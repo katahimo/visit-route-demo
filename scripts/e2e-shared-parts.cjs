@@ -334,8 +334,8 @@ async function person(page) {
 async function sameLook(page) {
   // 今日より後の保存した訪問を1件ピン、1件担当なしにする（別のタブで書き換えたのと同じ）
   await fresh(page, '/home', 'h1');
-  // 初期データは今日からの日を繰り返しの担当のままにするので、保存した担当の入った訪問を用意する
-  await planDays(page);
+  // 初期データは今日からの日を繰り返しの担当のままにするので、保存した担当の入った訪問を用意する（初期データからなので写しを使える）
+  await planDays(page, { cache: true });
   const picked = await page.evaluate(
     ({ k, today }) => {
       const d = JSON.parse(localStorage.getItem(k));

@@ -1,11 +1,10 @@
 // 素朴な案（solver の初期解の候補）と、AI案がそれより悪くならないこと（ADR-0007。レビュー H1・H2）
-import { afterAll, describe, expect, it } from 'vitest';
-import { addDays } from '../domain/time';
+import { describe, expect, it } from 'vitest';
 import { compile } from '../matching';
 import { client, DATE, makeData, randomData, rule, staff, visit } from '../matching/fixtures';
-import { applyPreset, createDemoData, INITIAL_PRESETS } from '../seed';
-import { defaultIterations, solve } from '../solver';
+import { solve } from '../solver';
 import { naivePlan, normalize, score, toHundred } from './index';
+import { SEED_DATES, SEED_PARTS } from './naiveSeed.testkit';
 
 describe('素朴な案', () => {
   it('件数の上限（必須の均等）と必須の条件を守り、必須の違反が無い', () => {
@@ -89,38 +88,9 @@ describe('AI案は素朴な案より悪くならない（初期解の候補に�
     }
   });
 
-  // 14日ぶんを1つの test で回すと、負荷のあるときに同期の計算が60秒を超え、vitest の worker の連絡（onTaskUpdate）が
-  // 時間切れになる（終了コード1）。日ごとの test に分け、1つの同期の塊を短くする（PRD D254）
-  const demo = createDemoData('2026-10-12');
-  const dates = Array.from({ length: 14 }, (_, i) => addDays('2026-10-12', i));
-  /** プリセット名 → 平日・土日の点 */
-  const ranges = new Map<string, { weekday: number[]; weekend: number[] }>();
-
-  it('seed は14日', () => {
-    expect(dates).toHaveLength(14);
-  });
-
-  it.each(dates)('seed の %s・各プリセットで、AI案の費用 ≤ 素朴な案、AI案の点 > 0', (date) => {
-    const weekday = new Date(`${date}T00:00:00Z`).getUTCDay();
-    for (const preset of INITIAL_PRESETS) {
-      const q = compile({ ...demo, rules: applyPreset(demo.rules, preset) }, date);
-      const s = normalize(q);
-      const naiveRoutes = naivePlan(q);
-      const r = solve(q, { seed: demo.seed, iterations: defaultIterations(q) });
-      expect(r.score).toBeLessThanOrEqual(score(q, naiveRoutes).total + 1e-6);
-      expect(score(q, naiveRoutes).dropped).toBe(0);
-      const h = toHundred(r.score, s);
-      expect(h, `${date} ${preset.name}`).toBeGreaterThan(0);
-      expect(h).toBeLessThanOrEqual(100);
-      const e = ranges.get(preset.name) ?? { weekday: [], weekend: [] };
-      (weekday >= 1 && weekday <= 5 ? e.weekday : e.weekend).push(h);
-      ranges.set(preset.name, e);
-    }
-  });
-
-  // 平日・土日の点の範囲を出す（全部の日が通ったあと）
-  afterAll(() => {
-    const span = (xs: number[]) => (xs.length ? `${Math.min(...xs)}〜${Math.max(...xs)}点（${xs.length}日）` : 'なし');
-    for (const [name, e] of ranges) console.info(`[点数] ${name}：平日 ${span(e.weekday)}・土日 ${span(e.weekend)}`);
+  // seed の14日 × 各プリセットは重いので naive.seed1〜4.test.ts に日で分けて並列に回す（naiveSeed.testkit.ts。PRD D254）
+  it('seed は14日（naive.seed1〜4.test.ts で全部の日を回す）', () => {
+    expect(SEED_DATES).toHaveLength(14);
+    expect(SEED_PARTS.flat()).toEqual(SEED_DATES);
   });
 });

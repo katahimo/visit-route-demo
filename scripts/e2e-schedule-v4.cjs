@@ -1,12 +1,12 @@
 // 見直しの4段目（ADR-0054。PRD D326〜D332）を本物のブラウザで確かめる：
-// メニューの最上位6項目（ホーム・予定を組む・予定・空き状況・人・設定。予定・予定を組む・人・設定は子の項目を持つ。PRD D349。ADR-0063）と
+// メニューの子の項目（予定・予定を組む・人。PRD D349。ADR-0063。最上位6項目の並びは e2e-nav）と
 // 人のタブ（〈利用者さん〉・〈スタッフ〉・相性・勤務時間（シフト）。最後に開いたタブ・勤務の見込みは勤務時間（シフト）の印）、パレットに案を比べるが出ない、
 // 日・週・月の切り替えで同じ操作の行（欠勤・キャンセルを登録／元に戻す／（月だけ）その他 ▾。「AI で組む ▾」は無い）、
 // 担当を組むの画面で週を組んだ範囲の提案の帯（反映するまで訪問は変わらない・週・日の予定にも出る・「反映する」で1回の update・
 // Ctrl+Z で戻る・Ctrl+Shift+Z でやり直す）、
 // 全体の元に戻す（入力欄の中では Ctrl+Z を奪わない・操作の行の「元に戻す」の title に手の名前・やり直しのトースト）、
 // 複数選択（日の時間軸の帯を Shift・Ctrl＋クリック、Shift＋Enter で足す、Esc で外す、帯の「時刻をずらす +15分」で2件の時刻が変わり1手で戻る、
-// 週の時間軸の帯で Ctrl＋クリック → 取り消す（独自の確認））、390px（メニューの引き出しの最上位5項目・操作の行と複数選択の帯がはみ出さない）、印刷（操作の行・帯を出さない）。
+// 週の時間軸の帯で Ctrl＋クリック → 取り消す（独自の確認））、390px（操作の行と複数選択の帯がはみ出さない）、印刷（操作の行・帯を出さない）。
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-schedule-v4.cjs
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）
@@ -19,13 +19,6 @@ const { sharedPage, openPage } = require('./lib/steps.cjs');
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
 const shot = (page, name) => page.screenshot({ path: path.join(OUT_DIR, `${name}.png`) });
 const visitsKey = (d) => JSON.stringify(d?.visits ?? null);
-/** メニューの最上位の項目（子の無い項目と、畳める親の行の項目。PRD D349） */
-const TOP_LINKS =
-  '.nav-groups > .nav-group > .nav-link, .nav-groups > .nav-group > .nav-parent > .nav-parent-row > .nav-link';
-/** 項目の名前（件数の印の文字は除く） */
-const labelsOf = (els) => els.map((e) => e.querySelector(':scope > span:not(.nav-badge)')?.textContent.trim() ?? '');
-/** メニューの最上位の項目名 */
-const navLabels = (page, scope = '.side-nav') => page.locator(`${scope} :is(${TOP_LINKS})`).evaluateAll(labelsOf);
 /** 親ごとの子の項目の key */
 const navKids = (page, parent, scope = '.side-nav') =>
   page
@@ -50,17 +43,12 @@ async function openView(page, hash) {
   await page.getByTestId('schedule-toolbar').waitFor({ timeout: 60000 });
   await settle(page, 400);
 }
-// ---- メニュー（最上位5項目と子の項目）・人のタブ・パレット ----
+// ---- メニュー（子の項目）・人のタブ・パレット ----
 async function menu(page) {
   await page.goto(`${BASE}#/home`);
   await page.locator('h1').waitFor();
   await settle(page, 300);
-  const labels = await navLabels(page);
-  check(
-    JSON.stringify(labels) === JSON.stringify(['ホーム', '予定を組む', '予定', '空き状況', '人', '設定']),
-    'メニューの最上位は6項目（ホーム・予定を組む・予定・空き状況・人・設定）',
-    labels,
-  );
+  // 最上位6項目の並びと名前・グループの見出しが無いことは e2e-nav の menu が確かめる
   const kids = {
     schedule: await navKids(page, 'schedule'),
     arrange: await navKids(page, 'arrange'),
@@ -76,7 +64,6 @@ async function menu(page) {
     '予定の子は今日の予定・◯月の予定・欠勤・キャンセル、予定を組むの子は担当を組む・組み方の標準、人の子は〈利用者さん〉・〈スタッフ〉・相性・勤務時間（シフト）',
     kids,
   );
-  check((await page.locator('.side-nav .nav-group-title').count()) === 0, 'メニューにグループの見出しは無い');
   await shot(page, 'menu-1400');
   await page.locator('.side-nav [data-key="people"]').click();
   await page.waitForURL(/#\/clients$/);
@@ -455,8 +442,7 @@ async function narrow(page) {
   await page.getByTestId('menu-btn').click();
   const drawer = page.locator('[role="dialog"][aria-modal="true"]');
   await drawer.waitFor();
-  const labels = await navLabels(page, '[role="dialog"][aria-modal="true"]');
-  check(labels.length === 6 && labels[4] === '人', '390px：引き出しのメニューも最上位6項目', labels);
+  // 引き出しのメニューの最上位6項目は e2e-nav（390px の「引き出しも同じ並び」）が確かめる
   await shot(page, 'menu-390');
   await page.keyboard.press('Escape');
   for (const hash of ['/plan', '/week', '/month']) {

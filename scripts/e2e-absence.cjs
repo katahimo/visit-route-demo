@@ -5,7 +5,7 @@
 // 5段目の連絡（人ごとの文・［文をコピー］・メール・［連絡した］の数。PRD D243〜D246）→ 終わる → 確定済み、
 // 当日キャンセル（訪問を選ぶ・当日キャンセルが既定・影響の文・取り消すと cancelKind='sameDay'・4段目・5段目で担当に「中止」）、
 // 列の見出しの「欠勤を直す」で同じ欄が2段目で開き、欠勤を取り消せる、戻る、Esc で閉じて入口のボタンへフォーカス、
-// 訪問の無い日は欠勤だけ登録できる、390px で入口が見え欄が画面に収まる・下のタブは5つ（ホーム・予定・欠勤・探す・メニュー。PRD D336）、印刷で入口を出さない、ブラウザの確認を出さない。
+// 訪問の無い日は欠勤だけ登録できる、390px で入口が見え欄が画面に収まる（下のタブの並びは e2e-mobile）、印刷で入口を出さない、ブラウザの確認を出さない。
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-absence.cjs
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）
@@ -94,7 +94,7 @@ async function fromHome(page) {
   await page.evaluate((k) => localStorage.removeItem(k), STORAGE_KEY);
   await page.reload();
   // 初期データは今日からの日を繰り返しの担当のままにするので、保存した担当の入った訪問を用意する（のちの段（recommend-b）も使う）
-  await planDays(page);
+  await planDays(page, { cache: true });
   await page.getByTestId('home-absence').waitFor();
   const href = await page.getByTestId('home-absence').getAttribute('href');
   check(href?.includes(`/plan?date=${TODAY}&do=absence`), 'ホームのカードの行き先が ?date=今日&do=absence', href);
@@ -396,7 +396,8 @@ async function reopenFocus(page, best) {
 async function toldContacts(page) {
   await page.goto(`${BASE}#/home`);
   await page.evaluate((k) => localStorage.removeItem(k), STORAGE_KEY);
-  await planDays(page);
+  // 初期データから組むので、from-home の結果の写し（scripts/lib/plan.cjs）
+  await planDays(page, { cache: true });
   await openPlan(page);
   // 確定（伝えた）
   await page.getByTestId('adopt').click();
@@ -684,12 +685,7 @@ async function mobile(page) {
   await openPlan(page);
   const b = await page.getByTestId('sudden-open').boundingBox();
   check(b && b.x >= 0 && b.x + b.width <= 390, '390px：入口のボタンが画面に収まる', b);
-  const tabs = await page.getByTestId('bottom-tabs').locator('.bottom-tab').allTextContents();
-  check(
-    JSON.stringify(tabs.map((t) => t.trim())) === JSON.stringify(['ホーム', '予定', '欠勤', '探す', 'メニュー']),
-    '390px：下のタブは5つ（欠勤のタブがある。PRD D336）',
-    tabs,
-  );
+  // 下のタブの並び（ホーム・予定・欠勤・探す・メニュー。PRD D336）は e2e-mobile の bottom が確かめる
   await page.getByTestId('sudden-open').click();
   await panel(page).waitFor();
   await page.getByTestId('sudden-kind-staff').click();

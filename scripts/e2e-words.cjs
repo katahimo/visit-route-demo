@@ -589,8 +589,8 @@ async function unplacedWords(page) {
 async function warnColors(page) {
   // 月：要対応（担当なし・担当が休み など）の日だけ赤。まだ伝えていないだけの日は赤くしない（版2：「案なし」の注意は無い）
   await resetData(page);
-  // 週の確認で今日の訪問の担当を外すので、保存した担当の入った訪問を用意する
-  await planDays(page);
+  // 週の確認で今日の訪問の担当を外すので、保存した担当の入った訪問を用意する（初期データからなので写しを使える）
+  await planDays(page, { cache: true });
   await open(page, `/month?ym=${YM}`, '[data-testid="month-grid"]');
   const line = await page.locator('.month-legend-line').innerText();
   check(/赤い枠と「要対応 N」の札＝要対応/.test(line), '月：凡例の要約に要対応', line);

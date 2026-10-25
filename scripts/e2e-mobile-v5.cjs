@@ -2,8 +2,8 @@
 // 390×844：日の予定は日ごとのリスト（最初の画面に訪問が見える・操作の行が1段・行に時刻・〈利用者さん〉・担当）、
 // 上の帯の日付送りとスワイプで日を送る、行を押すと下から出る欄（大きな4つのボタン：担当を替える・取り消す・道順・日の予定で見る。
 // 日時の変更・範囲は出ない。担当を替えて保存・取り消すと書き、元に戻すで戻る）、複数選択（長押し・「選ぶ」。帯は下から出る置き場所で
-// 時刻をずらすは出ない・まとめて取り消す）、下のタブ（ホーム・予定・欠勤・探す・メニュー。「探す」でパレット・上の帯に「探す」は無い・
-// 空き状況はパレットから）。
+// 時刻をずらすは出ない・まとめて取り消す）、下のタブの「探す」でパレット（aria-expanded・空き状況はパレットから。
+// タブの並び・上の帯に「探す」が無いことは e2e-mobile）。
 // 1400×1000：日の予定の時間軸の帯のキーボード（↑↓ 15分・Shift+→ 隣の担当の列・→ 次の日（その日へ移る）・Enter で欄・Esc で帯へ・
 // Delete で取り消し（確認）・どれも全体の元に戻すの1手で手の名前・Ctrl+Z で全部戻る）、繰り返しの回の範囲の小さな帯（これ以降も）、
 // 週の時間軸の帯の ↓、パレットで担当の名前＋日付・「担当なし」で訪問を引く、担当を組むで出した範囲の提案が画面を移っても残る。
@@ -307,17 +307,9 @@ async function multi(page) {
 }
 
 // ---- 390px：下のタブ（探す） ----
+// 下のタブの並び・上の帯に「探す」を出さないことは e2e-mobile（bottom・header）、
+// パレットを閉じると「探す」へフォーカスが戻ることは e2e-nav（390px の「閉じたらボタンへ」）が確かめる
 async function tabs(page) {
-  const names = await page
-    .getByTestId('bottom-tabs')
-    .locator('a, button')
-    .evaluateAll((els) => els.map((e) => e.textContent.trim()));
-  check(
-    JSON.stringify(names) === JSON.stringify(['ホーム', '予定', '欠勤', '探す', 'メニュー']),
-    '下のタブ：ホーム・予定・欠勤・探す・メニュー',
-    names,
-  );
-  check(!(await page.getByTestId('cmdk-open').isVisible()), '390px：上の帯に「探す」は出さない');
   const head = await page.locator('.app-header').boundingBox();
   check(head && head.height <= 64, '390px：日の予定の上の帯は1段（名前と日付の切り替え）', head);
   await page.getByTestId('bottom-search').click();
@@ -333,10 +325,6 @@ async function tabs(page) {
   await shot(page, 'palette-390');
   await page.keyboard.press('Escape');
   await input.waitFor({ state: 'detached' });
-  check(
-    await page.getByTestId('bottom-search').evaluate((el) => document.activeElement === el),
-    'パレットを閉じるとフォーカスは「探す」',
-  );
   await shot(page, 'tabs-390');
 }
 

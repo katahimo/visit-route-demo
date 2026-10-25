@@ -1,6 +1,6 @@
 {
   "src": "src",
-  "exclude": ["**/*.test.ts", "**/*.test.tsx", "**/*.d.ts"],
+  "exclude": ["**/*.test.ts", "**/*.test.tsx", "**/*.testkit.ts", "**/*.d.ts"],
   "maxFileLines": 600,
   "maxFunctionLines": 150,
   "layers": {

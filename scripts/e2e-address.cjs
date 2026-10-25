@@ -17,7 +17,7 @@
 const path = require('node:path');
 const { skipTour } = require('./lib/tourSeen.cjs');
 const { answerConfirms } = require('./lib/confirmDialog.cjs');
-const { BASE, OUT_DIR, NOW, check, stored, runSteps, settle } = require('./lib/env.cjs');
+const { BASE, OUT_DIR, NOW, check, stored, runSteps, settle, until: untilTrue } = require('./lib/env.cjs');
 const { pagePerStep } = require('./lib/steps.cjs');
 
 const ZIP_ONE = {
@@ -46,13 +46,14 @@ const GSI_ONE = [feature(140.8716, 38.2601, '宮城県仙台市青葉区一番�
 
 /**
  * 偽の検索サービス。mode：ok（応答を返す）・notFound・abort（つながらない）・hang（応答しない）。delay で応答を遅らせる。
- * 呼ばれた URL（デコード済み）を calls に残す
+ * 呼ばれた URL（デコード済み）を calls に残し、応答を返し終えた（つながらないも含む）数を answered に数える
  */
 async function fakeServices(page) {
   const fake = {
     zip: { mode: 'ok', body: ZIP_ONE, delay: 0 },
     gsi: { mode: 'ok', body: GSI_ONE, delay: 0 },
     calls: [],
+    answered: 0,
   };
   const handle = (key, notFoundBody) => async (route) => {
     const url = decodeURIComponent(route.request().url());
@@ -73,6 +74,8 @@ async function fakeServices(page) {
       });
     } catch {
       // ページが閉じた・呼び出しを止めた
+    } finally {
+      fake.answered++;
     }
   };
   await page.route(/zipcloud\.ibsnet\.co\.jp/, handle('zip', { status: 200, message: null, results: null }));
@@ -244,10 +247,21 @@ async function openVacancyPlace(page) {
   await page.getByTestId('vacancy-place').waitFor();
 }
 
+/** 偽の検索サービスへ送るまで待つ（押してから、探している途中の操作をする前に） */
+async function untilSent(fake, before) {
+  await untilTrue(() => fake.calls.length > before);
+}
+/**
+ * 送った検索の（古い）応答を返し終え、ページがそれを受けて落ち着くまで待つ。
+ * 「古い応答が来ても書かない」は DOM に出ないので、応答を返したこと（fake.answered）を目印にする（ADR-0041）
+ */
+async function untilAnswered(page, fake, before) {
+  await untilTrue(() => fake.answered > before);
+  await settle(page, 300);
+}
+
 /** 5・6：連打・閉じる・途中で書き換え */
 async function races(page, fake) {
-  // この段の固定の待ち（waitForTimeout）は、偽の検索サービスの遅れ（fake.*.delay。Node の側で遅らせる）を待つもの。
-  // ページのタイマーにも DOM にも出ない「古い応答が来ても書かない」を見るので、遅れより長く待つ（ADR-0041）
   await page.goto(`${BASE}#/vacancy`);
   await openVacancyPlace(page);
   const status = page.getByTestId('vacancy-status');
@@ -263,10 +277,12 @@ async function races(page, fake) {
   fake.zip.delay = 800;
   await page.getByTestId('vacancy-address').fill('');
   await page.getByTestId('vacancy-postal').fill('9800812');
+  let sent = fake.calls.length;
+  let answered = fake.answered;
   await page.getByTestId('vacancy-postal-search').click();
-  await page.waitForTimeout(150);
+  await untilSent(fake, sent);
   await page.getByTestId('vacancy-address').fill('手で書いた住所');
-  await page.waitForTimeout(1100);
+  await untilAnswered(page, fake, answered);
   check(
     (await page.getByTestId('vacancy-address').inputValue()) === '手で書いた住所',
     '途中で住所を書き換えたら、郵便番号の古い応答で上書きしない',
@@ -274,10 +290,12 @@ async function races(page, fake) {
   check(!/住所を探しています/.test(await status.textContent()), '書き換えたら「探しています」を解く');
   // 郵便番号を書き換えた場合
   await page.getByTestId('vacancy-address').fill('');
+  sent = fake.calls.length;
+  answered = fake.answered;
   await page.getByTestId('vacancy-postal-search').click();
-  await page.waitForTimeout(150);
+  await untilSent(fake, sent);
   await page.getByTestId('vacancy-postal').fill('100-0001');
-  await page.waitForTimeout(1100);
+  await untilAnswered(page, fake, answered);
   check(
     (await page.getByTestId('vacancy-address').inputValue()) === '',
     '途中で郵便番号を書き換えたら、古い応答を捨てる',
@@ -285,10 +303,12 @@ async function races(page, fake) {
   // 住所を探している途中に住所を書き換えたら、ピンを置かない
   fake.gsi.delay = 800;
   await page.getByTestId('vacancy-address').fill('宮城県仙台市青葉区一番町');
+  sent = fake.calls.length;
+  answered = fake.answered;
   await page.getByTestId('vacancy-geo-search').click();
-  await page.waitForTimeout(150);
+  await untilSent(fake, sent);
   await page.getByTestId('vacancy-address').fill('宮城県仙台市青葉区一番町2-2');
-  await page.waitForTimeout(1100);
+  await untilAnswered(page, fake, answered);
   check(/未登録/.test(await pinText(page, 'vacancy')), '途中で住所を書き換えたら、古い応答でピンを置かない');
   fake.zip.delay = 0;
   fake.gsi.delay = 0;
@@ -298,10 +318,12 @@ async function races(page, fake) {
   await openClient(page, 'c3');
   const addr0 = await page.getByTestId('client-address').inputValue();
   await page.getByTestId('client-postal').fill('9800811');
+  sent = fake.calls.length;
+  answered = fake.answered;
   await page.getByTestId('client-postal-search').click();
-  await page.waitForTimeout(100);
+  await untilSent(fake, sent);
   await cancelSection(page);
-  await page.waitForTimeout(1100);
+  await untilAnswered(page, fake, answered);
   const c3 = (await stored(page)).clients.find((c) => c.id === 'c3');
   check(c3.place.address === addr0 && c3.place.postalCode !== '9800811', '探している途中に取り消したら書かない');
   await openClient(page, 'c3');

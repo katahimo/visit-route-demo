@@ -85,8 +85,9 @@ async function prepare(page) {
   await page.evaluate((k) => localStorage.removeItem(k), STORAGE_KEY);
   await page.reload();
   await page.locator('.date-switch select').waitFor({ timeout: 30000 });
-  // 初期データは今日からの日を繰り返しの担当のままにするので、保存した担当の入った訪問を用意する
-  await planDays(page);
+  // 初期データは今日からの日を繰り返しの担当のままにするので、保存した担当の入った訪問を用意する。
+  // どの段も初期データから同じ組み方をするので、2回目からは1回目の結果の写し（scripts/lib/plan.cjs）
+  await planDays(page, { cache: true });
   await open(page, '/plan', '.date-switch select');
   const options = await page.locator('.date-switch select option').evaluateAll((os) => os.map((o) => o.value));
   SECOND = options.find((d) => d > TODAY) ?? '';
