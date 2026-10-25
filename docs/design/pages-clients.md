@@ -1,6 +1,6 @@
 # 〈利用者さん〉の一覧と、〈利用者さん〉・〈スタッフ〉の画面・住所の入力・絞り込み（共通部品）
 
-> この画面のファイル：`src/pages/ClientsPage.tsx`・`ClientPage.tsx`・`PatternsSection.tsx`・`ClientLeavesSection.tsx`・`PlaceAllPanel.tsx`、`src/components/personPage.tsx`（`personPage.css`）・`PersonCalendar.tsx`（`personCalendar.css`）・`personView.tsx`（`personView.css`）・`placeLookup.tsx`（`placeLookup.css`）・`ClientFilter.tsx`・`ClientPicker.tsx`・`VisitRules.tsx`・`PickChips.tsx`、`src/lib/personPage.ts`・`viewMode.ts`・`visitOps.ts`（`staffVisitsIn`・`endPatternOp`）・`clientFilter.ts`・`area.ts`・`search.ts`・`leaves.ts`・`patternText.ts`・`tentative.ts`・`clientStage.ts`・`addressLookup.ts`・`geocode.ts`・`postalCode.ts`・`placeAll.ts`。関連 ADR：0012・0013・0014・0015・0016（追記を含む）・0017・0021・0026・0051・0052・0056。関連 PRD：D36〜D40・D47・D60〜D62・D64〜D66・D68・D86〜D92・D108〜D112・D285・D118〜D121・D220・D308〜D313・D339〜D341。
+> この画面のファイル：`src/pages/ClientsPage.tsx`（一覧の表 `clientsTable.tsx`・状態 `useClientsList.ts`）・`ClientPage.tsx`（見出しとタブ `clientPageHeader.tsx`・タブ `clientBasicTab.tsx`・`clientBasicSections.tsx`・`clientStaffingTab.tsx`・`clientScheduleTab.tsx`・節の編集 `useClientEdit.ts`・保存 `useClientSave.ts`・カレンダーの URL `useClientCal.ts`）・`PatternsSection.tsx`（一覧 `patternsList.tsx`・入力欄 `patternsForm.tsx`・状態 `usePatternsFlow.ts`）・`ClientLeavesSection.tsx`（`clientLeaveParts.tsx`・`useClientLeaves.ts`）・`PlaceAllPanel.tsx`（`usePlaceAllRun.ts`）、`src/components/personPage.tsx`（`personPage.css`）・`PersonCalendar.tsx`（`personCalendar.css`）・`personView.tsx`（`personView.css`）・`placeLookup.tsx`（`placeLookup.css`）・`ClientFilter.tsx`・`ClientPicker.tsx`・`VisitRules.tsx`・`PickChips.tsx`、`src/lib/personPage.ts`・`viewMode.ts`・`visitOps.ts`（`staffVisitsIn`・`endPatternOp`）・`clientFilter.ts`・`area.ts`・`search.ts`・`leaves.ts`・`patternText.ts`・`tentative.ts`・`clientStage.ts`・`addressLookup.ts`・`geocode.ts`・`postalCode.ts`・`placeAll.ts`・`clientEdit.ts`・`newClient.ts`・`patternForm.ts`・`patternConfirm.ts`。関連 ADR：0012・0013・0014・0015・0016（追記を含む）・0017・0021・0026・0051・0052・0056。関連 PRD：D36〜D40・D47・D60〜D62・D64〜D66・D68・D86〜D92・D108〜D112・D285・D118〜D121・D220・D308〜D313・D339〜D341。
 > 〈スタッフ〉の画面の中身は [pages-staff.md](pages-staff.md)（画面の殻・タブ・節・予定のカレンダーはこのファイルと共通）。訪問の詳細の欄は [pages-common.md](pages-common.md)。
 
 ### 〈利用者さん〉一覧（`#/clients`）
@@ -34,7 +34,7 @@
 - `card person-sec`（`person-sec`・`data-section`）：見出し h2（アイコン＋名前）。読むときは中身（dl・地図など）と右上に「直す」（`sec-edit`。枠のボタン。aria-label「〈節の名前〉を直す」）、直すときは `<form noValidate>`（`sec-form`）に入力欄と「保存」（`sec-save`。主ボタン。直せる節は同時に1つなので画面に1つ）・「取り消し」（`sec-cancel`）・誤りの文（`FieldError`）。Enter で保存（`submitHandler`）、Esc で取り消し
 - 直すと最初の入力欄へ、保存・取り消しのあとは「直す」へフォーカス
 - 誤りの文の id は画面が持ち（`useId`）、`EditSection` の `errorId` と入力欄の `aria-describedby` を同じにする
-- 画面は `edit = { key, form, opened }`（〈利用者さん〉は担当できる人を限るかも）を1つ持つ。`SECTIONS`（節 → 保存する項目）で、変更があるかは `pickFields` の項目だけを `lib/viewMode` の `isDirty` で比べ、保存は保存した中身に `mergeFields` でその項目だけ重ねる（ほかの節の項目・まとめて置いた位置を古い入力で上書きしない）。検査（郵便番号・メール・同じ名前・アイコン）も直している節の項目だけ（ほかの節の古い値で保存を止めない）。新しい人は `key: 'new'` で全部の項目
+- 画面は `edit = { key, form, opened }`（〈利用者さん〉は担当できる人を限るかも）を1つ持つ。`lib/clientEdit` の `CLIENT_SECTIONS`（〈スタッフ〉は `lib/staffEdit` の `STAFF_SECTIONS`。節 → 保存する項目）で、変更があるかは `pickFields` の項目だけを `lib/viewMode` の `isDirty` で比べ、保存は保存した中身に `mergeFields` でその項目だけ重ねる（ほかの節の項目・まとめて置いた位置を古い入力で上書きしない）。検査（郵便番号・メール・同じ名前・アイコン）も直している節の項目だけ（ほかの節の古い値で保存を止めない）。新しい人は `key: 'new'` で全部の項目
 - 変更の確認（`components/personPage` の `useAskDiscard`・`discardChanges`）：取り消し・Esc は「変更を捨てますか？」（確定「捨てる」）、別の節は「変更を捨てて、ほかの節を直しますか？」、タブは「変更を捨てて、タブを替えますか？」、別の人は「変更を捨てて、〈名前〉を開きますか？」、メニュー・リンク・パレットで移るときは `useLeaveGuard`（「変更を捨てて移りますか？」「捨てて移る」。確定すると `onLeave` で入力を捨ててから移る。行き先は止めた時点で持ち、確認の間にリンクが外れた（名前の吹き出しが閉じた）ら行き先へ `navigate`）。訪問の詳細の欄の「日の予定で見る」・休みの注意の「…の予定を開く」も移る前に `confirmLeave`。取り消し側はどれも「編集を続ける」・危険の色。再読込・タブを閉じるは `beforeunload`（変更があるときだけ）。繰り返し・休みの入力の変更も数える（`onDirty`）。別のタブの変更の知らせ（D227）にも変更ありを知らせる
 - 〈利用者さん〉の担当できる人は、比べる前に保存のときと同じ値（限らなければ空・限るなら利用中の人だけ）にそろえる。特性は `cleanTraits` で未入力を取り除いて比べる
 
@@ -82,14 +82,14 @@
 - 〈スタッフ〉に求めること（`conds`：必要条件・希望の `ConditionsEditor`。読むときは `CondRows` と条件のチップ）
 - 相性（読むだけ。`compat` が入のとき）：`ClientCompatRows`（記号ごとの利用中の〈スタッフ〉の人数と名前。`view-compat-*`）と「相性の表で直す」（相性の画面をその人の名前で絞って開く `?cf=`）
 
-#### 休みのタブ（`pages/ClientLeavesSection.tsx`。ADR-0013。PRD D65）
+#### 休みのタブ（`pages/ClientLeavesSection.tsx`・`clientLeaveParts.tsx`・`useClientLeaves.ts`。ADR-0013。PRD D65）
 
 - 休みの一覧（期間・理由・その期間の訪問 N件・確定した日の数・終わった休みは「（終わった休み）」）と「休みを入れる」（`leave-add`）・行の「直す」（`leave-edit`）
 - 入力（`leave-form`）：開始日（`leave-from`）・終了日（`leave-to`。初期値は今日〜今日）・理由（`leave-note`。100字まで）と「保存」（`leave-save`）・「取り消し」（`leave-cancel`）・直すときは「この休みを消す」（`leave-remove`。確認してから消す。元に戻るだけ）
 - 入れる・直す前に、休みと重なる確定した日（`leaveConfirmedDates`）があれば「確定した日（10/20・10/27）に〈名前〉の訪問があります。その日の「日の予定」で案を作り直してください」とその日へのリンクを出す（確認ではなく注意。保存はできる）
 - 休みの訪問は AI案・まとめて作る・空き状況から外れる。日・週・月での見せ方は各画面のファイル。〈スタッフ〉のスマホ画面は休みの訪問を出さない
 
-#### 繰り返し（`pages/PatternsSection.tsx`。ADR-0012・0013。PRD D37・D64・D310）
+#### 繰り返し（`pages/PatternsSection.tsx`・`patternsList.tsx`・`patternsForm.tsx`・`usePatternsFlow.ts`、`lib/patternForm.ts`・`patternConfirm.ts`。ADR-0012・0013。PRD D37・D64・D310）
 
 - 見出し「繰り返し」と「繰り返しを足す」（`pattern-add`）。説明は箇条書き（押すとカレンダーで目立たせる・足すと作ってある最後の日まで作る・その先は月の予定）
 - 一覧の行（`pattern-row`・`data-pattern`）：押せる文（`pattern-pick`。`aria-pressed`。種類・`patternWhenText`・所要・`periodText`・いつもの担当・標準の開始「標準の開始：月 10:00・水 11:00」（無ければ出さない。`pattern-usual-starts`））と「直す」（`pattern-edit`）・「終わらせる」（`pattern-end`）
@@ -144,7 +144,7 @@
 - `ClientPlaceEditor`：`place.postalCode` を持たせた〈利用者さん〉用（住所の節を直すたびに作り直す）
 - 使う所：〈利用者さん〉の画面の住所の節（`ClientPlaceEditor`）・空き状況の場所（[pages-vacancy.md](pages-vacancy.md)）・〈スタッフ〉の自宅（[pages-staff.md](pages-staff.md)）
 
-#### まとめて地図に置く（`lib/placeAll.ts`・`pages/PlaceAllPanel.tsx`）
+#### まとめて地図に置く（`lib/placeAll.ts`・`pages/PlaceAllPanel.tsx`・`usePlaceAllRun.ts`）
 
 - 一覧の上の「位置の無い〈利用者さん〉」のカード：ふつうのボタン「まとめて地図に置く」・注記・進み具合・「止める」・結果。画面を離れたら止める
 - `placeAllTargets(clients)`（対象・住所も郵便番号もない人）、`placeAll(targets, opts)`（1人ずつ順に・呼ぶたびに間隔をあける・止める・1人ごとに結果を返す）、`withFoundPlace(data, id, place)`（位置の無いときだけ書く update 用の純粋関数）

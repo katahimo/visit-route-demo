@@ -1,6 +1,6 @@
 # 〈スタッフ〉の一覧と画面・勤務時間（シフト）・勤務の見込み・スマホ画面
 
-> この画面のファイル：`src/pages/StaffPage.tsx`・`StaffPersonPage.tsx`・`OffboardPanel.tsx`・`AvailabilityPage.tsx`（部品 `availabilityParts.tsx`・セルを直す状態 `useAvailabilityEdit.ts`）・`WorkloadPage.tsx`（`workload.css`）・`StaffViewPage.tsx`、`src/components/workBars.tsx`・`mapsLinks.tsx`・`personPage.tsx`・`PersonCalendar.tsx`・`personView.tsx`・`placeLookup.tsx`、`src/lib/offboard.ts`・`workload.ts`・`links.ts`・`personPage.ts`・`visitOps.ts`・`viewMode.ts`。関連 ADR：0011・0014・0015・0016 追記・0017・0018・0050・0052。関連 PRD：D16・D68・D75〜D77・D91〜D101・D118〜D121・D201〜D209・D220・D221・D298・D299・D308〜D312。
+> この画面のファイル：`src/pages/StaffPage.tsx`（行とカード `staffList.tsx`）・`StaffPersonPage.tsx`（見出しとタブ `staffPersonHeader.tsx`・タブ `staffSections.tsx`・`staffFields.tsx`・`staffScheduleTab.tsx`・節の編集と保存 `useStaffEdit.ts`・予定 `useStaffSchedule.ts`）・`OffboardPanel.tsx`（`offboardParts.tsx`・`useOffboardFlow.ts`）・`AvailabilityPage.tsx`（部品 `availabilityParts.tsx`・セルを直す状態 `useAvailabilityEdit.ts`）・`WorkloadPage.tsx`（`workload.css`・見出し `workloadHead.tsx`・表 `workloadTables.tsx`・設定 `useWorkloadSettings.ts`）・`StaffViewPage.tsx`（`staffViewParts.tsx`）、`src/components/workBars.tsx`・`mapsLinks.tsx`・`personPage.tsx`・`PersonCalendar.tsx`・`personView.tsx`・`placeLookup.tsx`、`src/lib/offboard.ts`・`offboardView.ts`・`staffEdit.ts`・`workload.ts`・`workloadView.ts`・`links.ts`・`personPage.ts`・`visitOps.ts`・`viewMode.ts`。関連 ADR：0011・0014・0015・0016 追記・0017・0018・0050・0052。関連 PRD：D16・D68・D75〜D77・D91〜D101・D118〜D121・D201〜D209・D220・D221・D298・D299・D308〜D312。
 > 画面の殻（ルート・見出し・タブ・節・変更の確認）と予定のカレンダーは [pages-clients.md](pages-clients.md) と共通。
 
 ### 〈スタッフ〉一覧（`#/staff`）
@@ -62,7 +62,7 @@
 ### 勤務の見込み（`#/workload?ym=&staff=`。ADR-0015）
 
 - 入口（メニューには出さない。題名の下の人のタブは勤務時間（シフト）に印。PRD D275・D326）：勤務時間（シフト）の見出しの「勤務の見込み」・月の予定の「その他 ▾」の「勤務の見込み」・日の予定の拘束超えの帯・月の要対応（`workloadHref`）・パレット。メニュー・下のタブの今の画面の印は「勤務時間（シフト）」
-- `lib/workload` の `workMonth`・`workTotals`・`workloadTsv`
+- `lib/workload` の `workMonth`・`workTotals`・`workloadTsv`、画面のための計算は `lib/workloadView`（`pickedDaysOf`・`workAxis`・`statTitle`・`spanNum` など）
 - 見出し（`work-title`）・「表をコピー」（`work-copy`。タブ区切りの表）・要約（`work-summary`）。主ボタンは無し
 - 事業所の設定（`org`）をこの画面で直す：交通費の単価（`work-fare`。0 にすると交通費の列が消える）・拘束の上限（`work-limit`。`Term` `span`＝出勤〜退勤（拘束））
 - 空の画面（`work-empty`。`periodEmptyGuide`。`onOpenDay`）
