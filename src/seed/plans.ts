@@ -1,7 +1,6 @@
-// 初期データに今日から7日分の担当を入れる（PRD D225。ADR-0031・ADR-0053）。
-// 起動したとき（データが無い・初期状態に戻す）に1回だけ、点数の基準の重みで1日ずつ AI で組み、担当・開始を訪問に書く
-// （lib/dayPlan の writeRoutes。「AI で組む」の提案を反映したのと同じ）。
-// 同じ日付なら同じデータ（乱数はデータの種、止めるのは反復回数。Date.now を使わない）
+// 起動したときの初期データ（PRD D322。ADR-0053・ADR-0064）と、AI で組んだ日のあるデータを作る部品（テストで使う）。
+// 初期データの今日からの日は AI で組まない（繰り返しの担当のまま）。AI で組むのは「担当を組む」で（標準が無い間は考え方ごとの案。ADR-0064）。
+// withSeedPlans は点数の基準の重みで1日ずつ AI で組み、担当・開始を訪問に書く（同じ日付なら同じデータ。Date.now を使わない）
 import type { DemoData } from '../contracts/data';
 import type { Features } from '../contracts/features';
 import { addDays } from '../domain/time';
@@ -37,12 +36,12 @@ export function withSeedPlans(data: DemoData, today: string, days: number = SEED
 }
 
 /**
- * 起動したときの初期データ：seed の人・決まり・繰り返し（createDemoData）に、今日から7日分の担当を入れたもの。
- * features は機能の入り切り（既定はすべて入の {}）。担当を組む前に入れる（計算に効く機能（相性・担当を限る）を組むときに使う。PRD D276）
+ * 起動したときの初期データ：seed の人・決まり・繰り返し（createDemoData）に、過去の日を伝えた状態にしたもの。
+ * 今日からの日は繰り返しの担当のまま（AI で組まない。ADR-0064）。features は機能の入り切り（既定はすべて入の {}）
  */
 export function createInitialData(today: string, features: Features = {}): DemoData {
   const d = createDemoData(today);
-  return withPastTold(withSeedPlans({ ...d, org: { ...d.org, features } }, today), today);
+  return withPastTold({ ...d, org: { ...d.org, features } }, today);
 }
 
 /**

@@ -13,7 +13,7 @@ import { visitsOn } from '../patterns';
 import { reassignDiff } from '../reassign';
 import { defaultIterations, runSolve } from '../solver';
 import { own } from './common';
-import { aiPinsOf, dayProblemOf, routesOf, startsOf, writeRoutes } from './dayPlan';
+import { aiPinsOf, dayProblemOf, pinsOf, routesOf, startsOf, writeRoutes } from './dayPlan';
 import type { BatchMode } from './month';
 import { createValueStore, type ReadableStore } from './valueStore';
 
@@ -419,8 +419,8 @@ export function createMonthBatch(solve: Solve = runSolve): MonthBatch {
         return;
       }
       const visits = visitsOn(latest, day);
-      // 手で付けたピンと標準のピン（ADR-0062）
-      const pins = aiPinsOf(withRules(latest, task.rules), day, visits);
+      // 手で付けたピンと標準のピン（ADR-0062）。考え方ごとの案は標準を決める前の案なので、手で付けたピンだけ（ADR-0064）
+      const pins = task.v >= 0 ? pinsOf(visits) : aiPinsOf(withRules(latest, task.rules), day, visits);
       const p = dayProblemOf(withRules(latest, task.rules), day, Object.keys(pins).length > 0 ? pins : undefined);
       if (!p || p.visits.length === 0 || p.staff.length === 0) {
         step(i + 1);

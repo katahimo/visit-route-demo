@@ -147,12 +147,16 @@ async function choices(page, { dlg }) {
   await page.getByTestId('arrange-start').click();
   await choiceBand(page).waitFor({ timeout: 150000 });
   const cards = choiceBand(page).getByTestId('choice-card');
-  check((await cards.count()) === 3, '考え方ごとの案のカードが3つ（初期データのプリセットの数）', await cards.count());
-  check((await assignedOn(page, TODAY)) === 0, '案が出ても、選ぶまで訪問は変わらない');
+  check((await cards.count()) === 3, '考え方ごとの案のタブが3つ（初期データのプリセットの数）', await cards.count());
+  const pts = await choiceBand(page).getByTestId('choice-points').allInnerTexts();
+  check(pts.length === 3 && pts.every((t) => /^\d+点$/.test(t)), '案ごとに点（100点満点）', pts);
   check(
-    (await choiceBand(page).getByTestId('proposal-change').count()) > 0,
-    'カードに変わる訪問（誰の訪問が誰へ）の一覧',
+    (await choiceBand(page).getByTestId('route-timeline').count()) === 1 &&
+      (await choiceBand(page).getByTestId('choice-current').count()) === 1,
+    '選んだ案を今日の予定と同じ時間軸で見る（今の担当のタブもある）',
   );
+  check((await assignedOn(page, TODAY)) === 0, '案が出ても、選ぶまで訪問は変わらない');
+  check((await choiceBand(page).getByTestId('proposal-change').count()) > 0, '変わる訪問（誰の訪問が誰へ）の一覧');
   await page.screenshot({ path: path.join(OUT_DIR, 'arrange-choices.png') });
   // 案を比べる（その日）にも考え方ごとの案が出る（ADR-0064）
   await page.goto(`${BASE}#/compare?date=${TODAY}`);
@@ -163,7 +167,8 @@ async function choices(page, { dlg }) {
   await choiceBand(page).waitFor({ timeout: 10000 });
   const preset = await cards.nth(1).getAttribute('data-preset');
   const n = dlg.messages.length;
-  await cards.nth(1).getByTestId('choice-adopt').click();
+  await cards.nth(1).click();
+  await choiceBand(page).getByTestId('choice-adopt').click();
   await choiceBand(page).waitFor({ state: 'detached', timeout: 10000 });
   check(
     /組み方の標準にしますか/.test(dlg.messages[n] ?? ''),

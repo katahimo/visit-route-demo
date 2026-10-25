@@ -111,8 +111,8 @@ describe('load・save', () => {
     const d = load();
     expect(d.version).toBe(DATA_VERSION);
     expect(mem.has(STORAGE_KEY)).toBe(true);
-    // 今日から7日分の担当を訪問に書く（PRD D225。ADR-0053）
-    expect(new Set(d.visits.filter((v) => v.staffId !== null).map((v) => v.date)).size).toBe(7);
+    // 今日からの日は AI で組まない（繰り返しの担当のまま。保存した回は無い。PRD D322。ADR-0064）
+    expect(d.visits).toEqual([]);
   });
 
   it('壊れた JSON は退避して初期データを返す', () => {
