@@ -20,7 +20,8 @@
 - 新しい関数・部品を作る前に、同じ働きのものを grep で探して使う（日付の書式・時刻の変換・件数の上限の判定・振り直しの手順など）。同じ名前で別の意味のものを作らない
 - 種類（条件の型・繰り返し方・チップ）ごとの分岐は1か所に集め、switch は `const _: never = x` で網羅を型で確かめる
 - 使われなくなった関数・部品・CSS・テストは同じ変更で消す
-- `npm run check:code` で新しい違反を出さない。直して違反が減ったら `npm run check:code -- --update-baseline` で基準を縮め、一緒にコミットする
+- `npm run check:code` で新しい違反を出さない。直して違反が減ったら `npm run check:code -- --update-baseline --sync-biome` で基準と `biome.json` を縮め、一緒にコミットする
+- 層の決まりと関数の行数は `biome.json` にも同じものが入っている（層の違反は lint のエラー、150 行を超える関数は警告としてエディタに出る）。`biome.json` の `overrides` は `code-rules.json` から作る生成物なので手で直さない。決まりを変えるときは `code-rules.json` を直して `--sync-biome`
 
 ## ディレクトリ構成
 ```
@@ -50,7 +51,7 @@ docs/ … README.md（索引）/ prd.md / design.md / design/（画面の詳細�
 - テスト：`npm test`（vitest）
 - フォーマット・リント：`npm run lint`（biome と、競合の印 `<<<<<<<`・`>>>>>>>` の検査 `scripts/check-conflict-markers.cjs`）
 - 型チェック：`npm run typecheck`
-- コードの検査：`npm run check:code`（層の依存・循環 import・長いファイルと関数・使われない export。`code-rules.baseline.json` の基準より増えたら失敗。`-- --all` で基準にあるものも表示。Python 3 が要る）
+- コードの検査：`npm run check:code`（層の依存・循環 import・長いファイルと関数・使われない export。`code-rules.baseline.json` の基準より増えたら失敗。`-- --all` で基準にあるものも表示。`biome.json` が `code-rules.json` とずれていても失敗。Python 3 が要る）
 - ビルド：`npm run build`（`dist/`、`base: './'`）
 - e2e（本物のブラウザ。ADR-0029）：`npm run e2e`（速さを見る5本を除く残りを4本ずつ並列）・`npm run e2e:perf`（速さを見る5本を1本ずつ）・`npm run e2e:all`（e2e のあとに e2e:perf。同時には走らせない）。1本だけは `npx playwright test --grep <スクリプトの名前>`（例 `--grep "e2e-details\.cjs"`。部分一致なので `e2e-details` だけでは e2e-details2 も走る）。サイトは webServer がビルドして `vite preview --port 4183` で出す。4183 で動いている配信があればビルドせずにそれを使い回すので、古いビルドの配信が残っていれば止めるか、確かめたい配信を `BASE=http://localhost:4183/` で渡す。報告は `npx playwright show-report`（落ちた test に記録が付き、`NG  ` の行が見える）。`playwright-report/` と `test-results/` は実行のたびに上書きされるので、`npm run e2e` のあと `npm run e2e:perf`（`e2e:all` も同じ）を走らせると残るのは perf の報告だけ。e2e の報告を見るなら e2e:perf の前に開く。`node scripts/e2e-xxx.cjs` で1本ずつ単独でも今どおり走る（先に `npm run build && npx vite preview --port 4183`）
 - e2e の書き方（段階2。ADR-0041）：スクリプトは段（`[名前, 関数]` の並び）を `module.exports = { steps }` で出し、末尾に `if (require.main === module) runSteps(steps)`。段の型は `scripts/lib/steps.cjs` の `sharedPage`（1つのページを使い回す）・`pagePerStep`（段ごとに新しい文脈）・`guard`。包みは段を `test.step`、`check` を `expect.soft`（名前はそのまま）に写すので、段を足すときは並びに1行足すだけ。押したあとの待ちは `settle(page, ms)`（描画・DOM の変化・終わりのある CSS の動き・期限の近いタイマーが落ち着くまで。最長 max(3×ms, 1500ms)）か目印（`locator.waitFor`・`until(fn)`）で待ち、`waitForTimeout` は速さの計測・外の遅れ・時間そのものを見る所だけ（前の行に理由と「固定の待ち」と書く）。`E2E_SETTLE_LOG=1` で落ち着かずに最長まで待った所を、`=2` で1回ずつの待った時間を出す（`E2E_SETTLE=fixed` で前の固定の待ちに戻して切り分け）。1つの段は最長3分（`E2E_STEP_TIMEOUT_MS`）。落ちた test には trace・動画（perf は取らない）・`-fail-` のスクリーンショット・記録が付く（`npx playwright show-report`・`npx playwright show-trace`）

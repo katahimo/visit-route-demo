@@ -124,6 +124,7 @@ solo-architecture-design/
 ### コードの決まりを置く（初回だけ）
 - プロジェクトの直下に `code-rules.json`（上限・層の決まり）を置き、`python3 <skill>/scripts/check_code.py <プロジェクト> --update-baseline` で今の違反を基準に記録する
 - `package.json` などに検査のコマンドを足し、CI の PR の検査で回す。AGENTS.md の完了の定義に入れる
+- Biome を使うなら `--sync-biome` で `biome.json` に同じ決まり（層の import の禁止・関数の行数の警告）を書き出す。書いている最中にエディタで見え、`code-rules.json` が唯一の正のまま保てる
 
 ## レビューモード
 
@@ -141,7 +142,7 @@ solo-architecture-design/
 3. 大きいコードは領域（画面・部品・画面用の関数・中核）ごとにエージェントを分けて並行に読ませ、結果を1つの表にまとめる
 4. 指摘は「重要度｜原則｜file:line｜根拠（数字・grep）｜直し方｜手間」の表にする。推測で書かない
 5. 直す順番を示す：(1) 挙動を変えない小さい片づけ（死んだコード・重複・改名・網羅の型）→ (2) 層の整理（置き場所の移動）→ (3) 巨大な部品の分割（`code-principles.md` 5節の型で1段ずつ、1つずつ別の PR）。どこまで直すかはユーザーが決める
-6. 直したら `check_code.py --update-baseline` で基準を縮める
+6. 直したら `check_code.py --update-baseline`（Biome を使うなら `--sync-biome` も）で基準を縮める
 
 出力形式：
 

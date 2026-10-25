@@ -28,6 +28,11 @@
     "baseline": "code-rules.baseline.json"
   }
 
+Biome を使うプロジェクトでは --sync-biome で biome.json に同じ決まりを書き出す（エディタで書いている最中に見える）：
+  - 層の決まり → overrides の noRestrictedImports（基準にある層の違反のファイルは除く）
+  - 関数の行数 → noExcessiveLinesPerFunction（警告。テストは除く）
+  biome.json の overrides は生成物として丸ごと置き換える。ずれていれば通常の検査で biome-sync の違反になる。
+
 標準ライブラリだけで動く。字句の解析は簡易（文字列・コメント・テンプレートを除いてから括弧を数える）。
 """
 
@@ -342,12 +347,62 @@ def check_unused(pj: Project):
                 yield ('unused-export', f'{rel}:{name}', 'どこからも使わない', 0)
 
 
+def biome_module(pattern: str) -> list[str]:
+    """code-rules の禁止先（src/store/** など）を Biome の import の指定子の型に直す。"""
+    segs = [x for x in pattern.split('/') if x and '*' not in x]
+    name = segs[-1]
+    return [f'**/{name}', f'**/{name}/**']
+
+
+def biome_overrides(cfg: dict, baseline: dict) -> list:
+    exceptions: dict[str, set[str]] = {}
+    for key in baseline:
+        if key.startswith('layer '):
+            frm = key.split(' ', 1)[1].split(' -> ')[0]
+            for pat in cfg['layers']:
+                if match(frm, pat):
+                    exceptions.setdefault(pat, set()).add(frm)
+    out = [
+        {
+            'includes': ['**/*.test.*', '**/*.spec.*', 'e2e/**', 'scripts/**'],
+            'linter': {'rules': {'complexity': {'noExcessiveLinesPerFunction': 'off'}}},
+        }
+    ]
+    for pat, rule in cfg['layers'].items():
+        paths = {m: f'{pat} は {m} に依存しない（code-rules.json）' for m in rule.get('forbid', []) if not m.startswith(('src/', '.'))}
+        groups = [g for m in rule.get('forbid', []) if m.startswith('src/') for g in biome_module(m)]
+        options: dict = {}
+        if paths:
+            options['paths'] = paths
+        if groups:
+            options['patterns'] = [{'group': groups, 'message': f'{pat} の層の決まりに反する import（code-rules.json）'}]
+        includes = [pat, *(f'!{x}' for x in cfg['exclude']), *(f'!{f}' for f in sorted(exceptions.get(pat, ())))]
+        out.append({'includes': includes, 'linter': {'rules': {'style': {'noRestrictedImports': {'level': 'error', 'options': options}}}}})
+    return out
+
+
+def biome_config(root: Path, cfg: dict, baseline: dict) -> tuple[Path, dict, dict] | None:
+    path = root / 'biome.json'
+    if not path.exists():
+        return None
+    cur = json.loads(path.read_text(encoding='utf-8'))
+    new = json.loads(json.dumps(cur))
+    rules = new.setdefault('linter', {}).setdefault('rules', {})
+    rules.setdefault('complexity', {})['noExcessiveLinesPerFunction'] = {
+        'level': 'warn',
+        'options': {'maxLines': cfg['maxFunctionLines'], 'skipBlankLines': True},
+    }
+    new['overrides'] = biome_overrides(cfg, baseline)
+    return path, cur, new
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('project', nargs='?', default='.')
     ap.add_argument('--config', default='code-rules.json')
     ap.add_argument('--update-baseline', action='store_true', help='今の違反を基準として書き出す')
     ap.add_argument('--all', action='store_true', help='基準にある違反も表示する')
+    ap.add_argument('--sync-biome', action='store_true', help='biome.json に層の決まりと関数の行数を書き出す')
     args = ap.parse_args()
 
     root = Path(args.project).resolve()
@@ -366,9 +421,21 @@ def main() -> int:
         data = {k: v[3] for k, v in sorted(keyed.items())}
         base_path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
         print(f'基準を書き出した：{base_path.relative_to(root)}（{len(data)} 件）')
-        return 0
+        if not args.sync_biome:
+            return 0
 
     baseline: dict[str, int] = json.loads(base_path.read_text(encoding='utf-8')) if base_path.exists() else {}
+    biome = biome_config(root, cfg, baseline)
+    if args.sync_biome:
+        if not biome:
+            print('biome.json が無い')
+            return 1
+        path, _, new = biome
+        path.write_text(json.dumps(new, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+        print(f'biome.json に書き出した（層の決まり {len(cfg["layers"])} 件）')
+        return 0
+    if biome and biome[1] != biome[2]:
+        keyed['biome-sync biome.json'] = ('biome-sync', 'biome.json', 'code-rules.json・基準と合っていない（--sync-biome で書き直す）', 0)
     new, grown, known = [], [], []
     for k, (kind, key, msg, size) in sorted(keyed.items()):
         if k not in baseline:
