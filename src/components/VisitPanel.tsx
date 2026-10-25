@@ -1,68 +1,32 @@
-import {
-  Ban,
-  CalendarDays,
-  Check,
-  ClipboardList,
-  Navigation,
-  Pin,
-  Plus,
-  Repeat,
-  RotateCcw,
-  Undo2,
-  UserRoundCog,
-  X,
-} from 'lucide-react';
-import {
-  createContext,
-  type ReactNode,
-  useCallback,
-  useContext,
-  useDeferredValue,
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { ClipboardList, Plus } from 'lucide-react';
+import { createContext, type ReactNode, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import type { DemoData } from '../contracts/data';
-import type { Visit } from '../contracts/documents';
-import { hhmmToMinutes, jstDate, minutesToHhmm } from '../domain/time';
-import { newId } from '../lib/common';
-import { dateText } from '../lib/dateText';
-import { confirmLeave } from '../lib/leaveGuard';
-import { directionsHref, HOME_LABEL } from '../lib/mapsLink';
+import { jstDate } from '../domain/time';
 import { typeOf } from '../lib/patternText';
-import {
-  applyVisitEdit,
-  cancelVisitOp,
-  draftOf,
-  newDraft,
-  restoreOccurrenceOp,
-  SCOPE_LABELS,
-  scopeTexts,
-  staffChoices,
-  toldDaysChanged,
-  uncancelVisitOp,
-  type VisitDraft,
-  type VisitScope,
-  visitInfo,
-} from '../lib/visitOps';
-import { findVisit, visitsOn } from '../patterns';
+import { scopeTexts, type VisitDraft, visitInfo } from '../lib/visitOps';
 import { useDemoData } from '../store';
-import { useConfirm } from './ConfirmDialog';
-import { useDay } from './day';
-import { FieldError, invalidAttrs, RequiredMark } from './FieldError';
-import { MAPS_TITLE, VisitRouteLinks } from './mapsLinks';
-import { PersonButton } from './PersonPopover';
-import { StaffMark } from './StaffMark';
-import { useToast } from './Toast';
-import { SidePanel, WithIcon } from './ui';
-import { useUndoAction } from './undo';
+import { FieldError } from './FieldError';
+import { SidePanel } from './ui';
 import { useFeature } from './useFeature';
 import { COMPACT_QUERY, useMedia } from './useMedia';
-import { hasVisitRules, VisitRules } from './VisitRules';
-import { TypeDot, TypeMark } from './visitType';
+import {
+  useOpenDay,
+  useStaffChoices,
+  useVisitActions,
+  useVisitForm,
+  useVisitRoute,
+  useVisitSave,
+  useVisitWriter,
+} from './useVisitPanel';
+import { VisitScopeFields, VisitStaffFields, VisitTimeFields } from './visitPanelForm';
+import {
+  type VisitAct,
+  VisitBigButtons,
+  VisitCancelArea,
+  VisitFooter,
+  VisitRulesSection,
+  VisitSummary,
+} from './visitPanelParts';
 import './visitPanel.css';
 
 /**
@@ -132,13 +96,6 @@ export function VisitPanelProvider({ children }: { children: ReactNode }) {
   );
 }
 
-/** 一覧の選択肢の「変えない」 */
-const KEEP = '__keep';
-/** 一覧の選択肢の「担当なし」 */
-const NONE_PICK = '__none';
-
-const hhmm = (s: string) => /^\d{2}:\d{2}$/.test(s);
-
 function VisitPanel({
   req,
   latest,
@@ -148,47 +105,23 @@ function VisitPanel({
   latest: { readonly current: DemoData };
   onClose: () => void;
 }) {
-  const { data, update } = useDemoData();
-  const terms = data.org.terms;
-  const toast = useToast();
-  const confirm = useConfirm();
-  const navigate = useNavigate();
-  const { pathname } = useLocation();
-  const { date: shownDate, setDate } = useDay();
+  const { data } = useDemoData();
   const narrow = useMedia(COMPACT_QUERY);
   const today = jstDate(Date.now());
   const isNew = !req.visitId;
   /** 開いている訪問の ID（欄を開いている間は変えない。保存で作り直した回の ID は savedRef で閉じたあとのフォーカスに使う） */
   const [visitId] = useState<string | null>(req.visitId ?? null);
-  /**
-   * 開いたときの訪問（欄の中の書き込みのあとは書いた形に差し替える）。保存・取り消しの前にデータの訪問と比べ、別のタブ・別の操作で
-   * 変わっていれば古い入力で上書きしない
-   */
-  const baseRef = useRef<Visit | null>(req.visitId ? findVisit(data, req.visitId) : null);
   const info = useMemo(() => (visitId ? visitInfo(data, visitId, today) : null), [data, visitId, today]);
   const v = info?.visit ?? null;
-  const [draft, setDraft] = useState<VisitDraft>(() => {
-    const base = req.visitId
-      ? (() => {
-          const x = req.visitId ? findVisit(data, req.visitId) : null;
-          return x ? draftOf(x) : newDraft(data, today);
-        })()
-      : newDraft(data, req.newVisit?.date ?? today, req.newVisit?.clientId, req.newVisit?.start);
-    return { ...base, ...req.draft };
-  });
-  const [pick, setPick] = useState<string>(req.staff ?? KEEP);
-  const [scope, setScope] = useState<VisitScope>('once');
+  const form = useVisitForm(req, data, today);
+  const { draft, set, error, errorId, bad } = form;
   /** スマホの下から出る欄で開いている操作（大きな4つのボタンの「担当を替える」「取り消す」。PRD D334） */
-  const [act, setAct] = useState<'staff' | 'cancel' | null>(null);
+  const [act, setAct] = useState<VisitAct>(null);
   const mapsOn = useFeature('mapsLink');
-  const [error, setError] = useState<{ text: string; field?: keyof VisitDraft } | null>(null);
-  const errorId = useId();
-  const bad = (k: keyof VisitDraft) => invalidAttrs(error?.field === k, errorId);
   const savedRef = useRef<string | null>(null);
 
   const client = data.clients.find((c) => c.id === (v?.clientId ?? draft.clientId));
   const staffById = useMemo(() => new Map(data.staff.map((s) => [s.id, s])), [data.staff]);
-  const staffName = (id: string | null) => (id ? (staffById.get(id)?.name ?? '（不明）') : '');
   const cancelled = !!v?.cancelled;
   const editable = isNew || (!!info?.editable && !cancelled);
   /** 日時を変えられる（狭い画面は出さない） */
@@ -199,217 +132,37 @@ function VisitPanel({
     () => (visitId && editable && info?.pattern ? scopeTexts(data, visitId, today) : null),
     [data, visitId, editable, info?.pattern, today],
   );
-
-  // 担当の候補（日時を変えたらその日時で計算し直す。打つたびに計算しないよう遅らせる）
-  const deferred = useDeferredValue(draft);
-  const choices = useMemo(
-    () => (editable && !newBlocked ? staffChoices(data, visitId, deferred) : null),
-    [data, visitId, deferred, editable, newBlocked],
-  );
-  const current = choices?.currentStaffId ?? null;
-  // 日時を変えて候補が変わり、選んでいた人が候補に無い・選べなくなったら「変えない」に戻す（担当なしも今の担当がいなくなれば戻す）
-  useEffect(() => {
-    if (!choices || pick === KEEP) return;
-    const ok =
-      pick === NONE_PICK
-        ? choices.currentStaffId !== null
-        : choices.choices.some((c) => c.staffId === pick && !c.disabled && !c.current);
-    if (!ok) setPick(KEEP);
-  }, [choices, pick]);
-
-  const set = (patch: Partial<VisitDraft>) => {
-    setDraft((f) => ({ ...f, ...patch }));
-    setError(null);
-  };
+  const choices = useStaffChoices(data, visitId, draft, editable && !newBlocked, form.pick, form.setPick);
 
   /** 閉じたあとのフォーカス（開いた帯へ。無ければ開く前の要素） */
   const returnFocus = () => req.returnFocus?.(savedRef.current ?? visitId) ?? null;
+  const writer = useVisitWriter(visitId, isNew, latest);
+  const save = useVisitSave({
+    req,
+    writer,
+    form,
+    visitId,
+    info,
+    isNew,
+    savable: editable && !newBlocked,
+    clientName: client?.displayName ?? '',
+    today,
+    savedRef,
+    onClose,
+  });
+  const { doCancel, doUncancel, doRestore } = useVisitActions(req, writer, form, v, today);
 
-  /** トーストの「元に戻す」（全体の履歴を1手戻す。PRD D329） */
-  const undoAction = useUndoAction();
+  const { showDayLink, openDay } = useOpenDay(isNew, v, draft.date, onClose);
+  const { route, routeHref } = useVisitRoute(data, v, client, mapsOn);
 
-  /** 別のタブ・別の操作で開いた訪問が変わっていれば、その文（保存・取り消しを止める） */
-  const changedElsewhere = (): string | null => {
-    if (isNew || !visitId) return null;
-    const now = visitId ? findVisit(latest.current, visitId) : null;
-    return JSON.stringify(now) !== JSON.stringify(baseRef.current)
-      ? 'この訪問は別の操作で変わりました。閉じて開き直してください'
-      : null;
-  };
-  /**
-   * 書く（書く前のデータが今のデータのときだけ。確認を待つ間などに別の変更が入っていれば書かずに null を返し、呼ぶ側が誤りを出す）。
-   * 書いたら「元に戻す」の操作を返す。label は全体の履歴の手の名前
-   */
-  const write = (next: DemoData, label: string) => {
-    const before = data;
-    if (latest.current !== before) return null;
-    update((d) => (d === before ? next : d), label);
-    if (visitId) baseRef.current = findVisit(next, visitId);
-    return undoAction;
-  };
-  const STALE = '開いている間にデータが変わりました。閉じて開き直してください';
-
-  const save = async () => {
-    if (!editable || newBlocked) {
-      onClose();
-      return;
-    }
-    const elsewhere = changedElsewhere();
-    if (elsewhere) {
-      setError({ text: elsewhere });
-      return;
-    }
-    const staff = pick === KEEP ? undefined : pick === NONE_PICK ? null : pick;
-    const r = applyVisitEdit(
-      data,
-      { visitId, draft, staff, scope },
-      today,
-      { visit: newId('v'), patterns: [newId('pt'), newId('pt')] },
-      Date.now(),
-    );
-    if (!r.ok) {
-      setError({ text: r.error, field: r.field });
-      return;
-    }
-    if (r.unchanged) {
-      toast('変更はありません');
-      onClose();
-      return;
-    }
-    // これ以降・すべてで確定した日の訪問も変わるなら確かめる（週のドラッグと同じ）
-    if (scope !== 'once' && !isNew) {
-      const fixed = toldDaysChanged(data, r.data, today);
-      if (
-        fixed.length > 0 &&
-        !(await confirm({
-          title: '確定した日の訪問も変えますか？',
-          body: `確定した日（${fixed.map((x) => dateText(x)).join('・')}）の訪問も変わります。その日は「未連絡の変更あり」になり、連絡の一覧に出ます。`,
-          confirmLabel: '変える',
-        }))
-      )
-        return;
-    }
-    const action = write(r.data, isNew ? '訪問を追加' : '訪問を保存');
-    if (!action) {
-      setError({ text: STALE });
-      return;
-    }
-    const after = findVisit(r.data, r.visitId);
-    const label = after ? `${dateText(after.date)} ${after.earliestStart}` : '';
-    const range = info?.pattern && !isNew ? `・${SCOPE_LABELS[scope]}` : '';
-    const failText =
-      r.failed.length > 0
-        ? `。担当を割り当てられなかった回が ${r.failed.length}件あります（${r.failed
-            .slice(0, 3)
-            .map((x) => `${dateText(x.date)} ${x.why}`)
-            .join('、')}）`
-        : '';
-    toast(`${isNew ? '訪問を追加しました' : '訪問を保存しました'}（${label}${range}）${failText}`, { action });
-    savedRef.current = r.visitId;
-    req.onSaved?.({
-      visitId: r.visitId,
-      date: after?.date ?? draft.date,
-      moved: isNew || (!!v && (after?.date !== v.date || after?.earliestStart !== v.earliestStart)),
-      staffSet: staff !== undefined,
-      isNew,
-      label: `${client?.displayName ?? ''} ${label}`,
-    });
-    onClose();
-  };
-
-  /** 欄の中の操作の前に、別の操作で変わっていないかを見る（変わっていれば誤りを出して true） */
-  const blocked = () => {
-    const t = changedElsewhere();
-    if (t) setError({ text: t });
-    return !!t;
-  };
-  const doCancel = (sameDay: boolean) => {
-    if (!v || blocked()) return;
-    const action = write(cancelVisitOp(data, v.id, sameDay), sameDay ? '当日キャンセル' : '訪問を取り消す');
-    if (!action) return setError({ text: STALE });
-    toast(sameDay ? '当日キャンセルとして取り消しました' : '取り消しました', { action });
-    req.onSaved?.({ visitId: v.id, date: v.date, moved: false, staffSet: false, isNew: false, label: '' });
-  };
-  const doUncancel = () => {
-    if (!v || blocked()) return;
-    const action = write(uncancelVisitOp(data, v.id), '取り消しをやめる');
-    if (!action) return setError({ text: STALE });
-    toast('取り消しをやめました', { action });
-    req.onSaved?.({ visitId: v.id, date: v.date, moved: false, staffSet: false, isNew: false, label: '' });
-  };
-  const doRestore = () => {
-    if (!v || blocked()) return;
-    const next = restoreOccurrenceOp(data, v.id, today);
-    if (next === data) return;
-    const action = write(next, 'この回の変更を戻す');
-    if (!action) return setError({ text: STALE });
-    const after = findVisit(next, v.id);
-    if (after) setDraft(draftOf(after));
-    toast('この回の変更を戻しました（繰り返しのとおり）', { action });
-  };
-
-  /** 日の予定でその日を開く（今その日の日の予定にいるなら出さない） */
-  const dayDate = v?.date ?? draft.date;
-  const showDayLink = !isNew && !(pathname === '/plan' && shownDate === dayDate);
-  const openDay = async () => {
-    // 下書きのある画面（人の画面の節・条件の重み）から移るときは確かめる（断れば移らない）
-    if (!(await confirmLeave())) return;
-    onClose();
-    setDate(dayDate);
-    navigate('/plan', v ? { state: { visitId: v.id } } : undefined);
-  };
-
-  // 道順（今の担当の列の前の訪問先、1件目は自宅から）
-  const route = useMemo(() => {
-    if (!v || !info?.assignment.staffId) return null;
-    const s = staffById.get(info.assignment.staffId);
-    if (!s) return null;
-    // その人のその日の訪問（開始の順）で、この訪問の前の訪問
-    const order = visitsOn(data, v.date).filter((x) => !x.cancelled && x.staffId === s.id);
-    const i = order.findIndex((x) => x.id === v.id);
-    const prev = i > 0 ? order[i - 1] : undefined;
-    const prevClient = prev ? data.clients.find((c) => c.id === prev.clientId) : undefined;
-    return { staff: s, from: prevClient ? prevClient.place : s.home, fromName: prevClient?.displayName ?? HOME_LABEL };
-  }, [v, info, staffById, data]);
-
-  /** スマホの「道順」：前の場所（前の訪問先・自宅）から。担当が無ければ今いる場所から（Google マップ。ADR-0018） */
-  const routeHref = useMemo(() => {
-    if (!v || !client || !mapsOn) return null;
-    const mode = route?.staff.travelMode ?? 'DRIVE';
-    return (
-      (route?.from ? directionsHref({ origin: route.from, destination: client.place, mode }) : null) ??
-      directionsHref({ origin: null, destination: client.place, mode })
-    );
-  }, [v, client, route, mapsOn]);
-
-  const title = isNew ? '訪問を追加' : '訪問の詳細';
-  const type = typeOf(data.visitTypes, v?.typeId ?? draft.typeId);
   const owner = info?.assignment.staffId ?? null;
-  const ownerStaff = owner ? staffById.get(owner) : undefined;
-  const windowShown = (x: Pick<Visit, 'windowKind' | 'earliestStart' | 'latestStart'>) =>
-    x.windowKind === 'window' ? `${x.earliestStart}〜${x.latestStart} の間に開始` : x.earliestStart;
-
   /** スマホは「担当を替える」を開いたときだけ保存（ほかは閉じるだけ） */
   const saveShown = editable && !newBlocked && (!narrow || act === 'staff');
-  const footer = saveShown ? (
-    <>
-      <button type="submit" className="btn btn-primary" data-testid="vp-save">
-        <WithIcon icon={isNew ? Plus : Check}>{isNew ? '追加' : '保存'}</WithIcon>
-      </button>
-      <button type="button" className="btn" onClick={onClose} data-testid="vp-close">
-        <WithIcon icon={X}>閉じる</WithIcon>
-      </button>
-    </>
-  ) : (
-    <button type="button" className="btn" onClick={onClose} data-testid="vp-close">
-      <WithIcon icon={X}>閉じる</WithIcon>
-    </button>
-  );
 
   return (
     <SidePanel
       icon={isNew ? Plus : ClipboardList}
-      title={title}
+      title={isNew ? '訪問を追加' : '訪問の詳細'}
       narrow
       onClose={onClose}
       onSubmit={save}
@@ -417,7 +170,7 @@ function VisitPanel({
       returnFocus={returnFocus}
       fallbackFocus={headingOfPage}
       focusPanel={!isNew}
-      footer={footer}
+      footer={<VisitFooter saveShown={saveShown} isNew={isNew} onClose={onClose} />}
     >
       <div
         className="visit-panel stack"
@@ -436,487 +189,62 @@ function VisitPanel({
           </p>
         )}
         {v && info && (
-          <section className="vp-summary" data-testid="vp-summary" aria-label="訪問の内容">
-            <div className="vp-head">
-              <strong className="vp-client">
-                {client ? (
-                  <PersonButton kind="client" id={client.id} name={client.displayName} testId="vp-client-name" />
-                ) : (
-                  '（不明）'
-                )}
-              </strong>
-              <TypeMark type={type} compact />
-              {cancelled && (
-                <span className="chip chip-red" data-testid="vp-cancelled">
-                  {v.cancelKind === 'sameDay' ? '当日キャンセル' : '取り消し済み'}
-                </span>
-              )}
-              {info.onLeave && <span className="chip chip-leave">休みのため無し</span>}
-            </div>
-            <dl className="vp-facts">
-              <dt>日時</dt>
-              <dd data-testid="vp-when">
-                {dateText(v.date)} {windowShown(v)}
-              </dd>
-              <dt>所要</dt>
-              <dd>{v.durationMinutes}分</dd>
-              <dt>種類</dt>
-              <dd>{type?.name ?? 'なし'}</dd>
-              <dt>担当</dt>
-              <dd data-testid="vp-staff-now">
-                {ownerStaff ? (
-                  <span className="with-staff-mark">
-                    <StaffMark staff={ownerStaff} size="xs" />
-                    <PersonButton kind="staff" id={ownerStaff.id} name={ownerStaff.name} testId="vp-staff-name" />
-                    {info.assignment.pinned && (
-                      <span className="chip chip-pin">
-                        <Pin size={12} strokeWidth={2.4} aria-hidden="true" />
-                        ピン
-                      </span>
-                    )}
-                    {owner === info.usualStaffId && <span className="sub">（いつもの担当）</span>}
-                  </span>
-                ) : (
-                  <span className="sub">担当なし</span>
-                )}
-              </dd>
-              {info.patternText && (
-                <>
-                  <dt>繰り返し</dt>
-                  <dd data-testid="vp-pattern">
-                    <WithIcon icon={Repeat} size={14}>
-                      {info.patternText}の回
-                    </WithIcon>
-                  </dd>
-                </>
-              )}
-              {(info.changes.length > 0 || (v.pattern?.edited && !cancelled)) && (
-                <>
-                  <dt>この回の変更</dt>
-                  <dd className="row" style={{ gap: 4, flexWrap: 'wrap' }} data-testid="vp-changes">
-                    {info.changes.length === 0 && <span className="chip chip-warn">この回だけの変更</span>}
-                    {info.changes.map((c) => (
-                      <span key={c} className="chip chip-warn">
-                        {c}
-                      </span>
-                    ))}
-                    {timeOn && info.changes.length > 0 && (
-                      <button
-                        type="button"
-                        className="btn btn-small btn-text"
-                        onClick={doRestore}
-                        data-testid="vp-restore"
-                      >
-                        <WithIcon icon={RotateCcw} size={14}>
-                          繰り返しのとおりに戻す
-                        </WithIcon>
-                      </button>
-                    )}
-                  </dd>
-                </>
-              )}
-              {v.note && (
-                <>
-                  <dt>メモ</dt>
-                  <dd>{v.note}</dd>
-                </>
-              )}
-            </dl>
-            {!info.editable && <p className="sub">今日より前の訪問なので、見るだけです。</p>}
-            {showDayLink && !narrow && (
-              <button type="button" className="btn btn-small" onClick={openDay} data-testid="vp-open-day">
-                <WithIcon icon={CalendarDays} size={14}>
-                  日の予定で見る（{dateText(v.date)}）
-                </WithIcon>
-              </button>
-            )}
-          </section>
+          <VisitSummary
+            v={v}
+            info={info}
+            client={client}
+            type={typeOf(data.visitTypes, v?.typeId ?? draft.typeId)}
+            ownerStaff={owner ? staffById.get(owner) : undefined}
+            restorable={timeOn}
+            onRestore={doRestore}
+            onOpenDay={showDayLink && !narrow ? openDay : null}
+          />
         )}
 
-        {/* スマホの大きな4つのボタン（PRD D334）：担当を替える・取り消す・道順・日の予定で見る */}
         {narrow && v && info && (
-          <div className="vp-big" data-testid="vp-big">
-            <button
-              type="button"
-              className={`btn vp-big-btn${act === 'staff' ? ' is-on' : ''}`}
-              aria-expanded={act === 'staff'}
-              disabled={!editable}
-              title={!editable ? (cancelled ? '取り消した訪問です' : '今日より前の訪問は変えられません') : undefined}
-              onClick={() => setAct(act === 'staff' ? null : 'staff')}
-              data-testid="vp-big-staff"
-            >
-              <UserRoundCog size={22} aria-hidden="true" />
-              担当を替える
-            </button>
-            <button
-              type="button"
-              className={`btn vp-big-btn${act === 'cancel' ? ' is-on' : ''}`}
-              aria-expanded={act === 'cancel'}
-              disabled={!info.editable}
-              title={!info.editable ? '今日より前の訪問は変えられません' : undefined}
-              // 取り消した回は押すとそのまま取り消しをやめる（「取り消しをやめる」を2つ並べない）
-              onClick={() => (cancelled ? doUncancel() : setAct(act === 'cancel' ? null : 'cancel'))}
-              data-testid="vp-big-cancel"
-            >
-              {cancelled ? <Undo2 size={22} aria-hidden="true" /> : <Ban size={22} aria-hidden="true" />}
-              {cancelled ? '取り消しをやめる' : '取り消す'}
-            </button>
-            {/* 道順のリンク（ADR-0028 の mapsLink）を切っていれば出さない（3つに詰める） */}
-            {!mapsOn ? null : routeHref ? (
-              <a
-                className="btn vp-big-btn"
-                href={routeHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                title={MAPS_TITLE}
-                aria-label={`道順（${client?.displayName ?? ''}さんへ。Google マップ・新しいタブ）`}
-                data-testid="vp-big-route"
-              >
-                <Navigation size={22} aria-hidden="true" />
-                道順
-              </a>
-            ) : (
-              <button
-                type="button"
-                className="btn vp-big-btn"
-                disabled
-                title="場所（住所・地図の位置）が未登録のため、道順はありません"
-                data-testid="vp-big-route"
-              >
-                <Navigation size={22} aria-hidden="true" />
-                道順
-              </button>
-            )}
-            <button
-              type="button"
-              className="btn vp-big-btn"
-              onClick={showDayLink ? openDay : onClose}
-              data-testid="vp-big-day"
-            >
-              <CalendarDays size={22} aria-hidden="true" />
-              日の予定で見る
-            </button>
-          </div>
+          <VisitBigButtons
+            info={info}
+            editable={editable}
+            act={act}
+            setAct={setAct}
+            onUncancel={doUncancel}
+            mapsOn={mapsOn}
+            routeHref={routeHref}
+            clientName={client?.displayName ?? ''}
+            onDay={showDayLink ? openDay : onClose}
+          />
         )}
 
         {timeOn && !newBlocked && (
-          <fieldset className="vp-section" data-testid="vp-time">
-            <legend>{isNew ? '何を・いつ' : '日時を変える'}</legend>
-            <div className="form-grid">
-              {isNew && (
-                <label>
-                  <span>
-                    {terms.client}
-                    <RequiredMark />
-                  </span>
-                  <select
-                    value={draft.clientId}
-                    required
-                    {...bad('clientId')}
-                    onChange={(e) => set({ clientId: e.target.value })}
-                    data-testid="vp-client"
-                  >
-                    <option value="">選択してください</option>
-                    {data.clients
-                      .filter((c) => c.active || c.id === draft.clientId)
-                      .map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.displayName}
-                        </option>
-                      ))}
-                  </select>
-                </label>
-              )}
-              <label>
-                <span className="row" style={{ gap: 6 }}>
-                  種類
-                  {typeOf(data.visitTypes, draft.typeId) && <TypeDot type={typeOf(data.visitTypes, draft.typeId)!} />}
-                </span>
-                <select
-                  value={draft.typeId ?? ''}
-                  onChange={(e) => {
-                    const t = typeOf(data.visitTypes, e.target.value);
-                    // 新しい訪問は、種類を選ぶと所要をその種類の標準の所要にする
-                    set({
-                      typeId: e.target.value || null,
-                      ...(isNew && t ? { durationMinutes: t.durationMinutes } : {}),
-                    });
-                  }}
-                  data-testid="vp-type"
-                >
-                  <option value="">種類なし</option>
-                  {data.visitTypes.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
-                  {draft.typeId && !typeOf(data.visitTypes, draft.typeId) && (
-                    <option value={draft.typeId}>（消えた種類）</option>
-                  )}
-                </select>
-              </label>
-              <label>
-                <span>
-                  日付
-                  <RequiredMark />
-                </span>
-                <input
-                  type="date"
-                  value={draft.date}
-                  min={today}
-                  required
-                  {...bad('date')}
-                  onChange={(e) => set({ date: e.target.value || draft.date })}
-                  data-testid="vp-date"
-                />
-              </label>
-              <label>
-                時間の約束
-                <select
-                  value={draft.windowKind}
-                  onChange={(e) => set({ windowKind: e.target.value as VisitDraft['windowKind'] })}
-                  data-testid="vp-window"
-                >
-                  <option value="fixed">開始時刻が決まっている</option>
-                  <option value="window">開始に幅がある（受けられる時間帯）</option>
-                </select>
-              </label>
-              <label>
-                <span>
-                  {draft.windowKind === 'fixed' ? '開始時刻' : '最も早い開始時刻'}
-                  <RequiredMark />
-                </span>
-                <input
-                  type="time"
-                  value={draft.earliestStart}
-                  required
-                  {...bad('earliestStart')}
-                  onChange={(e) => {
-                    const s = e.target.value;
-                    if (!hhmm(s)) return set({ earliestStart: s });
-                    // 幅を保ってずらす
-                    const w =
-                      draft.windowKind === 'window' && hhmm(draft.latestStart)
-                        ? hhmmToMinutes(draft.latestStart) - hhmmToMinutes(draft.earliestStart)
-                        : 0;
-                    set({ earliestStart: s, latestStart: cappedHhmm(hhmmToMinutes(s) + Math.max(0, w)) });
-                  }}
-                  data-testid="vp-start"
-                />
-              </label>
-              {draft.windowKind === 'window' && (
-                <label>
-                  <span>
-                    最も遅い開始時刻
-                    <RequiredMark />
-                  </span>
-                  <input
-                    type="time"
-                    value={draft.latestStart}
-                    required
-                    {...bad('latestStart')}
-                    onChange={(e) => set({ latestStart: e.target.value })}
-                    data-testid="vp-latest"
-                  />
-                </label>
-              )}
-              <label>
-                <span>
-                  所要時間（分）
-                  <RequiredMark />
-                </span>
-                <input
-                  type="number"
-                  min={5}
-                  max={720}
-                  value={Number.isFinite(draft.durationMinutes) ? draft.durationMinutes : ''}
-                  required
-                  {...bad('durationMinutes')}
-                  onChange={(e) =>
-                    set({ durationMinutes: e.target.value === '' ? Number.NaN : Number(e.target.value) })
-                  }
-                  data-testid="vp-duration"
-                />
-              </label>
-              <label>
-                メモ
-                <input
-                  value={draft.note}
-                  maxLength={200}
-                  {...bad('note')}
-                  onChange={(e) => set({ note: e.target.value })}
-                  data-testid="vp-note"
-                />
-              </label>
-            </div>
-          </fieldset>
+          <VisitTimeFields data={data} draft={draft} set={set} bad={bad} isNew={isNew} today={today} />
         )}
 
         {editable && !newBlocked && choices && (!narrow || act === 'staff') && (
-          <fieldset className="vp-section" data-testid="vp-staff">
-            <legend>
-              {isNew ? '担当' : '担当を替える'}
-              {draft.date !== v?.date && !isNew && <span className="sub">（{dateText(draft.date)}の候補）</span>}
-            </legend>
-            {choices.why && <p className="sub">{choices.why}</p>}
-            <div className="vp-choices" role="radiogroup" aria-label="担当">
-              <label className="vp-choice">
-                <input
-                  type="radio"
-                  name="vp-staff"
-                  checked={pick === KEEP}
-                  onChange={() => setPick(KEEP)}
-                  data-testid="vp-staff-keep"
-                />
-                <span className="vp-choice-text">
-                  <span className="vp-choice-name">
-                    {isNew ? '選ばない（担当なし。あとで AI で組める）' : '変えない'}
-                    {!isNew && current && <span className="sub">（今：{staffName(current)}）</span>}
-                  </span>
-                </span>
-              </label>
-              {choices.choices
-                .filter((c) => !c.current)
-                .map((c) => {
-                  const off = !!c.disabled;
-                  return (
-                    <label
-                      key={c.staffId}
-                      className={`vp-choice${off ? ' is-off' : ''}`}
-                      title={c.disabled || undefined}
-                      data-testid="vp-staff-choice"
-                      data-staff={c.staffId}
-                    >
-                      <input
-                        type="radio"
-                        name="vp-staff"
-                        checked={pick === c.staffId}
-                        disabled={off}
-                        onChange={() => setPick(c.staffId)}
-                      />
-                      <span className="vp-choice-text">
-                        <span className="vp-choice-name with-staff-mark">
-                          <StaffMark staff={staffById.get(c.staffId)} size="xs" />
-                          {staffName(c.staffId)}
-                        </span>
-                        <span className="sub vp-choice-desc">{c.disabled || c.description}</span>
-                      </span>
-                    </label>
-                  );
-                })}
-              {!isNew && current && (
-                <label className="vp-choice">
-                  <input
-                    type="radio"
-                    name="vp-staff"
-                    checked={pick === NONE_PICK}
-                    onChange={() => setPick(NONE_PICK)}
-                    data-testid="vp-staff-none"
-                  />
-                  <span className="vp-choice-text">
-                    <span className="vp-choice-name">担当なし（入らなかった訪問へ）</span>
-                    <span className="sub vp-choice-desc">ピンも外れます（この回だけ）</span>
-                  </span>
-                </label>
-              )}
-            </div>
-            <p className="sub">選んだ人にピンが付き、AI で組んでも担当は変わりません。</p>
-          </fieldset>
+          <VisitStaffFields
+            isNew={isNew}
+            draftDate={draft.date}
+            visitDate={v?.date}
+            choices={choices}
+            pick={form.pick}
+            setPick={form.setPick}
+            staffById={staffById}
+          />
         )}
 
-        {scopes && !narrow && (
-          <fieldset className="vp-section" data-testid="vp-scope">
-            <legend>変える範囲（繰り返しの回です）</legend>
-            {(['once', 'following', 'all'] as const).map((k) => (
-              <label key={k} className="check">
-                <input
-                  type="radio"
-                  name="vp-scope"
-                  checked={scope === k}
-                  onChange={() => setScope(k)}
-                  style={{ width: 'auto' }}
-                  data-testid={`vp-scope-${k}`}
-                />
-                {SCOPE_LABELS[k]}
-                {k === 'following' && <span className="sub">（{scopes.following}）</span>}
-                {k === 'all' && <span className="sub">（{scopes.all}）</span>}
-              </label>
-            ))}
-            {scope !== 'once' && (
-              <p className="sub" data-testid="vp-scope-note">
-                {scopes.otherDays ? 'ほかの曜日の回は変えません。' : ''}
-                {keptText(scope === 'all' ? scopes.keptDates.all : scopes.keptDates.following)}
-                担当を選ぶと、範囲の回の担当といつもの担当も替わります。
-              </p>
-            )}
-          </fieldset>
-        )}
+        {scopes && !narrow && <VisitScopeFields scopes={scopes} scope={form.scope} setScope={form.setScope} />}
 
         <FieldError id={errorId} token={error}>
           {error?.text}
         </FieldError>
 
         {v && info?.editable && (!narrow || (act === 'cancel' && !cancelled)) && (
-          <section className="vp-section vp-cancel" aria-label="取り消し" data-testid="vp-cancel-area">
-            {cancelled ? (
-              <button type="button" className="btn" onClick={doUncancel} data-testid="vp-uncancel">
-                <WithIcon icon={Undo2}>取り消しをやめる</WithIcon>
-              </button>
-            ) : (
-              <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
-                <button
-                  type="button"
-                  className="btn tone-danger"
-                  onClick={() => doCancel(false)}
-                  data-testid="vp-cancel"
-                >
-                  <WithIcon icon={Ban}>取り消す</WithIcon>
-                </button>
-                <button
-                  type="button"
-                  className="btn tone-danger"
-                  onClick={() => doCancel(true)}
-                  data-testid="vp-cancel-sameday"
-                >
-                  当日キャンセルとして取り消す
-                </button>
-              </div>
-            )}
-            {info.pattern && !cancelled && <p className="sub">取り消しはこの回だけです。</p>}
-          </section>
+          <VisitCancelArea info={info} onCancel={doCancel} onUncancel={doUncancel} />
         )}
 
-        {v && client && (!narrow || hasVisitRules(client)) && (
-          <section className="vp-section" aria-label="決まりごと・道順">
-            <VisitRules client={client} />
-            {route && !narrow && (
-              <VisitRouteLinks
-                to={client.place}
-                toName={client.displayName}
-                from={route.from}
-                fromName={route.fromName}
-                mode={route.staff.travelMode}
-                testId="vp-route"
-              />
-            )}
-          </section>
-        )}
+        {v && client && <VisitRulesSection client={client} route={route} narrow={narrow} />}
       </div>
     </SidePanel>
   );
-}
-
-/** 分 → "HH:mm"（時刻の入力の上限 23:59 で止める） */
-const cappedHhmm = (m: number) => minutesToHhmm(Math.min(m, 23 * 60 + 59));
-
-/** そのままにする回の文（無ければ空） */
-function keptText(dates: readonly string[]): string {
-  if (dates.length === 0) return '';
-  const head = dates
-    .slice(0, 4)
-    .map((x) => dateText(x))
-    .join('・');
-  return `この回だけ変えた・取り消した ${dates.length}回（${head}${dates.length > 4 ? ' など' : ''}）はそのままです。`;
 }
 
 /** 閉じたときに戻り先が消えていたら、画面の見出しへ（フォーカスを body に落とさない） */

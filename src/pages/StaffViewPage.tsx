@@ -15,6 +15,7 @@ import { colorOf, initialOf } from '../lib/colors';
 import { AI_LINE, attempt, hasLocation, own, r0, TRAVEL_MODE_LABELS } from '../lib/common';
 import { dateText } from '../lib/dateText';
 import { BICYCLE_NOTE, dayStops, HOME_LABEL, tripLinks } from '../lib/mapsLink';
+import { prevStopOf } from '../lib/prevStop';
 import type { MapPoint } from '../lib/routeView';
 import { scheduleRoute } from '../matching';
 import './schedule.css';
@@ -152,9 +153,9 @@ export default function StaffViewPage() {
             )}
             <div className="card">
               {ids.length === 0 && <Empty icon={MapPin}>今日の訪問はありません</Empty>}
-              {ids.map((id, i) => {
+              {ids.map((id) => {
                 const v = visitById.get(id);
-                const prev = stops[i];
+                const prev = prevStopOf(data, id);
                 const c = v ? clientById.get(v.clientId) : undefined;
                 const t = timing.get(id);
                 return (
@@ -179,8 +180,8 @@ export default function StaffViewPage() {
                         <VisitRouteLinks
                           to={c?.place}
                           toName={c?.displayName ?? '（不明）'}
-                          from={prev?.place}
-                          fromName={prev && i > 0 ? prev.label : HOME_LABEL}
+                          from={prev?.from}
+                          fromName={prev?.fromName ?? HOME_LABEL}
                           mode={me.travelMode}
                         />
                       </div>
