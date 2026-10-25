@@ -7,9 +7,21 @@ import { putVisits, visitsOn } from '../patterns';
 import { createDemoData } from '../seed';
 import { confirmDay } from './confirmDay';
 import { dayProblemOf } from './dayPlan';
-import { attentionList, batchTargets, clientDay, type DayStatus, dayMarks, dayPlanOf, dayStatus, issueBreakdown, monthProgress, staffDay, staffMonth } from './month';
-import { addMonths, calendarWeeks, firstDayOf, isYm, monthDates, ymOf } from './ym';
+import {
+  attentionList,
+  batchTargets,
+  clientDay,
+  type DayStatus,
+  dayMarks,
+  dayPlanOf,
+  dayStatus,
+  issueBreakdown,
+  monthProgress,
+  staffDay,
+  staffMonth,
+} from './month';
 import { attentionCountByDate } from './monthRest';
+import { addMonths, calendarWeeks, firstDayOf, isYm, monthDates, ymOf } from './ym';
 
 const TODAY = '2026-11-10';
 /** 11月のデモのデータ（繰り返しの担当で回が計算される。版2） */

@@ -33,6 +33,7 @@ import { weekDates, weekDay } from '../lib/week';
 import { useDemoData } from '../store';
 import { PlaceAllPanel } from './PlaceAllPanel';
 import './settings.css';
+import { dateText } from '../lib/dateText';
 
 /**
  * 〈利用者さん〉一覧（PoC本体 ClientsPage.tsx を写し、性別希望・NG を特性・条件・相性に置き換えた）。
@@ -82,8 +83,7 @@ export default function ClientsPage() {
   const filterBodyId = useId();
   // 消えた種類を押したままでも数えない（今ある種類で絞る）
   const filterCount = activeFilterCount(knownTypes(filter, data.visitTypes));
-  const md = (d: string) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
-  const periodLabel = `${md(dates[0]!)}（${WEEKDAY_LABELS[weekday(dates[0]!)]}）からの週`;
+  const periodLabel = `${dateText(dates[0]!)}からの週`;
   const staffName = (id: string | null) => (id ? (staff.find((s) => s.id === id)?.name ?? '（不明）') : '');
   /** いつもの担当（繰り返しの担当。版2） */
   const usualMap = useMemo(() => usualStaffMap(data.patterns, date), [data.patterns, date]);

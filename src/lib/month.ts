@@ -8,7 +8,6 @@ import type { ContactList, Routes } from '../contracts/reassign';
 import { afterLastDay, availabilityOf, type Slot, withoutAbsences } from '../domain/availability';
 import { isOnLeave } from '../domain/leaves';
 import { addDays, hhmmToMinutes } from '../domain/time';
-import { monthDates } from './ym';
 import { type CompileInput, scheduleRoute } from '../matching';
 import { visitsOn } from '../patterns';
 import { own } from './common';
@@ -26,6 +25,7 @@ import {
 import { isRequestedOff } from './requestedOff';
 import { busyParts, type StaffSlot, spansOf, staffSlots } from './staffBar';
 import { workStats } from './workload';
+import { monthDates } from './ym';
 
 /** 担当を AI で組む日（月・週の「担当を AI で組む」）：要対応のある日だけ／伝えていない日すべて */
 export type BatchMode = 'care' | 'all';

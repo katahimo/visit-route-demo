@@ -5,8 +5,7 @@
 // 版2（ADR-0053）は混み具合も〈スタッフ〉の表示も同じ「その日の訪問の担当」を数えるので、混み具合の「空き N人」と、その30分が
 // 「空き」の人の数は一致する。純粋関数（データは書き換えない）
 import type { StopTiming } from '../contracts/problem';
-import { timeText } from '../domain/availability';
-import { hhmmToMinutes, minutesToHhmm } from '../domain/time';
+import { hhmmToMinutes } from '../domain/time';
 import {
   BAR_END,
   BAR_START,
@@ -17,6 +16,7 @@ import {
   DAY_MINUTES,
   edgeLabel,
 } from './barRows';
+import { clockTime } from './dateText';
 
 /**
  * 30分の状態：訪問／移動／空き（勤務内）／案なし（勤務内だが、その日に数える案が無いので空きか分からない）／
@@ -118,11 +118,9 @@ export function staffSlots(input: {
 export const spansOf = (slots: readonly { start: string; end: string }[]): Span[] =>
   slots.map((x) => ({ start: hhmmToMinutes(x.start), end: hhmmToMinutes(x.end) }));
 
-const hm = (t: number) => timeText(minutesToHhmm(t));
-
 /** 「9:00〜9:30 訪問」 */
 export function staffSlotText(x: StaffSlot): string {
-  return `${hm(x.start)}〜${hm(x.start + STEP)} ${STAFF_SLOT_LABEL[x.state]}`;
+  return `${clockTime(x.start)}〜${clockTime(x.start + STEP)} ${STAFF_SLOT_LABEL[x.state]}`;
 }
 
 /**
@@ -152,7 +150,7 @@ export function staffSlotSummary(slots: readonly StaffSlot[]): string {
         to = x.start + STEP;
         continue;
       }
-      if (from !== null) ranges.push(`${hm(from)}〜${hm(to)}`);
+      if (from !== null) ranges.push(`${clockTime(from)}〜${clockTime(to)}`);
       from = null;
       if (x && x.state === state) {
         from = x.start;

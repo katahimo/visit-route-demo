@@ -2,11 +2,9 @@
 // 確定のあとの「次の確定していない日へ」（PRD D224）の純粋関数。データは書き換えず、新しい DemoData を返す（書くのは画面の update(fn)）
 import type { DemoData } from '../contracts/data';
 import type { Problem } from '../contracts/problem';
-import { weekday } from '../domain/time';
-import { WEEKDAY_LABELS } from './common';
+import { dateText } from './dateText';
 import { tellDay } from './dayPlan';
 import type { Attention, DayStatus } from './month';
-import { mdText } from './dateText';
 
 /**
  * その日を確定する（今の担当・開始を伝えた内容として残す。日の画面の「確定（伝えた）」と月のまとめて確定で共通）。

@@ -17,4 +17,4 @@ export const ymText = (ym: string): string => `${ym.slice(0, 4)}年${Number(ym.s
 export const monthLabel = (ym: string): string => `${Number(ym.slice(5, 7))}月`;
 
 /** 0時からの分の時刻の文（「9:05」。先頭の0を付けない。分は丸める） */
-export const hmText = (minutes: number): string => timeText(minutesToHhmm(minutes));
+export const clockTime = (minutes: number): string => timeText(minutesToHhmm(minutes));

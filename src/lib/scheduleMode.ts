@@ -3,9 +3,9 @@
 import type { DemoData } from '../contracts/data';
 import { addDays } from '../domain/time';
 import { own } from './common';
+import { monthLabel } from './dateText';
 import { activeDayVisits } from './dayPlan';
 import { HOME_NEXT_MONTH_FROM_DAY } from './home';
-import { monthLabel } from './dateText';
 import { monthDates, ymOf } from './ym';
 
 /** 来月（YYYY-MM） */

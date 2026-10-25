@@ -61,7 +61,7 @@ import {
   type VisitRowData,
 } from '../components/visitParts';
 import type { Staff, Visit, VisitType } from '../contracts/documents';
-import { slotsText, timeText } from '../domain/availability';
+import { slotsText } from '../domain/availability';
 import { isOnLeave } from '../domain/leaves';
 import { addDays, hhmmToMinutes, jstDate, minutesToHhmm, weekday } from '../domain/time';
 import {
@@ -77,10 +77,27 @@ import {
 import { colorOf } from '../lib/colors';
 import { attempt, byDisplayName, byName, newId, WEEKDAY_LABELS } from '../lib/common';
 import { bulkConfirmDialog, bulkConfirmLabel, bulkConfirmTargets, bulkConfirmWhy, confirmDay } from '../lib/confirmDay';
+import { clockTime, mdText } from '../lib/dateText';
 import { isOn } from '../lib/features';
 import { attentionTarget, type LinkTarget } from '../lib/links';
-import { attentionList, batchTargets, type ClientDay, clientDay, type DayMarks, type DayPlan, type DayStatus, dayMarks, dayPlanOf, issueBreakdown, monthProgress, type StaffDay, shortName, staffDay, staffMonth, type TypeCount } from '../lib/month';
-import { addMonths, calendarWeeks, firstDayOf, isYm, monthDates, ymOf } from '../lib/ym';
+import {
+  attentionList,
+  batchTargets,
+  type ClientDay,
+  clientDay,
+  type DayMarks,
+  type DayPlan,
+  type DayStatus,
+  dayMarks,
+  dayPlanOf,
+  issueBreakdown,
+  monthProgress,
+  type StaffDay,
+  shortName,
+  staffDay,
+  staffMonth,
+  type TypeCount,
+} from '../lib/month';
 import { batchBandText, monthBatch } from '../lib/monthBatch';
 import { cellGuide, createTipStore, type TipStore } from '../lib/monthGuide';
 import {
@@ -95,7 +112,6 @@ import {
 } from '../lib/monthList';
 import { attentionCountByDate, showRestMark, usualRestByWeekday } from '../lib/monthRest';
 import { scrollBehavior } from '../lib/motion';
-import { mdText } from '../lib/dateText';
 import { type BandOp, bandHref, urgentCount } from '../lib/progressBand';
 import {
   type OffDayState,
@@ -113,10 +129,12 @@ import { useValueStore } from '../lib/valueStore';
 import { dropShadowText, dropTone } from '../lib/visitDrop';
 import { cellKeyOf } from '../lib/visitKeys';
 import { canSelectVisit, isMultiClick } from '../lib/visitSelect';
+import { addMonths, calendarWeeks, firstDayOf, isYm, monthDates, ymOf } from '../lib/ym';
 import { findVisit, visitsOn } from '../patterns';
 import { type DayLoadSlot, dayLoad } from '../vacancy';
 import './month.css';
 import './settings.css';
+import { ymText } from '../lib/dateText';
 
 /**
  * 月間カレンダーと月まとめ作成（ADR-0012。PRD D39〜D43・D53〜D55。design.md §4 pages「月単位の予定」「月間・週間の改定」）。
@@ -129,8 +147,6 @@ import './settings.css';
 
 const longDate = (d: string) =>
   `${Number(d.slice(5, 7))}月${Number(d.slice(8, 10))}日（${WEEKDAY_LABELS[weekday(d)]}）`;
-const ymText = (ym: string) => `${ym.slice(0, 4)}年${Number(ym.slice(5, 7))}月`;
-const hm = (t: number) => timeText(minutesToHhmm(t));
 const hoursText = (minutes: number) => `${Math.round((minutes / 60) * 10) / 10}時間`;
 
 /** 日の状態の言葉（一覧と同じ。lib/monthList） */
@@ -744,7 +760,7 @@ export default function MonthPage() {
     const at = hhmmToMinutes(v.start ?? v.earliestStart);
     return {
       visitId: v.id,
-      time: `${hm(at).replace(/^0/, '')}〜${hm(at + v.durationMinutes).replace(/^0/, '')}`,
+      time: `${clockTime(at).replace(/^0/, '')}〜${clockTime(at + v.durationMinutes).replace(/^0/, '')}`,
       title: data.clients.find((c) => c.id === v.clientId)?.displayName ?? '（不明）',
       staff: v.cancelled ? null : (s ?? null),
       staffName: v.cancelled || !v.staffId ? '' : (s?.name ?? '（不明）'),
@@ -812,7 +828,7 @@ export default function MonthPage() {
           c.visits
             .map(
               (v) =>
-                `${hm(v.start)} ${
+                `${clockTime(v.start)} ${
                   v.cancelled
                     ? '取り消し'
                     : v.leave
@@ -2147,7 +2163,7 @@ const DayCell = memo(function DayCell(props: CellProps) {
           : v.staffId
             ? `${staffById.get(v.staffId)?.name ?? ''}さん${v.substitute ? '（いつもの担当でない）' : ''}`
             : '担当なし';
-      parts.push(`${hm(v.start)} ${typeName(v.typeId)} ${who}${v.edited ? '（この回だけ変更）' : ''}`);
+      parts.push(`${clockTime(v.start)} ${typeName(v.typeId)} ${who}${v.edited ? '（この回だけ変更）' : ''}`);
     }
     body.push(
       <span key="visits" className="month-cvisits">
@@ -2163,7 +2179,7 @@ const DayCell = memo(function DayCell(props: CellProps) {
                 style={{ background: t ? colorOf(t.color) : '#cfc4bb' }}
                 aria-hidden="true"
               />
-              <span className="month-cvisit-time">{hm(v.start)}</span>
+              <span className="month-cvisit-time">{clockTime(v.start)}</span>
               <span className="month-cvisit-who">
                 {v.cancelled
                   ? v.sameDay

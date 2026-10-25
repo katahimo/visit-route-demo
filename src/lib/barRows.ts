@@ -5,6 +5,7 @@
 import { DAY_LOAD_MINUTES, type DayLoadSlot } from '../contracts/vacancy';
 import { timeText } from '../domain/availability';
 import { minutesToHhmm } from '../domain/time';
+import { clockTime } from './dateText';
 
 /** 段（時）：午前 8〜12・昼 12〜16・夕方 16〜20 */
 export const BAR_ROWS: readonly (readonly [number, number])[] = [
@@ -79,8 +80,6 @@ export function barEdges<T extends { start: number }>(
 /** 端の印の title・読み上げ（無ければ null） */
 export type BarEdgeTexts = { early: string | null; late: string | null };
 
-const hm = (t: number) => timeText(minutesToHhmm(t));
-
 /**
  * 混み具合の端の印の文（PRD D82）：8時より前・20時以降で働く人がいる30分を、時刻と人数が続く分でまとめる
  * （例「8時より前：7:00〜8:00 空き 2人／働く 3人」）。無ければ null
@@ -101,7 +100,7 @@ export function loadEdgeTexts(load: readonly DayLoadSlot[]): BarEdgeTexts {
       )
         j++;
       const x = xs[i]!;
-      parts.push(`${hm(x.start)}〜${hm(xs[j]!.start + BAR_STEP)} 空き ${x.free}人／働く ${x.working}人`);
+      parts.push(`${clockTime(x.start)}〜${clockTime(xs[j]!.start + BAR_STEP)} 空き ${x.free}人／働く ${x.working}人`);
       i = j + 1;
     }
     return `${edgeLabel(side)}：${parts.join('、')}`;

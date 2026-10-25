@@ -1,10 +1,10 @@
 // 空き状況の画面の段階と表示の決め方（PRD D184〜D187。ADR-0025。UI/UX 改善の区切り8a）。
 // 計算（vacancyOf・verdictOf・inquirySummary）は src/vacancy のまま。ここは画面に出す文と印を決めるだけの純粋関数
 import type { InquiryWish, VacancyCell, VacancyResult, Verdict } from '../contracts/vacancy';
-import { timeText } from '../domain/availability';
-import { hhmmToMinutes, minutesToHhmm } from '../domain/time';
+import { hhmmToMinutes } from '../domain/time';
 import { verdictOf } from '../vacancy';
 import { WEEKDAY_LABELS } from './common';
+import { clockTime } from './dateText';
 
 /** 狭い画面で表をはじめに見せる開始時刻（PRD D221。朝の早い列はたいてい × なので 9:00 の列から） */
 export const NARROW_FIRST_START = '09:00';
@@ -137,8 +137,6 @@ export type AnswerCard = {
   note: string;
 };
 
-const hm = (t: number) => timeText(minutesToHhmm(t));
-
 /**
  * 結果の1枚目の答え（PRD D258）。希望の曜日（無ければ全曜日）・開始の時間帯の中で、どの週も受けられる（○）開始時刻を
  * 曜日ごとに続いた範囲にまとめ（要約 inquirySummary と同じ決め方）、そこで受けられる人数（どの週でも受けられる人数の幅）を添える。
@@ -188,7 +186,8 @@ export function answerCard(result: VacancyResult, wish: Omit<InquiryWish, 'start
     let first: number | null = null;
     let last: number | null = null;
     const flush = () => {
-      if (first !== null && last !== null) ranges.push(first === last ? hm(first) : `${hm(first)}〜${hm(last)}`);
+      if (first !== null && last !== null)
+        ranges.push(first === last ? clockTime(first) : `${clockTime(first)}〜${clockTime(last)}`);
     };
     for (const c of cellsOf(wd)) {
       if (verdictOf(c) !== 'ok') continue;

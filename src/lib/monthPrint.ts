@@ -10,8 +10,8 @@ import { visitsOn } from '../patterns';
 import { own } from './common';
 import { dayProblemOf, dayRoutes, startsOf } from './dayPlan';
 import { shortName } from './month';
-import { calendarWeeks, ymOf } from './ym';
 import { isRequestedOff } from './requestedOff';
+import { calendarWeeks, ymOf } from './ym';
 
 /** 印刷の1件（訪問） */
 export type PrintEntry = {

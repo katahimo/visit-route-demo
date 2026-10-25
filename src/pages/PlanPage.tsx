@@ -78,9 +78,9 @@ import {
 } from '../lib/absences';
 import { colorOf } from '../lib/colors';
 import { attempt, formError, own, pointsText, r0 } from '../lib/common';
-import { dateText } from '../lib/dateText';
 import { confirmDay } from '../lib/confirmDay';
 import { type CancelledContact, type ContactRow, clock, contactCount, contactRows, dateWordOf } from '../lib/contacts';
+import { clockTime, dateText } from '../lib/dateText';
 import { dayLineRange, dayLines } from '../lib/dayLine';
 import {
   changeCount,
@@ -2001,7 +2001,6 @@ export default function PlanPage() {
   const dayRows = useMemo((): DayListRow[] => {
     if (!compact) return [];
     const startOf = (v: Visit) => explained.get(v.id)?.timing?.start ?? hhmmToMinutes(v.earliestStart);
-    const hm = (x: number) => minutesToHhmm(Math.round(x)).replace(/^0/, '');
     return [...m.allVisits]
       .sort((a, b) => startOf(a) - startOf(b) || a.id.localeCompare(b.id))
       .map((v) => {
@@ -2013,7 +2012,7 @@ export default function PlanPage() {
         const type = typeOf(data.visitTypes, v.typeId);
         return {
           visitId: v.id,
-          time: `${hm(start)}〜${hm(start + v.durationMinutes)}`,
+          time: `${clockTime(start)}〜${clockTime(start + v.durationMinutes)}`,
           title: clientById.get(v.clientId)?.displayName ?? '（不明）',
           staff: s,
           staffName: sName,

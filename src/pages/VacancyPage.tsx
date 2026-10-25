@@ -13,33 +13,58 @@ import { Hint, PageHeader, SidePanel, WithIcon } from '../components/ui';
 import type { Client, ClientPlace, Pattern } from '../contracts/documents';
 import { EMPTY_REFERRER, patternSchema } from '../contracts/documents';
 import type { Condition } from '../contracts/rules';
-import { VACANCY_DAY_END_DEFAULT, VACANCY_DAY_START_DEFAULT, VACANCY_DURATION_MAX, VACANCY_DURATION_MIN, VACANCY_MARGIN_DEFAULT, VACANCY_STEP_DEFAULT, VACANCY_WEEKS_MAX, VACANCY_WEEKS_MIN, type VacancyCell, type VacancyQuery, type VacancyRange, type VacancyResult } from '../contracts/vacancy';
+import {
+  VACANCY_DAY_END_DEFAULT,
+  VACANCY_DAY_START_DEFAULT,
+  VACANCY_DURATION_MAX,
+  VACANCY_DURATION_MIN,
+  VACANCY_MARGIN_DEFAULT,
+  VACANCY_STEP_DEFAULT,
+  VACANCY_WEEKS_MAX,
+  VACANCY_WEEKS_MIN,
+  type VacancyCell,
+  type VacancyQuery,
+  type VacancyRange,
+  type VacancyResult,
+} from '../contracts/vacancy';
 import { HALF_HOURS, timeText } from '../domain/availability';
 import { addDays, hhmmToMinutes, jstDate, jstHhmm, minutesToHhmm, weekday } from '../domain/time';
 import { pinnedAddressAfter, toPlace } from '../lib/addressLookup';
 import { copyText } from '../lib/clipboard';
 import { CLIENT_COLORS } from '../lib/colors';
 import { attempt, nameTaken, newId, WEEKDAY_LABELS } from '../lib/common';
-import { dateText, mdText } from '../lib/dateText';
+import { clockTime, dateText, mdText } from '../lib/dateText';
 import { unassignedDays } from '../lib/dayPlan';
-import { inquiryDayLevel, type InquiryDayMark, type InquiryRow, inquiryRows, vacancyLevel } from '../lib/glance';
+import { type InquiryDayMark, type InquiryRow, inquiryDayLevel, inquiryRows, vacancyLevel } from '../lib/glance';
 import { dayHref, unassignedHref } from '../lib/links';
 import { referrerRecipients, vacancySubject } from '../lib/mail';
 import { buildBccMails } from '../lib/mailto';
-import { ymOf } from '../lib/ym';
 import { typeOf } from '../lib/patternText';
 import { normalizePostalCode } from '../lib/postalCode';
 import { scrollLeftToShow } from '../lib/scrollEdge';
 import { useFeature } from '../lib/useFeature';
 import { COMPACT_QUERY, useMedia } from '../lib/useMedia';
 import { loadVacancyInput, saveVacancyInput } from '../lib/vacancyInput';
-import { answerCard, cellFace, markLegend, NARROW_FIRST_START, NO_TYPE_TEXT, noticeLine, placeLine, VACANCY_MARK, VACANCY_MARK_TEXT, whenWhatLine } from '../lib/vacancyView';
+import {
+  answerCard,
+  cellFace,
+  markLegend,
+  NARROW_FIRST_START,
+  NO_TYPE_TEXT,
+  noticeLine,
+  placeLine,
+  VACANCY_MARK,
+  VACANCY_MARK_TEXT,
+  whenWhatLine,
+} from '../lib/vacancyView';
 import { insertAllIntoPlans, weekStart } from '../lib/week';
+import { ymOf } from '../lib/ym';
 import { visitsIn } from '../patterns';
 import { useDemoData } from '../store';
 import { inquirySummary, vacancyNotice, vacancyOf, verdictOf } from '../vacancy';
 import './settings.css';
 import './vacancy.css';
+import { monthLabel } from '../lib/dateText';
 
 /**
  * 空き状況と問い合わせの試算（ADR-0012。段階3＝PRD D45〜D48。design.md §4 pages「空き状況と問い合わせの試算」）。
@@ -74,8 +99,6 @@ function StepNo({ n }: { n: number }) {
     </span>
   );
 }
-
-const hm = (t: number) => timeText(minutesToHhmm(t));
 
 /** 空き状況の表の凡例（PRD D78。どの週でも受けられる人数の段階） */
 const VACANCY_LEGEND: [string, string][] = [
@@ -115,11 +138,11 @@ function InquiryWeeks({ rows, exact }: { rows: InquiryRow[]; exact: boolean }) {
               <tr key={r.weekday}>
                 <th scope="row">
                   {WEEKDAY_LABELS[r.weekday]} {MARK[r.verdict]}
-                  {r.start !== null && <small> {hm(r.start)}〜</small>}
+                  {r.start !== null && <small> {clockTime(r.start)}〜</small>}
                   <span className="sr-only">（{VERDICT_TEXT[r.verdict]}）</span>
                 </th>
                 {r.days.map((x) => {
-                  const label = `${dateText(x.date)}${r.start !== null ? ` ${hm(r.start)}から` : ''}：${DAY_MARK[x.mark]} ${DAY_TEXT[x.mark]}${
+                  const label = `${dateText(x.date)}${r.start !== null ? ` ${clockTime(r.start)}から` : ''}：${DAY_MARK[x.mark]} ${DAY_TEXT[x.mark]}${
                     x.mark === 'ok' ? `（${exact ? '' : '約'}${x.best}人）` : ''
                   }`;
                   return (
@@ -835,7 +858,7 @@ export default function VacancyPage() {
                 to={`/month?ym=${ymOf(noPlan[0]!)}`}
                 data-testid="vacancy-noplan-month"
               >
-                {Number(noPlan[0]!.slice(5, 7))}月の予定を見る
+                {monthLabel(noPlan[0]!)}の予定を見る
               </Link>
             )}
           </div>
@@ -897,7 +920,7 @@ export default function VacancyPage() {
                   </th>
                   {result.times.map((t) => (
                     <th key={t} scope="col" className={t % 60 === 0 ? 'is-hour' : ''} data-start={minutesToHhmm(t)}>
-                      {hm(t)}
+                      {clockTime(t)}
                     </th>
                   ))}
                 </tr>
@@ -911,7 +934,7 @@ export default function VacancyPage() {
                     {result.times.map((t) => {
                       const c = cellOf.get(`${wd}-${t}`);
                       if (!c) return <td key={t} />;
-                      const f = cellFace(c, result.exact, `${WEEKDAY_LABELS[wd]} ${hm(t)}から`);
+                      const f = cellFace(c, result.exact, `${WEEKDAY_LABELS[wd]} ${clockTime(t)}から`);
                       return (
                         <td key={t}>
                           <button
@@ -1162,7 +1185,7 @@ export default function VacancyPage() {
         <SidePanel
           icon={Users}
           narrow
-          title={`${WEEKDAY_LABELS[picked.weekday]} ${hm(picked.start)}〜${hm(picked.start + durationNum)}`}
+          title={`${WEEKDAY_LABELS[picked.weekday]} ${clockTime(picked.start)}〜${clockTime(picked.start + durationNum)}`}
           onClose={() => setPicked(null)}
           footer={
             <button type="button" className="btn" onClick={() => setPicked(null)}>
@@ -1254,7 +1277,7 @@ export default function VacancyPage() {
             {slots.map((s) => (
               <li key={s.weekday}>
                 <strong>
-                  {WEEKDAY_LABELS[s.weekday]} {hm(s.start)}
+                  {WEEKDAY_LABELS[s.weekday]} {clockTime(s.start)}
                 </strong>
                 <span>
                   {vType ? `${vType.name}・` : ''}

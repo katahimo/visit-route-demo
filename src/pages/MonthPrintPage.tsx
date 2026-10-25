@@ -6,11 +6,12 @@ import { WithIcon } from '../components/ui';
 import { jstDate, minutesToHhmm, weekday } from '../domain/time';
 import { colorOf } from '../lib/colors';
 import { byName, WEEKDAY_LABELS } from '../lib/common';
-import { addMonths, isYm, ymOf } from '../lib/ym';
 import { monthPrint, type PrintDay } from '../lib/monthPrint';
 import { REQUESTED_OFF_NOTE } from '../lib/requestedOff';
+import { addMonths, isYm, ymOf } from '../lib/ym';
 import { useDemoData } from '../store';
 import './monthPrint.css';
+import { ymText } from '../lib/dateText';
 
 /**
  * 月の予定の印刷（PRD D70。ADR-0014。#/month/print?ym=2026-11&staff=s1）：紙のカレンダーの代わり。
@@ -30,7 +31,7 @@ export default function MonthPrintPage() {
   const staffId = staff?.id ?? null;
   const weeks = useMemo(() => monthPrint(data, ym, staffId), [data, ym, staffId]);
   const today = jstDate(Date.now());
-  const title = `${ym.slice(0, 4)}年${Number(ym.slice(5, 7))}月の予定${staff ? `（${staff.name}さん）` : ''}`;
+  const title = `${ymText(ym)}の予定${staff ? `（${staff.name}さん）` : ''}`;
 
   const patch = (next: Record<string, string | null>) =>
     setParams(

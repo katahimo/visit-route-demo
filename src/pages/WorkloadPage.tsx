@@ -16,14 +16,15 @@ import { timeText } from '../domain/availability';
 import { jstDate, minutesToHhmm, weekday } from '../domain/time';
 import { copyText } from '../lib/clipboard';
 import { byName, WEEKDAY_LABELS } from '../lib/common';
+import { mdText } from '../lib/dateText';
 import { periodEmptyGuide } from '../lib/emptyGuide';
 import { activeVisitsOn } from '../lib/month';
-import { addMonths, isYm, monthDates, ymOf } from '../lib/ym';
-import { mdText } from '../lib/dateText';
 import { useFeature } from '../lib/useFeature';
 import { hmText, kmOf, type WorkDay, type WorkStat, workloadTsv, workMonth, workTotals } from '../lib/workload';
+import { addMonths, isYm, monthDates, ymOf } from '../lib/ym';
 import { useDemoData } from '../store';
 import './workload.css';
+import { ymText } from '../lib/dateText';
 
 /**
  * 稼働の見込み（PRD D72。ADR-0015。#/workload?ym=2026-11）：予定（確定した割当、無ければ今の案）から、
@@ -186,7 +187,7 @@ export default function WorkloadPage() {
             <ChevronLeft size={18} aria-hidden="true" />
           </button>
           <h2 className="work-title" data-testid="work-title">
-            {ym.slice(0, 4)}年{Number(ym.slice(5, 7))}月
+            {ymText(ym)}
           </h2>
           <button
             type="button"

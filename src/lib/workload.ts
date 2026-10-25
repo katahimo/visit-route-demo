@@ -6,9 +6,10 @@ import type { DemoData } from '../contracts/data';
 import type { Problem } from '../contracts/problem';
 import { type CompileInput, scheduleRoute } from '../matching';
 import { own } from './common';
+import { mdText } from './dateText';
 import { dayProblemOf, dayRoutes } from './dayPlan';
-import { monthDates } from './ym';
 import { type RoutePart, spanParts } from './staffBar';
+import { monthDates } from './ym';
 
 /** 見込みの元：伝えた日（確定）／まだ伝えていない日 */
 export type WorkSource = 'confirmed' | 'plan';

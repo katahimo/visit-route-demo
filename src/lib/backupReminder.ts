@@ -1,6 +1,7 @@
 // 控え（バックアップ）の書き出しの記録と知らせ（PRD D227。ADR-0032）：最後に書き出した日の文と、起動したときに知らせるかを決める純粋関数。
 // 日付は日本時間の YYYY-MM-DD を引数で受ける（Date.now を読まない）。記録の読み書きは store の backupMemory
 import type { DemoData } from '../contracts/data';
+import { mdText } from './dateText';
 
 /** この日数以上書き出していなければ知らせる */
 export const BACKUP_REMIND_DAYS = 14;

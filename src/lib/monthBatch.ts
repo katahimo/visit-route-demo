@@ -13,6 +13,7 @@ import { visitsOn } from '../patterns';
 import { reassignDiff } from '../reassign';
 import { defaultIterations, runSolve } from '../solver';
 import { own } from './common';
+import { mdText } from './dateText';
 import { aiPinsOf, dayProblemOf, pinsOf, routesOf, startsOf, writeRoutes } from './dayPlan';
 import type { BatchMode } from './month';
 import { createValueStore, type ReadableStore } from './valueStore';

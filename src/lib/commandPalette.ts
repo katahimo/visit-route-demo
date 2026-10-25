@@ -8,9 +8,9 @@ import { visitsIn } from '../patterns';
 import { STAGE_LABELS } from './clientStage';
 import { dateText } from './dateText';
 import { isHrefOn } from './features';
-import { addMonths, ymOf } from './ym';
 import { absenceHref, isNavAction, type MenuItem, type NavSection } from './nav';
 import { normalizeKana } from './search';
+import { addMonths, ymOf } from './ym';
 
 /** 候補の種類（出す順）：操作 → 画面 → 〈利用者さん〉 → 〈スタッフ〉 → 訪問（PRD D304） */
 export type PaletteKind = 'action' | 'screen' | 'client' | 'staff' | 'visit';

@@ -8,6 +8,7 @@ import { useToast } from '../components/Toast';
 import { Hint, SectionTitle, SidePanel, WithIcon } from '../components/ui';
 import { addDays, jstDate, weekday } from '../domain/time';
 import { byName, newId, WEEKDAY_LABELS } from '../lib/common';
+import { mdText } from '../lib/dateText';
 import {
   applyOffboard,
   applyOffboardWith,
@@ -17,8 +18,8 @@ import {
   offboardScope,
   unlimitedBy,
 } from '../lib/offboard';
-import { mdText } from '../lib/dateText';
 import { useDemoData } from '../store';
+import { monthLabel } from '../lib/dateText';
 
 /** 持ち方の文 */
 const ROLE_TEXT: Record<OffboardRole, string> = {
@@ -255,7 +256,7 @@ export function OffboardPanel({ staffId, onClose }: { staffId: string; onClose: 
                 }}
               >
                 <WithIcon icon={CalendarDays} size={14}>
-                  {Number(scope.from.slice(5, 7))}月の「月の予定」を開く
+                  {monthLabel(scope.from)}の「月の予定」を開く
                 </WithIcon>
               </button>
               <ul className="offboard-days" data-testid="offboard-visits">

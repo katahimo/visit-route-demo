@@ -40,8 +40,8 @@ import { useValueStore } from '../lib/valueStore';
 import { useDemoData } from '../store';
 import './settings.css';
 import './standard.css';
+import { mdText, dateText } from '../lib/dateText';
 
-const md = (d: string) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
 const cellKey = (r: CellRef) => `${r.patternId}|${r.weekday}`;
 
 type TableProps = {
@@ -384,7 +384,7 @@ export default function StandardPage() {
     const patternsChanged = new Set(effectiveDiff.map((c) => c.patternId)).size;
     const lines = [
       `今の標準と違う ${effectiveDiff.length}か所（繰り返し ${patternsChanged}件）を書き換えます。曜日で担当が違う繰り返しは曜日ごとに分けます。`,
-      `${md(since)}から先の予定は、この表の担当・時刻で並びます。`,
+      `${mdText(since)}から先の予定は、この表の担当・時刻で並びます。`,
       temps.length > 0
         ? temp === 'drop'
           ? `すでに入っている予定で新しい標準と違う ${temps.length}件は、消して標準どおりにします。`
@@ -394,7 +394,7 @@ export default function StandardPage() {
       '伝えた日の予定とピンの予定は変えません。元に戻すで戻せます',
     ].filter(Boolean);
     const ok = await confirmDialog({
-      title: `この表を ${md(since)} から標準にしますか？`,
+      title: `この表を ${mdText(since)} から標準にしますか？`,
       body: lines.join('\n'),
       confirmLabel: '標準にする',
     });
@@ -433,14 +433,14 @@ export default function StandardPage() {
       />
       <p className="sub" data-testid="standard-now">
         {std
-          ? `標準：${md(std.from)}から・考え方「${presetName(data.scorePresetId ?? std.presetId)}」・${std.weeks}週の周期（${md(jstDate(std.at))}に登録）`
+          ? `標準：${mdText(std.from)}から・考え方「${presetName(data.scorePresetId ?? std.presetId)}」・${std.weeks}週の周期（${mdText(jstDate(std.at))}に登録）`
           : 'まだ標準を登録していません'}
       </p>
       <ol className="standard-steps stack" data-testid="standard-steps">
         <li className="card stack" data-step="proposals">
           <h2>1. 案をくらべる</h2>
           <p className="sub" data-testid="standard-period">
-            プリセット（考え方）ごとに、{md(period.from)}〜{md(period.to)}（{period.weeks}週。{cycle.reason}）の担当を
+            プリセット（考え方）ごとに、{mdText(period.from)}〜{mdText(period.to)}（{period.weeks}週。{cycle.reason}）の担当を
             AI
             で組み、標準の表の案を作ります。繰り返しだけから作り（ピン・今の予定の手直しは見ません）、今の予定は変わりません
           </p>
@@ -646,7 +646,7 @@ export default function StandardPage() {
                 {temps.length > 0 && (
                   <fieldset className="standard-temp stack" data-testid="standard-temp-choice">
                     <legend>
-                      {md(since)}から先ですでに担当が入っている予定のうち、新しい標準と違うもの
+                      {mdText(since)}から先ですでに担当が入っている予定のうち、新しい標準と違うもの
                       <strong data-testid="standard-temp-count"> {temps.length}件</strong>
                     </legend>
                     <label className="standard-choice">
@@ -680,7 +680,7 @@ export default function StandardPage() {
                       <ul className="standard-temp-list">
                         {temps.slice(0, 20).map((t) => (
                           <li key={t.visitId}>
-                            {md(t.date)}（{WEEKDAY_LABELS[new Date(`${t.date}T00:00:00Z`).getUTCDay()]}）
+                            {dateText(t.date)}
                             {clientName(t.clientId)}：今 {staffName(t.now.staffId)} {t.now.start ?? ''} → 標準{' '}
                             {staffName(t.standard.staffId)} {t.standard.start ?? ''}
                           </li>
@@ -707,7 +707,7 @@ export default function StandardPage() {
                   )}
                   {skippedDiff > 0 && (
                     <span className="sub" data-testid="standard-skipped">
-                      {md(since)}より前に終わる繰り返しの直し {skippedDiff}か所は書き換えません
+                      {mdText(since)}より前に終わる繰り返しの直し {skippedDiff}か所は書き換えません
                     </span>
                   )}
                 </div>
@@ -716,7 +716,7 @@ export default function StandardPage() {
               registered && (
                 <div className="standard-done stack" data-testid="standard-done">
                   <p>
-                    <strong>{md(registered.since)} から毎週この表のとおりに並びます</strong>
+                    <strong>{mdText(registered.since)} から毎週この表のとおりに並びます</strong>
                   </p>
                   <div className="row">
                     <Link to={`/week?d=${mondayOf(registered.since)}`} className="btn" data-testid="standard-week-link">

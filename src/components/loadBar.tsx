@@ -7,8 +7,6 @@ import './barMarks.css';
 import './loadBar.css';
 import type { VisitType } from '../contracts/documents';
 import type { DayLoadSlot } from '../contracts/vacancy';
-import { timeText } from '../domain/availability';
-import { minutesToHhmm } from '../domain/time';
 import {
   BAR_ROWS,
   BAR_STEP,
@@ -21,6 +19,7 @@ import {
   withEdges,
 } from '../lib/barRows';
 import { colorOf } from '../lib/colors';
+import { clockTime } from '../lib/dateText';
 
 /** 30分の色の段階：働く人がいない／空き 0人／1人／2人以上 */
 export type LoadLevel = 'off' | 'none' | 'one' | 'many';
@@ -33,11 +32,10 @@ export function loadLevel(x: Pick<DayLoadSlot, 'working' | 'free'>): LoadLevel {
 }
 
 const STEP = BAR_STEP;
-const hm = (t: number) => timeText(minutesToHhmm(t));
 
 /** 「14:00〜14:30 空き 3人／働く 7人」 */
 export function loadSlotText(x: DayLoadSlot): string {
-  const range = `${hm(x.start)}〜${hm(x.start + STEP)}`;
+  const range = `${clockTime(x.start)}〜${clockTime(x.start + STEP)}`;
   if (x.working === 0) return `${range} 働く人なし`;
   return `${range} 空き ${x.free}人／働く ${x.working}人`;
 }
@@ -58,7 +56,7 @@ export function loadSummary(load: readonly DayLoadSlot[]): string {
         to = x.start + STEP;
         continue;
       }
-      if (from !== null) ranges.push(`${hm(from)}〜${hm(to)}`);
+      if (from !== null) ranges.push(`${clockTime(from)}〜${clockTime(to)}`);
       from = null;
     }
     if (ranges.length > 0) parts.push(`${label} ${ranges.join('、')}`);

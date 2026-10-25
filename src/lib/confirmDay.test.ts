@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { dateText } from './dateText';
 import type { DemoData } from '../contracts/data';
 import { findVisit, putVisits, visitsOn } from '../patterns';
 import { createInitialData } from '../seed/plans';
@@ -13,6 +12,7 @@ import {
   datesText,
   nextUnconfirmed,
 } from './confirmDay';
+import { dateText } from './dateText';
 import { dayProblemOf, dayRoutes, toldChanges } from './dayPlan';
 import { type DayStatus, dayStatus } from './month';
 

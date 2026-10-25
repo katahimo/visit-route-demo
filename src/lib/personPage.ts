@@ -3,12 +3,12 @@
 import type { DemoData } from '../contracts/data';
 import type { Absence, Visit } from '../contracts/documents';
 import { leaveOn } from '../domain/leaves';
-import { addDays, hhmmToMinutes, weekday } from '../domain/time';
-import { own, WEEKDAY_LABELS } from './common';
-import { addMonths, ymOf } from './ym';
-import { mdText } from './dateText';
+import { addDays, hhmmToMinutes } from '../domain/time';
+import { own } from './common';
+import { dateText, ymText } from './dateText';
 import { clientVisitsIn, staffVisitsIn } from './visitOps';
 import { weekDates, weekStart } from './week';
+import { addMonths, ymOf } from './ym';
 
 // ---- ルートとタブ ----
 

@@ -16,12 +16,12 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Check } from '../components/Check';
 import { useConfirm } from '../components/ConfirmDialog';
 import { CondChips, ConditionsEditor, TraitsEditor } from '../components/conditions';
 import { type FormErr, invalidAttrs, RequiredMark, toFormErr } from '../components/FieldError';
 import { PersonCalendar } from '../components/PersonCalendar';
 import { PickChips } from '../components/PickChips';
-import { Check } from '../components/Check';
 import { TentativeMark } from '../components/parts';
 import { ClientAreaRow, ClientStaffRows, CondRows, DlRow } from '../components/personDetail';
 import { BackToList, EditSection, type PersonTabDef, PersonTabs, useAskDiscard } from '../components/personPage';
@@ -42,9 +42,9 @@ import { isBeforeActive, STAGE_LABELS, stageChoices, withStage } from '../lib/cl
 import { CLIENT_COLORS, colorOf, initialOf } from '../lib/colors';
 import { byName, hasLocation, nameTaken, newId } from '../lib/common';
 import { traitText } from '../lib/compatView';
+import { mdText } from '../lib/dateText';
 import { leavesOf } from '../lib/leaves';
 import { normalizeEmail } from '../lib/mailto';
-import { mdText } from '../lib/dateText';
 import {
   type CalView,
   CLIENT_TABS,

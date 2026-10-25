@@ -4,13 +4,7 @@ import type { DemoData } from '../contracts/data';
 import type { Absence } from '../contracts/documents';
 import { client, DATE, makeData, staff, visit } from '../matching/fixtures';
 import { attentionList, dayMarks, dayPlanOf, dayStatus, staffDay, staffMonth } from './month';
-import {
-  isRequestedOff,
-  offDayState,
-  REQUESTED_OFF_NOTE,
-  requestedOffDates,
-  toggleRequestedOff,
-} from './requestedOff';
+import { isRequestedOff, offDayState, REQUESTED_OFF_NOTE, requestedOffDates, toggleRequestedOff } from './requestedOff';
 
 /** DATE は月曜。s1・s2 は平日勤務 */
 const SAT = '2026-10-17';
@@ -72,7 +66,6 @@ describe('希望休の判定と付け外し', () => {
 });
 
 describe('休みの人の月の印', () => {
-
   it('dayStatus：休みの人に担当のある訪問は「担当が休み」の要対応（版2。訪問ごとの検査）', () => {
     const staffed = [visit('v1', 'c1', '10:00', '11:00', { staffId: 's1' })];
     const d = data({ absences: [off('a1', 's1', DATE)], visits: staffed });

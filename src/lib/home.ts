@@ -7,15 +7,14 @@ import { addDays } from '../domain/time';
 import { dateText, monthLabel } from './dateText';
 import { isHrefOn } from './features';
 import { type AttentionKind, attentionList, type DayStatus } from './month';
-import { monthDates, ymOf } from './ym';
 import { SUDDEN_DO } from './sudden';
+import { monthDates, ymOf } from './ym';
 
 /**
  * この日（日付の日）以降なら、来月も見る（来月の準備。PRD D142・D255）。月末7日では来月のまとめて作るが遅い（シフトの希望・
  * 確定の連絡は月の後半に始まる）ので、月の半ばから出す。事業所ごとに変えない（契約に足すほどの差が無い。D255）
  */
 export const HOME_NEXT_MONTH_FROM_DAY = 15;
-
 
 /** ホームで見る月：今月。今日が HOME_NEXT_MONTH_FROM_DAY 日以降なら来月も */
 export function homeMonths(today: string): string[] {

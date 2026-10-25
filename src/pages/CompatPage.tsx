@@ -46,6 +46,7 @@ import {
 import { weekDates, weekDay } from '../lib/week';
 import { useDemoData } from '../store';
 import './settings.css';
+import { dateText } from '../lib/dateText';
 
 /** 凡例（◎○△×の意味。色は表のセルと同じ） */
 const LEGEND: { mark: string; cls: string; text: string }[] = [
@@ -227,8 +228,7 @@ export default function CompatPage() {
     [terms.staff],
   );
   const filterTerms = useMemo(() => ({ client: terms.client, staff: terms.staff }), [terms.client, terms.staff]);
-  const md = (d: string) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
-  const periodLabel = `${md(dates[0]!)}（${WEEKDAY_LABELS[weekday(dates[0]!)]}）からの週`;
+  const periodLabel = `${dateText(dates[0]!)}からの週`;
 
   /** URL に書く（既定なら消す。履歴を増やさない） */
   const go = useCallback(

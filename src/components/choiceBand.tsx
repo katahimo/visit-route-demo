@@ -11,11 +11,17 @@ import { colorOf } from '../lib/colors';
 import { deltaText, newId, r0, WEEKDAY_LABELS } from '../lib/common';
 import { dateText, mdText } from '../lib/dateText';
 import { ownerOf, pointsOf, routesOf, unassignedOf } from '../lib/dayPlan';
-import { type BatchProposal, monthBatch, type ProposalChange, proposalDayChanges, proposalDayFresh } from '../lib/monthBatch';
+import {
+  type BatchProposal,
+  monthBatch,
+  type ProposalChange,
+  proposalDayChanges,
+  proposalDayFresh,
+} from '../lib/monthBatch';
 import { typeOf } from '../lib/patternText';
 import { buildRouteMap, homeLegKey, useRouteSelection } from '../lib/routeView';
 import { bestIndex, dayStandardPreview, registerDayStandard } from '../lib/standard';
-import { legsOf, type LegSpan } from '../lib/timeline';
+import { type LegSpan, legsOf } from '../lib/timeline';
 import { useDayModel } from '../lib/useDayModel';
 import { useValueStore } from '../lib/valueStore';
 import { useConfirm } from './ConfirmDialog';

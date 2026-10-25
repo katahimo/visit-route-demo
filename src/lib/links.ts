@@ -5,8 +5,8 @@
 import type { Features } from '../contracts/features';
 import { isHrefOn } from './features';
 import type { Attention } from './month';
-import { ymOf } from './ym';
 import { SUDDEN_DO } from './sudden';
+import { ymOf } from './ym';
 
 /** 日の画面の「入らなかった訪問」の列へ巻く `?do=` の値（PRD D201） */
 export const UNASSIGNED_DO = 'unassigned';
