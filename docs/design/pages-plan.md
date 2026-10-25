@@ -1,6 +1,6 @@
 # 日の予定（予定と手直し）
 
-> この画面のファイル：`src/pages/PlanPage.tsx`・`planParts.tsx`・`planHeader.tsx`（`PlanConfirmActions`・`PlanOneLine`・`PlanHelp`）・`planBands.tsx`（`PlanBands`）・`planDetail.tsx`（`PlanDetailPanel`・`PlanSummary`・`BalanceChips`）・`cancelVisitPanel.tsx`・`mailPanels.tsx`（`DayMailPanel`）・`plan.css`、`src/components/routeView.tsx`・`routeTimeline.tsx`・`MapDock.tsx`・`MenuButton.tsx`・`dayLines.tsx`・`visitType.tsx`・`VisitRules.tsx`・`mapsLinks.tsx`・`useDayModel.ts`・`useRouteSelection.ts`、`src/lib/dayModel.ts`・`dayPlan.ts`・`planView.ts`（`planColumns`・`hardLabelsOf`・`toldMarksOf`・`unplacedReasons`・`droppedRowsOf`・`hardRowsOf`）・`dayMail.ts`（`dayMailRows`・`dayMailProgress`）・`reassignMenu.ts`・`scoreReason.ts`・`routeView.ts`・`timeline.ts`・`dayLine.ts`・`confirmDay.ts`、`src/components/Toast.tsx`。関連 ADR：0004・0007〜0010・0012・0013・0015・0018・0025・0028・0030・0031・0044・0053・0056。関連 PRD：D16〜D18・D20・D21・D23〜D25・D58・D63・D84・D91〜D101・D157・D158・D173〜D174・D201〜D209・D217〜D219・D224・D266・D269・D314〜D319・D323・D339〜D341。
+> この画面のファイル：`src/pages/PlanPage.tsx`（区画を並べるだけ）・状態と処理のフック `usePlanPage.ts`（まとめ）・`usePlanData.ts`（計算）・`usePlanView.ts`（表示の状態）・`usePlanNav.ts`（移動・フォーカス・URL の入口）・`usePlanEdits.ts`（手直し・取り消し・確定）・`usePlanDrag.ts`（ドラッグ）・`usePlanShown.ts`（地図・日ごとのリスト・担当ごとの1日・一覧の行）・区画 `planLayout.tsx`・`planToolbar.tsx`（`PlanProgressText`）・`planColumns.tsx`（列・`PlanBoard`）・`planCards.tsx`（カード・帯・印）・`planReassignMenu.tsx`（`ReassignMenu`）・`visitList.tsx`（`VisitList`）・`planParts.tsx`・`planHeader.tsx`（`PlanConfirmActions`・`PlanOneLine`・`PlanHelp`）・`planBands.tsx`（`PlanBands`）・`planDetail.tsx`（`PlanDetailPanel`・`PlanSummary`・`BalanceChips`）・`cancelVisitPanel.tsx`・`mailPanels.tsx`（`DayMailPanel`）・`plan.css`、`src/components/routeView.tsx`・`routeTimeline.tsx`・`MapDock.tsx`・`MenuButton.tsx`・`dayLines.tsx`・`visitType.tsx`・`VisitRules.tsx`・`mapsLinks.tsx`・`useDayModel.ts`・`useRouteSelection.ts`、`src/lib/dayModel.ts`・`dayPlan.ts`・`planView.ts`（`planColumns`・`hardLabelsOf`・`toldMarksOf`・`unplacedReasons`・`droppedRowsOf`・`hardRowsOf`）・`dayMail.ts`（`dayMailRows`・`dayMailProgress`）・`reassignMenu.ts`・`scoreReason.ts`・`routeView.ts`・`timeline.ts`・`dayLine.ts`・`confirmDay.ts`、`src/components/Toast.tsx`。関連 ADR：0004・0007〜0010・0012・0013・0015・0018・0025・0028・0030・0031・0044・0053・0056。関連 PRD：D16〜D18・D20・D21・D23〜D25・D58・D63・D84・D91〜D101・D157・D158・D173〜D174・D201〜D209・D217〜D219・D224・D266・D269・D314〜D319・D323・D339〜D341。
 > 版2（ADR-0053）：担当は訪問に持ち（`Visit.staffId`・`start`・`pinned`）、その日の割当は `lib/dayPlan` の `dayRoutes`。この節で「今の案」とあるのはその日の訪問の担当のこと
 > 欠勤・キャンセルの欄と振り直しは [pages-plan-absence.md](pages-plan-absence.md)、バーの塗りは [pages-bars.md](pages-bars.md)。
 
@@ -118,7 +118,7 @@
 - ドラッグの始まりは `lib/dragStart` の `deferredDragStart`（つかんでから DOM を変えない）
 - 移すとトースト「〈名前〉さんへ移しました」（必須の条件に合わなければ「〈名前〉さんへ移しました。必須の条件に合わないので、作り直すとこの訪問は入りません」。PRD D307）、入らなかった訪問へは「入らなかった訪問へ移しました」。どちらも「元に戻す」付き（下）
 
-##### 担当を変える ▾（PRD D217。`ReassignMenu`）
+##### 担当を変える ▾（PRD D217。`pages/planReassignMenu.tsx` の `ReassignMenu`）
 
 ドラッグと同じ手直しを、押す・キーボード・タッチで。訪問の詳細（時間軸の帯の `tl-detail`・順番のカードの詳細。900px 以下・390px は順番の表示なのでカードの詳細）の「担当：」の下に置く。
 
