@@ -35,7 +35,7 @@ import {
   homeTasks,
 } from '../lib/home';
 import { dayPlanOf } from '../lib/month';
-import { dayVisitRows, unassignedVisits, type VisitRow } from '../lib/visitOps';
+import { dayVisitRows, unassignedVisits, type VisitRow } from '../lib/visitLists';
 import { useDemoData } from '../store';
 import './home.css';
 

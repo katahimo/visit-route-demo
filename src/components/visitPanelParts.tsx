@@ -15,7 +15,7 @@ import {
 import type { Client, Staff, Visit, VisitType } from '../contracts/documents';
 import { dateText } from '../lib/dateText';
 import type { PrevStop } from '../lib/prevStop';
-import type { VisitInfo } from '../lib/visitOps';
+import type { VisitInfo } from '../lib/visitDraft';
 import { windowShown } from '../lib/visitPanelText';
 import { MAPS_TITLE, VisitRouteLinks } from './mapsLinks';
 import { PersonButton } from './PersonPopover';

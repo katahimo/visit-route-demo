@@ -4,7 +4,9 @@
 import type { DemoData } from '../contracts/data';
 import { hhmmToMinutes, minutesToHhmm } from '../domain/time';
 import { findVisit } from '../patterns';
-import { applyVisitEdit, assignOnDays, cancelVisitOp, draftOf } from './visitOps';
+import { draftOf } from './visitDraft';
+import { applyVisitEdit, cancelVisitOp } from './visitOps';
+import { assignOnDays } from './visitStaff';
 import { canMoveVisit } from './week';
 
 /** 時刻（HH:mm）を minutes 分ずらす（その日の 00:00〜23:59 を出たら null） */
