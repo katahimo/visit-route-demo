@@ -1,24 +1,15 @@
 // Excel の「プリセット」シート（ADR-0008）
-import ExcelJS from 'exceljs';
+import type ExcelJS from 'exceljs';
 import { describe, expect, it } from 'vitest';
-import type { DemoData, ImportError } from '../contracts/data';
+import type { DemoData } from '../contracts/data';
 import { setBasisWeight } from '../lib/presets';
 import { createDemoData, presetOf, scorePresetOf } from '../seed';
 import { isImportError } from '../store/persist';
-import { exportWorkbook, importWorkbook } from './index';
+import { editAndImport, toBuffer } from './excel.testkit';
+import { importWorkbook } from './index';
 
 const base = () => createDemoData('2026-10-13');
 
-async function toBuffer(d: DemoData): Promise<ArrayBuffer> {
-  return (await exportWorkbook(d)).arrayBuffer();
-}
-async function editAndImport(d: DemoData, fn: (wb: ExcelJS.Workbook) => void): Promise<DemoData | ImportError> {
-  const wb = new ExcelJS.Workbook();
-  await wb.xlsx.load(await toBuffer(d));
-  fn(wb);
-  const buf = (await wb.xlsx.writeBuffer()) as ArrayBuffer;
-  return importWorkbook(buf, d);
-}
 const col = (ws: ExcelJS.Worksheet, header: string) => {
   for (let c = 1; c <= ws.columnCount; c++) if (ws.getRow(1).getCell(c).value === header) return c;
   throw new Error(`列がない：${header}`);

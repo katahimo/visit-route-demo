@@ -149,8 +149,9 @@ function makeDay(d, today) {
 
 // ---- 日の画面：入らなかった訪問・受けられる人・欠勤の人に残る訪問・休み・上限を超える拘束（2人以上） ----
 async function day(page) {
-  // 初期データは今日からの日を繰り返しの担当のままにするので、保存した担当の入った訪問を用意する
-  await planDays(page);
+  // 初期データは今日からの日を繰り返しの担当のままにするので、保存した担当の入った訪問を用意する。
+  // 段ごとの新しい文脈（初期データ）から組むので、2回目からは1回目の結果の写し（scripts/lib/plan.cjs）
+  await planDays(page, { cache: true });
   await openPlan(page);
   const made = await mutate(page, makeDay, TODAY);
   check(!!made?.leaveClient && !!made.v1 && !!made.v2, 'データを作った（欠勤・入らない訪問・休み・拘束の上限）', made);
@@ -342,7 +343,8 @@ async function day(page) {
 
 // ---- 拘束が上限を超える人が1人なら、今までどおり帯の「稼働の見込み」ボタン ----
 async function overOne(page) {
-  await planDays(page);
+  // 新しい文脈（初期データ）から組むので day の結果の写し
+  await planDays(page, { cache: true });
   await openPlan(page);
   // 今日の訪問を、保存した訪問でいちばん訪問の多い人だけに残し（ほかは担当なし）、上限を 0.5時間にする。
   // 拘束は今の担当から数えるので、上限を超えるのは必ずその1人になる

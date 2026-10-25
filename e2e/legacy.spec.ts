@@ -210,6 +210,9 @@ for (const file of files) {
   test(`${file}${PERF.has(name) ? ' @perf' : ''}`, async () => {
     const base = test.info().project.use.baseURL;
     if (!base) throw new Error('baseURL がありません（playwright.config.ts の use.baseURL）');
+    // 初期データから AI で組んだ結果（scripts/lib/plan.cjs の planDays の cache）を、同じ実行のスクリプトで分け合う。
+    // test-results の下なので実行のたびに消える
+    process.env.E2E_PLAN_CACHE_DIR = path.join(test.info().project.outputDir, '.plan-cache');
     if (hasSteps(file)) await runInProcess(file, name, base);
     else await runChild(file, name, base);
   });

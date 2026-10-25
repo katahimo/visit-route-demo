@@ -722,7 +722,7 @@ async function mobile(page) {
     '390px：設定のタブの上の帯の名前「設定・データ」',
   );
   await open(page, '/clients');
-  check(!(await page.getByTestId('cmdk-open').isVisible()), '390px：上の帯に「探す」は出さない（下のタブ。PRD D336）');
+  // 上の帯に「探す」を出さないことは e2e-mobile の header が確かめる
   const btn = page.getByTestId('bottom-search');
   const bb = await btn.boundingBox();
   const tb = await page.getByTestId('bottom-tabs').boundingBox();

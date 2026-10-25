@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { type Problem, SCORE_MAX } from '../contracts/problem';
 import { compile } from '../matching';
 import { DATE, randomData } from '../matching/fixtures';
-import { applyPreset, createDemoData, INITIAL_PRESETS as PRESETS } from '../seed';
+import { createDemoData } from '../seed';
 import { defaultIterations, solve } from '../solver';
 import { hundredBreakdown, naivePlan, normalize, ruleLowerBounds, score, toHundred } from './index';
 
@@ -68,19 +68,7 @@ describe('点数（ADR-0007 案A。100 −（費用 − 下限）÷ 訪問の件
     );
   }, 30000);
 
-  it(`デモデータ ${DEMO_DATE}：どのプリセットの AI案も下限以上の費用`, () => {
-    for (const preset of PRESETS) {
-      const q = compile({ ...demo, rules: applyPreset(demo.rules, preset) }, DEMO_DATE);
-      const s = normalize(q);
-      const naive = score(q, naivePlan(q)).total;
-      const r = solve(q, { seed: demo.seed, iterations: defaultIterations(q) });
-      expect(s.lowerBound).toBeLessThanOrEqual(r.score + 1e-6);
-      expect(s.lowerBound).toBeLessThanOrEqual(naive + 1e-6);
-      console.info(
-        `[点数] ${preset.name}：AI案 費用${Math.round(r.score)}→${toHundred(r.score, s)}点 / 素朴な案 ${Math.round(naive)} / 下限 ${Math.round(s.lowerBound)}`,
-      );
-    }
-  }, 60000);
+  // 各プリセットの AI案・素朴な案が下限以上の費用であることは、seed の14日（この日を含む）で naive.seed*.test.ts が確かめる
 
   it('ランダムな問題でも、下限は素朴な案・AI案・適当な案の費用以下', () => {
     for (const seed of [1, 2, 3, 4, 5]) {
