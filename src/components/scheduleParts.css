@@ -242,3 +242,70 @@
   box-shadow: none;
   border-width: 1px;
 }
+/* 提案の変わる訪問（誰の訪問が誰へ・何時へ）。390px でも1行ずつ折り返して見える */
+.proposal-changes {
+  margin: 4px 0 8px;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+}
+.proposal-change {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+}
+.proposal-change-visit {
+  font-weight: 700;
+}
+.proposal-change-who {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.proposal-change.is-unplaced {
+  border-color: var(--danger);
+}
+.proposal-change.is-unplaced .proposal-change-who {
+  color: var(--danger);
+}
+/* 考え方ごとの案（PRD D357）：カードを横に並べ、狭い画面では縦に積む */
+.choice-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 8px;
+}
+.choice-card {
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+}
+.choice-name {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  font-size: 1rem;
+}
+.choice-stats {
+  margin: 0;
+  font-size: 0.9rem;
+}
+.choice-card .proposal-changes {
+  margin: 0;
+  font-size: 0.88rem;
+}
+.choice-actions {
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: auto;
+}

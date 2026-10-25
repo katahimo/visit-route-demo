@@ -3,6 +3,7 @@ import type { DemoData } from '../contracts/data';
 import type { Problem, SolveResult } from '../contracts/problem';
 import { addDays } from '../domain/time';
 import { putVisits, visitsOn } from '../patterns';
+import { reassignDiff } from '../reassign';
 import { createDemoData } from '../seed';
 import { solve } from '../solver';
 import { dayProblemOf } from './dayPlan';
@@ -15,6 +16,7 @@ import {
   dayInputsOf,
   dayLabel,
   proposalCounts,
+  proposalDayChanges,
   proposalDayFresh,
   weekLabel,
 } from './monthBatch';
@@ -133,6 +135,51 @@ describe('monthBatch（担当を AI で組む。PRD D256・D257。ADR-0042・ADR
     expect(b.proposal.get()).toBeNull();
     expect(b.apply()).toBeNull();
     expect(b.running()).toBe(false);
+  });
+
+  it('考え方ごとの案（variants）：最初の日を考え方ごとに組み、案ごとに選んで反映する。andThen は同じ update で当てる（PRD D357）', async () => {
+    const seen: Problem[] = [];
+    const s = fakeSolve();
+    const b = createMonthBatch((p) => {
+      seen.push(p);
+      return s.fn(p);
+    });
+    const start = unassigned();
+    const h = hostOf(start);
+    b.connect(h.host);
+    const variants = start.presets.slice(0, 3).map((p, k) => ({
+      presetId: p.id,
+      name: p.name,
+      rules: start.rules.map((r) => ({ ...r, weight: k })),
+    }));
+    expect(b.start({ ...job, source: 'day', rangeStart: TODAY, variants })).toBe(true);
+    expect(b.run.get()).toMatchObject({ targets: [TODAY, TODAY, TODAY], variants: variants.map((v) => v.name) });
+    expect(batchBandText(b.run.get()!)).toContain(variants[0]!.name);
+    await finishAll(s.calls);
+    expect(seen.length).toBe(3);
+    const prop = b.proposal.get()!;
+    expect(prop.days).toEqual([]);
+    expect(prop.choices?.map((c) => [c.presetId, c.days.map((x) => x.date)])).toEqual(
+      variants.map((v) => [v.presetId, [TODAY]]),
+    );
+    expect(batchDoneText(b.done.get()!)).toContain('案を3つ');
+    // 見ていた提案と違う番号なら反映しない（確認を待つ間に提案が替わったとき）
+    expect(b.apply({ id: prop.id + 1, choice: 1 })).toBeNull();
+    expect(h.writes()).toBe(0);
+    let marked = false;
+    const r = b.apply({
+      id: prop.id,
+      choice: 1,
+      andThen: (d) => {
+        marked = true;
+        return d;
+      },
+    });
+    expect(r).toEqual({ applied: [TODAY], skipped: [] });
+    expect(marked).toBe(true);
+    expect(h.writes()).toBe(1);
+    expect(staffed(h.data(), TODAY)).toBeGreaterThan(0);
+    expect(b.proposal.get()).toBeNull();
   });
 
   it('考え方（rules）を渡すと、その条件で問題を作る（データの条件は変えない。担当を組むの画面のプリセット）', async () => {
@@ -398,5 +445,29 @@ describe('日の予定のその場の提案の古さ（PRD D335。画面を移�
       ],
     };
     expect(proposalDayFresh(other, day)).toBe(true);
+  });
+});
+
+describe('proposalDayChanges', () => {
+  it('担当が変わる訪問（今の担当 → 提案の担当）と時刻が変わる訪問（差の分）を、提案での開始の順に並べる', () => {
+    const d = createDemoData(TODAY);
+    const date = addDays(TODAY, 1);
+    const problem = dayProblemOf(d, date)!;
+    const routes = solve(problem, { seed: 1, iterations: 2000 }).routes;
+    const [s0] = problem.staff.filter((s) => (routes[s.id] ?? []).length > 0);
+    const moved = routes[s0!.id]![0]!;
+    const before = { ...routes, [s0!.id]: routes[s0!.id]!.slice(1) };
+    const diff = reassignDiff({ problem, routes: before }, { problem, routes });
+    const rows = proposalDayChanges({ problem, routes, diff });
+    const row = rows.find((r) => r.visitId === moved)!;
+    expect(row).toMatchObject({ kind: 'staff', from: null, to: s0!.id });
+    expect(row.clientId).toBe(problem.visits.find((v) => v.id === moved)!.clientId);
+    expect(rows.filter((r) => r.kind === 'staff')).toHaveLength(diff.moved.length);
+    expect(rows.filter((r) => r.kind === 'time').map((r) => r.minutes)).toEqual(
+      expect.arrayContaining(diff.shifted.map((x) => x.minutes)),
+    );
+    for (const r of rows.filter((x) => x.kind === 'time')) expect(r.from).toBe(s0!.id);
+    expect(rows.map((r) => r.at)).toEqual([...rows.map((r) => r.at)].sort((a, b) => a - b));
+    expect(proposalDayChanges({ problem, routes, diff: null })).toEqual([]);
   });
 });

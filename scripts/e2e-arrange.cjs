@@ -2,6 +2,7 @@
 // 見出しの下のタブ（担当を組む・組み方の標準）、範囲（月・週・日。既定は月で URL の ?ym=・?d=・?date= に書く）と
 // 選んだ範囲の担当なし・要対応の件数、「AI で組む」で範囲の提案の帯が出て反映するまで訪問は変わらない・
 // ［反映する］で担当が入り「元に戻す」で1手戻る・［捨てる］で何も変えない、考え方（プリセット）を選んで組むと帯にその名前、
+// 組み方の標準がまだ無い日の範囲は考え方ごとの案（3つ）を並べ、［この案を標準にする］でその日に反映して標準を登録する（PRD D357）、
 // 「案を比べる」で比較の画面（#/compare?date=）へ移り、比較の画面から担当を組むへ戻れる、スマホ（390px）で横にはみ出さない。
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-arrange.cjs
@@ -10,6 +11,7 @@
 const path = require('node:path');
 const { answerConfirms } = require('./lib/confirmDialog.cjs');
 const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, hashOf, runSteps, settle } = require('./lib/env.cjs');
+const { markStandard } = require('./lib/standard.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
 
 const YM = TODAY.slice(0, 7);
@@ -57,14 +59,17 @@ const assignedOn = (page, date) =>
     ({ k, d }) => JSON.parse(localStorage.getItem(k)).visits.filter((v) => v.date === d && v.staffId).length,
     { k: STORAGE_KEY, d: date },
   );
+/** 標準が無い間の週・月に出る案内（「AI で組む」の欄の代わり） */
+const NEED_STANDARD = '[data-testid="arrange-need-standard"]';
 const rangeBand = (page) => page.locator('[data-testid="proposal-band"][data-kind="range"]');
+const choiceBand = (page) => page.locator('[data-testid="proposal-band"][data-kind="choices"]');
 /** 帯が出るまで待つ（組み終わるまで） */
 const waitBand = (page) => rangeBand(page).waitFor({ timeout: 90000 });
 
 // ---- 範囲：既定は月、月・週・日を選ぶと URL に書く ----
 async function range(page) {
   await editData(page, (key) => localStorage.removeItem(key), STORAGE_KEY);
-  await open(page, '/arrange');
+  await open(page, '/arrange', NEED_STANDARD);
   check((await page.locator('h1').innerText()) === '担当を組む', '見出し「担当を組む」');
   const tabs = page.getByTestId('arrange-tabs');
   check(
@@ -88,7 +93,7 @@ async function range(page) {
   await page.locator('[data-testid="arrange-scope"] [data-scope="day"]').click();
   await page.waitForFunction(() => /[?&]date=/.test(location.hash));
   check(/^#\/arrange\?date=\d{4}-\d{2}-\d{2}$/.test(hashOf(page)), '日を選ぶと ?date=', hashOf(page));
-  await open(page, `/arrange?d=${TODAY}`);
+  await open(page, `/arrange?d=${TODAY}`, NEED_STANDARD);
   check(
     (await page.locator('[data-testid="arrange-scope"] button[aria-pressed="true"]').getAttribute('data-scope')) ===
       'week' && (await page.getByTestId('arrange-date').inputValue()) === mondayOf(TODAY),
@@ -97,9 +102,120 @@ async function range(page) {
   await page.screenshot({ path: path.join(OUT_DIR, 'arrange-1400.png') });
 }
 
+// ---- 標準が無い間の週・月：案内の文と［日の範囲へ］だけ（「AI で組む」の欄は出さない。ADR-0064） ----
+async function needStandard(page) {
+  await editData(page, (key) => localStorage.removeItem(key), STORAGE_KEY);
+  for (const [label, hash] of [
+    ['月', `/arrange?ym=${YM}`],
+    ['月（クエリ無し）', '/arrange'],
+    ['週', `/arrange?d=${TODAY}`],
+  ]) {
+    await open(page, hash, NEED_STANDARD);
+    check((await page.getByTestId('arrange-need-standard').count()) === 1, `標準が無い${label}：案内の文を出す`);
+    check((await page.getByTestId('arrange-to-day').count()) === 1, `標準が無い${label}：日の範囲へ移るボタンを出す`);
+    const hidden = [];
+    for (const id of ['arrange-start', 'arrange-mode-care', 'arrange-mode-all', 'arrange-preset', 'arrange-count']) {
+      if ((await page.getByTestId(id).count()) > 0) hidden.push(id);
+    }
+    check(hidden.length === 0, `標準が無い${label}：「AI で組む」の欄を出さない`, hidden);
+  }
+  check(
+    /^\d+\/\d+を考え方ごとの案で組む$/.test((await page.getByTestId('arrange-to-day').innerText()).trim()),
+    '案内のボタン「M/Dを考え方ごとの案で組む」',
+    await page.getByTestId('arrange-to-day').innerText(),
+  );
+  await page.getByTestId('arrange-to-day').click();
+  await page.waitForFunction(() => /[?&]date=/.test(location.hash));
+  check(/^#\/arrange\?date=\d{4}-\d{2}-\d{2}$/.test(hashOf(page)), '［日の範囲へ］で ?date= になる', hashOf(page));
+  await page.getByTestId('arrange-start').waitFor({ timeout: 30000 });
+  check(
+    (await choiceBand(page).count()) === 0 && (await page.getByTestId('arrange-need-standard').count()) === 0,
+    '日の範囲では案内を出さず「AI で組む」（考え方ごとの案）に変わる',
+  );
+}
+
+// ---- 標準が無い日の範囲：考え方ごとの案 → この案を標準にする → 元に戻す（PRD D357） ----
+async function choices(page, { dlg }) {
+  await clearPlans(page);
+  await open(page, `/arrange?date=${TODAY}`);
+  check(
+    (await page.getByTestId('arrange-choices-note').count()) === 1,
+    '標準が無い日の範囲：考え方ごとの案を組むと書く',
+  );
+  check((await page.getByTestId('arrange-preset').count()) === 0, '考え方ごとの案のときは考え方の選ぶ欄を出さない');
+  check(/つの案を組む/.test(await page.getByTestId('arrange-start').innerText()), 'ボタン「3つの案を組む」');
+  await page.getByTestId('arrange-start').click();
+  await choiceBand(page).waitFor({ timeout: 150000 });
+  const cards = choiceBand(page).getByTestId('choice-card');
+  check((await cards.count()) === 3, '考え方ごとの案のカードが3つ（初期データのプリセットの数）', await cards.count());
+  check((await assignedOn(page, TODAY)) === 0, '案が出ても、選ぶまで訪問は変わらない');
+  check(
+    (await choiceBand(page).getByTestId('proposal-change').count()) > 0,
+    'カードに変わる訪問（誰の訪問が誰へ）の一覧',
+  );
+  await page.screenshot({ path: path.join(OUT_DIR, 'arrange-choices.png') });
+  const preset = await cards.nth(1).getAttribute('data-preset');
+  const n = dlg.messages.length;
+  await cards.nth(1).getByTestId('choice-adopt').click();
+  await choiceBand(page).waitFor({ state: 'detached', timeout: 10000 });
+  check(
+    /組み方の標準にしますか/.test(dlg.messages[n] ?? ''),
+    '［この案を標準にする］は何が起きるかを確かめる',
+    dlg.messages[n],
+  );
+  await page.waitForFunction(
+    ({ k }) => JSON.parse(localStorage.getItem(k)).standard !== undefined,
+    { k: STORAGE_KEY },
+    { timeout: 10000 },
+  );
+  const saved = await page.evaluate((k) => JSON.parse(localStorage.getItem(k)), STORAGE_KEY);
+  check(
+    saved.standard?.presetId === preset && saved.scorePresetId === preset,
+    '選んだ案の考え方が標準の考え方（点数の基準）になる',
+    { standard: saved.standard, scorePresetId: saved.scorePresetId, preset },
+  );
+  check((await page.getByTestId('arrange-choices-note').count()) === 0, '標準を登録したら日の範囲もふだんの提案に戻る');
+  // 全体の「元に戻す」で1手戻る（反映と標準の登録をまとめて）
+  await page.getByTestId('undo-btn').click();
+  await page.waitForFunction(
+    ({ k }) => JSON.parse(localStorage.getItem(k)).standard === undefined,
+    { k: STORAGE_KEY },
+    { timeout: 10000 },
+  );
+  check((await assignedOn(page, TODAY)) === 0, '「元に戻す」で案を選ぶ前に戻る（標準も消える）');
+}
+
+// ---- 考え方ごとの案はすべてのプリセット（最大6つ）：プリセットを1つ足すとカードが4枚（ADR-0064） ----
+async function choicesAll(page) {
+  await clearPlans(page);
+  await editData(
+    page,
+    (key) => {
+      const d = JSON.parse(localStorage.getItem(key));
+      d.presets.push({ ...d.presets[0], id: 'extra', name: '追加の考え方' });
+      localStorage.setItem(key, JSON.stringify(d));
+    },
+    STORAGE_KEY,
+  );
+  await open(page, `/arrange?date=${TODAY}`);
+  const n = await page.evaluate((k) => JSON.parse(localStorage.getItem(k)).presets.length, STORAGE_KEY);
+  check(n === 4, '用意：プリセットが4つ', n);
+  check(/4つの案を組む/.test(await page.getByTestId('arrange-start').innerText()), 'ボタン「4つの案を組む」');
+  await page.getByTestId('arrange-start').click();
+  await choiceBand(page).waitFor({ timeout: 200000 });
+  const cards = choiceBand(page).getByTestId('choice-card');
+  check((await cards.count()) === 4, 'プリセットの数だけ（4枚）カードが並ぶ', await cards.count());
+  check(
+    (await choiceBand(page).locator('[data-testid="choice-card"][data-preset="extra"]').count()) === 1,
+    '足したプリセットのカードがある',
+  );
+  check((await assignedOn(page, TODAY)) === 0, '案が出ても、選ぶまで訪問は変わらない');
+}
+
 // ---- AI で組む → 提案の帯 → 反映 → 元に戻す ----
 async function runApply(page) {
   await clearPlans(page);
+  await markStandard(page);
   await open(page, `/arrange?date=${TODAY}`);
   const unassigned = Number(await page.getByTestId('arrange-unassigned').getAttribute('data-count'));
   check(unassigned > 0, '担当を外した日：担当なしの訪問の件数が出る', unassigned);
@@ -135,6 +251,7 @@ async function runApply(page) {
 
 // ---- 考え方（プリセット）を選んで組む・捨てる ----
 async function preset(page) {
+  await markStandard(page);
   await open(page, `/arrange?date=${TODAY}`);
   const select = page.getByTestId('arrange-preset');
   const options = await select.locator('option').allInnerTexts();
@@ -154,6 +271,7 @@ async function preset(page) {
 
 // ---- 案を比べるへ移る・戻る ----
 async function compare(page) {
+  await markStandard(page);
   await open(page, `/arrange?ym=${YM}`);
   const date = await page.getByTestId('arrange-compare-date').inputValue();
   await page.getByTestId('arrange-compare-open').click();
@@ -168,6 +286,7 @@ async function compare(page) {
 
 // ---- スマホ（390px）：横にはみ出さない ----
 async function mobile(page) {
+  await markStandard(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await open(page, `/arrange?ym=${YM}`);
   const w = await page.evaluate(() => {
@@ -192,8 +311,12 @@ const steps = sharedPage({
     // 確認は独自のダイアログで受ける（ネイティブのダイアログが出たら失敗。PRD D146）
     return { ...s, dlg: await answerConfirms(s.page) };
   },
+  call: (fn, s) => fn(s.page, s),
   steps: [
     ['range', range],
+    ['need-standard', needStandard],
+    ['choices', choices],
+    ['choices-all', choicesAll],
     ['run-apply', runApply],
     ['preset', preset],
     ['compare', compare],

@@ -433,7 +433,7 @@ export default function StandardPage() {
       />
       <p className="sub" data-testid="standard-now">
         {std
-          ? `標準：${md(std.from)}から・考え方「${presetName(std.presetId)}」・${std.weeks}週の周期（${md(jstDate(std.at))}に登録）`
+          ? `標準：${md(std.from)}から・考え方「${presetName(data.scorePresetId ?? std.presetId)}」・${std.weeks}週の周期（${md(jstDate(std.at))}に登録）`
           : 'まだ標準を登録していません'}
       </p>
       <ol className="standard-steps stack" data-testid="standard-steps">

@@ -77,8 +77,8 @@ describe('プリセットの repair', () => {
 });
 
 describe('点数の基準のプリセット（scorePresetId。ADR-0010）', () => {
-  it('初期データは「標準」', () => {
-    expect(base().scorePresetId).toBe('standard');
+  it('初期データは「バランス」', () => {
+    expect(base().scorePresetId).toBe('balance');
   });
 
   it('無い古いデータ・存在しない id は先頭のプリセットにする（版は1のまま）', () => {

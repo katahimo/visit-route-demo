@@ -1,5 +1,5 @@
 // テスト用の小さな手作りデータと、乱数で作る大きめのデータ（matching・solver・evaluate のテストで使う）
-import type { DemoData } from '../contracts/data';
+import { DATA_VERSION, type DemoData } from '../contracts/data';
 import type { Client, Staff, Visit } from '../contracts/documents';
 import type { Item, Rule } from '../contracts/rules';
 import { minutesToHhmm } from '../domain/time';
@@ -91,7 +91,7 @@ export function visit(
 
 export function makeData(over: Partial<DemoData> = {}): DemoData {
   return {
-    version: 2,
+    version: DATA_VERSION,
     baseDate: DATE,
     seed: 1,
     org: {

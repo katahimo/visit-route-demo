@@ -30,7 +30,7 @@ const unassigned = (n: number): Partial<DayStatus> => ({
 const data = {
   absences: [] as Absence[],
   staff: [] as Staff[],
-  standard: { at: 0, presetId: 'standard', from: '2026-10-01', weeks: 1 },
+  standard: { at: 0, presetId: 'balance', from: '2026-10-01', weeks: 1 },
 };
 const TODAY = '2026-10-14';
 const input = (statuses: DayStatus[], months = ['2026-10'], todayStaff = 2, today = TODAY) => ({
@@ -69,7 +69,7 @@ describe('homeTasks（版2）', () => {
       data: { absences: [], staff: [] },
     });
     expect(r.tasks.map((t) => t.kind)).toEqual(['standard', 'today']);
-    expect(r.tasks[0]).toMatchObject({ tone: 'todo', to: '/standard' });
+    expect(r.tasks[0]).toMatchObject({ tone: 'todo', to: `/arrange?date=${TODAY}` });
     expect(r.ready).toBe(false);
   });
   it('何も無い：今日の訪問は無い知らせだけで、準備はできている', () => {

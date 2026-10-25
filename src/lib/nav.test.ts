@@ -34,12 +34,12 @@ const item = (key: string, g = groups): MenuItem =>
   g.flatMap((x) => x.items.flatMap((i) => [i, ...(i.children ?? [])])).find((i) => i.key === key)!;
 
 describe('menuSections（PRD D326・D349。ADR-0054・0063）', () => {
-  it('見出しの無い6項目：ホーム・予定・予定を組む・空き状況・人・設定', () => {
+  it('見出しの無い6項目：ホーム・予定を組む・予定・空き状況・人・設定', () => {
     expect(groups.map((g) => g.title ?? null)).toEqual([null]);
     expect(groups.flatMap((g) => g.items.map((i) => i.label))).toEqual([
       'ホーム',
-      '予定',
       '予定を組む',
+      '予定',
       '空き状況',
       '人',
       '設定',

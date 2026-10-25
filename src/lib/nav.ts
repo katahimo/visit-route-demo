@@ -251,7 +251,7 @@ export const scheduleHref = (last?: string | null): string =>
   last && SCHEDULE_VIEWS.includes(last) ? last : SCHEDULE_DEFAULT;
 
 /**
- * メニューの並び（PRD D326・D349・D355。ADR-0054・0063）：見出しの無い6項目 ホーム・予定・予定を組む・空き状況・人・設定。
+ * メニューの並び（PRD D326・D349・D355。ADR-0054・0063）：見出しの無い6項目 ホーム・予定を組む・予定・空き状況・人・設定。
  * 「予定」「予定を組む」「人」「設定」は畳める子の項目を持つ（既定は設定だけ畳む。今の画面の親はいつも開く）。
  * 「予定」の子：今日の予定（今日の日の予定）・◯月の予定（月の後半は来月、前半は今月の月の予定）・欠勤・キャンセル（今日の日の予定で
  * 欠勤・キャンセルの欄を開く）。親を押すと最後に開いた表示（既定は日の予定）。「予定を組む」の子：担当を組む・組み方の標準。
@@ -302,15 +302,6 @@ export function menuSections(
   const items: MenuItem[] = [
     { key: 'home', to: '/home', label: 'ホーム', short: 'ホーム', icon: 'home' },
     {
-      key: 'schedule',
-      to: scheduleHref(last.schedule),
-      label: '予定',
-      short: '予定',
-      icon: 'day',
-      match: SCHEDULE_PATHS,
-      children: scheduleChildren.filter((i) => isHrefOn(features, i.to)),
-    },
-    {
       key: 'arrange',
       to: '/arrange',
       label: '予定を組む',
@@ -318,6 +309,15 @@ export function menuSections(
       icon: 'arrange',
       match: ARRANGE_PATHS,
       children: arrangeChildren,
+    },
+    {
+      key: 'schedule',
+      to: scheduleHref(last.schedule),
+      label: '予定',
+      short: '予定',
+      icon: 'day',
+      match: SCHEDULE_PATHS,
+      children: scheduleChildren.filter((i) => isHrefOn(features, i.to)),
     },
     { key: 'vacancy', to: '/vacancy', label: '空き状況', short: '空き状況', icon: 'vacancy' },
     {

@@ -675,11 +675,10 @@ async function palette(page) {
 // ---- 1400px：範囲の提案は画面を移っても残る ----
 async function keepRange(page) {
   await freshPlan(page, '/week');
-  // 範囲の提案は担当を組むの画面で出す（ADR-0063）
+  // 範囲の提案は担当を組むの画面で出す（ADR-0063。標準が無い日の範囲は考え方ごとの案。D357）
   await page.goto(`${BASE}#/arrange?date=${TODAY}`);
-  await page.getByTestId('arrange-mode-all').check();
   await page.getByTestId('arrange-start').click();
-  const band = page.locator('[data-testid="proposal-band"][data-kind="range"]');
+  const band = page.locator('[data-testid="proposal-band"]');
   await band.waitFor({ timeout: 120000 });
   await page.locator('.side-nav [data-testid="nav-link"]', { hasText: 'ホーム' }).click();
   await page.waitForURL(/#\/home/);
@@ -688,10 +687,10 @@ async function keepRange(page) {
   await page.goto(`${BASE}#/month`);
   await page.getByTestId('schedule-toolbar').waitFor({ timeout: 60000 });
   check(
-    (await page.locator('[data-testid="proposal-band"][data-kind="range"]').count()) === 1,
+    (await page.locator('[data-testid="proposal-band"]').count()) === 1,
     '範囲の提案：ホーム・人へ移って月の予定に戻っても残る',
   );
-  await page.locator('[data-testid="proposal-band"][data-kind="range"]').getByTestId('proposal-discard').click();
+  await page.locator('[data-testid="proposal-band"]').getByTestId('proposal-discard').click();
 }
 
 const steps = sharedPage({

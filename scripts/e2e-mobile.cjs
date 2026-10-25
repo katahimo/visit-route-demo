@@ -112,14 +112,14 @@ async function drawerOpenClose(page) {
   );
   const titles = await d.locator('.nav-group-title').allInnerTexts();
   check(titles.length === 0, '引き出し：見出しの無い1つの並び', titles);
-  // 最上位は6項目（ホーム・予定・予定を組む・空き状況・人・設定。ADR-0063）。開いている親の子の項目も含めて、全部の項目を縦に並べる
+  // 最上位は6項目（ホーム・予定を組む・予定・空き状況・人・設定。ADR-0063）。開いている親の子の項目も含めて、全部の項目を縦に並べる
   const top = await d.locator(TOP_LINKS).evaluateAll((els) => els.map((el) => el.dataset.key));
   const links = d.locator('.nav-link');
   const n = await links.count();
   const boxes = [];
   for (let i = 0; i < n; i++) boxes.push(await links.nth(i).boundingBox());
   check(
-    JSON.stringify(top) === JSON.stringify(['home', 'schedule', 'arrange', 'vacancy', 'people', 'settings']) &&
+    JSON.stringify(top) === JSON.stringify(['home', 'arrange', 'schedule', 'vacancy', 'people', 'settings']) &&
       n > top.length &&
       boxes.every((b, i) => i === 0 || b.y > boxes[i - 1].y),
     '引き出し：最上位6項目のメニューと開いた子の項目を縦に並べる',

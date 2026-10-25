@@ -1,5 +1,5 @@
 // 見直しの4段目（ADR-0054。PRD D326〜D332）を本物のブラウザで確かめる：
-// メニューの最上位6項目（ホーム・予定・予定を組む・空き状況・人・設定。予定・予定を組む・人・設定は子の項目を持つ。PRD D349。ADR-0063）と
+// メニューの最上位6項目（ホーム・予定を組む・予定・空き状況・人・設定。予定・予定を組む・人・設定は子の項目を持つ。PRD D349。ADR-0063）と
 // 人のタブ（〈利用者さん〉・〈スタッフ〉・相性・勤務時間（シフト）。最後に開いたタブ・勤務の見込みは勤務時間（シフト）の印）、パレットに案を比べるが出ない、
 // 日・週・月の切り替えで同じ操作の行（欠勤・キャンセルを登録／元に戻す／（月だけ）その他 ▾。「AI で組む ▾」は無い）、
 // 担当を組むの画面で週を組んだ範囲の提案の帯（反映するまで訪問は変わらない・週・日の予定にも出る・「反映する」で1回の update・
@@ -13,6 +13,7 @@
 // 終了コード：全部通れば 0、通らないものがあれば 1。ページのエラー（pageerror）も失敗に数える
 const path = require('node:path');
 const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, settle, stored, until, runSteps } = require('./lib/env.cjs');
+const { markStandard } = require('./lib/standard.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
 
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
@@ -56,8 +57,8 @@ async function menu(page) {
   await settle(page, 300);
   const labels = await navLabels(page);
   check(
-    JSON.stringify(labels) === JSON.stringify(['ホーム', '予定', '予定を組む', '空き状況', '人', '設定']),
-    'メニューの最上位は6項目（ホーム・予定・予定を組む・空き状況・人・設定）',
+    JSON.stringify(labels) === JSON.stringify(['ホーム', '予定を組む', '予定', '空き状況', '人', '設定']),
+    'メニューの最上位は6項目（ホーム・予定を組む・予定・空き状況・人・設定）',
     labels,
   );
   const kids = {
@@ -204,6 +205,7 @@ async function scope(page) {
   );
   await page.reload();
   await page.locator('h1').waitFor();
+  await markStandard(page); // 標準が無い間は週を組めない（ADR-0064）
   await openView(page, '/week');
   const before = await stored(page);
   // 週を組むのは担当を組むの画面（ADR-0063）

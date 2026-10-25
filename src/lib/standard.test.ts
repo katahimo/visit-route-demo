@@ -11,11 +11,13 @@ import {
   cellOf,
   currentTable,
   cycleWeeks,
+  dayStandardPreview,
   defaultSince,
   diffCounts,
   earliestSince,
   mondayOf,
   nextMonday,
+  registerDayStandard,
   registerStandard,
   type StandardTable,
   setCell,
@@ -414,5 +416,58 @@ describe('bestIndex', () => {
     });
     expect(bestIndex([s(80), s(90), s(90)])).toBe(1);
     expect(bestIndex([null, s(null)])).toBe(-1);
+  });
+});
+
+describe('1日の案を標準にする（PRD D357）', () => {
+  it('その曜日のマスだけ案の担当にし、来週の月曜から。考え方を標準の考え方にする', () => {
+    const presets = initialPresets();
+    const d = data({ presets, scorePresetId: presets[0]!.id });
+    const day = { date: MON, problem: dayProblemOf(d, MON)!, routes: { s2: [`${MON}_p1`] } };
+    const pv = dayStandardPreview(d, day, TODAY);
+    expect(pv).toMatchObject({ since: MON, weekday: 1, diff: [{ patternId: 'p1', weekday: 1, kind: 'staff' }] });
+    const out = registerDayStandard(d, day, presets[2]!.id, TODAY, { newId: ids, at: 5 });
+    expect(out.standard).toMatchObject({ at: 5, presetId: presets[2]!.id, from: MON });
+    expect(out.scorePresetId).toBe(presets[2]!.id);
+    expect(visitsOn(out, MON).map((v) => v.staffId)).toEqual(['s2']);
+    expect(visitsOn(out, WED).map((v) => v.staffId)).toEqual(['s1']);
+  });
+  it('案が今の標準と同じでも、標準を登録したことにする（考え方といつから）', () => {
+    const presets = initialPresets();
+    const d = data({
+      presets,
+      scorePresetId: presets[0]!.id,
+      patterns: [pattern({ usualStarts: [{ weekday: 1, start: '09:00' }] })],
+    });
+    const day = { date: MON, problem: dayProblemOf(d, MON)!, routes: { s1: [`${MON}_p1`] } };
+    const out = registerDayStandard(d, day, presets[1]!.id, TODAY, { newId: ids, at: 7 });
+    expect(out.patterns).toBe(d.patterns);
+    expect(out.standard).toMatchObject({ at: 7, presetId: presets[1]!.id, from: MON });
+    expect(out.scorePresetId).toBe(presets[1]!.id);
+  });
+  it('その日に今の標準の担当が働けない回は、表に入れず今の標準のまま（PR #93 のレビュー）', () => {
+    const d = data();
+    const p = dayProblemOf(d, MON)!;
+    const day = {
+      date: MON,
+      problem: { ...p, staff: p.staff.filter((x) => x.id !== 's1') },
+      routes: { s2: [`${MON}_p1`] },
+    };
+    expect(dayStandardPreview(d, day, TODAY).diff).toEqual([]);
+  });
+  it('別の日へ動かした回・この回だけ変えた回は、表に入れない（PR #93 のレビュー）', () => {
+    const base = data({ patterns: [pattern({ usualStarts: [{ weekday: 1, start: '09:00' }] })] });
+    const d = { ...base, visits: [saved(base, WED, { date: MON })] };
+    const day = { date: MON, problem: dayProblemOf(d, MON)!, routes: { s1: [`${MON}_p1`], s2: [`${WED}_p1`] } };
+    expect(dayStandardPreview(d, day, TODAY).diff).toEqual([]);
+  });
+  it('keepDate の日の回は、標準と違っても入れ替えずに残す（ピンは足さない）', () => {
+    const LATER = '2026-10-19';
+    const base = data();
+    const d = { ...base, visits: [saved(base, LATER, { staffId: 's2' })] };
+    const t = tableWith(d, [['p1', 1, 's1', '10:00']]);
+    expect(visitsOn(reg(d, t), LATER)[0]?.staffId).toBe('s1');
+    const kept = registerStandard(d, t, MON, TODAY, { newId: ids, temp: 'drop', at: 1, keepDate: LATER });
+    expect(visitsOn(kept, LATER).map((v) => [v.staffId, v.pinned])).toEqual([['s2', false]]);
   });
 });

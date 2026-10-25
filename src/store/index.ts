@@ -47,9 +47,8 @@ function describeIssue(issue: z.core.$ZodIssue): string {
 
 const fail = (message: string): ImportError => ({ code: 'INVALID_ARGUMENT', message });
 
-/** 前の版（版1）のデータの文言（ADR-0053。移行は作らない） */
-export const OUTDATED_MESSAGE =
-  'データの形が変わったため（版1 → 版2）、このデータは読み込めません。初期データで始めてください';
+/** 前の版のデータの文言（ADR-0053・ADR-0064。移行は作らない） */
+export const OUTDATED_MESSAGE = `データの形が変わったため（版${DATA_VERSION}になりました）、このデータは読み込めません。初期データで始めてください`;
 
 /** 前の版のデータか（版が今より小さい数） */
 export function isOutdated(raw: unknown): boolean {

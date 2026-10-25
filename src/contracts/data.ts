@@ -16,10 +16,10 @@ import {
 } from './documents';
 import { compatSchema, itemSchema, presetSchema, ruleSchema } from './rules';
 
-/** localStorage のキー（1つの JSON。版2でも同じキーに書く。版1のデータは読み込みで「形が変わった」と知らせて初期データで始める） */
+/** localStorage のキー（1つの JSON。版が上がっても同じキーに書く。前の版のデータは読み込みで「形が変わった」と知らせて初期データで始める） */
 export const STORAGE_KEY = 'vrdemo:data:v1';
-/** データの版（版2：担当を訪問に持つ。ADR-0053） */
-export const DATA_VERSION = 2;
+/** データの版（版2：担当を訪問に持つ。ADR-0053。版3：初期のプリセット「バランス」（id balance）。ADR-0064） */
+export const DATA_VERSION = 3;
 
 const routesSchema = z.record(z.string(), z.array(z.string()));
 

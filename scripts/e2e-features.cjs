@@ -23,6 +23,7 @@
 const path = require('node:path');
 const { answerConfirms } = require('./lib/confirmDialog.cjs');
 const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, hashOf, runSteps, settle } = require('./lib/env.cjs');
+const { markStandard } = require('./lib/standard.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
 
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -77,7 +78,7 @@ const TEMPLATE_LABEL = {
 const asFeatures = (on) => Object.fromEntries(FEATURE_IDS.map((id) => [id, on.includes(id)]));
 
 /** メニューの最上位（6項目。予定・予定を組む・人・設定は畳める子の項目を持つ。PRD D349。ADR-0063） */
-const MENU = ['ホーム', '予定', '予定を組む', '空き状況', '人', '設定'];
+const MENU = ['ホーム', '予定を組む', '予定', '空き状況', '人', '設定'];
 /** 予定を組むの子の項目の key（担当を組む・組み方の標準。どのひな形でも同じ。ADR-0063） */
 const ARRANGE_KIDS = ['arrange:assign', 'arrange:standard'];
 /** 人の子の項目（人のタブ。相性はどのひな形でも入） */
@@ -574,7 +575,7 @@ async function pathVariants(page, dlg, ctx) {
   await open(page, '/home', '[data-testid="home-tasks"]');
   const m = await menu(page);
   check(
-    same(m.labels, ['ホーム', '予定', '予定を組む', '人', '設定']) &&
+    same(m.labels, ['ホーム', '予定を組む', '予定', '人', '設定']) &&
       same(m.schedule, ['today', 'month-view']) &&
       m.titles.length === 0,
     '欠勤・キャンセルと空き状況を切るとメニューの最上位は5項目・予定の子に欠勤・キャンセルが無い（見出しは無い）',
@@ -744,6 +745,7 @@ async function insideEntries(page, dlg, ctx) {
     await writeFeaturesInOtherTab(ctx, asFeatures(TEMPLATE_ON[t]));
     const data = await page.evaluate((k) => JSON.parse(localStorage.getItem(k)), STORAGE_KEY);
     check(same(data.org.features, asFeatures(TEMPLATE_ON[t])), `${label}：入り切りを書いた`);
+    await markStandard(page); // 標準が無い間は週を組めない（ADR-0064）
     const count = (id) => page.getByTestId(id).count();
 
     // 日の画面（今日）
@@ -759,8 +761,8 @@ async function insideEntries(page, dlg, ctx) {
     check((await count('day-mail')) === (on('mail') ? 1 : 0), `${label}：日の予定の見出しの「予定をメールで送る」`);
     if (!on('rules')) check((await count('plan-reason')) === 0, `${label}：点数の横の理由を出さない`);
     check((await count('plan-menu')) === 0, `${label}：日の予定に「AI で組む ▾」は無い`);
-    // 担当を組む（日の範囲）：AI で組む・考え方（プリセット）・案を比べる（ADR-0063）
-    await open(page, `/arrange?date=${TODAY}`, '[data-testid="arrange-start"]');
+    // 担当を組む（週の範囲）：AI で組む・考え方（プリセット）・案を比べる（ADR-0063。日の範囲は標準が無いと考え方ごとの案。D357）
+    await open(page, `/arrange?d=${TODAY}`, '[data-testid="arrange-start"]');
     check((await count('arrange-start')) === 1, `${label}：担当を組むの「AI で組む」`);
     // 点数の基準のほかのプリセットで組める（条件の重みを切ると考え方の欄ごと出さない）
     const presets = await page.locator('[data-testid="arrange-preset"] option:not([value=""])').count();
@@ -989,15 +991,17 @@ async function keepData(page, dlg, ctx) {
 
 /**
  * 担当を組む（#/arrange?date=。日の範囲）で「AI で組む」の提案を出して反映する（版2：提案は反映するまで担当を変えない。
- * ADR-0053・ADR-0063）。担当の入った訪問も組み直すので、組む日は「伝えていない日をすべて組み直す」
+ * ADR-0053・ADR-0063）。担当の入った訪問も組み直すので、組む日は「伝えていない日をすべて組み直す」。
+ * 組み方の標準が無ければ考え方ごとの案（D357）になるので、最初の案を［この日だけ反映］
  */
 async function proposeAndApply(page, date) {
   await open(page, `/arrange?date=${date}`, '[data-testid="arrange-start"]');
-  await page.getByTestId('arrange-mode-all').check();
+  if ((await page.getByTestId('arrange-mode-all').count()) > 0) await page.getByTestId('arrange-mode-all').check();
   await page.getByTestId('arrange-start').click();
-  const band = page.locator('[data-testid="proposal-band"][data-kind="range"]');
-  await band.getByTestId('proposal-apply').waitFor({ timeout: 90000 });
-  await band.getByTestId('proposal-apply').click();
+  const band = page.locator('[data-testid="proposal-band"]');
+  const apply = band.locator('[data-testid="proposal-apply"], [data-testid="choice-apply"]').first();
+  await apply.waitFor({ timeout: 150000 });
+  await apply.click();
   await band.waitFor({ state: 'detached', timeout: 10000 });
   await settle(page, 600);
 }
