@@ -3,12 +3,12 @@
 // 選んだ案に［この案を標準にする］（確認のあと、その日に反映し、その曜日の担当・時刻を来週の月曜から標準にし、考え方を
 // 点数の基準にする。元に戻すの1手）［この日だけ反映］。担当や時刻が変わる訪問は時間軸の帯に印を付け、一覧でも見られる
 import { CircleCheck, Crown, Sparkles, X } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { jstDate, minutesToHhmm } from '../domain/time';
 import { busyStaff, choiceColumns } from '../lib/choiceView';
 import { colorOf } from '../lib/colors';
 import { dateText, deltaText, newId, r0, WEEKDAY_LABELS } from '../lib/common';
-import { pointsOf, routesOf, unassignedOf } from '../lib/dayPlan';
+import { ownerOf, pointsOf, routesOf, unassignedOf } from '../lib/dayPlan';
 import {
   type BatchProposal,
   monthBatch,
@@ -17,19 +17,24 @@ import {
   proposalDayFresh,
 } from '../lib/monthBatch';
 import { mdText, typeOf } from '../lib/patternText';
+import { buildRouteMap, homeLegKey, useRouteSelection } from '../lib/routeView';
 import { bestIndex, dayStandardPreview, registerDayStandard } from '../lib/standard';
-import { legsOf } from '../lib/timeline';
+import { type LegSpan, legsOf } from '../lib/timeline';
 import { useDayModel } from '../lib/useDayModel';
 import { useValueStore } from '../lib/valueStore';
 import { useConfirm } from './ConfirmDialog';
 import { ProposalChanges } from './proposalChanges';
+import { RouteMap } from './RouteMap';
 import { RouteTimeline, type TimelineColumn } from './routeTimeline';
+import { StaffLegend } from './routeView';
 import { StaffMark } from './StaffMark';
 import { useToast } from './Toast';
 import { shiftShort, TlMark } from './timelineMarks';
 import { WithIcon } from './ui';
 
 type Routes = Record<string, string[]>;
+/** 地図・選択の集まりのキー（案は1つずつ見る） */
+const CHOICE_SET = 'choice';
 const NO_DROP = { onDragOver: () => {}, onDragLeave: () => {}, onDrop: () => {} };
 
 export function ChoiceBand({ proposal }: { proposal: BatchProposal }) {
@@ -43,6 +48,13 @@ export function ChoiceBand({ proposal }: { proposal: BatchProposal }) {
   const today = jstDate(Date.now());
   /** 見ているタブ（-1 は今の担当） */
   const [tab, setTab] = useState(0);
+  /** 地図で見る担当・強調する区間・選んだ訪問（予定の画面と共通。担当は見ているタブの案で引く） */
+  const owners = useRef(new Map<string, string>());
+  const sel = useRouteSelection(date, (_set, id) => owners.current.get(id));
+  const pick = (next: number) => {
+    setTab(next);
+    sel.reset();
+  };
 
   const first = choices[0]?.days[0];
   /** 今の担当（組み始めたときの訪問から）と、案ごとの担当 */
@@ -73,6 +85,8 @@ export function ChoiceBand({ proposal }: { proposal: BatchProposal }) {
   const day = chosen?.days[0];
   const problem = day?.problem ?? first.problem;
   const routes = day?.routes ?? current;
+  owners.current = ownerOf(routes);
+  const visitById = new Map(first.visits.map((v) => [v.id, v]));
   const changes = new Map<string, ProposalChange>(day ? proposalDayChanges(day).map((r) => [r.visitId, r]) : []);
   const unassigned = unassignedOf(problem, routes);
   const fresh = (i: number) => choices[i]?.days.every((d) => proposalDayFresh(data, d)) ?? false;
@@ -117,9 +131,9 @@ export function ChoiceBand({ proposal }: { proposal: BatchProposal }) {
           name: clientName(t.visitId),
           color: type ? colorOf(type.color) : null,
           tone: null,
-          picked: false,
+          picked: sel.isPicked({ id: t.visitId, set: CHOICE_SET }),
           dragging: false,
-          onPick: () => {},
+          onPick: () => sel.togglePick({ id: t.visitId, set: CHOICE_SET }),
           note,
           marks:
             c && note ? (
@@ -174,6 +188,24 @@ export function ChoiceBand({ proposal }: { proposal: BatchProposal }) {
     );
   };
 
+  /** 時間軸の区間 → 地図で強調する区間（自宅までは `home:<担当>`、来る区間は行き先の訪問。予定の画面と同じ） */
+  const legSel = (leg: LegSpan) => ({
+    id: leg.kind === 'toHome' ? homeLegKey(owners.current.get(leg.visitId) ?? '') : leg.visitId,
+    set: CHOICE_SET,
+  });
+  const mapStaff = columns.map((c) => c.staffId).filter((sid) => (routes[sid]?.length ?? 0) > 0);
+  const map = buildRouteMap({
+    sets: [{ key: CHOICE_SET, routes }],
+    staffOrder: columns.map((c) => c.staffId),
+    staffById,
+    visitById,
+    clientById,
+    colorOfStaff,
+    focusStaff: sel.focusStaff,
+    picked: sel.picked,
+    focusLeg: sel.focusLeg,
+  });
+
   const pointText = (p: number | null) => (p === null ? '—' : `${p}点`);
   const shown = k >= 0 ? points.choices[k] : points.current;
   const diff = shown !== null && points.current !== null ? shown - points.current : null;
@@ -212,7 +244,7 @@ export function ChoiceBand({ proposal }: { proposal: BatchProposal }) {
           role="tab"
           aria-selected={k < 0}
           className={`choice-tab${k < 0 ? ' is-on' : ''}`}
-          onClick={() => setTab(-1)}
+          onClick={() => pick(-1)}
           data-testid="choice-current"
         >
           <span className="choice-tab-name">今の担当</span>
@@ -227,7 +259,7 @@ export function ChoiceBand({ proposal }: { proposal: BatchProposal }) {
               role="tab"
               aria-selected={k === i}
               className={`choice-tab${k === i ? ' is-on' : ''}`}
-              onClick={() => setTab(i)}
+              onClick={() => pick(i)}
               data-testid="choice-card"
               data-preset={c.presetId}
             >
@@ -300,7 +332,28 @@ export function ChoiceBand({ proposal }: { proposal: BatchProposal }) {
         {k >= 0 && changes.size > 0 && (
           <p className="sub">「代」（担当が変わる）・「±分」（時刻が変わる）の印の訪問が、今と変わる訪問です</p>
         )}
-        <RouteTimeline columns={columns} legOn={() => false} onLeg={() => {}} />
+        <div className="choice-body">
+          <RouteTimeline
+            columns={columns}
+            legOn={(leg) => sel.isLeg(legSel(leg))}
+            onLeg={(leg) => sel.toggleLeg(legSel(leg))}
+          />
+          <aside className="choice-map stack" aria-label="地図" data-testid="choice-map">
+            {sel.focusStaff && (
+              <button type="button" className="btn btn-small" onClick={sel.clear}>
+                全員のルートを見る
+              </button>
+            )}
+            <RouteMap points={map.points} lines={map.lines} height={420} />
+            <StaffLegend
+              staffIds={mapStaff}
+              staffName={(id) => staffById.get(id)?.name ?? '（不明）'}
+              focusStaff={sel.focusStaff}
+              onFocus={sel.focusOn}
+              extra={<span className="nowrap legend-item">「家」＝自宅</span>}
+            />
+          </aside>
+        </div>
         {unassigned.length > 0 && (
           <p className="sub warn-text" data-testid="choice-unassigned">
             担当なし：{unassigned.map((id) => clientName(id)).join('・')}
