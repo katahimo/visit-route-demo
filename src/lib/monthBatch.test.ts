@@ -163,8 +163,12 @@ describe('monthBatch（担当を AI で組む。PRD D256・D257。ADR-0042・ADR
       variants.map((v) => [v.presetId, [TODAY]]),
     );
     expect(batchDoneText(b.done.get()!)).toContain('案を3つ');
+    // 見ていた提案と違う番号なら反映しない（確認を待つ間に提案が替わったとき）
+    expect(b.apply({ id: prop.id + 1, choice: 1 })).toBeNull();
+    expect(h.writes()).toBe(0);
     let marked = false;
     const r = b.apply({
+      id: prop.id,
       choice: 1,
       andThen: (d) => {
         marked = true;

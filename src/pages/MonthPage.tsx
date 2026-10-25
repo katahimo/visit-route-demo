@@ -103,7 +103,7 @@ import {
   type TypeCount,
   ymOf,
 } from '../lib/month';
-import { monthBatch } from '../lib/monthBatch';
+import { batchBandText, monthBatch } from '../lib/monthBatch';
 import { cellGuide, createTipStore, type TipStore } from '../lib/monthGuide';
 import {
   DAY_STATE_TEXT,
@@ -1144,9 +1144,9 @@ export default function MonthPage() {
             />
             <div className="row" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
               <span className="sub" aria-live="polite">
-                {current ? '' : `${batch.label}：`}
-                {current ? `${mdText(current)}：` : ''}
-                {batch.index + 1}/{batch.targets.length}日（組めた日 {batch.made}日）
+                {batch.variants
+                  ? batchBandText(batch)
+                  : `${current ? '' : `${batch.label}：`}${current ? `${mdText(current)}：` : ''}${batch.index + 1}/${batch.targets.length}日（組めた日 ${batch.made}日）`}
               </span>
               <button type="button" className="btn btn-small" onClick={stop}>
                 <WithIcon icon={Square} size={14}>

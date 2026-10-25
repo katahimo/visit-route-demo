@@ -140,12 +140,13 @@ export function tableDiff(table: StandardTable, current: StandardTable): CellDif
 /**
  * AI の案（日ごとの割当）から標準の表を作る：standardPatterns の繰り返しの回（問題の訪問 ID が計算した回の ID）から、
  * 曜日ごとに最初の回の担当と lenient の開始を取る（担当なしは担当も開始も無し。開始が時間の約束の外なら開始は無し）。
- * 期間に回の無いマスは今の標準のまま
+ * 期間に回の無いマスは今の標準のまま。only を渡すと、通った回だけを見る（ほかのマスは今の標準のまま）
  */
 export function tableFromDays(
   data: PatternData,
   days: readonly Pick<StandardDay, 'problem' | 'routes'>[],
   today: string,
+  only?: (visitId: string, refDate: string, p: Pattern) => boolean,
 ): StandardTable {
   const patterns = new Map(standardPatterns(data, today).map((p) => [p.id, p]));
   const out = currentTable(data, today);
@@ -158,6 +159,7 @@ export function tableFromDays(
       const ref = parsePatternVisitId(pv.id);
       const p = ref ? patterns.get(ref.patternId) : undefined;
       if (!ref || !p) continue;
+      if (only && !only(pv.id, ref.date, p)) continue;
       const wd = weekday(ref.date);
       const key = `${p.id}|${wd}`;
       if (seen.has(key) || !p.weekdays.includes(wd)) continue;
@@ -381,7 +383,7 @@ export function registerStandard(
   table: StandardTable,
   sinceIn: string,
   today: string,
-  opts: { newId: () => string; temp: TemporaryChoice; at: number; presetId?: string | null },
+  opts: { newId: () => string; temp: TemporaryChoice; at: number; presetId?: string | null; keepDate?: string },
 ): DemoData {
   const since = clampSince(data, sinceIn, today);
   const rows = changedRows(data, table, since, today);
@@ -439,13 +441,14 @@ export function registerStandard(
       continue;
     }
     if (!visit.pinned && sameAsStandard(t)) continue; // 計算した回と同じになる（ピンは残す）
-    if (!visit.pinned && opts.temp === 'drop') continue; // 標準どおりに入れ替える
-    // ピンの回・残す回：新しい繰り返しの回にして、担当・開始・ピンを残す
+    const keep = visit.pattern.date === opts.keepDate;
+    if (!visit.pinned && opts.temp === 'drop' && !keep) continue; // 標準どおりに入れ替える
+    // ピンの回・残す回・keepDate の回：新しい繰り返しの回にして、担当・開始を残す（keepDate の回はピンを足さない）
     put.push({
       ...visitOf(target, visit.pattern.date),
       staffId: visit.staffId,
       start: visit.start,
-      pinned: true,
+      pinned: visit.pinned || !keep,
       note: visit.note,
     });
   }
@@ -461,14 +464,22 @@ export function registerStandard(
 
 /**
  * 1日の案を標準にするときの見込み（PRD D357）：その日の曜日の表（tableFromDays。ほかの曜日は今の標準のまま）・今の標準と違うマス・
- * いつから（defaultSince）
+ * いつから（defaultSince）。表に使うのは、その日の曜日の計算した回のうち、別の日へ動かした回・この回だけ変えた回でなく、
+ * 今の標準の担当がその日に働ける（欠勤・休みでない）回だけ（その日だけの事情を毎週の標準にしない）。ほかのマスは今の標準のまま
  */
 export function dayStandardPreview(
   data: DemoData,
   day: Pick<StandardDay, 'date' | 'problem' | 'routes'>,
   today: string,
 ): { table: StandardTable; diff: CellDiff[]; since: string; weekday: number } {
-  const table = tableFromDays(data, [day], today);
+  const wd = weekday(day.date);
+  const saved = new Map(data.visits.map((v) => [v.id, v]));
+  const working = new Set(day.problem.staff.map((s) => s.id));
+  const table = tableFromDays(data, [day], today, (id, refDate, p) => {
+    const v = saved.get(id);
+    if (weekday(refDate) !== wd || (v && isEdited(v))) return false;
+    return p.usualStaffId === null || working.has(p.usualStaffId);
+  });
   return {
     table,
     diff: tableDiff(table, currentTable(data, today)),
@@ -479,7 +490,7 @@ export function dayStandardPreview(
 
 /**
  * 1日の案を組み方の標準として登録する（PRD D357）：その日の曜日のマスを案の担当・開始にして registerStandard（いつからは来週の月曜。
- * すでに入っている予定で違うものは標準どおりに入れ替える）、プリセットを標準の考え方（点数の基準）にする。
+ * すでに入っている予定で違うものは標準どおりに入れ替える。その日の回は残す）、プリセットを標準の考え方（点数の基準）にする。
  * 違うマスが無くても標準は登録したことにする（考え方といつからを残す）
  */
 export function registerDayStandard(
@@ -490,7 +501,8 @@ export function registerDayStandard(
   opts: { newId: () => string; at: number },
 ): DemoData {
   const { table, since } = dayStandardPreview(data, day, today);
-  const out = registerStandard(data, table, since, today, { ...opts, temp: 'drop', presetId });
+  // その日（反映したばかり）の回は、いつから以降でも消さずに残す
+  const out = registerStandard(data, table, since, today, { ...opts, temp: 'drop', presetId, keepDate: day.date });
   if (out !== data) return out;
   const id = data.presets.some((p) => p.id === presetId) ? presetId : (data.scorePresetId ?? data.presets[0]?.id ?? '');
   const standard: StandardInfo = {

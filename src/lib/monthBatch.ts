@@ -190,7 +190,13 @@ export function applyProposal(
 }
 
 /** 反映の指定（考え方ごとの案の番号・続けて当てる変更・元に戻すの名前） */
-export type ApplyOptions = { choice?: number; andThen?: (d: DemoData) => DemoData; label?: string };
+export type ApplyOptions = {
+  choice?: number;
+  andThen?: (d: DemoData) => DemoData;
+  label?: string;
+  /** 見ていた提案の番号（BatchProposal.id）。今の提案と違えば反映しない（確認を待つ間に提案が替わったとき） */
+  id?: number;
+};
 
 /** 作っている間の進み具合（作っていなければ null） */
 export type BatchRun = {
@@ -276,9 +282,10 @@ export function batchDoneText(d: BatchDone): string {
   if (d.aborted) return `データを差し替えたので、${d.label}の担当を組むのを止めました（提案は捨てました）`;
   const counts = d.proposal ? `・担当が変わる ${d.proposal.moved}件・時刻が変わる ${d.proposal.shifted}件` : '';
   if (d.error) return `${d.label}の担当を${d.made}日分組んだところで止まりました（${d.error}）`;
+  if (d.choices)
+    return `${d.label}の案を${d.choices}つ${d.stopped ? '組んだところで止めました' : '出しました'}。くらべて、気に入った案を選んでください`;
   if (d.stopped) return `${d.label}の担当を${d.made}日分組んだところで止めました（${d.made}日分の提案${counts}）`;
   if (d.made === 0) return `${d.label}に組める日がありませんでした`;
-  if (d.choices) return `${d.label}の案を${d.choices}つ出しました。くらべて、気に入った案を選んでください`;
   return `${d.label}の提案を出しました（${d.made}日分${counts}）。見て「反映する」と担当が変わります`;
 }
 
@@ -475,6 +482,7 @@ export function createMonthBatch(solve: Solve = runSolve): MonthBatch {
     apply: (opts) => {
       const p = proposal.get();
       if (!p || !host || run.get() !== null) return null;
+      if (opts?.id !== undefined && opts.id !== p.id) return null;
       const chosen = p.choices ? p.choices[opts?.choice ?? 0] : undefined;
       if (p.choices && !chosen) return null;
       const all = chosen ? chosen.days : p.days;

@@ -359,7 +359,7 @@ function ChoiceBand({ proposal }: { proposal: BatchProposal }) {
 
   const applyOnly = (k: number) => {
     const c = choices[k];
-    const r = monthBatch.apply({ choice: k });
+    const r = monthBatch.apply({ id: proposal.id, choice: k });
     if (!r || !c) return;
     toast(r.applied.length === 0 ? staleText : `「${c.name}」の案を${proposal.label}に反映しました`);
   };
@@ -383,6 +383,7 @@ function ChoiceBand({ proposal }: { proposal: BatchProposal }) {
     });
     if (!ok) return;
     const r = monthBatch.apply({
+      id: proposal.id,
       choice: k,
       andThen: (d) => registerDayStandard(d, day, c.presetId, today, { newId: () => newId('pattern'), at: Date.now() }),
       label: `組み方の標準にする（${c.name}）`,

@@ -182,6 +182,8 @@ export default function ArrangePage() {
 
   /** 案を比べる日（範囲の中の今日以降の最初の訪問のある日。選び直せる） */
   const firstDay = allTargets[0] ?? dates.find((d) => d >= today) ?? dates[0]!;
+  /** 標準が無いときに日の案へ移る日（過去の範囲なら今日） */
+  const guideDay = firstDay >= today ? firstDay : today;
   const [compareDay, setCompareDay] = useState<string | null>(null);
   const compareDate = compareDay && dates.includes(compareDay) ? compareDay : firstDay;
 
@@ -267,10 +269,10 @@ export default function ArrangePage() {
               <button
                 type="button"
                 className="btn btn-primary"
-                onClick={() => pick('day', firstDay)}
+                onClick={() => pick('day', guideDay)}
                 data-testid="arrange-to-day"
               >
-                <WithIcon icon={CalendarDays}>{mdText(firstDay)}を考え方ごとの案で組む</WithIcon>
+                <WithIcon icon={CalendarDays}>{mdText(guideDay)}を考え方ごとの案で組む</WithIcon>
               </button>
             </div>
           </>
