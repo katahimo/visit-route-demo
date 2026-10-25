@@ -1,82 +1,26 @@
 import { CircleStop, MapPinned, Pencil } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo } from 'react';
 import { RouteMap } from '../components/RouteMap';
-import { useToast } from '../components/Toast';
 import { WithIcon } from '../components/ui';
 import type { Client } from '../contracts/documents';
 import { colorOf, initialOf } from '../lib/colors';
 import { hasLocation } from '../lib/common';
-import { EXTERNAL_NOTICE, lookupMessage, lookupPostalCode, searchAddress } from '../lib/geocode';
-import { type PlaceAllResult, placeAll, placeAllTargets, sleep, withFoundPlace } from '../lib/placeAll';
+import { EXTERNAL_NOTICE, lookupMessage } from '../lib/geocode';
+import { type PlaceAllResult, placeAllTargets } from '../lib/placeAll';
 import { useDemoData } from '../store';
+import { usePlaceAllRun } from './usePlaceAllRun';
 import '../components/placeLookup.css';
 
 /**
  * 位置の無い〈利用者さん〉をまとめて地図に置く（PRD D89・D90。ADR-0016）。Excel の読み込みのあとなどに使う。
- * 1人ずつ順に外部の検索を呼び（lib/placeAll）、置けた人は1人ごとに store の update(fn) で書く。画面を離れたら止める
+ * 1人ずつ順に外部の検索を呼び（lib/placeAll）、置けた人は1人ごとに store の update(fn) で書く（usePlaceAllRun）。画面を離れたら止める
  */
 export function PlaceAllPanel({ onEdit }: { onEdit: (c: Client) => void }) {
-  const { data, update } = useDemoData();
-  const toast = useToast();
+  const { data } = useDemoData();
   const terms = data.org.terms;
   const { targets, skipped } = useMemo(() => placeAllTargets(data.clients), [data.clients]);
-  const [running, setRunning] = useState(false);
-  /** 今回の対象の数（押したときの） */
-  const [total, setTotal] = useState(0);
-  const [results, setResults] = useState<PlaceAllResult[]>([]);
-  const [stopped, setStopped] = useState(false);
-  const ctrl = useRef<AbortController | null>(null);
-  /** 画面を離れたら止め、知らせも出さない */
-  const alive = useRef(true);
-  useEffect(() => {
-    alive.current = true;
-    return () => {
-      alive.current = false;
-      ctrl.current?.abort();
-    };
-  }, []);
+  const { running, total, results, stopped, run, stop } = usePlaceAllRun(targets);
   const clientById = useMemo(() => new Map(data.clients.map((c) => [c.id, c])), [data.clients]);
-
-  const run = async () => {
-    if (running || targets.length === 0) return;
-    const c = new AbortController();
-    ctrl.current = c;
-    const list = targets;
-    setRunning(true);
-    setStopped(false);
-    setTotal(list.length);
-    setResults([]);
-    let placed = 0;
-    // 1回の「まとめて探す」は全体の「元に戻す」の1手（PRD D329）
-    const group = {};
-    const r = await placeAll(list, {
-      search: searchAddress,
-      lookup: lookupPostalCode,
-      wait: sleep,
-      signal: c.signal,
-      onResult: (x) => {
-        setResults((prev) => [...prev, x]);
-        if (x.ok) {
-          placed += 1;
-          update((d) => withFoundPlace(d, x.clientId, x.from, x), '住所をまとめて探す', { group });
-        } else if (x.foundAddress !== null) {
-          // 郵便番号で住所は見つかったが位置が見つからない人は、住所だけ書く
-          const address = x.foundAddress;
-          update(
-            (d) => withFoundPlace(d, x.clientId, x.from, { lat: null, lng: null, address }),
-            '住所をまとめて探す',
-            {
-              group,
-            },
-          );
-        }
-      },
-    });
-    if (!alive.current || ctrl.current !== c) return;
-    setRunning(false);
-    setStopped(r.stopped);
-    toast(r.stopped ? `止めました（${placed}人を地図に置きました）` : `${placed}人を地図に置きました`);
-  };
 
   const ok = results.filter((r) => r.ok);
   // 置いた人の地図（毎回作り直すと地図が寄せ直すので memo）
@@ -120,12 +64,7 @@ export function PlaceAllPanel({ onEdit }: { onEdit: (c: Client) => void }) {
           </WithIcon>
         </button>
         {running && (
-          <button
-            type="button"
-            className="btn btn-small"
-            onClick={() => ctrl.current?.abort()}
-            data-testid="place-all-stop"
-          >
+          <button type="button" className="btn btn-small" onClick={stop} data-testid="place-all-stop">
             <WithIcon icon={CircleStop} size={14}>
               止める
             </WithIcon>

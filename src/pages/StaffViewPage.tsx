@@ -1,23 +1,21 @@
-import { ArrowLeft, Car, Clock, Info, MapPin, Smartphone, Sparkles } from 'lucide-react';
+import { ArrowLeft, Car, Info, MapPin, Smartphone, Sparkles } from 'lucide-react';
 import { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useDay } from '../components/day';
-import { MAPS_SR_TAIL, MapsLink, VisitRouteLinks } from '../components/mapsLinks';
 import { RouteMap } from '../components/RouteMap';
 import { StaffMark } from '../components/StaffMark';
 import { Empty, WithIcon } from '../components/ui';
 import { useDayModel } from '../components/useDayModel';
 import { useFeature } from '../components/useFeature';
-import { VisitRules } from '../components/VisitRules';
 import { timesOf } from '../domain/scheduleModel';
-import { minutesToHhmm } from '../domain/time';
 import { colorOf, initialOf } from '../lib/colors';
 import { AI_LINE, attempt, hasLocation, own, r0, TRAVEL_MODE_LABELS } from '../lib/common';
 import { dateText } from '../lib/dateText';
-import { BICYCLE_NOTE, dayStops, HOME_LABEL, tripLinks } from '../lib/mapsLink';
+import { dayStops, tripLinks } from '../lib/mapsLink';
 import { prevStopOf } from '../lib/prevStop';
 import type { MapPoint } from '../lib/routeView';
 import { scheduleRoute } from '../matching';
+import { StaffViewStop, type StaffViewTiming, StaffViewTrip } from './staffViewParts';
 import './schedule.css';
 
 /**
@@ -42,7 +40,7 @@ export default function StaffViewPage() {
   );
 
   // 時刻：問題があれば移動を入れた時刻（scheduleRoute）、無ければ移動を入れない目安
-  const timing = useMemo(() => {
+  const timing = useMemo((): Map<string, StaffViewTiming> => {
     if (problem) {
       const si = problem.staff.findIndex((s) => s.id === staffId);
       const idx = ids.map((id) => problem.visits.findIndex((v) => v.id === id)).filter((i) => i >= 0);
@@ -52,7 +50,7 @@ export default function StaffViewPage() {
       }
     }
     const t = timesOf(ids, visitById, slotsOf.get(staffId)?.slots);
-    return new Map([...t].map(([id, x]) => [id, { start: x.start, end: x.end, travel: null as number | null }]));
+    return new Map([...t].map(([id, x]) => [id, { start: x.start, end: x.end, travel: null }]));
   }, [problem, staffId, ids, visitById, slotsOf]);
 
   const points: MapPoint[] = [];
@@ -118,34 +116,7 @@ export default function StaffViewPage() {
               )}
             </div>
             {points.length > 0 && <RouteMap points={points} lines={[line]} height={240} />}
-            {mapsOn && trips.length > 0 && (
-              <div className="row" style={{ flexWrap: 'wrap', gap: 6 }} data-testid="sv-trip">
-                {trips.map((t) => {
-                  const text = trips.length > 1 ? `${t.label}を開く` : '1日の全行程を開く';
-                  const end = (x: string) => (x === HOME_LABEL ? x : `${x}さん`);
-                  return (
-                    <MapsLink
-                      key={t.label}
-                      href={t.href}
-                      label={`${text}（${end(t.from)}から${end(t.to)}まで。経由地${t.waypoints}件。${MAPS_SR_TAIL}）`}
-                      testId="maps-trip"
-                    >
-                      {text}
-                    </MapsLink>
-                  );
-                })}
-                {trip.skipped.length > 0 && (
-                  <span className="sub" data-testid="sv-trip-skipped">
-                    （場所が未登録の{terms.client}（{trip.skipped.map((x) => `${x}さん`).join('・')}
-                    ）は全行程に入っていません）
-                  </span>
-                )}
-                {trip.homeSkipped && (
-                  <span className="sub">（自宅の場所が未登録のため、全行程は自宅を通りません）</span>
-                )}
-                {me.travelMode === 'BICYCLE' && <span className="sub">{BICYCLE_NOTE}</span>}
-              </div>
-            )}
+            {mapsOn && trips.length > 0 && <StaffViewTrip trip={trip} clientTerm={terms.client} mode={me.travelMode} />}
             {mapsOn && me.travelMode === 'TRANSIT' && ids.length > 0 && (
               <p className="sub" data-testid="sv-transit">
                 公共交通のため、1日の全行程のリンクはありません。訪問ごとの「自宅から」「前の場所から」「ここへ道案内」を使ってください。
@@ -155,38 +126,15 @@ export default function StaffViewPage() {
               {ids.length === 0 && <Empty icon={MapPin}>今日の訪問はありません</Empty>}
               {ids.map((id) => {
                 const v = visitById.get(id);
-                const prev = prevStopOf(data, id);
-                const c = v ? clientById.get(v.clientId) : undefined;
-                const t = timing.get(id);
                 return (
-                  <div key={id}>
-                    {t?.travel != null && (
-                      <div className="leg">
-                        <Car size={14} aria-hidden="true" />約{r0(t.travel)}分
-                      </div>
-                    )}
-                    <div className="stop">
-                      <span className="dot" style={{ background: colorOf(c?.color ?? 0) }}>
-                        {initialOf(c?.displayName ?? '?')}
-                      </span>
-                      <div className="grow">
-                        <div className="sv-name">{c?.displayName ?? '（不明）'}さん</div>
-                        <div className="sub sv-time">
-                          <Clock size={14} aria-hidden="true" />
-                          {t ? `${minutesToHhmm(t.start)}〜${minutesToHhmm(t.end)}` : v?.earliestStart}
-                        </div>
-                        {v?.note && <div className="sub">{v.note}</div>}
-                        <VisitRules client={c} />
-                        <VisitRouteLinks
-                          to={c?.place}
-                          toName={c?.displayName ?? '（不明）'}
-                          from={prev?.from}
-                          fromName={prev?.fromName ?? HOME_LABEL}
-                          mode={me.travelMode}
-                        />
-                      </div>
-                    </div>
-                  </div>
+                  <StaffViewStop
+                    key={id}
+                    v={v}
+                    c={v ? clientById.get(v.clientId) : undefined}
+                    t={timing.get(id)}
+                    prev={prevStopOf(data, id)}
+                    mode={me.travelMode}
+                  />
                 );
               })}
             </div>
