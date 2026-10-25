@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { addDays } from '../domain/time';
 import { findVisit, visitsOn } from '../patterns';
 import { createDemoData } from '../seed';
+import { draftOf } from './visitDraft';
 import { cellKeyOf, issuesAt, keyMove, movedText, moveLabel, nextStaffFor, visitKeyOf } from './visitKeys';
-import { draftOf, staffChoices, toldDaysChanged } from './visitOps';
+import { toldDaysChanged } from './visitOps';
+import { staffChoices } from './visitStaff';
 
 const TODAY = '2026-10-21';
 const data = createDemoData(TODAY);

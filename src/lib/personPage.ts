@@ -6,7 +6,7 @@ import { leaveOn } from '../domain/leaves';
 import { addDays, hhmmToMinutes } from '../domain/time';
 import { own } from './common';
 import { dateText, ymText } from './dateText';
-import { clientVisitsIn, staffVisitsIn } from './visitOps';
+import { clientVisitsIn, staffVisitsIn } from './visitLists';
 import { weekDates, weekStart } from './week';
 import { addMonths, ymOf } from './ym';
 

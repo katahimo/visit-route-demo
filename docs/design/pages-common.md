@@ -200,9 +200,10 @@
 - 閉じたときに戻り先が消えていれば画面の見出し（`.app-main h1`）へ
 - 印刷：`.drawer-wrap:has(.visit-panel)` を出さない
 
-#### `lib/visitOps.ts`（純粋関数。テストあり）
+#### `lib/visitOps.ts`・`visitDraft.ts`・`visitStaff.ts`・`visitLists.ts`（純粋関数。テストあり）
 
 - 欄がデータを読む・書く薄い層（段3でデータの形を変えるときはここを差し替える）。書いたデータは呼ぶ側が `update` で反映する。今日・時刻・新しい ID は引数
+- 置き場所：入力・欄の情報・範囲の文（`VisitDraft`・`draftOf`〜`scopeTexts`）は `visitDraft`、担当の候補・割り当て（`staffChoices`・`staffPickError`・`assignOnDays`）は `visitStaff`、一覧は `visitLists`、書く操作・`endPatternOp`・`toldDaysChanged` は `visitOps`
 - 読む：`draftOf`・`newDraft`・`timeChanged`・`assignmentOf`（今の案、無ければ確定した割当）・`visitInfo`（繰り返しの文・この回の変更・いつもの担当・休み・変えられるか）・`occurrenceChanges`・`scopeTexts`（「M/D 以降の〈曜日〉曜の回」・ほかの曜日の有無・そのままにする回）・`staffChoices(data, visitId, draft)`（欄の日時でその日の問題を日の予定と同じ作り方で作り、「担当を変える ▾」と同じ `lib/reassignMenu` の `reassignChoices`。出す人は `workingStaff`（稼働時間帯がある・列に訪問がある）と今の担当）・`staffPickError`（保存の前に今の入力で選んだ担当を見直す）
 - 書く：`applyVisitEdit(data, { visitId, draft, staff, scope }, today, ids, now)`（今ある訪問の〈利用者さん〉は変えない。新規・この回だけ＝`savedVisit`・これ以降＝`moveFollowing`（開いた回を欄の日付へ。over で所要・種類・時間の約束・幅・いつもの担当）・すべて＝今日以降で最初の、この回だけ変えていない・取り消していない同じ曜日の回から、元の日から欄の日付までの差で。メモだけならこの回だけ。担当は `assignOnDays`（その日の今の案で `bestInsertion`・固定。担当なしは外す）、これ以降・すべては範囲の回と手直しの記憶にも）・`cancelVisitOp`・`uncancelVisitOp`（ほかに変えた所が無ければ edited も外す）・`restoreOccurrenceOp`
 - 一覧：`unassignedVisits(data, from, to)`（今の案で入らない訪問）・`dayVisitRows(data, date, nowHm, limit)`（担当なし → 案なし → これからの近い順）・`clientVisitsIn(data, clientId, from, to)`・`staffVisitsIn(data, staffId, from, to)`（その日の今の案、無ければ確定した割当でその人の列にある訪問。取り消しは出さない。〈スタッフ〉の画面の予定）

@@ -9,6 +9,7 @@ import { newId } from '../lib/common';
 import { dateText } from '../lib/dateText';
 import { appHistory } from '../lib/history';
 import { createValueStore } from '../lib/valueStore';
+import { SCOPE_LABELS, type VisitScope } from '../lib/visitDraft';
 import {
   issuesAt,
   type KeyLayout,
@@ -19,7 +20,7 @@ import {
   type VisitMove,
   visitKeyOf,
 } from '../lib/visitKeys';
-import { cancelVisitOp, SCOPE_LABELS, toldDaysChanged, type VisitScope } from '../lib/visitOps';
+import { cancelVisitOp, toldDaysChanged } from '../lib/visitOps';
 import { findVisit } from '../patterns';
 import { useDemoData } from '../store';
 import { useConfirm } from './ConfirmDialog';
