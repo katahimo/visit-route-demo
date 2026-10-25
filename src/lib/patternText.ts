@@ -2,6 +2,7 @@
 import type { Pattern, VisitType } from '../contracts/documents';
 import { timesOn } from '../patterns';
 import { WEEKDAY_LABELS } from './common';
+import { mdText } from './dateText';
 
 /** 間隔の呼び方（1〜4週ごと） */
 export const EVERY_WEEKS_LABELS: Record<number, string> = { 1: '毎週', 2: '隔週', 3: '3週ごと', 4: '4週ごと' };
@@ -51,9 +52,6 @@ export function patternWhenText(
     .map((w) => `${WEEKDAY_LABELS[w] ?? '?'} ${startText({ windowKind: p.windowKind, ...timesOn(p, w) })}`)
     .join('・')}`;
 }
-
-/** 日付の短い文（「11/14」） */
-export const mdText = (date: string) => `${Number(date.slice(5, 7))}/${Number(date.slice(8, 10))}`;
 
 /** 期間の文（「11/1から」「11/1〜12/31」） */
 export function periodText(p: Pick<Pattern, 'from' | 'to'>): string {

@@ -6,9 +6,9 @@ import type { Features } from '../contracts/features';
 import { addDays } from '../domain/time';
 import { visitsIn } from '../patterns';
 import { STAGE_LABELS } from './clientStage';
-import { dateText } from './common';
+import { dateText } from './dateText';
 import { isHrefOn } from './features';
-import { addMonths, ymOf } from './month';
+import { addMonths, ymOf } from './ym';
 import { absenceHref, isNavAction, type MenuItem, type NavSection } from './nav';
 import { normalizeKana } from './search';
 

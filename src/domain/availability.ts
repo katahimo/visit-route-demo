@@ -1,4 +1,13 @@
 // 写した元：katahimo-dev/visit-route-poc @ a46e7db packages/shared/src/domain/availability.ts
+import {
+  END_AFTER_START_ERROR,
+  HALF_HOUR_ERROR,
+  isHalfHour,
+  MAX_SLOTS,
+  SLOT_STEP_MINUTES,
+  type Slot,
+  slotsError,
+} from '../contracts/slots';
 import { hhmmToMinutes, minutesToHhmm, weekday } from './time';
 
 /**
@@ -6,11 +15,8 @@ import { hhmmToMinutes, minutesToHhmm, weekday } from './time';
  * 「その日に働ける時間帯」を決めるのはこのファイルだけ（画面・予定の警告・AI案で同じものを使う）。
  */
 
-export type Slot = { start: string; end: string };
-/** 30分単位 */
-export const SLOT_STEP_MINUTES = 30;
-/** 1日の時間帯の上限 */
-export const MAX_SLOTS = 4;
+// 時間帯の型・上限・30分単位・検査は contracts/slots.ts（contracts の検査と共有するため）。画面は今までどおりここから import する
+export { END_AFTER_START_ERROR, HALF_HOUR_ERROR, isHalfHour, MAX_SLOTS, SLOT_STEP_MINUTES, type Slot, slotsError };
 
 /**
  * 基本の曜日と時間。lastDay（最終勤務日。デモで足した。PRD D71・ADR-0015）があれば、その翌日からは勤務なし
@@ -40,33 +46,9 @@ export function availabilityOf(
   return override ? { slots: override.slots, overridden: true } : { slots: weeklySlots(base, date), overridden: false };
 }
 
-/** 時間帯・欠勤の入力の理由の文（画面で同じ文を使う。デモで1か所にまとめた） */
-export const HALF_HOUR_ERROR = '時間は30分単位で選んでください';
-export const END_AFTER_START_ERROR = '終了は開始より後にしてください';
-
-/** 30分単位の時刻か（HH:mm） */
-export function isHalfHour(hhmm: string): boolean {
-  return hhmmToMinutes(hhmm) % SLOT_STEP_MINUTES === 0;
-}
-
 /** 時刻の表示（先頭の0を落とす：09:00 → 9:00）。デモで1か所にまとめた */
 export function timeText(hhmm: string): string {
   return hhmm.replace(/^0(\d)/, '$1');
-}
-
-/** 時間帯が正しいか（30分単位・開始の順・重なりなし・開始＜終了・上限以内）。正しくなければ理由 */
-export function slotsError(slots: Slot[]): string | null {
-  if (slots.length > MAX_SLOTS) return `時間帯は${MAX_SLOTS}つまでです`;
-  let prevEnd = -1;
-  for (const s of slots) {
-    const a = hhmmToMinutes(s.start);
-    const b = hhmmToMinutes(s.end);
-    if (!isHalfHour(s.start) || !isHalfHour(s.end)) return HALF_HOUR_ERROR;
-    if (a >= b) return END_AFTER_START_ERROR;
-    if (a < prevEnd) return '時間帯が重なっています';
-    prevEnd = b;
-  }
-  return null;
 }
 
 /** 開始の順に並べ、くっついた・重なった時間帯をまとめる */

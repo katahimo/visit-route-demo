@@ -18,7 +18,7 @@ import { attempt, ITEM_KIND_LABELS } from '../lib/common';
 import { conditionText } from '../matching';
 import { useDemoData } from '../store/react';
 import { FieldError, invalidAttrs } from './FieldError';
-import { Check } from './parts';
+import { Check } from './Check';
 import { IconButton, WithIcon } from './ui';
 
 /** 項目の名前に合わせたアイコン（見つからなければ Tag）。表示だけの対応 */

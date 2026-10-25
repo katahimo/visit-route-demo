@@ -11,7 +11,8 @@ import { findVisit, keepsOccurrence, putVisits, timesOn, visitsIn, visitsOn } fr
 import { attempt, formError, formErrorField, WEEKDAY_LABELS } from './common';
 import { dayProblemOf, pinsOf, routesOf, settleDay, unassignedOf, writeRoutes } from './dayPlan';
 import { isDate } from './isDate';
-import { mdText, patternWhenText, typeOf } from './patternText';
+import { patternWhenText, typeOf } from './patternText';
+import { mdText } from './dateText';
 import { type ReassignChoice, reassignChoices, workingStaff } from './reassignMenu';
 import { savedVisit } from './visitEdit';
 import { canMoveVisit, moveFollowing } from './week';

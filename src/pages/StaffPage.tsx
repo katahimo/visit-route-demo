@@ -10,7 +10,7 @@ import { jstDate } from '../domain/time';
 import { byName, hasLocation, WEEKDAY_LABELS } from '../lib/common';
 import { narrowRole } from '../lib/narrowRoles';
 import { offboardScope } from '../lib/offboard';
-import { mdText } from '../lib/patternText';
+import { mdText } from '../lib/dateText';
 import { shouldOpenRow } from '../lib/rowOpen';
 import { useFeature } from '../lib/useFeature';
 import { useDemoData } from '../store';

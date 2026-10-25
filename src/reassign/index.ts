@@ -413,9 +413,8 @@ export const candidatesFor: CandidatesFor = (problem, routes, visitId) => {
     const reasons = problem.reasons[v]![s]!;
     const violations: Reason[] = reasons.filter((r) => r.points === INF || r.points > 0);
     const over = overCap(problem.balance, s, known.length + 1);
-    const allowed = problem.allowed[v]![s]!;
     const routeBroken = known.length > 0 && scheduleRoute(problem, s, known, 'strict') === null;
-    const fit = allowed && !over && !routeBroken ? bestFit(problem, s, known, v) : null;
+    const fit = problem.allowed[v]![s]! && !over && !routeBroken ? bestFit(problem, s, known, v) : null;
     let shiftMinutes: number | null = null;
     // ずらせば入るか：時刻に関わらない必須の原因が無く、件数の上限を超えず、列に元から違反の無い人だけ
     const timeOnly = reasons.every((r) => r.points !== INF || TIME_RULES.has(r.ruleId));

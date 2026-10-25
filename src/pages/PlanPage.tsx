@@ -77,7 +77,8 @@ import {
   withoutAbsencesOn,
 } from '../lib/absences';
 import { colorOf } from '../lib/colors';
-import { attempt, dateText, formError, own, pointsText, r0 } from '../lib/common';
+import { attempt, formError, own, pointsText, r0 } from '../lib/common';
+import { dateText } from '../lib/dateText';
 import { confirmDay } from '../lib/confirmDay';
 import { type CancelledContact, type ContactRow, clock, contactCount, contactRows, dateWordOf } from '../lib/contacts';
 import { dayLineRange, dayLines } from '../lib/dayLine';

@@ -5,7 +5,7 @@ import { Check, CircleAlert, Lock, type LucideIcon, Repeat, Sparkles } from 'luc
 import { type MouseEvent, memo, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { type PrepPart, prepParts } from '../lib/glance';
-import { monthLabel } from '../lib/home';
+import { monthLabel } from '../lib/dateText';
 import type { MonthProgress } from '../lib/month';
 import { type BandNextKind, type BandOp, bandHref, bandNext, visitsText } from '../lib/progressBand';
 import './glance.css';

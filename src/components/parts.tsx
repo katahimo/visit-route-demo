@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import type { Client, Place } from '../contracts/documents';
 import { HALF_HOURS, MAX_SLOTS, type Slot, slotsError } from '../domain/availability';
 import { hhmmToMinutes, minutesToHhmm } from '../domain/time';
@@ -167,23 +166,5 @@ export function SlotEditor({ value, onChange }: { value: Slot[]; onChange: (v: S
       )}
       <FieldError live={false}>{error}</FieldError>
     </div>
-  );
-}
-
-/** チェックボックスの横並び（label の縦並びの既定を打ち消す） */
-export function Check({
-  checked,
-  onChange,
-  children,
-}: {
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  children: ReactNode;
-}) {
-  return (
-    <label className="check">
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-      {children}
-    </label>
   );
 }

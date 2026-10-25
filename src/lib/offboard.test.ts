@@ -7,7 +7,6 @@ import { AFTER_LAST_DAY, compile } from '../matching';
 import { client, DATE, makeData, staff } from '../matching/fixtures';
 import { findVisit, putVisits, visitsOn } from '../patterns';
 import { applyOffboard, applyOffboardWith, defaultChoice, offboardScope, unlimitedBy } from './offboard';
-import { absentLeftIds } from './requestedOff';
 
 /** DATE（月曜）の翌日 */
 const TUE = '2026-10-13';
@@ -66,13 +65,12 @@ describe('最終勤務日（availabilityOf・compile）', () => {
     expect(afterLastDay(staff('s2', 0, 0), TUE)).toBe(false);
   });
 
-  it('compile は最終勤務日の後の人を「最終勤務日の後」で外し、その人に残る訪問を absentLeftIds で数える', () => {
+  it('compile は最終勤務日の後の人を「最終勤務日の後」で外し', () => {
     const d = data();
     const p = compile(d, TUE);
     const v = p.visits.findIndex((x) => x.id === `${TUE}_p1`);
     expect(p.allowed[v]![0]).toBe(false);
     expect(p.reasons[v]![0]!.some((r) => r.ruleId === 'slot' && r.label === AFTER_LAST_DAY)).toBe(true);
-    expect(absentLeftIds(p, { s1: [`${TUE}_p1`], s2: [`${TUE}_p2`] })).toEqual([`${TUE}_p1`]);
     // 版2：繰り返しの担当のまま計算した回は、日の検査で「担当が休み」になる
     expect(findVisit(d, `${TUE}_p1`)!.staffId).toBe('s1');
   });

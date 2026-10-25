@@ -1,8 +1,8 @@
 import { z } from 'zod';
-import { MAX_SLOTS, slotsError } from '../domain/availability';
 import { INDUSTRIES, TRAVEL_MODES, WINDOW_KINDS } from './codes';
 import { featuresSchema } from './features';
 import { conditionSchema, traitsSchema } from './rules';
+import { MAX_SLOTS, slotsError } from './slots';
 
 /**
  * データ一式（DemoData）の中の1件ごとの形。PoC本体 packages/shared/src/contracts/documents.ts を元に、

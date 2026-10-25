@@ -6,7 +6,7 @@ import { weekday } from '../domain/time';
 import { WEEKDAY_LABELS } from './common';
 import { tellDay } from './dayPlan';
 import type { Attention, DayStatus } from './month';
-import { mdText } from './patternText';
+import { mdText } from './dateText';
 
 /**
  * その日を確定する（今の担当・開始を伝えた内容として残す。日の画面の「確定（伝えた）」と月のまとめて確定で共通）。
@@ -59,9 +59,6 @@ export function bulkConfirmWhy(b: BulkConfirm): string {
   return '確定していない日はありません';
 }
 
-/** 「10/22（水）」 */
-export const dayLabel = (date: string): string => `${mdText(date)}（${WEEKDAY_LABELS[weekday(date)]}）`;
-
 /** 日付を並べる上限（超えたら「…」で略す） */
 const LIST_MAX = 7;
 
@@ -69,7 +66,7 @@ const LIST_MAX = 7;
 export function datesText(dates: readonly string[]): string {
   const shown = dates.length > LIST_MAX ? dates.slice(0, LIST_MAX - 1) : dates;
   const more = dates.length > shown.length ? '・…' : '';
-  return `${shown.map(dayLabel).join('・')}${more} 計 ${dates.length}日`;
+  return `${shown.map(dateText).join('・')}${more} 計 ${dates.length}日`;
 }
 
 /** 確認ダイアログの中身（独自の確認。ADR-0026） */
@@ -79,7 +76,7 @@ export function bulkConfirmDialog(b: BulkConfirm, staffTerm: string): { title: s
     `今の担当と時刻を${staffTerm}に伝えた内容として残します（あとの変更は「未連絡の変更」になります）。`,
   ];
   if (b.problem.length > 0)
-    lines.push(`問題のある ${b.problem.length}日は残します（要対応で確認）：${b.problem.map(dayLabel).join('・')}`);
+    lines.push(`問題のある ${b.problem.length}日は残します（要対応で確認）：${b.problem.map(dateText).join('・')}`);
   if (b.changed.length > 0)
     lines.push(`未連絡の変更のある ${b.changed.length}日も残します（日の予定の連絡の一覧で確かめます）。`);
   return { title: `問題の無い ${b.targets.length}日を確定しますか？`, body: lines.join('\n') };

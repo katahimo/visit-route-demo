@@ -8,10 +8,10 @@ import { useToast } from '../components/Toast';
 import { Hint, SectionTitle, WithIcon } from '../components/ui';
 import { type Client, type ClientLeave, clientLeaveSchema } from '../contracts/documents';
 import { jstDate } from '../domain/time';
-import { dateText, newId } from '../lib/common';
+import { newId } from '../lib/common';
+import { dateText, mdText } from '../lib/dateText';
 import { confirmLeave } from '../lib/leaveGuard';
 import { leaveConfirmedDates, leavesOf, leaveVisits, removeLeave, saveLeave } from '../lib/leaves';
-import { mdText } from '../lib/patternText';
 import { useDemoData } from '../store';
 
 /**

@@ -296,15 +296,9 @@ export function batchBandText(r: BatchRun): string {
   return `${r.label}の担当を組んでいます ${Math.min(r.index + 1, r.targets.length)}/${r.targets.length}日`;
 }
 
-/** 日の呼び名（「10/28」。範囲が1日のとき） */
-export function dayLabel(date: string): string {
-  return `${Number(date.slice(5, 7))}/${Number(date.slice(8, 10))}`;
-}
-
 /** 週の呼び名（「11/2〜11/8の週」。上の帯・知らせの文の月の名前の代わり） */
 export function weekLabel(start: string): string {
-  const md = (d: string) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
-  return `${md(start)}〜${md(addDays(start, 6))}の週`;
+  return `${mdText(start)}〜${mdText(addDays(start, 6))}の週`;
 }
 
 /** 進み具合の帯の文・知らせのボタンの行き先（担当を組むの画面の、組んだ範囲。ADR-0063） */

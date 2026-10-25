@@ -9,7 +9,8 @@ import { hhmmToMinutes } from '../domain/time';
 import { visitsOn } from '../patterns';
 import { own } from './common';
 import { dayProblemOf, dayRoutes, startsOf } from './dayPlan';
-import { calendarWeeks, shortName, ymOf } from './month';
+import { shortName } from './month';
+import { calendarWeeks, ymOf } from './ym';
 import { isRequestedOff } from './requestedOff';
 
 /** 印刷の1件（訪問） */

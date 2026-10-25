@@ -1,7 +1,6 @@
 import type { TravelMode } from '../contracts/codes';
 import type { Place, Terms } from '../contracts/documents';
 import { HARDABLE, type ItemKind, type RuleType } from '../contracts/rules';
-import { weekday } from '../domain/time';
 
 /** 画面の共通の表示（呼び方は org.terms から引く。「お客様」「シッター」を直書きしない） */
 
@@ -183,7 +182,3 @@ export function deltaText(n: number, unit = ''): string {
 export const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name, 'ja');
 export const byDisplayName = (a: { displayName: string }, b: { displayName: string }) =>
   a.displayName.localeCompare(b.displayName, 'ja');
-
-/** 「10/12（月）」 */
-export const dateText = (d: string) =>
-  `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}（${WEEKDAY_LABELS[weekday(d)]}）`;

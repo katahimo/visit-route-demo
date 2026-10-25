@@ -55,7 +55,7 @@ import { HistoryKeys } from '../components/undo';
 import { VisitPanelProvider } from '../components/VisitPanel';
 import { addDays, jstDate } from '../domain/time';
 import { hashPathname, isPaletteShortcut, keepPaletteOn } from '../lib/commandPalette';
-import { dateText } from '../lib/common';
+import { dateText } from '../lib/dateText';
 import { featureLabel, featureOfLocation, isFeatureOffState, isOn } from '../lib/features';
 import {
   activeNavPath,

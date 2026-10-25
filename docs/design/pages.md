@@ -327,6 +327,7 @@
 | `mailParts.tsx`・`mapsLinks.tsx` | メール・道順のリンク | [pages-common.md](pages-common.md) |
 | `FilePick.tsx` | ファイル選択 | [pages-data.md](pages-data.md) |
 | `parts.tsx` | `ClientName`・`ClientDot`（〈利用者さん〉の丸）など | — |
+| `Check.tsx` | チェックボックスの横並び `Check`（ほかの部品を import しない。`conditions`・`parts` の循環を作らない） | — |
 | `StaffMark.tsx` | 〈スタッフ〉の印 `StaffMark`・`StaffMarkById` | このファイル（〈スタッフ〉の印） |
 
 #### `lib/`（画面用の純粋関数。テストあり）

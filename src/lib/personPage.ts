@@ -5,8 +5,8 @@ import type { Absence, Visit } from '../contracts/documents';
 import { leaveOn } from '../domain/leaves';
 import { addDays, hhmmToMinutes, weekday } from '../domain/time';
 import { own, WEEKDAY_LABELS } from './common';
-import { addMonths, ymOf } from './month';
-import { mdText } from './patternText';
+import { addMonths, ymOf } from './ym';
+import { mdText } from './dateText';
 import { clientVisitsIn, staffVisitsIn } from './visitOps';
 import { weekDates, weekStart } from './week';
 
@@ -80,10 +80,9 @@ export function shiftAnchor(view: CalView, anchor: string, dir: -1 | 1): string 
 
 /** 期間の見出し（「10/19（月）〜10/25（日）」「2026年10月」） */
 export function calTitle(view: CalView, anchor: string): string {
-  if (view === 'month') return `${anchor.slice(0, 4)}年${Number(anchor.slice(5, 7))}月`;
+  if (view === 'month') return ymText(anchor);
   const d = weekDates(anchor);
-  const t = (x: string) => `${mdText(x)}（${WEEKDAY_LABELS[weekday(x)]}）`;
-  return `${t(d[0]!)}〜${t(d[6]!)}`;
+  return `${dateText(d[0]!)}〜${dateText(d[6]!)}`;
 }
 
 /** カレンダーの回の様子 */

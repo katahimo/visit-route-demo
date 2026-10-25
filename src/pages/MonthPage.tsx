@@ -79,30 +79,8 @@ import { attempt, byDisplayName, byName, newId, WEEKDAY_LABELS } from '../lib/co
 import { bulkConfirmDialog, bulkConfirmLabel, bulkConfirmTargets, bulkConfirmWhy, confirmDay } from '../lib/confirmDay';
 import { isOn } from '../lib/features';
 import { attentionTarget, type LinkTarget } from '../lib/links';
-import {
-  addMonths,
-  attentionList,
-  batchTargets,
-  type ClientDay,
-  calendarWeeks,
-  clientDay,
-  type DayMarks,
-  type DayPlan,
-  type DayStatus,
-  dayMarks,
-  dayPlanOf,
-  firstDayOf,
-  issueBreakdown,
-  isYm,
-  monthDates,
-  monthProgress,
-  type StaffDay,
-  shortName,
-  staffDay,
-  staffMonth,
-  type TypeCount,
-  ymOf,
-} from '../lib/month';
+import { attentionList, batchTargets, type ClientDay, clientDay, type DayMarks, type DayPlan, type DayStatus, dayMarks, dayPlanOf, issueBreakdown, monthProgress, type StaffDay, shortName, staffDay, staffMonth, type TypeCount } from '../lib/month';
+import { addMonths, calendarWeeks, firstDayOf, isYm, monthDates, ymOf } from '../lib/ym';
 import { batchBandText, monthBatch } from '../lib/monthBatch';
 import { cellGuide, createTipStore, type TipStore } from '../lib/monthGuide';
 import {
@@ -117,7 +95,7 @@ import {
 } from '../lib/monthList';
 import { attentionCountByDate, showRestMark, usualRestByWeekday } from '../lib/monthRest';
 import { scrollBehavior } from '../lib/motion';
-import { mdText } from '../lib/patternText';
+import { mdText } from '../lib/dateText';
 import { type BandOp, bandHref, urgentCount } from '../lib/progressBand';
 import {
   type OffDayState,

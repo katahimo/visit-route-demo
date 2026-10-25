@@ -101,7 +101,7 @@
 
 #### `lib/personPage.ts`（純粋関数。テストあり）
 
-`personPathKind`・`tabOf`・`tabSearch`・`pickFields`・`mergeFields`・`calViewOf`・`monthWeeksMon`・`calDates`・`shiftAnchor`・`calTitle`・`clientCalItems`・`staffCalItems`・`itemsByDate`・`lastMadeDate`・`staffAbsencesIn`・`slotOf`・`clientStaffGroups`（〈利用者さん〉から見た相性の記号ごとの〈スタッフ〉）
+`tabOf`・`tabSearch`・`pickFields`・`mergeFields`・`calViewOf`・`monthWeeksMon`・`calDates`・`shiftAnchor`・`calTitle`・`clientCalItems`・`staffCalItems`・`itemsByDate`・`lastMadeDate`・`staffAbsencesIn`・`slotOf`・`clientStaffGroups`（〈利用者さん〉から見た相性の記号ごとの〈スタッフ〉）
 
 #### `lib/viewMode.ts`（純粋関数。テストあり）
 
@@ -109,7 +109,7 @@
 
 #### `lib/leaves.ts`（画面の純粋関数。テストあり）
 
-`leavesOf(data, clientId)`（開始の順）・`saveLeave(d, leave)`（同じ ID は置き換え）・`removeLeave(d, id)`・`leaveVisitsOn(data, date)`（その日の休みの訪問と休み）・`leaveConfirmedDates(data, leave)`（休みの期間で、確定した割当にその〈利用者さん〉の訪問がある日）・`leaveVisits(data, leave)`（休みの期間のその〈利用者さん〉の取り消しでない訪問）・`keepLeaveVisits(cols, leaveVisitIds, before)`（確定するとき、休みの訪問を前の確定した担当のまま残す）
+`leavesOf(data, clientId)`（開始の順）・`saveLeave(d, leave)`（同じ ID は置き換え）・`removeLeave(d, id)`・`leaveConfirmedDates(data, leave)`（休みの期間で、確定した割当にその〈利用者さん〉の訪問がある日）・`leaveVisits(data, leave)`（休みの期間のその〈利用者さん〉の取り消しでない訪問）・`keepLeaveVisits(cols, leaveVisitIds, before)`（確定するとき、休みの訪問を前の確定した担当のまま残す）
 
 #### 確かめ
 

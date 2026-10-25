@@ -72,7 +72,7 @@
 
 - 地図の浮かせた表示：`components/MapDock.tsx`（画面の外の地図を右下に浮かせる）。位置は `--map-dock-left`・`--map-dock-top`
 - `components/floating.ts`（`FLOATING_EVENT`・`useFloatingEdge(name)`）：知らせ（トースト）は欠勤の振り直しの帯・地図より上に出す（`--reassign-dock-top`・`--map-dock-top`）
-- `components/Toast.tsx`：z-index 1200。body の直下の `div.toast-layer[data-inert-keep]` に出す（右の欄の inert に巻き込まれず、欄が開いていても読み上げ・「元に戻す」を押せる。確認ダイアログ・パレット・ツアーの間は今までどおり inert）。`toast(msg)` は文だけ（`output.toast`・2.5秒・押しても下へ抜ける）。`toast(msg, { action })` はボタン1つ付き（`.toast.has-action`。文は中の `output`・ボタンだけ押せる・`toastMs`＝6秒から文の長さ（1字 120ms）で延ばし10秒まで・フォーカスがある間・マウスを重ねている間は消さず、両方が外れたら2.5秒で消す。ボタン付きの箱（文の幅だけ）はマウスを受ける（`pointer-events: auto`）。PRD D268）。使う所は全体の「元に戻す」（`components/undo` の `useUndoAction`。data-testid `toast-undo`。戻したあとは「やり直す」 `toast-redo`。PRD D329）と、範囲の AI で組むの終わりの［月の予定を見る］／［週の予定を見る］（`components/batchBand` の `MonthBatchHost`。提案を出したときに日・週・月の予定か（空き状況から始めたなら）空き状況にいれば、提案の帯が見えるのでボタンを付けない。提案が無いときは、その月の月の予定・その週の週の予定を見ていれば付けない（`lib/month` の `monthShown(search, date)`。テストあり）。PRD D268・D328）
+- `components/Toast.tsx`：z-index 1200。body の直下の `div.toast-layer[data-inert-keep]` に出す（右の欄の inert に巻き込まれず、欄が開いていても読み上げ・「元に戻す」を押せる。確認ダイアログ・パレット・ツアーの間は今までどおり inert）。`toast(msg)` は文だけ（`output.toast`・2.5秒・押しても下へ抜ける）。`toast(msg, { action })` はボタン1つ付き（`.toast.has-action`。文は中の `output`・ボタンだけ押せる・`toastMs`＝6秒から文の長さ（1字 120ms）で延ばし10秒まで・フォーカスがある間・マウスを重ねている間は消さず、両方が外れたら2.5秒で消す。ボタン付きの箱（文の幅だけ）はマウスを受ける（`pointer-events: auto`）。PRD D268）。使う所は全体の「元に戻す」（`components/undo` の `useUndoAction`。data-testid `toast-undo`。戻したあとは「やり直す」 `toast-redo`。PRD D329）と、範囲の AI で組むの終わりの［月の予定を見る］／［週の予定を見る］（`components/batchBand` の `MonthBatchHost`。提案を出したときに日・週・月の予定か（空き状況から始めたなら）空き状況にいれば、提案の帯が見えるのでボタンを付けない。提案が無いときは、担当を組むの画面にいれば付けない。PRD D268・D328）
 
 ### フォームの共通の決まり（PRD D250・D251。`components/FieldError.tsx`）
 
@@ -110,7 +110,7 @@
 予定のモードは無い（予定はいつも手で直せる。AI で組むのは予定を組む）。この部品は組む月の決まりとメニューの件数だけを持つ純粋関数（テストあり）。データは書き換えない。
 
 - `nextYm(today)`・`isLateMonth(today)`（`HOME_NEXT_MONTH_FROM_DAY` 日以降。PRD D255）・`planYm(today)`：組む月（月の後半は来月、前半は今月）。`planLabel(today)`：メニューの子の名前「◯月の予定」
-- `unassignedDays(data, ym, today)`：その月の、担当なしの訪問がある日（今日以降・まだ伝えていない日）の数（取り消し・〈利用者さん〉の休みの回は数えない。compile しないので軽い）。`PLAN_NEEDED_DAYS`（2）
+- `unassignedDays(data, ym, today)`：その月の、担当なしの訪問がある日（今日以降・まだ伝えていない日）の数（取り消し・〈利用者さん〉の休みの回は数えない。compile しないので軽い）
 - `menuBadges(data, today)`：メニューの件数の印 `{ planUnassignedDays, todayUntold }`（担当を組むの「N日」・今日の予定の「未確定」）
 
 ### 訪問の札の共通の部品（`lib/visitLook.ts`・`visitSelect.ts`・`visitDrop.ts`・`components/visitParts.tsx`・`visitParts.css`。PRD D339〜D342。ADR-0056・ADR-0057）

@@ -6,7 +6,7 @@ import { WithIcon } from '../components/ui';
 import { jstDate, minutesToHhmm, weekday } from '../domain/time';
 import { colorOf } from '../lib/colors';
 import { byName, WEEKDAY_LABELS } from '../lib/common';
-import { addMonths, isYm, ymOf } from '../lib/month';
+import { addMonths, isYm, ymOf } from '../lib/ym';
 import { monthPrint, type PrintDay } from '../lib/monthPrint';
 import { REQUESTED_OFF_NOTE } from '../lib/requestedOff';
 import { useDemoData } from '../store';

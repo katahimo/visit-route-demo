@@ -19,8 +19,7 @@ export function daysBetween(a: string, b: string): number {
 export function exportAgoText(last: string | null, today: string): string {
   if (last === null) return NEVER_EXPORTED_TEXT;
   const n = daysBetween(last, today);
-  const md = `${Number(last.slice(5, 7))}/${Number(last.slice(8, 10))}`;
-  return `${md}（${n <= 0 ? '今日' : `${n}日前`}）`;
+  return `${mdText(last)}（${n <= 0 ? '今日' : `${n}日前`}）`;
 }
 
 /**
@@ -53,7 +52,7 @@ export function shouldRemindBackup(x: {
 /** 時刻（ms）を日本時間の「10/19 14:03」に */
 export function jstStamp(at: number): string {
   const j = new Date(at + 9 * 3600 * 1000).toISOString();
-  return `${Number(j.slice(5, 7))}/${Number(j.slice(8, 10))} ${j.slice(11, 16)}`;
+  return `${mdText(j)} ${j.slice(11, 16)}`;
 }
 
 /** 「直前の状態に戻す」の欄の文：「10/19 14:03 の『初期状態に戻す』の前の状態に戻せます」 */

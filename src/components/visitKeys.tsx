@@ -5,7 +5,8 @@ import { Repeat, X } from 'lucide-react';
 import { useCallback, useRef } from 'react';
 import type { DemoData } from '../contracts/data';
 import { jstDate } from '../domain/time';
-import { dateText, newId } from '../lib/common';
+import { newId } from '../lib/common';
+import { dateText } from '../lib/dateText';
 import { appHistory } from '../lib/history';
 import { createValueStore, useValueStore } from '../lib/valueStore';
 import {

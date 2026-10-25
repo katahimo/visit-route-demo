@@ -2,7 +2,7 @@
 import type { Problem, RouteTiming, StopTiming } from '../contracts/problem';
 
 /** 浮動小数の誤差の許し（matching・solver・evaluate・reassign・vacancy で同じ値を使う） */
-export const EPS = 1e-6;
+export const EPS = 1e-9;
 
 /**
  * t0 以降で、作業 [t, t+duration] が時間帯の1つに収まる最も早い t。無ければ Infinity。

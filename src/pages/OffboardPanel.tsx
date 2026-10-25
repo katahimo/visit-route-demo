@@ -17,7 +17,7 @@ import {
   offboardScope,
   unlimitedBy,
 } from '../lib/offboard';
-import { mdText } from '../lib/patternText';
+import { mdText } from '../lib/dateText';
 import { useDemoData } from '../store';
 
 /** 持ち方の文 */

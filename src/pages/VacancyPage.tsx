@@ -13,50 +13,27 @@ import { Hint, PageHeader, SidePanel, WithIcon } from '../components/ui';
 import type { Client, ClientPlace, Pattern } from '../contracts/documents';
 import { EMPTY_REFERRER, patternSchema } from '../contracts/documents';
 import type { Condition } from '../contracts/rules';
-import {
-  VACANCY_DAY_END_DEFAULT,
-  VACANCY_DAY_START_DEFAULT,
-  VACANCY_DURATION_MAX,
-  VACANCY_DURATION_MIN,
-  VACANCY_MARGIN_DEFAULT,
-  VACANCY_STEP_DEFAULT,
-  VACANCY_WEEKS_MAX,
-  VACANCY_WEEKS_MIN,
-  type VacancyCell,
-  type VacancyQuery,
-  type VacancyRange,
-  type VacancyResult,
-} from '../contracts/vacancy';
+import { VACANCY_DAY_END_DEFAULT, VACANCY_DAY_START_DEFAULT, VACANCY_DURATION_MAX, VACANCY_DURATION_MIN, VACANCY_MARGIN_DEFAULT, VACANCY_STEP_DEFAULT, VACANCY_WEEKS_MAX, VACANCY_WEEKS_MIN, type VacancyCell, type VacancyQuery, type VacancyRange, type VacancyResult } from '../contracts/vacancy';
 import { HALF_HOURS, timeText } from '../domain/availability';
 import { addDays, hhmmToMinutes, jstDate, jstHhmm, minutesToHhmm, weekday } from '../domain/time';
 import { pinnedAddressAfter, toPlace } from '../lib/addressLookup';
 import { copyText } from '../lib/clipboard';
 import { CLIENT_COLORS } from '../lib/colors';
-import { attempt, dateText, nameTaken, newId, WEEKDAY_LABELS } from '../lib/common';
+import { attempt, nameTaken, newId, WEEKDAY_LABELS } from '../lib/common';
+import { dateText, mdText } from '../lib/dateText';
 import { unassignedDays } from '../lib/dayPlan';
-import { type InquiryDayMark, type InquiryRow, inquiryDayLevel, inquiryRows, vacancyLevel } from '../lib/glance';
+import { inquiryDayLevel, type InquiryDayMark, type InquiryRow, inquiryRows, vacancyLevel } from '../lib/glance';
 import { dayHref, unassignedHref } from '../lib/links';
 import { referrerRecipients, vacancySubject } from '../lib/mail';
 import { buildBccMails } from '../lib/mailto';
-import { ymOf } from '../lib/month';
-import { mdText, typeOf } from '../lib/patternText';
+import { ymOf } from '../lib/ym';
+import { typeOf } from '../lib/patternText';
 import { normalizePostalCode } from '../lib/postalCode';
 import { scrollLeftToShow } from '../lib/scrollEdge';
 import { useFeature } from '../lib/useFeature';
 import { COMPACT_QUERY, useMedia } from '../lib/useMedia';
 import { loadVacancyInput, saveVacancyInput } from '../lib/vacancyInput';
-import {
-  answerCard,
-  cellFace,
-  markLegend,
-  NARROW_FIRST_START,
-  NO_TYPE_TEXT,
-  noticeLine,
-  placeLine,
-  VACANCY_MARK,
-  VACANCY_MARK_TEXT,
-  whenWhatLine,
-} from '../lib/vacancyView';
+import { answerCard, cellFace, markLegend, NARROW_FIRST_START, NO_TYPE_TEXT, noticeLine, placeLine, VACANCY_MARK, VACANCY_MARK_TEXT, whenWhatLine } from '../lib/vacancyView';
 import { insertAllIntoPlans, weekStart } from '../lib/week';
 import { visitsIn } from '../patterns';
 import { useDemoData } from '../store';

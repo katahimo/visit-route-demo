@@ -8,19 +8,14 @@ import { slotsText } from '../domain/availability';
 import { jstDate, minutesToHhmm } from '../domain/time';
 import { busyStaff, choiceColumns } from '../lib/choiceView';
 import { colorOf } from '../lib/colors';
-import { dateText, deltaText, newId, r0, WEEKDAY_LABELS } from '../lib/common';
+import { deltaText, newId, r0, WEEKDAY_LABELS } from '../lib/common';
+import { dateText, mdText } from '../lib/dateText';
 import { ownerOf, pointsOf, routesOf, unassignedOf } from '../lib/dayPlan';
-import {
-  type BatchProposal,
-  monthBatch,
-  type ProposalChange,
-  proposalDayChanges,
-  proposalDayFresh,
-} from '../lib/monthBatch';
-import { mdText, typeOf } from '../lib/patternText';
+import { type BatchProposal, monthBatch, type ProposalChange, proposalDayChanges, proposalDayFresh } from '../lib/monthBatch';
+import { typeOf } from '../lib/patternText';
 import { buildRouteMap, homeLegKey, useRouteSelection } from '../lib/routeView';
 import { bestIndex, dayStandardPreview, registerDayStandard } from '../lib/standard';
-import { type LegSpan, legsOf } from '../lib/timeline';
+import { legsOf, type LegSpan } from '../lib/timeline';
 import { useDayModel } from '../lib/useDayModel';
 import { useValueStore } from '../lib/valueStore';
 import { useConfirm } from './ConfirmDialog';

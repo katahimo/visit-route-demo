@@ -1,33 +1,12 @@
-import {
-  BadgeCheck,
-  CalendarDays,
-  CalendarX,
-  Clock,
-  HeartHandshake,
-  Home,
-  Plus,
-  SlidersHorizontal,
-  Smartphone,
-  Sparkles,
-  Timer,
-  UserRound,
-  UserRoundCog,
-} from 'lucide-react';
+import { BadgeCheck, CalendarDays, CalendarX, Clock, HeartHandshake, Home, Plus, SlidersHorizontal, Smartphone, Sparkles, Timer, UserRound, UserRoundCog } from 'lucide-react';
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useConfirm } from '../components/ConfirmDialog';
 import { ConditionsEditor, TraitsEditor } from '../components/conditions';
 import { type FormErr, invalidAttrs, RequiredMark, toFormErr } from '../components/FieldError';
 import { PersonCalendar } from '../components/PersonCalendar';
-import { Check } from '../components/parts';
-import {
-  CondRows,
-  DlRow,
-  StaffHoursRow,
-  StaffLastDayRow,
-  StaffTraitRows,
-  StaffTravelRow,
-} from '../components/personDetail';
+import { Check } from '../components/Check';
+import { CondRows, DlRow, StaffHoursRow, StaffLastDayRow, StaffTraitRows, StaffTravelRow } from '../components/personDetail';
 import { BackToList, EditSection, type PersonTabDef, PersonTabs, useAskDiscard } from '../components/personPage';
 import { placeText, StaffClientRows } from '../components/personView';
 import { AddressField } from '../components/placeLookup';
@@ -40,25 +19,14 @@ import { type Staff, staffSchema } from '../contracts/documents';
 import { availabilityOf, slotsText } from '../domain/availability';
 import { addDays, jstDate } from '../domain/time';
 import { absenceText } from '../lib/absences';
-import { dateText, nameTaken, newId, TRAVEL_MODE_LABELS, WEEKDAY_LABELS } from '../lib/common';
+import { nameTaken, newId, TRAVEL_MODE_LABELS, WEEKDAY_LABELS } from '../lib/common';
+import { dateText, mdText } from '../lib/dateText';
 import { encodeStaffFilter } from '../lib/compatView';
 import { linkIfOn, suddenHref, workloadHref } from '../lib/links';
 import { normalizeEmail } from '../lib/mailto';
-import { ymOf } from '../lib/month';
+import { ymOf } from '../lib/ym';
 import { offboardScope } from '../lib/offboard';
-import { mdText } from '../lib/patternText';
-import {
-  type CalView,
-  calDates,
-  calViewOf,
-  mergeFields,
-  NEW_PERSON_ID,
-  pickFields,
-  STAFF_TABS,
-  type StaffTab,
-  staffAbsencesIn,
-  tabOf,
-} from '../lib/personPage';
+import { calDates, type CalView, calViewOf, mergeFields, NEW_PERSON_ID, pickFields, STAFF_TABS, staffAbsencesIn, type StaffTab, tabOf } from '../lib/personPage';
 import { isRequestedOff, REQUESTED_OFF_NOTE } from '../lib/requestedOff';
 import { staffColorMap, staffIconError, surnameInitial } from '../lib/staffMark';
 import { useFeature, useFeatures } from '../lib/useFeature';

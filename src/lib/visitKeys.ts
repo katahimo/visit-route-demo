@@ -5,7 +5,7 @@
 import type { DemoData } from '../contracts/data';
 import { addDays, hhmmToMinutes, minutesToHhmm } from '../domain/time';
 import { findVisit, visitsOn } from '../patterns';
-import { dateText } from './common';
+import { dateText } from './dateText';
 import { dayProblemOf, routesOf, visitIssues } from './dayPlan';
 import { applyVisitEdit, draftOf, SCOPE_LABELS, staffChoices, type VisitScope } from './visitOps';
 

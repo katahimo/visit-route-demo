@@ -49,7 +49,7 @@ import {
   WEEK_TABLE_FILTER,
 } from '../lib/clientFilter';
 import { colorOf } from '../lib/colors';
-import { dateText } from '../lib/common';
+import { dateText } from '../lib/dateText';
 import { bulkConfirmDialog, bulkConfirmTargets, confirmDay } from '../lib/confirmDay';
 import { periodEmptyGuide } from '../lib/emptyGuide';
 import { isDate } from '../lib/isDate';

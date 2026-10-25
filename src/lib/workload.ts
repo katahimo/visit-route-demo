@@ -7,7 +7,7 @@ import type { Problem } from '../contracts/problem';
 import { type CompileInput, scheduleRoute } from '../matching';
 import { own } from './common';
 import { dayProblemOf, dayRoutes } from './dayPlan';
-import { monthDates } from './month';
+import { monthDates } from './ym';
 import { type RoutePart, spanParts } from './staffBar';
 
 /** 見込みの元：伝えた日（確定）／まだ伝えていない日 */
@@ -214,7 +214,7 @@ export function workloadTsv(
   const fare = opts.fareYenPerKm > 0;
   const head = [
     '名前',
-    ...days.map((d) => `${Number(d.date.slice(5, 7))}/${Number(d.date.slice(8, 10))}`),
+    ...days.map((d) => mdText(d.date)),
     '日数',
     '拘束',
     '訪問',

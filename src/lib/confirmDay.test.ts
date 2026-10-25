@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { dateText } from './dateText';
 import type { DemoData } from '../contracts/data';
 import { findVisit, putVisits, visitsOn } from '../patterns';
 import { createInitialData } from '../seed/plans';
@@ -10,7 +11,6 @@ import {
   bulkConfirmWhy,
   confirmDay,
   datesText,
-  dayLabel,
   nextUnconfirmed,
 } from './confirmDay';
 import { dayProblemOf, dayRoutes, toldChanges } from './dayPlan';
@@ -124,9 +124,9 @@ describe('bulkConfirmTargets（PRD D223）', () => {
   });
 });
 
-describe('datesText・dayLabel・nextUnconfirmed', () => {
+describe('datesText・dateText・nextUnconfirmed', () => {
   it('日付と曜日・多ければ略して計を添える', () => {
-    expect(dayLabel('2026-10-22')).toBe('10/22（木）');
+    expect(dateText('2026-10-22')).toBe('10/22（木）');
     expect(datesText(['2026-10-22', '2026-10-23'])).toBe('10/22（木）・10/23（金） 計 2日');
     const many = Array.from({ length: 9 }, (_, i) => `2026-11-${String(i + 1).padStart(2, '0')}`);
     const t = datesText(many);

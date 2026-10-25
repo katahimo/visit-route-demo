@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Absence, Staff } from '../contracts/documents';
-import { HOME_NEXT_MONTH_FROM_DAY, homeDays, homeMonths, homeTasks, monthLabel } from './home';
+import { HOME_NEXT_MONTH_FROM_DAY, homeDays, homeMonths, homeTasks } from './home';
+import { monthLabel } from './dateText';
 import { type DayStatus, monthProgress } from './month';
 
 /** 日の状態（既定は訪問3件・確定済み・問題なし） */

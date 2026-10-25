@@ -4,9 +4,10 @@ import type { DemoData } from '../contracts/data';
 import type { Terms } from '../contracts/documents';
 import type { Features } from '../contracts/features';
 import { addDays } from '../domain/time';
-import { dateText } from './common';
+import { dateText, monthLabel } from './dateText';
 import { isHrefOn } from './features';
-import { type AttentionKind, attentionList, type DayStatus, monthDates, ymOf } from './month';
+import { type AttentionKind, attentionList, type DayStatus } from './month';
+import { monthDates, ymOf } from './ym';
 import { SUDDEN_DO } from './sudden';
 
 /**
@@ -15,8 +16,6 @@ import { SUDDEN_DO } from './sudden';
  */
 export const HOME_NEXT_MONTH_FROM_DAY = 15;
 
-/** 月の名前（「10月」） */
-export const monthLabel = (ym: string): string => `${Number(ym.slice(5, 7))}月`;
 
 /** ホームで見る月：今月。今日が HOME_NEXT_MONTH_FROM_DAY 日以降なら来月も */
 export function homeMonths(today: string): string[] {

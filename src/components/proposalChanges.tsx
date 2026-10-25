@@ -2,7 +2,7 @@
 import { ArrowRight } from 'lucide-react';
 import type { DemoData } from '../contracts/data';
 import { minutesToHhmm } from '../domain/time';
-import { dateText } from '../lib/common';
+import { dateText } from '../lib/dateText';
 import { type ProposalChange, type ProposalDay, proposalDayChanges } from '../lib/monthBatch';
 
 /** 時刻の差の文（「30分遅く」「15分早く」） */

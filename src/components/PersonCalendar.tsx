@@ -1,33 +1,12 @@
-import {
-  CalendarClock,
-  CalendarRange,
-  ChevronLeft,
-  ChevronRight,
-  Plus,
-  Sparkles,
-  TriangleAlert,
-  X,
-} from 'lucide-react';
+import { CalendarClock, CalendarRange, ChevronLeft, ChevronRight, Plus, Sparkles, TriangleAlert, X } from 'lucide-react';
 import { type PointerEvent, type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import type { Visit } from '../contracts/documents';
 import { hhmmToMinutes, jstDate, minutesToHhmm } from '../domain/time';
 import { colorOf } from '../lib/colors';
-import { dateText } from '../lib/common';
-import { ymOf } from '../lib/month';
-import { mdText, typeOf } from '../lib/patternText';
-import {
-  CAL_STATE_TEXT,
-  type CalItem,
-  type CalView,
-  calDates,
-  calTitle,
-  clientCalItems,
-  itemsByDate,
-  monthWeeksMon,
-  shiftAnchor,
-  slotOf,
-  staffCalItems,
-} from '../lib/personPage';
+import { dateText, mdText } from '../lib/dateText';
+import { ymOf } from '../lib/ym';
+import { typeOf } from '../lib/patternText';
+import { CAL_STATE_TEXT, calDates, type CalItem, calTitle, type CalView, clientCalItems, itemsByDate, monthWeeksMon, shiftAnchor, slotOf, staffCalItems } from '../lib/personPage';
 import { COMPACT_QUERY, useMedia } from '../lib/useMedia';
 import { canSelectVisit } from '../lib/visitSelect';
 import { canMoveVisit, DAY_END, DAY_START, insertIntoPlan, laneLayout, snapMinutes, weekDates } from '../lib/week';
@@ -39,16 +18,7 @@ import { WithIcon } from './ui';
 import { UndoButtons } from './undo';
 import { useOpenVisit } from './VisitPanel';
 import { focusVisitItem, KeyMoveBand, useVisitKeys, visitItemOf } from './visitKeys';
-import {
-  DropShadow,
-  SelectToggle,
-  useVisitDrag,
-  useVisitItem,
-  useVisitLooks,
-  useVisitSelection,
-  VisitMarks,
-  VisitRow,
-} from './visitParts';
+import { DropShadow, SelectToggle, useVisitDrag, useVisitItem, useVisitLooks, useVisitSelection, VisitMarks, VisitRow } from './visitParts';
 import { TypeDot } from './visitType';
 import './personCalendar.css';
 

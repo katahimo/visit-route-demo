@@ -10,7 +10,8 @@ import { type Client, type Pattern, patternSchema } from '../contracts/documents
 import type { PatternChange } from '../contracts/patterns';
 import { hhmmToMinutes, jstDate, minutesToHhmm } from '../domain/time';
 import { byName, newId, WEEKDAY_LABELS } from '../lib/common';
-import { EVERY_WEEKS_LABELS, mdText, patternWhenText, periodText, typeOf } from '../lib/patternText';
+import { EVERY_WEEKS_LABELS, patternWhenText, periodText, typeOf } from '../lib/patternText';
+import { mdText } from '../lib/dateText';
 import { useFeature } from '../lib/useFeature';
 import { endPatternOp } from '../lib/visitOps';
 import { removePattern, splitPattern, timesOn } from '../patterns';
