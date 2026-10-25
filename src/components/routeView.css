@@ -1,0 +1,127 @@
+/* 担当ごとのルートの共通の見た目（予定・比較・担当を組むの案で同じ。列の見出し・地図の凡例・区間・強調する訪問先） */
+/* 列の見出し（〈スタッフ〉の印は components/staffMark.css） */
+.col-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.col-head + .chip {
+  flex-shrink: 0;
+}
+/* 担当の列の見出しの下：その日の稼働時間帯と「この日だけ変更」・休み */
+.col-hours {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.item-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+/* 地図で見るスタッフ（列の見出し・凡例を押す）と、選んだ訪問先の強調 */
+.col-focus {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 6px;
+  margin-left: -6px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  color: inherit;
+  cursor: pointer;
+}
+.col-focus:hover,
+.col-focus[aria-pressed="true"] {
+  background: var(--primary-soft);
+}
+.col-focus-icon {
+  color: var(--sub);
+  opacity: 0;
+}
+.col-focus:hover .col-focus-icon,
+.col-focus[aria-pressed="true"] .col-focus-icon {
+  opacity: 1;
+  color: var(--primary);
+}
+.route-col.is-focus {
+  box-shadow: 0 0 0 2px var(--primary);
+}
+.route-col.is-dim-col {
+  opacity: 0.55;
+}
+/* 地図の凡例 */
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.legend-line {
+  display: inline-block;
+  width: 22px;
+  height: 4px;
+  border-radius: 2px;
+}
+.legend-line-ink {
+  background: var(--ink);
+}
+.legend-line.is-dashed {
+  height: 0;
+  border-top: 3px dashed currentColor;
+  border-radius: 0;
+}
+.legend-btn {
+  border: 1px solid transparent;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+.legend-btn:hover,
+.legend-btn.is-on {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+/* 区間（移動）を押すと地図でその線を強調 */
+.leg-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  margin-left: -6px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.leg-btn:hover,
+.leg-btn.is-on {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+}
+.map-pin-hl {
+  width: 40px;
+  height: 40px;
+  font-size: 1rem;
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+  animation: pin-pulse 1.4s ease-out infinite;
+}
+@keyframes pin-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(232, 115, 95, 0.55);
+  }
+  100% {
+    box-shadow: 0 0 0 14px rgba(232, 115, 95, 0);
+  }
+}
+
