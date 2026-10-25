@@ -1,12 +1,13 @@
 // 担当ごとの順番の部品（区間のボタン・訪問カード・地図の凡例）。予定 #/plan と比較 #/compare で共通（ADR-0009）
-import { Car, Clock, Hourglass, House } from 'lucide-react';
+import './routeView.css';
+import { Car, Clock, Hourglass, House, MapPin } from 'lucide-react';
 import type { DragEvent, ReactNode } from 'react';
-import type { Client } from '../contracts/documents';
+import type { Client, Staff } from '../contracts/documents';
 import type { StopTiming } from '../contracts/problem';
 import { minutesToHhmm } from '../domain/time';
 import { r0 } from '../lib/common';
 import { ClientName } from './parts';
-import { StaffMarkById } from './StaffMark';
+import { StaffMark, StaffMarkById } from './StaffMark';
 import { WithIcon } from './ui';
 
 /**
@@ -162,6 +163,35 @@ export function VisitCard({
       </div>
       {picked && detail}
     </div>
+  );
+}
+
+/**
+ * 列の見出しの担当の名前（押すと地図をその人のルートだけにする。もう一度で全員。予定の画面と担当を組むの案の時間軸で同じ）
+ */
+export function StaffFocusButton({
+  staff,
+  name,
+  on,
+  onToggle,
+}: {
+  staff: Staff | undefined;
+  name: string;
+  on: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="col-head col-focus ellipsis"
+      aria-pressed={on}
+      title={on ? '地図を全員に戻す' : '地図でこの人のルートだけを見る'}
+      onClick={onToggle}
+    >
+      <StaffMark staff={staff} size="sm" />
+      <span className="col-head-name">{name}</span>
+      <MapPin size={13} className="col-focus-icon" aria-hidden="true" />
+    </button>
   );
 }
 

@@ -42,7 +42,12 @@
   },
   "overrides": [
     {
-      "includes": ["**/*.test.*", "**/*.spec.*", "e2e/**", "scripts/**"],
+      "includes": [
+        "**/*.test.*",
+        "**/*.spec.*",
+        "e2e/**",
+        "scripts/**"
+      ],
       "linter": {
         "rules": {
           "complexity": {
@@ -52,7 +57,13 @@
       }
     },
     {
-      "includes": ["src/contracts/**", "!**/*.test.ts", "!**/*.test.tsx", "!**/*.d.ts", "!src/contracts/documents.ts"],
+      "includes": [
+        "src/contracts/**",
+        "!**/*.test.ts",
+        "!**/*.test.tsx",
+        "!**/*.d.ts",
+        "!src/contracts/documents.ts"
+      ],
       "linter": {
         "rules": {
           "style": {
@@ -88,7 +99,12 @@
       }
     },
     {
-      "includes": ["src/domain/**", "!**/*.test.ts", "!**/*.test.tsx", "!**/*.d.ts"],
+      "includes": [
+        "src/domain/**",
+        "!**/*.test.ts",
+        "!**/*.test.tsx",
+        "!**/*.d.ts"
+      ],
       "linter": {
         "rules": {
           "style": {
@@ -126,7 +142,12 @@
       }
     },
     {
-      "includes": ["src/patterns/**", "!**/*.test.ts", "!**/*.test.tsx", "!**/*.d.ts"],
+      "includes": [
+        "src/patterns/**",
+        "!**/*.test.ts",
+        "!**/*.test.tsx",
+        "!**/*.d.ts"
+      ],
       "linter": {
         "rules": {
           "style": {
@@ -158,7 +179,12 @@
       }
     },
     {
-      "includes": ["src/matching/**", "!**/*.test.ts", "!**/*.test.tsx", "!**/*.d.ts"],
+      "includes": [
+        "src/matching/**",
+        "!**/*.test.ts",
+        "!**/*.test.tsx",
+        "!**/*.d.ts"
+      ],
       "linter": {
         "rules": {
           "style": {
@@ -190,7 +216,12 @@
       }
     },
     {
-      "includes": ["src/solver/**", "!**/*.test.ts", "!**/*.test.tsx", "!**/*.d.ts"],
+      "includes": [
+        "src/solver/**",
+        "!**/*.test.ts",
+        "!**/*.test.tsx",
+        "!**/*.d.ts"
+      ],
       "linter": {
         "rules": {
           "style": {
@@ -222,7 +253,12 @@
       }
     },
     {
-      "includes": ["src/evaluate/**", "!**/*.test.ts", "!**/*.test.tsx", "!**/*.d.ts"],
+      "includes": [
+        "src/evaluate/**",
+        "!**/*.test.ts",
+        "!**/*.test.tsx",
+        "!**/*.d.ts"
+      ],
       "linter": {
         "rules": {
           "style": {
@@ -254,7 +290,12 @@
       }
     },
     {
-      "includes": ["src/reassign/**", "!**/*.test.ts", "!**/*.test.tsx", "!**/*.d.ts"],
+      "includes": [
+        "src/reassign/**",
+        "!**/*.test.ts",
+        "!**/*.test.tsx",
+        "!**/*.d.ts"
+      ],
       "linter": {
         "rules": {
           "style": {
@@ -286,7 +327,12 @@
       }
     },
     {
-      "includes": ["src/vacancy/**", "!**/*.test.ts", "!**/*.test.tsx", "!**/*.d.ts"],
+      "includes": [
+        "src/vacancy/**",
+        "!**/*.test.ts",
+        "!**/*.test.tsx",
+        "!**/*.d.ts"
+      ],
       "linter": {
         "rules": {
           "style": {
@@ -318,7 +364,12 @@
       }
     },
     {
-      "includes": ["src/excel/**", "!**/*.test.ts", "!**/*.test.tsx", "!**/*.d.ts"],
+      "includes": [
+        "src/excel/**",
+        "!**/*.test.ts",
+        "!**/*.test.tsx",
+        "!**/*.d.ts"
+      ],
       "linter": {
         "rules": {
           "style": {
@@ -330,7 +381,14 @@
                 },
                 "patterns": [
                   {
-                    "group": ["**/components", "**/components/**", "**/pages", "**/pages/**", "**/app", "**/app/**"],
+                    "group": [
+                      "**/components",
+                      "**/components/**",
+                      "**/pages",
+                      "**/pages/**",
+                      "**/app",
+                      "**/app/**"
+                    ],
                     "message": "src/excel/** の層の決まりに反する import（code-rules.json）"
                   }
                 ]
@@ -341,7 +399,12 @@
       }
     },
     {
-      "includes": ["src/seed/**", "!**/*.test.ts", "!**/*.test.tsx", "!**/*.d.ts"],
+      "includes": [
+        "src/seed/**",
+        "!**/*.test.ts",
+        "!**/*.test.tsx",
+        "!**/*.d.ts"
+      ],
       "linter": {
         "rules": {
           "style": {
@@ -422,7 +485,12 @@
       }
     },
     {
-      "includes": ["src/store/**", "!**/*.test.ts", "!**/*.test.tsx", "!**/*.d.ts"],
+      "includes": [
+        "src/store/**",
+        "!**/*.test.ts",
+        "!**/*.test.tsx",
+        "!**/*.d.ts"
+      ],
       "linter": {
         "rules": {
           "style": {
@@ -431,7 +499,14 @@
               "options": {
                 "patterns": [
                   {
-                    "group": ["**/components", "**/components/**", "**/pages", "**/pages/**", "**/app", "**/app/**"],
+                    "group": [
+                      "**/components",
+                      "**/components/**",
+                      "**/pages",
+                      "**/pages/**",
+                      "**/app",
+                      "**/app/**"
+                    ],
                     "message": "src/store/** の層の決まりに反する import（code-rules.json）"
                   }
                 ]
@@ -459,7 +534,12 @@
               "options": {
                 "patterns": [
                   {
-                    "group": ["**/pages", "**/pages/**", "**/app", "**/app/**"],
+                    "group": [
+                      "**/pages",
+                      "**/pages/**",
+                      "**/app",
+                      "**/app/**"
+                    ],
                     "message": "src/components/** の層の決まりに反する import（code-rules.json）"
                   }
                 ]

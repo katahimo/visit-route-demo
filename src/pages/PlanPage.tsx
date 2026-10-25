@@ -14,7 +14,6 @@ import {
   ListChecks,
   Mail,
   Map as MapIcon,
-  MapPin,
   MessageSquareText,
   PanelRightOpen,
   Pin,
@@ -44,7 +43,7 @@ import { type IssueRow, PlanIssueCount } from '../components/PlanIssueCount';
 import { ClientName } from '../components/parts';
 import { RouteMap } from '../components/RouteMap';
 import { RouteTimeline, type TimelineBand, type TimelineColumn } from '../components/routeTimeline';
-import { LegLine, StaffLegend, VisitCard } from '../components/routeView';
+import { LegLine, StaffFocusButton, StaffLegend, VisitCard } from '../components/routeView';
 import { ScheduleNav } from '../components/ScheduleNav';
 import { StaffMark, StaffMarkById } from '../components/StaffMark';
 import { RangeProposalBand, ScheduleToolbar, SelectionBar } from '../components/scheduleParts';
@@ -1709,19 +1708,12 @@ export default function PlanPage() {
     return (
       <>
         <div className="spread">
-          <button
-            type="button"
-            className="col-head col-focus ellipsis"
-            aria-pressed={focusStaff === sid}
-            title={focusStaff === sid ? '地図を全員に戻す' : '地図でこの人のルートだけを見る'}
-            onClick={() => {
-              focusOn(focusStaff === sid ? null : sid);
-            }}
-          >
-            <StaffMark staff={s} size="sm" />
-            <span className="col-head-name">{staffName(sid)}</span>
-            <MapPin size={13} className="col-focus-icon" aria-hidden="true" />
-          </button>
+          <StaffFocusButton
+            staff={s}
+            name={staffName(sid)}
+            on={focusStaff === sid}
+            onToggle={() => focusOn(focusStaff === sid ? null : sid)}
+          />
           <span className="chip">{ids.length}件</span>
         </div>
         <div className="col-hours">
