@@ -107,13 +107,13 @@ export default function ArrangePage() {
   const preset = rulesOn ? (data.presets.find((p) => p.id === presetId) ?? null) : null;
 
   /**
-   * 考え方ごとの案（PRD D357）：範囲が日で、組み方の標準がまだ無いときは、先頭の3つの考え方でその日を組んで並べる。
+   * 考え方ごとの案（PRD D357）：範囲が日で、組み方の標準がまだ無いときは、すべての考え方（プリセット。最大6つ）でその日を組んで並べる。
    * 気に入った案を標準にすると、これからはその考え方で組む。標準が無い間は週・月を組まない（先に日で標準を決める）
    */
   const needStandard = !hasStandard(data);
   const variants: BatchVariant[] | null =
     scope === 'day' && needStandard && data.presets.length > 0
-      ? data.presets.slice(0, 3).map((p) => ({ presetId: p.id, name: p.name, rules: applyPreset(data.rules, p) }))
+      ? data.presets.map((p) => ({ presetId: p.id, name: p.name, rules: applyPreset(data.rules, p) }))
       : null;
 
   /** 組む日（考え方ごとの案は伝えていない日を組み直す） */
@@ -261,7 +261,7 @@ export default function ArrangePage() {
         {needStandard && scope !== 'day' ? (
           <>
             <p data-testid="arrange-need-standard">
-              組み方の標準がまだありません。週・月をまとめて組む前に、1日を3つの考え方で組んでくらべ、気に入った案を標準にしてください。標準を決めると、週・月もその考え方で組めます
+              組み方の標準がまだありません。週・月をまとめて組む前に、1日を考え方（プリセット）ごとに組んでくらべ、気に入った案を標準にしてください。標準を決めると、週・月もその考え方で組めます
             </p>
             <div className="row">
               <button
@@ -270,7 +270,7 @@ export default function ArrangePage() {
                 onClick={() => pick('day', firstDay)}
                 data-testid="arrange-to-day"
               >
-                <WithIcon icon={CalendarDays}>{mdText(firstDay)}を3つの案で組む</WithIcon>
+                <WithIcon icon={CalendarDays}>{mdText(firstDay)}を考え方ごとの案で組む</WithIcon>
               </button>
             </div>
           </>
@@ -339,7 +339,7 @@ export default function ArrangePage() {
                 data-testid="arrange-start"
               >
                 <WithIcon icon={Sparkles}>
-                  {run ? '組んでいます…' : variants ? `${runs || 3}つの案を組む` : 'AI で組む'}
+                  {run ? '組んでいます…' : variants ? `${runs || variants.length}つの案を組む` : 'AI で組む'}
                 </WithIcon>
               </button>
               {/* 反映した提案は全体の「元に戻す」で1手戻せる（PRD D329） */}

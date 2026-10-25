@@ -145,7 +145,7 @@ export function homeTasks(input: HomeInput): { tasks: HomeTask[]; ready: boolean
       });
     }
   }
-  // 組み方の標準を登録していなければ先頭に（PRD D354・D357。ADR-0064）：訪問のある伝えていない最初の日を、担当を組むで3つの案にする
+  // 組み方の標準を登録していなければ先頭に（PRD D354・D357。ADR-0064）：訪問のある伝えていない最初の日を、担当を組むで考え方ごとの案にする
   const firstDay = future.find((s) => s.count > 0 && s.state === 'none')?.date ?? today;
   const standard: HomeTask[] = data.standard
     ? []
@@ -154,7 +154,7 @@ export function homeTasks(input: HomeInput): { tasks: HomeTask[]; ready: boolean
           kind: 'standard',
           tone: 'todo',
           title: 'はじめに組み方の標準を決める',
-          detail: '1日を3つの考え方で組んでくらべ、気に入った案を標準にします。これからはその考え方で組みます',
+          detail: '1日を考え方ごとに組んでくらべ、気に入った案を標準にします。これからはその考え方で組みます',
           to: `/arrange?date=${firstDay}`,
         },
       ];
