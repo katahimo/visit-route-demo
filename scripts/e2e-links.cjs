@@ -11,6 +11,7 @@ const path = require('node:path');
 const { skipTour } = require('./lib/tourSeen.cjs');
 const { answerConfirms } = require('./lib/confirmDialog.cjs');
 const { BASE, OUT_DIR, NOW, TODAY, STORAGE_KEY, check, settle, hashOf, stored, runSteps } = require('./lib/env.cjs');
+const { planDays } = require('./lib/plan.cjs');
 const { pagePerStep } = require('./lib/steps.cjs');
 
 /** 「10/21」の形（月の要対応の日付の文） */
@@ -84,6 +85,9 @@ async function prepare(page) {
   await page.evaluate((k) => localStorage.removeItem(k), STORAGE_KEY);
   await page.reload();
   await page.locator('.date-switch select').waitFor({ timeout: 30000 });
+  // 初期データは今日からの日を繰り返しの担当のままにするので、保存した担当の入った訪問を用意する
+  await planDays(page);
+  await open(page, '/plan', '.date-switch select');
   const options = await page.locator('.date-switch select option').evaluateAll((os) => os.map((o) => o.value));
   SECOND = options.find((d) => d > TODAY) ?? '';
   YM2 = SECOND.slice(0, 7);

@@ -13,6 +13,7 @@
 const path = require('node:path');
 const { answerConfirms } = require('./lib/confirmDialog.cjs');
 const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, settle, hashOf, stored, runSteps } = require('./lib/env.cjs');
+const { planDays } = require('./lib/plan.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
 
 /** 訪問の無い日を作るのに使う、今日の次の日 */
@@ -92,6 +93,8 @@ async function fromHome(page) {
   await page.goto(`${BASE}#/home`);
   await page.evaluate((k) => localStorage.removeItem(k), STORAGE_KEY);
   await page.reload();
+  // 初期データは今日からの日を繰り返しの担当のままにするので、保存した担当の入った訪問を用意する（のちの段（recommend-b）も使う）
+  await planDays(page);
   await page.getByTestId('home-absence').waitFor();
   const href = await page.getByTestId('home-absence').getAttribute('href');
   check(href?.includes(`/plan?date=${TODAY}&do=absence`), 'ホームのカードの行き先が ?date=今日&do=absence', href);
@@ -393,6 +396,7 @@ async function reopenFocus(page, best) {
 async function toldContacts(page) {
   await page.goto(`${BASE}#/home`);
   await page.evaluate((k) => localStorage.removeItem(k), STORAGE_KEY);
+  await planDays(page);
   await openPlan(page);
   // 確定（伝えた）
   await page.getByTestId('adopt').click();
