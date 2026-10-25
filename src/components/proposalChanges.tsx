@@ -1,4 +1,4 @@
-// 提案の1日の変わる訪問の一覧（PRD D356・D357）：範囲の提案の帯と考え方ごとの案で使う
+// 提案の1日の変わる訪問の一覧（PRD D356）：範囲の提案の帯で使う
 import { ArrowRight } from 'lucide-react';
 import type { DemoData } from '../contracts/data';
 import { minutesToHhmm } from '../domain/time';

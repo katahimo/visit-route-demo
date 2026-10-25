@@ -1,12 +1,11 @@
-// 提案を比べる（#/compare。D19・D22・ADR-0005・ADR-0064）の比べる案の一覧と、A・B の選び方・条件の差・担当の並びを作る純粋関数。
+// 提案を比べる（#/compare。D19・D22・ADR-0005・ADR-0065）の比べる案の一覧と、A・B の選び方・条件の差・担当の並びを作る純粋関数。
 // 画面（pages/ComparePage）は store から読んだデータを渡すだけで、案の組み立て・判定はここで行う
 import type { DemoData, ReassignInfo } from '../contracts/data';
 import type { Client, Visit } from '../contracts/documents';
 import type { Problem, Reason, ScoreScale } from '../contracts/problem';
-import type { Preset, Rule } from '../contracts/rules';
+import type { Rule } from '../contracts/rules';
 import { toHundred } from '../evaluate';
 import { scheduleRoute } from '../matching';
-import { applyPreset } from '../seed';
 import { attempt, ruleWeightText } from './common';
 import { routesOf, unassignedOf } from './dayPlan';
 import { type BatchProposal, type ProposalDay, proposalDayFresh } from './monthBatch';
@@ -40,49 +39,32 @@ const ARRANGE_PREFIX = 'arrange-';
 export const isArrangeChoice = (c: Pick<CompareChoice, 'id'>): boolean => c.id.startsWith(ARRANGE_PREFIX);
 
 /**
- * 担当を組むで出した提案のうち date の日の分（考え方ごとの案はそれぞれ、範囲の提案はその日）。比べる案に足す（ADR-0064）。
+ * 担当を組むで出した提案のうち date の日の分。比べる案に足す（ADR-0065：範囲の提案の1つの形だけ）。
  * 担当なしは今の問題で数え直すので空にしておく（compareChoices）。hidden（この画面で消した・反映した ID）は外す
  */
 export function arrangeChoices(
   batch: BatchProposal | null,
   date: string,
-  presets: readonly Preset[],
   rules: Rule[],
   hidden: ReadonlySet<string>,
 ): CompareChoice[] {
   if (!batch) return [];
-  const of = (key: string, title: string, day: ProposalDay | undefined, presetId: string | null): CompareChoice[] => {
-    if (!day || day.date !== date) return [];
-    const preset = presetId ? presets.find((p) => p.id === presetId) : undefined;
-    return [
-      {
-        id: `${ARRANGE_PREFIX}${batch.id}-${key}`,
-        title,
-        kind: 'proposal',
-        rules: preset ? applyPreset(rules, preset) : rules,
-        routes: day.routes,
-        unassigned: [],
-        visits: day.visits,
-        day,
-      },
-    ];
-  };
-  const list = batch.choices
-    ? batch.choices.flatMap((c) =>
-        of(
-          c.presetId,
-          `「${c.name}」の案（担当を組む）`,
-          c.days.find((d) => d.date === date),
-          c.presetId,
-        ),
-      )
-    : of(
-        'range',
-        `${batch.label}の提案（担当を組む）`,
-        batch.days.find((d) => d.date === date),
-        null,
-      );
-  return list.filter((c) => !hidden.has(c.id));
+  const day = batch.days.find((d) => d.date === date);
+  if (!day) return [];
+  const id = `${ARRANGE_PREFIX}${batch.id}-range`;
+  if (hidden.has(id)) return [];
+  return [
+    {
+      id,
+      title: `${batch.label}の提案（担当を組む）`,
+      kind: 'proposal',
+      rules,
+      routes: day.routes,
+      unassigned: [],
+      visits: day.visits,
+      day,
+    },
+  ];
 }
 
 export type CompareChoicesInput = {

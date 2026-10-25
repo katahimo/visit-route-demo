@@ -19,6 +19,7 @@ const path = require('node:path');
 const { answerConfirms } = require('./lib/confirmDialog.cjs');
 const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, hashOf, runSteps, settle } = require('./lib/env.cjs');
 const { planDays } = require('./lib/plan.cjs');
+const { markStandard } = require('./lib/standard.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
 const {
   same,
@@ -512,7 +513,8 @@ async function deadEnds(page, dlg, ctx) {
     (await page.getByTestId('plan-menu').count()) === 0,
     '日の予定：「AI で組む ▾」は無い（AI で組むのは担当を組む。ADR-0063）',
   );
-  // 担当を組む：提案を比べるを切ると「案を比べる」の欄を出さない（AI で組むは残る）
+  // 担当を組む：提案を比べるを切ると「案を比べる」の欄を出さない（AI で組むは残る。標準が無い間は組めないので先に登録。ADR-0065）
+  await markStandard(page);
   await open(page, `/arrange?date=${second}`, '[data-testid="arrange-start"]');
   check(
     (await page.getByTestId('arrange-compare').count()) === 0 &&

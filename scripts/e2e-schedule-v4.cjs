@@ -192,7 +192,7 @@ async function scope(page) {
   );
   await page.reload();
   await page.locator('h1').waitFor();
-  await markStandard(page); // 標準が無い間は週を組めない（ADR-0064）
+  await markStandard(page); // 標準が無い間は担当を組むで組めない（ADR-0065）
   await openView(page, '/week');
   const before = await stored(page);
   // 週を組むのは担当を組むの画面（ADR-0063）

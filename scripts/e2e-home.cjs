@@ -3,6 +3,7 @@
 // 組み方の標準（未登録のとき）→ 要対応 → 月ごとに担当なしの訪問を組む → 確定していない日（今月 → 来月）→ 今日）・先頭の「まずこれ」・
 // 同じ月の「担当なしの訪問がある日 N日」は組むカードだけ、今日のカードで日の画面（選んでいる日付が今日）、
 // 「N月の担当なしの訪問を組む」のカードで担当を組むの画面（#/arrange?ym=。ADR-0063）が開く、
+// 「はじめに組み方の標準を決める」のカードで組み方の標準の画面（#/standard。ADR-0065）が開く、
 // 月の画面の ?do=attention・?do=unconfirmed で右の欄、確定したらホームの今日のカードが「確定済み」に、
 // いつでもの入口（欠勤・空き状況・探す）、何も無いデータで「今日の準備はできています」、
 // メニューの先頭の「ホーム」（1400px）、スマホ（390×844）で縦に並び横にはみ出さない・先頭に欠勤・キャンセルの入口（PRD D247）・下のタブの「ホーム」、印刷で出さない。
@@ -77,6 +78,7 @@ async function tasks(page) {
       kind: el.dataset.kind,
       tone: el.dataset.tone,
       title: el.querySelector('strong').textContent,
+      detail: el.textContent,
     })),
   );
 }
@@ -187,7 +189,7 @@ async function firstState(page) {
     // 「N月の担当なしの訪問を組む」→ 担当を組むの画面（その月の範囲。ADR-0063）
     await page.getByTestId('home-task').filter({ hasText: create.title }).click();
     await page.waitForURL(/#\/arrange/);
-    // 初期データには組み方の標準が無いので、月の範囲は「AI で組む」でなく案内（ADR-0064）
+    // 初期データには組み方の標準が無いので、「AI で組む」でなく組み方の標準への案内（ADR-0065）
     await page.getByTestId('arrange-need-standard').waitFor({ timeout: 30000 });
     await settle(page, 300);
     check(
@@ -202,17 +204,18 @@ async function firstState(page) {
     check(hashOf(page) === '#/home', '戻るでホームへ（?do= を残さないので欄を繰り返し開かない）', hashOf(page));
   }
 
-  // 先頭の「はじめに組み方の標準を決める」→ 担当を組む（日の範囲。訪問のある伝えていない最初の日）
+  // 先頭の「はじめに組み方の標準を決める」→ 組み方の標準の画面（ADR-0065）
   const std = list.find((t) => t.kind === 'standard');
+  check(
+    !!std && /考え方ごとの案をくらべて標準の週を決めます/.test(std.detail ?? ''),
+    '「はじめに組み方の標準を決める」の内訳（考え方ごとの案をくらべて標準の週を決めます…）',
+    std,
+  );
   if (std) {
     await page.getByTestId('home-task').filter({ hasText: std.title }).click();
-    await page.waitForURL(/#\/arrange/);
-    await page.getByTestId('arrange-start').waitFor({ timeout: 30000 });
-    check(
-      /^#\/arrange\?date=\d{4}-\d{2}-\d{2}$/.test(hashOf(page)),
-      '「はじめに組み方の標準を決める」：担当を組む（日の範囲）が開く',
-      hashOf(page),
-    );
+    await page.waitForURL(/#\/standard/);
+    await page.locator('h1').filter({ hasText: '組み方の標準' }).waitFor({ timeout: 30000 });
+    check(hashOf(page) === '#/standard', '「はじめに組み方の標準を決める」：組み方の標準の画面が開く', hashOf(page));
     await open(page, '/home');
   }
 
