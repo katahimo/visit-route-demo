@@ -19,8 +19,9 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # ビルドと配信は各ジョブで1回だけ。設定ファイルの webServer は使わない
-  BASE: http://localhost:4183/
+  # ビルドと配信は各ジョブで1回だけ。設定ファイルの webServer は使わない。
+  # コンテナの中の localhost は ::1 になり vite preview の待ち受け（IPv4）と合わないので 127.0.0.1 に固定
+  BASE: http://127.0.0.1:4183/
 
 jobs:
   check:
@@ -67,7 +68,7 @@ jobs:
       - run: npm run build
       - name: 配信を始めて待つ
         run: |
-          npx vite preview --port 4183 --strictPort > preview.log 2>&1 &
+          npx vite preview --host 127.0.0.1 --port 4183 --strictPort > preview.log 2>&1 &
           node -e "(async()=>{for(let i=0;i<60;i++){try{if((await fetch(process.env.BASE)).ok)process.exit(0)}catch{}await new Promise(r=>setTimeout(r,1000))}process.exit(1)})()" || { cat preview.log; exit 1; }
       - run: npx playwright test --project=e2e --shard=${{ matrix.shard }}/4
       - uses: actions/upload-artifact@v4
@@ -114,7 +115,7 @@ jobs:
       - run: npm run build
       - name: 配信を始めて待つ
         run: |
-          npx vite preview --port 4183 --strictPort > preview.log 2>&1 &
+          npx vite preview --host 127.0.0.1 --port 4183 --strictPort > preview.log 2>&1 &
           node -e "(async()=>{for(let i=0;i<60;i++){try{if((await fetch(process.env.BASE)).ok)process.exit(0)}catch{}await new Promise(r=>setTimeout(r,1000))}process.exit(1)})()" || { cat preview.log; exit 1; }
       - run: npm run e2e:perf
       - uses: actions/upload-artifact@v4
