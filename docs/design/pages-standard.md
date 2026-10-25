@@ -1,6 +1,6 @@
 # 組み方の標準（標準の週）の画面
 
-> この画面のファイル：`src/pages/StandardPage.tsx`（`standard.css`）、`src/lib/standard.ts`（純粋関数）、`src/lib/standardDraft.ts`（画面の外の入れ物と案を作る計算）。関連 ADR：0012・0013・0035・0053・0063。関連 PRD：D314・D350〜D354。
+> この画面のファイル：`src/pages/StandardPage.tsx`（`standard.css`。表とマスの欄 `standardParts.tsx`・3段の区画 `standardSteps.tsx`・段ごとの状態 `useStandardProposals.ts`・`useStandardDraft.ts`・`useStandardRegister.ts`）、`src/lib/standardView.ts`（表の行・曜日・選べる人・登録で書き換える所・確認の文）、`src/lib/standard.ts`（純粋関数）、`src/lib/standardDraft.ts`（画面の外の入れ物と案を作る計算）。関連 ADR：0012・0013・0035・0053・0063。関連 PRD：D314・D350〜D354。
 > 契約（`Pattern.usualStarts`・`DemoData.standard`）は design.md §5「データの1件ずつ」「データ一式」
 
 ### 組み方の標準（`#/standard`）
