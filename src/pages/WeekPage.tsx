@@ -3,7 +3,6 @@ import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useSta
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ClientFilter } from '../components/ClientFilter';
 import { ClientPicker } from '../components/ClientPicker';
-import { useConfirm } from '../components/ConfirmDialog';
 import { useDay } from '../components/day';
 import { EdgeScroll } from '../components/EdgeScroll';
 import { EmptyNext } from '../components/EmptyNext';
@@ -14,8 +13,8 @@ import { ScheduleNav } from '../components/ScheduleNav';
 import { StaffMark } from '../components/StaffMark';
 import { RangeProposalBand, ScheduleToolbar, SelectionBar } from '../components/scheduleParts';
 import { StaffBar, StaffLegend } from '../components/staffBar';
-import { useToast } from '../components/Toast';
 import { Hint, PageHeader, WithIcon } from '../components/ui';
+import { useBulkConfirm } from '../components/useBulkConfirm';
 import { useDayModel } from '../components/useDayModel';
 import { useDayStatuses } from '../components/useDayStatuses';
 import { useFeature } from '../components/useFeature';
@@ -54,11 +53,11 @@ import {
   WEEK_TABLE_FILTER,
 } from '../lib/clientFilter';
 import { colorOf } from '../lib/colors';
-import { bulkConfirmDialog, bulkConfirmTargets, confirmDay } from '../lib/confirmDay';
+import { bulkConfirmTargets } from '../lib/confirmDay';
 import { clockTime, dateText, mdText } from '../lib/dateText';
 import { periodEmptyGuide } from '../lib/emptyGuide';
 import { isDate } from '../lib/isDate';
-import { attentionList } from '../lib/month';
+import { rangeProgress } from '../lib/month';
 import { monthBatch } from '../lib/monthBatch';
 import { staffLabels } from '../lib/monthPrint';
 import { typeOf } from '../lib/patternText';
@@ -139,10 +138,8 @@ const initialOf = (name: string) => Array.from(name.trim())[0] ?? '？';
 export default function WeekPage() {
   const { date, setDate, dates: dataDates } = useDay();
   /** 予定のモード（PRD D348）：組むではメールを出さず、確認では札を動かさない */
-  const { data, update, compileInput, staff, staffById, clients, clientById, colorOfStaff } = useDayModel(date);
+  const { data, compileInput, staff, staffById, clients, clientById, colorOfStaff } = useDayModel(date);
   const terms = data.org.terms;
-  const toast = useToast();
-  const confirmDialog = useConfirm();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const today = jstDate(Date.now());
@@ -275,16 +272,14 @@ export default function WeekPage() {
   const weekStatuses = useDayStatuses(data, compileInput, futureDates);
   const weekPrep = useMemo(() => {
     const statusOf = (d: string) => weekStatuses.get(d)?.status;
-    const list = futureDates.flatMap((d) => statusOf(d) ?? []);
-    const unconfirmed = list.filter((x) => x.count > 0 && x.state !== 'told').map((x) => x.date);
-    const bulk = bulkConfirmTargets(unconfirmed, statusOf, attentionList(data, list, today));
-    const futureDays = list.filter((x) => x.count > 0).length;
+    const p = rangeProgress(data, futureDates, today, statusOf);
+    const bulk = bulkConfirmTargets(p.unconfirmed, statusOf, p.attentionItems);
     // 1行の状態（PRD D332）：今日以降の訪問のある日の確定の状態と要対応の数
-    const told = list.filter((x) => x.count > 0 && x.state === 'told').length;
-    const changed = list.filter((x) => x.count > 0 && x.state === 'changed').length;
-    const notYet = list.filter((x) => x.count > 0 && x.state === 'none').length;
-    const care = list.reduce((n, x) => n + x.care, 0);
-    return { bulk, futureDays, line: { told, changed, notYet, care } };
+    return {
+      bulk,
+      futureDays: p.days,
+      line: { told: p.confirmed, changed: p.changed, notYet: p.notYet, care: p.care },
+    };
   }, [weekStatuses, futureDates, data, today]);
   /** 月の予定の担当を組む計算（ADR-0042）：組んでいる間は確定しない */
   const batchRun = useValueStore(monthBatch.run);
@@ -304,25 +299,12 @@ export default function WeekPage() {
    * この週の問題の無い日をまとめて確定（PRD D280）：月の「問題の無い日をまとめて確定」（D223）と同じ決まり・同じ確認の型で、
    * 範囲をこの週の今日以降にする。1回の update で日ごとに「確定（伝えた）」と同じ書き方（lib/confirmDay）
    */
-  const confirmWeek = async () => {
-    const bulk = weekPrep.bulk;
-    if (monthBatch.running() || bulk.targets.length === 0) return;
-    const ok = await confirmDialog({
-      ...bulkConfirmDialog(bulk, terms.staff),
-      confirmLabel: `${bulk.targets.length}日を確定する`,
-    });
-    if (!ok || monthBatch.running()) return;
-    const ready = bulk.targets.flatMap((d) => {
-      const p = weekStatuses.get(d)?.problem;
-      return p ? [{ date: d, p }] : [];
-    });
-    if (ready.length === 0) return;
-    const at = Date.now();
-    update((d) => ready.reduce((out, x) => confirmDay(out, x.date, x.p, at), d), `${ready.length}日をまとめて確定`);
-    toast(`${ready.length}日を確定しました`);
+  const confirmBulk = useBulkConfirm(
+    (d) => weekStatuses.get(d)?.problem,
     // 押したボタンは状態の文に替わるので、フォーカスは主ボタンの場所へ（body に落とさない）
-    requestAnimationFrame(() => nextRef.current?.focus({ preventScroll: true }));
-  };
+    () => nextRef.current?.focus({ preventScroll: true }),
+  );
+  const confirmWeek = () => confirmBulk(weekPrep.bulk);
   const table = useMemo(() => (tab === 'table' ? staffWeekTable(compileInput, days) : null), [tab, compileInput, days]);
   /** 〈スタッフ〉×曜日の表のマスの訪問（担当・日ごと。時刻の順。表で選ぶ・キーで動かす・ドラッグする。PRD D340） */
   const bandsOf = useMemo(() => {

@@ -537,25 +537,62 @@ export type MonthProgress = {
   attention: number;
 };
 
-/** 今月の準備：その月の今日以降について。statusOf は日の状態（画面が作ったもの。無ければ dayStatus で作る） */
-export function monthProgress(
+/** 日付の範囲の準備（rangeProgress）：今月の準備に、週の1行の状態（PRD D332）と要対応の一覧を足したもの */
+export type RangeProgress = MonthProgress & {
+  /** 未連絡の変更のある日の数（訪問のある日） */
+  changed: number;
+  /** まだ伝えていない日の数（訪問のある日） */
+  notYet: number;
+  /** 要対応の訪問の数（日の状態の care の合計） */
+  care: number;
+  /** 要対応（attentionList。まとめて確定の対象を決める lib/confirmDay の bulkConfirmTargets に渡す） */
+  attentionItems: Attention[];
+};
+
+/**
+ * 日付の範囲の準備：dates のうち今日以降について（月の「今月の準備」・週の「この週の準備」で同じ数え方）。
+ * statusOf は日の状態（画面が作ったもの。無ければ dayStatus で作る）
+ */
+export function rangeProgress(
   data: CompileInput & Pick<DemoData, 'snapshots'>,
-  ym: string,
+  dates: readonly string[],
   today: string,
   statusOf?: (date: string) => DayStatus | undefined,
-): MonthProgress {
+): RangeProgress {
   const statuses: DayStatus[] = [];
-  for (const date of monthDates(ym)) {
+  for (const date of dates) {
     if (date < today) continue;
     statuses.push(statusOf?.(date) ?? dayStatus(data, date));
   }
   const withVisits = statuses.filter((s) => s.count > 0);
+  const attentionItems = attentionList(data, statuses, today);
   return {
     visits: withVisits.reduce((m, s) => m + s.count, 0),
     days: withVisits.length,
     planned: withVisits.filter((s) => s.care === 0).length,
     confirmed: withVisits.filter((s) => s.state === 'told').length,
     unconfirmed: withVisits.filter((s) => s.state !== 'told').map((s) => s.date),
-    attention: attentionList(data, statuses, today).length,
+    attention: attentionItems.length,
+    changed: withVisits.filter((s) => s.state === 'changed').length,
+    notYet: withVisits.filter((s) => s.state === 'none').length,
+    care: statuses.reduce((n, s) => n + s.care, 0),
+    attentionItems,
   };
+}
+
+/** 今月の準備：その月の今日以降について（rangeProgress を月の日付で）。statusOf は日の状態（画面が作ったもの。無ければ dayStatus で作る） */
+export function monthProgress(
+  data: CompileInput & Pick<DemoData, 'snapshots'>,
+  ym: string,
+  today: string,
+  statusOf?: (date: string) => DayStatus | undefined,
+): MonthProgress {
+  const {
+    changed: _c,
+    notYet: _n,
+    care: _care,
+    attentionItems: _a,
+    ...p
+  } = rangeProgress(data, monthDates(ym), today, statusOf);
+  return p;
 }
