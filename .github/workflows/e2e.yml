@@ -1,6 +1,8 @@
 name: e2e（本物のブラウザ）
 
-# PR・手動・夜間に scripts/e2e-*.cjs を @playwright/test で走らせる（ADR-0029）。
+# PR・手動・夜間に、速い検査（lint・型・ユニットテスト・コードの検査）と e2e（scripts/e2e-*.cjs を @playwright/test で。ADR-0029）を並列に走らせる。
+# e2e は shard で4つのジョブに分け、速さを見る perf は別のジョブで1本ずつ。
+# ブラウザと依存は Playwright の公式イメージに入っているので、毎回のインストール（約3分）をしない。
 # 公開（deploy.yml）はまだこれを待たない
 on:
   pull_request:
@@ -16,22 +18,86 @@ concurrency:
   group: e2e-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  # ビルドと配信は各ジョブで1回だけ。設定ファイルの webServer は使わない
+  BASE: http://localhost:4183/
+
 jobs:
-  e2e:
-    # ubuntu-latest は Ubuntu 26.04 になり、Playwright 1.56 は依存とブラウザを入れられない（ubuntu26.04 は未対応）。
-    # Playwright が対応するまで 24.04 に固定する
+  check:
+    name: 速い検査
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # 競合の印（<<<<<<<・>>>>>>>）の検査も npm run lint に入っている（PRD D253）
+      - run: npm run lint
+      - run: npm run typecheck
+      # 設計の決まり（層の依存・循環 import・長い関数・使われない export）の違反を基準より増やさない（AGENTS.md）
+      - run: npm run check:code
+      - run: npm test
+
+  e2e:
+    # Playwright の版（package.json の @playwright/test）と同じイメージを使う。版を上げるときはここも上げる
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.1-noble
+      options: --user 1001
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
+        shard: [1, 2, 3, 4]
         # 夜間だけ月末の「今日」でも走らせる（空は次の水曜の日本時間 12:00）
         fake_now: ${{ github.event_name == 'schedule' && fromJSON('["", "2026-10-28T12:00:00+09:00", "2026-10-31T12:00:00+09:00"]') || fromJSON('[""]') }}
-    name: e2e ${{ matrix.fake_now || '次の水曜' }}
+    name: e2e ${{ matrix.shard }}/4 ${{ matrix.fake_now || '次の水曜' }}
     env:
       FAKE_NOW: ${{ matrix.fake_now }}
-      # ビルドと配信はこのジョブで1回だけ。設定ファイルの webServer は使わない
-      BASE: http://localhost:4183/
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: 配信を始めて待つ
+        run: |
+          npx vite preview --port 4183 --strictPort > preview.log 2>&1 &
+          node -e "(async()=>{for(let i=0;i<60;i++){try{if((await fetch(process.env.BASE)).ok)process.exit(0)}catch{}await new Promise(r=>setTimeout(r,1000))}process.exit(1)})()" || { cat preview.log; exit 1; }
+      - run: npx playwright test --project=e2e --shard=${{ matrix.shard }}/4
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report-e2e-${{ strategy.job-index }}
+          path: playwright-report/
+          retention-days: 14
+      # test-results（落ちた test の trace.zip・動画・スクリーンショット・記録）は失敗のときに残す（ADR-0041）
+      - uses: actions/upload-artifact@v4
+        if: ${{ failure() }}
+        with:
+          name: test-results-e2e-${{ strategy.job-index }}
+          path: test-results/
+          retention-days: 14
+
+  perf:
+    # 速さの上限を見るもの（e2e/legacy.spec.ts の PERF）。ほかと同時に走らせると遅れるので、別のジョブで1本ずつ
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.1-noble
+      options: --user 1001
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        fake_now: ${{ github.event_name == 'schedule' && fromJSON('["", "2026-10-28T12:00:00+09:00", "2026-10-31T12:00:00+09:00"]') || fromJSON('[""]') }}
+    name: perf ${{ matrix.fake_now || '次の水曜' }}
+    env:
+      FAKE_NOW: ${{ matrix.fake_now }}
       # 速さの上限：手元は既定（100/3000/5000ms）、CI は共有ランナーのため緩める
       PERF_MS_COMPAT: 300
       PERF_MS_NAV: 300
@@ -45,51 +111,21 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      # 競合の印（<<<<<<<・>>>>>>>）がコミットされていたら先に落とす（PRD D253。npm run lint にも入っている）
-      - name: 競合の印が無い
-        run: node scripts/check-conflict-markers.cjs
-      # 設計の決まり（層の依存・循環 import・長い関数・使われない export）の違反を基準より増やさない（AGENTS.md）
-      - name: コードの検査
-        if: github.event_name == 'pull_request'
-        run: npm run check:code
-      - name: Playwright の版
-        id: pw
-        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: ms-playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
-      - run: npx playwright install --with-deps chromium
       - run: npm run build
       - name: 配信を始めて待つ
         run: |
           npx vite preview --port 4183 --strictPort > preview.log 2>&1 &
-          for i in $(seq 1 60); do
-            curl -sf -o /dev/null "$BASE" && exit 0
-            sleep 1
-          done
-          cat preview.log
-          exit 1
-      # 2回目の実行が playwright-report/ と test-results/ を消すので、1回ごとに reports/ へ移す
-      - run: npm run e2e
-      - name: e2e の結果を移す
-        if: ${{ !cancelled() }}
-        run: mkdir -p reports/e2e && mv playwright-report test-results reports/e2e/ 2>/dev/null || true
+          node -e "(async()=>{for(let i=0;i<60;i++){try{if((await fetch(process.env.BASE)).ok)process.exit(0)}catch{}await new Promise(r=>setTimeout(r,1000))}process.exit(1)})()" || { cat preview.log; exit 1; }
       - run: npm run e2e:perf
-        if: ${{ !cancelled() }}
-      - name: perf の結果を移す
-        if: ${{ !cancelled() }}
-        run: mkdir -p reports/perf && mv playwright-report test-results reports/perf/ 2>/dev/null || true
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
-          name: playwright-report-${{ strategy.job-index }}
-          path: reports/*/playwright-report/
+          name: playwright-report-perf-${{ strategy.job-index }}
+          path: playwright-report/
           retention-days: 14
-      # test-results（落ちた test の trace.zip・動画・スクリーンショット・記録）は失敗のときに残す（ADR-0041）
       - uses: actions/upload-artifact@v4
         if: ${{ failure() }}
         with:
-          name: test-results-${{ strategy.job-index }}
-          path: reports/*/test-results/
+          name: test-results-perf-${{ strategy.job-index }}
+          path: test-results/
           retention-days: 14

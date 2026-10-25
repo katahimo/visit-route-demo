@@ -38,7 +38,7 @@ src/
   lib/         … 画面から使う純粋関数（日の割当と確定 dayPlan・confirmDay、月・週の状態、組む月 scheduleMode、AI で組む monthBatch（担当を組む）、組み方の標準 standard、訪問の札の見た目・選ぶ・落とし先の判定・キーの読み方 visitLook・visitSelect・visitDrop・visitKeys、選んだ訪問をまとめて直す multiEdit など）
   pages/ components/ … 画面
 .github/workflows/deploy.yml … test → build → GitHub Pages
-.github/workflows/e2e.yml … PR・手動・夜間の e2e（ADR-0029）
+.github/workflows/e2e.yml … PR・手動・夜間の速い検査（lint・型・check:code・vitest）と e2e（4つに分けて並列）・perf（ADR-0029）。Playwright の版を上げるときはイメージの版も上げる
 e2e/ … @playwright/test の spec（scripts/e2e-*.cjs の段を test.step で回す。ADR-0041）
 scripts/ … e2e のスクリプト（e2e-*.cjs）と共通の部品（lib/）
 code-rules.json・code-rules.baseline.json … コードの検査（npm run check:code）の決まりと、今ある違反の基準
