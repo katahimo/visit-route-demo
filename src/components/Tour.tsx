@@ -1,11 +1,20 @@
 import { Compass } from 'lucide-react';
-import { createContext, type ReactNode, useCallback, useContext, useEffect, useId, useRef, useState } from 'react';
+import {
+  createContext,
+  type ReactNode,
+  type RefObject,
+  useCallback,
+  useContext,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import type { DemoData } from '../contracts/data';
 import type { Terms } from '../contracts/documents';
 import { jstDate } from '../domain/time';
-import { trapTarget } from '../lib/confirmDialog';
 import { applyTemplate, matchTemplate } from '../lib/features';
 import { confirmLeave } from '../lib/leaveGuard';
 import { dayHref } from '../lib/links';
@@ -23,9 +32,9 @@ import {
   tourSteps,
 } from '../lib/tour';
 import { tourMemory, useDemoData } from '../store';
-import { FOCUSABLE } from './ui';
-import { inertLock, useBodyScrollLock } from './useBodyScrollLock';
+import { useBodyScrollLock } from './useBodyScrollLock';
 import { useFeatures } from './useFeature';
+import { useTourModal } from './useTourModal';
 import './tour.css';
 
 /** 案内を開く関数（データの画面の「案内をもう一度見る」） */
@@ -145,46 +154,7 @@ function TourDialog({
   const titleId = useId();
   const bodyId = useId();
   useBodyScrollLock();
-  useEffect(() => {
-    const back = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const releaseInert = inertLock.lock(
-      Array.from(document.body.children).filter(
-        (el): el is HTMLElement => el instanceof HTMLElement && el !== wrapRef.current,
-      ),
-    );
-    nextRef.current?.focus();
-    // 捕捉の段で受け、右の欄・引き出し・コマンドパレットのキー（document・window で受けている）に渡さない
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !e.isComposing) {
-        e.preventDefault();
-        e.stopPropagation();
-        closeRef.current();
-        return;
-      }
-      if (e.key !== 'Tab' || !boxRef.current) return;
-      e.stopPropagation();
-      // ラジオは選んでいる方だけ Tab で止まる（標準の radio group と同じ。切り替えは矢印）
-      const box = boxRef.current;
-      const list = [...box.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
-        (el) =>
-          !(el instanceof HTMLInputElement) ||
-          el.type !== 'radio' ||
-          el.checked ||
-          !box.querySelector(`input[type="radio"][name="${CSS.escape(el.name)}"]:checked`),
-      );
-      const at = document.activeElement;
-      const to = trapTarget(list.length, at instanceof HTMLElement ? list.indexOf(at) : -1, e.shiftKey);
-      if (to === null) return;
-      e.preventDefault();
-      list[to]?.focus();
-    };
-    window.addEventListener('keydown', onKey, true);
-    return () => {
-      window.removeEventListener('keydown', onKey, true);
-      releaseInert();
-      if (back?.isConnected && back !== document.body) back.focus({ preventScroll: true });
-    };
-  }, []);
+  useTourModal({ wrapRef, boxRef, nextRef, closeRef });
   // biome-ignore lint/correctness/useExhaustiveDependencies: 枚が変わったときだけ
   useEffect(() => {
     // 最後の枚は次の一手の主ボタン「今日の予定を開く」へ
@@ -256,48 +226,15 @@ function TourDialog({
             <li key={s.key} className={i === index ? 'is-on' : undefined} />
           ))}
         </ol>
-        <div className="tour-actions">
-          {!last && (
-            <button
-              type="button"
-              className="btn btn-small tour-skip"
-              onClick={() => go('skip')}
-              data-testid="tour-skip"
-            >
-              とばす
-            </button>
-          )}
-          <span className="tour-spacer" />
-          <button
-            type="button"
-            className="btn btn-small"
-            disabled={index === 0}
-            onClick={() => go('back')}
-            data-testid="tour-back"
-          >
-            戻る
-          </button>
-          <button
-            ref={nextRef}
-            type="button"
-            className={last ? 'btn btn-small' : 'btn btn-small btn-primary'}
-            onClick={() => go('next')}
-            data-testid="tour-next"
-          >
-            {tourNextLabel(index, steps.length)}
-          </button>
-          {last && (
-            <button
-              ref={todayRef}
-              type="button"
-              className="btn btn-small btn-primary"
-              onClick={onToday}
-              data-testid="tour-today"
-            >
-              {TOUR_TODAY_LABEL}
-            </button>
-          )}
-        </div>
+        <TourActions
+          last={last}
+          index={index}
+          label={tourNextLabel(index, steps.length)}
+          nextRef={nextRef}
+          todayRef={todayRef}
+          onGo={go}
+          onToday={onToday}
+        />
       </div>
     </div>,
     document.body,
@@ -340,5 +277,65 @@ function StartChoice({
       ))}
       <p className="tour-choice-note">{TOUR_START_NOTE}</p>
     </fieldset>
+  );
+}
+
+/** カードの下のボタンの行（とばす・戻る・次へ・今日の予定を開く） */
+function TourActions({
+  last,
+  index,
+  label,
+  nextRef,
+  todayRef,
+  onGo,
+  onToday,
+}: {
+  last: boolean;
+  index: number;
+  /** 「次へ」ボタンの文字（最後の枚は「閉じる」） */
+  label: string;
+  nextRef: RefObject<HTMLButtonElement | null>;
+  todayRef: RefObject<HTMLButtonElement | null>;
+  onGo: (move: TourMove) => void;
+  onToday: () => void;
+}) {
+  return (
+    <div className="tour-actions">
+      {!last && (
+        <button type="button" className="btn btn-small tour-skip" onClick={() => onGo('skip')} data-testid="tour-skip">
+          とばす
+        </button>
+      )}
+      <span className="tour-spacer" />
+      <button
+        type="button"
+        className="btn btn-small"
+        disabled={index === 0}
+        onClick={() => onGo('back')}
+        data-testid="tour-back"
+      >
+        戻る
+      </button>
+      <button
+        ref={nextRef}
+        type="button"
+        className={last ? 'btn btn-small' : 'btn btn-small btn-primary'}
+        onClick={() => onGo('next')}
+        data-testid="tour-next"
+      >
+        {label}
+      </button>
+      {last && (
+        <button
+          ref={todayRef}
+          type="button"
+          className="btn btn-small btn-primary"
+          onClick={onToday}
+          data-testid="tour-today"
+        >
+          {TOUR_TODAY_LABEL}
+        </button>
+      )}
+    </div>
   );
 }
