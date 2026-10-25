@@ -38,7 +38,7 @@ import { attempt, dateText, deltaText, formError, newId, own, pointsText, r0 } f
 import { aiPinsOf, routesOf, unassignedOf, writeRoutes } from '../lib/dayPlan';
 import { compareEmptyGuide } from '../lib/emptyGuide';
 import { isDate } from '../lib/isDate';
-import { monthBatch, type ProposalDay } from '../lib/monthBatch';
+import { monthBatch, type ProposalDay, proposalDayFresh } from '../lib/monthBatch';
 import { narrowRole } from '../lib/narrowRoles';
 import { buildRouteMap, homeLegKey, homeTravel, useRouteSelection } from '../lib/routeView';
 import { type ScoreReason, scoreReason } from '../lib/scoreReason';
@@ -67,6 +67,8 @@ type Choice = {
   unassigned: string[];
   /** 提案を作ったときのその日の訪問（変わったら当てられない） */
   visits?: readonly Visit[];
+  /** 担当を組むで出した提案の日（反映してよいかを担当を組むと同じ決まりで確かめる。proposalDayFresh） */
+  day?: ProposalDay;
   stopped?: boolean;
 };
 const CURRENT = 'current';
@@ -130,8 +132,10 @@ export default function ComparePage() {
           kind: 'proposal',
           rules: preset ? applyPreset(data.rules, preset) : data.rules,
           routes: day.routes,
-          unassigned: unassignedOf(day.problem, day.routes),
+          // 担当なしは今の問題で数える（下の choices で数え直す）
+          unassigned: [],
           visits: day.visits,
+          day,
         },
       ];
     };
@@ -188,7 +192,7 @@ export default function ComparePage() {
       routes,
       unassigned: unassignedOf(problem, routes),
     });
-    return [...out, ...fromArrange, ...made];
+    return [...out, ...fromArrange.map((c) => ({ ...c, unassigned: unassignedOf(problem, c.routes) })), ...made];
   }, [problem, m.allVisits, reassign, data.rules, made, fromArrange]);
   const byId = (id: string | null) => choices.find((c) => c.id === id);
   // 日の予定から「比較の画面で見る」で来たら、A＝欠勤前、B＝今の担当
@@ -245,7 +249,8 @@ export default function ComparePage() {
   );
   /** 提案を作ったあとに訪問が変わったか（変わったら当てられない） */
   const stale = (c: Choice) =>
-    !!c.visits && (c.visits.length !== m.allVisits.length || c.visits.some((v, i) => v !== m.allVisits[i]));
+    (!!c.visits && (c.visits.length !== m.allVisits.length || c.visits.some((v, i) => v !== m.allVisits[i]))) ||
+    (!!c.day && !proposalDayFresh(data, c.day));
 
   const staffName = (id: string) => staffById.get(id)?.name ?? '（不明）';
   const clientOf = (visitId: string) => {
@@ -265,6 +270,7 @@ export default function ComparePage() {
       return;
     }
     const p = problem;
+    if (c.id.startsWith('arrange-')) setHidden((h) => new Set([...h, c.id]));
     // 全体の「元に戻す」の1手（トーストと Ctrl+Z・予定の操作の行の「元に戻す」。PRD D329）
     const before = data;
     const next = writeRoutes(before, date, p, c.routes);

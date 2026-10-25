@@ -200,7 +200,7 @@ export function RangeProposalBand() {
   const toast = useToast();
   const navigate = useNavigate();
   if (!proposal) return null;
-  if (proposal.choices) return <ChoiceBand proposal={proposal} />;
+  if (proposal.choices) return <ChoiceBand key={proposal.id} proposal={proposal} />;
   const counts = proposalCounts(proposal);
   const staleDays = proposal.days.filter((d) => !proposalDayFresh(data, d)).length;
   const apply = () => {
