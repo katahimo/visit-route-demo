@@ -10,12 +10,12 @@ import type { ReassignDiff } from '../contracts/reassign';
 import type { Rule } from '../contracts/rules';
 import { addDays } from '../domain/time';
 import { visitsOn } from '../patterns';
-import { reassignDiff } from '../reassign';
 import { defaultIterations, runSolve } from '../solver';
 import { own } from './common';
 import { mdText } from './dateText';
-import { aiPinsOf, dayProblemOf, pinsOf, routesOf, startsOf, writeRoutes } from './dayPlan';
+import { startsOf, writeRoutes } from './dayPlan';
 import type { BatchMode } from './month';
+import { batchDayProblem, batchTasksOf, proposalDayOf } from './monthBatchDay';
 import { createValueStore, type ReadableStore } from './valueStore';
 
 /** 組む日（日ごとの選び方：care＝要対応のある日、all＝伝えていない日すべて） */
@@ -309,6 +309,109 @@ export function batchHref(x: Pick<BatchRun, 'ym' | 'source' | 'rangeStart'>): st
   return `/arrange?ym=${x.ym}`;
 }
 
+/** 始めたときの進み具合 */
+function firstRun(
+  job: BatchJob,
+  rangeStart: string | null,
+  targets: string[],
+  variants: readonly BatchVariant[] | null,
+): BatchRun {
+  return {
+    ym: job.ym,
+    label: job.label,
+    mode: job.mode,
+    source: job.source,
+    rangeStart,
+    targets,
+    index: 0,
+    made: 0,
+    iteration: 0,
+    total: 1,
+    ...(variants ? { variants: variants.map((x) => x.name) } : {}),
+  };
+}
+
+/** 終わったときの提案（番号の前。組んだ日も案も無ければ null）と知らせ */
+function finishedOf(a: {
+  job: BatchJob;
+  rangeStart: string | null;
+  variants: readonly BatchVariant[] | null;
+  days: ProposalDay[];
+  choiceDays: ProposalDay[][];
+  made: number;
+  unassignedDays: number;
+  stopped: boolean;
+  error: string | null;
+}): { proposal: Omit<BatchProposal, 'id'> | null; done: BatchDone } {
+  const { job, rangeStart, variants, days, choiceDays, made, unassignedDays, stopped } = a;
+  const counts = proposalCounts({ days });
+  const choices: ProposalChoice[] = (variants ?? [])
+    .map((x, v) => ({ presetId: x.presetId, name: x.name, days: [...(choiceDays[v] ?? [])] }))
+    .filter((c) => c.days.length > 0);
+  const proposal =
+    days.length > 0 || choices.length > 0
+      ? {
+          ym: job.ym,
+          label: job.label,
+          source: job.source,
+          rangeStart,
+          days: [...days],
+          ...(variants ? { choices } : {}),
+          stopped,
+        }
+      : null;
+  const done: BatchDone = {
+    ym: job.ym,
+    label: job.label,
+    source: job.source,
+    rangeStart,
+    made,
+    unassignedDays,
+    stopped,
+    error: a.error,
+    aborted: false,
+    proposal: days.length > 0 ? { moved: counts.moved, shifted: counts.shifted } : null,
+    ...(choices.length > 0 ? { choices: choices.length } : {}),
+  };
+  return { proposal, done };
+}
+
+/** データを丸ごと差し替えて止めたときの知らせ（r は止めたときの進み具合） */
+function abortedDone(r: BatchRun): BatchDone {
+  return {
+    ym: r.ym,
+    label: r.label,
+    source: r.source,
+    rangeStart: r.rangeStart,
+    made: r.made,
+    unassignedDays: 0,
+    stopped: true,
+    error: null,
+    aborted: true,
+    proposal: null,
+  };
+}
+
+/**
+ * 提案 p を反映する（考え方ごとの案なら opts.choice の案。その案が無ければ null）。
+ * 反映するかどうかを今のデータで決めてから、1回の update で書く（全体の「元に戻す」の1手）
+ */
+function applyTo(h: BatchHost, p: BatchProposal, opts?: ApplyOptions): { applied: string[]; skipped: string[] } | null {
+  const chosen = p.choices ? p.choices[opts?.choice ?? 0] : undefined;
+  if (p.choices && !chosen) return null;
+  const all = chosen ? chosen.days : p.days;
+  const r = applyProposal(h.get(), { days: all });
+  if (r.applied.length > 0)
+    h.update(
+      (d) => {
+        const out = applyProposal(d, { days: all.filter((x) => r.applied.includes(x.date)) }).data;
+        return opts?.andThen ? opts.andThen(out) : out;
+      },
+      opts?.label ?? `AI の提案を反映（${chosen ? `${p.label}・${chosen.name}` : p.label}）`,
+    );
+  return { applied: r.applied, skipped: r.skipped };
+}
+
 /** 入れ物を作る（solve は差し替えられる。テストは Worker なしで解く） */
 export function createMonthBatch(solve: Solve = runSolve): MonthBatch {
   const run = createValueStore<BatchRun | null>(null);
@@ -335,14 +438,9 @@ export function createMonthBatch(solve: Solve = runSolve): MonthBatch {
     const gen = ++generation;
     const live = () => gen === generation;
     const variants = job.variants && job.variants.length > 0 ? job.variants : null;
-    /** 組む日と条件（考え方ごとの案なら最初の日を考え方ごとに。v は案の番号、ふだんは -1） */
-    const tasks = variants
-      ? variants.map((x, v) => ({ date: job.days[0]!.date, rules: x.rules as Rule[] | undefined, v }))
-      : job.days.map((x) => ({ date: x.date, rules: job.rules, v: -1 }));
+    const tasks = batchTasksOf(job, variants);
     const targets = tasks.map((x) => x.date);
     const rangeStart = job.rangeStart ?? null;
-    /** 組む条件（プリセットを当てた条件か、今の条件） */
-    const withRules = (d: DemoData, rules: Rule[] | undefined): DemoData => (rules ? { ...d, rules } : d);
     const choiceDays: ProposalDay[][] = (variants ?? []).map(() => []);
     stopped = false;
     // 新しく組み始めたら前の提案は捨てる（提案は1つだけ）
@@ -350,52 +448,25 @@ export function createMonthBatch(solve: Solve = runSolve): MonthBatch {
     let made = 0;
     let unassignedDays = 0;
     const days: ProposalDay[] = [];
-    run.set({
-      ym: job.ym,
-      label: job.label,
-      mode: job.mode,
-      source: job.source,
-      rangeStart,
-      targets,
-      index: 0,
-      made: 0,
-      iteration: 0,
-      total: 1,
-      ...(variants ? { variants: variants.map((x) => x.name) } : {}),
-    });
+    run.set(firstRun(job, rangeStart, targets, variants));
     const patch = (p: Partial<BatchRun>) => run.set((b) => (b ? { ...b, ...p } : b));
 
     const finish = (why?: string) => {
       current = null;
       run.set(null);
-      const counts = proposalCounts({ days });
-      const choices: ProposalChoice[] = (variants ?? [])
-        .map((x, v) => ({ presetId: x.presetId, name: x.name, days: [...(choiceDays[v] ?? [])] }))
-        .filter((c) => c.days.length > 0);
-      if (days.length > 0 || choices.length > 0)
-        proposal.set({
-          id: ++proposalId,
-          ym: job.ym,
-          label: job.label,
-          source: job.source,
-          rangeStart,
-          days: [...days],
-          ...(variants ? { choices } : {}),
-          stopped,
-        });
-      done.set({
-        ym: job.ym,
-        label: job.label,
-        source: job.source,
+      const f = finishedOf({
+        job,
         rangeStart,
+        variants,
+        days,
+        choiceDays,
         made,
         unassignedDays,
         stopped,
         error: why ?? null,
-        aborted: false,
-        proposal: days.length > 0 ? { moved: counts.moved, shifted: counts.shifted } : null,
-        ...(choices.length > 0 ? { choices: choices.length } : {}),
       });
+      if (f.proposal) proposal.set({ id: ++proposalId, ...f.proposal });
+      done.set(f.done);
     };
 
     const step = (i: number) => {
@@ -405,22 +476,14 @@ export function createMonthBatch(solve: Solve = runSolve): MonthBatch {
         return;
       }
       const task = tasks[i]!;
-      const day = task.date;
       const latest = h.get();
       patch({ index: i, iteration: 0, total: 1 });
-      // 組んでいる間に確定した日は飛ばす
-      if (own(latest.snapshots, day)) {
+      const planned = batchDayProblem(latest, task);
+      if (!planned) {
         step(i + 1);
         return;
       }
-      const visits = visitsOn(latest, day);
-      // 手で付けたピンと標準のピン（ADR-0062）。考え方ごとの案は標準を決める前の案なので、手で付けたピンだけ（ADR-0064）
-      const pins = task.v >= 0 ? pinsOf(visits) : aiPinsOf(withRules(latest, task.rules), day, visits);
-      const p = dayProblemOf(withRules(latest, task.rules), day, Object.keys(pins).length > 0 ? pins : undefined);
-      if (!p || p.visits.length === 0 || p.staff.length === 0) {
-        step(i + 1);
-        return;
-      }
+      const p = planned.problem;
       const started = (() => {
         try {
           return solve(p, { seed: latest.seed, iterations: defaultIterations(p) }, (x) => {
@@ -437,22 +500,9 @@ export function createMonthBatch(solve: Solve = runSolve): MonthBatch {
       started.promise
         .then((result) => {
           if (!live()) return;
-          const before = routesOf(p, visits);
-          let diff: ReassignDiff | null = null;
-          try {
-            diff = reassignDiff({ problem: p, routes: before }, { problem: p, routes: result.routes });
-          } catch {
-            diff = null;
-          }
-          (task.v >= 0 ? (choiceDays[task.v] ?? days) : days).push({
-            date: day,
-            problem: p,
-            visits,
-            inputs: dayInputsOf(latest, day),
-            routes: result.routes,
-            diff,
-            unassigned: result.unassigned.length,
-          });
+          (task.v >= 0 ? (choiceDays[task.v] ?? days) : days).push(
+            proposalDayOf(task.date, planned, result, dayInputsOf(latest, task.date)),
+          );
           made++;
           if (result.unassigned.length > 0) unassignedDays++;
           patch({ made });
@@ -478,23 +528,8 @@ export function createMonthBatch(solve: Solve = runSolve): MonthBatch {
       const p = proposal.get();
       if (!p || !host || run.get() !== null) return null;
       if (opts?.id !== undefined && opts.id !== p.id) return null;
-      const chosen = p.choices ? p.choices[opts?.choice ?? 0] : undefined;
-      if (p.choices && !chosen) return null;
-      const all = chosen ? chosen.days : p.days;
-      let result: { applied: string[]; skipped: string[] } = { applied: [], skipped: [] };
-      const h = host;
-      // 反映するかどうかを今のデータで決めてから、1回の update で書く（全体の「元に戻す」の1手）
-      const r = applyProposal(h.get(), { days: all });
-      result = { applied: r.applied, skipped: r.skipped };
-      if (r.applied.length > 0)
-        h.update(
-          (d) => {
-            const out = applyProposal(d, { days: all.filter((x) => r.applied.includes(x.date)) }).data;
-            return opts?.andThen ? opts.andThen(out) : out;
-          },
-          opts?.label ?? `AI の提案を反映（${chosen ? `${p.label}・${chosen.name}` : p.label}）`,
-        );
-      proposal.set(null);
+      const result = applyTo(host, p, opts);
+      if (result) proposal.set(null);
       return result;
     },
     discard: () => proposal.set(null),
@@ -509,18 +544,7 @@ export function createMonthBatch(solve: Solve = runSolve): MonthBatch {
       const r = run.get();
       if (r === null) return;
       drop();
-      done.set({
-        ym: r.ym,
-        label: r.label,
-        source: r.source,
-        rangeStart: r.rangeStart,
-        made: r.made,
-        unassignedDays: 0,
-        stopped: true,
-        error: null,
-        aborted: true,
-        proposal: null,
-      });
+      done.set(abortedDone(r));
     },
     connect: (h) => {
       host = h;
