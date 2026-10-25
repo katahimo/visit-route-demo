@@ -38,7 +38,8 @@ import {
   targetsOf,
 } from '../reassign';
 import { leftReasonText } from './absenceParts';
-import type { AnnealBox, LeftContact, ReassignOption } from './reassignParts';
+import type { LeftContact } from './contactPanel';
+import type { AnnealBox, ReassignOption } from './reassignParts';
 import { type PlanRun, usePlanRun } from './usePlanRun';
 
 /** 振り直しの手の名前（「振り直す前に戻す」は直前の手がこの日のこれのときだけ全体の「元に戻す」で戻す） */

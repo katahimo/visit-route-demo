@@ -3,33 +3,23 @@ import {
   Ban,
   BedSingle,
   CalendarDays,
-  Car,
-  ChevronRight,
-  CircleCheck,
   CircleOff,
   Clock,
-  Gauge,
-  Hourglass,
   Info,
-  ListChecks,
-  Mail,
   Map as MapIcon,
   MessageSquareText,
   PanelRightOpen,
   Pin,
   PinOff,
   Plus,
-  Scale,
   ShieldAlert,
-  ShieldCheck,
   Square,
-  Timer,
   TriangleAlert,
   UserRoundX,
 } from 'lucide-react';
-import { type DragEvent, Fragment, type ReactNode, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { type DragEvent, type ReactNode, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
-import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { useConfirm } from '../components/ConfirmDialog';
 import { useDay } from '../components/day';
 import { DayLines } from '../components/dayLines';
@@ -39,18 +29,18 @@ import { MenuButton, type MenuItem } from '../components/MenuButton';
 import { useMailLimit } from '../components/mailParts';
 import { VisitRouteLinks } from '../components/mapsLinks';
 import { PersonButton, PersonInfo } from '../components/PersonPopover';
-import { type IssueRow, PlanIssueCount } from '../components/PlanIssueCount';
+import type { IssueRow } from '../components/PlanIssueCount';
 import { ClientName } from '../components/parts';
 import { RouteMap } from '../components/RouteMap';
 import { RouteTimeline, type TimelineBand, type TimelineColumn } from '../components/routeTimeline';
 import { LegLine, StaffFocusButton, StaffLegend, VisitCard } from '../components/routeView';
 import { ScheduleNav } from '../components/ScheduleNav';
 import { StaffMark, StaffMarkById } from '../components/StaffMark';
-import { RangeProposalBand, ScheduleToolbar, SelectionBar } from '../components/scheduleParts';
+import { ScheduleToolbar, SelectionBar } from '../components/scheduleParts';
 import { Term } from '../components/Term';
 import { useToast } from '../components/Toast';
 import { shiftShort, TlMark, type TlMarkTone } from '../components/timelineMarks';
-import { Empty, Hint, IconButton, PageHeader, SectionTitle, SidePanel, Stat, WithIcon } from '../components/ui';
+import { Empty, Hint, IconButton, PageHeader, SectionTitle, WithIcon } from '../components/ui';
 import { useHistoryOps, useUndoAction } from '../components/undo';
 import { useDayModel } from '../components/useDayModel';
 import { useFeature } from '../components/useFeature';
@@ -64,15 +54,15 @@ import { useVisitSelection } from '../components/visitParts';
 import { TypeMark } from '../components/visitType';
 import type { DemoData } from '../contracts/data';
 import type { Client, Visit, VisitType } from '../contracts/documents';
-import type { PlanScore, Problem, ScoreScale } from '../contracts/problem';
+import type { Problem } from '../contracts/problem';
 import { slotsText } from '../domain/availability';
 import { leaveOn } from '../domain/leaves';
 import { NONE, timeOrder, windowText } from '../domain/scheduleModel';
 import { hhmmToMinutes, jstDate, minutesToHhmm } from '../domain/time';
-import { achievements, BALANCE_RULE_KEY, hundredBreakdown, ruleLowerBounds, score, toHundred } from '../evaluate';
+import { achievements, ruleLowerBounds, score, toHundred } from '../evaluate';
 import { absenceText } from '../lib/absences';
 import { colorOf } from '../lib/colors';
-import { attempt, own, pointsText, r0 } from '../lib/common';
+import { attempt, own } from '../lib/common';
 import { confirmDay } from '../lib/confirmDay';
 import { dayContactWords } from '../lib/contacts';
 import { clockTime, dateText } from '../lib/dateText';
@@ -91,14 +81,14 @@ import {
 import { deferredDragStart } from '../lib/dragStart';
 import { hardLinks } from '../lib/hardLinks';
 import { isDate } from '../lib/isDate';
-import { linkIfOn, UNASSIGNED_DO, workloadHref } from '../lib/links';
+import { linkIfOn, UNASSIGNED_DO } from '../lib/links';
 import { contactMailText, mailTo } from '../lib/mail';
 import { HOME_LABEL } from '../lib/mapsLink';
 import { issueBreakdown } from '../lib/month';
 import { scrollBehavior } from '../lib/motion';
 import { typeOf } from '../lib/patternText';
 import { leavePeople } from '../lib/personLinks';
-import { hardLabelsOf, planColumns, toldMarksOf } from '../lib/planView';
+import { droppedRowsOf, hardLabelsOf, hardRowsOf, planColumns, toldMarksOf, unplacedReasons } from '../lib/planView';
 import { CURRENT_TEXT, hardReasonLabels, NONE_TEXT, notAllowedText, reassignChoices } from '../lib/reassignMenu';
 import { buildRouteMap, homeLegKey, homeTravel } from '../lib/routeView';
 import { reasonFace, reasonOfRoutes } from '../lib/scoreReason';
@@ -108,26 +98,20 @@ import type { ReadableStore } from '../lib/valueStore';
 import { dayLooks } from '../lib/visitLook';
 import { cancelVisitOp } from '../lib/visitOps';
 import { canSelectVisit } from '../lib/visitSelect';
-import { hmText, workStats } from '../lib/workload';
+import { workStats } from '../lib/workload';
 import { bestInsertion } from '../matching';
 import { placeVisit, type ReassignCandidate } from '../reassign';
+import { CancelVisitPanel } from './cancelVisitPanel';
+import { PlanBands } from './planBands';
+import { PlanDetailPanel } from './planDetail';
+import { PlanConfirmActions, PlanHelp, PlanOneLine } from './planHeader';
 import './plan.css';
 import './schedule.css';
 import { CandidateBox, leftReasonText, ReassignBar } from './absenceParts';
+import { ContactPanel } from './contactPanel';
 import { DayMailPanel } from './mailPanels';
-import {
-  AchievementList,
-  breakdownText,
-  explainMap,
-  HARD_NOTE,
-  HundredHint,
-  NextUnconfirmed,
-  ReasonBox,
-  RefMark,
-  ScoreNextStep,
-  ScoreReasonText,
-} from './planParts';
-import { AnnealBox, ContactButton, ContactPanel, ReassignDock } from './reassignParts';
+import { explainMap, ReasonBox } from './planParts';
+import { AnnealBox, ContactButton, ReassignDock } from './reassignParts';
 import { SuddenPanel } from './SuddenPanel';
 import type { PlanProgress } from './usePlanRun';
 import { reassignShown, useReassignFlow } from './useReassignFlow';
@@ -230,7 +214,6 @@ export default function PlanPage() {
   /** 取り消しの欄を開いている訪問（PRD D74。null：閉じている）と、当日キャンセルか */
   const [cancelFor, setCancelFor] = useState<Visit | null>(null);
   const [cancelSameDay, setCancelSameDay] = useState(false);
-  const navigate = useNavigate();
   const location = useLocation();
   /** ページの中の地図のカード（画面の外なら右下に浮かせる） */
   const mapCardRef = useRef<HTMLDivElement>(null);
@@ -1248,9 +1231,7 @@ export default function PlanPage() {
       </div>
       {unassigned.length === 0 && <span className="sub">ここへドラッグすると担当なしにできます</span>}
       {unassigned.map((id) => {
-        // どの担当も可にならない訪問は infeasible、候補がいるのに入らない訪問は explain が理由を持つ
-        const inf = problem?.infeasible.find((f) => problem.visits[f.visit]?.id === id);
-        const reasons = inf?.reasons ?? explained.get(id)?.reasons ?? [];
+        const reasons = unplacedReasons(problem, explained, id);
         const client = clientOf(id);
         return (
           <div key={id} className="stack" style={{ gap: 2 }}>
@@ -1324,45 +1305,20 @@ export default function PlanPage() {
   });
 
   // ---- 日の画面の整理（PRD D63）：1行のまとめ・案を変えるメニュー・右の欄・表示の切り替え・地図の横置き ----
-  const hardCount = cs?.hardViolations.length ?? 0;
   /** 一覧の時刻（今の担当の開始。無ければ約束の開始） */
   const issueTime = (id: string) => {
     const t = explained.get(id)?.timing;
     return t ? minutesToHhmm(t.start) : (visitById.get(id)?.earliestStart ?? '');
   };
+  const rowWords = { timeOf: issueTime, clientName: (id: string) => clientOf(id)?.displayName ?? '（不明）' };
   /** 「入らない N」の一覧（PRD D345）：理由は「担当なしの訪問」の列の札と同じ */
-  const droppedRows: IssueRow[] = unassigned.map((id) => {
-    const inf = problem?.infeasible.find((f) => problem.visits[f.visit]?.id === id);
-    const reasons = inf?.reasons ?? explained.get(id)?.reasons ?? [];
-    return {
-      visitId: id,
-      time: issueTime(id),
-      clientName: clientOf(id)?.displayName ?? '（不明）',
-      reasons: reasons.map((r) => reasonFace(r).text),
-      links: [],
-    };
-  });
+  const droppedRows: IssueRow[] = droppedRowsOf(unassigned, (id) => unplacedReasons(problem, explained, id), rowWords);
   /** 「守れない条件 N」の一覧（PRD D345）：訪問ごとに1行。関連の画面は lib/hardLinks（切った機能の行き先は出さない） */
-  const hardRows: IssueRow[] = [];
-  for (const h of cs?.hardViolations ?? []) {
-    const client = clientOf(h.visitId);
-    const links = hardLinks(h, client?.id, terms).filter((l) => linkIfOn(data.org.features, l.to) !== null);
-    const row = hardRows.find((r) => r.visitId === h.visitId);
-    if (row) {
-      if (!row.reasons.includes(h.label)) row.reasons.push(h.label);
-      for (const l of links) if (!row.links.some((x) => x.to === l.to)) row.links.push(l);
-      continue;
-    }
-    hardRows.push({
-      visitId: h.visitId,
-      time: issueTime(h.visitId),
-      clientName: client?.displayName ?? '（不明）',
-      staffName: staffName(h.staffId),
-      reasons: [h.label],
-      links,
-    });
-  }
-  hardRows.sort((a, b) => a.time.localeCompare(b.time));
+  const hardRows: IssueRow[] = hardRowsOf(
+    cs?.hardViolations ?? [],
+    (h) => hardLinks(h, clientOf(h.visitId)?.id, terms).filter((l) => linkIfOn(data.org.features, l.to) !== null),
+    { ...rowWords, staffName },
+  );
   /** 「見る」（入らない訪問）：担当なしの列へ移り、その訪問を選ぶ（選んだままなら外さない） */
   const lookNone = (id: string) => {
     // スマホの日ごとのリストは表示を変えず、その行へ巻く（「担当なしの列へ」と同じ）
@@ -1642,55 +1598,17 @@ export default function PlanPage() {
         picker={{ label: '日付', value: date, options: dayOptions, onChange: setDate }}
         actions={
           (hasPlan || toldState === 'changed') && (
-            <>
-              {toldState === 'told' ? (
-                <>
-                  <span className="chip chip-ok" data-testid="confirm-state">
-                    <CircleCheck size={12} aria-hidden="true" />
-                    <Term k="confirmed">確定済み</Term>
-                  </span>
-                  {/* 確定したら次の確定していない日へ（PRD D224） */}
-                  <NextUnconfirmed date={date} onPick={setDate} />
-                </>
-              ) : toldState === 'changed' ? (
-                <button
-                  type="button"
-                  className="chip chip-warn chip-btn"
-                  onClick={() => setToldOpen(true)}
-                  data-testid="confirm-state"
-                  title="伝えたあとに変わった訪問の連絡の一覧を開く"
-                >
-                  <TriangleAlert size={12} aria-hidden="true" />
-                  <Term k="confirmDiff">未連絡の変更あり</Term> {toldCount}件
-                </button>
-              ) : (
-                <span className="chip chip-warn" data-testid="confirm-state">
-                  <TriangleAlert size={12} aria-hidden="true" />
-                  <Term k="unconfirmed">まだ伝えていない</Term>
-                </span>
-              )}
-              {/* 担当ごとの予定をメールアプリで開く（PRD D92・D306。ADR-0017）。毎日送るので見出しの主ボタンの隣に枠のボタンで置く */}
-              {mailOn && (
-                <button type="button" className="btn" onClick={() => setPanel('mail')} data-testid="day-mail">
-                  <WithIcon icon={Mail}>
-                    <span className="m-sr">予定をメールで送る</span>
-                  </WithIcon>
-                </button>
-              )}
-              {/* 主ボタン（塗り）は「確定」だけ。確定済みの日は枠にして主ボタンを置かない（PRD D238） */}
-              <button
-                type="button"
-                className={toldState === 'told' ? 'btn' : 'btn btn-primary'}
-                disabled={!!running || toldState === 'told'}
-                onClick={adopt}
-                data-testid="adopt"
-                title="今の担当と時刻を〈スタッフ〉に伝えたら押します"
-              >
-                <WithIcon icon={CircleCheck}>
-                  {toldState === 'changed' ? '確定し直す（伝えた）' : '確定（伝えた）'}
-                </WithIcon>
-              </button>
-            </>
+            <PlanConfirmActions
+              toldState={toldState}
+              toldCount={toldCount}
+              date={date}
+              mailOn={mailOn}
+              running={!!running}
+              onPickDate={setDate}
+              onOpenTold={() => setToldOpen(true)}
+              onMail={() => setPanel('mail')}
+              onAdopt={adopt}
+            />
           )
         }
       />
@@ -1702,81 +1620,23 @@ export default function PlanPage() {
       )}
 
       {hasPlan && cs && (
-        <div className="plan-oneline" data-testid="plan-summary">
-          <span className="plan-oneline-title">今の担当</span>
-          <span>
-            訪問 <strong>{visits.length}</strong>件
-          </span>
-          {/* 数を押すと一覧（見る・開く・関連の画面へ。PRD D345）。0 件は数だけ */}
-          <span className={cs.dropped > 0 ? 'warn-text' : ''}>
-            <Term k="dropped" />{' '}
-            <PlanIssueCount
-              count={cs.dropped}
-              title={`入らない訪問 ${droppedRows.length}件`}
-              rows={droppedRows}
-              onLook={lookNone}
-              onOpen={(id) => openVisit(id)}
-              footer={(close) => (
-                <button
-                  type="button"
-                  className="btn btn-small btn-text detail-popover-link"
-                  onClick={() => {
-                    close();
-                    requestAnimationFrame(goToNone);
-                  }}
-                  data-testid="plan-dropped-none"
-                >
-                  担当なしの列へ
-                </button>
-              )}
-              testId="plan-dropped"
-            />
-          </span>
-          <span className={`m-hide${hardCount > 0 ? ' error' : ''}`}>
-            <Term k="hard" />{' '}
-            <PlanIssueCount
-              count={hardCount}
-              title={`守れない条件 ${hardCount}件`}
-              rows={hardRows}
-              onLook={lookAt}
-              onOpen={(id) => openVisit(id)}
-              testId="plan-hard"
-            />
-          </span>
-          <span className="m-hide">
-            <Term k="travel" /> <strong>{r0(cs.travelMinutes)}</strong>分
-          </span>
-          {/* 点数の色（PRD D266）：入らない・必須の違反があるときだけ要対応の色。無ければ点が低くても赤にしない（D228） */}
-          <span
-            className={`plan-oneline-score${cs.dropped > 0 || hardCount > 0 ? ' is-alert' : ''}`}
-            title={`「${scoreRulerName}」の重みで付けた点数`}
-            data-testid="plan-score"
-          >
-            <Term k="score" /> <strong data-testid="plan-total">{hundredNow ?? '—'}</strong>点
-            {hardCount > 0 && (
-              <span className="chip chip-warn" title={HARD_NOTE}>
-                参考
-              </span>
-            )}
-          </span>
-          {/* 点を下げているいちばん大きい理由（PRD D173） */}
-          <span className="plan-oneline-why">
-            {rulesOn && reasonNow && <ScoreReasonText reason={reasonNow} testId="plan-reason" />}
-            {/* いちばんの理由の次の一手（PRD D229）：担当なし → 受けられる人・相性 → 相性の表。
-              理由のすぐ後ろに同じ行で（上の段を詰める。PRD D237） */}
-            {rulesOn && reasonNow && <ScoreNextStep reason={reasonNow} date={date} compatOn={compatOn} />}
-          </span>
-          <button
-            type="button"
-            className="link-btn plan-oneline-more"
-            onClick={() => setPanel('detail')}
-            data-testid="plan-detail"
-          >
-            <WithIcon icon={ChevronRight} size={14}>
-              詳しく
-            </WithIcon>
-          </button>
-        </div>
+        <PlanOneLine
+          cs={cs}
+          visitCount={visits.length}
+          droppedRows={droppedRows}
+          hardRows={hardRows}
+          hundredNow={hundredNow}
+          scoreRulerName={scoreRulerName}
+          reasonNow={reasonNow}
+          rulesOn={rulesOn}
+          compatOn={compatOn}
+          date={date}
+          lookNone={lookNone}
+          lookAt={lookAt}
+          goToNone={goToNone}
+          onOpen={(id) => openVisit(id)}
+          onDetail={() => setPanel('detail')}
+        />
       )}
       {/* 操作の行（日・週・月で同じ並び・同じ位置＝状態の1行のすぐ下。PRD D327・D344）：欠勤・キャンセルを登録／元に戻す・やり直す／表示／訪問を追加・使い方（スマホは その他 ▾） */}
       <ScheduleToolbar
@@ -1847,42 +1707,7 @@ export default function PlanPage() {
         )}
       </ScheduleToolbar>
       {/* 使い方は操作の行のすぐ下に開く */}
-      {helpOpen && (
-        <div ref={helpRef} className="hint-body plan-help" tabIndex={-1} data-testid="plan-help">
-          <ul className="plan-help-list">
-            <li>
-              担当を変えるには、訪問を別の{terms.staff}
-              の列へドラッグします。訪問を押して「担当を変える」から選んでも同じです。
-              移した訪問は、その人の回る順番のいちばん無駄の少ない所に入り、ピンが付きます（ピンの付いた訪問は、AI
-              で組み直しても担当を変えません）。
-            </li>
-            <li>「担当なしの訪問」へ移すと、担当なしに戻ります。</li>
-            <li>
-              「元に戻す」（Ctrl+Z）で1手ずつ戻せます（50手まで）。「やり直す」（Ctrl+Shift+Z）で戻した手をやり直せます。
-            </li>
-            <li>
-              Shift か Ctrl
-              を押しながら訪問を押すと、複数を選べます。下に出る帯で、まとめて担当を替える・時刻をずらす・取り消すができます。
-            </li>
-            <li>
-              「予定をメールで送る」などで{terms.staff}
-              に伝えたら「確定」を押します。確定のあとに変えた訪問は「未連絡の変更」に出ます。
-            </li>
-            <li>
-              名前の下の時間は、その日に働ける時間です。約束の時間に間に合わない訪問や、働ける時間からはみ出す訪問は赤い枠になります。訪問を押すと理由が出ます。
-            </li>
-            <li>「自宅から」「自宅まで」や移動の時間を押すと、地図でその道のりが太くなります。</li>
-            <li>
-              時間軸の灰色は働かない時間・休憩、斜線は欠勤、点線の枠は待ち時間です。ドラッグしている間は、落とす列に入れられるか（緑）入れられないか（赤）が出ます。
-            </li>
-          </ul>
-          <div>
-            <button type="button" className="btn btn-small btn-text" onClick={() => setHelpOpen(false)}>
-              使い方を閉じる
-            </button>
-          </div>
-        </div>
-      )}
+      {helpOpen && <PlanHelp helpRef={helpRef} staffTerm={terms.staff} onClose={() => setHelpOpen(false)} />}
       {/* 担当ごとの1日（PRD D84）。訪問のある日だけ。狭い幅では畳む */}
       {hasPlan && cs && !compact && (
         <DayLines
@@ -1897,126 +1722,18 @@ export default function PlanPage() {
       )}
 
       {/* あるときだけの帯（PRD D63）。ドラッグ中には増減しない（移したあとに変わる） */}
-      {m.problemError && (
-        <p className="error plan-band" role="alert">
-          問題を作れませんでした：{m.problemError}
-        </p>
-      )}
-      {error && (
-        <p className="error plan-band" role="alert">
-          {error}
-        </p>
-      )}
-      {hasPlan && curScore?.error && (
-        <p className="error plan-band" role="alert">
-          採点できません（{curScore.error}）
-        </p>
-      )}
-      {/* 担当を組むの画面で組んだ範囲の提案（日・週・月の予定で同じもの） */}
-      <RangeProposalBand />
-      {hasPlan && careCount > 0 && (
-        <div className="plan-band is-warn row" data-testid="band-care">
-          <WithIcon icon={TriangleAlert} size={16}>
-            <span className="band-text">
-              <Term k="attention">要対応</Term>の訪問 <strong>{careCount}</strong>件（{careParts.join('・')}）
-            </span>
-          </WithIcon>
-          {unassigned.length > 0 && (
-            <button type="button" className="btn btn-small" onClick={goToNone} data-testid="band-unassigned">
-              担当なしを見る
-            </button>
-          )}
-        </div>
-      )}
-      {toldState === 'changed' && (
-        <div className="plan-band row" data-testid="band-told">
-          <WithIcon icon={MessageSquareText} size={16}>
-            伝えたあとに変わった訪問 {toldCount}件（未連絡の変更）
-          </WithIcon>
-          <button type="button" className="btn btn-small" onClick={() => setToldOpen(true)} data-testid="told-open">
-            連絡の一覧
-          </button>
-        </div>
-      )}
-      {hasPlan && reassignInfo && (
-        <div className="plan-band row" data-testid="band-reassign">
-          <WithIcon icon={UserRoundX} size={16}>
-            欠勤の振り直し：入らない {rDiff?.unplaced.length ?? 0}件
-            {left.length > 0 ? `・欠勤の人のまま ${left.length}件` : ''}
-          </WithIcon>
-          <button type="button" className="btn btn-small" onClick={goToBar}>
-            差の欄へ
-          </button>
-        </div>
-      )}
-      {m.leaveVisits.length > 0 && (
-        <div className="plan-band row" data-testid="band-leave">
-          <WithIcon icon={BedSingle} size={16}>
-            {/* 名前のボタンを並べても折り返すよう、文は1つの要素に入れる（with-icon は横並び） */}
-            <span className="band-text">
-              {terms.client}の休みのため無し {m.leaveVisits.length}件：
-              {leaveNames.map((x, i) => (
-                <Fragment key={x.clientId}>
-                  {i > 0 && '・'}
-                  <PersonButton kind="client" id={x.clientId} name={x.name} testId="leave-name">
-                    {x.name || '（不明）'}
-                  </PersonButton>
-                  {x.note && `（${x.note}）`}
-                </Fragment>
-              ))}
-            </span>
-          </WithIcon>
-          <button type="button" className="btn btn-small" onClick={() => setView('list')}>
-            一覧で見る
-          </button>
-        </div>
-      )}
-      {workloadOn && overSpan.length > 0 && (
-        <div className="plan-band is-warn row" data-testid="band-over-span">
-          <WithIcon icon={Timer} size={16}>
-            <span className="band-text">
-              出勤〜退勤（拘束）が上限の{data.org.spanLimitHours}時間を超える
-              {terms.staff}：
-              {overSpan.map((x, i) => {
-                const name = staffById.get(x.staffId)?.name ?? '';
-                return (
-                  <Fragment key={x.staffId}>
-                    {i > 0 && '・'}
-                    {/* 1人ぶん（名前・拘束・リンク）は途中で折り返さない */}
-                    <span className="over-span-item">
-                      <PersonButton kind="staff" id={x.staffId} name={name} testId="over-span-name">
-                        {staffName(x.staffId)}
-                      </PersonButton>{' '}
-                      {hmText(x.span)}
-                      {/* 2人以上なら人ごとに稼働の見込みへ（主ボタンは増やさない。PRD D207） */}
-                      {overSpan.length > 1 && workloadOn && (
-                        <Link
-                          to={workloadHref(date.slice(0, 7), x.staffId)}
-                          className="over-span-link"
-                          aria-label={`${staffName(x.staffId)}さんの勤務の見込み`}
-                          data-testid="over-span-link"
-                        >
-                          勤務の見込み
-                        </Link>
-                      )}
-                    </span>
-                  </Fragment>
-                );
-              })}
-              （今の担当からの見込み）
-            </span>
-          </WithIcon>
-          {overSpan.length === 1 && workloadOn && (
-            <button
-              type="button"
-              className="btn btn-small"
-              onClick={() => navigate(workloadHref(date.slice(0, 7), overSpan[0]!.staffId))}
-            >
-              勤務の見込み
-            </button>
-          )}
-        </div>
-      )}
+      <PlanBands
+        errors={{ problem: m.problemError, run: error, score: (hasPlan && curScore?.error) || null }}
+        care={{ count: hasPlan ? careCount : 0, parts: careParts, unassigned: unassigned.length }}
+        toldCount={toldState === 'changed' ? toldCount : null}
+        reassign={hasPlan && reassignInfo ? { unplaced: rDiff?.unplaced.length ?? 0, left: left.length } : null}
+        leave={{ count: m.leaveVisits.length, names: leaveNames }}
+        over={workloadOn ? { list: overSpan, limitHours: data.org.spanLimitHours, staffById } : null}
+        terms={terms}
+        date={date}
+        staffName={staffName}
+        on={{ goNone: goToNone, openTold: () => setToldOpen(true), goBar: goToBar, showList: () => setView('list') }}
+      />
       {/* キーで動かした先の読み上げと、繰り返しの回の範囲を選び直す小さな帯（PRD D333） */}
       <KeyMoveBand
         onMoved={(r) => {
@@ -2171,92 +1888,30 @@ export default function PlanPage() {
       )}
 
       {cancelFor && (
-        <SidePanel
-          icon={Ban}
-          narrow
-          title="訪問を取り消す"
+        <CancelVisitPanel
+          visit={cancelFor}
+          clientName={clientById.get(cancelFor.clientId)?.displayName ?? ''}
+          clientWord={terms.client}
+          suddenOn={suddenOn}
+          sameDay={cancelSameDay}
+          setSameDay={setCancelSameDay}
+          onCancel={doCancel}
           onClose={() => setCancelFor(null)}
-          footer={
-            <>
-              <button type="button" className="btn btn-danger" onClick={doCancel} data-testid="cancel-visit-ok">
-                <WithIcon icon={Ban}>取り消す</WithIcon>
-              </button>
-              <button type="button" className="btn" onClick={() => setCancelFor(null)}>
-                やめる
-              </button>
-            </>
-          }
-        >
-          <p>
-            <strong>
-              {clientById.get(cancelFor.clientId)?.displayName ?? ''} {windowText(cancelFor)}
-            </strong>{' '}
-            の訪問を取り消します。
-          </p>
-          {suddenOn && (
-            <>
-              <fieldset className="stack cancel-kind" style={{ gap: 6 }} data-testid="cancel-kind">
-                <legend>取り消しの種類</legend>
-                <label className="check">
-                  <input
-                    type="radio"
-                    name="cancel-kind"
-                    checked={!cancelSameDay}
-                    onChange={() => setCancelSameDay(false)}
-                    style={{ width: 'auto' }}
-                  />
-                  ふつうの取り消し（前もって決まった休み・予定の変更など）
-                </label>
-                <label className="check">
-                  <input
-                    type="radio"
-                    name="cancel-kind"
-                    checked={cancelSameDay}
-                    onChange={() => setCancelSameDay(true)}
-                    style={{ width: 'auto' }}
-                    data-testid="cancel-same-day"
-                  />
-                  当日キャンセル（その日になって{terms.client}の都合で取りやめ）
-                </label>
-              </fieldset>
-              <p className="sub">
-                当日キャンセルは、月の予定と{terms.client}
-                ごとの集計に回数が出ます。ほかの担当はそのままで、この訪問だけ外れます。
-              </p>
-            </>
-          )}
-        </SidePanel>
+        />
       )}
-
       {panel === 'detail' && (
-        <SidePanel icon={Gauge} title="今の担当の詳しく" onClose={() => setPanel(null)}>
-          {hasPlan && cs ? (
-            <div className="stack" data-testid="plan-detail-panel">
-              <PlanSummary
-                current={cs}
-                problem={scoreProblem}
-                scale={scoreScale}
-                rulerName={scoreRulerName}
-                balanceOut={(() => {
-                  const b = curAch.find((x) => x.ruleId === BALANCE_RULE_KEY);
-                  return b ? b.total - b.met : null;
-                })()}
-              />
-              {scoreProblem && (
-                <div className="stack" style={{ gap: 6 }}>
-                  <strong className="balance-title">
-                    <ListChecks size={15} aria-hidden="true" />
-                    条件ごとの達成
-                  </strong>
-                  <AchievementList list={curAch} rules={data.rules} terms={terms} />
-                </div>
-              )}
-              {scoreProblem && <BalanceChips problem={scoreProblem} routes={routes} staffName={staffName} />}
-            </div>
-          ) : (
-            <Empty icon={Gauge}>この日に計算できる訪問がありません</Empty>
-          )}
-        </SidePanel>
+        <PlanDetailPanel
+          cs={hasPlan ? cs : null}
+          scoreProblem={scoreProblem}
+          scoreScale={scoreScale}
+          scoreRulerName={scoreRulerName}
+          curAch={curAch}
+          rules={data.rules}
+          terms={terms}
+          routes={routes}
+          staffName={staffName}
+          onClose={() => setPanel(null)}
+        />
       )}
       {panel === 'mail' && mailOn && (
         <DayMailPanel
@@ -2319,134 +1974,6 @@ function useNarrowOrPrint(): boolean {
     };
   }, []);
   return narrow || printing;
-}
-
-/** 今の担当の合計点（100点満点）・移動・待ち・要対応 */
-function PlanSummary({
-  current,
-  problem,
-  scale,
-  rulerName,
-  balanceOut,
-}: {
-  current: PlanScore | null;
-  /** 点数の基準の物差しの問題と物差し（ADR-0010） */
-  problem: Problem | null;
-  scale: ScoreScale | null;
-  /** 点数の基準のプリセットの名前 */
-  rulerName: string;
-  /** 件数の目安から外れた人の数（負担の均等が無効なら null） */
-  balanceOut: number | null;
-}) {
-  if (!current) return null;
-  const hard = current.hardViolations.length;
-  const hundred = scale ? toHundred(current.total, scale) : null;
-  const parts = scale && problem ? hundredBreakdown(current, scale, problem) : [];
-  return (
-    <div className="stack" style={{ gap: 8 }}>
-      <div className="stat-row">
-        <Stat
-          icon={Gauge}
-          label={hard > 0 ? '合計（参考）' : '合計'}
-          tone="primary"
-          value={hundred ?? '—'}
-          unit="点"
-          note={breakdownText(parts) || undefined}
-        />
-        <Stat icon={Car} label="移動" value={r0(current.travelMinutes)} unit="分" />
-        <Stat icon={Hourglass} label={<Term k="wait" />} value={r0(current.waitMinutes)} unit="分" />
-        {balanceOut !== null && (
-          <Stat
-            icon={Scale}
-            label="目安から外れた人"
-            tone={balanceOut > 0 ? 'warn' : 'ok'}
-            value={balanceOut}
-            unit="人"
-            note={balanceOut > 0 ? `負担の均等 ${pointsText(current.balancePoints)}点` : undefined}
-          />
-        )}
-        <Stat
-          icon={hard > 0 ? ShieldAlert : ShieldCheck}
-          label="守れない条件"
-          tone={hard > 0 ? 'danger' : 'ok'}
-          value={hard}
-          unit="件"
-        />
-        {current.dropped > 0 && (
-          <Stat icon={CircleOff} label="担当なし" tone="warn" value={current.dropped} unit="件" />
-        )}
-      </div>
-      <div className="row" style={{ flexWrap: 'wrap', gap: 12 }}>
-        {scale && (
-          <span className="sub" data-testid="score-ruler">
-            <Term k="scoreBase" />：{rulerName}
-          </span>
-        )}
-        {scale && <HundredHint cost={current.total} parts={parts} scale={scale} rulerName={rulerName} />}
-        {scale && <RefMark hard={hard} />}
-      </div>
-    </div>
-  );
-}
-
-/** スタッフごとの件数と目安の帯（帯の外は色、必須の上限を超えたら赤）。名前の前は〈スタッフ〉の印（StaffMark） */
-function BalanceChips({
-  problem,
-  routes,
-  staffName,
-}: {
-  problem: Problem;
-  routes: Record<string, string[]>;
-  staffName: (id: string) => string;
-}) {
-  const b = problem.balance;
-  const rows = problem.staff
-    .map((s, i) => ({ id: s.id, i, n: own(routes, s.id)?.length ?? 0, working: s.slots.length > 0 }))
-    .filter((x) => x.working || x.n > 0);
-  // 横棒の目盛りの最大（件数・目安の上・必須の上限のうち最大＋余白）
-  const max = Math.max(1, ...rows.map(({ i, n }) => Math.max(n, b?.hi[i] ?? 0, b?.cap?.[i] ?? 0)));
-  const pct = (v: number) => `${(Math.min(v, max) / max) * 100}%`;
-  return (
-    <div className="stack balance" style={{ gap: 6 }}>
-      <div className="spread">
-        <strong className="balance-title">
-          <Scale size={15} aria-hidden="true" />
-          件数の偏り
-        </strong>
-        <Hint>
-          {b ? '色のついた帯が目安です。働ける時間が長い人ほど多くなります。' : '負担の均等の条件が無効です。'}
-          {b?.cap ? '必須なので、目安より1件多いところまでです。' : ''}
-        </Hint>
-      </div>
-      {rows.map(({ id, i, n }) => {
-        const lo = b?.lo[i] ?? 0;
-        const hi = b?.hi[i] ?? 0;
-        const over = b?.cap ? n > (b.cap[i] ?? Number.POSITIVE_INFINITY) : false;
-        const out = b ? n < lo || n > hi : false;
-        const tone = over ? 'red' : out ? 'warn' : 'ok';
-        const band = lo === hi ? `${lo}` : `${lo}〜${hi}`;
-        return (
-          <div key={id} className="balance-row" title={b ? `目安 ${band}件` : ''}>
-            <span className="balance-name ellipsis">
-              <StaffMarkById id={id} size="xs" />
-              {staffName(id)}
-            </span>
-            <div
-              className="balance-bar"
-              role="img"
-              aria-label={`${staffName(id)} ${n}件${b ? `（目安 ${band}件）` : ''}`}
-            >
-              {b && <span className="balance-band" style={{ left: pct(lo), width: `calc(${pct(hi)} - ${pct(lo)})` }} />}
-              <span className={`balance-fill tone-${tone}`} style={{ width: pct(n) }} />
-            </div>
-            <span className={`balance-num tone-${tone}`}>
-              {n}件{b && <small>目安 {band}</small>}
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
 }
 
 /** 訪問の一覧の「注意」に出すもの */
