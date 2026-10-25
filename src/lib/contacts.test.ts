@@ -1,6 +1,7 @@
 // 連絡の一覧と連絡文（PRD D35・D244〜D246。ADR-0011・ADR-0038）
 import { describe, expect, it } from 'vitest';
 import type { ContactList } from '../contracts/reassign';
+import { visit } from '../matching/fixtures';
 import {
   allContactsText,
   type ContactWords,
@@ -8,9 +9,11 @@ import {
   contactCount,
   contactRows,
   dateWordOf,
+  dayContactWords,
   familyName,
   promisedText,
   staffMessage,
+  withoutVisit,
 } from './contacts';
 
 const names: Record<string, string> = {
@@ -235,5 +238,61 @@ describe('ほか', () => {
     expect(contactCount({ ...list, timeChanged: [...list.timeChanged, list.staffChanged[0]!] })).toBe(3);
     expect(contactCount(null)).toBe(0);
     expect(contactCount(EMPTY)).toBe(0);
+  });
+});
+
+describe('withoutVisit（取り消した訪問を連絡の差から外す）', () => {
+  it('担当・時刻の変化と人ごとの一覧から外し、空になった人は消す', () => {
+    const cv = (visitId: string) => ({
+      visitId,
+      clientId: 'c1',
+      fromStaffId: 's1',
+      toStaffId: 's2',
+      fromStart: 540,
+      toStart: 540,
+    });
+    const c: ContactList = {
+      staffChanged: [cv('v1'), cv('v2')],
+      timeChanged: [cv('v3')],
+      staff: [
+        { staffId: 's1', added: [], removed: [cv('v1')], shifted: [] },
+        { staffId: 's2', added: [cv('v1'), cv('v2')], removed: [], shifted: [cv('v3')] },
+      ],
+    };
+    const got = withoutVisit(c, 'v1');
+    expect(got.staffChanged.map((x) => x.visitId)).toEqual(['v2']);
+    expect(got.timeChanged.map((x) => x.visitId)).toEqual(['v3']);
+    expect(got.staff.map((x) => x.staffId)).toEqual(['s2']);
+    expect(got.staff[0]?.added.map((x) => x.visitId)).toEqual(['v2']);
+  });
+});
+
+describe('dayContactWords（日の予定の連絡文の名前・呼び方）', () => {
+  it('その日の訪問と〈利用者さん〉から引く', () => {
+    const v = (id: string, over = {}) => ({
+      ...visit(id, 'c1', '09:00', '09:30', { durationMinutes: 45 }),
+      ...over,
+    });
+    const w = dayContactWords({
+      date: '2026-10-15',
+      staffWord: 'ヘルパー',
+      orgName: 'ほしみ',
+      staffName: (id) => `名${id}`,
+      clientById: new Map([['c1', { displayName: '天文台', place: { address: '仙台市', lat: 0, lng: 0 } }]]),
+      visits: [v('v1'), v('v2', { windowKind: 'fixed', latestStart: '09:00' })],
+    });
+    expect(w.day).toBe('10月15日（木）');
+    expect(w.staffWord).toBe('ヘルパー');
+    expect(w.orgName).toBe('ほしみ');
+    expect(w.staffName('s1')).toBe('名s1');
+    expect(w.clientName('c1')).toBe('天文台');
+    expect(w.clientName('x')).toBe('（不明）');
+    expect(w.clientAddress('c1')).toBe('仙台市');
+    expect(w.clientAddress('x')).toBe('');
+    expect(w.visitMinutes?.('v1')).toBe(45);
+    expect(w.visitMinutes?.('x')).toBeNull();
+    expect(w.promised?.('v1')).toEqual({ from: 540, to: 570 });
+    expect(w.promised?.('v2')).toEqual({ from: 540, to: 540 });
+    expect(w.promised?.('x')).toBeNull();
   });
 });

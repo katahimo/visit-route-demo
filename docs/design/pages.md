@@ -275,7 +275,7 @@
 
 #### 呼ぶ側の決まり
 
-- 確認を出す関数は async。確認の後に計算中なら何もしない（日の予定の `runRef`：`recreate`・`runPreset`・`registerAndReassign`・`chooseOption`・`revert`・`adopt`・`revertToBase`・`placeCandidate`、月の `start` は `runningRef`）
+- 確認を出す関数は async。確認の後に計算中なら何もしない（日の予定は `usePlanRun` の `busy()`：`registerAndReassign`・`chooseOption`・`adopt`・`revertToBase`・`placeCandidate`、月の `start` は `runningRef`）
 - 日の予定の `create` は同期のまま（自動作成・順に作るが戻り値を使う）。手で押す作る・作り直す・プリセットは `recreate`／`runPreset`（async）が確認してから呼ぶ
 - 名簿の読み込みは確認の後にデータが変わっていないかを見直す
 - e2e で確認に答えるときは `scripts/lib/confirmDialog.cjs` の `answerConfirms(page)`（出た確認の見出しと本文を記録し `answer` のボタンを押す。ネイティブのダイアログは記録して失敗に、beforeunload だけ受ける）

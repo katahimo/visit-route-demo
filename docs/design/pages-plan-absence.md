@@ -1,6 +1,6 @@
 # 日の予定：欠勤・キャンセルと振り直し
 
-> この画面のファイル：`src/pages/SuddenPanel.tsx`・`absenceParts.tsx`（`AbsenceFields`・`AbsenceTargets`・`ReassignBar`・`ReassignSummary`・`ReassignMoves`・`CandidateBox`・`previewOf`）・`reassignParts.tsx`（`AnnealBox`・`ContactPanel`・`ContactButton`・`ReassignDock`）・`PlanPage.tsx`・`plan.css`、`src/lib/sudden.ts`・`absences.ts`・`contacts.ts`・`clipboard.ts`・`runs.ts`。関連 ADR：0011（追記を含む）・0015 追記・0025 追記・0038・0044。関連 PRD：D26〜D35・D167〜D172・D243〜D246・D264・D265。
+> この画面のファイル：`src/pages/SuddenPanel.tsx`・`absenceParts.tsx`（`AbsenceFields`・`AbsenceTargets`・`ReassignBar`・`ReassignResultBox`・`ReassignSummary`・`ReassignMoves`・`CandidateBox`・`previewOf`）・`reassignParts.tsx`（`AnnealBox`・`ContactPanel`・`ContactButton`・`ReassignDock`）・`useReassignFlow.ts`・`useSuddenFlow.tsx`・`usePlanRun.ts`・`PlanPage.tsx`・`plan.css`、`src/lib/sudden.ts`・`absences.ts`・`planReassign.ts`・`contacts.ts`・`clipboard.ts`・`runs.ts`。関連 ADR：0011（追記を含む）・0015 追記・0025 追記・0038・0044。関連 PRD：D26〜D35・D167〜D172・D243〜D246・D264・D265。
 > 日の予定の全体は [pages-plan.md](pages-plan.md)。計算（`reassign`・`targetsOf`・`prepareAnneal`・`settleAnneal`）は design.md の「reassign」。
 > 版2（ADR-0053）：振り直しは `writeRoutes` で訪問に書き、振り直す前の担当は `reassigns[date]`。確定は5段目の「連絡したので確定」（伝えた内容 `snapshots`）。下で「今の案」とあるのはその日の訪問の担当、「確定した割当」は伝えた内容
 
@@ -71,11 +71,12 @@
 - 押せない理由（`reassignBlocked({ error, running, hasPreview, hasBase })`）：「計算中は押せません（終わるまで待ってください）」・「見込みを出せませんでした」・「この日はまだ案がありません。欠勤だけ登録できます（案を作るときは欠勤を除いて作ります）」
 - 案の無い日（`sudden-no-plan`。`noPlanText(running)`）：計算中は「案を作っています。終わると振り直せます」、ほかは欠勤だけ登録できる
 
-#### 日の予定の関数（`pages/PlanPage.tsx`）
+#### 日の予定の関数（`pages/PlanPage.tsx` と、状態と処理のフック）
 
-- 状態 `sudden`
-- `registerAndReassign(absence, anneal, stay)`：欄から呼ぶとき（`stay`）は欄を閉じず差の欄へも移らず、振り直せたかを返す
-- `adopt`・`revertToBase`・`cancelAbsence`：済んだか（確認で取り消したら false）を返す
+- 欄の状態は `useSuddenState(date)`（`sudden`・開く `open(init)`・欄で取り消した訪問）、`?do=absence` の入口は `useSuddenEntry`、欄に渡すもの（選択肢・5段目の連絡・欠勤だけ登録・欠勤の取り消し・欄からの取り消し・閉じる）は `useSuddenFlow`（`pages/useSuddenFlow.tsx`）
+- 振り直しは `useReassignFlow`（`pages/useReassignFlow.ts`）：差・印・欠勤の人に残る訪問・案A／案B（`useAnneal`）・比べる数（`useReassignOptions`）・差の欄へ移る（`useBarFocus`）。計算（Worker）は `usePlanRun`（`pages/usePlanRun.ts`）
+- `registerAndReassign(absence, anneal, stay)`（`useReassignFlow`）：欄から呼ぶとき（`stay`）は欄を閉じず差の欄へも移らず、振り直せたかを返す。手順は `lib/planReassign.ts` の `planReassign(data, date, absence)`（欠勤を足して compile・振り直しの元の案・`targetsOf`・`reassign`。見込みの `previewOf` も前半 `absenceBaseOf` と後半 `reassignFrom` で同じ手順）
+- `adopt`・`revertToBase`・欠勤の取り消し（`onRemoveAbsence`）：済んだか（確認で取り消したら false）を返す
 - 訪問の取り消しは `applyCancel(visitId, sameDay)`（一覧の取り消しの欄と共通）
 
 #### `lib/sudden.ts`（純粋関数。テストあり）

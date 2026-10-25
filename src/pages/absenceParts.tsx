@@ -20,12 +20,12 @@ import type { Problem } from '../contracts/problem';
 import type { ReassignCandidate, ReassignDiff, ReassignLeft, ReassignTarget } from '../contracts/reassign';
 import { HALF_HOURS, type Slot, slotsText, timeText as t } from '../domain/availability';
 import { hhmmToMinutes, minutesToHhmm } from '../domain/time';
-import { absencesOn, absenceText, baseOf, saveAbsence, withoutAbsencesOn } from '../lib/absences';
+import { absenceText } from '../lib/absences';
 import { attempt, deltaText, r0 } from '../lib/common';
+import { absenceBaseOf, hasBase, reassignFrom } from '../lib/planReassign';
 import { shiftText } from '../lib/reassignMenu';
 import { type AbsenceDraft, reassignMoveRows } from '../lib/sudden';
-import { compile } from '../matching';
-import { candidatesFor, reassign, targetsOf } from '../reassign';
+import { candidatesFor } from '../reassign';
 
 /** 見込み（振り直す訪問）：入力のたびに targetsOf を呼ぶ */
 export type AbsencePreview = {
@@ -39,17 +39,11 @@ export type AbsencePreview = {
 /** 欠勤の入力から、その欠勤を入れたデータで振り直す訪問を出す（画面に規則を書かず reassign を呼ぶだけ） */
 export function previewOf(data: DemoData, date: string, absence: Absence): AbsencePreview | null {
   return attempt(() => {
-    const d = saveAbsence(data, absence);
-    const p = compile(d, date);
-    const base = baseOf(d, date, p);
-    if (Object.values(base.routes).every((ids) => ids.length === 0))
-      return { targets: [], hasBase: false, unplacedA: 0 };
-    const absent = [...new Set(absencesOn(d, date).map((a) => a.staffId))];
-    const plan = { problem: compile(withoutAbsencesOn(d, date), date), routes: base.routes };
-    const targets = targetsOf(p, plan, absent);
+    const b = absenceBaseOf(data, date, absence);
+    if (!hasBase(b)) return { targets: [], hasBase: false, unplacedA: 0 };
     // 案A の見込み（決定的で速い）。入らない訪問があれば案B を勧める
-    const unplacedA = reassign(p, base.routes, targets).unplaced.length;
-    return { targets, hasBase: true, unplacedA };
+    const { targets, result } = reassignFrom(b, date);
+    return { targets, hasBase: true, unplacedA: result.unplaced.length };
   }).value;
 }
 
@@ -321,6 +315,45 @@ export function ReassignBar({
       )}
       {children}
     </section>
+  );
+}
+
+/**
+ * 「欠勤・キャンセル」の欄の4段目：今の案の振り直しのまとめと、誰のどの訪問が誰へ移るか（PRD D265）。
+ * children は案A・案B を選ぶ欄（差の欄と同じ部品・同じ操作）
+ */
+export function ReassignResultBox({
+  info,
+  diff,
+  left,
+  visitLabel,
+  staffName,
+  children,
+}: {
+  info: ReassignInfo;
+  diff: ReassignDiff | null;
+  /** 欠勤の人に残る訪問の数 */
+  left: number;
+  visitLabel: (id: string) => string;
+  staffName: (id: string) => string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="stack" style={{ gap: 8 }} data-testid="sudden-result">
+      <strong>
+        反映した振り直し：
+        {info.method === 'anneal' ? '案B（少し動かした案）' : '案A（空き時間に入れた案）'}
+      </strong>
+      {diff && <ReassignSummary diff={diff} left={left} testId="sudden-summary" />}
+      {/* 誰のどの訪問が誰へ移るか（PRD D265）：確定の前に結果を見る */}
+      {diff && <ReassignMoves diff={diff} visitLabel={visitLabel} staffName={staffName} />}
+      {diff && diff.unplaced.length > 0 && (
+        <p className="sub">
+          入らない訪問は、下の案B を作るか、日の予定の「担当なしの訪問」の「受けられる人」から入れられます
+        </p>
+      )}
+      {children}
+    </div>
   );
 }
 

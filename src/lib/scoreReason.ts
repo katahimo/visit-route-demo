@@ -1,8 +1,9 @@
 // 点数の理由を一言（PRD D173。ADR-0025）：今の案の点を下げているいちばん大きい理由を短い文にする純粋関数。
 // 新しい採点は足さない。evaluate の減点の内訳（hundredBreakdown）・採点（score）・下限の条件ごとの内訳（ruleLowerBounds）・
 // 条件ごとの達成（achievements）から選ぶだけ
-import type { HundredPart, PlanScore, Reason, RuleAchievement } from '../contracts/problem';
+import type { HundredPart, PlanScore, Problem, Reason, RuleAchievement, ScoreScale } from '../contracts/problem';
 import type { Rule } from '../contracts/rules';
+import { hundredBreakdown } from '../evaluate';
 
 /** 理由を出さない減点の合計（これ未満なら「点を下げている理由」は無いとみなす。点は整数に丸めるので 0.5） */
 export const REASON_MIN_POINTS = 0.5;
@@ -143,6 +144,18 @@ export function scoreReason(
       return at(out > 0 ? `件数の偏り（目安から外れた人 ${out}人）` : '件数の偏り');
     }
   }
+}
+
+/**
+ * 担当の並びの点を下げているいちばん大きい理由（日の予定の今の案・比較の画面の案ごとで同じ決まり。PRD D173）。
+ * 点数の基準の物差し（ADR-0010）の問題・物差しで、採点 sc と条件ごとの達成から scoreReason を呼ぶ
+ */
+export function reasonOfRoutes(
+  ruler: { problem: Problem; scale: ScoreScale },
+  sc: PlanScore,
+  opts: ScoreReasonOptions,
+): ScoreReason | null {
+  return scoreReason(hundredBreakdown(sc, ruler.scale, ruler.problem), sc, opts);
 }
 
 /** 読み上げ・title 用の文：「点を下げているいちばんの理由：…」 */

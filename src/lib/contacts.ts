@@ -1,7 +1,8 @@
 // 欠勤・キャンセルの連絡（PRD D35・D244〜D246。ADR-0011・ADR-0038）：差（reassign.contactsOf の一覧）と取り消した訪問から、
 // 誰に何を伝えるかの一覧と連絡文を作る。送信はしない（画面がコピー・メールアプリを開くだけ）。呼び方は org.terms から渡す。純粋関数
+import type { Client, Visit } from '../contracts/documents';
 import type { ContactList, ContactVisit, StaffContact } from '../contracts/reassign';
-import { weekday } from '../domain/time';
+import { hhmmToMinutes, weekday } from '../domain/time';
 import { clockTime } from './dateText';
 
 /**
@@ -237,4 +238,52 @@ export function contactRows(list: ContactList, cancelled: readonly CancelledCont
     });
   }
   return rows;
+}
+
+/** 連絡の一覧から1件の訪問を外す（取り消した訪問は「中止」として別に出す。PRD D244） */
+export function withoutVisit(c: ContactList, visitId: string): ContactList {
+  const keep = (x: { visitId: string }) => x.visitId !== visitId;
+  return {
+    staffChanged: c.staffChanged.filter(keep),
+    timeChanged: c.timeChanged.filter(keep),
+    staff: c.staff
+      .map((x) => ({
+        ...x,
+        added: x.added.filter(keep),
+        removed: x.removed.filter(keep),
+        shifted: x.shifted.filter(keep),
+      }))
+      .filter((x) => x.added.length + x.removed.length + x.shifted.length > 0),
+  };
+}
+
+/**
+ * 日の予定の連絡文に使う名前・呼び方（その日の訪問・〈利用者さん〉から）。連絡文の日付は「本日」にせず「10月15日（木）」
+ * （あとから読まれても分かる。PRD D245）。約束の開始は時間帯の指定なら早〜遅、時刻の指定なら同じ
+ */
+export function dayContactWords(x: {
+  date: string;
+  staffWord: string;
+  orgName: string;
+  staffName: (id: string) => string;
+  clientById: ReadonlyMap<string, Pick<Client, 'displayName'> & { place: Pick<Client['place'], 'address'> }>;
+  /** その日の訪問（取り消し・休みの回も） */
+  visits: readonly Visit[];
+}): ContactWords {
+  const visitOf = (id: string) => x.visits.find((v) => v.id === id);
+  return {
+    day: dateWordOf(x.date),
+    staffWord: x.staffWord,
+    staffName: x.staffName,
+    clientName: (id) => x.clientById.get(id)?.displayName ?? '（不明）',
+    clientAddress: (id) => x.clientById.get(id)?.place.address ?? '',
+    visitMinutes: (id) => visitOf(id)?.durationMinutes ?? null,
+    promised: (id) => {
+      const v = visitOf(id);
+      if (!v) return null;
+      const from = hhmmToMinutes(v.earliestStart);
+      return { from, to: v.windowKind === 'window' ? hhmmToMinutes(v.latestStart) : from };
+    },
+    orgName: x.orgName,
+  };
 }
