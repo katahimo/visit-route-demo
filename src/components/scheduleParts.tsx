@@ -5,11 +5,11 @@
 // データを書くのは store の update だけ（複数選択は lib/multiEdit、提案は lib/monthBatch の apply）
 import { CalendarArrowUp, CircleCheck, Clock, Sparkles, UserRoundCog, UserRoundX, X, XCircle } from 'lucide-react';
 import { type ReactNode, type Ref, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import type { DemoData } from '../contracts/data';
 import { jstDate } from '../domain/time';
 import { dateText } from '../lib/common';
-import { monthBatch, proposalCounts, proposalDayFresh } from '../lib/monthBatch';
+import { batchHref, monthBatch, proposalCounts, proposalDayFresh } from '../lib/monthBatch';
 import { assignMany, cancelMany, moveManyToDate, multiResultText, selectionText, shiftMany } from '../lib/multiEdit';
 import { absenceHref } from '../lib/nav';
 import { COMPACT_QUERY, useMedia } from '../lib/useMedia';
@@ -199,8 +199,47 @@ export function RangeProposalBand() {
   const run = useValueStore(monthBatch.run);
   const toast = useToast();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   if (!proposal) return null;
-  if (proposal.choices) return <ChoiceBand key={proposal.id} proposal={proposal} />;
+  // 考え方ごとの案は担当を組むの画面でくらべる。予定（日・週・月）では予定と重ねず、1行の知らせだけ
+  if (proposal.choices)
+    return pathname === '/arrange' ? (
+      <ChoiceBand key={proposal.id} proposal={proposal} />
+    ) : (
+      <section
+        className="plan-band schedule-band proposal-band row"
+        aria-label="AI の案"
+        data-testid="proposal-band"
+        data-kind="choices-note"
+        style={{ flexWrap: 'wrap', gap: 8 }}
+      >
+        <WithIcon icon={Sparkles} size={16}>
+          <span className="band-text">
+            <strong>
+              {proposal.label}の案（{proposal.choices.length}つ）
+            </strong>
+            を担当を組むでくらべています
+          </span>
+        </WithIcon>
+        <Link
+          className="btn btn-primary btn-small"
+          to={batchHref({ ym: proposal.ym, source: proposal.source, rangeStart: proposal.rangeStart })}
+          data-testid="choice-open"
+        >
+          担当を組むで見る
+        </Link>
+        <button
+          type="button"
+          className="btn btn-small"
+          onClick={() => monthBatch.discard()}
+          data-testid="proposal-discard"
+        >
+          <WithIcon icon={X} size={14}>
+            捨てる
+          </WithIcon>
+        </button>
+      </section>
+    );
   const counts = proposalCounts(proposal);
   const staleDays = proposal.days.filter((d) => !proposalDayFresh(data, d)).length;
   const apply = () => {

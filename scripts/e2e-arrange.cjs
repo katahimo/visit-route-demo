@@ -171,7 +171,14 @@ async function choices(page, { dlg }) {
   await page.getByTestId('compare-apply').first().waitFor({ timeout: 30000 });
   const inCompare = await page.getByTestId('compare-apply').count();
   check(inCompare === 3, '案を比べるにも考え方ごとの案が並ぶ', inCompare);
-  await page.goto(`${BASE}#/arrange?date=${TODAY}`);
+  // 予定（日）では案を重ねず、1行の知らせと「担当を組むで見る」だけ
+  await page.goto(`${BASE}#/plan?date=${TODAY}`);
+  await page.locator('[data-testid="proposal-band"][data-kind="choices-note"]').waitFor({ timeout: 30000 });
+  check(
+    (await page.getByTestId('choice-card').count()) === 0 && (await page.getByTestId('choice-open').count()) === 1,
+    '予定（日）では案を重ねず、1行の知らせと「担当を組むで見る」',
+  );
+  await page.getByTestId('choice-open').click();
   await choiceBand(page).waitFor({ timeout: 10000 });
   const preset = await cards.nth(1).getAttribute('data-preset');
   const n = dlg.messages.length;

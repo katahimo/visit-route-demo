@@ -2,8 +2,9 @@
 // タブで切り替えて「今日の予定」と同じ時間軸で見る（今の担当のタブもある）。タブに点（点数の基準の物差し・100点満点）、
 // 選んだ案に［この案を標準にする］（確認のあと、その日に反映し、その曜日の担当・時刻を来週の月曜から標準にし、考え方を
 // 点数の基準にする。元に戻すの1手）［この日だけ反映］。担当や時刻が変わる訪問は時間軸の帯に印を付け、一覧でも見られる
-import { CircleCheck, Crown, Sparkles, X } from 'lucide-react';
+import { CircleCheck, Clock, Crown, Map as MapIcon, Sparkles, X } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
+import { slotsText } from '../domain/availability';
 import { jstDate, minutesToHhmm } from '../domain/time';
 import { busyStaff, choiceColumns } from '../lib/choiceView';
 import { colorOf } from '../lib/colors';
@@ -23,14 +24,14 @@ import { type LegSpan, legsOf } from '../lib/timeline';
 import { useDayModel } from '../lib/useDayModel';
 import { useValueStore } from '../lib/valueStore';
 import { useConfirm } from './ConfirmDialog';
+import { MapDock } from './MapDock';
 import { ProposalChanges } from './proposalChanges';
 import { RouteMap } from './RouteMap';
 import { RouteTimeline, type TimelineColumn } from './routeTimeline';
-import { StaffLegend } from './routeView';
-import { StaffMark } from './StaffMark';
+import { StaffFocusButton, StaffLegend } from './routeView';
 import { useToast } from './Toast';
 import { shiftShort, TlMark } from './timelineMarks';
-import { WithIcon } from './ui';
+import { SectionTitle, WithIcon } from './ui';
 
 type Routes = Record<string, string[]>;
 /** 地図・選択の集まりのキー（案は1つずつ見る） */
@@ -50,6 +51,7 @@ export function ChoiceBand({ proposal }: { proposal: BatchProposal }) {
   const [tab, setTab] = useState(0);
   /** 地図で見る担当・強調する区間・選んだ訪問（予定の画面と共通。担当は見ているタブの案で引く） */
   const owners = useRef(new Map<string, string>());
+  const mapCardRef = useRef<HTMLDivElement>(null);
   const sel = useRouteSelection(date, (_set, id) => owners.current.get(id));
   const pick = (next: number) => {
     setTab(next);
@@ -103,14 +105,31 @@ export function ChoiceBand({ proposal }: { proposal: BatchProposal }) {
     const s = staffById.get(col.staffId);
     return {
       staffId: col.staffId,
-      className: '',
+      // 地図で見ている人の列を強調し、ほかを薄くする（予定の画面と同じ）
+      className: [
+        sel.focusStaff === col.staffId ? 'is-focus' : '',
+        sel.focusStaff && sel.focusStaff !== col.staffId ? 'is-dim-col' : '',
+      ].join(' '),
       style: { borderTopColor: colorOfStaff.get(col.staffId) },
       drop: NO_DROP,
       header: (
-        <span className="choice-col-head">
-          <StaffMark staff={s} size="xs" />
-          <span className="ellipsis">{s?.name ?? '（不明）'}</span>
-        </span>
+        <>
+          <div className="spread">
+            <StaffFocusButton
+              staff={s}
+              name={s?.name ?? '（不明）'}
+              on={sel.focusStaff === col.staffId}
+              onToggle={() => sel.focusOn(sel.focusStaff === col.staffId ? null : col.staffId)}
+            />
+            <span className="chip">{col.stops.length}件</span>
+          </div>
+          <div className="col-hours">
+            <span className="sub item-time">
+              <Clock size={13} aria-hidden="true" />
+              {slotsText(m.slotsOf.get(col.staffId)?.slots ?? [])}
+            </span>
+          </div>
+        </>
       ),
       baseSlots: col.slots,
       slots: col.slots,
@@ -193,6 +212,7 @@ export function ChoiceBand({ proposal }: { proposal: BatchProposal }) {
     id: leg.kind === 'toHome' ? homeLegKey(owners.current.get(leg.visitId) ?? '') : leg.visitId,
     set: CHOICE_SET,
   });
+  const mapTitle = `地図${sel.focusStaff ? `：${staffById.get(sel.focusStaff)?.name ?? ''}` : ''}`;
   const mapStaff = columns.map((c) => c.staffId).filter((sid) => (routes[sid]?.length ?? 0) > 0);
   const map = buildRouteMap({
     sets: [{ key: CHOICE_SET, routes }],
@@ -332,28 +352,35 @@ export function ChoiceBand({ proposal }: { proposal: BatchProposal }) {
         {k >= 0 && changes.size > 0 && (
           <p className="sub">「代」（担当が変わる）・「±分」（時刻が変わる）の印の訪問が、今と変わる訪問です</p>
         )}
-        <div className="choice-body">
-          <RouteTimeline
-            columns={columns}
-            legOn={(leg) => sel.isLeg(legSel(leg))}
-            onLeg={(leg) => sel.toggleLeg(legSel(leg))}
+        {/* 予定の画面と同じ並び：時間軸の下に地図（全幅）。地図が画面の外なら右下に浮かせる（MapDock） */}
+        <RouteTimeline
+          columns={columns}
+          legOn={(leg) => sel.isLeg(legSel(leg))}
+          onLeg={(leg) => sel.toggleLeg(legSel(leg))}
+        />
+        <div ref={mapCardRef} className="choice-map stack" data-testid="choice-map">
+          <SectionTitle
+            icon={MapIcon}
+            aside={
+              sel.focusStaff && (
+                <button type="button" className="btn btn-small" onClick={sel.clear}>
+                  全員のルートを見る
+                </button>
+              )
+            }
+          >
+            {mapTitle}
+          </SectionTitle>
+          <RouteMap points={map.points} lines={map.lines} height={420} />
+          <StaffLegend
+            staffIds={mapStaff}
+            staffName={(id) => staffById.get(id)?.name ?? '（不明）'}
+            focusStaff={sel.focusStaff}
+            onFocus={sel.focusOn}
+            extra={<span className="nowrap legend-item">「家」＝自宅</span>}
           />
-          <aside className="choice-map stack" aria-label="地図" data-testid="choice-map">
-            {sel.focusStaff && (
-              <button type="button" className="btn btn-small" onClick={sel.clear}>
-                全員のルートを見る
-              </button>
-            )}
-            <RouteMap points={map.points} lines={map.lines} height={420} />
-            <StaffLegend
-              staffIds={mapStaff}
-              staffName={(id) => staffById.get(id)?.name ?? '（不明）'}
-              focusStaff={sel.focusStaff}
-              onFocus={sel.focusOn}
-              extra={<span className="nowrap legend-item">「家」＝自宅</span>}
-            />
-          </aside>
         </div>
+        <MapDock target={mapCardRef} points={map.points} lines={map.lines} title={mapTitle} focusKey={sel.focusKey} />
         {unassigned.length > 0 && (
           <p className="sub warn-text" data-testid="choice-unassigned">
             担当なし：{unassigned.map((id) => clientName(id)).join('・')}
