@@ -1,6 +1,6 @@
 # 週の予定
 
-> この画面のファイル：`src/pages/WeekPage.tsx`（`week.css`）・`mailPanels.tsx`（`WeekMailPanel`）、`src/components/PickChips.tsx`・`staffBar.tsx`・`visitParts.tsx`（札 `VisitChip`・マスに積む `ChipStack`）、`src/lib/week.ts`・`weekView.ts`・`weekPrep.ts`・`timelineClients.ts`・`fold.ts`・`clientFilter.ts`。関連 ADR：0012 追記・0013・0014・0021・0024 追記・0025 追記・0033・0042・0046・0056・0057。関連 PRD：D49〜D51・D56〜D57・D62・D65・D75・D93・D108・D285・D136〜D140・D175・D188・D221・D222・D228・D280・D282・D339〜D342。
+> この画面のファイル：`src/pages/WeekPage.tsx`（`week.css`。区画の部品 `weekParts.tsx`・表 `weekTables.tsx`・時間軸 `weekTimeline.tsx`、状態と処理のフック `useWeekNav`・`useWeekModel`・`useWeekPrep`・`useWeekClients`・`useWeekVisits`・`useWeekTodayScroll`）・`mailPanels.tsx`（`WeekMailPanel`）、`src/components/PickChips.tsx`・`staffBar.tsx`・`visitParts.tsx`（札 `VisitChip`・マスに積む `ChipStack`）、`src/lib/week.ts`・`weekView.ts`・`weekPrep.ts`・`weekScreen.ts`・`timelineClients.ts`・`fold.ts`・`clientFilter.ts`。関連 ADR：0012 追記・0013・0014・0021・0024 追記・0025 追記・0033・0042・0046・0056・0057。関連 PRD：D49〜D51・D56〜D57・D62・D65・D75・D93・D108・D285・D136〜D140・D175・D188・D221・D222・D228・D280・D282・D339〜D342。
 > 3段のバーの塗りは [pages-bars.md](pages-bars.md)、札の3段と入れ物（`VisitChip`・`ChipStack`）・印・選ぶ・キー・ドラッグの落とし先の判定の共通の部品は [pages-common.md](pages-common.md) の「訪問の札の共通の部品」、絞り込みの欄 `ClientFilter` は [pages-clients.md](pages-clients.md)。
 > 版2（ADR-0053）：担当は訪問に持つ。週の帯・表の担当は訪問の担当（`weekDay` は `visitsOn` の訪問から）。「未作成」「案なし」は無い
 
@@ -128,7 +128,7 @@ URL を書くときは履歴を増やさない `replace`（表示の切り替え
 - `PickChips`（`bulk={false}`・`detailKind="client"`・`actions` に「全部外す」（`?client=` を空。この週に訪問が0人でも空にする。`clientParamOf` を通さない）「先頭8人に戻す」（`?client=` を消す））
 - チップの✓と時間軸は同じ8人（URL に9人以上あっても `timelineClients`＝先頭8人をチップに渡す）
 - チップを押して8人を超えるなら選ばず、チップの下の `output`（`week-client-chips-message`）に上限の文「時間軸は8人まで。表（〈利用者さん〉×曜日）なら絞り込んだ全員を見られます」。`output` はいつも描き（空なら高さ0）、出すたびにいったん空にしてから入れ直して読ませる（60ms 後）。`?client=`・週（`anchor`）・見る人（`by`）が変わったら消す（戻るボタンも）
-- 畳む（PRD D140）：`PickChips` の `fold`（`rows=2`）。選んでいる人と2行ぶん、外す人がいれば最後に「あと N人」（開くと「畳む」）。開いているかは `WeekPage` の state（週を送っても、表と行き来しても残る。URL には書かない）
+- 畳む（PRD D140）：`PickChips` の `fold`（`rows=2`）。選んでいる人と2行ぶん、外す人がいれば最後に「あと N人」（開くと「畳む」）。開いているかは `useWeekClients` の state（週を送っても、表と行き来しても残る。URL には書かない）
 - その下に畳んだ details 要素「ほかの人を探す」の中に `ClientPicker`（`showChips={false}`。近道は〈スタッフ〉が担当する人・最近選んだ人。候補は利用中の人と、休止中でもこの週に訪問がある人）。選んだ人はチップの後ろに出る。印刷では「ほかの人を探す」を出さない
 - 週を送っても `?client=` が無ければ初期値はその週から作り直す（URL は触らない）
 - 表から時間軸へ移るとき（`handoffFromTable`。PRD D139）：`?client=` が無く表で絞り込んでいれば（`?cf=` が既定でない）、表で絞り込んだ人のうち時間軸の候補（`weekClients`）にいる人の先頭8人を `?client=` に書く。絞り込んでいなければ書かない（＝この週の先頭8人）
