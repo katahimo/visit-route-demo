@@ -91,7 +91,7 @@
 
 ### 狭い画面の表（PRD D220〜D222。ADR-0033。`styles.css` の末尾）
 
-- 境目は今までの 600px（`lib/useMedia` の `COMPACT_QUERY`＝`lib/monthList` の `MONTH_LIST_QUERY`＝CSS の `@media (max-width: 600px)`）。新しい境目は作らない。広い画面の見た目は変えない
+- 境目は今までの 600px（`components/useMedia` の `COMPACT_QUERY`＝`lib/monthList` の `MONTH_LIST_QUERY`＝CSS の `@media (max-width: 600px)`）。新しい境目は作らない。広い画面の見た目は変えない
 - **一覧の表をカードに**（D220）：`table.narrow-cards` を付けた表は、600px 以下で行（`tr`）を1枚のカードにする。表の印（`table`・`tr`・`td`・data-testid）は変えず CSS で組み替える。`thead` は読み上げにだけ残す（見えない形）。列は隠さない
   - role：`table` を block、`tbody`・`tr` を flex にすると WebKit は表の role を落とすので、`table`・`thead`／`tbody`・`tr`・`td`・`th` に `table`・`rowgroup`・`row`・`cell`・`columnheader` を明示する（`lib/narrowRoles` の `narrowRole` を展開。`role="cell"` と直に書くとリントの noRedundantRoles に止められる）
   - `td::before` の見出し（data-label）は読み上げでも読まれ、見出しの行（`thead`）の列の名前と二重になる。見出しの行は表として読むために残し、`::before` の二重は許す（CSS の生成内容は aria-hidden にできない。見た目の見出しを消すと目で読めなくなる）
@@ -100,7 +100,7 @@
   - `td.narrow-act`：操作（開く・消す）を右下
   - 付けた表：条件の重み（`narrow-rules`）・プリセットの重み・特性の項目・〈スタッフ〉一覧（`narrow-staff`）・〈利用者さん〉一覧（`narrow-clients`）・比較の記録（`narrow-runs`）。中身は各画面のファイル
   - `.narrow-stack`：ボタンの行を縦に幅いっぱいで並べ、文字を折り返さない
-- **格子の表の端**（D221）：`components/EdgeScroll`（`className` 既定 `table-scroll`・`scrollRef`）が巻く箱を外の枠 `.scroll-edge` で包み、右に続きがあるあいだ枠に `has-more-right` を付ける（`lib/useScrollEdge`。巻く・幅・中身の大きさが変わるたびに測る。判定は `lib/scrollEdge` の `moreRight`（純粋関数。端の余り 2px））。600px 以下では枠の `::after` で右の端を 28px ぼかし、`has-more-right` が外れると消す（印刷では出さない）。使う所：相性・稼働時間・勤務の見込み・空き状況・週の2つの表
+- **格子の表の端**（D221）：`components/EdgeScroll`（`className` 既定 `table-scroll`・`scrollRef`）が巻く箱を外の枠 `.scroll-edge` で包み、右に続きがあるあいだ枠に `has-more-right` を付ける（`components/useScrollEdge`。巻く・幅・中身の大きさが変わるたびに測る。判定は `lib/scrollEdge` の `moreRight`（純粋関数。端の余り 2px））。600px 以下では枠の `::after` で右の端を 28px ぼかし、`has-more-right` が外れると消す（印刷では出さない）。使う所：相性・稼働時間・勤務の見込み・空き状況・週の2つの表
   - 1列目と見出しの行を止める：相性（今まで）・勤務時間（シフト）と勤務の見込み（600px 以下で箱の高さを画面の中に収め、見出しの行と名前の列を止める）・空き状況（曜日の列だけ。行は7つ）・週の表（名前の列）・週の時間軸（時刻の列）
   - はじめの巻き位置は `scrollLeftToShow(box, targetLeft, stickyRight)`（純粋関数。ある列を止めた列のすぐ右に見せる。巻ける範囲に収める）：空き状況の 9:00 の列（[pages-vacancy.md](pages-vacancy.md)）・週の今日の列（[pages-week.md](pages-week.md)）
 
@@ -143,7 +143,7 @@
 ### メニューとナビゲーション（ADR-0024・ADR-0027・ADR-0045・ADR-0054・ADR-0055・ADR-0063。PRD D132・D133・D135・D179〜D183・D239・D273・D275・D326・D336・D348・D349）
 
 - メニューは ホーム・予定を組む・予定・空き状況・人・設定 の6項目（見出しなし。PRD D326・D349・D355）。予定・予定を組む・人・設定は子の項目を持つ親で、親の行の右の ▾（`button.nav-toggle`・data-testid `nav-toggle`・`aria-expanded`・`aria-controls`＝`nav-sub-<key>`・名前「◯の項目を畳む／開く」）で畳める。子は親の下の字下げした小さな行（`.nav-sub`・`.nav-child`）。予定の子はリンク（今日の予定・◯月の予定・欠勤・キャンセル）、予定を組むの子は担当を組む・組み方の標準、人の子は人のタブ、設定の子は設定のタブ
-- 畳み：既定は `NAV_OPEN_DEFAULT`＝予定・人を開き、設定を畳む。開け閉めは localStorage の `visit-route-demo:nav-open`（`{ 親の key: boolean }` の JSON。この端末に残す。読めなければ既定）に覚える。今の画面の親が畳んであれば、画面を移ったときに開く（開いたまま自分で畳んだ開け閉めは、移るまで変えない）
+- 畳み：既定は `NAV_OPEN_DEFAULT`＝予定・人を開き、設定を畳む。開け閉めは localStorage の `visit-route-demo:nav-open`（`store/navOpen` の `navOpenMemory`。`{ 親の key: boolean }` の JSON。この端末に残す。読めなければ既定）に覚える。今の画面の親が畳んであれば、画面を移ったときに開く（開いたまま自分で畳んだ開け閉めは、移るまで変えない）
 - 今の画面の印（`aria-current="page"`・`.active`）：親が開いていれば子に付け（今日の予定は日の予定、◯月の予定は月・週の予定、担当を組むは担当を組む・案を比べる）、畳んでいれば親に付ける。開いていても子のどれにも当たらなければ親に付ける。親の行は子が今の画面のとき太字だけ（`.has-current`）
 - 件数の印（`span.nav-badge`・data-testid `nav-badge`・見える文字と `.sr-only` の読み上げ）：担当を組む に「N日」（組む月の担当なしの訪問がある日の数。0なら出さない）、今日の予定 に「未確定」（今日に訪問があってまだ伝えていない）。数えるのは `lib/scheduleMode` の `menuBadges`
 - 広い画面の左のメニュー（`.side-nav`）は詰める：項目（`.nav-link`）は `min-height: 34px`（上下 5px・行の高さ 1.4）、グループの間 10px、メニューの上下 14px・16px。1440×900 で最後の項目（設定。既定は畳む）まで巻かずに見える。タッチできる端末（`any-pointer: coarse`。主の入力がマウスでもタッチ・ペンがあれば当たる）では `.nav-link` を `min-height: 44px`、［月｜週｜日］のタブ（見た目 36px）は `::before` で上下 4px 広げて 44px（PRD D237・D239）
@@ -189,7 +189,7 @@
 #### `AdminShell`（`src/app/App.tsx`）
 
 - `groups = menuSections(terms, today, features, last, badges)`（`badges = menuBadges(data, today)`）・`screens = screenSections(terms, features)`、アイコンは `NAV_ICONS`。`last` はモジュールの `lastViews`（描くたびに今の画面が予定の表示・設定のタブ・人のタブなら覚える `rememberView`。開いている間だけ・保存しない。印刷・〈スタッフ〉のスマホ画面から戻っても残る）
-- `NavGroups({ groups, pathname, onPick? })`：左のメニューと引き出しで共通。全部 `Link`（`aria-current` は `isActiveNav` で自分で付ける。data-testid `nav-link`・`data-key`）。中の nav の名前は「画面の一覧」。子を持つ項目は `div.nav-parent[data-parent]`（`.is-open`）の中に、親の行 `.nav-parent-row`（親の `Link`＋`.nav-toggle`）と `.nav-sub#nav-sub-<key>`（畳めば `hidden`。開いていれば子の `Link`＝`.nav-link.nav-child`）。`.nav-toggle` の名前は「◯の項目」で、開け閉めは `aria-expanded` だけ。開け閉めの覚え（`NAV_OPEN_KEY`＝`visit-route-demo:nav-open`。モジュールの1つの覚えを `useSyncExternalStore` で読み、左のメニューと引き出しで同じ）と、今の画面の親へ移ったときにその親を開いて見せる（`auto`。覚えない。同じ親の中で画面を移っても開き直さない。押して畳めば外す）はここ。子の項目もタッチできる端末では押せる所 44px。印は親が開いていて子が今の画面なら子、そうでなければ親。`badge` は `span.nav-badge`
+- `NavGroups({ groups, pathname, onPick? })`：左のメニューと引き出しで共通。全部 `Link`（`aria-current` は `isActiveNav` で自分で付ける。data-testid `nav-link`・`data-key`）。中の nav の名前は「画面の一覧」。子を持つ項目は `div.nav-parent[data-parent]`（`.is-open`）の中に、親の行 `.nav-parent-row`（親の `Link`＋`.nav-toggle`）と `.nav-sub#nav-sub-<key>`（畳めば `hidden`。開いていれば子の `Link`＝`.nav-link.nav-child`）。`.nav-toggle` の名前は「◯の項目」で、開け閉めは `aria-expanded` だけ。開け閉めの覚え（`store/navOpen` の `NAV_OPEN_KEY`＝`visit-route-demo:nav-open`。`navOpenMemory` の1つの覚えを `useSyncExternalStore` で読み、左のメニューと引き出しで同じ）と、今の画面の親へ移ったときにその親を開いて見せる（`auto`。覚えない。同じ親の中で画面を移っても開き直さない。押して畳めば外す）はここ。子の項目もタッチできる端末では押せる所 44px。印は親が開いていて子が今の画面なら子、そうでなければ親。`badge` は `span.nav-badge`
 - 上の帯 `.app-header`：狭い画面だけ ロゴと今の画面の名前（`.m-head-title`・data-testid `screen-name`。`navTitleParts(screens, …)`。一覧に無い画面は事業所の名前）。広い画面では `display: none`
 - 上の帯に「探す・移動」（`cmdk-open`。`aria-haspopup="dialog"`・`aria-expanded`・`aria-keyshortcuts`）。860px 以下では上の帯に出さず、下のタブの「探す」で開く（PRD D336。上の帯はロゴ・今の画面の名前・日付の切り替えの1段。名前は内容の幅だけ取り、日付の切り替えが入らなければ2段目へ）
 - 上の帯の右端に全画面の切り替え（`components/FullscreenButton`・`fullscreen`。`IconButton`・`aria-pressed`。Fullscreen API。`fullscreenchange` で表示を合わせる。`document.fullscreenEnabled` が偽なら出さない。印刷では出さない。PRD D358）
@@ -284,7 +284,7 @@
 
 機能の表・ひな形・判定（`lib/features.ts` の `FEATURES`・`isOn`・`featureOfLocation`・`featureOfHref`・`TEMPLATES`・`applyTemplate`・`matchTemplate`・`templateDiff`・`turnOffImpact`・`calcFeaturesOf`）は design.md の「features」。画面での出し分け：
 
-- `lib/useFeature.ts` の `useFeature(id): boolean`（`org.features` を読むだけ）、`components/Feature.tsx` の `Feature`（id を渡す。切なら何も出さない）
+- `components/useFeature.ts` の `useFeature(id): boolean`（`org.features` を読むだけ）、`components/Feature.tsx` の `Feature`（id を渡す。切なら何も出さない）
 - URL の直書きをやめ機能の表から引く：`menuSections`（下のタブもここから）・`screenSections`（上の帯の名前・パレットの画面）・`settingsTabs`（設定のタブ）、`app/App.tsx` のルート（切った機能の URL（`?do=` も）は `#/home` へ移し（replace。`state.featureOff`）、知らせ（トースト）と `#/settings` へのリンク。管理者設定と土台の画面は開ける）、`lib/commandPalette.ts` の操作、`lib/home.ts` のカード、`lib/tour.ts` の枚、`lib/links.ts`、画面の中の欄・ボタン（`Feature`）
 - `rules` が切なら、日の予定でこの日だけ試す重みで作る所（AI に作らせる・固定を残して作り直す）は `lib/presets` の `planRulesOf(data, false)`（いまの条件に点数の基準のプリセットの重みを当てたもの。月まとめ作成と同じ）で作る。「AI で組む ▾」のプリセットは点数の基準の1枚だけ（王冠・まとめて作るなし）、「条件を調整する」は出さない
 - 切っても事実の表示（月の「休みの人に N」・すでに振り直した案の差の欄・帯・連絡の一覧）は残し、隠すのは入力・操作の入口だけ
@@ -293,7 +293,7 @@
 
 ### 読み込みの分け方（PRD D248。ADR-0039）
 
-日の予定・空き状況・案を比べる・相性・月の予定は `src/app/lazyPages.tsx` の `React.lazy` で別のチャンク、地図は `RouteMap`（読み込み中の枠と `Suspense`）が本体 `LeafletMap`（Leaflet と leaflet.css）を `lazy` で読む。Excel（ExcelJS）はデータの画面で押したときの `import('../excel')`。`Suspense` は `AdminShell` の本文に1つ（画面ごとの ErrorBoundary の外。移るときは React Router の transition で前の画面のまま待つ）。分けた画面は URL（hash）で直接開いたら起動と並べてすぐ読み始め、地図を出す画面（日・比較・空き状況）は地図の本体も一緒に読み始める。開いた画面が出たら `PreloadWhenShown` が手の空いたとき（最長2秒）に残りのチャンクを1つずつ読む（1つ読み終わったら、また手が空くのを待つ）。読めないとき：`lib/chunkLoad` が失敗を見分け（`isChunkLoadError`）、`app/ErrorBoundary` は再読み込み（`lib/reloadPage`：保存を書いて 500ms 後に読み直す）と［もう一度表示する］（`retryFailedChunks` で lazy を作り直し、失敗の文の URL に `?retry=N` を付けて読み直す）を出す。地図は `RouteMap` の中の小さな境界で枠に「地図を読み込めませんでした」。`lazy` は `src/lib/lazyComponent.tsx`（読み終わったあとは `React.lazy` を通さず直に描き、先読みが済んだ画面へ移るときに止まらない）。ほかの画面（週・〈利用者さん〉・〈スタッフ〉・データなど）は本体のまま
+日の予定・空き状況・案を比べる・相性・月の予定は `src/app/lazyPages.tsx` の `React.lazy` で別のチャンク、地図は `RouteMap`（読み込み中の枠と `Suspense`）が本体 `LeafletMap`（Leaflet と leaflet.css）を `lazy` で読む。Excel（ExcelJS）はデータの画面で押したときの `import('../excel')`。`Suspense` は `AdminShell` の本文に1つ（画面ごとの ErrorBoundary の外。移るときは React Router の transition で前の画面のまま待つ）。分けた画面は URL（hash）で直接開いたら起動と並べてすぐ読み始め、地図を出す画面（日・比較・空き状況）は地図の本体も一緒に読み始める。開いた画面が出たら `PreloadWhenShown` が手の空いたとき（最長2秒）に残りのチャンクを1つずつ読む（1つ読み終わったら、また手が空くのを待つ）。読めないとき：`lib/chunkLoad` が失敗を見分け（`isChunkLoadError`）、`app/ErrorBoundary` は再読み込み（`lib/reloadPage`：渡された store の `flushSave` で保存を書いて 500ms 後に読み直す）と［もう一度表示する］（`retryFailedChunks` で lazy を作り直し、失敗の文の URL に `?retry=N` を付けて読み直す）を出す。地図は `RouteMap` の中の小さな境界で枠に「地図を読み込めませんでした」。`lazy` は `src/components/lazyComponent.tsx`（読み終わったあとは `React.lazy` を通さず直に描き、先読みが済んだ画面へ移るときに止まらない）。ほかの画面（週・〈利用者さん〉・〈スタッフ〉・データなど）は本体のまま
 
 ### 主な共通部品
 
@@ -307,6 +307,11 @@
 | `DetailPopover.tsx`・`PersonPopover.tsx`・`personDetail.tsx` | 名前から開く詳細 | [pages-common.md](pages-common.md) |
 | `personPage.tsx`・`PersonCalendar.tsx`・`personView.tsx` | 人の画面のタブ・節（`EditSection`）・予定のカレンダー・読むときの名前の並び（`PersonNames`・`StaffClientRows`・`ClientCompatRows`） | [pages-clients.md](pages-clients.md) |
 | `ViewSwitch.tsx` | ［月｜週｜日］ | このファイル |
+| `day.tsx` | 選んでいる日付（`DayProvider`・`useDay`。App が渡す） | このファイル |
+| `useDayModel.ts`・`useDayStatuses.ts` | 日のモデル（`useDayModel`・`useCompileInput`）・日ごとの状態（計算は `lib/dayModel`・`lib/dayStatuses`） | [pages-home.md](pages-home.md)・[pages-plan.md](pages-plan.md) |
+| `useFeature.ts`・`useMedia.ts`・`useScrollEdge.ts` | 機能の入り切り・狭い画面の判定（`COMPACT_QUERY`・`NARROW_QUERY`）・横に巻く表の端 | このファイル |
+| `useRouteSelection.ts` | 地図で選んだ担当・区間・訪問（遷移は `lib/routeView` の `routeSelect`） | [pages-plan.md](pages-plan.md) |
+| `valueStore.ts`・`dirtyForms.ts`・`lazyComponent.tsx` | 外の入れ物を読む `useValueStore`・編集中の印 `useDirtyMark`・別のチャンクの部品 | このファイル・[pages-data.md](pages-data.md) |
 | `ScheduleNav.tsx` | 予定の上のナビの行（PRD D347） | [pages-common.md](pages-common.md) |
 | `EdgeScroll.tsx` | 横に巻く格子の表の箱（右に続きがある印 `has-more-right`） | このファイル（狭い画面の表） |
 | `progressBand.tsx` | `ProgressBand`・`BandLive` | [pages-home.md](pages-home.md) |
@@ -334,19 +339,19 @@
 | ファイル | 役割 | 詳細 |
 |---|---|---|
 | `scheduleMode.ts` | 組む月（月の後半は来月）・担当なしの日の数・メニューの件数（PRD D349・D355） | [pages-common.md](pages-common.md) |
-| `nav.ts`・`commandPalette.ts`・`confirmDialog.ts`・`inertLock.ts`・`scrollLock.ts`・`panelFit.ts`・`personPopover.ts`・`glossary.ts`・`emptyGuide.ts`・`tour.ts`・`links.ts`・`features.ts`・`useFeature.ts`・`mailto.ts`・`mail.ts`・`mapsLink.ts`・`clipboard.ts` | 画面横断 | このファイル（nav・パレット・確認・ロック・features）・[pages-common.md](pages-common.md)（ほか） |
-| `useDayModel.ts`・`useDayStatuses.ts`・`home.ts`・`progressBand.ts` | 日のモデル・日の状態・ホーム・帯 | [pages-home.md](pages-home.md)・[pages-plan.md](pages-plan.md) |
+| `nav.ts`・`commandPalette.ts`・`confirmDialog.ts`・`inertLock.ts`・`scrollLock.ts`・`panelFit.ts`・`personPopover.ts`・`glossary.ts`・`emptyGuide.ts`・`tour.ts`・`links.ts`・`features.ts`・`mailto.ts`・`mail.ts`・`mapsLink.ts`・`clipboard.ts` | 画面横断 | このファイル（nav・パレット・確認・ロック・features）・[pages-common.md](pages-common.md)（ほか） |
+| `dayModel.ts`・`dayStatuses.ts`・`home.ts`・`progressBand.ts` | 日のモデルの計算（`daySlotsOf`・`ownerMap`）・日の状態の覚え（`createDayStatusMemo`）・ホーム・帯 | [pages-home.md](pages-home.md)・[pages-plan.md](pages-plan.md) |
 | `absences.ts`・`sudden.ts`・`contacts.ts`・`dayPlan.ts`・`confirmDay.ts`・`scoreReason.ts`・`routeView.ts`・`timeline.ts`・`visitEdit.ts`・`dragStart.ts` | 日の予定 | [pages-plan.md](pages-plan.md)・[pages-plan-absence.md](pages-plan-absence.md) |
 | `month.ts`・`monthList.ts`・`monthGuide.ts`・`monthPrint.ts`・`requestedOff.ts` | 月 | [pages-month.md](pages-month.md) |
-| `week.ts`・`weekView.ts`・`timelineClients.ts`・`fold.ts` | 週 | [pages-week.md](pages-week.md) |
+| `week.ts`・`weekOps.ts`・`weekView.ts`・`timelineClients.ts`・`fold.ts` | 週（`weekOps` は動かす・空き時間に入れる操作） | [pages-week.md](pages-week.md) |
 | `barRows.ts`・`staffBar.ts`・`glance.ts`・`dayLine.ts` | 時間帯のバー | [pages-bars.md](pages-bars.md) |
 | `vacancyView.ts` | 空き状況 | [pages-vacancy.md](pages-vacancy.md) |
-| `clientFilter.ts`・`area.ts`・`search.ts`・`leaves.ts`・`patternText.ts`・`tentative.ts`・`clientStage.ts`・`addressLookup.ts`・`geocode.ts`・`postalCode.ts`・`placeAll.ts`・`viewMode.ts`・`personPage.ts`・`personLinks.ts` | 〈利用者さん〉・人の画面・住所 | [pages-clients.md](pages-clients.md) |
+| `clientFilter.ts`・`area.ts`・`search.ts`・`leaves.ts`・`patternText.ts`・`tentative.ts`（伝えた日。取り消しは `store/tentative`）・`clientStage.ts`・`addressLookup.ts`・`geocode.ts`・`postalCode.ts`・`placeAll.ts`・`viewMode.ts`・`personPage.ts`・`personLinks.ts` | 〈利用者さん〉・人の画面・住所 | [pages-clients.md](pages-clients.md) |
 | `offboard.ts`・`workload.ts` | 〈スタッフ〉 | [pages-staff.md](pages-staff.md) |
 | `compatView.ts` | 相性 | [pages-compat.md](pages-compat.md) |
 | `presets.ts` | プリセット | [pages-rules.md](pages-rules.md) |
 | `filePick.ts` | ファイル選択 | [pages-data.md](pages-data.md) |
-| `useMedia.ts`・`scrollEdge.ts`・`useScrollEdge.ts` | 狭い画面の判定（`COMPACT_QUERY`）・横に巻く表の端と巻き位置 | このファイル（狭い画面の表） |
+| `scrollEdge.ts` | 横に巻く表の端と巻き位置（フックは `components/useMedia`・`components/useScrollEdge`） | このファイル（狭い画面の表） |
 | `staffMark.ts` | 〈スタッフ〉の印の色（`staffColorMap`）・文字（`staffMarkText`・`surnameInitial`）・アイコンの検査（`staffIconError`） | このファイル（〈スタッフ〉の印） |
 | `isDate.ts`・`common.ts`・`colors.ts`・`motion.ts`・`download.ts` | 小さな共通（動きを減らす設定・ファイルの保存） | — |
 | `dateText.ts`・`ym.ts`・`spans.ts`・`condText.ts` | 日付・年月・時刻の短い書式（`mdText`「11/4」・`dateText`「11/4（水）」・`ymText`「2026年11月」・`monthLabel`「11月」・`clockTime`「9:05」）、年月・日付の計算（`isYm`・`ymOf`・`addMonths`・`monthDates`・`calendarWeeks`・`daysBetween`）、時刻の区間（`Span`・`spansOf`・時間軸の範囲 `DAY_START`・`DAY_END`）、条件の表示文 `condText`。同じ書式・計算を画面ごとに書き直さずここから使う | — |

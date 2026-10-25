@@ -1,6 +1,6 @@
 # 日の予定（予定と手直し）
 
-> この画面のファイル：`src/pages/PlanPage.tsx`・`planParts.tsx`・`mailPanels.tsx`（`DayMailPanel`）・`plan.css`、`src/components/routeView.tsx`・`routeTimeline.tsx`・`MapDock.tsx`・`MenuButton.tsx`・`dayLines.tsx`・`visitType.tsx`・`VisitRules.tsx`・`mapsLinks.tsx`、`src/lib/useDayModel.ts`・`dayPlan.ts`・`reassignMenu.ts`・`scoreReason.ts`・`routeView.ts`・`timeline.ts`・`dayLine.ts`・`confirmDay.ts`、`src/components/Toast.tsx`。関連 ADR：0004・0007〜0010・0012・0013・0015・0018・0025・0028・0030・0031・0044・0053・0056。関連 PRD：D16〜D18・D20・D21・D23〜D25・D58・D63・D84・D91〜D101・D157・D158・D173〜D174・D201〜D209・D217〜D219・D224・D266・D269・D314〜D319・D323・D339〜D341。
+> この画面のファイル：`src/pages/PlanPage.tsx`・`planParts.tsx`・`mailPanels.tsx`（`DayMailPanel`）・`plan.css`、`src/components/routeView.tsx`・`routeTimeline.tsx`・`MapDock.tsx`・`MenuButton.tsx`・`dayLines.tsx`・`visitType.tsx`・`VisitRules.tsx`・`mapsLinks.tsx`・`useDayModel.ts`・`useRouteSelection.ts`、`src/lib/dayModel.ts`・`dayPlan.ts`・`reassignMenu.ts`・`scoreReason.ts`・`routeView.ts`・`timeline.ts`・`dayLine.ts`・`confirmDay.ts`、`src/components/Toast.tsx`。関連 ADR：0004・0007〜0010・0012・0013・0015・0018・0025・0028・0030・0031・0044・0053・0056。関連 PRD：D16〜D18・D20・D21・D23〜D25・D58・D63・D84・D91〜D101・D157・D158・D173〜D174・D201〜D209・D217〜D219・D224・D266・D269・D314〜D319・D323・D339〜D341。
 > 版2（ADR-0053）：担当は訪問に持ち（`Visit.staffId`・`start`・`pinned`）、その日の割当は `lib/dayPlan` の `dayRoutes`。この節で「今の案」とあるのはその日の訪問の担当のこと
 > 欠勤・キャンセルの欄と振り直しは [pages-plan-absence.md](pages-plan-absence.md)、バーの塗りは [pages-bars.md](pages-bars.md)。
 
@@ -27,7 +27,7 @@
 4. 操作の行（下の 6。日・週・月で同じ位置＝状態の1行のすぐ下。PRD D344。ADR-0058）と、開いていれば使い方の説明（`plan-help`）
 5. 担当ごとの1日（`DayLines`。下）。操作の行が間に入るので、1行のまとめとはつなげず別のカード（PRD D237 のつなげ方は D344 でやめた）
 5b. あるときだけの帯（ドラッグ中には増減しない）：問題を作れない・採点できない・範囲の提案の帯（担当を組むの画面で組んだ提案 `data-kind="range"`。[pages-common.md](pages-common.md) の「予定の共通の部品」）・入らない訪問（`band-unassigned`・「見る」）・欠勤の振り直し（`band-reassign`・「差の欄へ」）・休み（`band-leave`）・条件が変わった（`plan-stale`）・拘束超え（`band-over-span`）
-6. 見出しの右：状態・「予定をメールで送る」（`day-mail`。枠。`mail` が入のとき。PRD D306）・主ボタン「この割当で確定」。操作の行（`ScheduleToolbar zoom="day"`・`plan-toolbar`。日・週・月で同じ並び。PRD D327。「AI で組む ▾」は無い（AI で組むのは担当を組むの画面。ADR-0063）：「欠勤・キャンセルを登録」（`sudden-open`）は枠、「元に戻す」「やり直す」（`undo-btn`・`redo-btn`。全体の履歴。PRD D329）は文字のボタン（`btn-text`。PRD D238）・表示［時間軸｜順番｜一覧］・「訪問を追加」（`plan-visit-add`。〈利用者さん〉がいなければ `aria-disabled` と title に理由）・「使い方」（`plan-help-btn`・`aria-pressed`。開いていれば「使い方を閉じる」）（600px 以下は「その他 ▾」（`MenuButton`・`plan-more`）に訪問を追加・表示・使い方（`plan-more-help`）。PRD D334・D344）・欠勤の振り直しの案B の計算中の進み具合と止める（回数とバーは `PlanProgressText` が外の入れ物 `lib/valueStore` から読み、画面全体は描き直さない。PRD D249）。「使い方」は操作の行の下に説明 `plan-help` を開きフォーカスを移す（「使い方を閉じる」）
+6. 見出しの右：状態・「予定をメールで送る」（`day-mail`。枠。`mail` が入のとき。PRD D306）・主ボタン「この割当で確定」。操作の行（`ScheduleToolbar zoom="day"`・`plan-toolbar`。日・週・月で同じ並び。PRD D327。「AI で組む ▾」は無い（AI で組むのは担当を組むの画面。ADR-0063）：「欠勤・キャンセルを登録」（`sudden-open`）は枠、「元に戻す」「やり直す」（`undo-btn`・`redo-btn`。全体の履歴。PRD D329）は文字のボタン（`btn-text`。PRD D238）・表示［時間軸｜順番｜一覧］・「訪問を追加」（`plan-visit-add`。〈利用者さん〉がいなければ `aria-disabled` と title に理由）・「使い方」（`plan-help-btn`・`aria-pressed`。開いていれば「使い方を閉じる」）（600px 以下は「その他 ▾」（`MenuButton`・`plan-more`）に訪問を追加・表示・使い方（`plan-more-help`）。PRD D334・D344）・欠勤の振り直しの案B の計算中の進み具合と止める（回数とバーは `PlanProgressText` が外の入れ物 `lib/valueStore` から `components/valueStore` の `useValueStore` で読み、画面全体は描き直さない。PRD D249）。「使い方」は操作の行の下に説明 `plan-help` を開きフォーカスを移す（「使い方を閉じる」）
 7. 欠勤の差の欄（本体のすぐ上。[pages-plan-absence.md](pages-plan-absence.md)）
 8. 本体（時間軸か順番か一覧。600px 以下は日ごとのリストが既定）と、その下に全幅の地図（`plan-map`。1280px 以上は高さ 600px、狭い画面は 420px。比較の画面と同じ形。PRD D300）。地図が画面の外にあるあいだは `MapDock` で右下に浮かせ、〈スタッフ〉・区間・訪問を選ぶと開く
 
@@ -49,7 +49,7 @@
   - 新しい採点は足さない。`scoreReasonLabel`（読み上げ・title）
   - evaluate の `ruleLowerBounds(problem)`：normalize の割当の下限を条件ごとに分けたもの（各訪問で割当費用が最小の担当の理由の点の和。和は lowerAssign と同じ）
   - 次の一手 `nextStep`（PRD D229。`NEXT_STEP_TEXT`）：移動が長め＝「「移動を短く」で組む」（`shortTravel`）、入らない訪問＝「受けられる人を見る」（`candidates`）、相性△・×・◎の取り逃し＝「相性の表を開く」（`compat`）。ほか（必須の違反・待ち・偏り・ほかの担当の条件）は無し
-- `lib/useDayModel.ts` は `scoreRules`（点数の基準の条件。名前と重みを理由の文に使う）を返す
+- `components/useDayModel.ts` は `scoreRules`（点数の基準の条件。名前と重みを理由の文に使う）を返す
 - `pages/planParts.tsx` の `ScoreReasonText`：↘ と短い文。読み上げの前置き「点を下げているいちばんの理由：」は sr-only。使う所は日の予定の今の案の帯（`plan-reason`）と比較の画面（`compare-reason`）
 - `planParts.tsx` の `ScoreNextStep`：1行のまとめの中、理由のすぐ後ろに「次の一手：［…］」（`span.score-next`。PRD D237・data-testid `reason-next`・`data-kind`、操作は `reason-next-action`）。`shortTravel`（移動が長い）は日の予定では出さない（日の予定では AI で組まない。ADR-0063。`onShortTravel` を渡さない）、`candidates` は `unassignedHref(date)`（「入らなかった訪問」の列へ巻く）、`compat` は `#/compat`（`compat` を切っていれば出さない）。印刷では出さない
 - 点数の説明（`HundredHint`）は決め方と減点の内訳だけ。内部の費用（「費用 N（内部の値…）」）は出さない（PRD D229）
@@ -175,7 +175,8 @@
 
 - `buildRouteMap`：ルートの集まり（予定は1つ、比較は A 点線・B 実線）から地図の点・線を作る。線は担当の色。担当の絞り込み・選んだ訪問先・区間（来る移動と「自宅まで」の帰り）の強調・強調する訪問の集まり（振り直した訪問へ来る区間を太く）
 - `homeTravel`：最後の訪問先 → 自宅の分
-- `useRouteSelection`：地図で見る担当・強調する区間・選んだ訪問。担当を変える・訪問や区間を押すとその人のものでない選択を外し、担当を移した訪問を選んでいたら絞り込みを新しい担当に合わせ、案が入れ替わったとき・比べる案を変えたとき・日付が変わったら外す
+- 地図の点・線の型 `MapPoint`・`MapLine`（`components/RouteMap` はこれを描く）
+- `routeSelect`（純粋関数。テストあり）と `components/useRouteSelection.ts` の `useRouteSelection`：地図で見る担当・強調する区間・選んだ訪問。担当を変える・訪問や区間を押すとその人のものでない選択を外し、担当を移した訪問を選んでいたら絞り込みを新しい担当に合わせ、案が入れ替わったとき・比べる案を変えたとき・日付が変わったら外す
 - 画面の外の地図は `components/MapDock.tsx` で右下に浮かせる
 
 #### 帯：休み・拘束超え
@@ -211,9 +212,9 @@
 
 - 順番のカード・時間軸の帯の詳細に `VisitRouteLinks`（担当の今の案の `routes` の順番。担当の無い訪問は出さない）。`confirmState==='diff'` のときは `note`「今の案（未確定）の順番」
 
-#### `lib/useDayModel.ts`
+#### `components/useDayModel.ts`（計算は `lib/dayModel.ts`）
 
-- `useDayModel`：その日の問題・今の案・採点など。`compileInput` に `absences`。`slotsOf` は欠勤を差し引いた時間帯と、その日の欠勤（`absence`。無ければ null）を返す（スタッフの画面の時刻も欠勤を差し引く）。`scoreRules` を返す
+- `useDayModel`：その日の問題・今の案・採点など。`compileInput` に `absences`。`slotsOf`（`lib/dayModel` の `daySlotsOf`。テストあり）は欠勤を差し引いた時間帯と、その日の欠勤（`absence`。無ければ null）を返す（スタッフの画面の時刻も欠勤を差し引く）。`scoreRules` を返す
 - `useCompileInput(data)`：compile が読むデータだけ（ホーム・帯も使う）
 
 #### `lib/dayPlan.ts`（日の割当と確定。純粋関数。テストあり。ADR-0053）

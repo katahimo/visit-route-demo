@@ -1,6 +1,6 @@
 # ホーム（今日やること）と予定に共通の進み具合の帯
 
-> この画面のファイル：`src/pages/HomePage.tsx`（`home.css`）・`src/components/progressBand.tsx`（`progressBand.css`）・`src/lib/home.ts`・`src/lib/progressBand.ts`・`src/lib/useDayStatuses.ts`。関連 ADR：0025（追記を含む）・0038・0044・0062。関連 PRD：D141〜D145・D247・D255・D263（ホーム）・D151〜D155（進み具合の帯）・D161（条件が変わった）。
+> この画面のファイル：`src/pages/HomePage.tsx`（`home.css`）・`src/components/progressBand.tsx`（`progressBand.css`）・`src/lib/home.ts`・`src/lib/progressBand.ts`・`src/lib/dayStatuses.ts`・`src/components/useDayStatuses.ts`。関連 ADR：0025（追記を含む）・0038・0044・0062。関連 PRD：D141〜D145・D247・D255・D263（ホーム）・D151〜D155（進み具合の帯）・D161（条件が変わった）。
 > 版2（ADR-0053）：日の状態は まだ伝えていない／確定済み／未連絡の変更あり、要対応は訪問ごとの検査。「案を作る」は「担当を AI で組む」
 
 ### ホーム（`#/home`。PRD D141〜D145）
@@ -27,13 +27,13 @@
 
 #### `pages/HomePage.tsx`（`home.css`）
 
-- 日の状態：`lib/useDayModel` の `useCompileInput(data)`（compile が読むデータだけ。今日の問題は compile しない。`useDayModel` も中で使う）と `useDayStatuses`
+- 日の状態：`components/useDayModel` の `useCompileInput(data)`（compile が読むデータだけ。今日の問題は compile しない。`useDayModel` も中で使う）と `useDayStatuses`
 - `homeTasks` のカードを並べる。カード全体が `Link`（`date` があれば押したときに `setDate`）
 - 先頭の1枚（知らせだけ（`info`）でなければ）は「まずこれ」（PRD D263）：`li.is-lead` で格子の幅いっぱい（`grid-column: 1 / -1`）、カードは `.is-lead`（主ボタンの塗り `--primary`・白い文字・下の影。ホームの主ボタンはこの1つ）、題名の上に札「まずこれ」（`home-lead`。読み上げも題名の前）、`data-lead`。先頭が要対応（`is-warn`）なら左の縁を要対応の赤で太くし、札「要対応」（`home-lead-warn`）も添える。ほかのカードは今のまま
 - 何も無ければ「今日の準備はできています」（`ready`）
 - 「今日の訪問」（`home-visits`。PRD D304）：`lib/visitOps` の `dayVisitRows(data, 今日, 今の時刻, 5)`（取り消し・休みを除き、担当なし → これからの近い順）の行 `home-visit`（時刻・〈利用者さん〉・担当（印）か「担当なし（入らない）」「案なし」。担当なし・案なしは左の縁を赤）。押すと訪問の詳細の欄（閉じるとフォーカスは行）。残りは「あと N件（日の予定で見る）」（`home-visits-rest`）。下に「これからの入らない訪問（要対応）」（`home-unassigned`。`unassignedVisits(data, 明日, 31日後)` の5件、残りは件数だけ）。主ボタンは増やさない。印刷で出さない
 - 下に「いつでも」の入口：欠勤・キャンセルを登録（`/plan?date=今日&do=absence`）・空き状況・〈利用者さん〉一覧・〈スタッフ〉一覧・「訪問を追加」（`home-visit-add`。ボタンで訪問の詳細の欄の新規（今日）。600px 以下と〈利用者さん〉が0人なら出さない）
-- 狭い画面（860px 以下。`lib/useMedia` の `NARROW_QUERY`。App のメニューの切り替えと同じ定数）では欠勤・キャンセルの入口を見出しのすぐ下（「次にすること」の上。`home-quick`）に常に置き、「いつでも」から外す（同じ `home-absence`）。見た目はほかの入口と同じカード（`is-entry`。赤い縁は付けない）で、先頭に置くことで目立たせ、アイコンだけ朱（`.is-first`）。切っていれば出さない（PRD D247・ADR-0038）
+- 狭い画面（860px 以下。`components/useMedia` の `NARROW_QUERY`。App のメニューの切り替えと同じ定数）では欠勤・キャンセルの入口を見出しのすぐ下（「次にすること」の上。`home-quick`）に常に置き、「いつでも」から外す（同じ `home-absence`）。見た目はほかの入口と同じカード（`is-entry`。赤い縁は付けない）で、先頭に置くことで目立たせ、アイコンだけ朱（`.is-first`）。切っていれば出さない（PRD D247・ADR-0038）
 - カードは `auto-fill` の格子（390px で1列）
 
 #### 月の予定の `?do=`
@@ -44,7 +44,7 @@
 
 `scripts/e2e-home.cjs`：起動・知らない URL・`?id=`、カードの並び（作業の順）・先頭の「まずこれ」・同じ月の「担当なしの訪問がある日 N日」は組むカードだけ・今日のカード・「N月の担当を AI で組む」で月の欄・確定していない日の数・まとめて確定・次の確定していない日へ・訪問の無い人の欠勤は要対応にしない・いつでもの入口・何も無いデータ・スマホ・印刷（AGENTS.md の e2e の説明）
 
-### 日の状態の共通フック（`lib/useDayStatuses.ts`）
+### 日の状態の共通フック（`components/useDayStatuses.ts`。計算と日ごとの覚えは `lib/dayStatuses.ts` の `createDayStatusMemo`）
 
 - 月の予定の「日の問題と状態」を切り出したフック。月の予定・ホーム・進み具合の帯・週の準備・要対応で共通（数え方が食い違わない）
 - 点数の基準の条件で compile・採点し、訪問ごとの検査（`visitIssues`）・伝えた状態（`toldStateOf`）・拘束が上限を超える人を `dayStatus` に渡す
