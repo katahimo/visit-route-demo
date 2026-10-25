@@ -33,6 +33,7 @@
    - 組んでいる間の進み具合（`arrange-progress`。「〈名前〉：M/D・3/22日（組めた日 N日）」とバー）と［止める］（`arrange-stop`）
    - 計算できずに止まった理由（`FieldError`。`monthBatch.done.error`）
    - 注記：ピンの訪問（手で替えた訪問・組み方の標準の担当）はそのまま・今日より前の日と確定した日は組まない・1日ずつ組み終わったら提案・見て「反映する」と担当が変わる・ほかの画面へ移っても組み続ける
+   - 組み方の標準が無く範囲が日のとき（PRD D357。ADR-0064）：組む日（ラジオ）と考え方の欄を出さず、注記（`arrange-choices-note`）「組み方の標準がまだ無いので、「バランス」「移動を短く」「人の組み合わせ重視」の3つの考え方でこの日を組んで並べます。気に入った案を「この案を標準にする」で選ぶと、これからはその考え方で組みます」。組む日は伝えていない日（`allTargets`）、「組む日：1日（3つの案）（見込み 約9〜15秒）」、主ボタン「3つの案を組む」。進み具合は「〈日〉の案：〈考え方〉（1/3つ目）」
 4. 範囲の提案の帯（`RangeProposalBand`。[pages-common.md](pages-common.md) の「予定の共通の部品」）：［反映する］［捨てる］。同じ帯は日・週・月の予定にも出る
 5. 案を比べるのカード（`arrange-compare`。提案を比べる `compare` を切れば出さない）：日付の欄（`arrange-compare-date`。範囲の中。既定は範囲の今日以降の最初の訪問のある日）・［〈日〉の案を比べる］（`arrange-compare-open`。`/compare?date=`）・［日の予定を見る］（`arrange-day-open`。`/plan?date=`）
 
@@ -40,6 +41,7 @@
 
 - 組む日が0日なら「組む日がありません（今日より前の日・確定した日は組みません）」
 - 反映していない提案があれば `confirmDropProposal`（独自の確認「反映していない提案（〈名前〉）を捨てて、組み始めますか？」）。残せば組み始めない
+- 考え方ごとの案（D357）：`monthBatch.start({ …, mode: 'all', variants })`。`variants` は先頭の3つのプリセット（`{ presetId, name, rules: applyPreset(data.rules, p) }`）
 - `monthBatch.start({ ym, label, mode, days, today, source: 範囲, rangeStart, rules? })`。名前は「11月」「11/2〜11/8の週」「11/3」、考え方を選んだときは「11月（移動を短く）」。組んでいれば始めず知らせ
 - 上の帯（`BatchBand`）は担当を組むの画面と月の予定では出さない（画面の中に進み具合）。ほかの画面では「〈名前〉の担当を組んでいます N/M日」（行き先は `batchHref`）と［止める］
 - 終わった知らせ（`batchDoneText`）：提案の帯が見える画面（担当を組む・日・週・月の予定）にいれば［担当を組むを開く］を出さない。担当を組むの画面にいれば、提案が無くても出さない（PRD D268）
@@ -52,7 +54,9 @@
 - `BatchJob`＝`{ ym, label, mode, days: { date, mode }[], source: 'month' | 'week' | 'day', rangeStart?, rules?, today }`。`rules` があれば、その条件で問題を作る（`aiPinsOf`・`dayProblemOf` に条件を差し替えたデータを渡す）。データの条件は書き換えない
 - 1日ずつ：組んでいる間に確定した日は飛ばす。手で付けたピンと標準のピン（`aiPinsOf`。ADR-0062）を渡して compile し、Worker で解いて日ごとの提案（組み始めたときの訪問・その日の問題の入力 `dayInputsOf`・担当の並び・差）にする。訪問には書かない
 - `proposalCounts(p)`・`proposalDayFresh(data, day)`（組み始めたときの訪問のまま・その日の問題の入力（欠勤・希望休・稼働時間の上書き・〈利用者さん〉の休み、人・条件・種類・相性・繰り返し）が同じ・伝えていない）・`applyProposal(data, p)`（純粋関数：そのままの日だけ `writeRoutes`。反映した日・反映しなかった日）
-- 反映する（`apply`）：今のデータで反映する日を決め、1回の update（手の名前「AI の提案を反映（〈名前〉）」）。全体の「元に戻す」で1手戻る
+- 反映する（`apply({ choice?, andThen?, label? })`）：今のデータで反映する日を決め、1回の update（手の名前「AI の提案を反映（〈名前〉）」）。全体の「元に戻す」で1手戻る。考え方ごとの案なら `choice` の案を反映し、`andThen`（組み方の標準の登録）を同じ update の中で当てる
+- 考え方ごとの案（D357）：`BatchJob.variants`（`{ presetId, name, rules }[]`）があれば、`days` の最初の日を考え方ごとに組む（`run.targets` は同じ日が案の数だけ、`run.variants` は考え方の名前）。提案は `choices`（`{ presetId, name, days }[]`。`days` は空）、終わった知らせは `done.choices`（案の数。「〈日〉の案を3つ出しました。くらべて、気に入った案を選んでください」）
+- `proposalDayChanges(day)`：提案の1日の変わる訪問（`{ visitId, clientId, at, kind: 'staff' | 'time', from, to, minutes }`。提案での開始の順）
 - `batchBandText`・`batchDoneText`・`weekLabel`（「11/2〜11/8の週」）・`dayLabel`（「11/3」）・`batchHref`（月 `/arrange?ym=`・週 `/arrange?d=〈月曜〉`・日 `/arrange?date=`）
 - `components/batchBand.tsx` の `MonthBatchHost`（App の直下に1つ）：store の data と update をつなぎ、データを丸ごと差し替えたら止めて提案を捨てる（`abort`）。終わったら知らせを出す
 
@@ -63,4 +67,5 @@
 - [ ] 考え方を選んで組むと帯にその名前が出る。点数の基準・条件の重みは変わらない（`lib/monthBatch` のテスト・`scripts/e2e-arrange.cjs`）
 - [ ] 「案を比べる」で比較の画面（その日）へ移り、比較の画面から担当を組むへ戻れる（`scripts/e2e-arrange.cjs`）
 - [ ] 組み始めるとほかの画面へ移っても続き、上の帯に進み具合と［止める］。止めるとそこまでの日の提案。知らせから担当を組むへ（`scripts/e2e-progress.cjs`・`scripts/e2e-week.cjs`）
+- [ ] 組み方の標準が無い日の範囲は「3つの案を組む」で考え方ごとの案のカードが3つ出て、選ぶまで訪問は変わらない。［この案を標準にする］は確かめてから、その日に反映し標準を登録し考え方を点数の基準にする。「元に戻す」で標準ごと1手戻る。標準を登録したら日の範囲もふだんの提案（`scripts/e2e-arrange.cjs`・`lib/monthBatch`・`lib/standard` のテスト）
 - [ ] 390px で横にはみ出さない（`scripts/e2e-arrange.cjs`）

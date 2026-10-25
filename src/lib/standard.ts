@@ -459,6 +459,49 @@ export function registerStandard(
   return opts.presetId ? setScorePreset(out, presetId) : out;
 }
 
+/**
+ * 1日の案を標準にするときの見込み（PRD D357）：その日の曜日の表（tableFromDays。ほかの曜日は今の標準のまま）・今の標準と違うマス・
+ * いつから（defaultSince）
+ */
+export function dayStandardPreview(
+  data: DemoData,
+  day: Pick<StandardDay, 'date' | 'problem' | 'routes'>,
+  today: string,
+): { table: StandardTable; diff: CellDiff[]; since: string; weekday: number } {
+  const table = tableFromDays(data, [day], today);
+  return {
+    table,
+    diff: tableDiff(table, currentTable(data, today)),
+    since: defaultSince(data, today),
+    weekday: weekday(day.date),
+  };
+}
+
+/**
+ * 1日の案を組み方の標準として登録する（PRD D357）：その日の曜日のマスを案の担当・開始にして registerStandard（いつからは来週の月曜。
+ * すでに入っている予定で違うものは標準どおりに入れ替える）、プリセットを標準の考え方（点数の基準）にする。
+ * 違うマスが無くても標準は登録したことにする（考え方といつからを残す）
+ */
+export function registerDayStandard(
+  data: DemoData,
+  day: Pick<StandardDay, 'date' | 'problem' | 'routes'>,
+  presetId: string,
+  today: string,
+  opts: { newId: () => string; at: number },
+): DemoData {
+  const { table, since } = dayStandardPreview(data, day, today);
+  const out = registerStandard(data, table, since, today, { ...opts, temp: 'drop', presetId });
+  if (out !== data) return out;
+  const id = data.presets.some((p) => p.id === presetId) ? presetId : (data.scorePresetId ?? data.presets[0]?.id ?? '');
+  const standard: StandardInfo = {
+    at: opts.at,
+    presetId: id,
+    from: clampSince(data, since, today),
+    weeks: cycleWeeks(data, today).weeks,
+  };
+  return setScorePreset({ ...data, standard }, id);
+}
+
 /** 考え方のカードの数（PRD D350） */
 export type ProposalStats = {
   /** 日ごとの点の平均（四捨五入。日が無ければ null） */

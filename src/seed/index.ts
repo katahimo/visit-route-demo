@@ -107,7 +107,7 @@ export function createDemoData(today: string): DemoData {
     snapshots: {},
     reassigns: {},
     presets: initialPresets(),
-    // 点数の基準は「標準」（ADR-0010）
+    // 点数の基準は「バランス」（ADR-0010。id は standard）
     scorePresetId: INITIAL_PRESETS[0]!.id,
   };
   const { availability, owners } = generateDays(base, today, DEMO_DAYS);

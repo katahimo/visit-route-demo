@@ -12,7 +12,7 @@ const REQUIRED = { weight: 0, hard: true };
 export const INITIAL_PRESETS: readonly Preset[] = [
   {
     id: 'standard',
-    name: '標準',
+    name: 'バランス',
     note: '初期の重み。移動・相性・希望・負担をほどよく',
     weights: {
       clientRequirement: REQUIRED,

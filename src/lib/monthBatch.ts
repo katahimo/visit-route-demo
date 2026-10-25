@@ -38,8 +38,19 @@ export type BatchJob = {
   rangeStart?: string | null;
   /** 考え方（プリセット）を当てた条件（無ければ今の条件＝点数の基準の重み。データの条件は書き換えない） */
   rules?: Rule[];
+  /**
+   * 考え方ごとの案（範囲が日で、組み方の標準がまだ無いとき。PRD D357）。あれば days の最初の日を考え方ごとに組み、
+   * 提案は考え方ごとの案（choices）にする。rules は使わない
+   */
+  variants?: readonly BatchVariant[];
   today: string;
 };
+
+/** 考え方ごとの案の1つの組み方（プリセットの ID・名前と、そのプリセットを当てた条件） */
+export type BatchVariant = { presetId: string; name: string; rules: Rule[] };
+
+/** 考え方ごとの案の1つ（その考え方で組んだ日の提案） */
+export type ProposalChoice = { presetId: string; name: string; days: ProposalDay[] };
 
 /** 提案の1日（組み始めたときの訪問と、組んだ担当の並び・今との差） */
 export type ProposalDay = {
@@ -66,6 +77,8 @@ export type BatchProposal = {
   source: BatchSource;
   rangeStart: string | null;
   days: ProposalDay[];
+  /** 考え方ごとの案（BatchJob の variants で組んだとき。days は空） */
+  choices?: ProposalChoice[];
   /** ［止める］で途中まで */
   stopped: boolean;
 };
@@ -176,6 +189,9 @@ export function applyProposal(
   return { data: out, applied, skipped };
 }
 
+/** 反映の指定（考え方ごとの案の番号・続けて当てる変更・元に戻すの名前） */
+export type ApplyOptions = { choice?: number; andThen?: (d: DemoData) => DemoData; label?: string };
+
 /** 作っている間の進み具合（作っていなければ null） */
 export type BatchRun = {
   ym: string;
@@ -192,6 +208,8 @@ export type BatchRun = {
   made: number;
   iteration: number;
   total: number;
+  /** 考え方ごとの案を組むときの考え方の名前（targets と同じ並び） */
+  variants?: string[];
 };
 
 /** 終わったときの知らせ（終わるたびに新しい物。画面はこれを見てトーストを出す） */
@@ -212,6 +230,8 @@ export type BatchDone = {
   aborted: boolean;
   /** 出した提案（変わる訪問の数。提案が無ければ null） */
   proposal: { moved: number; shifted: number } | null;
+  /** 考え方ごとの案を出したときの案の数 */
+  choices?: number;
 };
 
 /** データの持ち主（App が store の data と update をつなぐ） */
@@ -230,8 +250,11 @@ export type MonthBatch = {
   done: ReadableStore<BatchDone | null>;
   /** 今の提案（無ければ null。反映する・捨てる・新しく組み始めると消える） */
   proposal: ReadableStore<BatchProposal | null>;
-  /** 提案を反映する（1回の update。反映した日・反映しなかった日。提案が無ければ null） */
-  apply(): { applied: string[]; skipped: string[] } | null;
+  /**
+   * 提案を反映する（1回の update。反映した日・反映しなかった日。提案が無ければ null）。考え方ごとの案なら choice の案を反映する。
+   * andThen は反映した日があるときに同じ update の中で続けて当てる（組み方の標準の登録。元に戻すの1手にまとめる）
+   */
+  apply(opts?: ApplyOptions): { applied: string[]; skipped: string[] } | null;
   /** 提案を捨てる */
   discard(): void;
   /** 始める。作っている間・つながっていない・作る日が無いときは始めず false（二重に始めない） */
@@ -255,11 +278,14 @@ export function batchDoneText(d: BatchDone): string {
   if (d.error) return `${d.label}の担当を${d.made}日分組んだところで止まりました（${d.error}）`;
   if (d.stopped) return `${d.label}の担当を${d.made}日分組んだところで止めました（${d.made}日分の提案${counts}）`;
   if (d.made === 0) return `${d.label}に組める日がありませんでした`;
+  if (d.choices) return `${d.label}の案を${d.choices}つ出しました。くらべて、気に入った案を選んでください`;
   return `${d.label}の提案を出しました（${d.made}日分${counts}）。見て「反映する」と担当が変わります`;
 }
 
 /** 上の帯の文（「11月の担当を組んでいます 8/22日」） */
 export function batchBandText(r: BatchRun): string {
+  if (r.variants)
+    return `${r.label}の案を組んでいます ${Math.min(r.index + 1, r.targets.length)}/${r.targets.length}つ目（${r.variants[r.index] ?? ''}）`;
   return `${r.label}の担当を組んでいます ${Math.min(r.index + 1, r.targets.length)}/${r.targets.length}日`;
 }
 
@@ -306,10 +332,16 @@ export function createMonthBatch(solve: Solve = runSolve): MonthBatch {
     const h = host;
     const gen = ++generation;
     const live = () => gen === generation;
-    const targets = job.days.map((x) => x.date);
+    const variants = job.variants && job.variants.length > 0 ? job.variants : null;
+    /** 組む日と条件（考え方ごとの案なら最初の日を考え方ごとに。v は案の番号、ふだんは -1） */
+    const tasks = variants
+      ? variants.map((x, v) => ({ date: job.days[0]!.date, rules: x.rules as Rule[] | undefined, v }))
+      : job.days.map((x) => ({ date: x.date, rules: job.rules, v: -1 }));
+    const targets = tasks.map((x) => x.date);
     const rangeStart = job.rangeStart ?? null;
     /** 組む条件（プリセットを当てた条件か、今の条件） */
-    const withRules = (d: DemoData): DemoData => (job.rules ? { ...d, rules: job.rules } : d);
+    const withRules = (d: DemoData, rules: Rule[] | undefined): DemoData => (rules ? { ...d, rules } : d);
+    const choiceDays: ProposalDay[][] = (variants ?? []).map(() => []);
     stopped = false;
     // 新しく組み始めたら前の提案は捨てる（提案は1つだけ）
     proposal.set(null);
@@ -327,6 +359,7 @@ export function createMonthBatch(solve: Solve = runSolve): MonthBatch {
       made: 0,
       iteration: 0,
       total: 1,
+      ...(variants ? { variants: variants.map((x) => x.name) } : {}),
     });
     const patch = (p: Partial<BatchRun>) => run.set((b) => (b ? { ...b, ...p } : b));
 
@@ -334,7 +367,10 @@ export function createMonthBatch(solve: Solve = runSolve): MonthBatch {
       current = null;
       run.set(null);
       const counts = proposalCounts({ days });
-      if (days.length > 0)
+      const choices: ProposalChoice[] = (variants ?? [])
+        .map((x, v) => ({ presetId: x.presetId, name: x.name, days: [...(choiceDays[v] ?? [])] }))
+        .filter((c) => c.days.length > 0);
+      if (days.length > 0 || choices.length > 0)
         proposal.set({
           id: ++proposalId,
           ym: job.ym,
@@ -342,6 +378,7 @@ export function createMonthBatch(solve: Solve = runSolve): MonthBatch {
           source: job.source,
           rangeStart,
           days: [...days],
+          ...(variants ? { choices } : {}),
           stopped,
         });
       done.set({
@@ -355,16 +392,18 @@ export function createMonthBatch(solve: Solve = runSolve): MonthBatch {
         error: why ?? null,
         aborted: false,
         proposal: days.length > 0 ? { moved: counts.moved, shifted: counts.shifted } : null,
+        ...(choices.length > 0 ? { choices: choices.length } : {}),
       });
     };
 
     const step = (i: number) => {
       if (!live()) return;
-      if (i >= job.days.length || stopped) {
+      if (i >= tasks.length || stopped) {
         finish();
         return;
       }
-      const day = job.days[i]!.date;
+      const task = tasks[i]!;
+      const day = task.date;
       const latest = h.get();
       patch({ index: i, iteration: 0, total: 1 });
       // 組んでいる間に確定した日は飛ばす
@@ -374,8 +413,8 @@ export function createMonthBatch(solve: Solve = runSolve): MonthBatch {
       }
       const visits = visitsOn(latest, day);
       // 手で付けたピンと標準のピン（ADR-0062）
-      const pins = aiPinsOf(withRules(latest), day, visits);
-      const p = dayProblemOf(withRules(latest), day, Object.keys(pins).length > 0 ? pins : undefined);
+      const pins = aiPinsOf(withRules(latest, task.rules), day, visits);
+      const p = dayProblemOf(withRules(latest, task.rules), day, Object.keys(pins).length > 0 ? pins : undefined);
       if (!p || p.visits.length === 0 || p.staff.length === 0) {
         step(i + 1);
         return;
@@ -403,7 +442,7 @@ export function createMonthBatch(solve: Solve = runSolve): MonthBatch {
           } catch {
             diff = null;
           }
-          days.push({
+          (task.v >= 0 ? (choiceDays[task.v] ?? days) : days).push({
             date: day,
             problem: p,
             visits,
@@ -433,18 +472,24 @@ export function createMonthBatch(solve: Solve = runSolve): MonthBatch {
     done,
     proposal,
     start,
-    apply: () => {
+    apply: (opts) => {
       const p = proposal.get();
       if (!p || !host || run.get() !== null) return null;
+      const chosen = p.choices ? p.choices[opts?.choice ?? 0] : undefined;
+      if (p.choices && !chosen) return null;
+      const all = chosen ? chosen.days : p.days;
       let result: { applied: string[]; skipped: string[] } = { applied: [], skipped: [] };
       const h = host;
       // 反映するかどうかを今のデータで決めてから、1回の update で書く（全体の「元に戻す」の1手）
-      const r = applyProposal(h.get(), p);
+      const r = applyProposal(h.get(), { days: all });
       result = { applied: r.applied, skipped: r.skipped };
       if (r.applied.length > 0)
         h.update(
-          (d) => applyProposal(d, { days: p.days.filter((x) => r.applied.includes(x.date)) }).data,
-          `AI の提案を反映（${p.label}）`,
+          (d) => {
+            const out = applyProposal(d, { days: all.filter((x) => r.applied.includes(x.date)) }).data;
+            return opts?.andThen ? opts.andThen(out) : out;
+          },
+          opts?.label ?? `AI の提案を反映（${chosen ? `${p.label}・${chosen.name}` : p.label}）`,
         );
       proposal.set(null);
       return result;

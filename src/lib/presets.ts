@@ -132,7 +132,7 @@ export function addRule(
   return { ...d, rules: [...d.rules, added] };
 }
 
-/** 初期の3種に戻す（点数の基準も先頭の「標準」に戻し、試す重みもそろえる） */
+/** 初期の3種に戻す（点数の基準も先頭の「バランス」に戻し、試す重みもそろえる） */
 export function resetPresets(d: DemoData): DemoData {
   const presets = initialPresets();
   return withBasisRules({ ...d, presets, scorePresetId: presets[0]?.id });

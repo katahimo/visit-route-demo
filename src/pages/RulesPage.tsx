@@ -553,7 +553,7 @@ function PresetSection({ draftCount, onReset }: { draftCount: number; onReset: (
   const reset = async () => {
     const ok = await confirmDialog({
       title: 'プリセットを初期の3つに戻しますか？',
-      body: `初期の3つ（標準・移動を短く・人の組み合わせ重視）に戻します。足したプリセットは消え、点数の基準は「標準」になります。${dropNote}`,
+      body: `初期の3つ（バランス・移動を短く・人の組み合わせ重視）に戻します。足したプリセットは消え、点数の基準は「バランス」になります。${dropNote}`,
       confirmLabel: '初期の3つに戻す',
       tone: 'danger',
     });

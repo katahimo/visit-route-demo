@@ -67,7 +67,7 @@ describe('点数の基準（ADR-0010）', () => {
     expect(removePreset({ ...d, scorePresetId: 'standard' }, 'standard').scorePresetId).toBe('travel');
   });
 
-  it('基準を選べる（無い id は変えない）。初期値に戻すと「標準」', () => {
+  it('基準を選べる（無い id は変えない）。初期値に戻すと「バランス」', () => {
     const d = base();
     expect(setScorePreset(d, 'people').scorePresetId).toBe('people');
     expect(setScorePreset(d, 'nothing')).toBe(d);

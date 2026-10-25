@@ -276,3 +276,36 @@
 .proposal-change.is-unplaced .proposal-change-who {
   color: var(--danger);
 }
+/* 考え方ごとの案（PRD D357）：カードを横に並べ、狭い画面では縦に積む */
+.choice-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 8px;
+}
+.choice-card {
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+}
+.choice-name {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  font-size: 1rem;
+}
+.choice-stats {
+  margin: 0;
+  font-size: 0.9rem;
+}
+.choice-card .proposal-changes {
+  margin: 0;
+  font-size: 0.88rem;
+}
+.choice-actions {
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: auto;
+}

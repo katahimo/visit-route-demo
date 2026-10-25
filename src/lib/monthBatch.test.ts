@@ -137,6 +137,47 @@ describe('monthBatch（担当を AI で組む。PRD D256・D257。ADR-0042・ADR
     expect(b.running()).toBe(false);
   });
 
+  it('考え方ごとの案（variants）：最初の日を考え方ごとに組み、案ごとに選んで反映する。andThen は同じ update で当てる（PRD D357）', async () => {
+    const seen: Problem[] = [];
+    const s = fakeSolve();
+    const b = createMonthBatch((p) => {
+      seen.push(p);
+      return s.fn(p);
+    });
+    const start = unassigned();
+    const h = hostOf(start);
+    b.connect(h.host);
+    const variants = start.presets.slice(0, 3).map((p, k) => ({
+      presetId: p.id,
+      name: p.name,
+      rules: start.rules.map((r) => ({ ...r, weight: k })),
+    }));
+    expect(b.start({ ...job, source: 'day', rangeStart: TODAY, variants })).toBe(true);
+    expect(b.run.get()).toMatchObject({ targets: [TODAY, TODAY, TODAY], variants: variants.map((v) => v.name) });
+    expect(batchBandText(b.run.get()!)).toContain(variants[0]!.name);
+    await finishAll(s.calls);
+    expect(seen.length).toBe(3);
+    const prop = b.proposal.get()!;
+    expect(prop.days).toEqual([]);
+    expect(prop.choices?.map((c) => [c.presetId, c.days.map((x) => x.date)])).toEqual(
+      variants.map((v) => [v.presetId, [TODAY]]),
+    );
+    expect(batchDoneText(b.done.get()!)).toContain('案を3つ');
+    let marked = false;
+    const r = b.apply({
+      choice: 1,
+      andThen: (d) => {
+        marked = true;
+        return d;
+      },
+    });
+    expect(r).toEqual({ applied: [TODAY], skipped: [] });
+    expect(marked).toBe(true);
+    expect(h.writes()).toBe(1);
+    expect(staffed(h.data(), TODAY)).toBeGreaterThan(0);
+    expect(b.proposal.get()).toBeNull();
+  });
+
   it('考え方（rules）を渡すと、その条件で問題を作る（データの条件は変えない。担当を組むの画面のプリセット）', async () => {
     const seen: Problem[] = [];
     const s = fakeSolve();

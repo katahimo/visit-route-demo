@@ -2,6 +2,7 @@
 // 見出しの下のタブ（担当を組む・組み方の標準）、範囲（月・週・日。既定は月で URL の ?ym=・?d=・?date= に書く）と
 // 選んだ範囲の担当なし・要対応の件数、「AI で組む」で範囲の提案の帯が出て反映するまで訪問は変わらない・
 // ［反映する］で担当が入り「元に戻す」で1手戻る・［捨てる］で何も変えない、考え方（プリセット）を選んで組むと帯にその名前、
+// 組み方の標準がまだ無い日の範囲は考え方ごとの案（3つ）を並べ、［この案を標準にする］でその日に反映して標準を登録する（PRD D357）、
 // 「案を比べる」で比較の画面（#/compare?date=）へ移り、比較の画面から担当を組むへ戻れる、スマホ（390px）で横にはみ出さない。
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-arrange.cjs
@@ -57,7 +58,20 @@ const assignedOn = (page, date) =>
     ({ k, d }) => JSON.parse(localStorage.getItem(k)).visits.filter((v) => v.date === d && v.staffId).length,
     { k: STORAGE_KEY, d: date },
   );
+/** 組み方の標準を登録したことにする（日の範囲でも考え方ごとの案にせず、ふだんの提案の帯にする） */
+async function markStandard(page) {
+  await editData(
+    page,
+    ({ key, today }) => {
+      const d = JSON.parse(localStorage.getItem(key));
+      d.standard = { at: 1, presetId: d.scorePresetId, from: today, weeks: 1 };
+      localStorage.setItem(key, JSON.stringify(d));
+    },
+    { key: STORAGE_KEY, today: TODAY },
+  );
+}
 const rangeBand = (page) => page.locator('[data-testid="proposal-band"][data-kind="range"]');
+const choiceBand = (page) => page.locator('[data-testid="proposal-band"][data-kind="choices"]');
 /** 帯が出るまで待つ（組み終わるまで） */
 const waitBand = (page) => rangeBand(page).waitFor({ timeout: 90000 });
 
@@ -97,9 +111,61 @@ async function range(page) {
   await page.screenshot({ path: path.join(OUT_DIR, 'arrange-1400.png') });
 }
 
+// ---- 標準が無い日の範囲：考え方ごとの案 → この案を標準にする → 元に戻す（PRD D357） ----
+async function choices(page, { dlg }) {
+  await clearPlans(page);
+  await open(page, `/arrange?date=${TODAY}`);
+  check(
+    (await page.getByTestId('arrange-choices-note').count()) === 1,
+    '標準が無い日の範囲：考え方ごとの案を組むと書く',
+  );
+  check((await page.getByTestId('arrange-preset').count()) === 0, '考え方ごとの案のときは考え方の選ぶ欄を出さない');
+  check(/つの案を組む/.test(await page.getByTestId('arrange-start').innerText()), 'ボタン「3つの案を組む」');
+  await page.getByTestId('arrange-start').click();
+  await choiceBand(page).waitFor({ timeout: 150000 });
+  const cards = choiceBand(page).getByTestId('choice-card');
+  check((await cards.count()) === 3, '考え方ごとの案のカードが3つ', await cards.count());
+  check((await assignedOn(page, TODAY)) === 0, '案が出ても、選ぶまで訪問は変わらない');
+  check(
+    (await choiceBand(page).getByTestId('proposal-change').count()) > 0,
+    'カードに変わる訪問（誰の訪問が誰へ）の一覧',
+  );
+  await page.screenshot({ path: path.join(OUT_DIR, 'arrange-choices.png') });
+  const preset = await cards.nth(1).getAttribute('data-preset');
+  const n = dlg.messages.length;
+  await cards.nth(1).getByTestId('choice-adopt').click();
+  await choiceBand(page).waitFor({ state: 'detached', timeout: 10000 });
+  check(
+    /組み方の標準にしますか/.test(dlg.messages[n] ?? ''),
+    '［この案を標準にする］は何が起きるかを確かめる',
+    dlg.messages[n],
+  );
+  await page.waitForFunction(
+    ({ k }) => JSON.parse(localStorage.getItem(k)).standard !== undefined,
+    { k: STORAGE_KEY },
+    { timeout: 10000 },
+  );
+  const saved = await page.evaluate((k) => JSON.parse(localStorage.getItem(k)), STORAGE_KEY);
+  check(
+    saved.standard?.presetId === preset && saved.scorePresetId === preset,
+    '選んだ案の考え方が標準の考え方（点数の基準）になる',
+    { standard: saved.standard, scorePresetId: saved.scorePresetId, preset },
+  );
+  check((await page.getByTestId('arrange-choices-note').count()) === 0, '標準を登録したら日の範囲もふだんの提案に戻る');
+  // 全体の「元に戻す」で1手戻る（反映と標準の登録をまとめて）
+  await page.getByTestId('undo-btn').click();
+  await page.waitForFunction(
+    ({ k }) => JSON.parse(localStorage.getItem(k)).standard === undefined,
+    { k: STORAGE_KEY },
+    { timeout: 10000 },
+  );
+  check((await assignedOn(page, TODAY)) === 0, '「元に戻す」で案を選ぶ前に戻る（標準も消える）');
+}
+
 // ---- AI で組む → 提案の帯 → 反映 → 元に戻す ----
 async function runApply(page) {
   await clearPlans(page);
+  await markStandard(page);
   await open(page, `/arrange?date=${TODAY}`);
   const unassigned = Number(await page.getByTestId('arrange-unassigned').getAttribute('data-count'));
   check(unassigned > 0, '担当を外した日：担当なしの訪問の件数が出る', unassigned);
@@ -135,6 +201,7 @@ async function runApply(page) {
 
 // ---- 考え方（プリセット）を選んで組む・捨てる ----
 async function preset(page) {
+  await markStandard(page);
   await open(page, `/arrange?date=${TODAY}`);
   const select = page.getByTestId('arrange-preset');
   const options = await select.locator('option').allInnerTexts();
@@ -192,8 +259,10 @@ const steps = sharedPage({
     // 確認は独自のダイアログで受ける（ネイティブのダイアログが出たら失敗。PRD D146）
     return { ...s, dlg: await answerConfirms(s.page) };
   },
+  call: (fn, s) => fn(s.page, s),
   steps: [
     ['range', range],
+    ['choices', choices],
     ['run-apply', runApply],
     ['preset', preset],
     ['compare', compare],
