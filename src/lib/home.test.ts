@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Absence, Staff } from '../contracts/documents';
 import { monthLabel } from './dateText';
-import { HOME_NEXT_MONTH_FROM_DAY, homeDays, homeMonths, homeTasks } from './home';
+import { HOME_NEXT_MONTH_FROM_DAY, homeDays, homeMonths, homeTasks, routedStaffCount } from './home';
 import { type DayStatus, monthProgress } from './month';
 
 /** 日の状態（既定は訪問3件・確定済み・問題なし） */
@@ -186,5 +186,12 @@ describe('homeTasks（版2）', () => {
       ['confirm', '11月の確定していない日 2日を確認'],
       ['today', '今日 10/28（水）の予定（確定済み）'],
     ]);
+  });
+});
+
+describe('routedStaffCount（今日の担当の人数）', () => {
+  it('訪問の列が1件以上ある人だけ数える', () => {
+    expect(routedStaffCount({})).toBe(0);
+    expect(routedStaffCount({ s1: ['v1', 'v2'], s2: [], s3: ['v3'] })).toBe(2);
   });
 });

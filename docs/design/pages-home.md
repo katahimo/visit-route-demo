@@ -1,6 +1,6 @@
 # ホーム（今日やること）と予定に共通の進み具合の帯
 
-> この画面のファイル：`src/pages/HomePage.tsx`（`home.css`）・`src/components/progressBand.tsx`（`progressBand.css`）・`src/lib/home.ts`・`src/lib/progressBand.ts`・`src/lib/dayStatuses.ts`・`src/components/useDayStatuses.ts`。関連 ADR：0025（追記を含む）・0038・0044・0062。関連 PRD：D141〜D145・D247・D255・D263（ホーム）・D151〜D155（進み具合の帯）・D161（条件が変わった）。
+> この画面のファイル：`src/pages/HomePage.tsx`（`home.css`）・`useHomeTasks.ts`・`homeParts.tsx`・`src/components/progressBand.tsx`（`progressBand.css`）・`src/lib/home.ts`・`src/lib/progressBand.ts`・`src/lib/dayStatuses.ts`・`src/components/useDayStatuses.ts`。関連 ADR：0025（追記を含む）・0038・0044・0062。関連 PRD：D141〜D145・D247・D255・D263（ホーム）・D151〜D155（進み具合の帯）・D161（条件が変わった）。
 > 版2（ADR-0053）：日の状態は まだ伝えていない／確定済み／未連絡の変更あり、要対応は訪問ごとの検査。「案を作る」は「担当を AI で組む」
 
 ### ホーム（`#/home`。PRD D141〜D145）
@@ -26,6 +26,8 @@
 | 4 | 今日の予定（題名に「（まだ伝えていない）」「（確定済み）」「（未連絡の変更あり）」、内訳「訪問 N件・担当 N人・要対応 N件」。要対応があれば warn） | `/plan`（今日） |
 
 #### `pages/HomePage.tsx`（`home.css`）
+
+画面は組み立てだけ。次にすること・いつでもの入口の計算は同じディレクトリの `useHomeTasks.ts`（今日の担当の人数は `lib/home` の `routedStaffCount`）、カード（`TaskCard`・`EntryCard`）・今日の訪問の欄（`HomeVisits`）・「訪問を追加」（`AddVisitItem`）は `homeParts.tsx`。
 
 - 日の状態：`components/useDayModel` の `useCompileInput(data)`（compile が読むデータだけ。今日の問題は compile しない。`useDayModel` も中で使う）と `useDayStatuses`
 - `homeTasks` のカードを並べる。カード全体が `Link`（`date` があれば押したときに `setDate`）
