@@ -33,7 +33,6 @@ import {
 } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ClientPicker } from '../components/ClientPicker';
-import { useConfirm } from '../components/ConfirmDialog';
 import { useDay } from '../components/day';
 import { FieldError } from '../components/FieldError';
 import { LoadBar, LoadLegend, LoadRowsSample, loadSummary, TypeStack } from '../components/loadBar';
@@ -46,8 +45,8 @@ import { StaffMark } from '../components/StaffMark';
 import { RangeProposalBand, ScheduleToolbar, SelectionBar } from '../components/scheduleParts';
 import { StaffBar, StaffLegend } from '../components/staffBar';
 import { Term, TipBubble } from '../components/Term';
-import { useToast } from '../components/Toast';
 import { PageHeader, SidePanel, WithIcon } from '../components/ui';
+import { useBulkConfirm } from '../components/useBulkConfirm';
 import { useDayModel } from '../components/useDayModel';
 import { useDayStatuses } from '../components/useDayStatuses';
 import { useOpenVisit } from '../components/VisitPanel';
@@ -79,7 +78,7 @@ import {
 } from '../lib/barRows';
 import { colorOf } from '../lib/colors';
 import { attempt, byDisplayName, byName, newId, WEEKDAY_LABELS } from '../lib/common';
-import { bulkConfirmDialog, bulkConfirmLabel, bulkConfirmTargets, bulkConfirmWhy, confirmDay } from '../lib/confirmDay';
+import { bulkConfirmLabel, bulkConfirmTargets, bulkConfirmWhy } from '../lib/confirmDay';
 import { clockTime, dateText, mdText, ymText } from '../lib/dateText';
 import { isOn } from '../lib/features';
 import { attentionTarget, type LinkTarget } from '../lib/links';
@@ -174,8 +173,6 @@ export default function MonthPage() {
   const workloadOn = isOn(data.org.features, 'workload');
   /** 欠勤・キャンセル（ADR-0028 の sudden）：切なら希望休を入れたときの知らせで「急な欠勤」の入口を案内しない */
   const suddenOn = isOn(data.org.features, 'sudden');
-  const toast = useToast();
-  const confirmDialog = useConfirm();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const today = jstDate(Date.now());
@@ -227,8 +224,6 @@ export default function MonthPage() {
   const [offNote, setOffNote] = useState<{ date: string; text: string; warn: boolean } | null>(null);
   const dataRef = useRef(data);
   dataRef.current = data;
-  /** 作っているか（確認のあとなど、描く前にも今の値を見る） */
-  const runningNow = () => monthBatch.running();
   // この画面を開いている間に計算できずに止まったら、理由を出す（ほかの画面で止まったときは知らせ（トースト）だけ）
   const seenDone = useRef(batchDone);
   useEffect(() => {
@@ -558,25 +553,12 @@ export default function MonthPage() {
    * まとめて確定：独自の確認（日付と残す日）のあと、1回の update で日ごとに日の画面の「この割当で確定」と同じ書き方
    * （lib/confirmDay）。問題は日の状態を数えたときのもの（計算に入れる訪問は条件の重みに依らない）。作っている間は押せない
    */
-  const confirmBulk = async () => {
-    if (runningNow() || bulk.targets.length === 0) return;
-    const targets = bulk.targets;
-    const ok = await confirmDialog({
-      ...bulkConfirmDialog(bulk, terms.staff),
-      confirmLabel: `${targets.length}日を確定する`,
-    });
-    if (!ok || runningNow()) return;
-    const ready = targets.flatMap((date) => {
-      const p = perDay.get(date)?.problem;
-      return p ? [{ date, p }] : [];
-    });
-    if (ready.length === 0) return;
-    const at = Date.now();
-    update((d) => ready.reduce((out, x) => confirmDay(out, x.date, x.p, at), d), `${ready.length}日をまとめて確定`);
-    toast(`${ready.length}日を確定しました`);
+  const runBulkConfirm = useBulkConfirm(
+    (date) => perDay.get(date)?.problem,
     // 押したボタンは0日になって押せなくなるので、フォーカスは右の欄へ（確定していない日の一覧の先頭から読める）
-    requestAnimationFrame(() => asideRef.current?.focus({ preventScroll: true }));
-  };
+    () => asideRef.current?.focus({ preventScroll: true }),
+  );
+  const confirmBulk = () => runBulkConfirm(bulk);
 
   const stop = () => monthBatch.stop();
 

@@ -45,6 +45,25 @@ export function bulkConfirmTargets(
   return out;
 }
 
+/** まとめて確定する日とその日の問題（確定の確認のあいだに問題が無くなった日は除く） */
+export type ReadyDay = { date: string; p: Problem };
+
+/** まとめて確定する日（targets）のうち、問題（計算に入れる訪問を決める）のある日（月の予定と週の予定で共通） */
+export function confirmReady(
+  targets: readonly string[],
+  problemOf: (date: string) => Problem | null | undefined,
+): ReadyDay[] {
+  return targets.flatMap((date) => {
+    const p = problemOf(date);
+    return p ? [{ date, p }] : [];
+  });
+}
+
+/** まとめて確定：1回の update で日ごとに confirmDay と同じ書き方をする（at は確定した時刻） */
+export function confirmDays(d: DemoData, ready: readonly ReadyDay[], at: number): DemoData {
+  return ready.reduce((out, x) => confirmDay(out, x.date, x.p, at), d);
+}
+
 /** 月の右の欄のボタンの文 */
 export const bulkConfirmLabel = (n: number): string => `問題の無い日をまとめて確定（${n}日）`;
 

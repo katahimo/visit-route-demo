@@ -9,6 +9,8 @@ import {
   bulkConfirmTargets,
   bulkConfirmWhy,
   confirmDay,
+  confirmDays,
+  confirmReady,
   datesText,
   nextUnconfirmed,
 } from './confirmDay';
@@ -76,6 +78,18 @@ const st = (date: string, x: Partial<DayStatus>): DayStatus => ({
   overSpan: [],
   needsCare: false,
   ...x,
+});
+
+describe('confirmReady・confirmDays（まとめて確定。月・週で共通）', () => {
+  it('問題のある日だけを残し、1回でそれぞれの日を confirmDay と同じに書く', () => {
+    const days = ['2026-10-22', '2026-10-23', '2026-10-24'];
+    const ready = confirmReady(days, (d) => (d === '2026-10-23' ? null : dayProblemOf(base, d)));
+    expect(ready.map((x) => x.date)).toEqual(days.filter((d) => d !== '2026-10-23' && dayProblemOf(base, d)));
+    const out = confirmDays(base, ready, 5);
+    const one = ready.reduce((m, x) => confirmDay(m, x.date, x.p, 5), base);
+    expect(out.snapshots).toEqual(one.snapshots);
+    expect(confirmReady([], () => undefined)).toEqual([]);
+  });
 });
 
 describe('bulkConfirmTargets（PRD D223）', () => {

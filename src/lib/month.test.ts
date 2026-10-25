@@ -17,6 +17,7 @@ import {
   dayStatus,
   issueBreakdown,
   monthProgress,
+  rangeProgress,
   staffDay,
   staffMonth,
 } from './month';
@@ -380,6 +381,39 @@ describe('今月の準備（monthProgress。版2）', () => {
       unconfirmed: [],
       attention: 0,
     });
+  });
+});
+
+describe('日付の範囲の準備（rangeProgress。月・週で同じ数え方）', () => {
+  it('月の日付で数えると monthProgress と同じ。週の1行の状態（伝えた・未連絡の変更・まだ・要対応）も数える', () => {
+    const d0 = novData();
+    const days = monthDates('2026-11').filter((x) => x >= TODAY && visitsOn(d0, x).some((v) => !v.cancelled));
+    const [a, b] = days;
+    let d = confirmDay(confirmDay(d0, a!, dayProblemOf(d0, a!)!, 1), b!, dayProblemOf(d0, b!)!, 1);
+    const v = visitsOn(d, b!).find((x) => x.staffId !== null)!;
+    d = { ...d, visits: putVisits(d.visits, [{ ...v, staffId: null }]) };
+    const r = rangeProgress(d, monthDates('2026-11'), TODAY);
+    const { changed, notYet, care, attentionItems, ...rest } = r;
+    expect(rest).toEqual(monthProgress(d, '2026-11', TODAY));
+    expect(r.confirmed).toBe(1);
+    expect(changed).toBe(1);
+    expect(notYet).toBe(days.length - 2);
+    expect(care).toBe(days.reduce((n, x) => n + dayStatus(d, x).care, 0));
+    expect(attentionItems.length).toBe(r.attention);
+  });
+
+  it('今日より前の日は数えない（週の今日以降）', () => {
+    const d0 = novData();
+    const days = monthDates('2026-11').filter((x) => visitsOn(d0, x).some((v) => !v.cancelled));
+    const r = rangeProgress(d0, days, TODAY);
+    expect(r.unconfirmed).toEqual(days.filter((x) => x >= TODAY));
+    expect(
+      rangeProgress(
+        d0,
+        days.filter((x) => x < TODAY),
+        TODAY,
+      ).days,
+    ).toBe(0);
   });
 });
 
