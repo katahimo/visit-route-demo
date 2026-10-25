@@ -1,35 +1,25 @@
-import { CornerDownLeft, Search, X } from 'lucide-react';
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useId, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useLocation, useNavigate } from 'react-router-dom';
-import type { Terms, Visit } from '../contracts/documents';
+import type { Terms } from '../contracts/documents';
 import { jstDate } from '../domain/time';
 import {
   filterPalette,
   isMacPlatform,
-  isPaletteShortcut,
   moveActive,
-  type PaletteItem,
   paletteActions,
-  paletteAttentionDays,
-  paletteKindLabel,
   palettePeople,
   paletteScreens,
   paletteVisitList,
   paletteVisits,
   visitIndex,
 } from '../lib/commandPalette';
-import { trapTarget } from '../lib/confirmDialog';
-import { dayProblemOf, routesOf, visitIssues } from '../lib/dayPlan';
-import { confirmLeave } from '../lib/leaveGuard';
 import type { MenuItem, NavSection } from '../lib/nav';
-import { visitsOn } from '../patterns';
 import { useDemoData } from '../store';
-import { useDay } from './day';
-import { StaffMarkById } from './StaffMark';
-import { FOCUSABLE } from './ui';
-import { inertLock, useBodyScrollLock } from './useBodyScrollLock';
-import { useOpenVisit } from './VisitPanel';
+import { PaletteFoot, PaletteGroups, PaletteHead, paletteOptionId } from './CommandPaletteParts';
+import { useBodyScrollLock } from './useBodyScrollLock';
+import { useAttentionCare } from './usePaletteCare';
+import { usePaletteModal, usePaletteScroll } from './usePaletteModal';
+import { usePalettePick } from './usePalettePick';
 import './commandPalette.css';
 
 /** このブラウザが mac か（⌘K と Ctrl+K のどちらで開くか・キーの印） */
@@ -52,9 +42,6 @@ export function CommandPalette({
   onClose: () => void;
 }) {
   const { data } = useDemoData();
-  const { setDate } = useDay();
-  const navigate = useNavigate();
-  const { pathname } = useLocation();
   const today = jstDate(Date.now());
   const wrapRef = useRef<HTMLDivElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
@@ -86,42 +73,7 @@ export function CommandPalette({
         : null,
     [typedAny, data.visits, data.patterns, data.clients, today],
   );
-  /**
-   * 「要対応」の語で引くときの訪問ごとの検査（PRD D337。日の予定と同じ visitIssues）。打った語に「要対応」があるときだけ、
-   * 検査する日（paletteAttentionDays）を1日ずつ間を空けて計算し（描画を止めない）、終わった日から候補に出す。
-   * 日ごとに覚え、データが変わったら捨てる
-   */
-  const careDays = useMemo(() => paletteAttentionDays(query, today), [query, today]);
-  const careMemo = useMemo(() => {
-    void data;
-    return new Map<string, Set<string>>();
-  }, [data]);
-  const [careTick, setCareTick] = useState(0);
-  const carePending = careDays.some((d) => !careMemo.has(d));
-  useEffect(() => {
-    const todo = careDays.filter((d) => !careMemo.has(d));
-    if (todo.length === 0) return;
-    let stop = false;
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const step = (i: number) => {
-      if (stop || i >= todo.length) return;
-      const date = todo[i]!;
-      if (!careMemo.has(date)) {
-        const visits = visitsOn(data, date);
-        const p = visits.some((x) => !x.cancelled) ? dayProblemOf(data, date) : null;
-        careMemo.set(date, new Set(p ? visitIssues(p, routesOf(p, visits), visits).keys() : []));
-        setCareTick((n) => n + 1);
-      }
-      timer = setTimeout(() => step(i + 1), 0);
-    };
-    timer = setTimeout(() => step(0), 0);
-    return () => {
-      stop = true;
-      if (timer) clearTimeout(timer);
-    };
-  }, [careDays, careMemo, data]);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: 検査が1日進む（careTick）たびに候補を作り直す
-  const careOf = useCallback((v: Visit): boolean => careMemo.get(v.date)?.has(v.id) ?? false, [careMemo, careTick]);
+  const { careOf, carePending } = useAttentionCare(data, query, today);
   const result = useMemo(() => {
     if (!vIndex) return base;
     const staffName = new Map(data.staff.map((s) => [s.id, s.name]));
@@ -144,87 +96,14 @@ export function CommandPalette({
   }, [base, vIndex, query, people, today, data, careOf]);
   const flat = result.flat;
   const at = flat.length === 0 ? -1 : Math.min(active, flat.length - 1);
-  const optionId = (i: number) => `${listId}-o${i}`;
+  const optionId = (i: number) => paletteOptionId(listId, i);
 
   useBodyScrollLock();
-  useEffect(() => {
-    const back = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const releaseInert = inertLock.lock(
-      Array.from(document.body.children).filter(
-        (el): el is HTMLElement => el instanceof HTMLElement && el !== wrapRef.current,
-      ),
-    );
-    inputRef.current?.focus();
-    // 捕捉の段で受け、右の欄・引き出しの Esc・Tab（document で受けている）に渡さない
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.key === 'Escape' && !e.isComposing) || isPaletteShortcut(e, IS_MAC)) {
-        e.preventDefault();
-        e.stopPropagation();
-        closeRef.current();
-        return;
-      }
-      if (e.key !== 'Tab' || !boxRef.current) return;
-      e.stopPropagation();
-      const list = [...boxRef.current.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
-        (el) => el.offsetParent !== null || el === document.activeElement,
-      );
-      const now = document.activeElement;
-      const to = trapTarget(list.length, now instanceof HTMLElement ? list.indexOf(now) : -1, e.shiftKey);
-      if (to === null) return;
-      e.preventDefault();
-      list[to]?.focus();
-    };
-    window.addEventListener('keydown', onKey, true);
-    return () => {
-      window.removeEventListener('keydown', onKey, true);
-      releaseInert();
-      // 開く前の要素が消えていたら（吹き出しの中から開いて、吹き出しが閉じたなど）上の帯の「探す」へ
-      // 開く前の要素が消えていたら、見えている「探す」（広い画面は上の帯、狭い画面は下のタブ）へ
-      const opener = [
-        ...document.querySelectorAll<HTMLElement>('[data-testid="cmdk-open"], [data-testid="bottom-search"]'),
-      ].find((el) => el.offsetParent !== null);
-      const to = back?.isConnected ? back : opener;
-      to?.focus({ preventScroll: true });
-    };
-  }, []);
+  usePaletteModal({ wrapRef, boxRef, inputRef, closeRef, isMac: IS_MAC });
 
-  // 選んでいる候補を見える所へ。先頭なら一番上まで、種類の先頭の候補なら見出しごと見せる（↓ で末尾から回ったときに見出しを隠さない）
-  useEffect(() => {
-    const list = listRef.current;
-    const el = at < 0 ? null : document.getElementById(optionId(at));
-    if (!list || !el) return;
-    if (at === 0) {
-      list.scrollTop = 0;
-      return;
-    }
-    el.scrollIntoView({ block: 'nearest' });
-    const title = el.previousElementSibling;
-    if (title instanceof HTMLElement && title.classList.contains('cmdk-group-title')) {
-      const top = title.getBoundingClientRect().top - list.getBoundingClientRect().top;
-      if (top < 0) list.scrollTop += top;
-    }
-  });
+  usePaletteScroll(listRef, at, optionId);
 
-  const openVisit = useOpenVisit();
-  const pick = async (it: PaletteItem | undefined) => {
-    if (!it) return;
-    onClose();
-    // 訪問・「訪問を追加」は画面を移らずに、今の画面の上で訪問の詳細の欄を開く（PRD D304）
-    if (it.visitId) {
-      openVisit({ visitId: it.visitId });
-      return;
-    }
-    if (it.op === 'visit-add') {
-      openVisit({ newVisit: { date: today } });
-      return;
-    }
-    // 確定していない下書きのある画面（条件の重み）から移るときは確かめる（PRD D286。断れば移らない）
-    if (it.to.split(/[?#]/)[0] !== pathname && !(await confirmLeave())) return;
-    if (it.date) setDate(it.date);
-    // 今の画面を選んだら閉じるだけ（URL のクエリ＝画面の状態を消さない。メニューと同じ）
-    if (it.to === pathname) return;
-    navigate(it.to);
-  };
+  const pick = usePalettePick(onClose, today);
 
   const onType = (v: string) => {
     setQuery(v);
@@ -239,118 +118,41 @@ export function CommandPalette({
         ? '見つかりません'
         : `${flat.length}件`;
 
-  let index = -1;
   return createPortal(
     <div ref={wrapRef} className="cmdk-wrap" data-testid="cmdk-wrap">
       {/* 背景を押すと閉じる（キーボードは Esc） */}
       <div className="cmdk-backdrop" aria-hidden="true" onClick={onClose} data-testid="cmdk-backdrop" />
       <div ref={boxRef} className="cmdk" role="dialog" aria-modal="true" aria-label="探す・移動" data-testid="cmdk">
-        <div className="cmdk-head">
-          <Search size={18} className="cmdk-head-icon" aria-hidden="true" />
-          <input
-            ref={inputRef}
-            type="text"
-            className="cmdk-input"
-            role="combobox"
-            aria-expanded={flat.length > 0}
-            aria-controls={listId}
-            aria-activedescendant={at >= 0 ? optionId(at) : undefined}
-            aria-autocomplete="list"
-            aria-label={`画面・操作・${terms.client}・${terms.staff}の名前・訪問（名前と日付）で探す`}
-            placeholder={`画面・操作・${terms.client}・${terms.staff}の名前`}
-            autoComplete="off"
-            spellCheck={false}
-            value={query}
-            onChange={(e) => onType(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.nativeEvent.isComposing) return;
-              if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-                e.preventDefault();
-                setActive(moveActive(at, flat.length, e.key === 'ArrowDown' ? 1 : -1));
-              } else if (e.key === 'Enter') {
-                e.preventDefault();
-                void pick(flat[at]);
-              }
-            }}
-            data-testid="cmdk-input"
-          />
-          <button type="button" className="icon-btn cmdk-close" aria-label="閉じる" onClick={onClose}>
-            <X size={18} aria-hidden="true" />
-          </button>
-        </div>
+        <PaletteHead
+          terms={terms}
+          inputRef={inputRef}
+          listId={listId}
+          query={query}
+          expanded={flat.length > 0}
+          activeId={at >= 0 ? optionId(at) : undefined}
+          onType={onType}
+          onMove={(step) => setActive(moveActive(at, flat.length, step))}
+          onEnter={() => void pick(flat[at])}
+          onClose={onClose}
+        />
         <div ref={listRef} id={listId} className="cmdk-list" role="listbox" aria-label="候補" data-testid="cmdk-list">
-          {result.groups.map((g) => {
-            const headId = `${listId}-g-${g.kind}`;
-            return (
-              // biome-ignore lint/a11y/useSemanticElements: listbox の中のまとまり（fieldset は listbox の子にできない）
-              <div key={g.kind} role="group" aria-labelledby={headId} className="cmdk-group" data-kind={g.kind}>
-                <div id={headId} role="presentation" className="cmdk-group-title">
-                  {paletteKindLabel(g.kind, terms)}
-                </div>
-                {g.items.map((it) => {
-                  index++;
-                  const i = index;
-                  return (
-                    // biome-ignore lint/a11y/useKeyWithClickEvents: キーボードは入力欄の↑↓・Enter で選ぶ（combobox。フォーカスは入力欄のまま）
-                    <div
-                      key={it.id}
-                      id={optionId(i)}
-                      role="option"
-                      tabIndex={-1}
-                      aria-selected={i === at}
-                      className={i === at ? 'cmdk-option is-active' : 'cmdk-option'}
-                      // 押してもフォーカスは入力欄のまま
-                      onMouseDown={(e) => e.preventDefault()}
-                      onMouseMove={() => {
-                        if (i !== at) setActive(i);
-                      }}
-                      onClick={() => void pick(it)}
-                      data-testid="cmdk-option"
-                      data-kind={it.kind}
-                      data-to={it.to}
-                      data-visit={it.visitId}
-                    >
-                      {/* 〈スタッフ〉は印を添える（PRD D298。飾りなので読み上げない） */}
-                      {it.kind === 'staff' && <StaffMarkById id={it.id.slice('staff:'.length)} size="xs" />}
-                      <span className="cmdk-option-label">{it.label}</span>
-                      {it.hint && <span className="cmdk-option-hint">{it.hint}</span>}
-                      {i === at && <CornerDownLeft size={14} className="cmdk-option-enter" aria-hidden="true" />}
-                    </div>
-                  );
-                })}
-                {g.rest > 0 && (
-                  // 読み上げは件数の知らせで足りるので、ここは目で見る補足だけ
-                  <div className="cmdk-rest" aria-hidden="true" data-testid="cmdk-rest">
-                    ほか {g.rest}人（続けて打つと絞り込めます）
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          <PaletteGroups
+            groups={result.groups}
+            listId={listId}
+            terms={terms}
+            at={at}
+            onHover={setActive}
+            onPick={(it) => void pick(it)}
+          />
         </div>
-        {carePending && (
-          <p className="cmdk-empty" data-testid="cmdk-care-pending">
-            要対応の訪問を調べています…（見つかった日から出します）
-          </p>
-        )}
-        {flat.length === 0 && !carePending && (
-          <p className="cmdk-empty" data-testid="cmdk-empty">
-            見つかりません。画面の名前・操作・{terms.client}のよみ・{terms.staff}の名前・訪問（「名前
-            10/28」「担当なし」「要対応」）で探せます
-          </p>
-        )}
-        <p className="cmdk-foot" aria-hidden="true">
-          <kbd>↑</kbd>
-          <kbd>↓</kbd> で選ぶ・<kbd>Enter</kbd> で開く・<kbd>Esc</kbd> で閉じる
-          {query === '' && (
-            <span>
-              ・名前を打つと{terms.client}・{terms.staff}も出ます
-            </span>
-          )}
-        </p>
-        <p id={statusId} className="sr-only" aria-live="polite" data-testid="cmdk-status">
-          {status}
-        </p>
+        <PaletteFoot
+          terms={terms}
+          carePending={carePending}
+          empty={flat.length === 0}
+          query={query}
+          statusId={statusId}
+          status={status}
+        />
       </div>
     </div>,
     document.body,

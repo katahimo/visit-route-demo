@@ -5,6 +5,10 @@ import {
   defaultStaffOf,
   matchClient,
   normalizeKana,
+  pickerBase,
+  pickerEmptyText,
+  pickerKeyAction,
+  pushRecent,
   searchClients,
   staffClientMap,
 } from './search';
@@ -108,5 +112,75 @@ describe('defaultStaffOf（月間の「〈スタッフ〉が担当する人」�
 describe('countAmong', () => {
   it('候補にいる人だけ数える（休止中で候補にいない人は数えない）', () => {
     expect(countAmong(new Set(['c1', 'c2', 'c9']), [{ id: 'c1' }, { id: 'c2' }, { id: 'c3' }])).toBe(2);
+  });
+});
+
+describe('pickerBase', () => {
+  const clients = [{ id: 'a', tentative: false }, { id: 'b', tentative: true }, { id: 'c' }];
+  const byId = new Map(clients.map((c) => [c.id, c]));
+  const src = { period: new Set(['a', 'c']), staffSet: new Set(['b']), recent: ['c', 'x', 'a'], byId };
+  it('近道なしは全員', () => {
+    expect(pickerBase(null, clients, src)).toEqual(clients);
+  });
+  it('期間・担当・最近・仮押さえで絞る', () => {
+    expect(pickerBase('period', clients, src).map((c) => c.id)).toEqual(['a', 'c']);
+    expect(pickerBase('staff', clients, src).map((c) => c.id)).toEqual(['b']);
+    expect(pickerBase('recent', clients, src).map((c) => c.id)).toEqual(['c', 'a']);
+    expect(pickerBase('tentative', clients, src).map((c) => c.id)).toEqual(['b']);
+  });
+  it('期間を渡さない・担当が無いときの扱い', () => {
+    expect(pickerBase('period', clients, { ...src, period: undefined })).toEqual(clients);
+    expect(pickerBase('staff', clients, { ...src, staffSet: null })).toEqual([]);
+  });
+});
+
+describe('pickerEmptyText', () => {
+  it('近道で絞って0人なら理由を返す', () => {
+    expect(pickerEmptyText('', 'recent', {})).toBe('まだ選んだ人がいません');
+    expect(pickerEmptyText('', 'staff', { staffName: '佐藤' })).toBe('佐藤さんが担当する人はいません');
+    expect(pickerEmptyText('', 'period', { periodLabel: 'この週' })).toBe('この週に訪問がある人はいません');
+  });
+  it('文字を打っているとき・情報が無いときは「見つかりません」', () => {
+    expect(pickerEmptyText('あ', 'recent', {})).toBe('見つかりません');
+    expect(pickerEmptyText('', 'staff', {})).toBe('見つかりません');
+    expect(pickerEmptyText('', null, {})).toBe('見つかりません');
+  });
+});
+
+describe('pushRecent', () => {
+  it('先頭に足し、重複は新しい方へ寄せ、上限で切る', () => {
+    expect(pushRecent(['a', 'b'], ['c'], 10)).toEqual(['c', 'a', 'b']);
+    expect(pushRecent(['a', 'b', 'c'], ['b'], 10)).toEqual(['b', 'a', 'c']);
+    expect(pushRecent(['a', 'b'], ['c', 'd'], 3)).toEqual(['c', 'd', 'a']);
+  });
+});
+
+describe('pickerKeyAction', () => {
+  const st = { open: true, optionCount: 3, hasActive: true, hasQuery: false, multiple: false, hasSelected: false };
+  const k = (key: string, state = st, composing = false) => pickerKeyAction({ key, composing }, state);
+  it('変換中は何もしない', () => {
+    expect(k('Enter', st, true)).toEqual({ type: 'none' });
+  });
+  it('↓↑：閉じていれば開く、候補が無ければ何もしない、あれば移る', () => {
+    expect(k('ArrowDown', { ...st, open: false })).toEqual({ type: 'open', prevent: true });
+    expect(k('ArrowUp', { ...st, optionCount: 0 })).toEqual({ type: 'none' });
+    expect(k('ArrowDown')).toEqual({ type: 'move', step: 1, prevent: true });
+    expect(k('ArrowUp')).toEqual({ type: 'move', step: -1, prevent: true });
+  });
+  it('Enter：開いていて指す候補があるときだけ選ぶ', () => {
+    expect(k('Enter')).toEqual({ type: 'choose', prevent: true });
+    expect(k('Enter', { ...st, open: false })).toEqual({ type: 'none' });
+    expect(k('Enter', { ...st, hasActive: false })).toEqual({ type: 'none' });
+  });
+  it('Esc：開いていれば閉じ、閉じていて文字があれば消す', () => {
+    expect(k('Escape')).toEqual({ type: 'close', prevent: true });
+    expect(k('Escape', { ...st, open: false, hasQuery: true })).toEqual({ type: 'clearQuery', prevent: true });
+    expect(k('Escape', { ...st, open: false })).toEqual({ type: 'none' });
+  });
+  it('Backspace：文字が空で複数のとき最後の人を外す（既定の動きは止めない）', () => {
+    const multi = { ...st, multiple: true, hasSelected: true };
+    expect(k('Backspace', multi)).toEqual({ type: 'unselectLast', prevent: false });
+    expect(k('Backspace', { ...multi, hasQuery: true })).toEqual({ type: 'none' });
+    expect(k('Backspace', st)).toEqual({ type: 'none' });
   });
 });

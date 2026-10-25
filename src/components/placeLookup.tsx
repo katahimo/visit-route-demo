@@ -1,30 +1,23 @@
 import { MapPin, Search, Undo2 } from 'lucide-react';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useId, useRef } from 'react';
 import type { ClientPlace, Place } from '../contracts/documents';
 import {
   addressBlockReason,
-  applyFoundAddress,
-  busyStatus,
   type CandidateItem,
   canUndoAddress,
-  failStatus,
   geoCandidates,
-  type LookupBusy,
-  type LookupStatus,
-  nextUndoAddress,
-  pinStatus,
   postalBlockReason,
   postalCandidates,
   postalInputError,
-  sameQuery,
   statusClass,
 } from '../lib/addressLookup';
 import { hasLocation } from '../lib/common';
-import { EXTERNAL_NOTICE, type GeoHit, lookupPostalCode, type PostalHit, searchAddress } from '../lib/geocode';
+import { EXTERNAL_NOTICE } from '../lib/geocode';
 import { normalizePostalCode } from '../lib/postalCode';
 import { FieldError } from './FieldError';
 import { PlacePin } from './parts';
 import { WithIcon } from './ui';
+import { useAddressLookup } from './useAddressLookup';
 import { useFeature } from './useFeature';
 import './placeLookup.css';
 
@@ -60,44 +53,21 @@ export function AddressField<T extends Place>({
   postalLabel = '郵便番号（任意）',
   noticeNote = '（押したときだけ。名前などほかの項目は送りません）',
 }: AddressFieldProps<T>) {
-  const [ownPostal, setOwnPostal] = useState('');
-  const postalText = postalCode ?? ownPostal;
-  const [busy, setBusyState] = useState<LookupBusy>(null);
-  // 連打しても1回だけ呼ぶ（描き直しを待たずに止める）
-  const busyRef = useRef<LookupBusy>(null);
-  const setBusy = (b: LookupBusy) => {
-    busyRef.current = b;
-    setBusyState(b);
-  };
-  const [status, setStatus] = useState<LookupStatus>(null);
-  const [postalHits, setPostalHits] = useState<PostalHit[]>([]);
-  const [geoHits, setGeoHits] = useState<GeoHit[]>([]);
-  /**
-   * 住所を探して最初に置き換える前の住所（「元に戻す」の先）。候補を選び直しても上書きせず、新しく「住所を探す」を押したときだけ消す。
-   * '' は空から入れた（戻す先が空なので「元に戻す」は出さない）
-   */
-  const [undoAddress, setUndoAddress] = useState<string | null>(null);
-  // 待っている間に入力・画面が変わっても最新の値と書き先に書く（描いたときの値に頼らない）
-  const latest = useRef(value);
-  latest.current = value;
-  const latestPostal = useRef(postalText);
-  latestPostal.current = postalText;
-  const emit = useRef(onChange);
-  emit.current = onChange;
-  const emitPostal = useRef(onPostalCodeChange);
-  emitPostal.current = onPostalCodeChange;
-  const put = (p: T) => {
-    latest.current = p;
-    emit.current(p);
-  };
-  const setPostal = (code: string) => {
-    latestPostal.current = code;
-    if (postalCode === undefined) setOwnPostal(code);
-    emitPostal.current?.(code);
-  };
-  const ctrl = useRef<AbortController | null>(null);
-  // 欄を閉じたら呼び出しを止める
-  useEffect(() => () => ctrl.current?.abort(), []);
+  const {
+    postalText,
+    busy,
+    status,
+    postalHits,
+    geoHits,
+    undoAddress,
+    cancel,
+    setPostal,
+    putAddress,
+    putPin,
+    findAddress,
+    findPin,
+    undo,
+  } = useAddressLookup({ value, onChange, postalCode, onPostalCodeChange });
   const ids = useId();
   const postalErrorId = `${ids}-postal-error`;
   const postalWhyId = `${ids}-postal-why`;
@@ -112,128 +82,26 @@ export function AddressField<T extends Place>({
   const addressWhy = addressBlockReason(value.address, busy);
   const postalError = postalInputError(postalText);
 
-  /** 欄を書き換えたら、探している途中の呼び出しを止める（古い応答で上書きしない） */
-  const cancel = () => {
-    if (!busyRef.current) return;
-    ctrl.current?.abort();
-    ctrl.current = null;
-    setBusy(null);
-    setStatus(null);
-  };
-
-  const begin = (what: 'postal' | 'address') => {
-    ctrl.current?.abort();
-    ctrl.current = new AbortController();
-    setBusy(what);
-    setStatus(busyStatus(what));
-    return ctrl.current.signal;
-  };
-
-  /** 見つけた住所を入れる。いまの住所が見つけた住所で始まるなら（番地まで書いてあれば）そのまま。ピンは消さない */
-  const putAddress = (found: string) => {
-    const r = applyFoundAddress(latest.current.address, found, hasLocation(latest.current));
-    if (r.replace) {
-      const before = latest.current.address;
-      setUndoAddress((prev) => nextUndoAddress(prev, before));
-      put({ ...latest.current, address: r.address });
-    }
-    setStatus(r.status);
-  };
-
-  const putPin = (hit: GeoHit) => {
-    put({ ...latest.current, lat: hit.lat, lng: hit.lng });
-    setStatus(pinStatus(hit));
-  };
-
-  const findAddress = async () => {
-    const sent = normalizePostalCode(latestPostal.current);
-    if (busyRef.current || !sent) return;
-    const signal = begin('postal');
-    setPostalHits([]);
-    setUndoAddress(null);
-    const r = await lookupPostalCode(sent, { signal });
-    if (signal.aborted) return;
-    setBusy(null);
-    // 念のため：待っている間に郵便番号が変わっていたら使わない
-    if (!sameQuery('postal', sent, latestPostal.current)) {
-      setStatus(null);
-      return;
-    }
-    if (!r.ok) {
-      setStatus(failStatus(r.reason, 'postal'));
-      return;
-    }
-    // 郵便番号は7桁に直して残す
-    if (latestPostal.current !== sent) setPostal(sent);
-    putAddress(r.hits[0].address);
-    setPostalHits(r.hits.length > 1 ? r.hits : []);
-  };
-
-  const findPin = async () => {
-    const sent = latest.current.address.trim();
-    if (busyRef.current || sent === '') return;
-    const signal = begin('address');
-    setGeoHits([]);
-    const r = await searchAddress(sent, { signal });
-    if (signal.aborted) return;
-    setBusy(null);
-    // 念のため：待っている間に住所が変わっていたら使わない
-    if (!sameQuery('address', sent, latest.current.address)) {
-      setStatus(null);
-      return;
-    }
-    if (!r.ok) {
-      setStatus(failStatus(r.reason, 'address'));
-      return;
-    }
-    putPin(r.hits[0]);
-    setGeoHits(r.hits.length > 1 ? r.hits : []);
-  };
-
   return (
     <div className="stack place-lookup" data-testid={`${testId}-place`}>
-      <div className="place-lookup-row">
-        <label className="place-postal">
-          {postalLabel}
-          <input
-            value={postalText}
-            maxLength={16}
-            inputMode="numeric"
-            placeholder="例：980-0811"
-            aria-invalid={postalError || undefined}
-            aria-describedby={postalError ? postalErrorId : undefined}
-            onChange={(e) => {
-              cancel();
-              setPostal(e.target.value);
-            }}
-            onBlur={() => {
-              // 7桁にできるなら直して見せる（できなければそのまま。保存のときに止める）
-              if (postal && postal !== postalText) setPostal(postal);
-            }}
-            data-testid={`${testId}-postal`}
-          />
-        </label>
-        {geocodeOn && (
-          <button
-            type="button"
-            className="btn btn-small"
-            aria-disabled={postalWhy ? true : undefined}
-            aria-describedby={postalWhy ? postalWhyId : undefined}
-            title={postalWhy ?? '郵便番号から住所（都道府県・市区町村・町名）を探して入れます'}
-            onClick={() => void findAddress()}
-            data-testid={`${testId}-postal-search`}
-          >
-            <WithIcon icon={Search} size={14}>
-              住所を探す
-            </WithIcon>
-          </button>
-        )}
-        {geocodeOn && postalWhy && (
-          <span id={postalWhyId} className="sr-only">
-            {postalWhy}
-          </span>
-        )}
-      </div>
+      <PostalRow
+        testId={testId}
+        label={postalLabel}
+        text={postalText}
+        why={postalWhy}
+        error={postalError}
+        geocodeOn={geocodeOn}
+        ids={{ error: postalErrorId, why: postalWhyId }}
+        onInput={(code) => {
+          cancel();
+          setPostal(code);
+        }}
+        onBlur={() => {
+          // 7桁にできるなら直して見せる（できなければそのまま。保存のときに止める）
+          if (postal && postal !== postalText) setPostal(postal);
+        }}
+        onSearch={() => void findAddress()}
+      />
       <FieldError as="span" id={postalErrorId} live={false} testId={`${testId}-postal-error`}>
         {postalError && '郵便番号は7桁の数字で入れてください（ハイフンは有っても無くても構いません）'}
       </FieldError>
@@ -258,42 +126,15 @@ export function AddressField<T extends Place>({
         />
       </label>
       {geocodeOn && (
-        <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
-          <button
-            type="button"
-            className="btn btn-small"
-            aria-disabled={addressWhy ? true : undefined}
-            aria-describedby={addressWhy ? addressWhyId : undefined}
-            title={addressWhy ?? '住所から位置を探して、地図にピンを置きます'}
-            onClick={() => void findPin()}
-            data-testid={`${testId}-geo-search`}
-          >
-            <WithIcon icon={MapPin} size={14}>
-              {hasLocation(value) ? '住所から置き直す' : '地図に置く'}
-            </WithIcon>
-          </button>
-          {addressWhy && (
-            <span id={addressWhyId} className="sr-only">
-              {addressWhy}
-            </span>
-          )}
-          {canUndoAddress(undoAddress) && (
-            <button
-              type="button"
-              className="btn btn-small"
-              onClick={() => {
-                put({ ...latest.current, address: undoAddress });
-                setUndoAddress(null);
-                setStatus(null);
-              }}
-              data-testid={`${testId}-address-undo`}
-            >
-              <WithIcon icon={Undo2} size={14}>
-                住所を元に戻す
-              </WithIcon>
-            </button>
-          )}
-        </div>
+        <PinActions
+          testId={testId}
+          why={addressWhy}
+          whyId={addressWhyId}
+          placed={hasLocation(value)}
+          undoAddress={undoAddress}
+          onSearch={() => void findPin()}
+          onUndo={undo}
+        />
       )}
       {geocodeOn && (
         <span className="sub place-notice" data-testid={tid('notice', 'place-notice')}>
@@ -320,6 +161,124 @@ export function AddressField<T extends Place>({
           onChange(p);
         }}
       />
+    </div>
+  );
+}
+
+/** 郵便番号の欄と「住所を探す」ボタン（検索を切っていればボタン・理由は出さない） */
+function PostalRow({
+  testId,
+  label,
+  text,
+  why,
+  error,
+  geocodeOn,
+  ids,
+  onInput,
+  onBlur,
+  onSearch,
+}: {
+  testId: AddressFieldId;
+  label: string;
+  text: string;
+  why: string | null;
+  error: boolean;
+  geocodeOn: boolean;
+  ids: { error: string; why: string };
+  onInput: (code: string) => void;
+  onBlur: () => void;
+  onSearch: () => void;
+}) {
+  return (
+    <div className="place-lookup-row">
+      <label className="place-postal">
+        {label}
+        <input
+          value={text}
+          maxLength={16}
+          inputMode="numeric"
+          placeholder="例：980-0811"
+          aria-invalid={error || undefined}
+          aria-describedby={error ? ids.error : undefined}
+          onChange={(e) => onInput(e.target.value)}
+          onBlur={onBlur}
+          data-testid={`${testId}-postal`}
+        />
+      </label>
+      {geocodeOn && (
+        <button
+          type="button"
+          className="btn btn-small"
+          aria-disabled={why ? true : undefined}
+          aria-describedby={why ? ids.why : undefined}
+          title={why ?? '郵便番号から住所（都道府県・市区町村・町名）を探して入れます'}
+          onClick={onSearch}
+          data-testid={`${testId}-postal-search`}
+        >
+          <WithIcon icon={Search} size={14}>
+            住所を探す
+          </WithIcon>
+        </button>
+      )}
+      {geocodeOn && why && (
+        <span id={ids.why} className="sr-only">
+          {why}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/** 「地図に置く」と「住所を元に戻す」のボタン */
+function PinActions({
+  testId,
+  why,
+  whyId,
+  placed,
+  undoAddress,
+  onSearch,
+  onUndo,
+}: {
+  testId: AddressFieldId;
+  why: string | null;
+  whyId: string;
+  placed: boolean;
+  undoAddress: string | null;
+  onSearch: () => void;
+  onUndo: (before: string) => void;
+}) {
+  return (
+    <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
+      <button
+        type="button"
+        className="btn btn-small"
+        aria-disabled={why ? true : undefined}
+        aria-describedby={why ? whyId : undefined}
+        title={why ?? '住所から位置を探して、地図にピンを置きます'}
+        onClick={onSearch}
+        data-testid={`${testId}-geo-search`}
+      >
+        <WithIcon icon={MapPin} size={14}>
+          {placed ? '住所から置き直す' : '地図に置く'}
+        </WithIcon>
+      </button>
+      {why && (
+        <span id={whyId} className="sr-only">
+          {why}
+        </span>
+      )}
+      {canUndoAddress(undoAddress) && (
+        <button
+          type="button"
+          className="btn btn-small"
+          onClick={() => onUndo(undoAddress)}
+          data-testid={`${testId}-address-undo`}
+        >
+          <WithIcon icon={Undo2} size={14}>
+            住所を元に戻す
+          </WithIcon>
+        </button>
+      )}
     </div>
   );
 }
