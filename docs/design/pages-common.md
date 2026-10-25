@@ -119,7 +119,7 @@
 
 #### 札の3段と入れ物（PRD D342。ADR-0057）
 
-- 訪問の札は3段の大きさ（`ChipSize`＝`l`・`m`・`s`。札の要素に `data-size`）。印（`VisitMarks`・`data-marks`）・選ぶ（`useVisitItem`）・キー（`useVisitKeys`）・ドラッグ（`useVisitDrag`）・全体の元に戻すは3段とも同じ
+- 訪問の札は3段の大きさ（`l`・`m`・`s`。札の要素に `data-size`）。印（`VisitMarks`・`data-marks`）・選ぶ（`useVisitItem`）・キー（`useVisitKeys`）・ドラッグ（`useVisitDrag`）・全体の元に戻すは3段とも同じ
 
 | 大きさ | 札 | 使う所 |
 |---|---|---|
@@ -332,7 +332,7 @@
 - `placeParam`：座標があれば「緯度,経度」、無ければ住所の文字、無ければ null
 - `directionsHref`：origin を null にすると出発地を書かない（今いる場所から）
 - `dayStops`（自宅→訪問…→自宅）・`legLinks`（区間ごと）・`tripLinks`（全行程。経由地の上限・URL の長さで分ける）
-- `MAPS_TRAVEL_MODE`・`MAPS_MOBILE_WAYPOINTS`（3。既定）・`MAPS_MAX_WAYPOINTS`（9）・`MAPS_URL_LIMIT`（2048）・`BICYCLE_NOTE`
+- `MAPS_TRAVEL_MODE`（中だけ）・`MAPS_MOBILE_WAYPOINTS`（3。既定。PC・アプリなら 9 まで入るが今は使わない）・`MAPS_URL_LIMIT`（2048）・`BICYCLE_NOTE`
 
 #### `components/mapsLinks.tsx`
 

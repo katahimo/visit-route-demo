@@ -20,10 +20,9 @@ const MAPS_TRAVEL_MODE: Record<TravelMode, 'driving' | 'walking' | 'bicycling' |
  * 1本のリンクに入れる経由地（waypoints）の数の上限。根拠：Maps URLs の説明（Google の公開の文書 developers.google.com/maps/documentation/urls/get-started
  * の Directions action の waypoints）に「経由地の数は開く先で変わり、スマホのブラウザは3件まで、それ以外は9件まで」とある。
  * スマホのブラウザで開くと4件目以降が黙って抜けるので、既定（スタッフ画面・メール）はスマホのブラウザに合わせて 3（MAPS_MOBILE_WAYPOINTS）。
- * 9（MAPS_MAX_WAYPOINTS）は PC・アプリで開くと分かっている場面のための上限（今は使っていない）
+ * PC・アプリで開くと分かっている場面なら 9 まで入れられる（今はその場面が無いので定数を置かない）
  */
 export const MAPS_MOBILE_WAYPOINTS = 3;
-const MAPS_MAX_WAYPOINTS = 9;
 /** URL の長さの上限（同じ文書。Maps URLs は 2,048 字まで）。住所の文字の経由地が多く超えるときも分ける */
 export const MAPS_URL_LIMIT = 2048;
 
