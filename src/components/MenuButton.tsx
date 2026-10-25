@@ -1,6 +1,15 @@
 import type { LucideIcon } from 'lucide-react';
 import { ChevronDown } from 'lucide-react';
-import { type KeyboardEvent, type ReactNode, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import {
+  type KeyboardEvent,
+  type MutableRefObject,
+  type ReactNode,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import './menuButton.css';
 
 /** メニューの項目。disabled に文字を渡すと押せない理由（title）にする */
@@ -170,79 +179,7 @@ export function MenuButton({
           data-testid={testId ? `${testId}-list` : undefined}
           onKeyDown={onMenuKey}
         >
-          {groupsOf(items).map((g) => {
-            const rows = g.items.map(({ item, i }) => {
-              const why = typeof item.disabled === 'string' ? item.disabled : undefined;
-              const whyId = `${menuId}-why-${item.key}`;
-              const labelId = `${menuId}-label-${item.key}`;
-              const noteId = `${menuId}-note-${item.key}`;
-              const descId = `${menuId}-desc-${item.key}`;
-              const ItemIcon = item.icon;
-              const hasDesc = item.description !== undefined;
-              const hasNote = item.note !== undefined;
-              return (
-                <div
-                  key={item.key}
-                  role="none"
-                  className={!g.heading && item.separatorBefore && i > 0 ? 'menu-sep' : undefined}
-                >
-                  <button
-                    ref={(el) => {
-                      itemRefs.current[i] = el;
-                    }}
-                    type="button"
-                    role="menuitem"
-                    tabIndex={-1}
-                    className={`menu-item${item.current ? ' is-current' : ''}${hasDesc ? ' has-desc' : ''}`}
-                    aria-disabled={item.disabled ? true : undefined}
-                    aria-current={item.current ? 'true' : undefined}
-                    title={why}
-                    aria-labelledby={hasDesc ? `${labelId}${hasNote ? ` ${noteId}` : ''}` : undefined}
-                    aria-describedby={hasDesc ? descId : why ? whyId : undefined}
-                    data-testid={item.testId}
-                    data-key={item.key}
-                    onClick={() => choose(item)}
-                  >
-                    <span className="menu-item-icon" aria-hidden="true">
-                      {ItemIcon && <ItemIcon size={15} strokeWidth={2.2} />}
-                    </span>
-                    <span className="menu-item-main">
-                      <span className="menu-item-head">
-                        <span id={labelId} className="menu-item-label">
-                          {item.label}
-                        </span>
-                        {hasNote && (
-                          <span id={noteId} className="menu-item-note">
-                            {item.note}
-                          </span>
-                        )}
-                      </span>
-                      {hasDesc && (
-                        <span id={descId} className={`menu-item-desc${why ? ' is-why' : ''}`}>
-                          {why ?? item.description}
-                        </span>
-                      )}
-                    </span>
-                    {why && !hasDesc && (
-                      <span id={whyId} hidden>
-                        {why}
-                      </span>
-                    )}
-                  </button>
-                </div>
-              );
-            });
-            if (!g.heading) return rows;
-            return (
-              // biome-ignore lint/a11y/useSemanticElements: メニューの中のまとまりは WAI-ARIA の menu の group（fieldset は使わない）
-              <div key={`group-${g.items[0]?.item.key}`} role="group" aria-label={g.heading} className="menu-group">
-                <div className="menu-heading" aria-hidden="true">
-                  {g.heading}
-                </div>
-                {rows}
-              </div>
-            );
-          })}
+          <MenuGroups items={items} menuId={menuId} itemRefs={itemRefs} onChoose={choose} />
         </div>
       )}
     </div>
@@ -258,4 +195,115 @@ function groupsOf(items: MenuItem[]): { heading?: string; items: { item: MenuIte
     else last.items.push({ item, i });
   });
   return out;
+}
+
+/** 一覧の中身（group ごとのまとまりと、各項目の行） */
+function MenuGroups({
+  items,
+  menuId,
+  itemRefs,
+  onChoose,
+}: {
+  items: MenuItem[];
+  menuId: string;
+  itemRefs: MutableRefObject<(HTMLButtonElement | null)[]>;
+  onChoose: (item: MenuItem) => void;
+}) {
+  return (
+    <>
+      {groupsOf(items).map((g) => {
+        const rows = g.items.map(({ item, i }) => (
+          <MenuItemRow
+            key={item.key}
+            item={item}
+            menuId={menuId}
+            bare={!g.heading && !!item.separatorBefore && i > 0}
+            buttonRef={(el) => {
+              itemRefs.current[i] = el;
+            }}
+            onChoose={onChoose}
+          />
+        ));
+        if (!g.heading) return rows;
+        return (
+          // biome-ignore lint/a11y/useSemanticElements: メニューの中のまとまりは WAI-ARIA の menu の group（fieldset は使わない）
+          <div key={`group-${g.items[0]?.item.key}`} role="group" aria-label={g.heading} className="menu-group">
+            <div className="menu-heading" aria-hidden="true">
+              {g.heading}
+            </div>
+            {rows}
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
+/** 項目1つの行。bare は「前に区切りの線を入れる」（menu-sep） */
+function MenuItemRow({
+  item,
+  menuId,
+  bare,
+  buttonRef,
+  onChoose,
+}: {
+  item: MenuItem;
+  menuId: string;
+  bare: boolean;
+  buttonRef: (el: HTMLButtonElement | null) => void;
+  onChoose: (item: MenuItem) => void;
+}) {
+  const why = typeof item.disabled === 'string' ? item.disabled : undefined;
+  const whyId = `${menuId}-why-${item.key}`;
+  const labelId = `${menuId}-label-${item.key}`;
+  const noteId = `${menuId}-note-${item.key}`;
+  const descId = `${menuId}-desc-${item.key}`;
+  const ItemIcon = item.icon;
+  const hasDesc = item.description !== undefined;
+  const hasNote = item.note !== undefined;
+  return (
+    <div role="none" className={bare ? 'menu-sep' : undefined}>
+      <button
+        ref={buttonRef}
+        type="button"
+        role="menuitem"
+        tabIndex={-1}
+        className={`menu-item${item.current ? ' is-current' : ''}${hasDesc ? ' has-desc' : ''}`}
+        aria-disabled={item.disabled ? true : undefined}
+        aria-current={item.current ? 'true' : undefined}
+        title={why}
+        aria-labelledby={hasDesc ? `${labelId}${hasNote ? ` ${noteId}` : ''}` : undefined}
+        aria-describedby={hasDesc ? descId : why ? whyId : undefined}
+        data-testid={item.testId}
+        data-key={item.key}
+        onClick={() => onChoose(item)}
+      >
+        <span className="menu-item-icon" aria-hidden="true">
+          {ItemIcon && <ItemIcon size={15} strokeWidth={2.2} />}
+        </span>
+        <span className="menu-item-main">
+          <span className="menu-item-head">
+            <span id={labelId} className="menu-item-label">
+              {item.label}
+            </span>
+            {hasNote && (
+              <span id={noteId} className="menu-item-note">
+                {item.note}
+              </span>
+            )}
+          </span>
+          {hasDesc && (
+            <span id={descId} className={`menu-item-desc${why ? ' is-why' : ''}`}>
+              {why ?? item.description}
+            </span>
+          )}
+        </span>
+        {why && !hasDesc && (
+          <span id={whyId} hidden>
+            {why}
+          </span>
+        )}
+      </button>
+    </div>
+  );
 }
