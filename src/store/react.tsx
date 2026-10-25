@@ -75,7 +75,8 @@ export type DemoStore = {
 
 const Ctx = createContext<DemoStore | null>(null);
 
-export function DemoDataProvider({ children }: { children: ReactNode }): ReactNode {
+/** DemoDataProvider の状態（データ・保存の失敗・控え・知らせのきっかけの回数） */
+function useStoreState() {
   const [initial] = useState(() => loadWithStatus());
   const [data, setData] = useState<DemoData>(initial.data);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -94,6 +95,32 @@ export function DemoDataProvider({ children }: { children: ReactNode }): ReactNo
   const skipSave = useRef(true);
   const latest = useRef(data);
   latest.current = data;
+  return {
+    initial,
+    data,
+    setData,
+    saveError,
+    setSaveError,
+    previous,
+    setPrevious,
+    broken,
+    setBroken,
+    externalReloads,
+    setExternalReloads,
+    replacedCount,
+    replaced,
+    previousDrops,
+    setPreviousDrops,
+    skipSave,
+    latest,
+  };
+}
+
+type StoreState = ReturnType<typeof useStoreState>;
+
+/** データが変わったら保存し、別のタブの変更を読み直し、ページを離れるときに保存を書き切る */
+function useStorageSync(st: StoreState): void {
+  const { data, setData, setSaveError, setPrevious, setPreviousDrops, setExternalReloads, replaced, skipSave } = st;
   useEffect(() => {
     // 例外の画面の控えは、画面が使っている最新のデータを書き出す（別のタブから読み直したデータも）
     rememberCurrent(data);
@@ -109,7 +136,7 @@ export function DemoDataProvider({ children }: { children: ReactNode }): ReactNo
         setPreviousDrops((n) => n + 1);
       }
     });
-  }, [data, setPrevious]);
+  }, [data, setPrevious, skipSave, setSaveError, setPreviousDrops]);
 
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
@@ -134,41 +161,56 @@ export function DemoDataProvider({ children }: { children: ReactNode }): ReactNo
       window.removeEventListener('storage', onStorage);
       window.removeEventListener('pagehide', onUnload);
     };
-  }, [setPrevious, replaced]);
+  }, [setPrevious, replaced, skipSave, setData, setExternalReloads]);
+}
 
-  // ---- 全体の「元に戻す」の履歴（PRD D329。ADR-0054）----
+/** 書き換え・元に戻す・やり直す（全体の「元に戻す」の履歴。PRD D329。ADR-0054） */
+function useHistoryActions(st: StoreState) {
+  const { setData, latest } = st;
   // update の1回を1手として積む（更新の関数の中で前後を積む。StrictMode で関数が2回呼ばれても、同じ update の印 token で1手）。
   // 戻す・やり直す・丸ごと差し替えは update を通らないので積まない
   // 開いたときの履歴は空（前のページの手は持ち越さない）
   useEffect(() => () => appHistory.clear(), []);
 
-  const update = useCallback((fn: (d: DemoData) => DemoData, label?: string, opts?: UpdateOptions) => {
-    const token = {};
-    const keep = opts?.history !== false;
-    if (!keep) appHistory.clear();
-    setData((d) => {
-      const n = fn(d);
-      if (keep) appHistory.record(d, n, label, token, opts?.group);
-      return n;
-    });
-  }, []);
+  const update = useCallback(
+    (fn: (d: DemoData) => DemoData, label?: string, opts?: UpdateOptions) => {
+      const token = {};
+      const keep = opts?.history !== false;
+      if (!keep) appHistory.clear();
+      setData((d) => {
+        const n = fn(d);
+        if (keep) appHistory.record(d, n, label, token, opts?.group);
+        return n;
+      });
+    },
+    [setData],
+  );
   const undo = useCallback((): string | null => {
     const r = appHistory.undo(latest.current);
     if (!r) return null;
     setData(r.data);
     return r.label;
-  }, []);
+  }, [latest, setData]);
   const redo = useCallback((): string | null => {
     const r = appHistory.redo(latest.current);
     if (!r) return null;
     setData(r.data);
     return r.label;
-  }, []);
+  }, [latest, setData]);
+  return { update, undo, redo };
+}
+
+/** 丸ごと差し替える操作（読み込み・初期状態に戻す）と、1世代の控え（PRD D227。ADR-0032） */
+function useReplaceActions(st: StoreState) {
+  const { setData, setSaveError, setPrevious, setBroken, replaced, latest } = st;
   /** 丸ごと差し替える（履歴は捨てる。差し替えの前のデータへは「直前の状態に戻す」で戻る） */
-  const swapIn = useCallback((d: DemoData) => {
-    appHistory.clear();
-    setData(d);
-  }, []);
+  const swapIn = useCallback(
+    (d: DemoData) => {
+      appHistory.clear();
+      setData(d);
+    },
+    [setData],
+  );
   const replace = useCallback(
     (d: DemoData) => {
       swapIn(d);
@@ -182,7 +224,7 @@ export function DemoDataProvider({ children }: { children: ReactNode }): ReactNo
       swapIn(resetStore(features ?? latest.current.org.features));
       replaced();
     },
-    [replaced, swapIn],
+    [replaced, swapIn, setSaveError, latest],
   );
   const keepPrevious = useCallback(
     (reason: string): PreviousKeep => {
@@ -196,7 +238,7 @@ export function DemoDataProvider({ children }: { children: ReactNode }): ReactNo
         },
       };
     },
-    [setPrevious],
+    [setPrevious, latest],
   );
   const restorePrevious = useCallback((): string | null => {
     // いまのデータを控えと入れ替える（戻したあとにもう一度戻せる）。いまのデータを控えに残せなければ戻さない
@@ -207,8 +249,18 @@ export function DemoDataProvider({ children }: { children: ReactNode }): ReactNo
     swapIn(r.data);
     replaced();
     return null;
-  }, [setPrevious, replaced, swapIn]);
-  const dismissBroken = useCallback(() => setBroken(false), []);
+  }, [setPrevious, replaced, swapIn, latest, setSaveError]);
+  const dismissBroken = useCallback(() => setBroken(false), [setBroken]);
+  return { replace, reset, keepPrevious, restorePrevious, dismissBroken };
+}
+
+export function DemoDataProvider({ children }: { children: ReactNode }): ReactNode {
+  const st = useStoreState();
+  useStorageSync(st);
+  // ---- 全体の「元に戻す」の履歴（PRD D329。ADR-0054）----
+  const { update, undo, redo } = useHistoryActions(st);
+  const { replace, reset, keepPrevious, restorePrevious, dismissBroken } = useReplaceActions(st);
+  const { initial, data, saveError, previous, broken, externalReloads, replacedCount, previousDrops } = st;
 
   const value = useMemo(
     () => ({
