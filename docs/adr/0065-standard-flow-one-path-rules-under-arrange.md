@@ -39,6 +39,12 @@
 - メニューの「予定を組む」の子とタブ（`ArrangeTabs`）は 条件の重み・組み方の標準・担当を組む の順。設定のタブから条件の重みを外す（設定は 訪問の種類・特性の項目・管理者設定・データ）。URL は変えない
 - 考え方を替えるのは ①（点数の基準のラジオ）と ②（案から作った表を登録したとき）だけ。③ はいつも点数の基準で組む
 
+### ① 条件の重み：重みを変える所は表だけ
+- 重み・必須を変えるのは、条件の重みの表（点数の基準のプリセット）のスライダーと確定だけ。プリセットの節では名前・一言だけを直し、重みは読み取り専用で見せる（利用者が決めた。2026-10-25）
+- 確定のボタンと確認は書き換えるプリセットの名前を出す（「「バランス」の重みを書き換える（N件）」）。点数の基準のプリセットそのものが変わると分かるようにする
+- 新しい考え方は「基準の重みを写して保存 → 点数の基準に選ぶ → 表で直して確定」。写すのは保存済みの重み（下書きの間は写せない）
+- 初期の重みに戻す：基準が初期の3つなら表に［初期の重みを入れる］（下書きに入れるだけ。確定で書き換える）。すべてを初期の3つに戻す（足したプリセットも消える）は詳細設定へ移す
+
 ### ② 組み方の標準：比べる段に時間軸と地図
 - 案は今までどおり `runProposals`（期間＝来週の月曜から周期の週数・プリセットごと・ひな形）。各日の問題と割当（`ProposalDay` と同じ形）を案に残す
 - ①案をくらべる に「日で見る」を置く：期間の日を選び、タブ（今の標準・案ごと。点・今の標準から担当が変わる件数。いちばん点の高い案に王冠）で切り替え、選んだ案をその日の担当ごとの時間軸と地図で見る（担当・時刻が変わる訪問に印。名前・訪問・区間を押すとその担当に絞る）。部品は今の考え方ごとの案の帯（`ChoiceBand`）の中身を、提案の入れ物に縛られない形にして使う
@@ -60,12 +66,13 @@
   - 1日の案から1手で標準にする近道は無くなる（案から作る → 標準にする の2手と確認）
   - 案に手で付けたピンは効かない（ひな形のまま）。その日の事情は担当を組む・手直しで扱う
   - 担当を組むで、その場だけ別の考え方で組むことはできない（比べるのは組み方の標準の①か、案を比べるの画面）
+  - 点数の基準でないプリセットの重みを直すには、いったん点数の基準に選ぶ（その間は担当を組むもその重みで組む）
   - 設定のタブで条件の重みを覚えた人は「予定を組む」を探す
   - 案の計算は期間の日数ぶん（今と同じ）。日で見るは計算済みの割当を出すだけで、計算は増えない
 - 1-B は曜日ごとに何度も選ぶ。1-C・2-C は散らばりが残る。2-B は画面が長くなり、重みの下書きと標準の下書きが1画面で混ざる
 
 ## 影響
-- 実装：`lib/nav`（メニュー・`ARRANGE_TABS`・`SETTINGS_TABS`）・`components/SettingsTabs`（`ArrangeTabs`）・`pages/ArrangePage`・`arrangeParts`・`useArrangeStart`・`lib/arrange`・`lib/monthBatch`・`components/choiceBand`・`choiceBandParts`・`lib/choiceView`・`lib/choiceBandView`・`components/scheduleParts`・`lib/standard`・`lib/standardDraft`・`pages/StandardPage`・`standardSteps`・`useStandardProposals`・`pages/RulesPage`・`rulesParts`・`usePresetSection`・`lib/presets`・`lib/home`・`lib/compareChoices`・e2e（arrange・standard・rules・nav）
+- 実装：`lib/nav`（メニュー・`ARRANGE_TABS`・`SETTINGS_TABS`）・`components/SettingsTabs`（`ArrangeTabs`）・`pages/ArrangePage`・`arrangeParts`・`useArrangeStart`・`lib/arrange`・`lib/monthBatch`・`components/choiceBand`・`choiceBandParts`・`lib/choiceView`・`lib/choiceBandView`・`components/scheduleParts`・`lib/standard`・`lib/standardDraft`・`pages/StandardPage`・`standardSteps`・`useStandardProposals`・`pages/RulesPage`・`rulesParts`・`presetSection`・`usePresetSection`・`lib/presets`（`initialPresetOf`）・`lib/weightDraft`・`lib/home`・`lib/compareChoices`・e2e（arrange・standard・rules・nav）
 - 設計書：design.md・design/pages.md・pages-arrange.md・pages-standard.md・pages-rules.md・pages-common.md・pages-home.md
 - ADR-0064 は置き換え（初期のプリセット名「バランス」・メニューの並び・提案の帯の変わる訪問の一覧・標準の画面の考え方の表示・初期データを AI で組まないことは、この ADR でもそのまま）
 - 見直す条件：1日の事情を見て標準にしたい声が多ければ、担当を組むの提案から「組み方の標準で開く」（その日の割当を下書きに入れる）を足す
