@@ -95,3 +95,95 @@ export function defaultStaffOf(staff: readonly { id: string }[], countOf: (staff
 export function countAmong(ids: ReadonlySet<string>, clients: readonly { id: string }[]): number {
   return clients.reduce((n, c) => n + (ids.has(c.id) ? 1 : 0), 0);
 }
+
+/** 検索欄の近道（この期間に訪問がある人・〈スタッフ〉が担当する人・最近選んだ人・仮押さえの人） */
+export type PickerShortcut = 'period' | 'staff' | 'recent' | 'tentative';
+
+/**
+ * 近道で絞った人（近道なしなら全員）。period は期間に訪問がある人の ID、staffSet は選んでいる〈スタッフ〉が担当する人の ID
+ * （null なら0人）、recent は最近選んだ人の ID（新しい順）
+ */
+export function pickerBase<T extends { id: string; tentative?: boolean }>(
+  shortcut: PickerShortcut | null,
+  clients: readonly T[],
+  src: {
+    period?: ReadonlySet<string>;
+    staffSet: ReadonlySet<string> | null;
+    recent: readonly string[];
+    byId: ReadonlyMap<string, T>;
+  },
+): readonly T[] {
+  switch (shortcut) {
+    case 'period':
+      return src.period ? clients.filter((c) => src.period?.has(c.id)) : clients;
+    case 'staff':
+      return src.staffSet ? clients.filter((c) => src.staffSet?.has(c.id)) : [];
+    case 'recent':
+      return src.recent.flatMap((id) => src.byId.get(id) ?? []);
+    case 'tentative':
+      return clients.filter((c) => c.tentative);
+    default:
+      return clients;
+  }
+}
+
+/** 候補が0人のときの文（近道で絞って0人なら、その理由）。staffName は近道で選んでいる〈スタッフ〉の名前、periodLabel は「この週」など */
+export function pickerEmptyText(
+  query: string,
+  shortcut: PickerShortcut | null,
+  hint: { staffName?: string; periodLabel?: string },
+): string {
+  if (query === '' && shortcut === 'recent') return 'まだ選んだ人がいません';
+  if (query === '' && shortcut === 'staff' && hint.staffName !== undefined)
+    return `${hint.staffName}さんが担当する人はいません`;
+  if (query === '' && shortcut === 'period' && hint.periodLabel !== undefined)
+    return `${hint.periodLabel}に訪問がある人はいません`;
+  return '見つかりません';
+}
+
+/** 「最近選んだ人」に ids（先頭が最新）を足す。重複は新しい方に寄せ、上限 limit 人まで */
+export function pushRecent(recent: readonly string[], ids: readonly string[], limit: number): string[] {
+  return [...ids, ...recent.filter((x) => !ids.includes(x))].slice(0, limit);
+}
+
+/** 検索欄でキーを押したときにすること（prevent は既定の動きを止めるか） */
+export type PickerKeyAction =
+  | { type: 'none' }
+  | { type: 'open'; prevent: boolean }
+  | { type: 'move'; step: 1 | -1; prevent: boolean }
+  | { type: 'choose'; prevent: boolean }
+  | { type: 'close'; prevent: boolean }
+  | { type: 'clearQuery'; prevent: boolean }
+  | { type: 'unselectLast'; prevent: boolean };
+
+/**
+ * 検索欄のキーの働き。日本語入力の変換中は何もしない（Enter・↑↓を変換の操作に譲る）。
+ * ↓↑：閉じていれば開く／候補が無ければ何もしない／あれば移る。Enter：開いていて指している候補があれば選ぶ。
+ * Esc：開いていれば閉じる、閉じていて文字があれば消す。文字が空で Backspace：複数で選んでいる人がいれば最後の人を外す
+ */
+export function pickerKeyAction(
+  key: { key: string; composing: boolean },
+  state: {
+    open: boolean;
+    optionCount: number;
+    hasActive: boolean;
+    hasQuery: boolean;
+    multiple: boolean;
+    hasSelected: boolean;
+  },
+): PickerKeyAction {
+  if (key.composing) return { type: 'none' };
+  if (key.key === 'ArrowDown' || key.key === 'ArrowUp') {
+    if (!state.open) return { type: 'open', prevent: true };
+    if (state.optionCount === 0) return { type: 'none' };
+    return { type: 'move', step: key.key === 'ArrowDown' ? 1 : -1, prevent: true };
+  }
+  if (key.key === 'Enter') return state.open && state.hasActive ? { type: 'choose', prevent: true } : { type: 'none' };
+  if (key.key === 'Escape') {
+    if (state.open) return { type: 'close', prevent: true };
+    return state.hasQuery ? { type: 'clearQuery', prevent: true } : { type: 'none' };
+  }
+  if (key.key === 'Backspace' && !state.hasQuery && state.multiple && state.hasSelected)
+    return { type: 'unselectLast', prevent: false };
+  return { type: 'none' };
+}

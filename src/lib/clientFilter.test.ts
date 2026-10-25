@@ -26,6 +26,7 @@ import {
   toggleTown,
   toggleType,
   townChips,
+  townGroups,
   townKey,
   typeChips,
   WEEK_TABLE_FILTER,
@@ -144,6 +145,13 @@ describe('地区（市区→町名）', () => {
       ['春日町', 1],
     ]);
     expect(townChips(people, s, F, 's1', NO_AREA)).toEqual([]);
+  });
+  it('町名のグループは選んだ市区の順に出し、住所なしは除く', () => {
+    const s = f({ cities: ['仙台市青葉区', NO_AREA] });
+    const groups = townGroups(people, s, F, 's1');
+    expect(groups.map((g) => g.city)).toEqual(['仙台市青葉区']);
+    expect(groups[0].chips.map((c) => c.label)).toEqual(['国分町', '春日町']);
+    expect(townGroups(people, f(), F, 's1')).toEqual([]);
   });
   it('市区を外すとその市区の町名の選択も外れる', () => {
     let s = toggleCity(f(), '仙台市青葉区');

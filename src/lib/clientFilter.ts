@@ -328,6 +328,19 @@ export function townChips(
     .map((t) => ({ key: townKey(city, t), label: t === '' ? NO_TOWN_LABEL : t, count: counts.get(t) ?? 0 }));
 }
 
+/** 選んだ市区ごとの町名のチップ（選んだ順。住所なしと、町名が1つも無い市区は除く） */
+export function townGroups(
+  clients: readonly FilterClient[],
+  state: ClientFilterState,
+  facts: FilterFacts,
+  staffId: string,
+): { city: string; chips: AreaChip[] }[] {
+  return state.cities
+    .filter((c) => c !== NO_AREA)
+    .map((city) => ({ city, chips: townChips(clients, state, facts, staffId, city) }))
+    .filter((x) => x.chips.length > 0);
+}
+
 /** 訪問の種類のチップ1つ（count は種類のほかの絞り込みをかけた、その種類の訪問がある人数） */
 export type TypeChip = { id: string; name: string; count: number };
 

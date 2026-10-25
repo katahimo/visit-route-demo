@@ -1,84 +1,19 @@
-import {
-  CalendarCheck,
-  CalendarClock,
-  CalendarDays,
-  CalendarRange,
-  CalendarSearch,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  Clock,
-  Database,
-  FlaskConical,
-  GitCompareArrows,
-  HeartHandshake,
-  House,
-  Layers,
-  ListTodo,
-  type LucideIcon,
-  Menu,
-  Route as RouteIcon,
-  Search,
-  Settings,
-  SlidersHorizontal,
-  Sparkles,
-  Tags,
-  Timer,
-  TriangleAlert,
-  UserRound,
-  Users,
-  UserX,
-} from 'lucide-react';
-import {
-  Fragment,
-  type MouseEvent,
-  type ReactElement,
-  Suspense,
-  useCallback,
-  useEffect,
-  useId,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from 'react';
-import { Link, Navigate, NavLink, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import { BatchBand, MonthBatchHost } from '../components/batchBand';
-import { CommandPalette, IS_MAC } from '../components/CommandPalette';
+import { TriangleAlert } from 'lucide-react';
+import { type ReactElement, Suspense, useCallback, useId, useMemo, useRef, useState } from 'react';
+import { Navigate, NavLink, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { MonthBatchHost } from '../components/batchBand';
+import { CommandPalette } from '../components/CommandPalette';
 import { BrokenDataNotice, DataWatch } from '../components/DataNotices';
 import { DayProvider, useDay } from '../components/day';
 import { FeatureOffNotice } from '../components/FeatureOffNotice';
-import { FullscreenButton } from '../components/FullscreenButton';
 import { PersonPopoverProvider } from '../components/PersonPopover';
 import { TourProvider } from '../components/Tour';
 import { HistoryKeys } from '../components/undo';
 import { NARROW_QUERY } from '../components/useMedia';
 import { VisitPanelProvider } from '../components/VisitPanel';
 import { addDays, jstDate } from '../domain/time';
-import { hashPathname, isPaletteShortcut, keepPaletteOn } from '../lib/commandPalette';
-import { dateText } from '../lib/dateText';
 import { featureLabel, featureOfLocation, isFeatureOffState, isOn } from '../lib/features';
-import {
-  activeNavPath,
-  bottomTabs,
-  isActiveNav,
-  isPeoplePath,
-  isScheduleView,
-  isSettingsPath,
-  type LastViews,
-  type MenuItem,
-  menuSections,
-  NAV_OPEN_DEFAULT,
-  type NavIcon,
-  type NavSection,
-  navTitleParts,
-  screenSections,
-  showsDateSwitch,
-  tabClick,
-  tabLabel,
-} from '../lib/nav';
-import { menuBadges } from '../lib/scheduleMode';
+import { navTitleParts, tabClick } from '../lib/nav';
 import ArrangePage from '../pages/ArrangePage';
 import AvailabilityPage from '../pages/AvailabilityPage';
 import ClientPage from '../pages/ClientPage';
@@ -96,10 +31,13 @@ import StandardPage from '../pages/StandardPage';
 import TypesPage from '../pages/TypesPage';
 import WeekPage from '../pages/WeekPage';
 import WorkloadPage from '../pages/WorkloadPage';
-import { navOpenMemory, useDemoData } from '../store';
+import { useDemoData } from '../store';
 import { ErrorBoundary } from './ErrorBoundary';
 import { ComparePage, CompatPage, MonthPage, PageLoading, PlanPage, PreloadWhenShown, VacancyPage } from './lazyPages';
 import { NavDrawer } from './NavDrawer';
+import { AppHeader, BottomTabs } from './shellBars';
+import { Brand, NavGroups } from './shellNav';
+import { useHeaderHeight, useShellNav, useShellOverlays } from './useAdminShell';
 
 /** seed は基準日から14日分 */
 const DAYS = 14;
@@ -210,214 +148,40 @@ function Guarded({ element }: { element: ReactElement }) {
   );
 }
 
-/** 左のメニュー（PRD D273〜D275。並びは lib/nav の menuSections） */
-type NavItem = MenuItem;
-
-/** メニューの項目のアイコン */
-const NAV_ICONS: Record<NavIcon, LucideIcon> = {
-  home: ListTodo,
-  month: CalendarRange,
-  week: CalendarClock,
-  day: CalendarDays,
-  compare: GitCompareArrows,
-  arrange: Sparkles,
-  absence: UserX,
-  vacancy: CalendarSearch,
-  clients: House,
-  people: Users,
-  compat: HeartHandshake,
-  staff: UserRound,
-  hours: Clock,
-  workload: Timer,
-  standard: CalendarCheck,
-  rules: SlidersHorizontal,
-  types: Layers,
-  items: Tags,
-  settings: Settings,
-  data: Database,
-};
-
-/**
- * メニューの「予定」「設定」で開く、最後に開いた表示・タブ（PRD D273・D275）。開いている間だけ覚える
- * （画面の状態なので保存しない。AdminShell の外の画面（印刷・〈スタッフ〉のスマホ画面）から戻っても残るよう、モジュールに置く）
- */
-const lastViews: LastViews = {};
-
-/** 今の画面が予定の表示・設定のタブ・人のタブなら覚える（同じ値を何度書いても同じ） */
-function rememberView(pathname: string): LastViews {
-  if (isScheduleView(pathname)) lastViews.schedule = activeNavPath(pathname);
-  if (isSettingsPath(pathname)) lastViews.settings = pathname;
-  if (isPeoplePath(pathname)) lastViews.people = activeNavPath(pathname);
-  return { ...lastViews };
-}
-
 function AdminShell() {
   const { data, saveError } = useDemoData();
   /** 選んでいる日付（日付の選択を出さない画面でも覚えたまま。外枠の data-date で読める。PRD D267） */
   const { date: pickedDate } = useDay();
   const terms = data.org.terms;
-  const features = data.org.features;
   const location = useLocation();
   const { pathname } = location;
   const navigate = useNavigate();
   /** 切った機能の URL から移ってきたときの、その機能（ホームの上に知らせを出す。PRD D213） */
   const featureOff = pathname === '/home' && isFeatureOffState(location.state) ? location.state.featureOff : null;
-  /** スマホの引き出しを開いているか（PRD D133） */
-  const [menuOpen, setMenuOpen] = useState(false);
+  const { menuOpen, setMenuOpen, paletteOpen, openPalette, closePalette } = useShellOverlays(pathname);
   const menuBtnRef = useRef<HTMLButtonElement>(null);
   const headerRef = useRef<HTMLElement>(null);
   const sideNavRef = useRef<HTMLElement>(null);
   const drawerId = useId();
-  /**
-   * コマンドパレットを開いた画面のパス（閉じていれば null。PRD D181）。開いたときの URL の hash から決める
-   * （画面を移ってすぐ開いたとき、移った先の画面の描画より先に開いても、あとの「画面を移ったら閉じる」で閉じない）
-   */
-  const [paletteFor, setPaletteFor] = useState<string | null>(null);
-  const paletteOpen = paletteFor !== null;
-  const openPalette = useCallback(() => setPaletteFor(hashPathname(window.location.hash)), []);
-  // Ctrl+K（mac は ⌘K）でコマンドパレットを開く（PRD D181）。入力欄・テキストエリアの中でも開く（入れた文字はそのまま、閉じるとそこへ戻る）。
-  // ほかの欄・確認・引き出し（aria-modal）が開いているあいだは開かない（そのときもブラウザの動きは止める）。開いたあとのキーはパレットが受ける
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (!isPaletteShortcut(e, IS_MAC)) return;
-      // 開かないときもブラウザの動き（検索欄・アドレスバーへ移る）は止める
-      e.preventDefault();
-      if (document.querySelector('[aria-modal="true"]')) return;
-      openPalette();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [openPalette]);
-  // 画面を移ったら上へ。引き出しも閉じる（画面を選ぶと閉じる。PRD D133）
-  // 本体はブロックにする（式本体だと戻り値が後始末として呼ばれる。Brave の scrollTo は値を返し「is not a function」になった）
-  useEffect(() => {
-    window.scrollTo(0, 0);
-    setMenuOpen(false);
-    // 移った先の画面で開き直したパレットは閉じない
-    setPaletteFor((p) => keepPaletteOn(p, pathname));
-  }, [pathname]);
-  // 広い画面へ戻ったら引き出しを閉じる（左のメニューが出るので）
-  useEffect(() => {
-    const mq = window.matchMedia(NARROW_QUERY);
-    const onChange = () => {
-      if (!mq.matches) setMenuOpen(false);
-    };
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
-  }, []);
-  // スマホでは上の帯が2段に折り返すことがあるので、帯の高さ（--header-h。この下に貼り付く要素が使う）を測って出す。
-  // 広い画面では styles.css の値（72px）のまま
-  useLayoutEffect(() => {
-    const el = headerRef.current;
-    if (!el) return;
-    const mq = window.matchMedia(NARROW_QUERY);
-    const root = document.documentElement.style;
-    const put = () => {
-      if (mq.matches) root.setProperty('--header-h', `${Math.round(el.getBoundingClientRect().height)}px`);
-      else root.removeProperty('--header-h');
-    };
-    put();
-    const ro = new ResizeObserver(put);
-    ro.observe(el);
-    mq.addEventListener('change', put);
-    return () => {
-      ro.disconnect();
-      mq.removeEventListener('change', put);
-      root.removeProperty('--header-h');
-    };
-  }, []);
-  // メニューの並び（PRD D178〜D180・D230〜D232。ADR-0027・0034）：ホーム／予定／当日・問い合わせ／人／AI の条件／設定。
-  // ルートの URL は変えない。当日・問い合わせの「欠勤・キャンセルを登録」は今日の日の予定の欄を開く操作（今の画面の印は付けない）
-  const today = jstDate(Date.now());
-  // 「予定」「設定」は最後に開いた表示・タブを開く（PRD D273・D275）
-  const last = rememberView(pathname);
-  const lastSchedule = last.schedule;
-  const lastSettings = last.settings;
-  const lastPeople = last.people;
-  // 切った機能の項目は出さない（PRD D213）。下のタブもここから引く
-  // 件数の印（PRD D349。compile しないので軽い）
-  const badges = useMemo(() => menuBadges(data, today), [data, today]);
-  const groups = useMemo(
-    () =>
-      menuSections(
-        terms,
-        today,
-        features,
-        { schedule: lastSchedule, settings: lastSettings, people: lastPeople },
-        badges,
-      ),
-    [terms, today, features, lastSchedule, lastSettings, lastPeople, badges],
-  );
-  // 画面の一覧（メニューから外した画面も1つずつ）：上の帯の名前・パレットの画面（PRD D273・D275）
-  const screens = useMemo(() => screenSections(terms, features), [terms, features]);
-  const brand = (
-    <div className="brand">
-      <span className="brand-mark" aria-hidden="true">
-        <RouteIcon size={20} strokeWidth={2.4} />
-      </span>
-      <div className="brand-text">
-        <strong>{data.org.name}</strong>
-        <span className="demo-badge" title="データはこのブラウザだけに保存。実在の個人情報は入れない">
-          <FlaskConical size={12} aria-hidden="true" />
-          デモ（ブラウザ内に保存）
-        </span>
-      </div>
-    </div>
-  );
-  /** 上の帯の今の画面の名前（スマホ。PRD D132・D179。見出し・項目名） */
-  const screenName = navTitleParts(screens, pathname);
+  useHeaderHeight(headerRef);
+  const { groups, screens } = useShellNav(data, pathname);
   return (
     // 初回の案内ツアー（PRD D192・D193）：まだ見ていなければ起動したときに中央のカードで出す。データの画面からもう一度開ける
     <TourProvider terms={terms}>
       <div className="app-shell" data-date={pickedDate}>
         <aside ref={sideNavRef} className="side-nav">
-          {brand}
+          <Brand orgName={data.org.name} />
           <NavGroups groups={groups} pathname={pathname} />
         </aside>
         <div className="app-body">
-          <header ref={headerRef} className="app-header">
-            {/* 月まとめ作成の進み具合と［止める］（PRD D256。ほかの画面へ移っても続く。月の予定では画面の中に出す） */}
-            <BatchBand />
-            {/* スマホだけ：ロゴと今の画面の名前（PRD D132。広い画面では出さない。「メニュー」は下のタブ。PRD D336） */}
-            <div className="m-head-title">
-              <span className="brand-mark" aria-hidden="true">
-                <RouteIcon size={18} strokeWidth={2.4} />
-              </span>
-              <strong className="m-screen-name" data-testid="screen-name">
-                {/* 見出しと項目名はそれぞれひとまとまりで折り返す（入りきらなければ項目名を次の行へ。PRD D179） */}
-                {screenName ? (
-                  <>
-                    {screenName.group && <span className="m-screen-group">{screenName.group}・</span>}
-                    <span className="m-screen-item">{screenName.item}</span>
-                  </>
-                ) : (
-                  data.org.name
-                )}
-              </strong>
-            </div>
-            {/* コマンドパレットを開く（PRD D181。広い画面は「探す・移動」とキーの印、狭い画面は「探す」） */}
-            <button
-              type="button"
-              className="btn btn-small cmdk-open"
-              aria-haspopup="dialog"
-              aria-expanded={paletteOpen}
-              aria-keyshortcuts={IS_MAC ? 'Meta+K' : 'Control+K'}
-              onClick={openPalette}
-              data-testid="cmdk-open"
-            >
-              <Search size={16} aria-hidden="true" />
-              <span>
-                探す<span className="cmdk-open-more">・移動</span>
-              </span>
-              <span className="cmdk-open-kbd" aria-hidden="true">
-                <kbd>{IS_MAC ? '⌘K' : 'Ctrl K'}</kbd>
-              </span>
-            </button>
-            {/* 日付の選択は日付で中身が変わる画面だけ（PRD D267） */}
-            {showsDateSwitch(pathname) && <DateSwitcher />}
-            {/* 全画面の切り替え（右端。少しでも広く使う） */}
-            <FullscreenButton />
-          </header>
+          <AppHeader
+            headerRef={headerRef}
+            screenName={navTitleParts(screens, pathname)}
+            orgName={data.org.name}
+            pathname={pathname}
+            paletteOpen={paletteOpen}
+            openPalette={openPalette}
+          />
           {saveError && (
             <div className="save-error" role="alert">
               <TriangleAlert size={16} aria-hidden="true" />
@@ -450,62 +214,18 @@ function AdminShell() {
               />
             </Suspense>
           </main>
-          {/* スマホだけ：よく使うタブ（ホーム・予定・欠勤）と「探す」「メニュー」（PRD D336。印刷では出さない） */}
-          <nav className="bottom-tabs" aria-label="よく使う画面" data-testid="bottom-tabs">
-            {bottomTabs(groups).map((item) => {
-              const { key, to, icon } = item;
-              const Icon = NAV_ICONS[icon];
-              // 「予定」は月・週・日の予定で印（PRD D273）。欠勤は操作なので印を付けない
-              const on = isActiveNav(item, pathname);
-              const click = tabClick(item, pathname);
-              return (
-                <Link
-                  key={key}
-                  to={to}
-                  className={on ? 'bottom-tab active' : 'bottom-tab'}
-                  aria-current={on ? 'page' : undefined}
-                  onClick={(e) => {
-                    // 今の画面のタブは何もしない（押し直して URL のクエリ＝画面の状態を消さない）
-                    if (click === 'stay') e.preventDefault();
-                  }}
-                  data-testid="bottom-tab"
-                  data-tab={key}
-                >
-                  <Icon size={20} strokeWidth={2.1} aria-hidden="true" />
-                  <span>{tabLabel(item)}</span>
-                </Link>
-              );
-            })}
-            {/* 「探す」：コマンドパレットを開く（PRD D336。上の帯から下のタブへ移した。空き状況はメニューと探すから） */}
-            <button
-              type="button"
-              className="bottom-tab"
-              aria-haspopup="dialog"
-              aria-expanded={paletteOpen}
-              onClick={openPalette}
-              data-testid="bottom-search"
-              data-tab="search"
-            >
-              <Search size={20} strokeWidth={2.1} aria-hidden="true" />
-              <span>探す</span>
-            </button>
-            {/* 「メニュー」：全部の画面の引き出し（PRD D133・D336。上の帯から下のタブの最後へ移した） */}
-            <button
-              ref={menuBtnRef}
-              type="button"
-              className="bottom-tab m-menu-btn"
-              aria-haspopup="dialog"
-              aria-expanded={menuOpen}
-              aria-controls={menuOpen ? drawerId : undefined}
-              onClick={() => setMenuOpen(true)}
-              data-testid="menu-btn"
-            >
-              <Menu size={20} strokeWidth={2.1} aria-hidden="true" />
-              <span>メニュー</span>
-            </button>
-          </nav>
+          <BottomTabs
+            groups={groups}
+            pathname={pathname}
+            paletteOpen={paletteOpen}
+            openPalette={openPalette}
+            menuOpen={menuOpen}
+            drawerId={drawerId}
+            menuBtnRef={menuBtnRef}
+            openMenu={() => setMenuOpen(true)}
+          />
         </div>
-        {paletteOpen && <CommandPalette sections={screens} terms={terms} onClose={() => setPaletteFor(null)} />}
+        {paletteOpen && <CommandPalette sections={screens} terms={terms} onClose={closePalette} />}
         {menuOpen && (
           <NavDrawer
             id={drawerId}
@@ -518,7 +238,7 @@ function AdminShell() {
                 : (sideNavRef.current?.querySelector<HTMLElement>('[aria-current="page"]') ??
                   sideNavRef.current?.querySelector<HTMLElement>('a[href]'))
             }
-            head={brand}
+            head={<Brand orgName={data.org.name} />}
           >
             <NavGroups
               groups={groups}
@@ -533,133 +253,5 @@ function AdminShell() {
         )}
       </div>
     </TourProvider>
-  );
-}
-
-/**
- * メニューの並び（左のメニューとスマホの引き出しで共通。グループの見出し付きの縦並び）。
- * 子の項目を持つ項目は ▾ で畳める（PRD D349）。押して変えた開け閉めは覚える。今の画面の親は、その親へ移ったときに開いて見せる
- * （覚えない。同じ親の中で画面を移っても、畳んだら畳んだまま）。
- * 今の画面の印は、開いていれば子に、畳んでいれば親に付ける
- */
-function NavGroups({
-  groups,
-  pathname,
-  onPick,
-}: {
-  groups: readonly NavSection<NavItem>[];
-  pathname: string;
-  /** 項目を押したとき（引き出しを閉じる。今の画面なら移らない） */
-  onPick?: (e: MouseEvent<HTMLAnchorElement>, item: NavItem) => void;
-}) {
-  // 畳める項目の開け閉めを覚える所（PRD D349。この端末に残す。store/navOpen）
-  const stored = useSyncExternalStore(navOpenMemory.subscribe, navOpenMemory.read, navOpenMemory.cached);
-  // 今の画面の親。その親へ移ったときだけ開いて見せる（auto）。押して畳めば auto を外す
-  const currentParent = groups.flatMap((g) => g.items).find((i) => i.children?.length && isActiveNav(i, pathname))?.key;
-  const [auto, setAuto] = useState(currentParent);
-  useEffect(() => {
-    setAuto(currentParent);
-  }, [currentParent]);
-  const isOpen = (key: string) => (key === auto ? true : (stored[key] ?? NAV_OPEN_DEFAULT[key] ?? true));
-  const toggle = (key: string, open: boolean) => {
-    if (key === auto) setAuto(undefined);
-    navOpenMemory.write(key, !open);
-  };
-  const link = (item: NavItem, on: boolean, extra = '') => {
-    const Icon = NAV_ICONS[item.icon];
-    return (
-      <Link
-        to={item.to}
-        className={`nav-link${on ? ' active' : ''}${extra}`}
-        aria-current={on ? 'page' : undefined}
-        onClick={(e) => onPick?.(e, item)}
-        data-testid="nav-link"
-        data-key={item.key}
-      >
-        <Icon size={18} strokeWidth={2.1} aria-hidden="true" />
-        <span>{item.label}</span>
-        {item.badge && (
-          <span className="nav-badge" title={item.badge.label} data-testid="nav-badge">
-            <span aria-hidden="true">{item.badge.text}</span>
-            <span className="sr-only">{item.badge.label}</span>
-          </span>
-        )}
-      </Link>
-    );
-  };
-  return (
-    <nav className="nav-groups" aria-label="画面の一覧">
-      {groups.map((g) => (
-        <div key={g.items[0]!.key} className="nav-group">
-          {g.title && <h2 className="nav-group-title">{g.title}</h2>}
-          {g.items.map((item) => {
-            // 今の画面の印（「予定」は月・週・日の予定、「設定」は設定のタブ。PRD D273・D275）
-            const on = isActiveNav(item, pathname);
-            const kids = item.children ?? [];
-            if (kids.length === 0) return <Fragment key={item.key}>{link(item, on)}</Fragment>;
-            const open = isOpen(item.key);
-            const kidOn = kids.map((k) => isActiveNav(k, pathname));
-            const subId = `nav-sub-${item.key}`;
-            return (
-              <div key={item.key} className={`nav-parent${open ? ' is-open' : ''}`} data-parent={item.key}>
-                <div className="nav-parent-row">
-                  {link(item, on && (!open || !kidOn.includes(true)), on ? ' has-current' : '')}
-                  <button
-                    type="button"
-                    className="nav-toggle"
-                    aria-expanded={open}
-                    aria-controls={subId}
-                    aria-label={`${item.label}の項目`}
-                    onClick={() => toggle(item.key, open)}
-                    data-testid="nav-toggle"
-                  >
-                    <ChevronDown size={16} aria-hidden="true" />
-                  </button>
-                </div>
-                <div id={subId} className="nav-sub" hidden={!open}>
-                  {open && kids.map((k, n) => <Fragment key={k.key}>{link(k, kidOn[n]!, ' nav-child')}</Fragment>)}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ))}
-    </nav>
-  );
-}
-
-/** 日付の切り替え（データの中の日付から選ぶ） */
-function DateSwitcher() {
-  const { date, setDate, dates } = useDay();
-  const i = dates.indexOf(date);
-  return (
-    <div className="date-switch">
-      <CalendarDays size={18} className="date-icon" aria-hidden="true" />
-      <button
-        type="button"
-        className="icon-btn"
-        disabled={i <= 0}
-        onClick={() => setDate(dates[i - 1] ?? date)}
-        aria-label="前の日"
-      >
-        <ChevronLeft size={18} aria-hidden="true" />
-      </button>
-      <select value={date} onChange={(e) => setDate(e.target.value)} aria-label="日付">
-        {dates.map((d) => (
-          <option key={d} value={d}>
-            {dateText(d)}
-          </option>
-        ))}
-      </select>
-      <button
-        type="button"
-        className="icon-btn"
-        disabled={i < 0 || i >= dates.length - 1}
-        onClick={() => setDate(dates[i + 1] ?? date)}
-        aria-label="次の日"
-      >
-        <ChevronRight size={18} aria-hidden="true" />
-      </button>
-    </div>
   );
 }

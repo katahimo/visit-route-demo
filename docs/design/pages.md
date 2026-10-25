@@ -1,6 +1,6 @@
 # pages（画面）：共通事項と索引
 
-> この画面のファイル：`src/app/App.tsx`・`src/app/NavDrawer.tsx`・`src/components/`・`src/lib/`（画面横断の部品）。関連 ADR：0009・0019・0022〜0028・0033。関連 PRD：D59・D102・D122〜D126・D132〜D135・D146〜D150・D173〜D183・D189〜D197・D201〜D204・D210〜D216・D220〜D222。
+> この画面のファイル：`src/app/App.tsx`（`shellBars.tsx`・`shellNav.tsx`・`useAdminShell.ts`）・`src/app/NavDrawer.tsx`・`src/components/`・`src/lib/`（画面横断の部品）。関連 ADR：0009・0019・0022〜0028・0033。関連 PRD：D59・D102・D122〜D126・D132〜D135・D146〜D150・D173〜D183・D189〜D197・D201〜D204・D210〜D216・D220〜D222。
 > 画面ごとの詳細は下の「画面別ファイルの索引」から。画面共通の部品（右の欄・名前から開く詳細・用語・ツアー・リンク・メール）は [pages-common.md](pages-common.md)。
 > 版2（ADR-0053）：担当は訪問に持ち（`Visit.staffId`・`start`・`pinned`）、AI は提案を出すだけ、確定は〈スタッフ〉に伝えた内容（`snapshots`）。画面別ファイルに残る「今の案」「確定した割当（無ければ今の案）」はその日の訪問の担当、「案の無い日」は担当なしの訪問のある日と読む
 
@@ -187,6 +187,8 @@
 - 画面の見出し（`PageHeader` の h1）は画面の一覧の項目名と同じ（PRD D179・D230）：ホーム（見出しの下の文は「今日やること：…」）・月の予定・週の予定・日の予定・勤務時間（シフト）・勤務の見込み（`fare` の入り切りで変えない）ほか。本文・行き先の文の画面名もこれにそろえる（人の稼働時間・Excel のシート名・［月｜週｜日］は変えない）。「今日」は画面の呼び名に使わない（PRD D273）
 
 #### `AdminShell`（`src/app/App.tsx`）
+
+- ファイル：殻は `App.tsx`、上の帯 `AppHeader`・下のタブ `BottomTabs`・日付の切り替え `DateSwitcher` は `shellBars.tsx`、`NavGroups`・`Brand`・`NAV_ICONS` は `shellNav.tsx`、メニューの並び `useShellNav`・パレットと引き出しの開け閉め `useShellOverlays`・帯の高さ `useHeaderHeight` は `useAdminShell.ts`
 
 - `groups = menuSections(terms, today, features, last, badges)`（`badges = menuBadges(data, today)`）・`screens = screenSections(terms, features)`、アイコンは `NAV_ICONS`。`last` はモジュールの `lastViews`（描くたびに今の画面が予定の表示・設定のタブ・人のタブなら覚える `rememberView`。開いている間だけ・保存しない。印刷・〈スタッフ〉のスマホ画面から戻っても残る）
 - `NavGroups({ groups, pathname, onPick? })`：左のメニューと引き出しで共通。全部 `Link`（`aria-current` は `isActiveNav` で自分で付ける。data-testid `nav-link`・`data-key`）。中の nav の名前は「画面の一覧」。子を持つ項目は `div.nav-parent[data-parent]`（`.is-open`）の中に、親の行 `.nav-parent-row`（親の `Link`＋`.nav-toggle`）と `.nav-sub#nav-sub-<key>`（畳めば `hidden`。開いていれば子の `Link`＝`.nav-link.nav-child`）。`.nav-toggle` の名前は「◯の項目」で、開け閉めは `aria-expanded` だけ。開け閉めの覚え（`store/navOpen` の `NAV_OPEN_KEY`＝`visit-route-demo:nav-open`。`navOpenMemory` の1つの覚えを `useSyncExternalStore` で読み、左のメニューと引き出しで同じ）と、今の画面の親へ移ったときにその親を開いて見せる（`auto`。覚えない。同じ親の中で画面を移っても開き直さない。押して畳めば外す）はここ。子の項目もタッチできる端末では押せる所 44px。印は親が開いていて子が今の画面なら子、そうでなければ親。`badge` は `span.nav-badge`

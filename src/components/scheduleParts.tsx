@@ -4,18 +4,15 @@
 // 予定の画面では AI で組まない（AI で組むのは「担当を組む」の画面。ADR-0063）。
 // データを書くのは store の update だけ（複数選択は lib/multiEdit、提案は lib/monthBatch の apply）
 import { CalendarArrowUp, CircleCheck, Clock, Sparkles, UserRoundCog, UserRoundX, X, XCircle } from 'lucide-react';
-import { type ReactNode, type Ref, useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode, Ref, RefObject } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import type { DemoData } from '../contracts/data';
 import { jstDate } from '../domain/time';
 import { dateText } from '../lib/dateText';
 import { batchHref, monthBatch, proposalCounts, proposalDayFresh } from '../lib/monthBatch';
-import { assignMany, cancelMany, moveManyToDate, multiResultText, selectionText, shiftMany } from '../lib/multiEdit';
+import { selectionText } from '../lib/multiEdit';
 import { absenceHref } from '../lib/nav';
-import { toldDaysChanged } from '../lib/visitOps';
-import { findVisit } from '../patterns';
 import { useDemoData } from '../store';
-import { useConfirm } from './ConfirmDialog';
+import type { useConfirm } from './ConfirmDialog';
 import { ChoiceBand } from './choiceBand';
 import { MenuButton, type MenuItem } from './MenuButton';
 import { ProposalChanges } from './proposalChanges';
@@ -23,7 +20,7 @@ import { StaffMark } from './StaffMark';
 import { useToast } from './Toast';
 import { WithIcon } from './ui';
 import { UndoButtons } from './undo';
-import { COMPACT_QUERY, useMedia } from './useMedia';
+import { useSelectionBar } from './useSelectionBar';
 import { useValueStore } from './valueStore';
 import './scheduleParts.css';
 
@@ -303,6 +300,97 @@ export function RangeProposalBand() {
 /** ずらす幅（分） */
 const SHIFTS = [-30, -15, 15, 30] as const;
 
+/** 「時刻をずらす −30・−15・+15・+30」 */
+function ShiftButtons({ onShift }: { onShift: (minutes: number) => void }) {
+  return (
+    <fieldset className="row selection-shift" aria-label="時刻をずらす">
+      <span className="sub">
+        <WithIcon icon={Clock} size={14}>
+          時刻をずらす
+        </WithIcon>
+      </span>
+      {SHIFTS.map((m) => (
+        <button
+          key={m}
+          type="button"
+          className="btn btn-small"
+          onClick={() => onShift(m)}
+          data-testid="selection-shift"
+          data-minutes={m}
+          aria-label={`${m > 0 ? '+' : '−'}${Math.abs(m)}分ずらす`}
+        >
+          {m > 0 ? '+' : '−'}
+          {Math.abs(m)}分
+        </button>
+      ))}
+    </fieldset>
+  );
+}
+
+/** 「別の日へ」のボタンと、開いたときの日付の欄・「移す」 */
+function MoveDay({
+  today,
+  moveTo,
+  setMoveTo,
+  moveRef,
+  onGo,
+}: {
+  today: string;
+  moveTo: string | null;
+  setMoveTo: (d: string | null) => void;
+  moveRef: RefObject<HTMLButtonElement | null>;
+  onGo: () => void;
+}) {
+  return (
+    <span className="row selection-move">
+      <button
+        ref={moveRef}
+        type="button"
+        className="btn btn-small"
+        aria-expanded={moveTo !== null}
+        onClick={() => setMoveTo(moveTo === null ? today : null)}
+        data-testid="selection-move"
+      >
+        <WithIcon icon={CalendarArrowUp} size={14}>
+          別の日へ
+        </WithIcon>
+      </button>
+      {moveTo !== null && (
+        // Esc は日付の欄を閉じるだけ（選んだ訪問は外さない）
+        // biome-ignore lint/a11y/noStaticElementInteractions: 中の入力欄・ボタンの Esc を受ける
+        <span
+          className="row selection-move-form"
+          onKeyDown={(e) => {
+            if (e.key !== 'Escape') return;
+            e.preventDefault();
+            e.stopPropagation();
+            setMoveTo(null);
+            moveRef.current?.focus();
+          }}
+        >
+          <input
+            type="date"
+            aria-label="移す先の日"
+            value={moveTo}
+            min={today}
+            onChange={(e) => setMoveTo(e.target.value)}
+            data-testid="selection-move-date"
+          />
+          <button
+            type="button"
+            className="btn btn-small"
+            disabled={!moveTo || moveTo < today}
+            onClick={onGo}
+            data-testid="selection-move-go"
+          >
+            移す
+          </button>
+        </span>
+      )}
+    </span>
+  );
+}
+
 /**
  * 複数選択の帯（画面の下に貼り付く。PRD D330）：「N件を選択：［担当を替える ▾］［時刻をずらす −30・−15・+15・+30］［取り消す］［選択を外す］」。
  * どれも「この回だけ」で、1回の update（全体の「元に戻す」で1手戻る）。できなかった訪問は知らせに理由
@@ -326,33 +414,9 @@ export function SelectionBar({
   /** 画面の下に貼り付けず、置いた所に出す（スマホの月の下から出る欄の中） */
   inline?: boolean;
 }) {
-  const { data, update } = useDemoData();
-  const toast = useToast();
-  const confirmDialog = useConfirm();
-  const today = jstDate(Date.now());
-  /** スマホ（600px 以下）は下から出る欄の置き場所に、時刻をずらすは出さない（スマホでは動かさない。ADR-0051 の決定5） */
-  const compact = useMedia(COMPACT_QUERY);
-  const live = ids.filter((id) => {
-    const v = findVisit(data, id);
-    return !!v && dates.includes(v.date);
-  });
-  const staff = useMemo(() => data.staff.filter((s) => s.active), [data.staff]);
-  /** 「別の日へ」の日付（null は閉じている） */
-  const [moveTo, setMoveTo] = useState<string | null>(null);
-  const moveRef = useRef<HTMLButtonElement>(null);
-  // 選んだ訪問が無くなったら日付の欄も閉じる（次に選んだとき開いたまま出さない）
-  const empty = live.length === 0;
-  useEffect(() => {
-    if (empty) setMoveTo(null);
-  }, [empty]);
-  if (empty) return null;
-  const run = (what: string, fn: (d: DemoData) => { data: DemoData; done: number; failed: { why: string }[] }) => {
-    // 結果の数は今のデータで見るが、書くのは store の最新のデータに反映し直す（確認を待つ間の別のタブの変更を消さない）
-    const r = fn(data);
-    if (r.done > 0) update((d) => fn(d).data, what);
-    toast(multiResultText(what, { done: r.done, failed: r.failed.map((f) => ({ visitId: '', why: f.why })) }));
-    return r.done;
-  };
+  const { today, compact, live, staff, moveTo, setMoveTo, moveRef, assignTo, shiftBy, moveGo, cancelSelected } =
+    useSelectionBar(ids, dates, onClear);
+  if (live.length === 0) return null;
   const staffItems: MenuItem[] = staff.map((s) => ({
     key: s.id,
     label: (
@@ -361,7 +425,7 @@ export function SelectionBar({
         {s.name}
       </span>
     ),
-    onSelect: () => run('担当を替えました', (d) => assignMany(d, live, s.id, today)),
+    onSelect: () => assignTo(s.id),
     testId: 'selection-staff',
   }));
   return (
@@ -372,114 +436,14 @@ export function SelectionBar({
     >
       <strong data-testid="selection-count">{selectionText(live.length)}</strong>
       <MenuButton label="担当を替える" icon={UserRoundCog} items={staffItems} testId="selection-assign" />
-      {!compact && shift && (
-        <fieldset className="row selection-shift" aria-label="時刻をずらす">
-          <span className="sub">
-            <WithIcon icon={Clock} size={14}>
-              時刻をずらす
-            </WithIcon>
-          </span>
-          {SHIFTS.map((m) => (
-            <button
-              key={m}
-              type="button"
-              className="btn btn-small"
-              onClick={() =>
-                run(`時刻を${m > 0 ? '+' : '−'}${Math.abs(m)}分ずらしました`, (d) => shiftMany(d, live, m, today))
-              }
-              data-testid="selection-shift"
-              data-minutes={m}
-              aria-label={`${m > 0 ? '+' : '−'}${Math.abs(m)}分ずらす`}
-            >
-              {m > 0 ? '+' : '−'}
-              {Math.abs(m)}分
-            </button>
-          ))}
-        </fieldset>
-      )}
+      {!compact && shift && <ShiftButtons onShift={shiftBy} />}
       {!compact && moveDay && (
-        <span className="row selection-move">
-          <button
-            ref={moveRef}
-            type="button"
-            className="btn btn-small"
-            aria-expanded={moveTo !== null}
-            onClick={() => setMoveTo(moveTo === null ? today : null)}
-            data-testid="selection-move"
-          >
-            <WithIcon icon={CalendarArrowUp} size={14}>
-              別の日へ
-            </WithIcon>
-          </button>
-          {moveTo !== null && (
-            // Esc は日付の欄を閉じるだけ（選んだ訪問は外さない）
-            // biome-ignore lint/a11y/noStaticElementInteractions: 中の入力欄・ボタンの Esc を受ける
-            <span
-              className="row selection-move-form"
-              onKeyDown={(e) => {
-                if (e.key !== 'Escape') return;
-                e.preventDefault();
-                e.stopPropagation();
-                setMoveTo(null);
-                moveRef.current?.focus();
-              }}
-            >
-              <input
-                type="date"
-                aria-label="移す先の日"
-                value={moveTo}
-                min={today}
-                onChange={(e) => setMoveTo(e.target.value)}
-                data-testid="selection-move-date"
-              />
-              <button
-                type="button"
-                className="btn btn-small"
-                disabled={!moveTo || moveTo < today}
-                onClick={async () => {
-                  const to = moveTo;
-                  if (!to) return;
-                  // 確定（伝えた）した日（移す前の日・移す先の日）が変わるなら確かめる（キー・欄と同じ文）
-                  const fixed = toldDaysChanged(data, moveManyToDate(data, live, to, today).data, today);
-                  if (
-                    fixed.length > 0 &&
-                    !(await confirmDialog({
-                      title: '確定した日の訪問も変えますか？',
-                      body: `確定した日（${fixed.map((x) => dateText(x)).join('・')}）の訪問も変わります。その日は「未連絡の変更あり」になり、連絡の一覧に出ます。`,
-                      confirmLabel: '変える',
-                    }))
-                  )
-                    return;
-                  const done = run(`${dateText(to)}へ移しました`, (d) => moveManyToDate(d, live, to, today));
-                  setMoveTo(null);
-                  // 1件も移せなければ選んだまま（選び直さなくてよい）。移したら帯が消えるので、フォーカスは「元に戻す」へ
-                  if (done === 0) return;
-                  onClear();
-                  requestAnimationFrame(() => document.querySelector<HTMLElement>('[data-testid="undo-btn"]')?.focus());
-                }}
-                data-testid="selection-move-go"
-              >
-                移す
-              </button>
-            </span>
-          )}
-        </span>
+        <MoveDay today={today} moveTo={moveTo} setMoveTo={setMoveTo} moveRef={moveRef} onGo={() => void moveGo()} />
       )}
       <button
         type="button"
         className="btn btn-small"
-        onClick={async () => {
-          const ok = await confirmDialog({
-            title: `${live.length}件の訪問を取り消しますか？`,
-            body: '取り消した訪問は担当の並びから外れます。「元に戻す」で戻せます。',
-            confirmLabel: '訪問を取り消す',
-            cancelLabel: 'やめる',
-            tone: 'danger',
-          });
-          if (!ok) return;
-          run('訪問を取り消しました', (d) => cancelMany(d, live, today));
-          onClear();
-        }}
+        onClick={() => void cancelSelected()}
         data-testid="selection-cancel"
       >
         <WithIcon icon={XCircle} size={14}>
