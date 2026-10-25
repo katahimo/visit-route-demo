@@ -242,3 +242,37 @@
   box-shadow: none;
   border-width: 1px;
 }
+/* 提案の変わる訪問（誰の訪問が誰へ・何時へ）。390px でも1行ずつ折り返して見える */
+.proposal-changes {
+  margin: 4px 0 8px;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+}
+.proposal-change {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+}
+.proposal-change-visit {
+  font-weight: 700;
+}
+.proposal-change-who {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.proposal-change.is-unplaced {
+  border-color: var(--danger);
+}
+.proposal-change.is-unplaced .proposal-change-who {
+  color: var(--danger);
+}

@@ -3,6 +3,7 @@ import type { DemoData } from '../contracts/data';
 import type { Problem, SolveResult } from '../contracts/problem';
 import { addDays } from '../domain/time';
 import { putVisits, visitsOn } from '../patterns';
+import { reassignDiff } from '../reassign';
 import { createDemoData } from '../seed';
 import { solve } from '../solver';
 import { dayProblemOf } from './dayPlan';
@@ -15,6 +16,7 @@ import {
   dayInputsOf,
   dayLabel,
   proposalCounts,
+  proposalDayChanges,
   proposalDayFresh,
   weekLabel,
 } from './monthBatch';
@@ -398,5 +400,29 @@ describe('日の予定のその場の提案の古さ（PRD D335。画面を移�
       ],
     };
     expect(proposalDayFresh(other, day)).toBe(true);
+  });
+});
+
+describe('proposalDayChanges', () => {
+  it('担当が変わる訪問（今の担当 → 提案の担当）と時刻が変わる訪問（差の分）を、提案での開始の順に並べる', () => {
+    const d = createDemoData(TODAY);
+    const date = addDays(TODAY, 1);
+    const problem = dayProblemOf(d, date)!;
+    const routes = solve(problem, { seed: 1, iterations: 2000 }).routes;
+    const [s0] = problem.staff.filter((s) => (routes[s.id] ?? []).length > 0);
+    const moved = routes[s0!.id]![0]!;
+    const before = { ...routes, [s0!.id]: routes[s0!.id]!.slice(1) };
+    const diff = reassignDiff({ problem, routes: before }, { problem, routes });
+    const rows = proposalDayChanges({ problem, routes, diff });
+    const row = rows.find((r) => r.visitId === moved)!;
+    expect(row).toMatchObject({ kind: 'staff', from: null, to: s0!.id });
+    expect(row.clientId).toBe(problem.visits.find((v) => v.id === moved)!.clientId);
+    expect(rows.filter((r) => r.kind === 'staff')).toHaveLength(diff.moved.length);
+    expect(rows.filter((r) => r.kind === 'time').map((r) => r.minutes)).toEqual(
+      expect.arrayContaining(diff.shifted.map((x) => x.minutes)),
+    );
+    for (const r of rows.filter((x) => x.kind === 'time')) expect(r.from).toBe(s0!.id);
+    expect(rows.map((r) => r.at)).toEqual([...rows.map((r) => r.at)].sort((a, b) => a - b));
+    expect(proposalDayChanges({ problem, routes, diff: null })).toEqual([]);
   });
 });

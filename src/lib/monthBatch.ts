@@ -13,7 +13,7 @@ import { visitsOn } from '../patterns';
 import { reassignDiff } from '../reassign';
 import { defaultIterations, runSolve } from '../solver';
 import { own } from './common';
-import { aiPinsOf, dayProblemOf, routesOf, writeRoutes } from './dayPlan';
+import { aiPinsOf, dayProblemOf, routesOf, startsOf, writeRoutes } from './dayPlan';
 import type { BatchMode } from './month';
 import { createValueStore, type ReadableStore } from './valueStore';
 
@@ -91,6 +91,40 @@ export function proposalCounts(p: Pick<BatchProposal, 'days'>): {
     if (d.unassigned > 0) unassignedDays++;
   }
   return { days: p.days.length, moved, shifted, changedDays, unassignedDays };
+}
+
+/**
+ * 提案の1日の変わる訪問の1行。staff：担当が変わる（from・to は担当。null＝担当なし）。time：担当は同じで開始が変わる
+ * （minutes は今 → 提案の差の分。正＝遅く）。at は提案での開始（分。担当なしなら受けられる時間帯の初め）
+ */
+export type ProposalChange = {
+  visitId: string;
+  clientId: string;
+  at: number;
+  kind: 'staff' | 'time';
+  from: string | null;
+  to: string | null;
+  minutes: number;
+};
+
+/** 提案の1日の変わる訪問（担当が変わる・時刻が変わる。提案での開始の順、同じなら担当が変わるが先） */
+export function proposalDayChanges(day: Pick<ProposalDay, 'problem' | 'routes' | 'diff'>): ProposalChange[] {
+  if (!day.diff) return [];
+  const pv = new Map(day.problem.visits.map((v) => [v.id, v]));
+  const starts = startsOf(day.problem, day.routes);
+  const out: ProposalChange[] = [];
+  const row = (visitId: string, kind: ProposalChange['kind'], from: string | null, to: string | null, minutes = 0) => {
+    const v = pv.get(visitId);
+    if (!v) return;
+    out.push({ visitId, clientId: v.clientId, at: starts.get(visitId)?.start ?? v.earliest, kind, from, to, minutes });
+  };
+  for (const m of day.diff.moved) row(m.visitId, 'staff', m.from, m.to);
+  for (const s of day.diff.shifted) {
+    const owner = starts.get(s.visitId)?.staffId ?? null;
+    row(s.visitId, 'time', owner, owner, s.minutes);
+  }
+  const rank = (k: ProposalChange['kind']) => (k === 'staff' ? 0 : 1);
+  return out.sort((a, b) => a.at - b.at || rank(a.kind) - rank(b.kind) || a.visitId.localeCompare(b.visitId));
 }
 
 /**

@@ -3,13 +3,30 @@
 // 複数選択の帯（N件を選択：担当を替える・時刻をずらす・別の日へ（月）・取り消す）。日・週・月は「拡大率」として同じ部品を並べる。
 // 予定の画面では AI で組まない（AI で組むのは「担当を組む」の画面。ADR-0063）。
 // データを書くのは store の update だけ（複数選択は lib/multiEdit、提案は lib/monthBatch の apply）
-import { CalendarArrowUp, CircleCheck, Clock, Sparkles, UserRoundCog, UserRoundX, X, XCircle } from 'lucide-react';
+import {
+  ArrowRight,
+  CalendarArrowUp,
+  CircleCheck,
+  Clock,
+  Sparkles,
+  UserRoundCog,
+  UserRoundX,
+  X,
+  XCircle,
+} from 'lucide-react';
 import { type ReactNode, type Ref, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { DemoData } from '../contracts/data';
-import { jstDate } from '../domain/time';
+import { jstDate, minutesToHhmm } from '../domain/time';
 import { dateText } from '../lib/common';
-import { monthBatch, proposalCounts, proposalDayFresh } from '../lib/monthBatch';
+import {
+  monthBatch,
+  type ProposalChange,
+  type ProposalDay,
+  proposalCounts,
+  proposalDayChanges,
+  proposalDayFresh,
+} from '../lib/monthBatch';
 import { assignMany, cancelMany, moveManyToDate, multiResultText, selectionText, shiftMany } from '../lib/multiEdit';
 import { absenceHref } from '../lib/nav';
 import { COMPACT_QUERY, useMedia } from '../lib/useMedia';
@@ -126,6 +143,7 @@ function ProposalBand({
   onDiscard,
   details,
   detailsLabel,
+  detailsOpen,
 }: {
   title: ReactNode;
   moved: number;
@@ -137,6 +155,8 @@ function ProposalBand({
   onDiscard: () => void;
   details?: ReactNode;
   detailsLabel?: string;
+  /** 差の一覧を初めから開く（変わる日が1日だけのときなど） */
+  detailsOpen?: boolean;
 }) {
   return (
     <section
@@ -175,12 +195,60 @@ function ProposalBand({
         </span>
       )}
       {details && (
-        <details className="reassign-moves-box" data-testid="proposal-moves">
+        <details className="reassign-moves-box" data-testid="proposal-moves" open={detailsOpen}>
           <summary>{detailsLabel ?? '変わる訪問を見る'}</summary>
           {details}
         </details>
       )}
     </section>
+  );
+}
+
+/** 時刻の差の文（「30分遅く」「15分早く」） */
+const shiftText = (minutes: number) => `${Math.abs(minutes)}分${minutes > 0 ? '遅く' : '早く'}`;
+
+/**
+ * 提案の1日の変わる訪問の一覧：提案での開始・〈利用者さん〉と、担当が変わる訪問は「今の担当 → 提案の担当」、
+ * 時刻が変わる訪問は「担当 今の開始 → 提案の開始」。反映する前に誰の訪問がどう変わるかを見て決められるように
+ */
+function ProposalChanges({ data, day }: { data: DemoData; day: ProposalDay }) {
+  const rows = proposalDayChanges(day);
+  if (rows.length === 0) return null;
+  const clientName = (id: string) => data.clients.find((c) => c.id === id)?.displayName ?? '（不明）';
+  const who = (id: string | null) =>
+    id === null ? '担当なし' : `${data.staff.find((s) => s.id === id)?.name ?? '（不明）'}さん`;
+  const change = (r: ProposalChange) =>
+    r.kind === 'staff' ? (
+      <>
+        {who(r.from)}
+        <ArrowRight size={14} aria-hidden="true" />
+        <span className="sr-only">から</span>
+        <strong>{who(r.to)}</strong>
+      </>
+    ) : (
+      <>
+        {who(r.to)} {minutesToHhmm(r.at - r.minutes)}
+        <ArrowRight size={14} aria-hidden="true" />
+        <span className="sr-only">から</span>
+        <strong>{minutesToHhmm(r.at)}</strong>（{shiftText(r.minutes)}）
+      </>
+    );
+  return (
+    <ul className="proposal-changes" aria-label={`${dateText(day.date)}の変わる訪問`} data-testid="proposal-changes">
+      {rows.map((r) => (
+        <li
+          key={r.visitId}
+          className={`proposal-change${r.kind === 'staff' && r.to === null ? ' is-unplaced' : ''}`}
+          data-testid="proposal-change"
+          data-kind={r.kind}
+        >
+          <span className="proposal-change-visit">
+            {minutesToHhmm(r.at)} {clientName(r.clientId)}さん
+          </span>
+          <span className="proposal-change-who">{change(r)}</span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -224,7 +292,8 @@ export function RangeProposalBand() {
       applyDisabled={run !== null || staleDays === proposal.days.length}
       onApply={apply}
       onDiscard={() => monthBatch.discard()}
-      detailsLabel={`変わる日を見る（${changed.length}日）`}
+      detailsLabel={`変わる訪問を見る（${changed.length}日）`}
+      detailsOpen={changed.length === 1}
       details={
         changed.length === 0 ? (
           <p className="sub">担当・時刻の変わる訪問はありません</p>
@@ -242,6 +311,7 @@ export function RangeProposalBand() {
                 </button>
                 ：担当が変わる {d.diff?.moved.length ?? 0}件・時刻が変わる {d.diff?.shifted.length ?? 0}件
                 {d.unassigned > 0 ? `・担当なし ${d.unassigned}件` : ''}
+                <ProposalChanges data={data} day={d} />
               </li>
             ))}
           </ul>
