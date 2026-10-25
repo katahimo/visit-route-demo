@@ -1,6 +1,6 @@
 # 〈スタッフ〉の一覧と画面・勤務時間（シフト）・勤務の見込み・スマホ画面
 
-> この画面のファイル：`src/pages/StaffPage.tsx`・`StaffPersonPage.tsx`・`OffboardPanel.tsx`・`AvailabilityPage.tsx`・`WorkloadPage.tsx`（`workload.css`）・`StaffViewPage.tsx`、`src/components/workBars.tsx`・`mapsLinks.tsx`・`personPage.tsx`・`PersonCalendar.tsx`・`personView.tsx`・`placeLookup.tsx`、`src/lib/offboard.ts`・`workload.ts`・`links.ts`・`personPage.ts`・`visitOps.ts`・`viewMode.ts`。関連 ADR：0011・0014・0015・0016 追記・0017・0018・0050・0052。関連 PRD：D16・D68・D75〜D77・D91〜D101・D118〜D121・D201〜D209・D220・D221・D298・D299・D308〜D312。
+> この画面のファイル：`src/pages/StaffPage.tsx`・`StaffPersonPage.tsx`・`OffboardPanel.tsx`・`AvailabilityPage.tsx`（部品 `availabilityParts.tsx`・セルを直す状態 `useAvailabilityEdit.ts`）・`WorkloadPage.tsx`（`workload.css`）・`StaffViewPage.tsx`、`src/components/workBars.tsx`・`mapsLinks.tsx`・`personPage.tsx`・`PersonCalendar.tsx`・`personView.tsx`・`placeLookup.tsx`、`src/lib/offboard.ts`・`workload.ts`・`links.ts`・`personPage.ts`・`visitOps.ts`・`viewMode.ts`。関連 ADR：0011・0014・0015・0016 追記・0017・0018・0050・0052。関連 PRD：D16・D68・D75〜D77・D91〜D101・D118〜D121・D201〜D209・D220・D221・D298・D299・D308〜D312。
 > 画面の殻（ルート・見出し・タブ・節・変更の確認）と予定のカレンダーは [pages-clients.md](pages-clients.md) と共通。
 
 ### 〈スタッフ〉一覧（`#/staff`）

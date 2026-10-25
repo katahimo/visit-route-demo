@@ -1,6 +1,6 @@
 # 空き状況と問い合わせの試算
 
-> この画面のファイル：`src/pages/VacancyPage.tsx`（`vacancy.css`）、`src/lib/vacancyView.ts`・`vacancyInput.ts`・`dayPlan.ts`（`unassignedDays`）・`glance.ts`・`tentative.ts`・`mail.ts`、`src/components/placeLookup.tsx`（`AddressField`）・`glance.tsx`・`conditions.tsx`。関連 ADR：0012 追記・0013・0015・0016 追記・0017・0025 追記・0042。関連 PRD：D45〜D47・D67・D78〜D81・D118〜D120・D184〜D187・D201〜D204・D221・D228・D258・D259。
+> この画面のファイル：`src/pages/VacancyPage.tsx`（`vacancy.css`。段階の部品 `vacancyStages.tsx`・小さい部品と表 `vacancyParts.tsx`・案内文の欄 `vacancyNotice.tsx`・右の欄 `vacancyPanels.tsx`、入力 `useVacancyInput.ts`・計算 `useVacancyResult.ts`・案内文 `useVacancyNotice.ts`・仮押さえ `useVacancyHold.ts`）、`src/lib/vacancyView.ts`（`vacancyQuery`・`noticeRange` も）・`vacancyInput.ts`・`hold.ts`（`holdSlots`・`holdPatterns`・`holdData`）・`newClient.ts`・`dayPlan.ts`（`unassignedDays`）・`glance.ts`・`tentative.ts`・`mail.ts`、`src/components/placeLookup.tsx`（`AddressField`）・`glance.tsx`・`conditions.tsx`。関連 ADR：0012 追記・0013・0015・0016 追記・0017・0025 追記・0042。関連 PRD：D45〜D47・D67・D78〜D81・D118〜D120・D184〜D187・D201〜D204・D221・D228・D258・D259。
 > 計算（`vacancyOf`・`verdictOf`・`inquirySummary`・`vacancyNotice`）は design.md の「vacancy」。
 
 ### 空き状況（`#/vacancy`）
