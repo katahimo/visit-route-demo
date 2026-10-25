@@ -155,6 +155,14 @@ async function choices(page, { dlg }) {
       (await choiceBand(page).getByTestId('choice-current').count()) === 1,
     '選んだ案を今日の予定と同じ時間軸で見る（今の担当のタブもある）',
   );
+  // 地図も予定の画面と同じに出て、時間軸の訪問を押すとその担当のルートに絞る
+  check((await choiceBand(page).getByTestId('choice-map').count()) === 1, '案の地図が出る');
+  await choiceBand(page).locator('[data-testid="route-timeline"] [data-visit]').first().click();
+  check(
+    (await choiceBand(page).getByTestId('choice-map').getByRole('button', { name: '全員のルートを見る' }).count()) ===
+      1,
+    '時間軸の訪問を押すと地図をその担当に絞る（全員のルートを見るで戻せる）',
+  );
   check((await assignedOn(page, TODAY)) === 0, '案が出ても、選ぶまで訪問は変わらない');
   check((await choiceBand(page).getByTestId('proposal-change').count()) > 0, '変わる訪問（誰の訪問が誰へ）の一覧');
   await page.screenshot({ path: path.join(OUT_DIR, 'arrange-choices.png') });

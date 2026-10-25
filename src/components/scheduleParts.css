@@ -333,3 +333,23 @@
   min-width: 0;
   font-weight: 700;
 }
+/* 案の時間軸と地図を並べる（予定の画面と同じ。狭い幅では縦に） */
+.choice-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
+  gap: 10px;
+  align-items: start;
+}
+.choice-map {
+  gap: 6px;
+  position: sticky;
+  top: calc(var(--header-h) + 8px);
+}
+@media (max-width: 900px) {
+  .choice-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .choice-map {
+    position: static;
+  }
+}
