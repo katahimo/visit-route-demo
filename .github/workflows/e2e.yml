@@ -48,6 +48,10 @@ jobs:
       # 競合の印（<<<<<<<・>>>>>>>）がコミットされていたら先に落とす（PRD D253。npm run lint にも入っている）
       - name: 競合の印が無い
         run: node scripts/check-conflict-markers.cjs
+      # 設計の決まり（層の依存・循環 import・長い関数・使われない export）の違反を基準より増やさない（AGENTS.md）
+      - name: コードの検査
+        if: github.event_name == 'pull_request'
+        run: npm run check:code
       - name: Playwright の版
         id: pw
         run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"

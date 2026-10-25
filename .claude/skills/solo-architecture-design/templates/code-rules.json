@@ -1,0 +1,13 @@
+{
+  "src": "src",
+  "exclude": ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.d.ts"],
+  "maxFileLines": 600,
+  "maxFunctionLines": 150,
+  "layers": {
+    "src/modules/*/domain/**": { "forbid": ["react", "src/modules/*/application/**", "src/modules/*/infrastructure/**", "src/modules/*/interface/**"] },
+    "src/modules/*/application/**": { "forbid": ["react", "src/modules/*/infrastructure/**", "src/modules/*/interface/**"] }
+  },
+  "unusedExports": true,
+  "testOnlyExports": true,
+  "baseline": "code-rules.baseline.json"
+}
