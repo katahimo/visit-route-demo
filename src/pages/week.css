@@ -1,4 +1,4 @@
-/* 週間（#/week。ADR-0012 追記の段階2） */
+/* 週間（#/week。ADR-0012の段階2） */
 .week-nav,
 .week-tools {
   flex-wrap: wrap;

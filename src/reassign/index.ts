@@ -464,7 +464,7 @@ export const candidatesFor: CandidatesFor = (problem, routes, visitId) => {
 };
 
 /**
- * 他の人の担当・順番・開始時刻を変えずに入れられる人（空き状況。ADR-0012 追記）：candidatesFor の fits が true の人
+ * 他の人の担当・順番・開始時刻を変えずに入れられる人（空き状況。ADR-0012）：candidatesFor の fits が true の人
  * （可・件数の上限を超えない・いまの列が strict で回れる・他の訪問の開始を変えずに strict で入る）だけを、
  * 同じ並び（増える費用の小さい順、同じなら staff の順）で返す。「ずらせば入る」の探索・影響の見込みはしない
  */
@@ -553,7 +553,7 @@ export const reassignDiff: ReassignDiffFn = (before, after) => {
   return { moved, shifted: shiftedList, unplaced, changedStaff, travelDelta: b.travel - a.travel };
 };
 
-// ---- 2回目：案B「少し動かしてよい」（PRD D34。ADR-0011 追記） ----
+// ---- 2回目：案B「少し動かしてよい」（PRD D34。ADR-0011） ----
 
 /** 「変更を減らす」の重み → 担当が変わった訪問1件の点・開始のずれ1分の点（重みは 0〜5 に収める） */
 export function stayPointsOf(weight: number): { movePoints: number; minutePoints: number } {
@@ -678,7 +678,7 @@ export const annealCost: AnnealCost = (problem, routes) => {
 };
 
 /**
- * 案B の結果を確かめて、出す案を決める（保険。ADR-0011 追記）。次のどちらかなら案B として出さず、案A
+ * 案B の結果を確かめて、出す案を決める（保険。ADR-0011）。次のどちらかなら案B として出さず、案A
  * （finishAnneal(prep, prep.initial)）を返して理由を付ける：
  * - keepDropped：案A に入っていた訪問（stay.keep）が1件でも案B に入っていない
  * - notBetter：案A の費用（annealCost(prep.problem, prep.initial)）が有限でない（計算中にデータが変わり案A が strict で
@@ -704,7 +704,7 @@ export const settleAnneal: SettleAnneal = (prep, solved) => {
   return { ok: true, reason: null, visitIds: [], result: finishAnneal(prep, solved) };
 };
 
-// ---- 2回目：連絡の一覧（PRD D35。ADR-0011 追記） ----
+// ---- 2回目：連絡の一覧（PRD D35。ADR-0011） ----
 
 /**
  * 元の案と今の案の差から、連絡の一覧を作る（時刻は lenient。開始の変化は四捨五入で1分以上。reassignDiff と同じ）。

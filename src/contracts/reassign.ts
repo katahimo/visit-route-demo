@@ -77,7 +77,7 @@ export type CandidatesFor = (problem: Problem, routes: Routes, visitId: string) 
 export type PlaceVisit = (problem: Problem, routes: Routes, visitId: string, staffId: string) => Routes;
 export type ReassignDiffFn = (before: ReassignPlan, after: ReassignPlan) => ReassignDiff;
 
-/** 他の人の担当・順番・開始時刻を変えずに入れられる人（fitsOf。空き状況。ADR-0012 追記） */
+/** 他の人の担当・順番・開始時刻を変えずに入れられる人（fitsOf。空き状況。ADR-0012） */
 export type FitOf = { staffId: string; addedCost: number; addedTravel: number };
 /**
  * candidatesFor の fits が true になる人だけを、同じ並び（増える費用の小さい順、同じなら staff の順）で返す。
@@ -101,7 +101,7 @@ export type ReassignLeft = {
  */
 export type LeftOf = (problem: Problem, plan: ReassignPlan, absentStaffIds: string[]) => ReassignLeft[];
 
-// ---- 2回目：案B「少し動かしてよい」（PRD D34。ADR-0011 追記） ----
+// ---- 2回目：案B「少し動かしてよい」（PRD D34。ADR-0011） ----
 
 /** 「変更を減らす」の重み（0〜5、0.5刻み）。0＝変更を気にしない。既定 3 */
 export const STAY_WEIGHT_MIN = 0;
@@ -164,7 +164,7 @@ export type AnnealSettled =
   | { ok: false; reason: 'keepDropped' | 'notBetter'; visitIds: string[]; result: ReassignResult };
 export type SettleAnneal = (prep: AnnealPrep, solved: Routes) => AnnealSettled;
 
-// ---- 2回目：連絡の一覧（PRD D35。ADR-0011 追記） ----
+// ---- 2回目：連絡の一覧（PRD D35。ADR-0011） ----
 
 /** 連絡に載せる訪問1件（時刻は0時からの分。lenient） */
 export type ContactVisit = {

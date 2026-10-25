@@ -1,4 +1,4 @@
-// 欠勤・キャンセルの連絡（PRD D35・D244〜D246。ADR-0011 追記・ADR-0038）：差（reassign.contactsOf の一覧）と取り消した訪問から、
+// 欠勤・キャンセルの連絡（PRD D35・D244〜D246。ADR-0011・ADR-0038）：差（reassign.contactsOf の一覧）と取り消した訪問から、
 // 誰に何を伝えるかの一覧と連絡文を作る。送信はしない（画面がコピー・メールアプリを開くだけ）。呼び方は org.terms から渡す。純粋関数
 import type { ContactList, ContactVisit, StaffContact } from '../contracts/reassign';
 import { minutesToHhmm, weekday } from '../domain/time';

@@ -2132,7 +2132,7 @@ a.icon-btn:hover {
   font-size: 1.1rem;
 }
 /*
- * 巻く領域。中は 内容（.drawer-content）→ 確定のボタンの帯（.drawer-foot）→ 番兵（高さ0）の順（PRD D194〜D197。ADR-0025 追記）。
+ * 巻く領域。中は 内容（.drawer-content）→ 確定のボタンの帯（.drawer-foot）→ 番兵（高さ0）の順（PRD D194〜D197。ADR-0025）。
  * 中身が短いと帯は内容のすぐ下に来て、下の余白は巻く領域の残り（欄の背景）になる。長いと帯は欄の下に貼り付く（sticky）。
  * Tab で入った入力欄が帯の裏に隠れないよう、帯の高さ（--drawer-foot-h。usePanelFoot が入れる）を scroll-padding-bottom にする
  */

@@ -867,7 +867,7 @@ export async function importWorkbook(buf: ArrayBuffer, base: DemoData): Promise<
       const kana = r.optional(CLIENT_KANA_COL, 50);
       const color = r.num(C.color, { int: true, min: 1, max: 8, required: true });
       const active = r.yes(C.active);
-      // 仮押さえ（ADR-0012 追記）：列が無い古いブックは false
+      // 仮押さえ（ADR-0012）：列が無い古いブックは false
       const tentative = r.yes(CLIENT_TENTATIVE_COL);
       // 郵便番号（ADR-0016。readPostal）
       const postalCode = readPostal(r);

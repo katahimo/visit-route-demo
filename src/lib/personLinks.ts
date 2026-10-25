@@ -1,4 +1,4 @@
-// 名前から詳細を開く場所を足す（PRD D205〜D209。ADR-0022 追記）ための純粋関数：
+// 名前から詳細を開く場所を足す（PRD D205〜D209。ADR-0022）ための純粋関数：
 // 日の画面の休みの帯の〈利用者さん〉、名簿の読み込みで最終勤務日が入った〈スタッフ〉（稼働の見込みへのリンクは lib/links の workloadHref）
 import type { ClientLeave, Staff } from '../contracts/documents';
 import { leaveOn } from '../domain/leaves';

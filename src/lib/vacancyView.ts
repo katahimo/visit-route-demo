@@ -1,4 +1,4 @@
-// 空き状況の画面の段階と表示の決め方（PRD D184〜D187。ADR-0025 追記。UI/UX 改善の区切り8a）。
+// 空き状況の画面の段階と表示の決め方（PRD D184〜D187。ADR-0025。UI/UX 改善の区切り8a）。
 // 計算（vacancyOf・verdictOf・inquirySummary）は src/vacancy のまま。ここは画面に出す文と印を決めるだけの純粋関数
 import type { InquiryWish, VacancyCell, VacancyResult, Verdict } from '../contracts/vacancy';
 import { timeText } from '../domain/availability';

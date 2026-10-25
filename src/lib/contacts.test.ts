@@ -1,4 +1,4 @@
-// 連絡の一覧と連絡文（PRD D35・D244〜D246。ADR-0011 追記・ADR-0038）
+// 連絡の一覧と連絡文（PRD D35・D244〜D246。ADR-0011・ADR-0038）
 import { describe, expect, it } from 'vitest';
 import type { ContactList } from '../contracts/reassign';
 import {

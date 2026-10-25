@@ -4,7 +4,7 @@ import { FILE_PICK_LABEL, fileNameText } from '../lib/filePick';
 import './filePick.css';
 
 /**
- * ファイルを選ぶ部品（PRD D191。ADR-0025 追記）。ブラウザ標準の「Choose File／No file chosen」（英語）の代わりに、
+ * ファイルを選ぶ部品（PRD D191。ADR-0025）。ブラウザ標準の「Choose File／No file chosen」（英語）の代わりに、
  * 日本語のボタン「ファイルを選ぶ」と選んだファイル名（未選択の文）を出す。
  * input は見えない形で残し（display: none にしない）、見た目のボタン（input の label）と同じ大きさで重ねる。Tab で届き Space・Enter で開ける。
  * 入力欄の名前は「〈何を読み込むか〉 ファイルを選ぶ」（aria-labelledby）、選んだファイルの文は aria-describedby。

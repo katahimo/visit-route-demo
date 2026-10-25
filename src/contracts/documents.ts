@@ -178,7 +178,7 @@ const clientObject = z.object({
   requirements: z.array(conditionSchema).max(20),
   /** 訪問先の希望（スタッフの特性に対して。例：経験3年以上）。rule 'clientPreference' */
   preferences: z.array(conditionSchema).max(20),
-  /** 仮押さえ（D47。問い合わせの試算から仮に押さえた〈利用者さん〉。ADR-0012 追記）。無い古いデータは false */
+  /** 仮押さえ（D47。問い合わせの試算から仮に押さえた〈利用者さん〉。ADR-0012）。無い古いデータは false */
   tentative: z.boolean().default(false),
   /** 訪問先の決まりごと（PRD D66。ADR-0013）：入り方（インターホン等）。無い古いデータは '' */
   entryNote: z.string().max(200).default(''),

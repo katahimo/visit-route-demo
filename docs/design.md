@@ -203,7 +203,7 @@ flowchart LR
 ### matching（項目・条件 → 費用表）
 - 責務：項目・特性・必要条件・希望・相性・条件を、solver が読む**問題（`Problem`）**に変換する。①可否 ②割当費用（§5「費用の物差し」）③負担の均等の目安 ④移動・待ちの行列と係数。訪問×スタッフごとの**理由**も返す
 - 持つデータ（持ち主）：なし
-- 提供するAPI：`compile(data: CompileInput, date, pins?)`（問題に入る〈スタッフ〉は利用中の人。`pins` の訪問はその担当だけ可＝理由 `pin`「固定（手直し）」）、手直しの記憶（ADR-0043。`matching/manualPrefs.ts`）の `prefKey(visit)`・`requestedPrefPins`・`applyPrefPins(problem, prefPins)`（記憶の担当が可のときだけその担当だけを可に。理由 `manualPref`「手直しの記憶（〈名前〉さんに固定）」／「手直しの記憶：前に手で〈名前〉さんにした」。費用は変えない）・`withManualPrefs(problem, data, pins?)`（固定のある訪問は飛ばす。案を作る問題だけに当て、採点・説明・欠勤の振り直しの問題には反映しない）、`matches`・`conditionText`・`scheduleRoute`（時刻の唯一の実装）・`routeCost`・`balancePoints`・`balanceOff`・`totalPoints`・`dropPointsOf`・`fitStart`・`naiveSeqs`、`bestInsertion(problem, routes, visitId, staffId)`（strict で最も安い位置、無ければ開始の順に lenient で入れて違反として見せる）
+- 提供するAPI：`compile(data: CompileInput, date, pins?)`（問題に入る〈スタッフ〉は利用中の人。`pins` の訪問はその担当だけ可＝理由 `pin`「固定（手直し）」）、`matches`・`conditionText`・`scheduleRoute`（時刻の唯一の実装）・`routeCost`・`balancePoints`・`balanceOff`・`totalPoints`・`dropPointsOf`・`fitStart`・`naiveSeqs`、`bestInsertion(problem, routes, visitId, staffId)`（strict で最も安い位置、無ければ開始の順に lenient で入れて違反として見せる）
 - 可否で外す原因（`points` は Infinity）：
   - 必須の条件、相性 ×（重み・必須によらない）
   - 稼働時間帯（`slot`）：欠勤は差し引き、文は `ABSENT_ALL_DAY`「欠勤（終日）」・`ABSENT_NO_HOURS`「欠勤で稼働時間がない」・`ABSENCE_OVERLAP`「欠勤の時間と重なる」。最終勤務日の後は `AFTER_LAST_DAY`「最終勤務日の後」

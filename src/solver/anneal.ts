@@ -343,7 +343,7 @@ export function createSolver(problem: Problem, options: SolveOptions): Solver {
     const greedyTotal = current;
     loadRoutes(naiveSeqs(problem));
     if (!(current < greedyTotal - EPS)) loadRoutes(greedy);
-    // 初期解の候補（案B の案A。ADR-0011 追記）：今の初期解より費用が高くなければ、そこから始める（結果の費用 ≤ 候補）
+    // 初期解の候補（案B の案A。ADR-0011）：今の初期解より費用が高くなければ、そこから始める（結果の費用 ≤ 候補）
     const given = options.initial ? initialSeqs(problem, options.initial) : null;
     if (given) {
       const chosen = routes.map((r) => r.slice());

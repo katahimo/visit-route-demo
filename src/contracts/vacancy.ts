@@ -1,5 +1,5 @@
 /**
- * 空き状況と問い合わせの試算（vacancy）の入出力（design.md §5「空き状況と問い合わせの試算」。ADR-0012 追記。段階3）。
+ * 空き状況と問い合わせの試算（vacancy）の入出力（design.md §5「空き状況と問い合わせの試算」。ADR-0012。段階3）。
  * 関数（vacancyOf・verdictOf・inquirySummary・dayLoad）の実装は src/vacancy/（下の関数の型で注釈する）。
  * 時刻は0時からの分。例外を投げない：いない種類は種類なし、時刻の範囲が空なら times が空。
  * データ・今の案は書き換えない

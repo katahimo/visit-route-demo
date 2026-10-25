@@ -949,7 +949,7 @@ export default function PlanPage() {
     return true;
   };
 
-  // ---- 案B「少し動かしてよい」・連絡の一覧（PRD D34・D35。ADR-0011 追記）----
+  // ---- 案B「少し動かしてよい」・連絡の一覧（PRD D34・D35。ADR-0011）----
   /** 「変更を減らす」の重み（反映した振り直しが案B ならその重み） */
   const [stayWeight, setStayWeight] = useState<number>(STAY_WEIGHT_DEFAULT);
   useEffect(() => {

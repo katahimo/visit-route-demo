@@ -13,7 +13,7 @@
 - 見出しの右のボタンは上下 9px（`.page-actions .btn:not(.btn-small)`）で、見出しの段を低くする
 - 狭い画面では右の `.page-actions` が題名の下へ折り返す（`flex-wrap`。題名は `min-width: 200px`）
 
-#### `components/ScheduleNav.tsx`（予定の上のナビの行。PRD D347・D348。ADR-0060・ADR-0061）
+#### `components/ScheduleNav.tsx`（予定の上のナビの行。PRD D347・D348。ADR-0060）
 
 - 月・週・日の予定の `PageHeader`（題名・1行の説明だけ。`nav` も `actions` も渡さない）のすぐ下に置く1行（`div.sched-nav`・data-testid `sched-nav`・`data-view`＝`month|week|day`）。［月｜週｜日］は見出しの下ではなくこの行の中。並びは ①「今日」（`btn btn-small`・`sched-today`。今日を含む期間を見ていれば押せない）②`.period-switch`（‹ `icon-btn`・期間の `select`・› `icon-btn`。日だけ `.date-switch` も付ける）③`ViewSwitch` ④右に `actions`（`.sched-nav-actions`。日：状態の印・メールで送る・確定、週：メールで送る・まとめて確定、月：無し）
 - `ScheduleNav({ current, today, prev, next, picker, actions? })`：`prev`・`next` は `{ label, onClick, disabled? }`（読み上げ名「前の月／次の月」「前の週／次の週」「前の日／次の日」）、`picker` は `{ label, value, options, onChange, testId? }`（月「月を選ぶ」・`month-title`、週「週を選ぶ」・`week-title`、日「日付」）。`options` は `value` を含めて呼ぶ側が渡す（部品は足さない。日の「今日」はデータに無い日でも選べるので、呼ぶ側が選んだ日を足す）
@@ -206,7 +206,7 @@
 - 一覧：`unassignedVisits(data, from, to)`（今の案で入らない訪問）・`dayVisitRows(data, date, nowHm, limit)`（担当なし → 案なし → これからの近い順）・`clientVisitsIn(data, clientId, from, to)`・`staffVisitsIn(data, staffId, from, to)`（その日の今の案、無ければ確定した割当でその人の列にある訪問。取り消しは出さない。〈スタッフ〉の画面の予定）
 - 繰り返し：`endPatternOp(data, patternId, last, today)`（終了日を入れ、last より後で今日以降の、この回だけ変えていない・取り消していない回を消す。消す件数と確定した日の数。〈利用者さん〉の画面の「終わらせる」）
 
-### 名前から開く詳細（ADR-0022 追記。PRD D122〜D126・D205〜D209）
+### 名前から開く詳細（ADR-0022。PRD D122〜D126・D205〜D209）
 
 付けた所は各画面のファイル。付けない所：〈スタッフ〉のスマホ画面（見本）・比較・勤務の見込み・空き状況・月の印刷・連絡の一覧・行き先のリンク（D124）。
 
@@ -245,7 +245,7 @@
 - `ClientName` の `detail`：名前を `PersonButton` に（訪問のカードの中では使わない）
 - `DayLines` の `detailName`：渡すと行のボタンの外の右に i。返す名前が空の行には置かず、同じ幅を空ける。目盛りの行も同じ幅だけ右を空ける
 
-### 用語の説明（PRD D173〜D177・D240〜D242・D307。ADR-0025 追記・ADR-0037）
+### 用語の説明（PRD D173〜D177・D240〜D242・D307。ADR-0025・ADR-0037）
 
 - `lib/glossary.ts`（純粋関数。テストあり）：`GLOSSARY`（span＝出勤〜退勤（拘束）・wait＝空き時間（待ち）・seed・scoreBase＝点数の基準・dropped・hard＝守れない条件（D307 で「必須の違反」から言い換え）・travel・loadCount＝空きを数える人・freeZero・backup＝控え（バックアップ）・terms＝画面での呼び方・typeUnfit・limitUnfit・vacancyCount・vacancyEstimate、予定の組み方の言葉（D242）：aiPlan＝AI案・pinned＝ピン（D307 で「固定」から言い換え）・confirmed＝確定・unconfirmed＝未確定・confirmDiff＝未確定の変更あり・preset＝プリセット・attention＝要対応・stale＝条件が変わった、D307：score＝点数（100点満点・高いほど良い・いつも点数の基準の重みで付ける。日の予定の1行のまとめの点数に付ける）・dayWeights＝この日だけの重み（日の予定の「条件を調整する」で変えた重み。日の予定の作り直しの帯に付ける））、`glossaryText(key, terms)`（〈staff〉〈client〉を呼び方に）。表示だけで、契約・データのキー名は変えない（`evaluate` の減点の内訳の `wait` の表示名は「空き時間（待ち）」）
 - 説明の文の決まり（D307）：1〜2文・90文字まで・「です・ます」で終わる。内部の言葉（費用・内訳・稼働時間・必須の違反・プリセット「・試す重み・展開・inputKey・固定・記録）を使わず、括弧の中に括弧を重ねない（`glossary.test.ts` で確かめる）。帯・確認から外した仕組みの説明（点数の付け方・この日だけの重みの効き方・条件が変わったとき）はここに寄せる

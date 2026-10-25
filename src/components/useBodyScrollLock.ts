@@ -20,6 +20,6 @@ export function useBodyScrollLock(active = true): void {
 
 /**
  * 画面全体で1つの inert のロック（要素ごとに数える。スマホのメニューの引き出しと確認ダイアログが重なっても、
- * 閉じる順にかかわらず最後の1つが閉じるまで戻さない。ADR-0026 追記）
+ * 閉じる順にかかわらず最後の1つが閉じるまで戻さない。ADR-0026）
  */
 export const inertLock = createInertLock();

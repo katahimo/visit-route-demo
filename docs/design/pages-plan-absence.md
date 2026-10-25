@@ -154,7 +154,7 @@
 - 幅 1100px 以下では右下の地図（開いた地図・地図のボタン）の上に積む（`--map-dock-top`。列の見出しを覆わないよう上には出さない）。860px 以下は `max(12px + タブ, --map-dock-top + 8px)`
 - 初めに出すかは差の欄の実際の位置で決める。トーストは帯・地図より上（`--reassign-dock-top`・`--map-dock-top`。`components/floating.ts`）。印刷では出さない
 
-### 少し動かしてよい（案B。ADR-0011 追記。PRD D34・D35）
+### 少し動かしてよい（案B。ADR-0011。PRD D34・D35）
 
 #### `AnnealBox`（`pages/reassignParts.tsx`）
 

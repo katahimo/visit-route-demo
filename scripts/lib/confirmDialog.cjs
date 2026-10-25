@@ -1,7 +1,7 @@
 // e2e の共通：独自の確認ダイアログ（PRD D146〜D150。ADR-0026）に答える。
 // 出たら見出しと本文を st.messages に記録し、st.answer（true＝確定・false＝取り消す）のボタンを押す。
 // ブラウザのネイティブのダイアログ（confirm・alert・prompt）が出たら st.native に記録して閉じる（呼ぶ側で失敗にする）。
-// beforeunload だけはブラウザの仕様で置き換えられないので受ける（再読込・タブを閉じるときの確認。ADR-0023）
+// beforeunload だけはブラウザの仕様で置き換えられないので受ける（再読込・タブを閉じるときの確認。ADR-0052）
 
 /** ページを開く前に呼ぶ（page.goto の前） */
 async function answerConfirms(page, init = {}) {

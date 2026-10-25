@@ -1,4 +1,4 @@
-/* 仮押さえの印（D47。ADR-0012 追記） */
+/* 仮押さえの印（D47。ADR-0012） */
 .tentative-mark {
   flex: none;
   display: inline-flex;

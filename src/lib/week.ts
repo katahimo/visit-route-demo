@@ -1,4 +1,4 @@
-// 週間（ADR-0012 追記の段階2。PRD D49〜D51。design.md §4 pages「週間（段階2）」）の画面の純粋関数。
+// 週間（ADR-0012の段階2。PRD D49〜D51。design.md §4 pages「週間（段階2）」）の画面の純粋関数。
 // データは書き換えず、新しい DemoData を返す（書くのは画面の update(fn)）。今日・新しい ID・時刻は引数で受け取る
 import type { DemoData } from '../contracts/data';
 import type { Client, Pattern, Staff, Visit } from '../contracts/documents';

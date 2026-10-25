@@ -1,4 +1,4 @@
-// 点数の理由を一言（PRD D173。ADR-0025 追記）：今の案の点を下げているいちばん大きい理由を短い文にする純粋関数。
+// 点数の理由を一言（PRD D173。ADR-0025）：今の案の点を下げているいちばん大きい理由を短い文にする純粋関数。
 // 新しい採点は足さない。evaluate の減点の内訳（hundredBreakdown）・採点（score）・下限の条件ごとの内訳（ruleLowerBounds）・
 // 条件ごとの達成（achievements）から選ぶだけ
 import type { HundredPart, PlanScore, Reason, RuleAchievement } from '../contracts/problem';

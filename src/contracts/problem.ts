@@ -57,7 +57,7 @@ export type Problem = {
   /** どの担当も可にならない訪問と、その原因 */
   infeasible: { visit: number; reasons: Reason[] }[];
   /**
-   * 元の案から変えた訪問への減点（欠勤の振り直しの案B「少し動かしてよい」だけ。ADR-0011 追記）。
+   * 元の案から変えた訪問への減点（欠勤の振り直しの案B「少し動かしてよい」だけ。ADR-0011）。
    * 無ければ今までと同じ。solver の費用（matching.routeCost）にだけ足し、evaluate の採点（score・点数）には入れない
    */
   stay?: ProblemStay;
@@ -127,7 +127,7 @@ export type SolveOptions = {
   seed: number;
   iterations: number;
   /**
-   * 初期解の候補（staffId → 訪問IDの列。欠勤の振り直しの案B で案A の結果を渡す。ADR-0011 追記）。
+   * 初期解の候補（staffId → 訪問IDの列。欠勤の振り直しの案B で案A の結果を渡す。ADR-0011）。
    * どの列も可・strict で回れて件数の上限を超えないときだけ候補にし、貪欲な初期解・素朴な案より費用が高くなければ
    * これから始める（よって結果の費用 ≤ この案の費用）。問題に無い人・訪問は無視する
    */

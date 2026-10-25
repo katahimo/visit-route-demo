@@ -131,7 +131,7 @@ export function applyReassign(
 }
 
 /**
- * 案A・案B のどちらかを反映する（PRD D34。ADR-0011 追記）。その日が振り直しのあとのときだけ（無ければそのまま）。
+ * 案A・案B のどちらかを反映する（PRD D34。ADR-0011）。その日が振り直しのあとのときだけ（無ければそのまま）。
  * 元の案の情報は引き継ぎ、method（案B なら stayWeight も）を変える
  */
 export function chooseReassign(

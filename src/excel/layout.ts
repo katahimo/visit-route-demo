@@ -52,7 +52,7 @@ export const CLIENT_COLS = {
   note: 'メモ',
 } as const;
 /**
- * 〈利用者さん〉の「仮押さえ」（○。ADR-0012 追記。段階3）。書き出しは「利用中」の次に置く。
+ * 〈利用者さん〉の「仮押さえ」（○。ADR-0012。段階3）。書き出しは「利用中」の次に置く。
  * 古いブックには無いので必須の列にしない（無ければ false）
  */
 export const CLIENT_TENTATIVE_COL = '仮押さえ';

@@ -31,7 +31,7 @@ export function totalPoints(
 
 /**
  * 訪問 v を落としたときの solver の費用：Problem.stay.keep の訪問（案B の、案A に入っている訪問）は KEEP_DROP_POINTS、
- * ほかは DROP_POINTS（ADR-0011 追記）。採点（totalPoints・evaluate）は常に DROP_POINTS
+ * ほかは DROP_POINTS（ADR-0011）。採点（totalPoints・evaluate）は常に DROP_POINTS
  */
 export function dropPointsOf(problem: Problem, v: number): number {
   return problem.stay?.keep?.[v] ? KEEP_DROP_POINTS : DROP_POINTS;
