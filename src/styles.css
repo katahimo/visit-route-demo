@@ -2741,3 +2741,12 @@ html[data-drawer-toast="side"] body:has(.drawer-wrap) .toast {
     opacity: 0;
   }
 }
+/* 全画面の切り替え（上の帯の右端）。印刷では出さない */
+.app-header .fullscreen-btn {
+  flex-shrink: 0;
+}
+@media print {
+  .fullscreen-btn {
+    display: none !important;
+  }
+}

@@ -48,6 +48,7 @@ import { BatchBand, MonthBatchHost } from '../components/batchBand';
 import { CommandPalette, IS_MAC } from '../components/CommandPalette';
 import { BrokenDataNotice, DataWatch } from '../components/DataNotices';
 import { FeatureOffNotice } from '../components/FeatureOffNotice';
+import { FullscreenButton } from '../components/FullscreenButton';
 import { PersonPopoverProvider } from '../components/PersonPopover';
 import { TourProvider } from '../components/Tour';
 import { HistoryKeys } from '../components/undo';
@@ -414,6 +415,8 @@ function AdminShell() {
             </button>
             {/* 日付の選択は日付で中身が変わる画面だけ（PRD D267） */}
             {showsDateSwitch(pathname) && <DateSwitcher />}
+            {/* 全画面の切り替え（右端。少しでも広く使う） */}
+            <FullscreenButton />
           </header>
           {saveError && (
             <div className="save-error" role="alert">

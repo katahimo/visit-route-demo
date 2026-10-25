@@ -1033,6 +1033,36 @@ async function screen1366(page) {
   await page.setViewportSize({ width: 1400, height: 1000 });
 }
 
+// ---- 全画面の切り替え（上の帯の右端） ----
+async function fullscreen(page) {
+  await open(page, '/home');
+  const btn = page.getByTestId('fullscreen');
+  if ((await page.evaluate(() => document.fullscreenEnabled)) !== true) {
+    check((await btn.count()) === 0, '全画面にできないブラウザでは出さない');
+    return;
+  }
+  check((await btn.getAttribute('aria-label')) === '全画面で表示', '上の帯の右端に「全画面で表示」');
+  await btn.click();
+  // 表示は fullscreenchange のあとで描き直すので、ボタンの文が変わるまで待つ
+  await page
+    .locator('[data-testid="fullscreen"][aria-pressed="true"]')
+    .waitFor({ timeout: 5000 })
+    .catch(() => {});
+  check(
+    (await btn.getAttribute('aria-label')) === '全画面をやめる' && (await btn.getAttribute('aria-pressed')) === 'true',
+    '押すと全画面になり「全画面をやめる」に変わる',
+  );
+  await btn.click();
+  await page
+    .locator('[data-testid="fullscreen"][aria-pressed="false"]')
+    .waitFor({ timeout: 5000 })
+    .catch(() => {});
+  check((await btn.getAttribute('aria-label')) === '全画面で表示', 'もう一度押すと元に戻る', {
+    label: await btn.getAttribute('aria-label'),
+    fs: await page.evaluate(() => document.fullscreenElement?.tagName ?? null),
+  });
+}
+
 const steps = sharedPage({
   open: async () => {
     const s = await openPage();
@@ -1048,6 +1078,7 @@ const steps = sharedPage({
     ['mobile', mobile],
     ['print', print],
     ['screen-1366', screen1366],
+    ['fullscreen', fullscreen],
     // 速さは時計を止めない別の文脈で測る（scripts/lib/env.cjs の withRealClock）
     ['perf', (_page, s) => withRealClock(s.b, pageErrors, perf)],
   ],
