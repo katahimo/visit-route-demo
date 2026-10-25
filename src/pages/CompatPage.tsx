@@ -13,7 +13,6 @@ import { StaffMark } from '../components/StaffMark';
 import { Empty, Hint, PageHeader } from '../components/ui';
 import type { Client, Staff } from '../contracts/documents';
 import { COMPAT_LABELS, COMPAT_LEVELS, type Compat, type CompatLevel } from '../contracts/rules';
-import { weekday } from '../domain/time';
 import {
   type ClientFilterState,
   decodeFilter,
@@ -26,7 +25,7 @@ import {
   sameFilter,
 } from '../lib/clientFilter';
 import { colorOf, initialOf } from '../lib/colors';
-import { byDisplayName, byName, WEEKDAY_LABELS } from '../lib/common';
+import { byDisplayName, byName, paramOf } from '../lib/common';
 import {
   COMPAT_CHIPS,
   clientFilterSummary,
@@ -68,10 +67,6 @@ const COMPAT_MEANING: Record<CompatLevel, string> = {
 /** 次の相性（◎→○→空→△→×→◎） */
 const nextLevel = (l: CompatLevel): CompatLevel =>
   COMPAT_LEVELS[(COMPAT_LEVELS.indexOf(l) + 1) % COMPAT_LEVELS.length] as CompatLevel;
-
-/** URL の値（無ければ null） */
-const paramOf = (params: URLSearchParams, key: string): string | null =>
-  params.has(key) ? (params.get(key) ?? '') : null;
 
 /** 開いている吹き出し（見出しのボタンは ID で持ち、そのたびに引く） */
 type Opened = { kind: 'staff' | 'client'; id: string };

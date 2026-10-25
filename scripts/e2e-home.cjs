@@ -48,7 +48,7 @@ const SEED_DAYS = Array.from({ length: 7 }, (_, i) => addDays(TODAY, i));
  */
 const SYM = SEED_DAYS.filter((d) => d.slice(0, 7) === YM).length >= 3 ? YM : SEED_DAYS[6].slice(0, 7);
 const WD = ['日', '月', '火', '水', '木', '金', '土'];
-/** 「10/22（木）」（アプリの lib/confirmDay の dayLabel と同じ） */
+/** 「10/22（木）」（アプリの lib/dateText の dateText と同じ） */
 const dayLabel = (d) =>
   `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}（${WD[new Date(`${d}T00:00:00Z`).getUTCDay()]}）`;
 

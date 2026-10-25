@@ -48,7 +48,7 @@
 - 〈利用者さん〉ごと（`offboard-clients`・`offboard-client`）：行の見出しの〈利用者さん〉の名前は `PersonButton`（`offboard-client-name`。select の option には置かない。欄の中の吹き出し・Esc）。代わりの候補（入れる回・受け持ち。`offboard-choice`）。無ければ `offboard-no-clients`
 - 翌日以降にその人が担当している訪問（`offboard-visits`。日ごとの件数と日の予定へのボタン）。無ければ `offboard-no-visits`
 - 欄の主ボタンは「まとめて適用」（`offboard-apply`。1つ）：いつもの担当・パターンの担当・担当できる人を置き換える。訪問の案は作り直さない
-- 月の予定で、最終勤務日に「最終」、後の日のその人の訪問は「休みの人に N」（`absentLeftIds` に「最終勤務日の後」を足した）、〈スタッフ〉を選ぶと後の日は「最終勤務日の後」
+- 月の予定で、最終勤務日に「最終」、後の日のその人の訪問は要対応の「担当が休み」（`lib/dayPlan` の訪問ごとの検査。最終勤務日の後を含む）、〈スタッフ〉を選ぶと後の日は「最終勤務日の後」
 
 ### 勤務時間（シフト）（`#/availability`）
 

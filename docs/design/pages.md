@@ -327,7 +327,6 @@
 | `mailParts.tsx`・`mapsLinks.tsx` | メール・道順のリンク | [pages-common.md](pages-common.md) |
 | `FilePick.tsx` | ファイル選択 | [pages-data.md](pages-data.md) |
 | `parts.tsx` | `ClientName`・`ClientDot`（〈利用者さん〉の丸）など | — |
-| `Check.tsx` | チェックボックスの横並び `Check`（ほかの部品を import しない。`conditions`・`parts` の循環を作らない） | — |
 | `StaffMark.tsx` | 〈スタッフ〉の印 `StaffMark`・`StaffMarkById` | このファイル（〈スタッフ〉の印） |
 
 #### `lib/`（画面用の純粋関数。テストあり）
@@ -350,6 +349,7 @@
 | `useMedia.ts`・`scrollEdge.ts`・`useScrollEdge.ts` | 狭い画面の判定（`COMPACT_QUERY`）・横に巻く表の端と巻き位置 | このファイル（狭い画面の表） |
 | `staffMark.ts` | 〈スタッフ〉の印の色（`staffColorMap`）・文字（`staffMarkText`・`surnameInitial`）・アイコンの検査（`staffIconError`） | このファイル（〈スタッフ〉の印） |
 | `isDate.ts`・`common.ts`・`colors.ts`・`motion.ts`・`download.ts` | 小さな共通（動きを減らす設定・ファイルの保存） | — |
+| `dateText.ts`・`ym.ts`・`spans.ts`・`condText.ts` | 日付・年月・時刻の短い書式（`mdText`「11/4」・`dateText`「11/4（水）」・`ymText`「2026年11月」・`monthLabel`「11月」・`clockTime`「9:05」）、年月・日付の計算（`isYm`・`ymOf`・`addMonths`・`monthDates`・`calendarWeeks`・`daysBetween`）、時刻の区間（`Span`・`spansOf`・時間軸の範囲 `DAY_START`・`DAY_END`）、条件の表示文 `condText`。同じ書式・計算を画面ごとに書き直さずここから使う | — |
 
 ### 完了の条件（共通）
 

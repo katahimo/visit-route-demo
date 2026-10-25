@@ -4,7 +4,7 @@
 import type { Visit } from '../contracts/documents';
 import type { Problem } from '../contracts/problem';
 import type { ContactList } from '../contracts/reassign';
-import { minutesToHhmm } from '../domain/time';
+import { clockTime } from './dateText';
 import { type UnfitMark, unfitMarks } from './week';
 
 /** 印の種類（並びはこの順） */
@@ -72,7 +72,7 @@ export function toldTexts(told: ContactList | null, staffName: (id: string) => s
   const out = new Map<string, string>();
   if (!told) return out;
   const name = (id: string | null) => (id ? staffName(id) : 'なし');
-  const clock = (m: number | null) => (m === null ? '—' : minutesToHhmm(Math.round(m)).replace(/^0/, ''));
+  const clock = (m: number | null) => (m === null ? '—' : clockTime(m));
   for (const c of told.staffChanged) out.set(c.visitId, `担当 ${name(c.fromStaffId)}→${name(c.toStaffId)}`);
   for (const c of told.timeChanged) {
     const t = `時刻 ${clock(c.fromStart)}→${clock(c.toStart)}`;

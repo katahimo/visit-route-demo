@@ -33,7 +33,7 @@ import { pinnedAddressAfter, toPlace } from '../lib/addressLookup';
 import { copyText } from '../lib/clipboard';
 import { CLIENT_COLORS } from '../lib/colors';
 import { attempt, nameTaken, newId, WEEKDAY_LABELS } from '../lib/common';
-import { clockTime, dateText, mdText } from '../lib/dateText';
+import { clockTime, dateText, mdText, monthLabel } from '../lib/dateText';
 import { unassignedDays } from '../lib/dayPlan';
 import { type InquiryDayMark, type InquiryRow, inquiryDayLevel, inquiryRows, vacancyLevel } from '../lib/glance';
 import { dayHref, unassignedHref } from '../lib/links';
@@ -64,7 +64,6 @@ import { useDemoData } from '../store';
 import { inquirySummary, vacancyNotice, vacancyOf, verdictOf } from '../vacancy';
 import './settings.css';
 import './vacancy.css';
-import { monthLabel } from '../lib/dateText';
 
 /**
  * 空き状況と問い合わせの試算（ADR-0012。段階3＝PRD D45〜D48。design.md §4 pages「空き状況と問い合わせの試算」）。

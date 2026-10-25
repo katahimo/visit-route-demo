@@ -23,7 +23,8 @@ import {
   visitIssues,
 } from './dayPlan';
 import { isRequestedOff } from './requestedOff';
-import { busyParts, type StaffSlot, spansOf, staffSlots } from './staffBar';
+import { spansOf } from './spans';
+import { busyParts, type StaffSlot, staffSlots } from './staffBar';
 import { workStats } from './workload';
 import { monthDates } from './ym';
 

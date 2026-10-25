@@ -432,6 +432,12 @@ def main() -> int:
             return 1
         path, _, new = biome
         path.write_text(json.dumps(new, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+        # Biome の書式にそろえる（入っていれば。そろえないと biome check が書式の違いで落ちる）
+        biome_bin = root / 'node_modules' / '.bin' / 'biome'
+        if biome_bin.exists():
+            import subprocess
+
+            subprocess.run([str(biome_bin), 'format', '--write', str(path)], cwd=root, capture_output=True)
         print(f'biome.json に書き出した（層の決まり {len(cfg["layers"])} 件）')
         return 0
     if biome and biome[1] != biome[2]:

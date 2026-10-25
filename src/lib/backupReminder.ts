@@ -2,6 +2,7 @@
 // 日付は日本時間の YYYY-MM-DD を引数で受ける（Date.now を読まない）。記録の読み書きは store の backupMemory
 import type { DemoData } from '../contracts/data';
 import { mdText } from './dateText';
+import { daysBetween } from './ym';
 
 /** この日数以上書き出していなければ知らせる */
 export const BACKUP_REMIND_DAYS = 14;
@@ -9,12 +10,6 @@ export const BACKUP_REMIND_DAYS = 14;
 export const BACKUP_REMIND_TEXT = '控え（バックアップ）を2週間以上書き出していません。データの画面で書き出せます';
 /** まだ書き出していないときの文 */
 export const NEVER_EXPORTED_TEXT = 'まだ書き出していません';
-
-/** a から b までの日数（b − a。日付は YYYY-MM-DD） */
-export function daysBetween(a: string, b: string): number {
-  const t = (d: string) => Date.UTC(Number(d.slice(0, 4)), Number(d.slice(5, 7)) - 1, Number(d.slice(8, 10)));
-  return Math.round((t(b) - t(a)) / 86400000);
-}
 
 /** 「10/12（7日前）」「10/19（今日）」。まだなら「まだ書き出していません」 */
 export function exportAgoText(last: string | null, today: string): string {

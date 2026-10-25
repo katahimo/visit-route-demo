@@ -14,11 +14,11 @@ import {
 } from 'lucide-react';
 import { useId, useState } from 'react';
 import type { Condition, Item, ItemTarget, Op, Traits, TraitValue } from '../contracts/rules';
-import { attempt, ITEM_KIND_LABELS } from '../lib/common';
-import { conditionText } from '../matching';
+import { ITEM_KIND_LABELS } from '../lib/common';
+import { condText } from '../lib/condText';
 import { useDemoData } from '../store/react';
-import { Check } from './Check';
 import { FieldError, invalidAttrs } from './FieldError';
+import { Check } from './parts';
 import { IconButton, WithIcon } from './ui';
 
 /** 項目の名前に合わせたアイコン（見つからなければ Tag）。表示だけの対応 */
@@ -174,18 +174,6 @@ function Segmented({
       ))}
     </fieldset>
   );
-}
-
-/** 条件の表示文（matching.conditionText。あり/なしは「項目：あり」の形に） */
-export function condText(cond: Condition, item: Item | undefined): string {
-  if (item?.kind === 'flag' && typeof cond.value === 'boolean' && (cond.op === 'is' || cond.op === 'not')) {
-    const yes = cond.op === 'is' ? cond.value : !cond.value;
-    return `${item.name}：${yes ? 'あり' : 'なし'}${cond.op === 'not' ? '（未確認も可）' : ''}`;
-  }
-  const r = attempt(() => conditionText(cond, item));
-  if (r.value !== null) return r.value;
-  if (!item) return '（項目がありません：無効）';
-  return item.name;
 }
 
 /** 文字列の配列として読む（is の1つの値も配列に） */

@@ -1,7 +1,7 @@
 // 定期パターンの表示の文（ADR-0012・ADR-0013）
 import { describe, expect, it } from 'vitest';
 import type { Pattern } from '../contracts/documents';
-import { monthWeeksLabel, patternWhenText, repeatText } from './patternText';
+import { monthWeeksLabel, patternWhenText, repeatText, usualStartsLabel } from './patternText';
 
 const p = (over: Partial<Pattern> = {}) => ({
   weekdays: [1, 4],
@@ -46,5 +46,20 @@ describe('patternWhenText', () => {
         }),
       ),
     ).toBe('火 13:00〜14:00の間');
+  });
+});
+
+describe('usualStartsLabel（標準の開始の文。ADR-0062）', () => {
+  it('曜日の順に「曜 開始」を並べる。無ければ空', () => {
+    expect(
+      usualStartsLabel({
+        usualStarts: [
+          { weekday: 3, start: '11:00' },
+          { weekday: 1, start: '10:00' },
+        ],
+      }),
+    ).toBe('標準の開始：月 10:00・水 11:00');
+    expect(usualStartsLabel({ usualStarts: [] })).toBe('');
+    expect(usualStartsLabel({})).toBe('');
   });
 });

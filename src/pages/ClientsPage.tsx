@@ -11,7 +11,7 @@ import { useToast } from '../components/Toast';
 import { PageHeader, WithIcon } from '../components/ui';
 import type { Client } from '../contracts/documents';
 import { leaveOn } from '../domain/leaves';
-import { jstDate, weekday } from '../domain/time';
+import { jstDate } from '../domain/time';
 import {
   activeFilterCount,
   EMPTY_FILTER,
@@ -22,7 +22,7 @@ import {
 } from '../lib/clientFilter';
 import { STAGE_LABELS } from '../lib/clientStage';
 import { colorOf, initialOf } from '../lib/colors';
-import { byDisplayName, byName, hasLocation, WEEKDAY_LABELS } from '../lib/common';
+import { byDisplayName, byName, hasLocation } from '../lib/common';
 import { narrowRole } from '../lib/narrowRoles';
 import { formatPostalCode } from '../lib/postalCode';
 import { shouldOpenRow } from '../lib/rowOpen';

@@ -63,3 +63,9 @@ export function periodText(p: Pick<Pattern, 'from' | 'to'>): string {
 export function typeOf(types: readonly VisitType[], typeId: string | null | undefined): VisitType | null {
   return typeId ? (types.find((t) => t.id === typeId) ?? null) : null;
 }
+
+/** 標準の開始の文（「標準の開始：月 10:00・水 11:00」。無ければ空。ADR-0062） */
+export const usualStartsLabel = (p: Pick<Pattern, 'usualStarts'>): string => {
+  const us = [...(p.usualStarts ?? [])].sort((a, b) => a.weekday - b.weekday);
+  return us.length === 0 ? '' : `標準の開始：${us.map((u) => `${WEEKDAY_LABELS[u.weekday]} ${u.start}`).join('・')}`;
+};

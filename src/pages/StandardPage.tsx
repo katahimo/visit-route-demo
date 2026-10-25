@@ -40,7 +40,7 @@ import { useValueStore } from '../lib/valueStore';
 import { useDemoData } from '../store';
 import './settings.css';
 import './standard.css';
-import { mdText, dateText } from '../lib/dateText';
+import { dateText, mdText } from '../lib/dateText';
 
 const cellKey = (r: CellRef) => `${r.patternId}|${r.weekday}`;
 
@@ -440,8 +440,8 @@ export default function StandardPage() {
         <li className="card stack" data-step="proposals">
           <h2>1. 案をくらべる</h2>
           <p className="sub" data-testid="standard-period">
-            プリセット（考え方）ごとに、{mdText(period.from)}〜{mdText(period.to)}（{period.weeks}週。{cycle.reason}）の担当を
-            AI
+            プリセット（考え方）ごとに、{mdText(period.from)}〜{mdText(period.to)}（{period.weeks}週。{cycle.reason}
+            ）の担当を AI
             で組み、標準の表の案を作ります。繰り返しだけから作り（ピン・今の予定の手直しは見ません）、今の予定は変わりません
           </p>
           <div className="row">

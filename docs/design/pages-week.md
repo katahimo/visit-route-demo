@@ -67,7 +67,7 @@ URL を書くときは履歴を増やさない `replace`（表示の切り替え
 
 #### 時間軸（PRD D49・D56・D57）
 
-- 列＝月〜日、縦＝`DAY_START` 07:00〜`DAY_END` 20:00（1時間ごとの目盛り。`lib/week`）
+- 列＝月〜日、縦＝`DAY_START` 07:00〜`DAY_END` 20:00（1時間ごとの目盛り。`lib/spans`。日の時間軸の初期値と同じ）
 - 訪問の帯：その日の今の案（無ければ確定した割当、どちらも無ければ訪問の開始（早））の lenient の開始〜終了の位置に、種類の色で（文字：時刻・〈利用者さん〉・担当の名前）。帯の縁は〈スタッフ〉で見るとき担当の色、〈利用者さん〉で見るとき〈利用者さん〉の色
 - 全員のとき、同じ時刻に重なる帯は列の中で横に並べる（`laneLayout`）
 - 担当の無い帯は「担当なし」・要対応の赤い破線（`is-unassigned`。PRD D228）。凡例も「担当なし（要対応）」。帯の印は共通の判定（`useVisitLooks`。要対応・資格✗／限✗・未連絡の変更・ピン・この回だけ変更・仮押さえ。PRD D339）を時刻の横に（`VisitMarks`。帯は大の札で `data-size="l"`・`data-marks`）。担当が種類の必要条件・担当できる人に合わなければ赤い枠と「資格✗」「限✗」。今日より前の日の帯には要対応・資格✗／限✗を出さない
@@ -150,7 +150,7 @@ URL を書くときは履歴を増やさない `replace`（表示の切り替え
 
 #### `lib/week.ts`（画面の純粋関数。テストあり）
 
-- `weekDates(date)`（月曜はじまりの7日）・`DAY_START`・`DAY_END`
+- `weekDates(date)`（月曜はじまりの7日）。時間軸の範囲 `DAY_START`・`DAY_END` は `lib/spans`
 - `laneLayout(blocks)`（重なる帯の横の並び）
 - `moveOnce(d, visitId, date, start)`・`moveFollowing(d, visitId, date, start, today, newId)`（`splitPattern` を使う。パターンの訪問でなければ `moveOnce`）・`canMoveVisit`・`changedDates`
 - `insertIntoPlan(d, date, visitId, problem)`・`fitCountAt`・`allowedStaffOf`

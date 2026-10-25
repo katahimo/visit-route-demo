@@ -77,7 +77,7 @@ import {
 import { colorOf } from '../lib/colors';
 import { attempt, byDisplayName, byName, newId, WEEKDAY_LABELS } from '../lib/common';
 import { bulkConfirmDialog, bulkConfirmLabel, bulkConfirmTargets, bulkConfirmWhy, confirmDay } from '../lib/confirmDay';
-import { clockTime, mdText } from '../lib/dateText';
+import { clockTime, dateText, mdText, ymText } from '../lib/dateText';
 import { isOn } from '../lib/features';
 import { attentionTarget, type LinkTarget } from '../lib/links';
 import {
@@ -134,7 +134,7 @@ import { findVisit, visitsOn } from '../patterns';
 import { type DayLoadSlot, dayLoad } from '../vacancy';
 import './month.css';
 import './settings.css';
-import { ymText } from '../lib/dateText';
+import { useMedia } from '../lib/useMedia';
 
 /**
  * 月間カレンダーと月まとめ作成（ADR-0012。PRD D39〜D43・D53〜D55。design.md §4 pages「月単位の予定」「月間・週間の改定」）。
@@ -1372,9 +1372,7 @@ export default function MonthPage() {
                         onClick={() => openDay(d)}
                         title="押すとその日の「日の予定」を開きます"
                       >
-                        <span className="month-attention-date">
-                          {mdText(d)}（{WEEKDAY_LABELS[weekday(d)]}）
-                        </span>
+                        <span className="month-attention-date">{dateText(d)}</span>
                         <span>{STATE_TEXT[statuses.get(d)?.state ?? 'none']}</span>
                       </button>
                     </li>
@@ -1412,9 +1410,7 @@ export default function MonthPage() {
                           data-date={a.date}
                           data-kind={a.kind}
                         >
-                          <span className="month-attention-date">
-                            {mdText(a.date)}（{WEEKDAY_LABELS[weekday(a.date)]}）
-                          </span>
+                          <span className="month-attention-date">{dateText(a.date)}</span>
                           <span>
                             {a.kind === 'care' && (
                               <WithIcon icon={CircleAlert} size={14}>
@@ -2339,16 +2335,3 @@ const DayCell = memo(function DayCell(props: CellProps) {
     </td>
   );
 });
-
-/** メディアクエリが合っているか（幅を変えたら追う。PRD D189 の一覧の既定） */
-function useMedia(query: string): boolean {
-  const [on, setOn] = useState(() => window.matchMedia(query).matches);
-  useEffect(() => {
-    const mq = window.matchMedia(query);
-    const onChange = () => setOn(mq.matches);
-    onChange();
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
-  }, [query]);
-  return on;
-}

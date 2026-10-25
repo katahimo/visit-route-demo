@@ -49,7 +49,7 @@ import {
 } from '../lib/clientFilter';
 import { colorOf } from '../lib/colors';
 import { bulkConfirmDialog, bulkConfirmTargets, confirmDay } from '../lib/confirmDay';
-import { clockTime, dateText } from '../lib/dateText';
+import { clockTime, dateText, mdText } from '../lib/dateText';
 import { periodEmptyGuide } from '../lib/emptyGuide';
 import { isDate } from '../lib/isDate';
 import { attentionList } from '../lib/month';
@@ -57,6 +57,7 @@ import { monthBatch } from '../lib/monthBatch';
 import { staffLabels } from '../lib/monthPrint';
 import { typeOf } from '../lib/patternText';
 import { scrollLeftToShow } from '../lib/scrollEdge';
+import { DAY_END, DAY_START } from '../lib/spans';
 import {
   clientParamOf,
   handoffFromTable,
@@ -78,8 +79,6 @@ import {
   canMoveVisit,
   clientItemMark,
   clientWeekTable,
-  DAY_END,
-  DAY_START,
   insertIntoPlan,
   laneLayout,
   qualificationBadges,
@@ -97,7 +96,7 @@ import { isTimeline, WEEK_VIEWS, type WeekView, weekViewLabel, weekViewOf, weekV
 import { findVisit, visitsOn } from '../patterns';
 import { WeekMailPanel } from './mailPanels';
 import './week.css';
-import { mdText } from '../lib/dateText';
+import { paramOf } from '../lib/common';
 
 /**
  * 週間（ADR-0012の段階2。PRD D49〜D51・D56・D57。design.md §4 pages「週間（段階2）」「月間・週間の改定（2026-10-17）」）。
@@ -129,9 +128,6 @@ const HOURS = Array.from({ length: (DAY_END - DAY_START) / 60 + 1 }, (_, i) => D
 /** 日の見出しの件数：休み（ADR-0013）のため無しの訪問を除く */
 const liveCount = (day: WeekDay) => day.bands.filter((b) => !b.leave).length;
 
-/** URL の ?staff= ?client= ?cf= の値（無ければ null） */
-const paramOf = (params: URLSearchParams, key: string): string | null =>
-  params.has(key) ? (params.get(key) ?? '') : null;
 /** 選んだ人（null＝全員、空なら []＝だれも選ばない） */
 const selectionOf = (raw: string | null): string[] | null => (raw === null ? null : raw.split(',').filter(Boolean));
 

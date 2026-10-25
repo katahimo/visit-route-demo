@@ -171,7 +171,7 @@
 
 #### `components/ClientFilter.tsx`
 
-- 検索欄：Esc で文字を消す。文字はこの部品の中にも持ち、変換中（`compositionstart`〜`compositionend`）は呼ぶ側へ渡さず確定で渡す。ふつうの入力は 300ms 待って渡す（週は `replace` で URL へ）。呼ぶ側の値が外から変わったら入力欄を合わせる。チップなどを押したときは入力欄の文字もいっしょに渡す
+- 検索欄：Esc で文字を消す。文字はこの部品の中にも持ち、変換中（`compositionstart`〜`compositionend`）は呼ぶ側へ渡さず確定で渡す。ふつうの入力は 300ms 待って渡す（週は `replace` で URL へ）。呼ぶ側の値が外から変わったら入力欄を合わせる。チップなどを押したときは入力欄の文字もいっしょに渡す（このふるまいは `components/useImeQuery` の `useImeQuery(state, onChange)`。〈スタッフ〉の絞り込み `StaffFilter` も同じフックを使う。待ちは `QUERY_DELAY_MS`）
 - 「終了の人も出す」（`hideEnded` で出さない）・件数「N人／M人」・「絞り込みを戻す」（既定と違うときだけ）
 - 地区の1段目（市区）と選んだ市区ごとの2段目（町名）
 - 訪問の種類（`visitTypes` を渡し1件以上のとき。地区の下・「絞り込み」の上の別の欄「訪問の種類（どれか）」。`testId-type`・`data-key`＝種類の id）：種類ごとのチップ（人数つき・0人は `aria-disabled`）。ADR-0021。訪問の種類の機能の入り切りは無い（`features` に無い）ので、種類が0件のときだけ出さない

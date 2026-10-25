@@ -11,7 +11,7 @@ import type { PatternChange } from '../contracts/patterns';
 import { hhmmToMinutes, jstDate, minutesToHhmm } from '../domain/time';
 import { byName, newId, WEEKDAY_LABELS } from '../lib/common';
 import { mdText } from '../lib/dateText';
-import { EVERY_WEEKS_LABELS, patternWhenText, periodText, typeOf } from '../lib/patternText';
+import { EVERY_WEEKS_LABELS, patternWhenText, periodText, typeOf, usualStartsLabel } from '../lib/patternText';
 import { useFeature } from '../lib/useFeature';
 import { endPatternOp } from '../lib/visitOps';
 import { removePattern, splitPattern, timesOn } from '../patterns';
@@ -98,12 +98,6 @@ const formOf = (p: Pattern | null, today: string, defaultDuration: number): Form
         usualStaffId: '',
         note: '',
       };
-
-/** 標準の開始の文（「標準の開始：月 10:00・水 11:00」。無ければ空。ADR-0062） */
-const usualStartsLabel = (p: Pick<Pattern, 'usualStarts'>): string => {
-  const us = [...(p.usualStarts ?? [])].sort((a, b) => a.weekday - b.weekday);
-  return us.length === 0 ? '' : `標準の開始：${us.map((u) => `${WEEKDAY_LABELS[u.weekday]} ${u.start}`).join('・')}`;
-};
 
 /** 確定した（伝えた）日のうち、since 以降でその繰り返しの回がある日の数（変えると「未連絡の変更」になる） */
 function confirmedDays(d: DemoData, patternId: string, since: string, c?: PatternChange): number {

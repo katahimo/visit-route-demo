@@ -4,7 +4,7 @@
 // 検索の文字だけはこの部品の中にも持つ（日本語の変換を壊さないため。変換中は呼ぶ側へ渡さず、確定後に、
 // ふつうの入力は少し遅らせて渡す。呼ぶ側の値が外から変わったら（戻るボタンなど）入力欄を合わせる）
 import { Search } from 'lucide-react';
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useId, useMemo } from 'react';
 import type { Client } from '../contracts/documents';
 import {
   type AreaChip,
@@ -33,6 +33,7 @@ import {
 } from '../lib/clientFilter';
 import { useFeature } from '../lib/useFeature';
 import './clientFilter.css';
+import { useImeQuery } from './useImeQuery';
 
 export type ClientFilterProps = {
   /** 候補の〈利用者さん〉（終了の人も含めて渡す。「終了の人も出す」で出し分ける） */
@@ -65,9 +66,6 @@ export type ClientFilterProps = {
   testId?: string;
 };
 
-/** 検索の文字を呼ぶ側へ渡すまでの待ち（ミリ秒。打つたびに URL を書かない） */
-export const QUERY_DELAY_MS = 300;
-
 /**
  * 絞り込みの欄。チップ・地区は押すと付け外し（aria-pressed）。押しても0人になるものは薄くして押せなくする
  * （aria-disabled。押しているものはいつでも外せる。「〈スタッフ〉が担当する人」は0人でも押せ、select で選び直せる）。
@@ -94,51 +92,7 @@ export function ClientFilter({
   const limitOn = useFeature('allowedStaff');
   const hiddenChip = (chip: FilterChip) => (chip === 'leave' && !leaveOn) || (chip === 'limited' && !limitOn);
   // ---- 検索の文字（変換中は呼ぶ側へ渡さない）----
-  const [text, setText] = useState(state.query);
-  const textRef = useRef(state.query);
-  /** 最後に呼ぶ側へ渡した文字（呼ぶ側の値がこれと違えば、外から変わった） */
-  const sent = useRef(state.query);
-  const composing = useRef(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const latest = useRef({ state, onChange });
-  latest.current = { state, onChange };
-  const clearTimer = () => {
-    if (timer.current !== null) clearTimeout(timer.current);
-    timer.current = null;
-  };
-  // 外すときは、待っている書き込みを取り消す
-  useEffect(() => {
-    return () => {
-      if (timer.current !== null) clearTimeout(timer.current);
-    };
-  }, []);
-  // 呼ぶ側の値が外から変わったら入力欄を合わせる（変換中は触らない）
-  useEffect(() => {
-    if (state.query === sent.current || composing.current) return;
-    if (timer.current !== null) clearTimeout(timer.current);
-    timer.current = null;
-    sent.current = state.query;
-    textRef.current = state.query;
-    setText(state.query);
-  }, [state.query]);
-  const setLocalText = (q: string) => {
-    textRef.current = q;
-    setText(q);
-  };
-  /** 呼ぶ側へ渡す（待っている文字の書き込みは取り消す） */
-  const send = (next: ClientFilterState) => {
-    clearTimer();
-    sent.current = next.query;
-    latest.current.onChange(next);
-  };
-  /** 入力欄の文字を渡す */
-  const flushQuery = () => {
-    if (textRef.current !== latest.current.state.query) send({ ...latest.current.state, query: textRef.current });
-    else clearTimer();
-  };
-  /** チップなどの変更：入力欄の文字もいっしょに渡す（変換中なら渡し済みの文字のまま） */
-  const change = (next: ClientFilterState) =>
-    send({ ...next, query: composing.current ? sent.current : textRef.current });
+  const { text, setLocalText, send, change, inputProps } = useImeQuery(state, onChange);
 
   const staffId = useMemo(() => resolveStaffId(state, staff, facts, clients), [state, staff, facts, clients]);
   const shown = useMemo(() => filterClients(clients, state, facts, staffId), [clients, state, facts, staffId]);
@@ -260,35 +214,10 @@ export function ClientFilter({
             <input
               id={`${uid}-q`}
               type="search"
-              value={text}
               placeholder="名前・よみで探す"
               maxLength={50}
               autoComplete="off"
-              onChange={(e) => {
-                setLocalText(e.target.value);
-                // 変換中は渡さない（確定の compositionend で渡す）。ふつうの入力は少し待ってから
-                if (composing.current || (e.nativeEvent as InputEvent).isComposing) return;
-                clearTimer();
-                timer.current = setTimeout(flushQuery, QUERY_DELAY_MS);
-              }}
-              onCompositionStart={() => {
-                composing.current = true;
-                clearTimer();
-              }}
-              onCompositionEnd={(e) => {
-                composing.current = false;
-                setLocalText(e.currentTarget.value);
-                flushQuery();
-              }}
-              onBlur={() => !composing.current && flushQuery()}
-              onKeyDown={(e) => {
-                if (e.nativeEvent.isComposing || e.keyCode === 229) return;
-                if (e.key === 'Escape' && text !== '') {
-                  e.preventDefault();
-                  setLocalText('');
-                  flushQuery();
-                } else if (e.key === 'Enter') flushQuery();
-              }}
+              {...inputProps}
               data-testid={`${testId}-input`}
             />
           </span>

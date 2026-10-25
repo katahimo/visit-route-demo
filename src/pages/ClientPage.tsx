@@ -16,13 +16,12 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Check } from '../components/Check';
 import { useConfirm } from '../components/ConfirmDialog';
 import { CondChips, ConditionsEditor, TraitsEditor } from '../components/conditions';
 import { type FormErr, invalidAttrs, RequiredMark, toFormErr } from '../components/FieldError';
 import { PersonCalendar } from '../components/PersonCalendar';
 import { PickChips } from '../components/PickChips';
-import { TentativeMark } from '../components/parts';
+import { Check, TentativeMark } from '../components/parts';
 import { ClientAreaRow, ClientStaffRows, CondRows, DlRow } from '../components/personDetail';
 import { BackToList, EditSection, type PersonTabDef, PersonTabs, useAskDiscard } from '../components/personPage';
 import { ClientCompatRows, PersonNames, placeText } from '../components/personView';

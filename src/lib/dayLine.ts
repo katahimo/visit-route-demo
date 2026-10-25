@@ -3,12 +3,12 @@
 // 区間の塗り分けは稼働の見込み（PRD D77。lib/staffBar の spanParts）と同じ言葉で、自宅からの移動も「移動」で足す
 // （拘束には入れないが、空いているかを見るため）。純粋関数（データは書き換えない）
 import type { Problem } from '../contracts/problem';
-import { timeText } from '../domain/availability';
-import { minutesToHhmm } from '../domain/time';
 import { scheduleRoute } from '../matching';
 import { BAR_END, BAR_START } from './barRows';
 import { own } from './common';
-import { type RoutePart, type Span, spanParts } from './staffBar';
+import { clockTime } from './dateText';
+import type { Span } from './spans';
+import { type RoutePart, spanParts } from './staffBar';
 
 export type DayLine = {
   staffId: string;
@@ -128,7 +128,6 @@ export function dayLineRange(lines: readonly DayLine[]): { start: number; end: n
   return { start: Math.max(0, start), end };
 }
 
-const clock = (m: number) => timeText(minutesToHhmm(Math.round(m)));
 /** 「1時間20分」「40分」 */
 const len = (m: number) => {
   const r = Math.round(m);
@@ -142,7 +141,9 @@ const len = (m: number) => {
  */
 export function dayLineText(x: DayLine): string {
   const shift =
-    x.shift.length > 0 ? `勤務 ${x.shift.map((s) => `${clock(s.start)}〜${clock(s.end)}`).join('、')}` : '勤務なし';
+    x.shift.length > 0
+      ? `勤務 ${x.shift.map((s) => `${clockTime(s.start)}〜${clockTime(s.end)}`).join('、')}`
+      : '勤務なし';
   if (x.count === 0) return `0件・${shift}・訪問なし`;
   const visits = x.parts.filter((p) => p.kind === 'visit');
   const from = Math.min(...visits.map((p) => p.start));
@@ -152,5 +153,5 @@ export function dayLineText(x: DayLine): string {
     `移動 ${len(x.travel)}`,
     ...(x.wait > 0 ? [`空き時間（待ち） ${len(x.wait)}`] : []),
   ].join('・');
-  return `${x.count}件・${shift}・訪問 ${clock(from)}〜${clock(to)}（${inner}）・空き ${len(x.free)}`;
+  return `${x.count}件・${shift}・訪問 ${clockTime(from)}〜${clockTime(to)}（${inner}）・空き ${len(x.free)}`;
 }

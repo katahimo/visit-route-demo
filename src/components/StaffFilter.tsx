@@ -1,8 +1,8 @@
 // 〈スタッフ〉の列の絞り込みの欄（相性の画面。PRD D116。ADR-0022）：名前の検索と、特性のチップ（AND・人数つき）。
-// 判定は lib/compatView の純粋関数。状態は呼ぶ側が持つ（URL の ?sf=）。検索の文字の扱いは ClientFilter と同じ
+// 判定は lib/compatView の純粋関数。状態は呼ぶ側が持つ（URL の ?sf=）。検索の文字の扱いは ClientFilter と同じ useImeQuery
 // （部品の中にも持ち、日本語の変換中は呼ぶ側へ渡さず確定後に、ふつうの入力は少し遅らせて渡す。外から変わったら入力欄を合わせる）
 import { Search } from 'lucide-react';
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useId, useMemo } from 'react';
 import type { Staff } from '../contracts/documents';
 import {
   filterStaff,
@@ -12,7 +12,7 @@ import {
   staffChipCounts,
   toggleStaffChip,
 } from '../lib/compatView';
-import { QUERY_DELAY_MS } from './ClientFilter';
+import { useImeQuery } from './useImeQuery';
 import './clientFilter.css';
 
 export function StaffFilter({
@@ -37,46 +37,7 @@ export function StaffFilter({
   testId?: string;
 }) {
   const uid = useId();
-  const [text, setText] = useState(state.query);
-  const textRef = useRef(state.query);
-  const sent = useRef(state.query);
-  const composing = useRef(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const latest = useRef({ state, onChange });
-  latest.current = { state, onChange };
-  const clearTimer = () => {
-    if (timer.current !== null) clearTimeout(timer.current);
-    timer.current = null;
-  };
-  useEffect(() => {
-    return () => {
-      if (timer.current !== null) clearTimeout(timer.current);
-    };
-  }, []);
-  // 呼ぶ側の値が外から変わったら入力欄を合わせる（変換中は触らない）
-  useEffect(() => {
-    if (state.query === sent.current || composing.current) return;
-    if (timer.current !== null) clearTimeout(timer.current);
-    timer.current = null;
-    sent.current = state.query;
-    textRef.current = state.query;
-    setText(state.query);
-  }, [state.query]);
-  const setLocalText = (q: string) => {
-    textRef.current = q;
-    setText(q);
-  };
-  const send = (next: StaffFilterState) => {
-    clearTimer();
-    sent.current = next.query;
-    latest.current.onChange(next);
-  };
-  const flushQuery = () => {
-    if (textRef.current !== latest.current.state.query) send({ ...latest.current.state, query: textRef.current });
-    else clearTimer();
-  };
-  const change = (next: StaffFilterState) =>
-    send({ ...next, query: composing.current ? sent.current : textRef.current });
+  const { text, setLocalText, send, change, inputProps } = useImeQuery(state, onChange);
 
   const shown = useMemo(() => filterStaff(staff, state, defs), [staff, state, defs]);
   const counts = useMemo(() => staffChipCounts(staff, state, defs), [staff, state, defs]);
@@ -91,34 +52,10 @@ export function StaffFilter({
             <input
               id={`${uid}-q`}
               type="search"
-              value={text}
               placeholder="名前で探す"
               maxLength={50}
               autoComplete="off"
-              onChange={(e) => {
-                setLocalText(e.target.value);
-                if (composing.current || (e.nativeEvent as InputEvent).isComposing) return;
-                clearTimer();
-                timer.current = setTimeout(flushQuery, QUERY_DELAY_MS);
-              }}
-              onCompositionStart={() => {
-                composing.current = true;
-                clearTimer();
-              }}
-              onCompositionEnd={(e) => {
-                composing.current = false;
-                setLocalText(e.currentTarget.value);
-                flushQuery();
-              }}
-              onBlur={() => !composing.current && flushQuery()}
-              onKeyDown={(e) => {
-                if (e.nativeEvent.isComposing || e.keyCode === 229) return;
-                if (e.key === 'Escape' && text !== '') {
-                  e.preventDefault();
-                  setLocalText('');
-                  flushQuery();
-                } else if (e.key === 'Enter') flushQuery();
-              }}
+              {...inputProps}
               data-testid={`${testId}-input`}
             />
           </span>

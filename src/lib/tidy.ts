@@ -2,23 +2,16 @@
 // 伝えた内容（snapshots）・振り直しの情報（reassigns）を消す純粋関数。繰り返しの回は繰り返しのとおりに戻り、人・条件は消さない。
 // 容量の見積もりは JSON の文字数から。データの書き換えは画面が store の update で行う
 import type { DemoData } from '../contracts/data';
+import { ymText } from './dateText';
+import { addMonths } from './ym';
 
 /** 選べる月の数（今月から前へ） */
 export const TIDY_MONTHS_BACK = 12;
 /** 既定は何か月前の月より前か */
 export const TIDY_DEFAULT_BACK = 3;
 
-/** 年月（YYYY-MM）を n か月ずらす */
-export function addMonths(ym: string, n: number): string {
-  const y = Number(ym.slice(0, 4));
-  const m = Number(ym.slice(5, 7)) - 1 + n;
-  const yy = y + Math.floor(m / 12);
-  const mm = ((m % 12) + 12) % 12;
-  return `${yy}-${String(mm + 1).padStart(2, '0')}`;
-}
-
 /** 「2026年7月より前」 */
-export const tidyMonthLabel = (ym: string): string => `${Number(ym.slice(0, 4))}年${Number(ym.slice(5, 7))}月より前`;
+export const tidyMonthLabel = (ym: string): string => `${ymText(ym)}より前`;
 
 /** 選べる月（新しい順。今月〜TIDY_MONTHS_BACK か月前）と既定（TIDY_DEFAULT_BACK か月前） */
 export function tidyMonthOptions(today: string): { options: string[]; initial: string } {

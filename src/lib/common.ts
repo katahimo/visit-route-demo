@@ -1,6 +1,6 @@
 import type { TravelMode } from '../contracts/codes';
 import type { Place, Terms } from '../contracts/documents';
-import { HARDABLE, type ItemKind, type RuleType } from '../contracts/rules';
+import { HARDABLE, type ItemKind, type Rule, type RuleType } from '../contracts/rules';
 
 /** 画面の共通の表示（呼び方は org.terms から引く。「お客様」「シッター」を直書きしない） */
 
@@ -182,3 +182,14 @@ export function deltaText(n: number, unit = ''): string {
 export const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name, 'ja');
 export const byDisplayName = (a: { displayName: string }, b: { displayName: string }) =>
   a.displayName.localeCompare(b.displayName, 'ja');
+
+/** URL のクエリの値（キーが無ければ null、値が空なら ''） */
+export const paramOf = (params: URLSearchParams, key: string): string | null =>
+  params.has(key) ? (params.get(key) ?? '') : null;
+
+/** 条件の重みの短い表示（比べる画面。例「重み3」「必須」「無効」。無い条件は「（なし）」） */
+export function ruleWeightText(r: Rule | undefined): string {
+  if (!r) return '（なし）';
+  if (r.hard && HARDABLE.has(r.type)) return r.type === 'balance' ? `必須・重み${r.weight}` : '必須';
+  return r.weight === 0 ? '無効' : `重み${r.weight}`;
+}

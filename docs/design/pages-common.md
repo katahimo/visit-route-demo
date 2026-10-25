@@ -110,7 +110,7 @@
 予定のモードは無い（予定はいつも手で直せる。AI で組むのは予定を組む）。この部品は組む月の決まりとメニューの件数だけを持つ純粋関数（テストあり）。データは書き換えない。
 
 - `nextYm(today)`・`isLateMonth(today)`（`HOME_NEXT_MONTH_FROM_DAY` 日以降。PRD D255）・`planYm(today)`：組む月（月の後半は来月、前半は今月）。`planLabel(today)`：メニューの子の名前「◯月の予定」
-- `unassignedDays(data, ym, today)`：その月の、担当なしの訪問がある日（今日以降・まだ伝えていない日）の数（取り消し・〈利用者さん〉の休みの回は数えない。compile しないので軽い）
+- `unassignedDayCount(data, ym, today)`：その月の、担当なしの訪問がある日（今日以降・まだ伝えていない日）の数（取り消し・〈利用者さん〉の休みの回は数えない。compile しないので軽い）
 - `menuBadges(data, today)`：メニューの件数の印 `{ planUnassignedDays, todayUntold }`（担当を組むの「N日」・今日の予定の「未確定」）
 
 ### 訪問の札の共通の部品（`lib/visitLook.ts`・`visitSelect.ts`・`visitDrop.ts`・`components/visitParts.tsx`・`visitParts.css`。PRD D339〜D342。ADR-0056・ADR-0057）
@@ -265,7 +265,7 @@
 
 - `lib/emptyGuide.ts`（純粋関数。テストあり）：
   - `periodEmptyGuide({ period, dates, today, visitDays })`（週・勤務の見込み）：訪問のある日が1日でもあれば null。訪問が無い期間は「〈期間〉には訪問がありません」と［日の予定で訪問を足す］
-  - `compareEmptyGuide({ date })`（比較の画面）、`batchHref(ym)`（担当を組むの画面 `/arrange?ym=`）
+  - `compareEmptyGuide({ date })`（比較の画面）、`arrangeMonthHref(ym)`（担当を組むの画面 `/arrange?ym=`）
 - `components/EmptyNext.tsx`：見出し・補足・ボタン（担当を組むは `Link`、日の予定は呼ぶ側の `onOpenDay`＝選んでいる日付を変えて `/plan`）。`primary={false}` で主ボタンにしない。480px 以下は縦に並べ、印刷ではボタンを出さない。使う所：週（`week-empty`。`compact`）・勤務の見込み（`work-empty`）・比較（`compare-empty`）
 
 ### 初回の案内ツアー（PRD D192・D193・D226・D276・D277。ADR-0045）

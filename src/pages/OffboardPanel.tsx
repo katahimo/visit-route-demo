@@ -6,9 +6,9 @@ import { useConfirm } from '../components/ConfirmDialog';
 import { PersonButton } from '../components/PersonPopover';
 import { useToast } from '../components/Toast';
 import { Hint, SectionTitle, SidePanel, WithIcon } from '../components/ui';
-import { addDays, jstDate, weekday } from '../domain/time';
-import { byName, newId, WEEKDAY_LABELS } from '../lib/common';
-import { mdText } from '../lib/dateText';
+import { addDays, jstDate } from '../domain/time';
+import { byName, newId } from '../lib/common';
+import { dateText, mdText, monthLabel } from '../lib/dateText';
 import {
   applyOffboard,
   applyOffboardWith,
@@ -19,7 +19,6 @@ import {
   unlimitedBy,
 } from '../lib/offboard';
 import { useDemoData } from '../store';
-import { monthLabel } from '../lib/dateText';
 
 /** 持ち方の文 */
 const ROLE_TEXT: Record<OffboardRole, string> = {
@@ -263,9 +262,7 @@ export function OffboardPanel({ staffId, onClose }: { staffId: string; onClose: 
                 {byDate.map(([d, x]) => (
                   <li key={d}>
                     <button type="button" className="offboard-day-btn" onClick={() => openDay(d)}>
-                      <span>
-                        {mdText(d)}（{WEEKDAY_LABELS[weekday(d)]}）
-                      </span>
+                      <span>{dateText(d)}</span>
                       <span>
                         {x.count}件{x.confirmed > 0 ? `（確定 ${x.confirmed}件）` : ''}
                       </span>

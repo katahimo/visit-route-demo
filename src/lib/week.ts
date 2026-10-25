@@ -14,11 +14,9 @@ import { findVisit, nthOfMonth, patternVisitId, putVisits, splitPattern, timesOn
 import { fitsOf, placeVisit } from '../reassign';
 import { attempt, byDisplayName, byName, own } from './common';
 import { dayProblemOf, dayRoutes, pinsOf, routesOf, writeRoutes } from './dayPlan';
-import { busyParts, type StaffSlot, spansOf, staffSlots } from './staffBar';
+import { DAY_END, DAY_START, spansOf } from './spans';
+import { busyParts, type StaffSlot, staffSlots } from './staffBar';
 
-/** 時間軸の縦の範囲（0時からの分）：07:00〜20:00 */
-export const DAY_START = 7 * 60;
-export const DAY_END = 20 * 60;
 /** ドラッグの丸めの刻み（分） */
 export const SNAP_MINUTES = 15;
 

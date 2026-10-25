@@ -3,12 +3,12 @@ import {
   BACKUP_REMIND_DAYS,
   BACKUP_REMIND_TEXT,
   confirmedDayCount,
-  daysBetween,
   exportAgoText,
   jstStamp,
   previousText,
   shouldRemindBackup,
 } from './backupReminder';
+import { daysBetween } from './ym';
 
 describe('最後に書き出した日の文（PRD D227）', () => {
   it('「10/12（7日前）」・同じ日は「今日」・まだなら「まだ書き出していません」', () => {

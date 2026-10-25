@@ -16,6 +16,7 @@ import { patternWhenText, typeOf } from './patternText';
 import { type ReassignChoice, reassignChoices, workingStaff } from './reassignMenu';
 import { savedVisit } from './visitEdit';
 import { canMoveVisit, moveFollowing } from './week';
+import { daysBetween } from './ym';
 
 // ---- 範囲（この回だけ／これ以降／すべて）----
 
@@ -378,9 +379,6 @@ function checkDraft(f: VisitDraft, id: string): { error: string; field?: keyof V
     };
   }
 }
-
-const daysBetween = (a: string, b: string) =>
-  Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000);
 
 /** 日を整える（開始を書き直す）。今日より前の日・同じ日は1回だけ */
 function settleDates(d: DemoData, dates: Iterable<string>, today: string): DemoData {

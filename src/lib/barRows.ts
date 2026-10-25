@@ -3,8 +3,6 @@
 // 段は 8〜12時・12〜16時・16〜20時（各4時間＝30分×8マス。同じ時刻が縦にそろう）。
 // 8時より前・20時以降は段に出さず、端の印（◀・▶）で「ある」ことと時刻を知らせる。純粋関数（データは書き換えない）
 import { DAY_LOAD_MINUTES, type DayLoadSlot } from '../contracts/vacancy';
-import { timeText } from '../domain/availability';
-import { minutesToHhmm } from '../domain/time';
 import { clockTime } from './dateText';
 
 /** 段（時）：午前 8〜12・昼 12〜16・夕方 16〜20 */
@@ -23,7 +21,7 @@ export const DAY_MINUTES = DAY_LOAD_MINUTES;
 
 /** 3段の範囲の文「8:00〜20:00」 */
 export function barRangeText(): string {
-  return `${timeText(minutesToHhmm(BAR_START))}〜${timeText(minutesToHhmm(BAR_END))}`;
+  return `${clockTime(BAR_START)}〜${clockTime(BAR_END)}`;
 }
 
 /** 端の印の説明「（8時より前・20時以降は端に ◀・▶）」 */

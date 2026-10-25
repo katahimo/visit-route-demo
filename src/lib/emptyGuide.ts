@@ -18,7 +18,7 @@ export type EmptyGuide = {
 };
 
 /** 担当を組むの画面の URL（lib/progressBand の bandHref と同じ形） */
-export const batchHref = (ym: string): string => `/arrange?ym=${ym}`;
+export const arrangeMonthHref = (ym: string): string => `/arrange?ym=${ym}`;
 
 export type PeriodInput = {
   /** 期間の呼び方（「この週」「この月」） */

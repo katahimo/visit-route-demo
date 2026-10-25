@@ -1,4 +1,4 @@
-// 年月（YYYY-MM）の計算の小さい部品（月の画面・稼働の見込み・担当を組むなどで使う）。純粋関数
+// 年月（YYYY-MM）と日付の計算の小さい部品（月の画面・稼働の見込み・担当を組むなどで使う）。純粋関数
 import { addDays, weekday } from '../domain/time';
 
 const YM = /^(\d{4})-(\d{2})$/;
@@ -42,4 +42,10 @@ export function calendarWeeks(ym: string): string[][] {
   const first = `${ym}-01`;
   const start = addDays(first, -weekday(first));
   return Array.from({ length: 6 }, (_, w) => Array.from({ length: 7 }, (_, i) => addDays(start, w * 7 + i)));
+}
+
+/** a から b までの日数（b − a。日付は YYYY-MM-DD） */
+export function daysBetween(a: string, b: string): number {
+  const t = (d: string) => Date.UTC(Number(d.slice(0, 4)), Number(d.slice(5, 7)) - 1, Number(d.slice(8, 10)));
+  return Math.round((t(b) - t(a)) / 86400000);
 }

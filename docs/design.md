@@ -611,7 +611,7 @@ vacancyNotice(result, input)
 
 ```ts
 // lib/requestedOff
-isRequestedOff; offDayState; toggleRequestedOff; requestedOffDates; absentLeftIds / absentLeftOf  // 欠勤の 'slot' の理由で可でない組
+isRequestedOff; offDayState; toggleRequestedOff; requestedOffDates
 // lib/monthPrint
 printDay(data, date)  // source：確定した割当（取り消し・休み・休止の〈利用者さん〉を除く訪問に担当1件以上）、無ければ今の案。pending＝未定の件数
 monthPrint; staffLabels  // 名字。利用中の人で重なればフルネーム

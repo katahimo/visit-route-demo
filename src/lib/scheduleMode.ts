@@ -21,7 +21,7 @@ export const planYm = (today: string): string => (isLateMonth(today) ? nextYm(to
  * その月の、担当なしの訪問がある日（今日以降・まだ伝えていない日）の数。ホームの「N月の担当を AI で組む」と同じ日の数え方
  * （担当が null の訪問。取り消し・〈利用者さん〉の休みの回は数えない）。compile しないので軽い
  */
-export function unassignedDays(
+export function unassignedDayCount(
   data: Pick<DemoData, 'visits' | 'patterns' | 'clients' | 'clientLeaves' | 'snapshots'>,
   ym: string,
   today: string,
@@ -54,7 +54,7 @@ function countUnassigned(
 export const planLabel = (today: string): string => `${monthLabel(planYm(today))}の予定`;
 
 /**
- * メニューの件数の印（PRD D349）：組む月の担当なしの日の数（unassignedDays）と、今日に訪問があってまだ伝えていないか。
+ * メニューの件数の印（PRD D349）：組む月の担当なしの日の数（unassignedDayCount）と、今日に訪問があってまだ伝えていないか。
  * compile しないので画面を移るたびに数えても軽い
  */
 export function menuBadges(
@@ -62,7 +62,7 @@ export function menuBadges(
   today: string,
 ): { planUnassignedDays: number; todayUntold: boolean } {
   return {
-    planUnassignedDays: unassignedDays(data, planYm(today), today),
+    planUnassignedDays: unassignedDayCount(data, planYm(today), today),
     todayUntold: !own(data.snapshots, today) && activeDayVisits(data, today).length > 0,
   };
 }

@@ -3,23 +3,12 @@ import { describe, expect, it } from 'vitest';
 import type { StopTiming } from '../contracts/problem';
 import { compile } from '../matching';
 import { client, DATE, makeData, staff, visit } from '../matching/fixtures';
-import {
-  backgroundOf,
-  boxOf,
-  hourMarks,
-  legsOf,
-  shadowOf,
-  spansOf,
-  subtractSpans,
-  TL_END,
-  TL_START,
-  timeRange,
-  toY,
-} from './timeline';
+import { DAY_END, DAY_START, spansOf } from './spans';
+import { backgroundOf, boxOf, hourMarks, legsOf, shadowOf, subtractSpans, timeRange, toY } from './timeline';
 
 describe('縦の範囲と位置', () => {
   it('07:00〜20:00 が基本で、はみ出せば1時間単位で広げる', () => {
-    expect(timeRange([])).toEqual({ start: TL_START, end: TL_END });
+    expect(timeRange([])).toEqual({ start: DAY_START, end: DAY_END });
     expect(timeRange([{ start: 8 * 60, end: 18 * 60 }])).toEqual({ start: 420, end: 1200 });
     expect(timeRange([{ start: 6 * 60 + 30, end: 20 * 60 + 10 }])).toEqual({ start: 360, end: 1260 });
     // 数でない値は無視し、0〜24時の外へは広げない

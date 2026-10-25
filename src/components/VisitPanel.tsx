@@ -28,7 +28,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useDay } from '../app/day';
 import type { DemoData } from '../contracts/data';
 import type { Visit } from '../contracts/documents';
-import { jstDate } from '../domain/time';
+import { hhmmToMinutes, jstDate, minutesToHhmm } from '../domain/time';
 import { newId } from '../lib/common';
 import { dateText } from '../lib/dateText';
 import { confirmLeave } from '../lib/leaveGuard';
@@ -697,9 +697,9 @@ function VisitPanel({
                     // 幅を保ってずらす
                     const w =
                       draft.windowKind === 'window' && hhmm(draft.latestStart)
-                        ? toMin(draft.latestStart) - toMin(draft.earliestStart)
+                        ? hhmmToMinutes(draft.latestStart) - hhmmToMinutes(draft.earliestStart)
                         : 0;
-                    set({ earliestStart: s, latestStart: toHm(toMin(s) + Math.max(0, w)) });
+                    set({ earliestStart: s, latestStart: cappedHhmm(hhmmToMinutes(s) + Math.max(0, w)) });
                   }}
                   data-testid="vp-start"
                 />
@@ -906,11 +906,8 @@ function VisitPanel({
   );
 }
 
-const toMin = (s: string) => Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5));
-const toHm = (m: number) => {
-  const x = Math.min(Math.max(0, m), 23 * 60 + 59);
-  return `${String(Math.floor(x / 60)).padStart(2, '0')}:${String(x % 60).padStart(2, '0')}`;
-};
+/** 分 → "HH:mm"（時刻の入力の上限 23:59 で止める） */
+const cappedHhmm = (m: number) => minutesToHhmm(Math.min(m, 23 * 60 + 59));
 
 /** そのままにする回の文（無ければ空） */
 function keptText(dates: readonly string[]): string {

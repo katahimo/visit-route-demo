@@ -15,11 +15,11 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Check } from '../components/Check';
 import { useConfirm } from '../components/ConfirmDialog';
 import { ConditionsEditor, TraitsEditor } from '../components/conditions';
 import { type FormErr, invalidAttrs, RequiredMark, toFormErr } from '../components/FieldError';
 import { PersonCalendar } from '../components/PersonCalendar';
+import { Check } from '../components/parts';
 import {
   CondRows,
   DlRow,

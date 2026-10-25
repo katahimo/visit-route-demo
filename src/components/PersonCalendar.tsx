@@ -12,7 +12,7 @@ import { type PointerEvent, type ReactNode, useEffect, useMemo, useRef, useState
 import type { Visit } from '../contracts/documents';
 import { hhmmToMinutes, jstDate, minutesToHhmm } from '../domain/time';
 import { colorOf } from '../lib/colors';
-import { dateText, mdText } from '../lib/dateText';
+import { clockTime, dateText, mdText } from '../lib/dateText';
 import { typeOf } from '../lib/patternText';
 import {
   CAL_STATE_TEXT,
@@ -27,9 +27,10 @@ import {
   slotOf,
   staffCalItems,
 } from '../lib/personPage';
+import { DAY_END, DAY_START } from '../lib/spans';
 import { COMPACT_QUERY, useMedia } from '../lib/useMedia';
 import { canSelectVisit } from '../lib/visitSelect';
-import { canMoveVisit, DAY_END, DAY_START, insertIntoPlan, laneLayout, snapMinutes, weekDates } from '../lib/week';
+import { canMoveVisit, insertIntoPlan, laneLayout, snapMinutes, weekDates } from '../lib/week';
 import { ymOf } from '../lib/ym';
 import { useDemoData } from '../store';
 import { StaffMark } from './StaffMark';
@@ -61,7 +62,6 @@ import './personCalendar.css';
 
 /** 時間軸の1分の高さ（px。週の予定と同じ） */
 const PX_PER_MIN = 0.8;
-const hm = (m: number) => minutesToHhmm(m);
 const HOURS = Array.from({ length: (DAY_END - DAY_START) / 60 + 1 }, (_, i) => DAY_START + i * 60);
 
 export function PersonCalendar({
@@ -133,7 +133,7 @@ export function PersonCalendar({
       it.edited ? 'この回だけ変更' : null,
       it.pinned ? '固定' : null,
     ].filter(Boolean);
-    return `${dateText(it.visit.date)} ${it.visit.earliestStart}〜${hm(it.end)} ${whoText(it)}${
+    return `${dateText(it.visit.date)} ${it.visit.earliestStart}〜${minutesToHhmm(it.end)} ${whoText(it)}${
       extra.length > 0 ? `（${extra.join('・')}）` : ''
     }（押すと訪問の詳細）`;
   };
@@ -146,7 +146,7 @@ export function PersonCalendar({
   /** 新しい訪問の欄（この〈利用者さん〉を入れて） */
   const openNew = (date: string, start: number, duration: number) =>
     openVisit({
-      newVisit: { date, clientId: personId, start: hm(start) },
+      newVisit: { date, clientId: personId, start: minutesToHhmm(start) },
       draft: { durationMinutes: duration },
       returnFocus: focusBack,
     });
@@ -165,7 +165,7 @@ export function PersonCalendar({
     setNotice(null);
     openVisit({
       visitId,
-      draft: { date, earliestStart: hm(start), latestStart: hm(start + width) },
+      draft: { date, earliestStart: minutesToHhmm(start), latestStart: minutesToHhmm(start + width) },
       returnFocus: focusBack,
       onSaved: (r) => {
         if (r.moved && !r.staffSet) setNotice({ date: r.date, visitId: r.visitId, label: r.label, error: null });
@@ -349,7 +349,7 @@ export function PersonCalendar({
       <VisitRow
         row={{
           visitId: it.visit.id,
-          time: `${it.visit.earliestStart.replace(/^0/, '')}〜${hm(it.end).replace(/^0/, '')}`,
+          time: `${it.visit.earliestStart.replace(/^0/, '')}〜${clockTime(it.end)}`,
           title: isClient ? (t?.name ?? '訪問') : (clientById.get(it.visit.clientId)?.displayName ?? '（不明）'),
           staff: isClient ? (s ?? null) : null,
           staffName: isClient && it.state === 'assigned' ? (s?.name ?? '（不明）') : '',
@@ -590,7 +590,7 @@ export function PersonCalendar({
         <div className="pcal-gutter" style={{ height }} aria-hidden="true">
           {HOURS.map((h) => (
             <span key={h} className="pcal-hour" style={{ top: top(h) }}>
-              {hm(h)}
+              {minutesToHhmm(h)}
             </span>
           ))}
         </div>
@@ -631,7 +631,7 @@ export function PersonCalendar({
                   aria-hidden="true"
                   data-testid="pcal-ghost"
                 >
-                  {hm(Math.min(ghost.a, ghost.b))}
+                  {minutesToHhmm(Math.min(ghost.a, ghost.b))}
                 </div>
               )}
               {list.map((it) => {
