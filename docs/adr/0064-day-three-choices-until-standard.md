@@ -25,6 +25,7 @@
 - ［この案を標準にする］：確認（何が起きるかを箇条で）→ その日に反映し、`registerDayStandard`（その曜日のマスだけ案の担当・開始。いつからは来週の月曜。違う予定は標準どおりに入れ替える。考え方を点数の基準に。違うマスが無くても標準を登録したことにする）を同じ update で（元に戻すの1手）
 - 標準を登録したあとは、日の範囲もふだんの「AI で組む」（点数の基準＝選んだ考え方で組む）
 - 提案の帯（ふだん・案のカードとも）に、日ごとの変わる訪問の一覧（「時刻 〈利用者さん〉：今の担当 → 提案の担当」、時刻だけなら「今の開始 → 提案の開始（N分遅く）」）
+- メニューの並びを ホーム・予定を組む・予定・空き状況・人・設定 にする（組む → 直す・確かめる の作業の順。利用者の指定。ADR-0063 の並びを変える）
 - 初期のプリセットの名前「標準」を「バランス」に、id も `balance` に。データの版を3に上げ、前の版のデータは移さず初期データで始める（ADR-0053 と同じ扱い）
 
 ## 理由とトレードオフ
@@ -39,5 +40,5 @@
 ## 影響
 - 要件：PRD D357 を足す。D20・D307 のプリセット名、D356 の提案の帯
 - 契約：`DATA_VERSION` を3に（形は変えない）。`BatchJob.variants`・`BatchProposal.choices` は lib の型
-- 実装：`lib/monthBatch`（`variants`・`choices`・`apply({ choice, andThen })`・`proposalDayChanges`）・`lib/standard`（`dayStandardPreview`・`registerDayStandard`）・`components/scheduleParts`（`ProposalChanges`・`ChoiceBand`）・`components/batchBand`（終わった知らせ）・`pages/ArrangePage`・`lib/home`・`seed/presets`・`store`（前の版の文言）
+- 実装：`lib/monthBatch`（`variants`・`choices`・`apply({ choice, andThen })`・`proposalDayChanges`）・`lib/standard`（`dayStandardPreview`・`registerDayStandard`）・`components/scheduleParts`（`ProposalChanges`・`ChoiceBand`）・`components/batchBand`（終わった知らせ）・`lib/nav`（メニューの並び）・`pages/ArrangePage`・`lib/home`・`seed/presets`・`store`（前の版の文言）
 - 見直す条件：週の範囲でも3案を比べたい声が多ければ、週を3案にする（計算は約1〜2分）
