@@ -1,9 +1,9 @@
 import { HeartHandshake, RefreshCw, SearchX } from 'lucide-react';
 import { memo, useCallback, useEffect, useId, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useDay } from '../app/day';
 import { ClientFilter } from '../components/ClientFilter';
 import { DetailPopover } from '../components/DetailPopover';
+import { useDay } from '../components/day';
 import { EdgeScroll } from '../components/EdgeScroll';
 import { TentativeMark } from '../components/parts';
 import { ClientDetail, StaffDetail } from '../components/personDetail';

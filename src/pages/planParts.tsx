@@ -16,6 +16,8 @@ import {
 import { type ReactNode, useDeferredValue, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Hint, WithIcon } from '../components/ui';
+import { useCompileInput } from '../components/useDayModel';
+import { useDayStatuses } from '../components/useDayStatuses';
 import type { DemoData } from '../contracts/data';
 import type { Terms } from '../contracts/documents';
 import type { HundredPart, PlanScore, Problem, RuleAchievement, ScoreScale, VisitExplain } from '../contracts/problem';
@@ -28,8 +30,6 @@ import { mdText } from '../lib/dateText';
 import { unassignedHref } from '../lib/links';
 import { addPresetError, addPresetFromRules, PRESET_NAME_MAX } from '../lib/presets';
 import { reasonFace, type ScoreReason, scoreReasonLabel } from '../lib/scoreReason';
-import { useCompileInput } from '../lib/useDayModel';
-import { useDayStatuses } from '../lib/useDayStatuses';
 import { addMonths, monthDates, ymOf } from '../lib/ym';
 import { ALLOWED_STAFF_RULE_ID, VISIT_TYPE_RULE_ID } from '../matching';
 import { useDemoData } from '../store';

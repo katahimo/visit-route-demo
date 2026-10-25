@@ -1,8 +1,8 @@
 import { BedSingle, Check, Pencil, Plus, Trash2, TriangleAlert, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDay } from '../app/day';
 import { useConfirm } from '../components/ConfirmDialog';
+import { useDay } from '../components/day';
 import { enterToSave, FieldError } from '../components/FieldError';
 import { useToast } from '../components/Toast';
 import { Hint, SectionTitle, WithIcon } from '../components/ui';

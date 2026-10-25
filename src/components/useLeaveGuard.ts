@@ -2,9 +2,9 @@
 import { useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import type { ConfirmOptions } from '../lib/confirmDialog';
-import { useDirtyMark } from '../lib/dirtyForms';
 import { type LeaveGuard, leaveTarget, setLeaveGuard } from '../lib/leaveGuard';
 import { useConfirm } from './ConfirmDialog';
+import { useDirtyMark } from './dirtyForms';
 
 /**
  * 下書きがある間（on）、画面を離れる前に確認を出す（dialog は確認の中身。確定で移る（onLeave を呼ぶ）、取り消しで留まる）。

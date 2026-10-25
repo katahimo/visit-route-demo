@@ -32,9 +32,9 @@ import {
   useSyncExternalStore,
 } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { useDay } from '../app/day';
 import { ClientPicker } from '../components/ClientPicker';
 import { useConfirm } from '../components/ConfirmDialog';
+import { useDay } from '../components/day';
 import { FieldError } from '../components/FieldError';
 import { LoadBar, LoadLegend, LoadRowsSample, loadSummary, TypeStack } from '../components/loadBar';
 import type { MenuItem as MoreItem } from '../components/MenuButton';
@@ -48,7 +48,10 @@ import { StaffBar, StaffLegend } from '../components/staffBar';
 import { Term, TipBubble } from '../components/Term';
 import { useToast } from '../components/Toast';
 import { PageHeader, SidePanel, WithIcon } from '../components/ui';
+import { useDayModel } from '../components/useDayModel';
+import { useDayStatuses } from '../components/useDayStatuses';
 import { useOpenVisit } from '../components/VisitPanel';
+import { useValueStore } from '../components/valueStore';
 import { focusVisitItem, KeyMoveBand, useVisitKeys, visitItemOf } from '../components/visitKeys';
 import {
   type DropHover,
@@ -122,10 +125,7 @@ import {
 } from '../lib/requestedOff';
 import { staffClientMap } from '../lib/search';
 import { isAllRest, staffEdgeTexts, staffSlotSummary } from '../lib/staffBar';
-import { useDayModel } from '../lib/useDayModel';
-import { useDayStatuses } from '../lib/useDayStatuses';
 import { usualStaffMap } from '../lib/usualStaff';
-import { useValueStore } from '../lib/valueStore';
 import { dropShadowText, dropTone } from '../lib/visitDrop';
 import { cellKeyOf } from '../lib/visitKeys';
 import { canSelectVisit, isMultiClick } from '../lib/visitSelect';
@@ -134,7 +134,7 @@ import { findVisit, visitsOn } from '../patterns';
 import { type DayLoadSlot, dayLoad } from '../vacancy';
 import './month.css';
 import './settings.css';
-import { useMedia } from '../lib/useMedia';
+import { useMedia } from '../components/useMedia';
 
 /**
  * 月間カレンダーと月まとめ作成（ADR-0012。PRD D39〜D43・D53〜D55。design.md §4 pages「月単位の予定」「月間・週間の改定」）。

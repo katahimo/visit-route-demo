@@ -1,6 +1,6 @@
 # 月の予定と月の印刷
 
-> この画面のファイル：`src/pages/MonthPage.tsx`（`month.css`）・`MonthPrintPage.tsx`（`monthPrint.css`）、`src/lib/month.ts`・`monthList.ts`・`monthGuide.ts`・`monthPrint.ts`・`requestedOff.ts`・`useDayStatuses.ts`・`confirmDay.ts`、`src/components/visitParts.tsx`（マスの選ぶ・その日の回の一覧の行・ドラッグ）・`scheduleParts.tsx`（選択の帯の「別の日へ」）。関連 ADR：0012（追記を含む）・0013・0014・0015・0025 追記・0031・0032・0042・0056・0057。関連 PRD：D36〜D44・D53〜D55・D65・D69・D70・D151〜D155・D161〜D166・D176・D189〜D192・D201〜D204・D223・D228・D256・D257・D313・D339〜D343。
+> この画面のファイル：`src/pages/MonthPage.tsx`（`month.css`）・`MonthPrintPage.tsx`（`monthPrint.css`）、`src/lib/month.ts`・`monthList.ts`・`monthGuide.ts`・`monthPrint.ts`・`requestedOff.ts`・`dayStatuses.ts`・`confirmDay.ts`、`src/components/useDayStatuses.ts`・`visitParts.tsx`（マスの選ぶ・その日の回の一覧の行・ドラッグ）・`scheduleParts.tsx`（選択の帯の「別の日へ」）。関連 ADR：0012（追記を含む）・0013・0014・0015・0025 追記・0031・0032・0042・0056・0057。関連 PRD：D36〜D44・D53〜D55・D65・D69・D70・D151〜D155・D161〜D166・D176・D189〜D192・D201〜D204・D223・D228・D256・D257・D313・D339〜D343。
 > 3段のバー・混み具合の塗りは [pages-bars.md](pages-bars.md)、進み具合の帯は [pages-home.md](pages-home.md)、帯の印・選ぶ・キー・1行1訪問の行 `VisitRow`・ドラッグの落とし先の判定の共通の部品は [pages-common.md](pages-common.md) の「訪問の札の共通の部品」。
 > 版2（ADR-0053）：担当は訪問に持ち、日の状態は「まだ伝えていない／確定済み／未連絡の変更あり」、要対応は訪問ごとの検査。「案なし・案あり・未作成・条件が変わった・欠勤あり（対応済み）」は無い
 

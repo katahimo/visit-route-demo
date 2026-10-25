@@ -1,6 +1,6 @@
 # データの画面と管理者設定
 
-> この画面のファイル：`src/pages/DataPage.tsx`・`SettingsPage.tsx`（`settings.css`）、`src/components/FilePick.tsx`（`filePick.css`）・`Tour.tsx`、`src/lib/filePick.ts`・`personLinks.ts`・`features.ts`・`backupReminder.ts`・`tidy.ts`・`dirtyForms.ts`、`src/components/DataNotices.tsx`（`dataNotices.css`）。関連 ADR：0006・0020・0025 追記・0028・0032・0043。関連 PRD：D191〜D193・D209・D210〜D216・D227・D260。
+> この画面のファイル：`src/pages/DataPage.tsx`・`SettingsPage.tsx`（`settings.css`）、`src/components/FilePick.tsx`（`filePick.css`）・`Tour.tsx`、`src/lib/filePick.ts`・`personLinks.ts`・`features.ts`・`backupReminder.ts`・`tidy.ts`・`dirtyForms.ts`、`src/components/DataNotices.tsx`（`dataNotices.css`）・`dirtyForms.ts`（`useDirtyMark`）。関連 ADR：0006・0020・0025 追記・0028・0032・0043。関連 PRD：D191〜D193・D209・D210〜D216・D227・D260。
 > Excel の変換は design.md の「excel」、機能の表と判定は design.md の「features」。
 
 ### データ（`#/data`）
@@ -65,7 +65,7 @@
 
 - 壊れたデータの知らせ（`BrokenDataNotice`・`data-broken-notice`。管理者の画面の本文の先頭、作り直しの帯の下）：起動したとき保存していたデータが読めず初期データで開いたら（`useDemoData().broken`）、注意の色の帯「保存していたデータを読めなかったため、初期データで開きました。元のデータはこのブラウザに残しています。…」（退避できなかったとき（`brokenKept` が false）は「元のデータを退避できませんでした。今すぐ書き出してください。」）と「読めなかったデータを書き出す」（`data-broken-download`。`brokenText()`＝`vrdemo:data:broken` の元の文字（退避できなければ開いたときに覚えた元の文字）をそのまま `visit-route-demo-broken-YYYY-MM-DD.json` に。`saveBlob`）と結果（`data-broken-message`）。閉じる（`data-broken-close`・aria-label「読めなかったデータの知らせを閉じる」）でフォーカスは画面の見出し。閉じたことは保存しない（次に読めれば出ない）。印刷で出さない
 - 控えの知らせ（`DataWatch`）：起動したとき1回だけ、確定した日（担当の決まった訪問のある確定した割当）が1日以上あり、最後に書き出した日から14日以上（まだなら常に）、今日まだ知らせていなければトースト「控え（バックアップ）を2週間以上書き出していません。データの画面で書き出せます」（`shouldRemindBackup`。知らせた日を覚え1日1回まで）
-- 別のタブの変更（`DataWatch`）：別のタブでデータが変わり読み直したらトースト「別のタブで変わったので読み直しました」。〈スタッフ〉・〈利用者さん〉の画面の節・繰り返し・休みに変更があるとき（`lib/dirtyForms` の `useDirtyMark`）は「別のタブで変わりました。保存すると上書きします」（入力はそのまま。変更があるかは、読み直したデータで描き直したあと（`setTimeout` 0）に見る）
+- 別のタブの変更（`DataWatch`）：別のタブでデータが変わり読み直したらトースト「別のタブで変わったので読み直しました」。〈スタッフ〉・〈利用者さん〉の画面の節・繰り返し・休みに変更があるとき（`components/dirtyForms` の `useDirtyMark`。数は `lib/dirtyForms` の `hasDirtyForm`）は「別のタブで変わりました。保存すると上書きします」（入力はそのまま。変更があるかは、読み直したデータで描き直したあと（`setTimeout` 0）に見る）
 
 #### ファイル選択（`components/FilePick.tsx`。PRD D192）
 

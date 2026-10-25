@@ -47,11 +47,13 @@ import { Link, Navigate, NavLink, Outlet, Route, Routes, useLocation, useNavigat
 import { BatchBand, MonthBatchHost } from '../components/batchBand';
 import { CommandPalette, IS_MAC } from '../components/CommandPalette';
 import { BrokenDataNotice, DataWatch } from '../components/DataNotices';
+import { DayProvider, useDay } from '../components/day';
 import { FeatureOffNotice } from '../components/FeatureOffNotice';
 import { FullscreenButton } from '../components/FullscreenButton';
 import { PersonPopoverProvider } from '../components/PersonPopover';
 import { TourProvider } from '../components/Tour';
 import { HistoryKeys } from '../components/undo';
+import { NARROW_QUERY } from '../components/useMedia';
 import { VisitPanelProvider } from '../components/VisitPanel';
 import { addDays, jstDate } from '../domain/time';
 import { hashPathname, isPaletteShortcut, keepPaletteOn } from '../lib/commandPalette';
@@ -77,7 +79,6 @@ import {
   tabLabel,
 } from '../lib/nav';
 import { menuBadges } from '../lib/scheduleMode';
-import { NARROW_QUERY } from '../lib/useMedia';
 import ArrangePage from '../pages/ArrangePage';
 import AvailabilityPage from '../pages/AvailabilityPage';
 import ClientPage from '../pages/ClientPage';
@@ -95,8 +96,7 @@ import StandardPage from '../pages/StandardPage';
 import TypesPage from '../pages/TypesPage';
 import WeekPage from '../pages/WeekPage';
 import WorkloadPage from '../pages/WorkloadPage';
-import { useDemoData } from '../store';
-import { DayProvider, useDay } from './day';
+import { navOpenMemory, useDemoData } from '../store';
 import { ErrorBoundary } from './ErrorBoundary';
 import { ComparePage, CompatPage, MonthPage, PageLoading, PlanPage, PreloadWhenShown, VacancyPage } from './lazyPages';
 import { NavDrawer } from './NavDrawer';
@@ -536,43 +536,6 @@ function AdminShell() {
   );
 }
 
-/** 畳める項目の開け閉めを覚える所（PRD D349。この端末に残す。左のメニューと引き出しで1つ） */
-const NAV_OPEN_KEY = 'visit-route-demo:nav-open';
-const navOpenListeners = new Set<() => void>();
-/** 覚えた開け閉め（読めなければ空。同じ文字なら同じ物を返す＝描き直さない） */
-let navOpenCache: { raw: string | null; value: Record<string, boolean> } = { raw: null, value: {} };
-const readNavOpen = (): Record<string, boolean> => {
-  let raw: string | null = null;
-  try {
-    raw = localStorage.getItem(NAV_OPEN_KEY);
-  } catch {
-    return navOpenCache.value;
-  }
-  if (raw === navOpenCache.raw) return navOpenCache.value;
-  let value: Record<string, boolean> = {};
-  try {
-    const v = JSON.parse(raw ?? '{}');
-    if (v && typeof v === 'object') value = v;
-  } catch {
-    // 読めなければ既定
-  }
-  navOpenCache = { raw, value };
-  return value;
-};
-const writeNavOpen = (key: string, open: boolean) => {
-  const next = { ...readNavOpen(), [key]: open };
-  try {
-    localStorage.setItem(NAV_OPEN_KEY, JSON.stringify(next));
-  } catch {
-    navOpenCache = { raw: navOpenCache.raw, value: next };
-  }
-  for (const fn of navOpenListeners) fn();
-};
-const subscribeNavOpen = (fn: () => void) => {
-  navOpenListeners.add(fn);
-  return () => navOpenListeners.delete(fn);
-};
-
 /**
  * メニューの並び（左のメニューとスマホの引き出しで共通。グループの見出し付きの縦並び）。
  * 子の項目を持つ項目は ▾ で畳める（PRD D349）。押して変えた開け閉めは覚える。今の画面の親は、その親へ移ったときに開いて見せる
@@ -589,7 +552,8 @@ function NavGroups({
   /** 項目を押したとき（引き出しを閉じる。今の画面なら移らない） */
   onPick?: (e: MouseEvent<HTMLAnchorElement>, item: NavItem) => void;
 }) {
-  const stored = useSyncExternalStore(subscribeNavOpen, readNavOpen, () => navOpenCache.value);
+  // 畳める項目の開け閉めを覚える所（PRD D349。この端末に残す。store/navOpen）
+  const stored = useSyncExternalStore(navOpenMemory.subscribe, navOpenMemory.read, navOpenMemory.cached);
   // 今の画面の親。その親へ移ったときだけ開いて見せる（auto）。押して畳めば auto を外す
   const currentParent = groups.flatMap((g) => g.items).find((i) => i.children?.length && isActiveNav(i, pathname))?.key;
   const [auto, setAuto] = useState(currentParent);
@@ -599,7 +563,7 @@ function NavGroups({
   const isOpen = (key: string) => (key === auto ? true : (stored[key] ?? NAV_OPEN_DEFAULT[key] ?? true));
   const toggle = (key: string, open: boolean) => {
     if (key === auto) setAuto(undefined);
-    writeNavOpen(key, !open);
+    navOpenMemory.write(key, !open);
   };
   const link = (item: NavItem, on: boolean, extra = '') => {
     const Icon = NAV_ICONS[item.icon];

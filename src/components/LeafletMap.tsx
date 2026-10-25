@@ -2,7 +2,8 @@
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { useEffect, useRef } from 'react';
-import type { MapLine, RouteMapProps } from './RouteMap';
+import type { MapLine } from '../lib/routeView';
+import type { RouteMapProps } from './RouteMap';
 
 /**
  * 地図の本体（Leaflet）。別のチャンクに分けて、地図を出すときだけ読む（PRD D248。ADR-0039）。

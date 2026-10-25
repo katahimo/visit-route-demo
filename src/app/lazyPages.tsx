@@ -2,9 +2,9 @@
 // 分けるのは日の予定・空き状況・案を比べる・相性・月の予定（地図 Leaflet は components/RouteMap で別に分ける）
 import { Hourglass } from 'lucide-react';
 import { useEffect } from 'react';
+import { type LazyComponent, lazyComponent } from '../components/lazyComponent';
 import { RouteMap } from '../components/RouteMap';
 import { hashPathname } from '../lib/commandPalette';
-import { type LazyComponent, lazyComponent } from '../lib/lazyComponent';
 
 export const PlanPage = lazyComponent('PlanPage', () => import('../pages/PlanPage'));
 export const VacancyPage = lazyComponent('VacancyPage', () => import('../pages/VacancyPage'));

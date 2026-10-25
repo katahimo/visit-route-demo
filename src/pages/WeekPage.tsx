@@ -1,10 +1,10 @@
 import { CalendarClock, Check, Lock, Mail, RefreshCw, Sparkles, TriangleAlert, X } from 'lucide-react';
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useDay } from '../app/day';
 import { ClientFilter } from '../components/ClientFilter';
 import { ClientPicker } from '../components/ClientPicker';
 import { useConfirm } from '../components/ConfirmDialog';
+import { useDay } from '../components/day';
 import { EdgeScroll } from '../components/EdgeScroll';
 import { EmptyNext } from '../components/EmptyNext';
 import { LoadRowsSample } from '../components/loadBar';
@@ -16,7 +16,12 @@ import { RangeProposalBand, ScheduleToolbar, SelectionBar } from '../components/
 import { StaffBar, StaffLegend } from '../components/staffBar';
 import { useToast } from '../components/Toast';
 import { Hint, PageHeader, WithIcon } from '../components/ui';
+import { useDayModel } from '../components/useDayModel';
+import { useDayStatuses } from '../components/useDayStatuses';
+import { useFeature } from '../components/useFeature';
+import { COMPACT_QUERY, useMedia } from '../components/useMedia';
 import { useOpenVisit } from '../components/VisitPanel';
+import { useValueStore } from '../components/valueStore';
 import { focusVisitItem, KeyMoveBand, useVisitKeys, visitItemOf } from '../components/visitKeys';
 import {
   ChipStack,
@@ -65,11 +70,6 @@ import {
   timelineChipIds,
   timelineSelection,
 } from '../lib/timelineClients';
-import { useDayModel } from '../lib/useDayModel';
-import { useDayStatuses } from '../lib/useDayStatuses';
-import { useFeature } from '../lib/useFeature';
-import { COMPACT_QUERY, useMedia } from '../lib/useMedia';
-import { useValueStore } from '../lib/valueStore';
 import { staffWhyOf } from '../lib/visitDrop';
 import type { VisitLook } from '../lib/visitLook';
 import {
@@ -79,7 +79,6 @@ import {
   canMoveVisit,
   clientItemMark,
   clientWeekTable,
-  insertIntoPlan,
   laneLayout,
   qualificationBadges,
   qualificationItem,
@@ -91,6 +90,7 @@ import {
   weekDates,
   weekDay,
 } from '../lib/week';
+import { insertIntoPlan } from '../lib/weekOps';
 import { weekDayCountText, weekNext } from '../lib/weekPrep';
 import { isTimeline, WEEK_VIEWS, type WeekView, weekViewLabel, weekViewOf, weekViewParams } from '../lib/weekView';
 import { findVisit, visitsOn } from '../patterns';
@@ -107,7 +107,7 @@ import { paramOf } from '../lib/common';
  * 検索欄 ClientPicker で選ぶ。〈利用者さん〉×曜日の表は選択と分け、この週に訪問がある人を全員出して
  * 絞り込みの欄 ClientFilter で減らす（PRD D108〜D112。?cf=）。表から時間軸へ移ったとき、?client= が無く表で絞り込んでいれば
  * その先頭8人を引き継ぐ（決まりは lib/timelineClients）。
- * データを書くのは「動かす」「空き時間に入れる」だけ（update の中で lib/week の純粋関数を呼ぶ）
+ * データを書くのは「動かす」「空き時間に入れる」だけ（update の中で lib/weekOps の純粋関数を呼ぶ）
  */
 
 /** 時間軸の上限の文（呼び方は org.terms から作る） */

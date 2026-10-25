@@ -345,13 +345,13 @@ flowchart LR
 ### features（機能の入り切り。ADR-0028）
 - 責務：機能の表（ID・名前・説明・グループ・依存・URL（ルート・`?do=`）・隠れるもの・ひな形）と、入り切りの判定・ひな形・切るときの影響の数え方。純粋関数
 - 持つデータ（持ち主）：なし（入り切りは store の `org.features`）
-- 提供するAPI：`lib/features.ts` の `FEATURES`・`FEATURE_GROUPS`・`isOn`（依存先が切なら切）・`isSwitchOn`・`featureOfLocation(pathname, search)`・`featureOfHref`・`isHrefOn`（土台は null。パスは小文字・末尾の `/` を落とす）・`TEMPLATES`（`basic` 基本／`laborContract` 労務・契約管理／`monthlyField` 月次予定・現場共有／`all` すべて）・`applyTemplate`・`matchTemplate`（違えば `custom`）・`templateDiff`・`turnOffImpact(data, id, today)`・`calcFeaturesOf`・`sameCalcFeatures`、`useFeature(id)`、部品 `Feature`
+- 提供するAPI：`lib/features.ts` の `FEATURES`・`FEATURE_GROUPS`・`isOn`（依存先が切なら切）・`isSwitchOn`・`featureOfLocation(pathname, search)`・`featureOfHref`・`isHrefOn`（土台は null。パスは小文字・末尾の `/` を落とす）・`TEMPLATES`（`basic` 基本／`laborContract` 労務・契約管理／`monthlyField` 月次予定・現場共有／`all` すべて）・`applyTemplate`・`matchTemplate`（違えば `custom`）・`templateDiff`・`turnOffImpact(data, id, today)`・`calcFeaturesOf`・`sameCalcFeatures`、`useFeature(id)`（`components/useFeature.ts`）、部品 `Feature`
 - 表の `doParams`：`sudden` は `/plan?do=absence`、`rules` は `/plan?do=recreate` も
 - `turnOffImpact`（D215）は計算に効くものだけ：相性は利用中の〈利用者さん〉×休止でない〈スタッフ〉、担当を限るは限った人に休止でない人がいる利用中の〈利用者さん〉、休み・希望休・欠勤は今日以降、空き状況は仮押さえの〈利用者さん〉
 - 出し分け：`menuSections(terms, today, features)`、`app/App.tsx` のルート（切った URL は `#/home` へ移し、知らせと `#/settings` へのリンク）、`lib/commandPalette`・`lib/home`・`lib/tour`・`lib/links`（切なら null）、画面の欄・ボタン。`rules` が切なら日の予定は `planRulesOf(data, false)`（点数の基準のプリセットを当てた条件）で作る。事実の表示（休みの人に N・振り直しの差・連絡の一覧）は残し、入力・操作の入口だけ隠す
 - 管理者設定 `pages/SettingsPage.tsx`（`#/settings`。だれでも開ける）：ひな形の4つ（適用するときは `templateDiff` の確認）とグループごとのスイッチ（role="switch"、その場で保存。データがあれば `turnOffImpact` の確認）
 - 依存するもの：contracts、store（読むだけ）
-- 配置：`src/lib/features.ts`・`src/lib/useFeature.ts`・`src/components/Feature.tsx`・`src/pages/SettingsPage.tsx`
+- 配置：`src/lib/features.ts`・`src/components/useFeature.ts`・`src/components/Feature.tsx`・`src/pages/SettingsPage.tsx`
 - 完了の条件：
   - [ ] `org.features` の無いデータで画面・計算・`problemKey` が変わらない（テスト）
   - [ ] メニュー・パレット・ホーム・ツアー・links の行き先が土台か表の機能に属する。依存（`vacancy`→`vacancyNotice`、`workload`→`fare`）、ひな形と `matchTemplate`（テスト）
@@ -362,14 +362,14 @@ flowchart LR
 - 持つデータ（持ち主）：画面の一時状態のみ（空き状況の入力はタブの間だけ sessionStorage の `vrdemo:vacancy:input`。PRD D258）。範囲（日・週・月）の AI で組むの進み具合と提案は画面の外の入れ物 `lib/monthBatch`（ページを開いている間だけ。ADR-0042・ADR-0054。訪問には書かず、提案の帯の「反映する」で1回の update）。日の予定のその場の提案も PlanPage の外の入れ物（画面を移っても残す。PRD D335）。全体の元に戻すの履歴は `lib/history` の `appHistory`（store が積む）
 - 提供するAPI：なし（ルートは [design/pages.md](design/pages.md) の表）
 - 依存するもの：store・matching・solver（Worker）・evaluate・reassign・patterns・vacancy・features
-- 配置：`src/pages/`・`src/components/`・画面用の純粋関数は `src/lib/`
+- 配置：`src/pages/`・`src/components/`（部品と React のフック `use*`）・画面用の純粋関数は `src/lib/`（React・store を import しない）。殻は `src/app/`
 - 予定（日・週・月）の共通の部品（PRD D327〜D330。ADR-0054）：`components/scheduleParts`（操作の行・複数選択の帯 `SelectionBar`。月は「別の日へ」も。書くのは `lib/multiEdit`）と `components/undo`（元に戻す・Ctrl+Z。殻に1つ）。予定は手で直すだけ（AI で組むは担当を組む。ADR-0063）。本体は3画面に残す
 - 予定を組む（PRD D350〜D357。ADR-0063・ADR-0064）：`pages/ArrangePage`・`pages/StandardPage`（詳細は下）
 - スマホ・キーボード（PRD D333〜D338。ADR-0055）：600px 以下の日の予定は `components/dayList` の日ごとのリスト（長押し・「選ぶ」で複数選択・スワイプで日を送る）、訪問の詳細の欄は `SidePanel` の `sheet`（下から出る欄）、帯・札をキーで動かすのは `components/visitKeys`（書くのは `lib/visitKeys` → `lib/visitOps`）
 - 訪問の札の共通の部品（PRD D339〜D343。ADR-0056・ADR-0057）：札は3段（大＝時間軸の帯・中＝行 `VisitRow`・小＝表の札 `VisitChip`。`data-size`）、入れ物は時間軸・表（`ChipStack`）・リスト。見た目・選ぶ・キー（入れ物ごとの `KeyLayout`）・落とし先の判定は `lib/visitLook`・`visitSelect`・`visitDrop`・`visitKeys` と `components/visitParts.tsx`（一覧は [design/pages-common.md](design/pages-common.md)）。書くのは `lib/visitOps`・`lib/multiEdit`・訪問の詳細の欄だけ
 - 訪問の詳細の欄（PRD D301〜D305。ADR-0051）：1件の訪問を見る・直す欄は `components/VisitPanel` の1つで、App の殻に置き、どの画面・コマンドパレットからも `useOpenVisit` で開く。欄はデータに `lib/visitOps`（純粋関数）越しにだけ触る（データの形を変えるときはここを差し替える）
 - 読み込みの分け方（PRD D248。ADR-0039）：重い画面5つ（日の予定・空き状況・案を比べる・相性・月の予定）と地図を `React.lazy` で分け、画面が出たら残りを先に読む。詳細は [design/pages.md](design/pages.md) の「読み込みの分け方」
-- よく変わる値（PRD D249）：AI案の計算の進み具合は画面の state に置かず、`src/lib/valueStore.ts` の入れ物（`useSyncExternalStore`）に置き、バーと回数の部品（`PlanProgressText`・`AnnealProgress`）だけが読む
+- よく変わる値（PRD D249）：AI案の計算の進み具合は画面の state に置かず、`src/lib/valueStore.ts` の入れ物に置き（読むのは `src/components/valueStore.ts` の `useValueStore`。`useSyncExternalStore`）、バーと回数の部品（`PlanProgressText`・`AnnealProgress`）だけが読む
 - 詳細（画面ごとに分けた。必要な画面のファイルだけ読む）：
   - 共通事項・ルート一覧・メニュー・確認ダイアログ・機能の入り切り（画面側）：[design/pages.md](design/pages.md)
   - 画面共通の部品（右の欄・訪問の詳細の欄（`components/VisitPanel`・`lib/visitOps`）・名前の詳細・用語・ツアー・作り直しの帯・リンク・メール・道順）：[design/pages-common.md](design/pages-common.md)
@@ -598,7 +598,7 @@ vacancyNotice(result, input)
 ```
 
 - 例外を投げない：いない種類は種類なし、範囲が空なら `times` が空。正確の問題は欠勤・上書き・条件をいまのまま使い、点数とは関係しない
-- 仮押さえ（`lib/tentative`）：選んだ曜日のうち ○ のある曜日を月→日の順に週の回数まで（足りるときだけ）。足した訪問は案のある日に空き時間へ入れて固定。取り消しはその〈利用者さん〉の訪問をすべて消し、同じ update で repair
+- 仮押さえ（空き状況の画面。空き時間に入れるのは `lib/weekOps` の `insertAllIntoPlans`）：選んだ曜日のうち ○ のある曜日を月→日の順に週の回数まで（足りるときだけ）。足した訪問は案のある日に空き時間へ入れて固定。取り消し（`store/tentative` の `cancelTentative`。伝えた日は `lib/tentative` の `confirmedDatesOf`）はその〈利用者さん〉の訪問をすべて消し、同じ update で repair
 
 ### 機能の入り切り（`src/contracts/features.ts`。PRD D210〜D216。ADR-0028）
 

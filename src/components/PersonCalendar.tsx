@@ -28,9 +28,9 @@ import {
   staffCalItems,
 } from '../lib/personPage';
 import { DAY_END, DAY_START } from '../lib/spans';
-import { COMPACT_QUERY, useMedia } from '../lib/useMedia';
 import { canSelectVisit } from '../lib/visitSelect';
-import { canMoveVisit, insertIntoPlan, laneLayout, snapMinutes, weekDates } from '../lib/week';
+import { canMoveVisit, laneLayout, snapMinutes, weekDates } from '../lib/week';
+import { insertIntoPlan } from '../lib/weekOps';
 import { ymOf } from '../lib/ym';
 import { useDemoData } from '../store';
 import { StaffMark } from './StaffMark';
@@ -38,6 +38,7 @@ import { SelectionBar } from './scheduleParts';
 import { useToast } from './Toast';
 import { WithIcon } from './ui';
 import { UndoButtons } from './undo';
+import { COMPACT_QUERY, useMedia } from './useMedia';
 import { useOpenVisit } from './VisitPanel';
 import { focusVisitItem, KeyMoveBand, useVisitKeys, visitItemOf } from './visitKeys';
 import {

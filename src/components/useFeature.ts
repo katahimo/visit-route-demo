@@ -1,7 +1,7 @@
 // 機能の入り切り（ADR-0028）を画面から読むフック。store の org.features を読むだけ（書くのは画面の update(fn)）
 import type { FeatureId, Features } from '../contracts/features';
+import { isOn } from '../lib/features';
 import { useDemoData } from '../store';
-import { isOn } from './features';
 
 /** 今の入り切り（無い ID は入） */
 export function useFeatures(): Features {

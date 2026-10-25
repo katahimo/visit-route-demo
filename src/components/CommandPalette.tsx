@@ -2,7 +2,6 @@ import { CornerDownLeft, Search, X } from 'lucide-react';
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useDay } from '../app/day';
 import type { Terms, Visit } from '../contracts/documents';
 import { jstDate } from '../domain/time';
 import {
@@ -26,6 +25,7 @@ import { confirmLeave } from '../lib/leaveGuard';
 import type { MenuItem, NavSection } from '../lib/nav';
 import { visitsOn } from '../patterns';
 import { useDemoData } from '../store';
+import { useDay } from './day';
 import { StaffMarkById } from './StaffMark';
 import { FOCUSABLE } from './ui';
 import { inertLock, useBodyScrollLock } from './useBodyScrollLock';

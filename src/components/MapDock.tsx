@@ -1,8 +1,9 @@
 import { ArrowDownToLine, Map as MapIcon, Maximize2, X } from 'lucide-react';
 import { type RefObject, useEffect, useState } from 'react';
 import { scrollBehavior } from '../lib/motion';
+import type { MapLine, MapPoint } from '../lib/routeView';
 import { useFloatingEdge } from './floating';
-import { type MapLine, type MapPoint, RouteMap } from './RouteMap';
+import { RouteMap } from './RouteMap';
 import { IconButton } from './ui';
 
 /**

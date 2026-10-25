@@ -50,7 +50,7 @@ URL を書くときは履歴を増やさない `replace`（表示の切り替え
 
 - `lib/weekView.ts`（純粋関数。テストあり）：
   - `WeekView`＝`timeline-staff`・`timeline-client`・`table`・`clients`（`WEEK_VIEWS` の順）
-  - `weekViewOf(view, by, narrow)`：view が `table`・`clients` ならその表（by は見ない）、それ以外（無い・`timeline`・知らない値）は時間軸で、`by=client` なら〈利用者さん〉、ほかは〈スタッフ〉。ただし narrow（600px 以下。`lib/useMedia` の `COMPACT_QUERY`）で view も by も無ければ〈スタッフ〉×曜日の表（PRD D222。下の「狭い画面の既定」）
+  - `weekViewOf(view, by, narrow)`：view が `table`・`clients` ならその表（by は見ない）、それ以外（無い・`timeline`・知らない値）は時間軸で、`by=client` なら〈利用者さん〉、ほかは〈スタッフ〉。ただし narrow（600px 以下。`components/useMedia` の `COMPACT_QUERY`）で view も by も無ければ〈スタッフ〉×曜日の表（PRD D222。下の「狭い画面の既定」）
   - `weekViewParams(v, narrow)`：時間軸は `view` を消す、`timeline-client` は `by=client`、表は `by` を消す。narrow の `timeline-staff` だけは既定（表）と分けるため `view=timeline` を書く（押したら必ず書く。月の `?layout=` と同じ。書いた URL は広い画面でも同じ表示）。`?staff=`・`?client=`・`?cf=` は触らない
   - `weekViewLabel(v, terms)`：「時間軸：〈スタッフ〉」「時間軸：〈利用者さん〉」「〈スタッフ〉×曜日」「〈利用者さん〉×曜日」
   - `isTimeline`
@@ -91,7 +91,7 @@ URL を書くときは履歴を増やさない `replace`（表示の切り替え
 - 帯を押す（Enter も）と訪問の詳細の欄（`components/VisitPanel.tsx`。[pages-common.md](pages-common.md)。PRD D301〜D304）。今日より前の訪問は見るだけ
 - 離すと同じ欄が落とした日付・開始（幅は保つ）を入れた形で開き、繰り返しの回なら範囲（この回だけ（初期値）／これ以降／すべて）を選んで「保存」（週の移動の欄はこの欄にした）
   - この回だけ：`lib/visitEdit` の `savedVisit`（日付が変われば手作業の担当を外し `pattern.edited` を true）
-  - これ以降・すべて：`lib/week` の `moveFollowing`（元の日以降の同じ曜日の回を新しい曜日・時刻に分ける。すべては今日以降で最初の回から）。確定した日が含まれれば確認
+  - これ以降・すべて：`lib/weekOps` の `moveFollowing`（元の日以降の同じ曜日の回を新しい曜日・時刻に分ける。すべては今日以降で最初の回から）。確定した日が含まれれば確認
 - 保存で日時が変わり、担当を選ばず、新しい日に今の案があれば知らせに「〈日〉の案に空き時間で入れる」（`insertIntoPlan`：その日の問題で reassign の `fitsOf` の先頭の人に `placeVisit` で入れ、固定。他の人の訪問の開始は変わらない。入らなければ「空き時間に入りません。その日を作り直すか、日の予定で手で入れてください」）と「その日を作り直す」（日の予定へ）
 - キーボード：帯にフォーカスして Enter で訪問の詳細の欄を開き、日付・時刻を変えて保存できる。閉じるとフォーカスは帯
 
@@ -152,8 +152,8 @@ URL を書くときは履歴を増やさない `replace`（表示の切り替え
 
 - `weekDates(date)`（月曜はじまりの7日）。時間軸の範囲 `DAY_START`・`DAY_END` は `lib/spans`
 - `laneLayout(blocks)`（重なる帯の横の並び）
-- `moveOnce(d, visitId, date, start)`・`moveFollowing(d, visitId, date, start, today, newId)`（`splitPattern` を使う。パターンの訪問でなければ `moveOnce`）・`canMoveVisit`・`changedDates`
-- `insertIntoPlan(d, date, visitId, problem)`・`fitCountAt`・`allowedStaffOf`
+- `canMoveVisit`・`changedDates`・`fitCountAt`・`allowedStaffOf`
+- データを書く操作は `lib/weekOps.ts`（テストあり）：`moveOnce(d, visitId, date, start)`・`moveFollowing(d, visitId, date, start, today, newId)`（`splitPattern` を使う。パターンの訪問でなければ `moveOnce`）・`insertIntoPlan(d, date, visitId, problem)`・`insertAllIntoPlans`
 - `staffWeekTable(data, dates, problems)`（行・列・合計・平均との差・`WeekCell.bar`）
 - `qualificationBadges(items, staff)`・`staffWithQualification`
 - `clientWeekTable`・`clientItemMark`（表の札の短い文字）
@@ -177,4 +177,4 @@ URL を書くときは履歴を増やさない `replace`（表示の切り替え
 - [ ] （ADR-0024）`#/week?by=client` を開くと、この週に訪問がある人がチップで並び（表と同じ順）、先頭8人が選ばれ、URL に `?client=` が無い。押すと付け外しでき、9人目は選ばずに上限の文。「全部外す」で「選んでいません」、「先頭8人に戻す」で URL から消える。週を送るとその週の先頭8人。「ほかの人を探す」でこの週に訪問の無い人を選ぶとチップの後ろに出る。表で絞り込んで時間軸へ移るとその先頭8人、絞り込まずに移ると初期値。チップの欄は選んでいる人と2行ぶんで「あと N人」
 - [ ] （PRD D222）390px で `#/week` を開くと〈スタッフ〉×曜日の表で、URL に `?view=` が無く、今日の列が画面に見える（案の無い週は案内が見え、縦に巻かない）。時間軸を押すと `?view=timeline` を書く
 - [ ] （ADR-0056・ADR-0057）〈スタッフ〉×曜日の表のマスに、その人のその日の訪問が小さな札（「9:00 図」）で3件まで出て、4件目からは「+N」（押すと一覧・Esc で閉じフォーカスは「+N」）。札を押すと欄・Ctrl＋クリックで選べ、→ で次の日・↓ で下の担当へ動く（時刻はそのまま。Ctrl+Z で戻る）。動かした札は「+N」に隠れない。別の人・日のマスへドラッグすると、その人を担当に選んだ欄が開く（担当できない人・今日より前の日は影と理由）。〈利用者さん〉×曜日のマスも札（時刻と担当の印）で、選ぶ・キーで動かす・同じ行の別の日へドラッグができる。札の印は時間軸・月・人の予定表と同じ。390px は「選ぶ」と長押しで選べる
-- [ ] `lib/week`（週の日付・重なりの並び・この回だけ・これ以降（`moveFollowing` の over も）・空き時間に入れる・表の合計と平均との差・`clientWeekTable`）・`lib/weekView`・`lib/timelineClients`・`lib/fold` のテストが通る
+- [ ] `lib/week`（週の日付・重なりの並び・表の合計と平均との差・`clientWeekTable`）・`lib/weekOps`（この回だけ・これ以降（`moveFollowing` の over も）・空き時間に入れる）・`lib/weekView`・`lib/timelineClients`・`lib/fold` のテストが通る

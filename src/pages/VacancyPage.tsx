@@ -10,6 +10,8 @@ import { AddressField } from '../components/placeLookup';
 import { Term } from '../components/Term';
 import { useToast } from '../components/Toast';
 import { Hint, PageHeader, SidePanel, WithIcon } from '../components/ui';
+import { useFeature } from '../components/useFeature';
+import { COMPACT_QUERY, useMedia } from '../components/useMedia';
 import type { Client, ClientPlace, Pattern } from '../contracts/documents';
 import { EMPTY_REFERRER, patternSchema } from '../contracts/documents';
 import type { Condition } from '../contracts/rules';
@@ -42,8 +44,6 @@ import { buildBccMails } from '../lib/mailto';
 import { typeOf } from '../lib/patternText';
 import { normalizePostalCode } from '../lib/postalCode';
 import { scrollLeftToShow } from '../lib/scrollEdge';
-import { useFeature } from '../lib/useFeature';
-import { COMPACT_QUERY, useMedia } from '../lib/useMedia';
 import { loadVacancyInput, saveVacancyInput } from '../lib/vacancyInput';
 import {
   answerCard,
@@ -57,7 +57,8 @@ import {
   VACANCY_MARK_TEXT,
   whenWhatLine,
 } from '../lib/vacancyView';
-import { insertAllIntoPlans, weekStart } from '../lib/week';
+import { weekStart } from '../lib/week';
+import { insertAllIntoPlans } from '../lib/weekOps';
 import { ymOf } from '../lib/ym';
 import { visitsIn } from '../patterns';
 import { useDemoData } from '../store';
@@ -468,7 +469,7 @@ export default function VacancyPage() {
   };
 
   /**
-   * 仮押さえ：〈利用者さん〉（仮）と繰り返しを1回の update で入れ、今日から4週の回を空き時間に入れて（lib/week の insertAllIntoPlans）、
+   * 仮押さえ：〈利用者さん〉（仮）と繰り返しを1回の update で入れ、今日から4週の回を空き時間に入れて（lib/weekOps の insertAllIntoPlans）、
    * いちばん多く入った人を繰り返しの担当にする（版2。それより後の回はその担当で出る）
    */
   const register = () => {
@@ -534,7 +535,7 @@ export default function VacancyPage() {
       }
       patterns.push(r.data);
     }
-    // 今日から4週の回を空き時間に入れてピン（lib/week の insertIntoPlan。入らない日は知らせる）。いちばん多く入った人を繰り返しの担当に
+    // 今日から4週の回を空き時間に入れてピン（lib/weekOps の insertIntoPlan。入らない日は知らせる）。いちばん多く入った人を繰り返しの担当に
     const build = (d: typeof data) => {
       const clients = [...d.clients, client];
       const next = { ...d, clients, patterns: [...d.patterns, ...patterns] };

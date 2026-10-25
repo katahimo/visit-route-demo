@@ -22,10 +22,10 @@ import {
   tourNextLabel,
   tourSteps,
 } from '../lib/tour';
-import { useFeatures } from '../lib/useFeature';
 import { tourMemory, useDemoData } from '../store';
 import { FOCUSABLE } from './ui';
 import { inertLock, useBodyScrollLock } from './useBodyScrollLock';
+import { useFeatures } from './useFeature';
 import './tour.css';
 
 /** 案内を開く関数（データの画面の「案内をもう一度見る」） */

@@ -1,8 +1,8 @@
 import { CalendarDays, Check, UserRoundCog, Users, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDay } from '../app/day';
 import { useConfirm } from '../components/ConfirmDialog';
+import { useDay } from '../components/day';
 import { PersonButton } from '../components/PersonPopover';
 import { useToast } from '../components/Toast';
 import { Hint, SectionTitle, SidePanel, WithIcon } from '../components/ui';

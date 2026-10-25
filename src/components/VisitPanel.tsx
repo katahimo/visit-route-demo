@@ -25,7 +25,6 @@ import {
   useState,
 } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useDay } from '../app/day';
 import type { DemoData } from '../contracts/data';
 import type { Visit } from '../contracts/documents';
 import { hhmmToMinutes, jstDate, minutesToHhmm } from '../domain/time';
@@ -34,8 +33,6 @@ import { dateText } from '../lib/dateText';
 import { confirmLeave } from '../lib/leaveGuard';
 import { directionsHref, HOME_LABEL } from '../lib/mapsLink';
 import { typeOf } from '../lib/patternText';
-import { useFeature } from '../lib/useFeature';
-import { COMPACT_QUERY, useMedia } from '../lib/useMedia';
 import {
   applyVisitEdit,
   cancelVisitOp,
@@ -54,6 +51,7 @@ import {
 import { findVisit, visitsOn } from '../patterns';
 import { useDemoData } from '../store';
 import { useConfirm } from './ConfirmDialog';
+import { useDay } from './day';
 import { FieldError, invalidAttrs, RequiredMark } from './FieldError';
 import { MAPS_TITLE, VisitRouteLinks } from './mapsLinks';
 import { PersonButton } from './PersonPopover';
@@ -61,6 +59,8 @@ import { StaffMark } from './StaffMark';
 import { useToast } from './Toast';
 import { SidePanel, WithIcon } from './ui';
 import { useUndoAction } from './undo';
+import { useFeature } from './useFeature';
+import { COMPACT_QUERY, useMedia } from './useMedia';
 import { hasVisitRules, VisitRules } from './VisitRules';
 import { TypeDot, TypeMark } from './visitType';
 import './visitPanel.css';

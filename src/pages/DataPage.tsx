@@ -21,6 +21,7 @@ import { Term } from '../components/Term';
 import { useToast } from '../components/Toast';
 import { useTour } from '../components/Tour';
 import { Hint, PageHeader, SectionTitle, WithIcon } from '../components/ui';
+import { useFeature } from '../components/useFeature';
 import type { DemoData, RosterKind, RosterMode } from '../contracts/data';
 import { jstDate } from '../domain/time';
 import { exportAgoText, previousText } from '../lib/backupReminder';
@@ -28,7 +29,6 @@ import { attempt, formError, isStaleBuild } from '../lib/common';
 import { backupFileName, saveBlob } from '../lib/download';
 import { type LastDayPerson, lastDayChanged } from '../lib/personLinks';
 import { sizeText, tidyMonthLabel, tidyMonthOptions, tidyOld, tidyPreview } from '../lib/tidy';
-import { useFeature } from '../lib/useFeature';
 import {
   backupMemory,
   canKeepPrevious,

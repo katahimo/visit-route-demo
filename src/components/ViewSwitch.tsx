@@ -1,7 +1,7 @@
 import { CalendarClock, CalendarDays, CalendarRange, type LucideIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useDay } from '../app/day';
 import { ymOf } from '../lib/ym';
+import { useDay } from './day';
 
 /** 予定の3つの画面 */
 export type ScheduleView = 'month' | 'week' | 'day';

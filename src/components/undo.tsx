@@ -4,10 +4,10 @@ import { Redo2, Undo2 } from 'lucide-react';
 import { type ReactNode, useEffect, useMemo } from 'react';
 import { hashPathname, isMacPlatform } from '../lib/commandPalette';
 import { appHistory, historyKey, historyKeysOn, isTextTarget } from '../lib/history';
-import { useValueStore } from '../lib/valueStore';
 import { useDemoData } from '../store';
 import { type ToastAction, useToast } from './Toast';
 import { WithIcon } from './ui';
+import { useValueStore } from './valueStore';
 
 /** このブラウザが mac か（⌘Z と Ctrl+Z。CommandPalette と同じ決め方。循環を避けてここで決める） */
 const IS_MAC = typeof navigator !== 'undefined' && isMacPlatform(navigator.platform || navigator.userAgent);

@@ -1,27 +1,15 @@
 import { Component, type ReactNode, Suspense } from 'react';
 import { isChunkLoadError } from '../lib/chunkLoad';
-import { lazyComponent } from '../lib/lazyComponent';
 import { reloadPage } from '../lib/reloadPage';
+import type { MapLine, MapPoint } from '../lib/routeView';
+import { flushSave } from '../store';
+import { lazyComponent } from './lazyComponent';
 
 /**
  * 地図（国土地理院の淡色地図。APIキー不要）。
  * 線は順番どおりに結ぶ。dashed は点線（比較の A）、実線は今の案・比較の B。
  * 本体（Leaflet）は別のチャンク（LeafletMap）で、地図を出すときに読む（PRD D248。ADR-0039）
  */
-/** highlight は選んだ訪問先（大きく・輪で囲み・前に出す） */
-export type MapPoint = { lat: number; lng: number; label: string; color: string; highlight?: boolean };
-/**
- * highlight は選んだ区間（太く・前に出す。dashed なら点線のまま）。区間があるときは、ほかの線を薄くする。
- * bold は目立たせたい区間（欠勤の振り直しで代行に入れた訪問へ来る区間など。ADR-0011）：太く描くだけで、ほかの線は薄くしない
- */
-export type MapLine = {
-  points: { lat: number; lng: number }[];
-  color: string;
-  dashed?: boolean;
-  highlight?: boolean;
-  bold?: boolean;
-};
-
 export type RouteMapProps = {
   points: MapPoint[];
   lines?: MapLine[];
@@ -51,7 +39,7 @@ class MapErrorBoundary extends Component<{ height: number; children: ReactNode }
     return (
       <div className="map map-loading map-error" style={{ height: this.props.height }} data-testid="map-error">
         <span>地図を読み込めませんでした</span>
-        <button type="button" className="btn btn-small" onClick={reloadPage}>
+        <button type="button" className="btn btn-small" onClick={() => reloadPage(flushSave)}>
           再読み込み
         </button>
       </div>

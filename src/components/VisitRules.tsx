@@ -1,6 +1,6 @@
 import { Car, DoorOpen, KeyRound, TriangleAlert } from 'lucide-react';
 import type { Client } from '../contracts/documents';
-import { useFeature } from '../lib/useFeature';
+import { useFeature } from './useFeature';
 
 /** 訪問先の決まりごと（PRD D66。ADR-0013）の見出しとアイコン（入力欄・表示で同じ並び） */
 export const VISIT_RULE_FIELDS = [

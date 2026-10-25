@@ -15,8 +15,8 @@ import {
 import { useLayoutEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ARRANGE_TABS, activeNavPath, peopleTabs, settingsTabs } from '../lib/nav';
-import { useFeatures } from '../lib/useFeature';
 import { useDemoData } from '../store';
+import { useFeatures } from './useFeature';
 
 /** タブのアイコン（メニューの前の項目と同じ。並びは lib/nav の SETTINGS_TABS と同じ） */
 const ICONS: Record<string, LucideIcon> = {

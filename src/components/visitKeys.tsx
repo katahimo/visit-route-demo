@@ -8,7 +8,7 @@ import { jstDate } from '../domain/time';
 import { newId } from '../lib/common';
 import { dateText } from '../lib/dateText';
 import { appHistory } from '../lib/history';
-import { createValueStore, useValueStore } from '../lib/valueStore';
+import { createValueStore } from '../lib/valueStore';
 import {
   issuesAt,
   type KeyLayout,
@@ -26,6 +26,7 @@ import { useConfirm } from './ConfirmDialog';
 import { useToast } from './Toast';
 import { WithIcon } from './ui';
 import { useUndoAction } from './undo';
+import { useValueStore } from './valueStore';
 
 /** 最後にキーで動かした手（範囲を選び直す帯が読む。画面の状態だけ） */
 type KeyMoveNote = {

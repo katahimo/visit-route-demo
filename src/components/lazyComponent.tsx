@@ -2,7 +2,7 @@
 // 読み終わったあとは lazy を通さず直に描く（React.lazy は読み終わっていても最初の描画で一度止まり、
 // 画面を移るのが遅れる。先読みが済んでいれば止まらない）
 import { type ComponentType, type LazyExoticComponent, lazy, useState } from 'react';
-import { createChunkLoader } from './chunkLoad';
+import { createChunkLoader } from '../lib/chunkLoad';
 
 export type LazyComponent<P extends object> = ComponentType<P> & {
   /** チャンクを読み始める（何度呼んでも1回だけ読む）。読めなければ次に呼んだとき・描くときに読み直す */
