@@ -448,7 +448,12 @@ function ChoiceBand({ proposal }: { proposal: BatchProposal }) {
                     {d.diff ? `・${travelText(d.diff.travelDelta)}` : ''}
                   </p>
                   {proposalDayChanges(d).length === 0 ? (
-                    <p className="sub">今の担当と同じです</p>
+                    <p className="sub" data-testid="choice-same">
+                      変わる訪問はありません
+                      {c.presetId === data.scorePresetId
+                        ? '（今の予定は、この考え方（点数の基準）で組んであります）'
+                        : '（今の担当と同じ）'}
+                    </p>
                   ) : (
                     <ProposalChanges data={data} day={d} />
                   )}

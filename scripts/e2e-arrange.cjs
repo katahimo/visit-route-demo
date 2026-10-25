@@ -154,6 +154,13 @@ async function choices(page, { dlg }) {
     'カードに変わる訪問（誰の訪問が誰へ）の一覧',
   );
   await page.screenshot({ path: path.join(OUT_DIR, 'arrange-choices.png') });
+  // 案を比べる（その日）にも考え方ごとの案が出る（ADR-0064）
+  await page.goto(`${BASE}#/compare?date=${TODAY}`);
+  await page.getByTestId('compare-apply').first().waitFor({ timeout: 30000 });
+  const inCompare = await page.getByTestId('compare-apply').count();
+  check(inCompare === 3, '案を比べるにも考え方ごとの案が並ぶ', inCompare);
+  await page.goto(`${BASE}#/arrange?date=${TODAY}`);
+  await choiceBand(page).waitFor({ timeout: 10000 });
   const preset = await cards.nth(1).getAttribute('data-preset');
   const n = dlg.messages.length;
   await cards.nth(1).getByTestId('choice-adopt').click();
