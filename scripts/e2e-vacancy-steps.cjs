@@ -25,6 +25,7 @@ const {
   runSteps,
   settle,
 } = require('./lib/env.cjs');
+const { planDays } = require('./lib/plan.cjs');
 const { guard, closeContext, firstLine, message } = require('./lib/steps.cjs');
 
 const PERF_MS = perfMs('PERF_MS_VACANCY', 5000);
@@ -276,6 +277,8 @@ const plusDays = (d, n) => new Date(Date.parse(`${d}T00:00:00Z`) + n * 86400000)
 
 // ---- 答えのカード・凡例・指定なし・入力の保持・担当なしを AI で組む（PRD D258・D259）----
 async function answer(page) {
+  // 初期データは今日からの日を繰り返しの担当のままにするので、保存した担当の入った訪問を用意する（のちに2日の担当を外す）
+  await planDays(page);
   await openVacancy(page);
   await settle(page, 500);
   const card = page.getByTestId('vacancy-answer');

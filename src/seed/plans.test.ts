@@ -10,18 +10,27 @@ const TODAY = '2026-10-21';
 const data = createInitialData(TODAY);
 const days = Array.from({ length: SEED_PLAN_DAYS }, (_, i) => addDays(TODAY, i));
 
-describe('createInitialData（PRD D225。版2）', () => {
-  it('今日から続けて7日分の担当・開始を訪問に書き、8日目からは書かない', () => {
-    expect(SEED_PLAN_DAYS).toBe(7);
-    expect([...new Set(data.visits.map((v) => v.date))].sort()).toEqual(days);
+describe('createInitialData（PRD D322。ADR-0064）', () => {
+  it('今日からの日は AI で組まない（保存した回は無く、繰り返しの担当のまま）', () => {
+    expect(data.visits).toEqual([]);
     for (const d of days) {
       const placed = visitsOn(data, d).filter((v) => !v.cancelled);
-      expect(placed.every((v) => v.start !== null || v.staffId === null)).toBe(true);
       expect(placed.some((v) => v.staffId !== null)).toBe(true);
+      expect(placed.every((v) => !v.pinned)).toBe(true);
+    }
+  });
+
+  it('withSeedPlans：今日から7日分の担当・開始を訪問に書き、8日目からは書かない（テストのデータを作る部品）', () => {
+    const planned = withSeedPlans(data, TODAY);
+    expect(SEED_PLAN_DAYS).toBe(7);
+    expect([...new Set(planned.visits.map((v) => v.date))].sort()).toEqual(days);
+    for (const d of days) {
+      const placed = visitsOn(planned, d).filter((v) => !v.cancelled);
+      expect(placed.every((v) => v.start !== null || v.staffId === null)).toBe(true);
       // AI が組んだ担当にはピンを付けない
       expect(placed.every((v) => !v.pinned)).toBe(true);
     }
-    expect(visitsOn(data, addDays(TODAY, 7)).every((v) => v.start === null)).toBe(true);
+    expect(visitsOn(planned, addDays(TODAY, 7)).every((v) => v.start === null)).toBe(true);
   });
 
   it('同じ日付なら同じデータ（種と反復回数で決まる）', () => {
@@ -57,6 +66,7 @@ describe('createInitialData（PRD D225。版2）', () => {
   });
 
   it('同じデータにもう一度反映しても変わらない（担当・開始が同じなら書かない）', () => {
-    expect(withSeedPlans(data, TODAY).visits).toEqual(data.visits);
+    const planned = withSeedPlans(data, TODAY);
+    expect(withSeedPlans(planned, TODAY).visits).toEqual(planned.visits);
   });
 });

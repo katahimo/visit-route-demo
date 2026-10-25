@@ -6,7 +6,7 @@
 // 月の画面の ?do=attention・?do=unconfirmed で右の欄、確定したらホームの今日のカードが「確定済み」に、
 // いつでもの入口（欠勤・空き状況・探す）、何も無いデータで「今日の準備はできています」、
 // メニューの先頭の「ホーム」（1400px）、スマホ（390×844）で縦に並び横にはみ出さない・先頭に欠勤・キャンセルの入口（PRD D247）・下のタブの「ホーム」、印刷で出さない。
-// 初期データ（版2。今日から7日分に担当が入り、まだ伝えていない）、月の「問題の無い日をまとめて確定」
+// 初期データ（版2。保存した訪問は空で、今日からの日は繰り返しの担当のまま・まだ伝えていない）、月の「問題の無い日をまとめて確定」
 // （PRD D223。N日・確認に日付と残す日・確定済みになりホームの数が減る・担当が休みの訪問のある日は外れ確認に日付が出る・
 // 未連絡の変更のある日は外れる・0日なら押せず理由）、確定した日の「次の確定していない日へ」（PRD D224）、
 // 訪問の無い人の欠勤は要対応に数えない。
@@ -157,7 +157,7 @@ function createMonthOf(list) {
 }
 
 async function firstState(page) {
-  // 初期データ：今日から7日は担当が入っている（まだ伝えていない）。繰り返しの回は繰り返しの担当で最初から入る（版2。ADR-0053）
+  // 初期データ：今日からの日は繰り返しの担当のまま（保存した訪問は空・まだ伝えていない）。繰り返しの回は繰り返しの担当で最初から入る（版2。ADR-0053）
   await reset(page);
   await open(page, '/home');
   const list = await tasks(page);
@@ -345,7 +345,7 @@ async function seedPlans(page) {
           snapshots: Object.keys(d.snapshots).filter((x) => x >= today).length,
           past: Object.keys(d.snapshots).filter((x) => x < today).length,
           saved: saved.length,
-          assigned: saved.filter((v) => v.staffId).length,
+          visitsAll: d.visits.length,
           usual: d.patterns.filter((x) => x.usualStaffId).length,
           patterns: d.patterns.length,
           old: ['aiPlans', 'manualPlans', 'aiRuns'].filter((x) => x in d),
@@ -358,10 +358,10 @@ async function seedPlans(page) {
         stored.snapshots === 0 &&
         stored.past > 0 &&
         stored.old.length === 0 &&
-        stored.saved > 0 &&
-        stored.assigned >= stored.saved * 0.8 &&
+        stored.saved === 0 &&
+        stored.visitsAll === 0 &&
         stored.usual >= stored.patterns * 0.5,
-      '初期データ（版2）：今日から7日は組んだ担当を保存し（変わった回だけ）、繰り返しは繰り返しの担当を持つ。過去の日は伝えた状態・今日からは伝えていない',
+      '初期データ（版2）：保存した訪問は空（AI で組まない）で、今日からは繰り返しの担当のまま（計算した回）。過去の日は伝えた状態・今日からは伝えていない',
       stored,
     );
     await p.screenshot({ path: path.join(OUT_DIR, 'month-first-run-1440.png'), fullPage: true });

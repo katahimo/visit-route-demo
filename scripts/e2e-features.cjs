@@ -24,6 +24,7 @@ const path = require('node:path');
 const { answerConfirms } = require('./lib/confirmDialog.cjs');
 const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, hashOf, runSteps, settle } = require('./lib/env.cjs');
 const { markStandard } = require('./lib/standard.cjs');
+const { planDays } = require('./lib/plan.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
 
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -594,6 +595,9 @@ async function deadEnds(page, dlg, ctx) {
   await page.evaluate((key) => localStorage.removeItem(key), STORAGE_KEY);
   await page.reload();
   await page.locator('.date-switch select').waitFor({ timeout: 30000 });
+  // 初期データは今日からの日を繰り返しの担当のままにするので、保存した担当の入った訪問を用意する
+  await planDays(page);
+  await open(page, '/plan', '.date-switch select');
   const options = await page.locator('.date-switch select option').evaluateAll((os) => os.map((o) => o.value));
   const second = options.find((d) => d > TODAY) ?? '';
   check(second !== '', '用意：今日より後の日がある', second);
@@ -1012,6 +1016,9 @@ async function turnOffCompat(page, dlg, ctx) {
   await page.evaluate((key) => localStorage.removeItem(key), STORAGE_KEY);
   await page.reload();
   await page.locator('.date-switch select').waitFor({ timeout: 30000 });
+  // 初期データは今日からの日を繰り返しの担当のままにするので、保存した担当の入った訪問を用意する
+  await planDays(page);
+  await open(page, '/plan', '.date-switch select');
   const options = await page.locator('.date-switch select option').evaluateAll((os) => os.map((o) => o.value));
   const second = options.find((d) => d > TODAY) ?? '';
   // 別のタブで、その日の担当のある訪問1件の〈利用者さん〉を全員と相性×にする（相性が入なら、組むとその訪問は担当にならない）

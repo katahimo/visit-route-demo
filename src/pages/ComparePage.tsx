@@ -38,10 +38,12 @@ import { attempt, dateText, deltaText, formError, newId, own, pointsText, r0 } f
 import { aiPinsOf, routesOf, unassignedOf, writeRoutes } from '../lib/dayPlan';
 import { compareEmptyGuide } from '../lib/emptyGuide';
 import { isDate } from '../lib/isDate';
+import { monthBatch, type ProposalDay, proposalDayFresh } from '../lib/monthBatch';
 import { narrowRole } from '../lib/narrowRoles';
 import { buildRouteMap, homeLegKey, homeTravel, useRouteSelection } from '../lib/routeView';
 import { type ScoreReason, scoreReason } from '../lib/scoreReason';
 import { ownerMap, useDayModel } from '../lib/useDayModel';
+import { useValueStore } from '../lib/valueStore';
 import { compile, scheduleRoute } from '../matching';
 import { applyPreset } from '../seed';
 import { defaultIterations, runSolve } from '../solver';
@@ -65,6 +67,8 @@ type Choice = {
   unassigned: string[];
   /** 提案を作ったときのその日の訪問（変わったら当てられない） */
   visits?: readonly Visit[];
+  /** 担当を組むで出した提案の日（反映してよいかを担当を組むと同じ決まりで確かめる。proposalDayFresh） */
+  day?: ProposalDay;
   stopped?: boolean;
 };
 const CURRENT = 'current';
@@ -110,6 +114,48 @@ export default function ComparePage() {
   /** この画面で作った提案（保存しない。日付を変えると捨てる） */
   const [proposals, setProposals] = useState<{ date: string; list: Choice[] }>({ date, list: [] });
   const made = proposals.date === date ? proposals.list : [];
+  /**
+   * 担当を組むで出した提案のうちこの日の分（考え方ごとの案はそれぞれ、範囲の提案はその日）。比べる案に足す（ADR-0064。
+   * 保存しない。担当を組むで反映する・捨てると消える）。この画面で消したものは隠す
+   */
+  const batch = useValueStore(monthBatch.proposal);
+  const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
+  const fromArrange = useMemo((): Choice[] => {
+    if (!batch) return [];
+    const of = (key: string, title: string, day: ProposalDay | undefined, presetId: string | null): Choice[] => {
+      if (!day || day.date !== date) return [];
+      const preset = presetId ? data.presets.find((p) => p.id === presetId) : undefined;
+      return [
+        {
+          id: `arrange-${batch.id}-${key}`,
+          title,
+          kind: 'proposal',
+          rules: preset ? applyPreset(data.rules, preset) : data.rules,
+          routes: day.routes,
+          // 担当なしは今の問題で数える（下の choices で数え直す）
+          unassigned: [],
+          visits: day.visits,
+          day,
+        },
+      ];
+    };
+    const list = batch.choices
+      ? batch.choices.flatMap((c) =>
+          of(
+            c.presetId,
+            `「${c.name}」の案（担当を組む）`,
+            c.days.find((d) => d.date === date),
+            c.presetId,
+          ),
+        )
+      : of(
+          'range',
+          `${batch.label}の提案（担当を組む）`,
+          batch.days.find((d) => d.date === date),
+          null,
+        );
+    return list.filter((c) => !hidden.has(c.id));
+  }, [batch, date, data.presets, data.rules, hidden]);
   // 日付を変えたら選んだ案・作った提案を外す（選んだ訪問・区間は useRouteSelection が外す）
   useEffect(() => {
     setSel({ a: null, b: null });
@@ -146,8 +192,8 @@ export default function ComparePage() {
       routes,
       unassigned: unassignedOf(problem, routes),
     });
-    return [...out, ...made];
-  }, [problem, m.allVisits, reassign, data.rules, made]);
+    return [...out, ...fromArrange.map((c) => ({ ...c, unassigned: unassignedOf(problem, c.routes) })), ...made];
+  }, [problem, m.allVisits, reassign, data.rules, made, fromArrange]);
   const byId = (id: string | null) => choices.find((c) => c.id === id);
   // 日の予定から「比較の画面で見る」で来たら、A＝欠勤前、B＝今の担当
   // biome-ignore lint/correctness/useExhaustiveDependencies: 来たときに1回だけ合わせる
@@ -203,7 +249,8 @@ export default function ComparePage() {
   );
   /** 提案を作ったあとに訪問が変わったか（変わったら当てられない） */
   const stale = (c: Choice) =>
-    !!c.visits && (c.visits.length !== m.allVisits.length || c.visits.some((v, i) => v !== m.allVisits[i]));
+    (!!c.visits && (c.visits.length !== m.allVisits.length || c.visits.some((v, i) => v !== m.allVisits[i]))) ||
+    (!!c.day && !proposalDayFresh(data, c.day));
 
   const staffName = (id: string) => staffById.get(id)?.name ?? '（不明）';
   const clientOf = (visitId: string) => {
@@ -223,6 +270,7 @@ export default function ComparePage() {
       return;
     }
     const p = problem;
+    if (c.id.startsWith('arrange-')) setHidden((h) => new Set([...h, c.id]));
     // 全体の「元に戻す」の1手（トーストと Ctrl+Z・予定の操作の行の「元に戻す」。PRD D329）
     const before = data;
     const next = writeRoutes(before, date, p, c.routes);
@@ -237,6 +285,7 @@ export default function ComparePage() {
     toast(`${c.title}を反映しました`, { action: undoAction });
   };
   const removeChoice = (c: Choice) => {
+    if (c.id.startsWith('arrange-')) setHidden((h) => new Set([...h, c.id]));
     setProposals((x) => ({ ...x, list: x.list.filter((y) => y.id !== c.id) }));
     setSel((s) => ({ a: s.a === c.id ? null : s.a, b: s.b === c.id ? null : s.b }));
     rs.reset();

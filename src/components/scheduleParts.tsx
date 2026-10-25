@@ -3,43 +3,24 @@
 // 複数選択の帯（N件を選択：担当を替える・時刻をずらす・別の日へ（月）・取り消す）。日・週・月は「拡大率」として同じ部品を並べる。
 // 予定の画面では AI で組まない（AI で組むのは「担当を組む」の画面。ADR-0063）。
 // データを書くのは store の update だけ（複数選択は lib/multiEdit、提案は lib/monthBatch の apply）
-import {
-  ArrowRight,
-  CalendarArrowUp,
-  CircleCheck,
-  Clock,
-  Crown,
-  Sparkles,
-  UserRoundCog,
-  UserRoundX,
-  X,
-  XCircle,
-} from 'lucide-react';
+import { CalendarArrowUp, CircleCheck, Clock, Sparkles, UserRoundCog, UserRoundX, X, XCircle } from 'lucide-react';
 import { type ReactNode, type Ref, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { DemoData } from '../contracts/data';
-import { jstDate, minutesToHhmm } from '../domain/time';
-import { dateText, newId, WEEKDAY_LABELS } from '../lib/common';
-import {
-  type BatchProposal,
-  monthBatch,
-  type ProposalChange,
-  type ProposalDay,
-  proposalCounts,
-  proposalDayChanges,
-  proposalDayFresh,
-} from '../lib/monthBatch';
+import { jstDate } from '../domain/time';
+import { dateText } from '../lib/common';
+import { monthBatch, proposalCounts, proposalDayFresh } from '../lib/monthBatch';
 import { assignMany, cancelMany, moveManyToDate, multiResultText, selectionText, shiftMany } from '../lib/multiEdit';
 import { absenceHref } from '../lib/nav';
-import { mdText } from '../lib/patternText';
-import { dayStandardPreview, registerDayStandard } from '../lib/standard';
 import { COMPACT_QUERY, useMedia } from '../lib/useMedia';
 import { useValueStore } from '../lib/valueStore';
 import { toldDaysChanged } from '../lib/visitOps';
 import { findVisit } from '../patterns';
 import { useDemoData } from '../store';
 import { useConfirm } from './ConfirmDialog';
+import { ChoiceBand } from './choiceBand';
 import { MenuButton, type MenuItem } from './MenuButton';
+import { ProposalChanges } from './proposalChanges';
 import { StaffMark } from './StaffMark';
 import { useToast } from './Toast';
 import { WithIcon } from './ui';
@@ -208,54 +189,6 @@ function ProposalBand({
   );
 }
 
-/** 時刻の差の文（「30分遅く」「15分早く」） */
-const shiftText = (minutes: number) => `${Math.abs(minutes)}分${minutes > 0 ? '遅く' : '早く'}`;
-
-/**
- * 提案の1日の変わる訪問の一覧：提案での開始・〈利用者さん〉と、担当が変わる訪問は「今の担当 → 提案の担当」、
- * 時刻が変わる訪問は「担当 今の開始 → 提案の開始」。反映する前に誰の訪問がどう変わるかを見て決められるように
- */
-function ProposalChanges({ data, day }: { data: DemoData; day: ProposalDay }) {
-  const rows = proposalDayChanges(day);
-  if (rows.length === 0) return null;
-  const clientName = (id: string) => data.clients.find((c) => c.id === id)?.displayName ?? '（不明）';
-  const who = (id: string | null) =>
-    id === null ? '担当なし' : `${data.staff.find((s) => s.id === id)?.name ?? '（不明）'}さん`;
-  const change = (r: ProposalChange) =>
-    r.kind === 'staff' ? (
-      <>
-        {who(r.from)}
-        <ArrowRight size={14} aria-hidden="true" />
-        <span className="sr-only">から</span>
-        <strong>{who(r.to)}</strong>
-      </>
-    ) : (
-      <>
-        {who(r.to)} {minutesToHhmm(r.at - r.minutes)}
-        <ArrowRight size={14} aria-hidden="true" />
-        <span className="sr-only">から</span>
-        <strong>{minutesToHhmm(r.at)}</strong>（{shiftText(r.minutes)}）
-      </>
-    );
-  return (
-    <ul className="proposal-changes" aria-label={`${dateText(day.date)}の変わる訪問`} data-testid="proposal-changes">
-      {rows.map((r) => (
-        <li
-          key={r.visitId}
-          className={`proposal-change${r.kind === 'staff' && r.to === null ? ' is-unplaced' : ''}`}
-          data-testid="proposal-change"
-          data-kind={r.kind}
-        >
-          <span className="proposal-change-visit">
-            {minutesToHhmm(r.at)} {clientName(r.clientId)}さん
-          </span>
-          <span className="proposal-change-who">{change(r)}</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
 /**
  * 範囲の提案の帯（lib/monthBatch の提案。「担当を組む」の画面で出す）。担当を組むの画面と日・週・月の予定に置く（提案は1つで、どの画面でも同じもの）。
  * 日ごとの差（担当が変わる・時刻が変わる）を畳んで出し、日付を押すとその日の日の予定へ
@@ -267,7 +200,7 @@ export function RangeProposalBand() {
   const toast = useToast();
   const navigate = useNavigate();
   if (!proposal) return null;
-  if (proposal.choices) return <ChoiceBand proposal={proposal} />;
+  if (proposal.choices) return <ChoiceBand key={proposal.id} proposal={proposal} />;
   const counts = proposalCounts(proposal);
   const staleDays = proposal.days.filter((d) => !proposalDayFresh(data, d)).length;
   const apply = () => {
@@ -323,169 +256,6 @@ export function RangeProposalBand() {
         )
       }
     />
-  );
-}
-
-/** 移動の増減の文（「移動 +12分」「移動 ±0分」） */
-const travelText = (minutes: number) => {
-  const m = Math.round(minutes);
-  return `移動 ${m > 0 ? '+' : m < 0 ? '−' : '±'}${Math.abs(m)}分`;
-};
-
-/**
- * 考え方ごとの案の帯（PRD D357）：範囲が日で組み方の標準がまだ無いときに、考え方ごとの案をカードで並べる。カードに件数・移動の増減・
- * 変わる訪問の一覧と［この案を標準にする］（確認のあと、その日に反映し、その曜日の担当・時刻を来週の月曜から標準にし、
- * 考え方を標準の考え方にする。元に戻すの1手）［この日だけ反映］。担当なし・担当が変わる訪問のいちばん少ない案に王冠
- */
-function ChoiceBand({ proposal }: { proposal: BatchProposal }) {
-  const { data } = useDemoData();
-  const run = useValueStore(monthBatch.run);
-  const toast = useToast();
-  const confirmDialog = useConfirm();
-  const choices = proposal.choices ?? [];
-  const today = jstDate(Date.now());
-  let fewest = -1;
-  let fewestN = Number.POSITIVE_INFINITY;
-  choices.forEach((c, k) => {
-    const d = c.days[0];
-    const n = (d?.unassigned ?? 0) * 1000 + (d?.diff?.moved.length ?? 0);
-    if (n < fewestN) {
-      fewest = k;
-      fewestN = n;
-    }
-  });
-  const fresh = (k: number) => choices[k]?.days.every((d) => proposalDayFresh(data, d)) ?? false;
-  const staleText = '提案を出したあとに訪問が変わったので、反映しませんでした。もう一度組んでください';
-
-  const applyOnly = (k: number) => {
-    const c = choices[k];
-    const r = monthBatch.apply({ id: proposal.id, choice: k });
-    if (!r || !c) return;
-    toast(r.applied.length === 0 ? staleText : `「${c.name}」の案を${proposal.label}に反映しました`);
-  };
-  const adopt = async (k: number) => {
-    const c = choices[k];
-    const day = c?.days[0];
-    if (!c || !day) return;
-    const pv = dayStandardPreview(data, day, today);
-    const wd = WEEKDAY_LABELS[pv.weekday as 0] ?? '';
-    const ok = await confirmDialog({
-      title: `「${c.name}」の案を組み方の標準にしますか？`,
-      body: [
-        `・${dateText(day.date)}の担当と時刻をこの案にします`,
-        pv.diff.length > 0
-          ? `・${mdText(pv.since)}から、毎週${wd}曜の担当と時刻をこの案のとおりにします（今と違う所 ${pv.diff.length}か所。ほかの曜日は今のまま）`
-          : `・毎週${wd}曜の担当と時刻は今のままです（この案と同じ）`,
-        `・これから AI で組むときは「${c.name}」の考え方で組みます`,
-        '「元に戻す」で戻せます。ほかの曜日は「組み方の標準」で表で直せます',
-      ].join('\n'),
-      confirmLabel: 'この案を標準にする',
-    });
-    if (!ok) return;
-    const r = monthBatch.apply({
-      id: proposal.id,
-      choice: k,
-      andThen: (d) => registerDayStandard(d, day, c.presetId, today, { newId: () => newId('pattern'), at: Date.now() }),
-      label: `組み方の標準にする（${c.name}）`,
-    });
-    if (!r) return;
-    toast(
-      r.applied.length === 0
-        ? staleText
-        : `「${c.name}」を組み方の標準にしました。${mdText(pv.since)}から毎週${wd}曜はこの案のとおりに並びます`,
-    );
-  };
-
-  return (
-    <section
-      className="plan-band schedule-band proposal-band choice-band stack"
-      aria-label="AI の案"
-      data-testid="proposal-band"
-      data-kind="choices"
-    >
-      <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
-        <WithIcon icon={Sparkles} size={16}>
-          <span className="band-text">
-            <strong>
-              {proposal.label}の案（{choices.length}つ）
-            </strong>
-            ：くらべて、気に入った案を「この案を標準にする」で選んでください。これから AI はその考え方で組みます
-          </span>
-        </WithIcon>
-        <button
-          type="button"
-          className="btn btn-small"
-          onClick={() => monthBatch.discard()}
-          data-testid="proposal-discard"
-        >
-          <WithIcon icon={X} size={14}>
-            捨てる
-          </WithIcon>
-        </button>
-      </div>
-      <div className="choice-cards">
-        {choices.map((c, k) => {
-          const d = c.days[0];
-          const ok = fresh(k);
-          return (
-            <article key={c.presetId} className="choice-card stack" data-testid="choice-card" data-preset={c.presetId}>
-              <h3 className="choice-name">
-                {fewest === k && choices.length > 1 && (
-                  <Crown size={16} aria-label="担当なし・担当の変わる訪問がいちばん少ない案" />
-                )}
-                {c.name}
-              </h3>
-              {d && (
-                <>
-                  <p className="choice-stats" data-testid="choice-stats">
-                    担当が変わる <strong>{d.diff?.moved.length ?? 0}</strong>件・時刻が変わる{' '}
-                    <strong>{d.diff?.shifted.length ?? 0}</strong>件
-                    {d.unassigned > 0 && (
-                      <>
-                        ・<span className="warn-text">担当なし {d.unassigned}件</span>
-                      </>
-                    )}
-                    {d.diff ? `・${travelText(d.diff.travelDelta)}` : ''}
-                  </p>
-                  {proposalDayChanges(d).length === 0 ? (
-                    <p className="sub">今の担当と同じです</p>
-                  ) : (
-                    <ProposalChanges data={data} day={d} />
-                  )}
-                </>
-              )}
-              {!ok && (
-                <span className="sub warn-text" data-testid="proposal-stale">
-                  提案を出したあとに訪問が変わりました（反映できません）
-                </span>
-              )}
-              <div className="row choice-actions">
-                <button
-                  type="button"
-                  className="btn btn-primary btn-small"
-                  disabled={run !== null || !ok}
-                  onClick={() => void adopt(k)}
-                  data-testid="choice-adopt"
-                >
-                  <WithIcon icon={CircleCheck} size={14}>
-                    この案を標準にする
-                  </WithIcon>
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-small"
-                  disabled={run !== null || !ok}
-                  onClick={() => applyOnly(k)}
-                  data-testid="choice-apply"
-                >
-                  この日だけ反映
-                </button>
-              </div>
-            </article>
-          );
-        })}
-      </div>
-    </section>
   );
 }
 

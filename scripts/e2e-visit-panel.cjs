@@ -13,6 +13,7 @@
 const path = require('node:path');
 const { answerConfirms } = require('./lib/confirmDialog.cjs');
 const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, hashOf, runSteps, settle, until } = require('./lib/env.cjs');
+const { findVisit } = require('./lib/visits.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
 
 const shot = (page, name) => page.screenshot({ path: path.join(OUT_DIR, `${name}.png`) });
@@ -425,17 +426,23 @@ async function narrow(page) {
   const id = await first.getAttribute('data-visit');
   const card = page.locator(`[data-testid="day-row"][data-visit="${id}"]`);
   // この回だけ変えた回にしておく（390px では「繰り返しのとおりに戻す」を出さない）
+  const computed = findVisit(await data(page), id);
   const edited = await page.evaluate(
-    ([k, vid]) => {
+    ([k, vid, c]) => {
       const d = JSON.parse(localStorage.getItem(k));
-      const v = d.visits.find((x) => x.id === vid);
+      let v = d.visits.find((x) => x.id === vid);
+      if (!v) {
+        // 計算した回（保存していない回）は、この回だけ変えた回として保存する
+        v = c;
+        d.visits.push(v);
+      }
       if (!v.pattern) return false;
       v.durationMinutes += 5;
       v.pattern.edited = true;
       localStorage.setItem(k, JSON.stringify(d));
       return true;
     },
-    [STORAGE_KEY, id],
+    [STORAGE_KEY, id, computed],
   );
   if (edited) {
     await page.reload();
@@ -519,15 +526,22 @@ async function otherTab(page) {
   const id = await openFromBand(page);
   const p = panel(page);
   await p.getByTestId('vp-note').fill('欄のメモ');
+  // 計算した回（保存していない回）なら、別のタブが保存した回として書く
+  const computed = findVisit(await data(page), id);
   const other = await page.context().newPage();
   await other.goto(`${BASE}#/home`);
   await other.evaluate(
-    ([k, vid]) => {
+    ([k, vid, c]) => {
       const d = JSON.parse(localStorage.getItem(k));
-      d.visits.find((v) => v.id === vid).note = '別のタブのメモ';
+      let v = d.visits.find((x) => x.id === vid);
+      if (!v) {
+        v = c;
+        d.visits.push(v);
+      }
+      v.note = '別のタブのメモ';
       localStorage.setItem(k, JSON.stringify(d));
     },
-    [STORAGE_KEY, id],
+    [STORAGE_KEY, id, computed],
   );
   await other.close();
   await settle(page, 600);

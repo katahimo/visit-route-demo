@@ -23,6 +23,7 @@ const {
   withTimeout,
   hashOf,
 } = require('./lib/env.cjs');
+const { planDays } = require('./lib/plan.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
 const { answerConfirms } = require('./lib/confirmDialog.cjs');
 
@@ -62,6 +63,8 @@ async function fresh(page, hash, ready, mutate = null, arg = null) {
   await page.evaluate((k) => localStorage.removeItem(k), STORAGE_KEY);
   await page.reload();
   await page.locator('h1').waitFor();
+  // 初期データは今日からの日を繰り返しの担当のままにするので、保存した担当の入った訪問を用意する（2回目からは写し）
+  await planDays(page, { cache: true });
   let out = null;
   if (mutate) {
     // 初期データが保存されるのを待ってから書き換える

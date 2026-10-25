@@ -5,11 +5,11 @@
 // どれも純粋関数（DemoData を書き換えない。今の時刻は引数）
 import type { DaySnapshot, DemoData, ToldVisit } from '../contracts/data';
 import type { Visit } from '../contracts/documents';
-import type { Problem } from '../contracts/problem';
+import type { Problem, ScoreScale, StopTiming } from '../contracts/problem';
 import type { ContactList, ContactVisit, Routes, StaffContact } from '../contracts/reassign';
 import { leaveOn } from '../domain/leaves';
 import { hhmmToMinutes, minutesToHhmm } from '../domain/time';
-import { score } from '../evaluate';
+import { score, toHundred } from '../evaluate';
 import { type CompileInput, compile, scheduleRoute } from '../matching';
 import { parsePatternVisitId, putVisits, visitsOn } from '../patterns';
 import { attempt, own } from './common';
@@ -137,21 +137,38 @@ export function ownerOf(routes: Routes): Map<string, string> {
   return out;
 }
 
-/** 列ごとの lenient の時刻（訪問ID → { 担当, 開始（分） }）。問題に無い訪問・人は除く */
-export function startsOf(problem: Problem, routes: Routes): Map<string, { staffId: string; start: number }> {
+/**
+ * 列ごとの lenient の時刻（担当 → 訪問の時刻の並び。問題の担当の順）。問題に無い訪問・人は除き、同じ訪問は先の列だけに数える
+ */
+export function stopsOf(problem: Problem, routes: Routes): Map<string, StopTiming[]> {
   const vIndex = new Map(problem.visits.map((v, i) => [v.id, i]));
-  const out = new Map<string, { staffId: string; start: number }>();
+  const seen = new Set<string>();
+  const out = new Map<string, StopTiming[]>();
   problem.staff.forEach((st, si) => {
     const seq: number[] = [];
     for (const id of own(routes, st.id) ?? []) {
       const j = vIndex.get(id);
-      if (j === undefined || out.has(id) || seq.includes(j)) continue;
+      if (j === undefined || seen.has(id)) continue;
+      seen.add(id);
       seq.push(j);
     }
-    const t = scheduleRoute(problem, si, seq, 'lenient');
-    for (const stop of t?.stops ?? []) out.set(stop.visitId, { staffId: st.id, start: stop.start });
+    out.set(st.id, scheduleRoute(problem, si, seq, 'lenient')?.stops ?? []);
   });
   return out;
+}
+
+/** 列ごとの lenient の時刻（訪問ID → { 担当, 開始（分） }）。問題に無い訪問・人は除く */
+export function startsOf(problem: Problem, routes: Routes): Map<string, { staffId: string; start: number }> {
+  const out = new Map<string, { staffId: string; start: number }>();
+  for (const [staffId, stops] of stopsOf(problem, routes))
+    for (const stop of stops) out.set(stop.visitId, { staffId, start: stop.start });
+  return out;
+}
+
+/** 点数の基準の物差しでの点（100点満点）。採点できなければ null（予定の画面・考え方ごとの案で同じ数え方） */
+export function pointsOf(scoreProblem: Problem | null, scale: ScoreScale | null, routes: Routes): number | null {
+  if (!scoreProblem || !scale) return null;
+  return attempt(() => toHundred(score(scoreProblem, routes).total, scale)).value ?? null;
 }
 
 /** 分 → HH:mm（0:00〜23:59 に収める） */
