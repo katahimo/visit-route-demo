@@ -5,7 +5,7 @@ import type { ContactVisit } from '../contracts/reassign';
 import { NONE } from '../domain/scheduleModel';
 import { compile } from '../matching';
 import { client, DATE, makeData, staff, visit } from '../matching/fixtures';
-import { hardLabelsOf, planColumns, toldMarksOf } from './planView';
+import { droppedRowsOf, hardLabelsOf, hardRowsOf, planColumns, toldMarksOf, unplacedReasons } from './planView';
 
 describe('planColumns（列に出す人）', () => {
   const data = makeData({
@@ -70,5 +70,54 @@ describe('toldMarksOf（未連絡の変更の印）', () => {
       ['v3', '時刻 9:00→9:30'],
     ]);
     expect(toldMarksOf(null, (id) => id).size).toBe(0);
+  });
+});
+
+describe('「入らない」「守れない条件」の一覧の行', () => {
+  const w = {
+    timeOf: (id: string) => ({ v1: '09:00', v2: '08:00', v3: '10:00' })[id] ?? '',
+    clientName: (id: string) => `客${id}`,
+  };
+  it('unplacedReasons：infeasible の理由を先に、無ければ explain の理由', () => {
+    const data = makeData({
+      staff: [staff('s1', 38.26, 140.87)],
+      clients: [client('c1', 38.261, 140.871)],
+      visits: [visit('v1', 'c1', '09:00', '09:00'), visit('v2', 'c1', '10:00', '10:00')],
+    });
+    const p = compile(data, DATE);
+    const r = { ruleId: 'x', label: '遠い', points: 3 };
+    const inf = { ...p, infeasible: [{ visit: 0, reasons: [{ ...r, label: 'だめ' }] }] };
+    const explained = new Map([['v2', { reasons: [r] }]]);
+    expect(unplacedReasons(inf, explained, 'v1').map((x) => x.label)).toEqual(['だめ']);
+    expect(unplacedReasons(inf, explained, 'v2')).toEqual([r]);
+    expect(unplacedReasons(null, new Map(), 'v1')).toEqual([]);
+  });
+  it('droppedRowsOf：時刻・名前・理由の言葉', () => {
+    const rows = droppedRowsOf(['v1'], () => [{ ruleId: 'x', label: '遠い', points: 3 }], w);
+    expect(rows).toEqual([{ visitId: 'v1', time: '09:00', clientName: '客v1', reasons: ['遠い'], links: [] }]);
+  });
+  it('hardRowsOf：訪問ごとに1行にまとめ、時刻の順', () => {
+    const v = (visitId: string, label: string) => ({ visitId, staffId: 's1', kind: 'notAllowed' as const, label });
+    const rows = hardRowsOf(
+      [v('v1', 'A'), v('v2', 'B'), v('v1', 'C'), v('v1', 'A')],
+      (h) => [
+        { to: `/x/${h.label}`, label: h.label },
+        { to: '/same', label: '同じ' },
+      ],
+      { ...w, staffName: (id) => `名${id}` },
+    );
+    expect(rows.map((r) => r.visitId)).toEqual(['v2', 'v1']);
+    expect(rows[1]).toEqual({
+      visitId: 'v1',
+      time: '09:00',
+      clientName: '客v1',
+      staffName: '名s1',
+      reasons: ['A', 'C'],
+      links: [
+        { to: '/x/A', label: 'A' },
+        { to: '/same', label: '同じ' },
+        { to: '/x/C', label: 'C' },
+      ],
+    });
   });
 });
