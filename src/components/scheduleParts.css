@@ -333,17 +333,3 @@
   min-width: 0;
   font-weight: 700;
 }
-/* 時間軸の帯の印：担当が変わる・時刻が変わる */
-.choice-mark {
-  display: inline-block;
-  padding: 0 4px;
-  border-radius: 4px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  line-height: 1.5;
-  color: #fff;
-  background: var(--danger);
-}
-.choice-mark.is-time {
-  background: var(--warn-ink);
-}

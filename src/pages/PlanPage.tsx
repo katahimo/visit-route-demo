@@ -50,6 +50,7 @@ import { StaffMark, StaffMarkById } from '../components/StaffMark';
 import { RangeProposalBand, ScheduleToolbar, SelectionBar } from '../components/scheduleParts';
 import { Term } from '../components/Term';
 import { useToast } from '../components/Toast';
+import { shiftShort, TlMark, type TlMarkTone } from '../components/timelineMarks';
 import { Empty, Hint, IconButton, PageHeader, SectionTitle, SidePanel, Stat, WithIcon } from '../components/ui';
 import { useHistoryOps, useUndoAction } from '../components/undo';
 import { useOpenVisit } from '../components/VisitPanel';
@@ -85,6 +86,7 @@ import {
   changeCount,
   ownerOf,
   pinsOf,
+  pointsOf,
   routesOf,
   toldChanges,
   toldStateOf,
@@ -486,7 +488,7 @@ export default function PlanPage() {
             progressStore.set((prev) => ({ iteration: p.iteration, total: p.total, hundred: prev?.hundred ?? null }));
             return;
           }
-          const hundred = sp && ss ? (attempt(() => toHundred(score(sp, best).total, ss)).value ?? null) : null;
+          const hundred = pointsOf(sp, ss, best);
           progressStore.set({ iteration: p.iteration, total: p.total, hundred });
         },
       ),
@@ -1138,10 +1140,7 @@ export default function PlanPage() {
       key,
       title,
       diff: attempt(() => reassignDiff(before, { problem, routes: r })).value,
-      hundred:
-        scoreProblem && scoreScale
-          ? (attempt(() => toHundred(score(scoreProblem, r).total, scoreScale)).value ?? null)
-          : null,
+      hundred: pointsOf(scoreProblem, scoreScale, r),
       current: norm(r) === cur,
     });
     const out: ReassignOption[] = [];
@@ -1613,12 +1612,12 @@ export default function PlanPage() {
     const stay = leftById.get(id);
     const notes: string[] = [];
     const icons: ReactNode[] = [];
-    const mark = (key: string, cls: string, title: string, body: ReactNode, testId?: string) => {
+    const mark = (key: string, tone: TlMarkTone, title: string, body: ReactNode, testId?: string) => {
       notes.push(title);
       icons.push(
-        <span key={key} className={`tl-mark ${cls}`} title={title} data-testid={testId}>
+        <TlMark key={key} tone={tone} title={title} testId={testId}>
           {body}
-        </span>,
+        </TlMark>,
       );
     };
     if (type) notes.push(`種類：${type.name}`);
@@ -1650,7 +1649,7 @@ export default function PlanPage() {
       );
     if (subFrom) mark('sub', 'is-move', `代行（元の担当：${staffName(subFrom)}さん）`, '代', 'substitute');
     if (shift !== undefined) {
-      const txt = shift > 0 ? `+${shift}分` : `−${-shift}分`;
+      const txt = shiftShort(shift);
       mark('shift', 'is-warn', `振り直す前の開始時刻からの変化 ${txt}`, txt, 'shifted');
     }
     const x = { id, set: PLAN_SET };

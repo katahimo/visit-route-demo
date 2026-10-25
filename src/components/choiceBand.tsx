@@ -5,9 +5,10 @@
 import { CircleCheck, Crown, Sparkles, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { jstDate, minutesToHhmm } from '../domain/time';
-import { busyStaff, choiceColumns, choicePoints } from '../lib/choiceView';
-import { dateText, newId, WEEKDAY_LABELS } from '../lib/common';
-import { routesOf, unassignedOf } from '../lib/dayPlan';
+import { busyStaff, choiceColumns } from '../lib/choiceView';
+import { colorOf } from '../lib/colors';
+import { dateText, deltaText, newId, r0, WEEKDAY_LABELS } from '../lib/common';
+import { pointsOf, routesOf, unassignedOf } from '../lib/dayPlan';
 import {
   type BatchProposal,
   monthBatch,
@@ -15,8 +16,8 @@ import {
   proposalDayChanges,
   proposalDayFresh,
 } from '../lib/monthBatch';
-import { mdText } from '../lib/patternText';
-import { dayStandardPreview, registerDayStandard } from '../lib/standard';
+import { mdText, typeOf } from '../lib/patternText';
+import { bestIndex, dayStandardPreview, registerDayStandard } from '../lib/standard';
 import { legsOf } from '../lib/timeline';
 import { useDayModel } from '../lib/useDayModel';
 import { useValueStore } from '../lib/valueStore';
@@ -25,16 +26,11 @@ import { ProposalChanges } from './proposalChanges';
 import { RouteTimeline, type TimelineColumn } from './routeTimeline';
 import { StaffMark } from './StaffMark';
 import { useToast } from './Toast';
+import { shiftShort, TlMark } from './timelineMarks';
 import { WithIcon } from './ui';
 
 type Routes = Record<string, string[]>;
 const NO_DROP = { onDragOver: () => {}, onDragLeave: () => {}, onDrop: () => {} };
-
-/** 移動の増減の文（「移動 +12分」「移動 ±0分」） */
-const travelText = (minutes: number) => {
-  const m = Math.round(minutes);
-  return `移動 ${m > 0 ? '+' : m < 0 ? '−' : '±'}${Math.abs(m)}分`;
-};
 
 export function ChoiceBand({ proposal }: { proposal: BatchProposal }) {
   const choices = proposal.choices ?? [];
@@ -53,8 +49,8 @@ export function ChoiceBand({ proposal }: { proposal: BatchProposal }) {
   const current: Routes = useMemo(() => (first ? routesOf(first.problem, first.visits) : {}), [first]);
   const points = useMemo(
     () => ({
-      current: choicePoints(m.scoreProblem, m.scoreScale, current),
-      choices: choices.map((c) => (c.days[0] ? choicePoints(m.scoreProblem, m.scoreScale, c.days[0].routes) : null)),
+      current: pointsOf(m.scoreProblem, m.scoreScale, current),
+      choices: choices.map((c) => (c.days[0] ? pointsOf(m.scoreProblem, m.scoreScale, c.days[0].routes) : null)),
     }),
     [m.scoreProblem, m.scoreScale, current, choices],
   );
@@ -69,10 +65,7 @@ export function ChoiceBand({ proposal }: { proposal: BatchProposal }) {
     }
     return out;
   }, [first, current, choices]);
-  let best = -1;
-  points.choices.forEach((p, k) => {
-    if (p !== null && (best < 0 || p > (points.choices[best] ?? -1))) best = k;
-  });
+  const best = bestIndex(points.choices.map((p) => ({ points: p })));
 
   if (!first) return null;
   const k = tab >= choices.length ? 0 : tab;
@@ -85,13 +78,14 @@ export function ChoiceBand({ proposal }: { proposal: BatchProposal }) {
   const fresh = (i: number) => choices[i]?.days.every((d) => proposalDayFresh(data, d)) ?? false;
   const ok = k >= 0 && fresh(k);
   const staffName = (id: string | null) => (id === null ? '担当なし' : `${staffById.get(id)?.name ?? '（不明）'}さん`);
+  const visitOf = (visitId: string) => first.visits.find((v) => v.id === visitId);
   const clientName = (visitId: string) => {
     const v = problem.visits.find((x) => x.id === visitId);
     return (v && clientById.get(v.clientId)?.displayName) ?? '（不明）';
   };
   const staleText = '提案を出したあとに訪問が変わったので、反映しませんでした。もう一度組んでください';
 
-  const columns: TimelineColumn[] = choiceColumns(problem, routes, staffIds).map((col) => {
+  const columns: TimelineColumn[] = choiceColumns(problem, routes, staffIds, staffById).map((col) => {
     const s = staffById.get(col.staffId);
     return {
       staffId: col.staffId,
@@ -108,6 +102,8 @@ export function ChoiceBand({ proposal }: { proposal: BatchProposal }) {
       slots: col.slots,
       bands: col.stops.map((t) => {
         const c = changes.get(t.visitId);
+        const type = typeOf(data.visitTypes, visitOf(t.visitId)?.typeId);
+        // 予定の画面の振り直しと同じ印：担当が変わる（代）・時刻だけ変わる（±分）
         const note =
           c?.kind === 'staff'
             ? `担当が変わる（今：${staffName(c.from)}）`
@@ -119,17 +115,18 @@ export function ChoiceBand({ proposal }: { proposal: BatchProposal }) {
           start: t.start,
           end: t.end,
           name: clientName(t.visitId),
-          color: null,
+          color: type ? colorOf(type.color) : null,
           tone: null,
           picked: false,
           dragging: false,
           onPick: () => {},
           note,
-          marks: c ? (
-            <span className={`choice-mark is-${c.kind}`} title={note} aria-hidden="true">
-              {c.kind === 'staff' ? '担当' : '時刻'}
-            </span>
-          ) : undefined,
+          marks:
+            c && note ? (
+              <TlMark tone={c.kind === 'staff' ? 'is-move' : 'is-warn'} title={note} testId="choice-mark">
+                {c.kind === 'staff' ? '代' : shiftShort(c.minutes)}
+              </TlMark>
+            ) : undefined,
         };
       }),
       legs: legsOf(col.stops, col.homeMinutes),
@@ -257,7 +254,7 @@ export function ChoiceBand({ proposal }: { proposal: BatchProposal }) {
               <>
                 ・担当が変わる <strong>{day.diff?.moved.length ?? 0}</strong>件・時刻が変わる{' '}
                 <strong>{day.diff?.shifted.length ?? 0}</strong>件
-                {day.diff ? `・${travelText(day.diff.travelDelta)}` : ''}
+                {day.diff ? `・移動 ${deltaText(r0(day.diff.travelDelta), '分')}` : ''}
               </>
             )}
             {unassigned.length > 0 && <span className="warn-text">・担当なし {unassigned.length}件</span>}
@@ -300,7 +297,9 @@ export function ChoiceBand({ proposal }: { proposal: BatchProposal }) {
               : '（今の担当と同じ）'}
           </p>
         )}
-        {k >= 0 && changes.size > 0 && <p className="sub">「担当」「時刻」の印の訪問が、今と変わる訪問です</p>}
+        {k >= 0 && changes.size > 0 && (
+          <p className="sub">「代」（担当が変わる）・「±分」（時刻が変わる）の印の訪問が、今と変わる訪問です</p>
+        )}
         <RouteTimeline columns={columns} legOn={() => false} onLeg={() => {}} />
         {unassigned.length > 0 && (
           <p className="sub warn-text" data-testid="choice-unassigned">

@@ -578,7 +578,7 @@ export function proposalStats(
 }
 
 /** いちばん点の高いカード（同点は前。点の無いカードは除く） */
-export function bestIndex(stats: readonly (ProposalStats | null)[]): number {
+export function bestIndex(stats: readonly (Pick<ProposalStats, 'points'> | null)[]): number {
   let best = -1;
   stats.forEach((s, i) => {
     if (s?.points == null) return;
