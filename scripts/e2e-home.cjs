@@ -187,7 +187,8 @@ async function firstState(page) {
     // 「N月の担当なしの訪問を組む」→ 担当を組むの画面（その月の範囲。ADR-0063）
     await page.getByTestId('home-task').filter({ hasText: create.title }).click();
     await page.waitForURL(/#\/arrange/);
-    await page.getByTestId('arrange-start').waitFor({ timeout: 30000 });
+    // 初期データには組み方の標準が無いので、月の範囲は「AI で組む」でなく案内（ADR-0064）
+    await page.getByTestId('arrange-need-standard').waitFor({ timeout: 30000 });
     await settle(page, 300);
     check(
       hashOf(page) === `#/arrange?ym=${create.ym}` &&
@@ -199,6 +200,20 @@ async function firstState(page) {
     await page.goBack();
     await settle(page, 500);
     check(hashOf(page) === '#/home', '戻るでホームへ（?do= を残さないので欄を繰り返し開かない）', hashOf(page));
+  }
+
+  // 先頭の「はじめに組み方の標準を決める」→ 担当を組む（日の範囲。訪問のある伝えていない最初の日）
+  const std = list.find((t) => t.kind === 'standard');
+  if (std) {
+    await page.getByTestId('home-task').filter({ hasText: std.title }).click();
+    await page.waitForURL(/#\/arrange/);
+    await page.getByTestId('arrange-start').waitFor({ timeout: 30000 });
+    check(
+      /^#\/arrange\?date=\d{4}-\d{2}-\d{2}$/.test(hashOf(page)),
+      '「はじめに組み方の標準を決める」：担当を組む（日の範囲）が開く',
+      hashOf(page),
+    );
+    await open(page, '/home');
   }
 
   // 今日のカード → 日の画面（今日）
@@ -339,7 +354,7 @@ async function seedPlans(page) {
       { k: STORAGE_KEY, days: SEED_DAYS, today: TODAY },
     );
     check(
-      stored.version === 2 &&
+      stored.version === 3 &&
         stored.snapshots === 0 &&
         stored.past > 0 &&
         stored.old.length === 0 &&

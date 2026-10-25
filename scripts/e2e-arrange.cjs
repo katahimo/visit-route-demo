@@ -119,6 +119,11 @@ async function needStandard(page) {
     }
     check(hidden.length === 0, `標準が無い${label}：「AI で組む」の欄を出さない`, hidden);
   }
+  check(
+    /^\d+\/\d+を考え方ごとの案で組む$/.test((await page.getByTestId('arrange-to-day').innerText()).trim()),
+    '案内のボタン「M/Dを考え方ごとの案で組む」',
+    await page.getByTestId('arrange-to-day').innerText(),
+  );
   await page.getByTestId('arrange-to-day').click();
   await page.waitForFunction(() => /[?&]date=/.test(location.hash));
   check(/^#\/arrange\?date=\d{4}-\d{2}-\d{2}$/.test(hashOf(page)), '［日の範囲へ］で ?date= になる', hashOf(page));
@@ -142,7 +147,7 @@ async function choices(page, { dlg }) {
   await page.getByTestId('arrange-start').click();
   await choiceBand(page).waitFor({ timeout: 150000 });
   const cards = choiceBand(page).getByTestId('choice-card');
-  check((await cards.count()) === 3, '考え方ごとの案のカードが3つ', await cards.count());
+  check((await cards.count()) === 3, '考え方ごとの案のカードが3つ（初期データのプリセットの数）', await cards.count());
   check((await assignedOn(page, TODAY)) === 0, '案が出ても、選ぶまで訪問は変わらない');
   check(
     (await choiceBand(page).getByTestId('proposal-change').count()) > 0,
@@ -178,6 +183,33 @@ async function choices(page, { dlg }) {
     { timeout: 10000 },
   );
   check((await assignedOn(page, TODAY)) === 0, '「元に戻す」で案を選ぶ前に戻る（標準も消える）');
+}
+
+// ---- 考え方ごとの案はすべてのプリセット（最大6つ）：プリセットを1つ足すとカードが4枚（ADR-0064） ----
+async function choicesAll(page) {
+  await clearPlans(page);
+  await editData(
+    page,
+    (key) => {
+      const d = JSON.parse(localStorage.getItem(key));
+      d.presets.push({ ...d.presets[0], id: 'extra', name: '追加の考え方' });
+      localStorage.setItem(key, JSON.stringify(d));
+    },
+    STORAGE_KEY,
+  );
+  await open(page, `/arrange?date=${TODAY}`);
+  const n = await page.evaluate((k) => JSON.parse(localStorage.getItem(k)).presets.length, STORAGE_KEY);
+  check(n === 4, '用意：プリセットが4つ', n);
+  check(/4つの案を組む/.test(await page.getByTestId('arrange-start').innerText()), 'ボタン「4つの案を組む」');
+  await page.getByTestId('arrange-start').click();
+  await choiceBand(page).waitFor({ timeout: 200000 });
+  const cards = choiceBand(page).getByTestId('choice-card');
+  check((await cards.count()) === 4, 'プリセットの数だけ（4枚）カードが並ぶ', await cards.count());
+  check(
+    (await choiceBand(page).locator('[data-testid="choice-card"][data-preset="extra"]').count()) === 1,
+    '足したプリセットのカードがある',
+  );
+  check((await assignedOn(page, TODAY)) === 0, '案が出ても、選ぶまで訪問は変わらない');
 }
 
 // ---- AI で組む → 提案の帯 → 反映 → 元に戻す ----
@@ -284,6 +316,7 @@ const steps = sharedPage({
     ['range', range],
     ['need-standard', needStandard],
     ['choices', choices],
+    ['choices-all', choicesAll],
     ['run-apply', runApply],
     ['preset', preset],
     ['compare', compare],

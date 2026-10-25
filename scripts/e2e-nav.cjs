@@ -78,7 +78,7 @@ const toKata = (s) => s.replace(/[ぁ-ゖ]/g, (ch) => String.fromCharCode(ch.cha
 
 // メニューの最上位6項目（PRD D349。ADR-0063）：見出しは無い。予定・予定を組む・人・設定は畳める子の項目を持つ
 const GROUPS = [];
-const LABELS = ['ホーム', '予定', '予定を組む', '空き状況', '人', '設定'];
+const LABELS = ['ホーム', '予定を組む', '予定', '空き状況', '人', '設定'];
 /** 子の項目の key（予定は今日の予定・◯月の予定・欠勤・キャンセル、予定を組むは担当を組む・組み方の標準、人は人のタブ、設定は設定のタブ） */
 const KIDS = {
   schedule: ['today', 'month-view', 'absence'],
@@ -491,7 +491,11 @@ async function keyboard(page) {
   );
   await page.keyboard.press('Enter');
   await page.waitForURL(/#\/arrange/);
-  await page.getByTestId('arrange-start').waitFor({ timeout: 30000 });
+  // 標準が無い間の月は「AI で組む」でなく案内（ADR-0064）。どちらでも画面が開いたと見る
+  await page
+    .locator('[data-testid="arrange-start"], [data-testid="arrange-need-standard"]')
+    .first()
+    .waitFor({ timeout: 30000 });
   check(
     hashOf(page) === `#/arrange?ym=${TODAY.slice(0, 7)}` &&
       (await page.locator('h1').innerText()).trim() === '担当を組む',

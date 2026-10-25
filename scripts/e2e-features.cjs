@@ -23,6 +23,7 @@
 const path = require('node:path');
 const { answerConfirms } = require('./lib/confirmDialog.cjs');
 const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, hashOf, runSteps, settle } = require('./lib/env.cjs');
+const { markStandard } = require('./lib/standard.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
 
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -77,7 +78,7 @@ const TEMPLATE_LABEL = {
 const asFeatures = (on) => Object.fromEntries(FEATURE_IDS.map((id) => [id, on.includes(id)]));
 
 /** メニューの最上位（6項目。予定・予定を組む・人・設定は畳める子の項目を持つ。PRD D349。ADR-0063） */
-const MENU = ['ホーム', '予定', '予定を組む', '空き状況', '人', '設定'];
+const MENU = ['ホーム', '予定を組む', '予定', '空き状況', '人', '設定'];
 /** 予定を組むの子の項目の key（担当を組む・組み方の標準。どのひな形でも同じ。ADR-0063） */
 const ARRANGE_KIDS = ['arrange:assign', 'arrange:standard'];
 /** 人の子の項目（人のタブ。相性はどのひな形でも入） */
@@ -574,7 +575,7 @@ async function pathVariants(page, dlg, ctx) {
   await open(page, '/home', '[data-testid="home-tasks"]');
   const m = await menu(page);
   check(
-    same(m.labels, ['ホーム', '予定', '予定を組む', '人', '設定']) &&
+    same(m.labels, ['ホーム', '予定を組む', '予定', '人', '設定']) &&
       same(m.schedule, ['today', 'month-view']) &&
       m.titles.length === 0,
     '欠勤・キャンセルと空き状況を切るとメニューの最上位は5項目・予定の子に欠勤・キャンセルが無い（見出しは無い）',
@@ -744,6 +745,7 @@ async function insideEntries(page, dlg, ctx) {
     await writeFeaturesInOtherTab(ctx, asFeatures(TEMPLATE_ON[t]));
     const data = await page.evaluate((k) => JSON.parse(localStorage.getItem(k)), STORAGE_KEY);
     check(same(data.org.features, asFeatures(TEMPLATE_ON[t])), `${label}：入り切りを書いた`);
+    await markStandard(page); // 標準が無い間は週を組めない（ADR-0064）
     const count = (id) => page.getByTestId(id).count();
 
     // 日の画面（今日）
