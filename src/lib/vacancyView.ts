@@ -1,10 +1,56 @@
 // 空き状況の画面の段階と表示の決め方（PRD D184〜D187。ADR-0025。UI/UX 改善の区切り8a）。
 // 計算（vacancyOf・verdictOf・inquirySummary）は src/vacancy のまま。ここは画面に出す文と印を決めるだけの純粋関数
-import type { InquiryWish, VacancyCell, VacancyResult, Verdict } from '../contracts/vacancy';
-import { hhmmToMinutes } from '../domain/time';
+import type { Place } from '../contracts/documents';
+import type { Condition } from '../contracts/rules';
+import {
+  type InquiryWish,
+  VACANCY_DAY_END_DEFAULT,
+  VACANCY_DAY_START_DEFAULT,
+  VACANCY_MARGIN_DEFAULT,
+  VACANCY_STEP_DEFAULT,
+  type VacancyCell,
+  type VacancyQuery,
+  type VacancyResult,
+  type Verdict,
+} from '../contracts/vacancy';
+import { addDays, hhmmToMinutes } from '../domain/time';
 import { verdictOf } from '../vacancy';
 import { WEEKDAY_LABELS } from './common';
 import { clockTime } from './dateText';
+import { weekStart } from './week';
+
+/** 試算の条件（間・1日の時間・刻みは既定。空き状況の表と案内文で同じ） */
+export function vacancyQuery(
+  typeId: string | null,
+  durationMinutes: number,
+  requirements: Condition[],
+  place: Place | null,
+): VacancyQuery {
+  return {
+    typeId,
+    durationMinutes,
+    requirements,
+    place,
+    marginMinutes: VACANCY_MARGIN_DEFAULT,
+    dayStart: VACANCY_DAY_START_DEFAULT,
+    dayEnd: VACANCY_DAY_END_DEFAULT,
+    stepMinutes: VACANCY_STEP_DEFAULT,
+  };
+}
+
+/** 案内文の期間（ADR-0013）：今週＝今日〜その週の日曜（月曜はじまり）、来週＝次の月曜〜日曜、先4週＝今日から4週 */
+export type NoticePeriod = 'thisWeek' | 'nextWeek' | 'fourWeeks';
+export const NOTICE_PERIODS: { id: NoticePeriod; label: string }[] = [
+  { id: 'thisWeek', label: '今週' },
+  { id: 'nextWeek', label: '来週' },
+  { id: 'fourWeeks', label: '先4週' },
+];
+export function noticeRange(period: NoticePeriod, today: string): { from: string; to: string; weeks: number } {
+  const monday = weekStart(today);
+  if (period === 'thisWeek') return { from: today, to: addDays(monday, 6), weeks: 1 };
+  if (period === 'nextWeek') return { from: addDays(monday, 7), to: addDays(monday, 13), weeks: 1 };
+  return { from: today, to: addDays(today, 27), weeks: 4 };
+}
 
 /** 狭い画面で表をはじめに見せる開始時刻（PRD D221。朝の早い列はたいてい × なので 9:00 の列から） */
 export const NARROW_FIRST_START = '09:00';
