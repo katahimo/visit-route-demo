@@ -1,115 +1,19 @@
 import { CalendarDays, Check, UserRoundCog, Users, X } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useConfirm } from '../components/ConfirmDialog';
-import { useDay } from '../components/day';
-import { PersonButton } from '../components/PersonPopover';
-import { useToast } from '../components/Toast';
 import { Hint, SectionTitle, SidePanel, WithIcon } from '../components/ui';
-import { addDays, jstDate } from '../domain/time';
-import { byName, newId } from '../lib/common';
-import { dateText, mdText, monthLabel } from '../lib/dateText';
-import {
-  applyOffboard,
-  applyOffboardWith,
-  defaultChoice,
-  OFFBOARD_SAMPLE_DAYS,
-  type OffboardRole,
-  offboardScope,
-  unlimitedBy,
-} from '../lib/offboard';
-import { useDemoData } from '../store';
-
-/** 持ち方の文 */
-const ROLE_TEXT: Record<OffboardRole, string> = {
-  pattern: '繰り返しの担当',
-  allowed: '担当できる人',
-};
-
-/** 選びの値（だれにもしない） */
-const NOBODY = '';
+import { addDays } from '../domain/time';
+import { byName } from '../lib/common';
+import { mdText } from '../lib/dateText';
+import { OFFBOARD_SAMPLE_DAYS } from '../lib/offboard';
+import { OffboardClientsTable, OffboardVisitDays } from './offboardParts';
+import { useOffboardFlow } from './useOffboardFlow';
 
 /**
  * 退職・担当替えの一括振り直し（PRD D71。ADR-0015）：最終勤務日のある〈スタッフ〉について、〈利用者さん〉ごとに代わりの人を選び、
- * 「まとめて適用」で 繰り返しの担当・保存した回の担当・担当できる人 を置き換える（版2。ADR-0053）
+ * 「まとめて適用」で 繰り返しの担当・保存した回の担当・担当できる人 を置き換える（版2。ADR-0053）。
+ * 状態と処理は useOffboardFlow、表と日の一覧は offboardParts
  */
 export function OffboardPanel({ staffId, onClose }: { staffId: string; onClose: () => void }) {
-  const { data, update } = useDemoData();
-  const { setDate } = useDay();
-  const navigate = useNavigate();
-  const toast = useToast();
-  const confirmDialog = useConfirm();
-  const terms = data.org.terms;
-  const today = jstDate(Date.now());
-  const scope = useMemo(() => offboardScope(data, staffId, today), [data, staffId, today]);
-  const staffById = useMemo(() => new Map(data.staff.map((s) => [s.id, s])), [data.staff]);
-  const clientById = useMemo(() => new Map(data.clients.map((c) => [c.id, c])), [data.clients]);
-  const name = staffById.get(staffId)?.name ?? '';
-  /** 〈利用者さん〉ID → 選んだ人（'' はだれにもしない） */
-  const [choices, setChoices] = useState<Record<string, string>>({});
-  // 範囲が変わったら（適用・最終勤務日の変更）、まだ選んでいない〈利用者さん〉に既定の候補を入れる
-  useEffect(() => {
-    if (!scope) return;
-    setChoices((prev) => {
-      const next: Record<string, string> = {};
-      for (const c of scope.clients) next[c.clientId] = prev[c.clientId] ?? defaultChoice(c) ?? NOBODY;
-      return next;
-    });
-  }, [scope]);
-
-  /** 訪問を日ごとにまとめる */
-  const byDate = useMemo(() => {
-    const out = new Map<string, { count: number; confirmed: number }>();
-    for (const v of scope?.visits ?? []) {
-      const x = out.get(v.date) ?? { count: 0, confirmed: 0 };
-      x.count++;
-      if (v.confirmed) x.confirmed++;
-      out.set(v.date, x);
-    }
-    return [...out];
-  }, [scope]);
-
-  const openDay = (d: string) => {
-    setDate(d);
-    onClose();
-    navigate('/plan');
-  };
-
-  const canApply = !!scope && scope.clients.length > 0;
-  const apply = async () => {
-    if (!scope || !canApply) return;
-    const picked: Record<string, string | null> = {};
-    for (const c of scope.clients) picked[c.clientId] = choices[c.clientId] || null;
-    const nobody = scope.clients.filter((c) => !picked[c.clientId]).map((c) => clientById.get(c.clientId)?.displayName);
-    // 担当できる人がその人だけの〈利用者さん〉を「だれにもしない」にすると、担当を限らなくなる
-    const unlimited = unlimitedBy(data, staffId, picked).map((id) => clientById.get(id)?.displayName);
-    // 確認の前に同じ規則で一度当てて、付け替える訪問の数を出す（データは変えない）
-    const from = scope.from;
-    const pids: string[] = [];
-    const nextPid = () => {
-      const id = newId('pt');
-      pids.push(id);
-      return id;
-    };
-    const preview = applyOffboardWith(data, staffId, picked, from, today, nextPid);
-    const body = `${scope.clients.length}人の${terms.client}の担当を、${mdText(from)}から選んだ${terms.staff}に移します（それより前の日はそのまま）。${
-      nobody.length > 0 ? `${nobody.join('・')}は「だれにもしない」なので、担当なしになります。` : ''
-    }${
-      unlimited.length > 0
-        ? `${unlimited.join('・')}は担当できる人がいなくなり、担当を限らなくなります（だれでも担当できます）。`
-        : ''
-    }${
-      preview.renamed > 0
-        ? `繰り返しは${mdText(from)}で分け、この回だけ変えた ${preview.renamed}件は新しい繰り返しの回にします（時刻・メモはそのまま）。`
-        : ''
-    }${mdText(from)}からの訪問の担当も選んだ人になります（入らない回は要対応に出ます）。`;
-    const ok = await confirmDialog({ title: '担当を置き換えますか？', body, confirmLabel: '担当を置き換える' });
-    if (!ok) return;
-    // 確認と同じパターン ID で当てる
-    let k = 0;
-    update((d) => applyOffboard(d, staffId, picked, from, today, () => pids[k++] ?? newId('pt')));
-    toast(`${scope.clients.length}人の担当を置き換えました。入らない回は月の予定の要対応で確かめてください`);
-  };
+  const { terms, scope, name, canApply, apply, ...flow } = useOffboardFlow(staffId, onClose);
 
   return (
     <SidePanel
@@ -169,108 +73,31 @@ export function OffboardPanel({ staffId, onClose }: { staffId: string; onClose: 
               {name}さんをいつもの担当・定期パターンの担当・担当できる人にしている{terms.client}はいません。
             </p>
           ) : (
-            <div className="table-scroll">
-              <table className="people-table offboard-table" data-testid="offboard-clients">
-                <thead>
-                  <tr>
-                    <th scope="col">{terms.client}</th>
-                    <th scope="col">いまの持ち方</th>
-                    <th scope="col">代わりの{terms.staff}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {scope.clients.map((c) => {
-                    const value = choices[c.clientId] ?? NOBODY;
-                    return (
-                      <tr key={c.clientId} data-testid="offboard-client">
-                        <th scope="row" className="person-name">
-                          {/* 名前から詳細（select の option には置けないので行の見出しだけ。PRD D208） */}
-                          <PersonButton
-                            kind="client"
-                            id={c.clientId}
-                            name={clientById.get(c.clientId)?.displayName ?? ''}
-                            testId="offboard-client-name"
-                          />
-                        </th>
-                        <td className="nowrap">
-                          {c.roles
-                            .map((r) =>
-                              r === 'pattern' && c.patternIds.length > 1
-                                ? `${ROLE_TEXT[r]}（${c.patternIds.length}つ）`
-                                : ROLE_TEXT[r],
-                            )
-                            .join('・')}
-                        </td>
-                        <td>
-                          <select
-                            value={value}
-                            onChange={(e) => setChoices({ ...choices, [c.clientId]: e.target.value })}
-                            aria-label={`${clientById.get(c.clientId)?.displayName ?? ''}の代わりの${terms.staff}`}
-                            data-testid="offboard-choice"
-                          >
-                            {c.candidates.map((x) => {
-                              const s = staffById.get(x.staffId);
-                              const fit =
-                                c.sample === 0
-                                  ? '見本の訪問なし'
-                                  : x.fits === 0
-                                    ? '入れる回なし'
-                                    : `入れる ${x.fits}/${c.sample}回`;
-                              return (
-                                <option key={x.staffId} value={x.staffId}>
-                                  {s?.name ?? ''}（{fit}・{OFFBOARD_SAMPLE_DAYS / 7}週の受け持ち {x.load}回）
-                                </option>
-                              );
-                            })}
-                            <option value={NOBODY}>（だれにもしない）</option>
-                          </select>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <OffboardClientsTable
+              clients={scope.clients}
+              choices={flow.choices}
+              onChoices={flow.setChoices}
+              staffById={flow.staffById}
+              clientById={flow.clientById}
+              terms={terms}
+            />
           )}
 
           <SectionTitle icon={CalendarDays}>
             {mdText(scope.from)}以降に{name}さんが担当している訪問（{scope.visits.length}件）
           </SectionTitle>
-          {byDate.length === 0 ? (
+          {flow.byDate.length === 0 ? (
             <p className="sub" data-testid="offboard-no-visits">
               {name}さんの担当の訪問はありません。
             </p>
           ) : (
-            <>
-              <p className="sub">
-                この訪問は{mdText(addDays(scope.lastDay, 1))}
-                から「担当が休み」の要対応になります。「まとめて適用」で担当を替えるか、日の予定で直してください。
-              </p>
-              <button
-                type="button"
-                className="btn btn-small"
-                onClick={() => {
-                  onClose();
-                  navigate(`/month?ym=${scope.from.slice(0, 7)}&staff=${encodeURIComponent(staffId)}`);
-                }}
-              >
-                <WithIcon icon={CalendarDays} size={14}>
-                  {monthLabel(scope.from)}の「月の予定」を開く
-                </WithIcon>
-              </button>
-              <ul className="offboard-days" data-testid="offboard-visits">
-                {byDate.map(([d, x]) => (
-                  <li key={d}>
-                    <button type="button" className="offboard-day-btn" onClick={() => openDay(d)}>
-                      <span>{dateText(d)}</span>
-                      <span>
-                        {x.count}件{x.confirmed > 0 ? `（確定 ${x.confirmed}件）` : ''}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </>
+            <OffboardVisitDays
+              byDate={flow.byDate}
+              lastDay={scope.lastDay}
+              from={scope.from}
+              onOpenDay={flow.openDay}
+              onOpenMonth={() => flow.openMonth(scope.from)}
+            />
           )}
         </div>
       )}
