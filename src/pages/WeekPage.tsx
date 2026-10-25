@@ -19,6 +19,7 @@ import { Hint, PageHeader, WithIcon } from '../components/ui';
 import { useDayModel } from '../components/useDayModel';
 import { useDayStatuses } from '../components/useDayStatuses';
 import { useFeature } from '../components/useFeature';
+import { useInsertNotice } from '../components/useInsertNotice';
 import { COMPACT_QUERY, useMedia } from '../components/useMedia';
 import { useOpenVisit } from '../components/VisitPanel';
 import { useValueStore } from '../components/valueStore';
@@ -90,7 +91,6 @@ import {
   weekDates,
   weekDay,
 } from '../lib/week';
-import { insertIntoPlan } from '../lib/weekOps';
 import { weekDayCountText, weekNext } from '../lib/weekPrep';
 import { isTimeline, WEEK_VIEWS, type WeekView, weekViewLabel, weekViewOf, weekViewParams } from '../lib/weekView';
 import { findVisit, visitsOn } from '../patterns';
@@ -130,10 +130,6 @@ const liveCount = (day: WeekDay) => day.bands.filter((b) => !b.leave).length;
 
 /** 選んだ人（null＝全員、空なら []＝だれも選ばない） */
 const selectionOf = (raw: string | null): string[] | null => (raw === null ? null : raw.split(',').filter(Boolean));
-
-/** 動かす欄の中身 */
-/** 動かしたあとの知らせ（新しい日に今の案があるとき） */
-type Notice = { date: string; visitId: string; label: string; error: string | null };
 
 /** 種類なしの帯の色（月の種類の積み上げと同じ） */
 const NO_TYPE_COLOR = '#cfc4bb';
@@ -181,7 +177,6 @@ export default function WeekPage() {
   );
   /** 訪問の詳細の欄（PRD D301。帯を押す・落とすと開く。週の移動の欄はこの欄にした） */
   const openVisitPanel = useOpenVisit();
-  const [notice, setNotice] = useState<Notice | null>(null);
   /** 表のマスで必ず見せる札（キーで動かした・欄で開いた訪問。「+N」に隠さない） */
   const [keepId, setKeepId] = useState<string | null>(null);
   /** 欠勤・キャンセルの入口（ADR-0028 の sudden） */
@@ -505,6 +500,16 @@ export default function WeekPage() {
     navigate('/plan', visitId ? { state: { visitId } } : undefined);
   };
   const staffName = (id: string | null) => (id ? (staffById.get(id)?.name ?? '（不明）') : '担当なし');
+  /** 動かしたあとの「空き時間に入れる」の知らせ（新しい日に今の案があるとき。〈利用者さん〉の画面のカレンダーと同じ） */
+  const {
+    notice,
+    show: showNotice,
+    clear: clearNotice,
+    insert,
+  } = useInsertNotice({
+    failText: '空き時間に入りません。「担当を組む」の画面の「AI で組む」か、手で担当を選んでください',
+    staffName,
+  });
   /** 〈利用者さん〉の帯の下の担当の呼び方（名字。重なればフルネーム。印刷と同じ）と、読み上げのフルネーム（PRD D83） */
   const labels = useMemo(() => staffLabels(staff), [staff]);
   const markNames = {
@@ -537,7 +542,7 @@ export default function WeekPage() {
   const openMove = (visitId: string, d?: string, s?: number, staffId?: string | null) => {
     const v = visitById.get(visitId);
     if (!v) return;
-    setNotice(null);
+    clearNotice();
     setKeepId(visitId);
     const changed = d !== undefined && s !== undefined && (d !== v.date || s !== hhmmToMinutes(v.earliestStart));
     const width = hhmmToMinutes(v.latestStart) - hhmmToMinutes(v.earliestStart);
@@ -549,7 +554,7 @@ export default function WeekPage() {
         : {}),
       onSaved: (r) => {
         if (r.moved && !r.staffSet && !findVisit(dataRef.current, r.visitId)?.staffId) {
-          setNotice({ date: r.date, visitId: r.visitId, label: r.label, error: null });
+          showNotice(r);
         }
       },
       returnFocus: (vid) => (vid ? visitItemOf(vid) : null),
@@ -635,21 +640,6 @@ export default function WeekPage() {
       look: lookOf(it.visitId),
       color: t ? colorOf(t.color) : NO_TYPE_COLOR,
     };
-  };
-  /** 新しい日の今の案に空き時間で入れる（入る人がいなければ知らせに理由を出す） */
-  const insert = () => {
-    if (!notice) return;
-    const r = insertIntoPlan(data, notice.date, notice.visitId);
-    if (!r.staffId) {
-      setNotice({
-        ...notice,
-        error: '空き時間に入りません。「担当を組む」の画面の「AI で組む」か、手で担当を選んでください',
-      });
-      return;
-    }
-    update((d) => insertIntoPlan(d, notice.date, notice.visitId).data, '空き時間に入れる');
-    toast(`${mdText(notice.date)} の空き時間に入れました（担当：${staffName(r.staffId)}）`);
-    setNotice(null);
   };
 
   /** 時間軸に出す帯：選んだ〈スタッフ〉（全員なら未割当も）・選んだ〈利用者さん〉の帯だけ */
@@ -959,7 +949,7 @@ export default function WeekPage() {
                 {notice.label} へ動かしました。担当なしです
               </WithIcon>
             </span>
-            <button type="button" className="icon-btn" aria-label="知らせを閉じる" onClick={() => setNotice(null)}>
+            <button type="button" className="icon-btn" aria-label="知らせを閉じる" onClick={clearNotice}>
               <X size={16} aria-hidden="true" />
             </button>
           </div>
