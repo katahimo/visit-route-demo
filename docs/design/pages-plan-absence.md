@@ -1,6 +1,6 @@
 # 日の予定：欠勤・キャンセルと振り直し
 
-> この画面のファイル：`src/pages/SuddenPanel.tsx`・`absenceParts.tsx`（`AbsenceFields`・`AbsenceTargets`・`ReassignBar`・`ReassignResultBox`・`ReassignSummary`・`ReassignMoves`・`CandidateBox`・`previewOf`）・`reassignParts.tsx`（`AnnealBox`・`ContactPanel`・`ContactButton`・`ReassignDock`）・`useReassignFlow.ts`・`useSuddenFlow.tsx`・`usePlanRun.ts`・`PlanPage.tsx`・`plan.css`、`src/lib/sudden.ts`・`absences.ts`・`planReassign.ts`・`contacts.ts`・`clipboard.ts`・`runs.ts`。関連 ADR：0011（追記を含む）・0015 追記・0025 追記・0038・0044。関連 PRD：D26〜D35・D167〜D172・D243〜D246・D264・D265。
+> この画面のファイル：`src/pages/SuddenPanel.tsx`・`absenceParts.tsx`（`AbsenceFields`・`AbsenceTargets`・`ReassignBar`・`ReassignResultBox`・`ReassignSummary`・`ReassignMoves`・`CandidateBox`・`previewOf`）・`useSuddenSteps.ts`・`suddenSteps.tsx`・`suddenContactStep.tsx`・`reassignParts.tsx`（`AnnealBox`・`ContactButton`・`ReassignDock`）・`contactPanel.tsx`（`ContactPanel`）・`useReassignFlow.ts`・`useSuddenFlow.tsx`・`usePlanRun.ts`・`PlanPage.tsx`・`plan.css`、`src/lib/sudden.ts`・`absences.ts`・`planReassign.ts`・`contacts.ts`・`clipboard.ts`・`runs.ts`。関連 ADR：0011（追記を含む）・0015 追記・0025 追記・0038・0044。関連 PRD：D26〜D35・D167〜D172・D243〜D246・D264・D265。
 > 日の予定の全体は [pages-plan.md](pages-plan.md)。計算（`reassign`・`targetsOf`・`prepareAnneal`・`settleAnneal`）は design.md の「reassign」。
 > 版2（ADR-0053）：振り直しは `writeRoutes` で訪問に書き、振り直す前の担当は `reassigns[date]`。確定は5段目の「連絡したので確定」（伝えた内容 `snapshots`）。下で「今の案」とあるのはその日の訪問の担当、「確定した割当」は伝えた内容
 
@@ -21,6 +21,7 @@
 #### `pages/SuddenPanel.tsx`
 
 - `SuddenPanel`：`SidePanel` の narrow（見出し「欠勤・キャンセル」・data-testid `sudden-panel`）。`init`＝`{ kind?, staffId? }`（人があれば2段目から）
+- 段階の状態と処理は `useSuddenSteps`（`pages/useSuddenSteps.ts`。props の型 `SuddenPanelProps`・`SuddenInit` もここ）、段ごとの中身と下の帯は `suddenSteps.tsx` の `kindStep`・`staffStep`・`visitStep`・`absenceImpactStep`・`cancelImpactStep`・`doneStep` と `suddenContactStep.tsx` の `contactStep`（どれも `{ body, footer }` を返す関数）
 - 段階・何が起きたか・人・欠勤の入力・訪問・取り消しの種類・済んだこと・5段目の［連絡した］の印は欄の中の状態（［連絡した］はデータに残さない。ADR-0038）
 - 段階の表示は `ol.sudden-steps`（aria-label「段階」。今の段階に `aria-current="step"`）。段階の見出し（`h3`・`data-return-focus`）へ `focusKey` でフォーカス
 - 戻る（`sudden-back`）・閉じる（`sudden-close`）。Esc で閉じると入口へフォーカス。閉じる `onClose(toBar)`：閉じたあと、振り直していれば差の欄へ（`returnFocus` と `goToBar`）。5段目からは差の欄へ移らない
@@ -174,7 +175,7 @@
 - 記録に1件（名前「欠勤の振り直し・案B（〈名前〉さん）」。同じ結果・同じ方法の記録があればそれを指す）
 - 今の案に案A・案B のどちらとも違う手直しがあれば確認を出す
 
-### 連絡の一覧（`ContactPanel`）
+### 連絡の一覧（`ContactPanel`。`pages/contactPanel.tsx`）
 
 - 差の欄の「連絡の一覧（訪問N件）」で右から出る欄。N は連絡が要る訪問の数＝担当が変わる訪問＋時刻だけ変わる訪問、同じ訪問は1件（`lib/contacts` の `contactCount`）
 - いちばん上に「欠勤の人に残っている訪問（N件）：対応が必要」（時刻・訪問先・担当・理由。連絡文には入れない）を出し、件数に足す（差を出せないときも、残る訪問があれば開ける）

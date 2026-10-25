@@ -19,8 +19,9 @@ import { SUDDEN_DO, staffChoices, visitChoices } from '../lib/sudden';
 import { type ContactList, contactsOf, type Routes } from '../reassign';
 import { ReassignResultBox } from './absenceParts';
 import { AnnealBox } from './reassignParts';
-import type { SuddenInit, SuddenPanel } from './SuddenPanel';
+import type { SuddenPanel } from './SuddenPanel';
 import { reassignShown, type useReassignFlow } from './useReassignFlow';
+import type { SuddenInit } from './useSuddenSteps';
 
 /** 連絡の一覧が出せない（差を出せない）ときでも、欠勤の人に残る訪問だけで開くための空の一覧 */
 export const EMPTY_CONTACTS: ContactList = { staffChanged: [], timeChanged: [], staff: [] };
