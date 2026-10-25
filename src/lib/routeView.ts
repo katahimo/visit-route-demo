@@ -1,6 +1,4 @@
-// 担当ごとのルートの地図と選択（予定 #/plan と比較 #/compare で共通。ADR-0009）
-import { useEffect, useState } from 'react';
-import type { MapLine, MapPoint } from '../components/RouteMap';
+// 担当ごとのルートの地図と選択（予定 #/plan と比較 #/compare で共通。ADR-0009）。選択のフックは components/useRouteSelection
 import type { Client, Staff, Visit } from '../contracts/documents';
 import type { Problem } from '../contracts/problem';
 import { colorOf, initialOf } from './colors';
@@ -17,6 +15,20 @@ export type RouteSet = { key: string; routes: Record<string, string[]>; dashed?:
 export type RouteSel = { id: string; set: string };
 
 type LatLng = { lat: number; lng: number };
+
+/** 地図の点（components/RouteMap が描く）。highlight は選んだ訪問先（大きく・輪で囲み・前に出す） */
+export type MapPoint = { lat: number; lng: number; label: string; color: string; highlight?: boolean };
+/**
+ * 地図の線（components/RouteMap が描く）。highlight は選んだ区間（太く・前に出す。dashed なら点線のまま）。区間があるときは、ほかの線を薄くする。
+ * bold は目立たせたい区間（欠勤の振り直しで代行に入れた訪問へ来る区間など。ADR-0011）：太く描くだけで、ほかの線は薄くしない
+ */
+export type MapLine = {
+  points: LatLng[];
+  color: string;
+  dashed?: boolean;
+  highlight?: boolean;
+  bold?: boolean;
+};
 
 /**
  * 地図の点・線を作る。担当（staffOrder の順）ごと・集まりごとに、自宅 → 訪問先 → 自宅を結ぶ（線の色は担当の色）。
@@ -114,88 +126,84 @@ export function homeTravel(
   return t !== undefined && Number.isFinite(t) ? t : null;
 }
 
+/** 地図で選んでいるもの：見る担当（focusStaff。null は全員）・強調する区間（focusLeg）・選んだ訪問（picked） */
+export type RouteSelState = { focusStaff: string | null; focusLeg: RouteSel | null; picked: RouteSel | null };
+
+/** 何も選んでいない */
+export const NO_ROUTE_SEL: RouteSelState = { focusStaff: null, focusLeg: null, picked: null };
+
 /**
- * 地図で見る担当（focusStaff。null は全員）・強調する区間（focusLeg）・選んだ訪問（picked）。日付が変わったら外す。
- * ownerOf(set, 訪問ID) は、その集まりでの担当
+ * 選び方の操作。reset：すべて外す（日付・案が変わったとき）、focus：見る担当を変える（null は全員）、
+ * pick：訪問を押した、leg：区間を押した、follow：訪問の担当が変わった（to が新しい担当、null は未割当）
  */
-export function useRouteSelection(date: string, ownerOf: (set: string, visitId: string) => string | undefined) {
-  const [focusStaff, setFocusStaff] = useState<string | null>(null);
-  const [focusLeg, setFocusLeg] = useState<RouteSel | null>(null);
-  const [picked, setPicked] = useState<RouteSel | null>(null);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: 日付を変えたら選んだものを外す
-  useEffect(() => {
-    setFocusStaff(null);
-    setFocusLeg(null);
-    setPicked(null);
-  }, [date]);
-  const ownerOfSel = (x: RouteSel) => (x.id.startsWith(HOME_LEG) ? x.id.slice(HOME_LEG.length) : ownerOf(x.set, x.id));
-  /**
-   * 地図で見る担当を変える（null は全員）。選んでいた区間・訪問がその人のものでなければ外す
-   * （全員に戻したときも区間の強調は外す）
-   */
-  const focusOn = (sid: string | null) => {
-    setFocusStaff(sid);
-    if (focusLeg && (sid === null || ownerOfSel(focusLeg) !== sid)) setFocusLeg(null);
-    if (picked && sid !== null && ownerOfSel(picked) !== sid) setPicked(null);
-  };
-  const same = (a: RouteSel | null, b: RouteSel) => !!a && a.id === b.id && a.set === b.set;
-  /** 訪問を押した：選ぶ（その人に地図を合わせ、その人のものでない区間の強調は外す）か、もう一度押して外す */
-  const togglePick = (x: RouteSel) => {
-    const on = !same(picked, x);
-    setPicked(on ? x : null);
-    const o = ownerOfSel(x);
-    if (!on || !o) return;
-    setFocusStaff(o);
-    if (focusLeg && ownerOfSel(focusLeg) !== o) setFocusLeg(null);
-  };
-  /** 区間を押した：強調する（その人に地図を合わせ、その人のものでない選んだ訪問は外す）か、もう一度押して外す */
-  const toggleLeg = (x: RouteSel) => {
-    const on = !same(focusLeg, x);
-    setFocusLeg(on ? x : null);
-    const o = ownerOfSel(x);
-    if (!on || !o) return;
-    setFocusStaff(o);
-    if (picked && ownerOfSel(picked) !== o) setPicked(null);
-  };
-  /** 「全員のルートを見る」：担当の絞り込みを外す（focusOn(null) と同じ。選んだ訪問は残し、区間の強調は外す） */
-  const clear = () => focusOn(null);
-  /** 選んだものをすべて外す（案が入れ替わったとき・比べる案を変えたとき） */
-  const reset = () => {
-    setFocusStaff(null);
-    setFocusLeg(null);
-    setPicked(null);
-  };
-  /**
-   * 訪問の担当が変わった（to：新しい担当、null は未割当）。その訪問を選んでいた・その訪問へ来る区間を強調していたら、
-   * 絞り込みを新しい担当に合わせ、その人のものでない選択を外す。未割当にしたときは、その訪問の選択を外す
-   */
-  const follow = (visitId: string, to: string | null) => {
-    const hit = (x: RouteSel | null) => !!x && x.id === visitId;
-    if (!hit(picked) && !hit(focusLeg)) return;
-    if (to === null) {
-      if (hit(picked)) setPicked(null);
-      if (hit(focusLeg)) setFocusLeg(null);
-      return;
+export type RouteSelAction =
+  | { type: 'reset' }
+  | { type: 'focus'; staffId: string | null }
+  | { type: 'pick'; sel: RouteSel }
+  | { type: 'leg'; sel: RouteSel }
+  | { type: 'follow'; visitId: string; to: string | null };
+
+/** 同じものを選んでいるか */
+export const sameRouteSel = (a: RouteSel | null, b: RouteSel): boolean => !!a && a.id === b.id && a.set === b.set;
+
+/**
+ * 選んだ訪問・区間の操作（components/useRouteSelection の状態の遷移）。ownerOf(set, 訪問ID) は、その集まりでの担当。
+ * 自宅へ帰る区間（`home:<staffId>`）の担当はキーの中の人。変わらなければ同じ物を返す
+ */
+export function routeSelect(
+  s: RouteSelState,
+  a: RouteSelAction,
+  ownerOf: (set: string, visitId: string) => string | undefined,
+): RouteSelState {
+  const owner = (x: RouteSel) => (x.id.startsWith(HOME_LEG) ? x.id.slice(HOME_LEG.length) : ownerOf(x.set, x.id));
+  const next = nextRouteSel(s, a, owner);
+  return next.focusStaff === s.focusStaff && next.focusLeg === s.focusLeg && next.picked === s.picked ? s : next;
+}
+
+function nextRouteSel(s: RouteSelState, a: RouteSelAction, owner: (x: RouteSel) => string | undefined): RouteSelState {
+  const { focusStaff, focusLeg, picked } = s;
+  switch (a.type) {
+    case 'reset':
+      return NO_ROUTE_SEL;
+    case 'focus': {
+      // 選んでいた区間・訪問がその人のものでなければ外す（全員に戻したときも区間の強調は外す）
+      const sid = a.staffId;
+      return {
+        focusStaff: sid,
+        focusLeg: focusLeg && (sid === null || owner(focusLeg) !== sid) ? null : focusLeg,
+        picked: picked && sid !== null && owner(picked) !== sid ? null : picked,
+      };
     }
-    if (focusStaff !== null) setFocusStaff(to);
-    if (focusLeg && !hit(focusLeg)) setFocusLeg(null);
-    if (picked && !hit(picked)) setPicked(null);
-  };
-  return {
-    focusStaff,
-    focusLeg,
-    picked,
-    focusOn,
-    togglePick,
-    toggleLeg,
-    clear,
-    reset,
-    follow,
-    isPicked: (x: RouteSel) => same(picked, x),
-    isLeg: (x: RouteSel) => same(focusLeg, x),
-    /** MapDock の focusKey（選んだものが変わったら開く） */
-    focusKey: [focusStaff, focusLeg && `${focusLeg.set}:${focusLeg.id}`, picked && `${picked.set}:${picked.id}`]
-      .filter(Boolean)
-      .join('|'),
-  };
+    case 'pick': {
+      // 選ぶ（その人に地図を合わせ、その人のものでない区間の強調は外す）か、もう一度押して外す
+      const on = !sameRouteSel(picked, a.sel);
+      const o = owner(a.sel);
+      if (!on || !o) return { ...s, picked: on ? a.sel : null };
+      return { focusStaff: o, focusLeg: focusLeg && owner(focusLeg) !== o ? null : focusLeg, picked: a.sel };
+    }
+    case 'leg': {
+      // 強調する（その人に地図を合わせ、その人のものでない選んだ訪問は外す）か、もう一度押して外す
+      const on = !sameRouteSel(focusLeg, a.sel);
+      const o = owner(a.sel);
+      if (!on || !o) return { ...s, focusLeg: on ? a.sel : null };
+      return { focusStaff: o, focusLeg: a.sel, picked: picked && owner(picked) !== o ? null : picked };
+    }
+    case 'follow': {
+      // その訪問を選んでいた・その訪問へ来る区間を強調していたら、絞り込みを新しい担当に合わせ、その人のものでない選択を外す。
+      // 未割当にしたときは、その訪問の選択を外す
+      const hit = (x: RouteSel | null) => !!x && x.id === a.visitId;
+      if (!hit(picked) && !hit(focusLeg)) return s;
+      if (a.to === null)
+        return { focusStaff, focusLeg: hit(focusLeg) ? null : focusLeg, picked: hit(picked) ? null : picked };
+      return {
+        focusStaff: focusStaff !== null ? a.to : null,
+        focusLeg: focusLeg && !hit(focusLeg) ? null : focusLeg,
+        picked: picked && !hit(picked) ? null : picked,
+      };
+    }
+    default: {
+      const _: never = a;
+      return _;
+    }
+  }
 }

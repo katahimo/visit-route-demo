@@ -2,7 +2,7 @@
 // 狭い画面（600px 以下）では右の端を薄くぼかして「続きがある」と示す（styles.css。広い画面の見た目は変えない）。
 // ぼかしは巻く箱の外の枠（.scroll-edge）に描くので、中身と一緒に動かない
 import { type ReactNode, type RefObject, useRef } from 'react';
-import { useScrollEdge } from '../lib/useScrollEdge';
+import { useScrollEdge } from './useScrollEdge';
 
 export function EdgeScroll({
   className = 'table-scroll',

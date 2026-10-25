@@ -16,9 +16,12 @@ import {
 } from 'lucide-react';
 import { useId, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { useDay } from '../app/day';
+import { useDay } from '../components/day';
 import { StaffMarkById } from '../components/StaffMark';
 import { PageHeader } from '../components/ui';
+import { useCompileInput } from '../components/useDayModel';
+import { useDayStatuses } from '../components/useDayStatuses';
+import { COMPACT_QUERY, NARROW_QUERY, useMedia } from '../components/useMedia';
 import { useOpenVisit } from '../components/VisitPanel';
 import { addDays, jstDate, jstHhmm } from '../domain/time';
 import { dateText } from '../lib/dateText';
@@ -32,9 +35,6 @@ import {
   homeTasks,
 } from '../lib/home';
 import { dayPlanOf } from '../lib/month';
-import { useCompileInput } from '../lib/useDayModel';
-import { useDayStatuses } from '../lib/useDayStatuses';
-import { COMPACT_QUERY, NARROW_QUERY, useMedia } from '../lib/useMedia';
 import { dayVisitRows, unassignedVisits, type VisitRow } from '../lib/visitOps';
 import { useDemoData } from '../store';
 import './home.css';

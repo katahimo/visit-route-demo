@@ -1,11 +1,13 @@
 import { ArrowLeft, Car, Clock, Info, MapPin, Smartphone, Sparkles } from 'lucide-react';
 import { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { useDay } from '../app/day';
+import { useDay } from '../components/day';
 import { MAPS_SR_TAIL, MapsLink, VisitRouteLinks } from '../components/mapsLinks';
-import { type MapPoint, RouteMap } from '../components/RouteMap';
+import { RouteMap } from '../components/RouteMap';
 import { StaffMark } from '../components/StaffMark';
 import { Empty, WithIcon } from '../components/ui';
+import { useDayModel } from '../components/useDayModel';
+import { useFeature } from '../components/useFeature';
 import { VisitRules } from '../components/VisitRules';
 import { timesOf } from '../domain/scheduleModel';
 import { minutesToHhmm } from '../domain/time';
@@ -13,8 +15,7 @@ import { colorOf, initialOf } from '../lib/colors';
 import { AI_LINE, attempt, hasLocation, own, r0, TRAVEL_MODE_LABELS } from '../lib/common';
 import { dateText } from '../lib/dateText';
 import { BICYCLE_NOTE, dayStops, HOME_LABEL, tripLinks } from '../lib/mapsLink';
-import { useDayModel } from '../lib/useDayModel';
-import { useFeature } from '../lib/useFeature';
+import type { MapPoint } from '../lib/routeView';
 import { scheduleRoute } from '../matching';
 import './schedule.css';
 

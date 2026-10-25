@@ -1,16 +1,16 @@
 import { useMemo } from 'react';
 import type { DemoData } from '../contracts/data';
-import type { Absence, Client, Staff, Visit } from '../contracts/documents';
+import type { Client, Staff, Visit } from '../contracts/documents';
 import type { Problem, ScoreScale } from '../contracts/problem';
-import { availabilityOf, type Slot, withoutAbsences } from '../domain/availability';
 import { isOnLeave } from '../domain/leaves';
 import { normalize } from '../evaluate';
+import { attempt, byDisplayName, byName } from '../lib/common';
+import { daySlotsOf } from '../lib/dayModel';
+import { staffColorMap } from '../lib/staffMark';
 import { type CompileInput, compile } from '../matching';
 import { visitsOn } from '../patterns';
 import { scorePresetOf } from '../seed';
 import { useDemoData } from '../store';
-import { attempt, byDisplayName, byName } from './common';
-import { staffColorMap } from './staffMark';
 
 /**
  * その日の画面で共通に使う形（予定・スタッフの画面）。
@@ -47,25 +47,10 @@ export function useDayModel(date: string) {
    * その日の稼働時間帯（基本の曜日と時間＋日ごとの上書き）。slots は欠勤を差し引いたもの（ADR-0011）、
    * baseSlots は差し引く前、absence はその日の欠勤（無ければ null）
    */
-  const slotsOf = useMemo(() => {
-    const overrides = new Map(data.availability.filter((a) => a.date === date).map((a) => [a.staffId, a]));
-    const absences = new Map(data.absences.filter((a) => a.date === date).map((a) => [a.staffId, a]));
-    return new Map<string, { slots: Slot[]; baseSlots: Slot[]; overridden: boolean; absence: Absence | null }>(
-      staff.map((s) => {
-        const a = availabilityOf(s, date, overrides.get(s.id));
-        const absence = absences.get(s.id) ?? null;
-        return [
-          s.id,
-          {
-            slots: absence ? withoutAbsences(a.slots, [absence]) : a.slots,
-            baseSlots: a.slots,
-            overridden: a.overridden,
-            absence,
-          },
-        ];
-      }),
-    );
-  }, [staff, data.availability, data.absences, date]);
+  const slotsOf = useMemo(
+    () => daySlotsOf(staff, { availability: data.availability, absences: data.absences }, date),
+    [staff, data.availability, data.absences, date],
+  );
   /** compile が読むデータだけ（案・記録・プリセットの更新では変わらない） */
   const compileInput = useCompileInput(data);
   const compiled = useMemo(() => attempt(() => compile(compileInput, date)), [compileInput, date]);
@@ -140,11 +125,4 @@ export function useCompileInput(data: DemoData): CompileInput {
       data.clientLeaves,
     ],
   );
-}
-
-/** 訪問ID → 担当 */
-export function ownerMap(routes: Record<string, string[]>): Map<string, string> {
-  const out = new Map<string, string>();
-  for (const [s, ids] of Object.entries(routes)) if (s !== '__none') for (const id of ids) out.set(id, s);
-  return out;
 }

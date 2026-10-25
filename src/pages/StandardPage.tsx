@@ -9,6 +9,7 @@ import { useConfirm } from '../components/ConfirmDialog';
 import { useToast } from '../components/Toast';
 import { PageHeader } from '../components/ui';
 import { useUndoAction } from '../components/undo';
+import { useValueStore } from '../components/valueStore';
 import type { Pattern } from '../contracts/documents';
 import { jstDate } from '../domain/time';
 import { newId, WEEKDAY_LABELS } from '../lib/common';
@@ -36,7 +37,6 @@ import {
   WEEKDAY_ORDER,
 } from '../lib/standard';
 import { patternsKey, runProposals, setDraft, standardWork, stopProposals } from '../lib/standardDraft';
-import { useValueStore } from '../lib/valueStore';
 import { useDemoData } from '../store';
 import './settings.css';
 import './standard.css';

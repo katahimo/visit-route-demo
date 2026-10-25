@@ -19,11 +19,9 @@ import {
   proposalDayFresh,
 } from '../lib/monthBatch';
 import { typeOf } from '../lib/patternText';
-import { buildRouteMap, homeLegKey, useRouteSelection } from '../lib/routeView';
+import { buildRouteMap, homeLegKey } from '../lib/routeView';
 import { bestIndex, dayStandardPreview, registerDayStandard } from '../lib/standard';
 import { type LegSpan, legsOf } from '../lib/timeline';
-import { useDayModel } from '../lib/useDayModel';
-import { useValueStore } from '../lib/valueStore';
 import { useConfirm } from './ConfirmDialog';
 import { MapDock } from './MapDock';
 import { ProposalChanges } from './proposalChanges';
@@ -33,6 +31,9 @@ import { StaffFocusButton, StaffLegend } from './routeView';
 import { useToast } from './Toast';
 import { shiftShort, TlMark } from './timelineMarks';
 import { SectionTitle, WithIcon } from './ui';
+import { useDayModel } from './useDayModel';
+import { useRouteSelection } from './useRouteSelection';
+import { useValueStore } from './valueStore';
 
 type Routes = Record<string, string[]>;
 /** 地図・選択の集まりのキー（案は1つずつ見る） */

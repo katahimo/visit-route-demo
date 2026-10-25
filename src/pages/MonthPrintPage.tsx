@@ -1,7 +1,7 @@
 import { ArrowLeft, ChevronLeft, ChevronRight, Printer } from 'lucide-react';
 import { useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { useDay } from '../app/day';
+import { useDay } from '../components/day';
 import { WithIcon } from '../components/ui';
 import { jstDate, minutesToHhmm, weekday } from '../domain/time';
 import { colorOf } from '../lib/colors';

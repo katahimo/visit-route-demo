@@ -31,7 +31,7 @@ import {
   townChips,
   typeChips,
 } from '../lib/clientFilter';
-import { useFeature } from '../lib/useFeature';
+import { useFeature } from './useFeature';
 import './clientFilter.css';
 import { useImeQuery } from './useImeQuery';
 

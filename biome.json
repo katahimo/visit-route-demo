@@ -373,23 +373,7 @@
       }
     },
     {
-      "includes": [
-        "src/lib/**",
-        "!**/*.test.ts",
-        "!**/*.test.tsx",
-        "!**/*.d.ts",
-        "!src/lib/dirtyForms.ts",
-        "!src/lib/lazyComponent.tsx",
-        "!src/lib/reloadPage.ts",
-        "!src/lib/routeView.ts",
-        "!src/lib/tentative.ts",
-        "!src/lib/useDayModel.ts",
-        "!src/lib/useDayStatuses.ts",
-        "!src/lib/useFeature.ts",
-        "!src/lib/useMedia.ts",
-        "!src/lib/useScrollEdge.ts",
-        "!src/lib/valueStore.ts"
-      ],
+      "includes": ["src/lib/**", "!**/*.test.ts", "!**/*.test.tsx", "!**/*.d.ts"],
       "linter": {
         "rules": {
           "style": {
@@ -442,15 +426,7 @@
       }
     },
     {
-      "includes": [
-        "src/components/**",
-        "!**/*.test.ts",
-        "!**/*.test.tsx",
-        "!**/*.d.ts",
-        "!src/components/CommandPalette.tsx",
-        "!src/components/ViewSwitch.tsx",
-        "!src/components/VisitPanel.tsx"
-      ],
+      "includes": ["src/components/**", "!**/*.test.ts", "!**/*.test.tsx", "!**/*.d.ts"],
       "linter": {
         "rules": {
           "style": {

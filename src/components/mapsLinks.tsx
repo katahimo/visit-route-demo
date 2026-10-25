@@ -5,8 +5,8 @@ import type { ReactNode } from 'react';
 import type { TravelMode } from '../contracts/codes';
 import type { Place } from '../contracts/documents';
 import { BICYCLE_NOTE, directionsHref, HOME_LABEL } from '../lib/mapsLink';
-import { useFeature } from '../lib/useFeature';
 import { WithIcon } from './ui';
+import { useFeature } from './useFeature';
 
 /** 開く先の注記（title） */
 export const MAPS_TITLE = 'Google マップが新しいタブで開きます（時間・距離は Google マップで確かめてください）';

@@ -15,7 +15,8 @@ import { isDate } from './isDate';
 import { patternWhenText, typeOf } from './patternText';
 import { type ReassignChoice, reassignChoices, workingStaff } from './reassignMenu';
 import { savedVisit } from './visitEdit';
-import { canMoveVisit, moveFollowing } from './week';
+import { canMoveVisit } from './week';
+import { moveFollowing } from './weekOps';
 import { daysBetween } from './ym';
 
 // ---- 範囲（この回だけ／これ以降／すべて）----
@@ -391,7 +392,7 @@ function settleDates(d: DemoData, dates: Iterable<string>, today: string): DemoD
  * 訪問を保存する（PRD D301〜D303。版2：ADR-0053）。
  * - 新しい訪問：単発の訪問を足す（ids.visit）。担当を選んでいればその日の担当の並びに入れてピンにする
  * - この回だけ（単発の訪問も）：lib/visitEdit の savedVisit（担当はそのまま・繰り返しの回は「この回だけ変えた」）
- * - これ以降：週のドラッグの「これ以降」と同じ lib/week の moveFollowing（同じ曜日の回を新しい曜日・時刻・所要・種類にした
+ * - これ以降：週のドラッグの「これ以降」と同じ lib/weekOps の moveFollowing（同じ曜日の回を新しい曜日・時刻・所要・種類にした
  *   繰り返しに分ける。担当を選んでいれば分けた繰り返しの担当にする。回は見るときに計算するので、範囲の回はその担当になる）。
  *   この回だけ変えた・取り消した回はそのまま
  * - すべて：今日以降で最初の同じ曜日の回から「これ以降」と同じに変える（過去は変えない）

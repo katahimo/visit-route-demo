@@ -3,9 +3,9 @@ import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 're
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { confirmLeave } from '../lib/leaveGuard';
 import { batchBandText, batchDoneText, batchHref, monthBatch } from '../lib/monthBatch';
-import { useValueStore } from '../lib/valueStore';
 import { useDemoData } from '../store';
 import { useToast } from './Toast';
+import { useValueStore } from './valueStore';
 import './batchBand.css';
 
 /**

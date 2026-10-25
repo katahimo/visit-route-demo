@@ -2,8 +2,10 @@
 // 循環を避けるため、react.tsx は ./persist を import し、この index は両方を再 export するだけにする
 
 export { BACKUP_LAST_KEY, BACKUP_REMINDED_KEY, backupMemory, type ExportKind, type LastExport } from './backup';
+export { navOpenMemory } from './navOpen';
 export * from './persist';
 export { DemoDataProvider, useDemoData } from './react';
 export { repair } from './repair';
 export { FEATURES_START_ALL, FEATURES_START_KEY, startFeatures } from './start';
+export { cancelTentative } from './tentative';
 export { TOUR_SEEN_KEY, tourMemory } from './tour';

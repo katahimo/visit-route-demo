@@ -1,7 +1,7 @@
 // メディアクエリが合っているかを追うフック（幅を変えたら追う）。
 // 狭い画面の既定（月の日ごとの一覧・週の表・〈利用者さん〉の絞り込みを畳む。PRD D189・D220〜D222）で使う
 import { useEffect, useState } from 'react';
-import { MONTH_LIST_QUERY } from './monthList';
+import { MONTH_LIST_QUERY } from '../lib/monthList';
 
 /**
  * 一覧の表をカードにする・既定の見せ方を変える幅（styles.css の @media (max-width: 600px) と同じ。

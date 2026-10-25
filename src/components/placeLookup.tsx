@@ -22,10 +22,10 @@ import {
 import { hasLocation } from '../lib/common';
 import { EXTERNAL_NOTICE, type GeoHit, lookupPostalCode, type PostalHit, searchAddress } from '../lib/geocode';
 import { normalizePostalCode } from '../lib/postalCode';
-import { useFeature } from '../lib/useFeature';
 import { FieldError } from './FieldError';
 import { PlacePin } from './parts';
 import { WithIcon } from './ui';
+import { useFeature } from './useFeature';
 import './placeLookup.css';
 
 /** data-testid の頭（〈利用者さん〉は今までどおり client-postal など） */

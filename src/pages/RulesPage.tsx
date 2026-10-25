@@ -22,6 +22,7 @@ import { WeightSlider } from '../components/parts';
 import { Term } from '../components/Term';
 import { useToast } from '../components/Toast';
 import { Hint, IconButton, PageHeader, SectionTitle, WithIcon } from '../components/ui';
+import { useFeature } from '../components/useFeature';
 import { useLeaveGuard } from '../components/useLeaveGuard';
 import { HARDABLE, MAX_PRESETS, type Preset, RULE_TYPES, type Rule, type RuleType } from '../contracts/rules';
 import { newId, ruleTypeHelp, ruleTypeLabel, weightLocked } from '../lib/common';
@@ -35,7 +36,6 @@ import {
   setScorePreset,
   trialPresetOf,
 } from '../lib/presets';
-import { useFeature } from '../lib/useFeature';
 import {
   applyDraft,
   changeText,

@@ -1,11 +1,11 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { retryFailedChunks } from '../components/lazyComponent';
 import { jstDate } from '../domain/time';
 import { isChunkLoadError } from '../lib/chunkLoad';
 import { backupFileName, backupNote, saveBlob } from '../lib/download';
-import { retryFailedChunks } from '../lib/lazyComponent';
 import { reloadPage } from '../lib/reloadPage';
-import { backup, backupMemory } from '../store';
+import { backup, backupMemory, flushSave } from '../store';
 
 /**
  * 画面の例外で真っ白にしない。主ボタンは「控え（バックアップ）を書き出す」（いまのデータを JSON で残す）、
@@ -68,7 +68,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode; onReset: () 
           <p className="sub">新しい版が公開されたか、通信が切れています。再読み込みしてください。</p>
           <pre className="error-detail">{error.message}</pre>
           <div className="row" style={{ flexWrap: 'wrap' }}>
-            <button type="button" className="btn btn-primary" onClick={reloadPage}>
+            <button type="button" className="btn btn-primary" onClick={() => reloadPage(flushSave)}>
               再読み込み
             </button>
             <button type="button" className="btn" onClick={this.retry}>

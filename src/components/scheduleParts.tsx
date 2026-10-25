@@ -12,8 +12,6 @@ import { dateText } from '../lib/dateText';
 import { batchHref, monthBatch, proposalCounts, proposalDayFresh } from '../lib/monthBatch';
 import { assignMany, cancelMany, moveManyToDate, multiResultText, selectionText, shiftMany } from '../lib/multiEdit';
 import { absenceHref } from '../lib/nav';
-import { COMPACT_QUERY, useMedia } from '../lib/useMedia';
-import { useValueStore } from '../lib/valueStore';
 import { toldDaysChanged } from '../lib/visitOps';
 import { findVisit } from '../patterns';
 import { useDemoData } from '../store';
@@ -25,6 +23,8 @@ import { StaffMark } from './StaffMark';
 import { useToast } from './Toast';
 import { WithIcon } from './ui';
 import { UndoButtons } from './undo';
+import { COMPACT_QUERY, useMedia } from './useMedia';
+import { useValueStore } from './valueStore';
 import './scheduleParts.css';
 
 /** 予定の拡大率（日・週・月） */

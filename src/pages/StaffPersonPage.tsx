@@ -34,6 +34,7 @@ import { AddressField } from '../components/placeLookup';
 import { StaffMark } from '../components/StaffMark';
 import { useToast } from '../components/Toast';
 import { Hint, PageHeader, WithIcon } from '../components/ui';
+import { useFeature, useFeatures } from '../components/useFeature';
 import { useLeaveGuard } from '../components/useLeaveGuard';
 import { TRAVEL_MODES, type TravelMode } from '../contracts/codes';
 import { type Staff, staffSchema } from '../contracts/documents';
@@ -60,7 +61,6 @@ import {
 } from '../lib/personPage';
 import { isRequestedOff, REQUESTED_OFF_NOTE } from '../lib/requestedOff';
 import { staffColorMap, staffIconError, surnameInitial } from '../lib/staffMark';
-import { useFeature, useFeatures } from '../lib/useFeature';
 import { isDirty, orDash } from '../lib/viewMode';
 import { hmText, workDayOf, workTotals } from '../lib/workload';
 import { ymOf } from '../lib/ym';

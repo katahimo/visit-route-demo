@@ -1,13 +1,14 @@
 import { Clock, Coffee, Pencil, RotateCcw, Save, Timer } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useDay } from '../app/day';
+import { useDay } from '../components/day';
 import { EdgeScroll } from '../components/EdgeScroll';
 import { SlotEditor } from '../components/parts';
 import { PeopleTabs } from '../components/SettingsTabs';
 import { StaffMark } from '../components/StaffMark';
 import { useToast } from '../components/Toast';
 import { Hint, PageHeader, SidePanel, WithIcon } from '../components/ui';
+import { useFeature } from '../components/useFeature';
 import type { Availability } from '../contracts/documents';
 import {
   afterLastDay,
@@ -22,7 +23,6 @@ import { weekday } from '../domain/time';
 import { absenceText } from '../lib/absences';
 import { byName, WEEKDAY_LABELS } from '../lib/common';
 import { linkIfOn, suddenHref } from '../lib/links';
-import { useFeature } from '../lib/useFeature';
 import { useDemoData } from '../store';
 import './schedule.css';
 

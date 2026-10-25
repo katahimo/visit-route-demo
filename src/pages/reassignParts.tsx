@@ -15,6 +15,7 @@ import { MailButton, MailLengthNote } from '../components/mailParts';
 import { WeightSlider } from '../components/parts';
 import { StaffMarkById } from '../components/StaffMark';
 import { Hint, SidePanel, WithIcon } from '../components/ui';
+import { useValueStore } from '../components/valueStore';
 import type { Terms } from '../contracts/documents';
 import type { ContactList, ContactVisit, ReassignDiff } from '../contracts/reassign';
 import { copyText } from '../lib/clipboard';
@@ -22,7 +23,7 @@ import { deltaText, r0 } from '../lib/common';
 import { allContactsText, type ContactWords, clientMessages, clock, staffMessage } from '../lib/contacts';
 import { NO_EMAIL } from '../lib/mail';
 import type { BuiltMail } from '../lib/mailto';
-import { type ReadableStore, useValueStore } from '../lib/valueStore';
+import type { ReadableStore } from '../lib/valueStore';
 import { STAY_WEIGHT_DEFAULT } from '../reassign';
 
 /** 案A・案B の比べる数（元の案との差と点数） */
