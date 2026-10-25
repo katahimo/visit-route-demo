@@ -1,6 +1,6 @@
 # データの画面と管理者設定
 
-> この画面のファイル：`src/pages/DataPage.tsx`・`SettingsPage.tsx`（`settings.css`）、`src/components/FilePick.tsx`（`filePick.css`）・`Tour.tsx`、`src/lib/filePick.ts`・`personLinks.ts`・`features.ts`・`backupReminder.ts`・`tidy.ts`・`dirtyForms.ts`、`src/components/DataNotices.tsx`（`dataNotices.css`）・`dirtyForms.ts`（`useDirtyMark`）。関連 ADR：0006・0020・0025 追記・0028・0032・0043。関連 PRD：D191〜D193・D209・D210〜D216・D227・D260。
+> この画面のファイル：`src/pages/DataPage.tsx`（画面は組み立てだけ。状態と処理は同じディレクトリの `useDataBackup`（`useLastExport`・`useDataBackup`・`useDataRestore`）・`useDataExcel`・`useDataRoster`・`useDataTidy`・`useDataTerms`、見た目は `dataParts.tsx`（保存の誤り・直前の状態に戻す・呼び方・控え（JSON）・古い訪問を片づける・使い方の案内・初期状態に戻す）・`dataExcel.tsx`（Excel の欄・名簿の読み込み方・最終勤務日の知らせ）、文と判定は `src/lib/dataScreen.ts`）・`SettingsPage.tsx`（`settings.css`）、`src/components/FilePick.tsx`（`filePick.css`）・`Tour.tsx`、`src/lib/filePick.ts`・`personLinks.ts`・`features.ts`・`backupReminder.ts`・`tidy.ts`・`dirtyForms.ts`、`src/components/DataNotices.tsx`（`dataNotices.css`）・`dirtyForms.ts`（`useDirtyMark`）。関連 ADR：0006・0020・0025 追記・0028・0032・0043。関連 PRD：D191〜D193・D209・D210〜D216・D227・D260。
 > Excel の変換は design.md の「excel」、機能の表と判定は design.md の「features」。
 
 ### データ（`#/data`）
