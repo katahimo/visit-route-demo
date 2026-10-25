@@ -34,6 +34,9 @@ async function clearStandard(page) {
  * @param {{ days?: number, keepStandard?: boolean }} [opt]
  */
 async function planDays(page, { days = 7, keepStandard = false } = {}) {
+  // 最初の文書が about:blank でも localStorage を読めるように、先にホームを開く
+  await page.goto(`${BASE}#/home`);
+  await page.locator('h1').waitFor();
   const hadStandard = await page.evaluate((k) => {
     const raw = localStorage.getItem(k);
     return raw !== null && JSON.parse(raw).standard !== undefined;
