@@ -1,7 +1,22 @@
 import { describe, expect, it } from 'vitest';
-import { VACANCY_MARGIN_DEFAULT } from '../contracts/vacancy';
+import {
+  VACANCY_DAY_END_DEFAULT,
+  VACANCY_DAY_START_DEFAULT,
+  VACANCY_MARGIN_DEFAULT,
+  VACANCY_STEP_DEFAULT,
+} from '../contracts/vacancy';
 import { GLOSSARY } from './glossary';
-import { answerCard, cellFace, markLegend, noticeLine, placeLine, whenWhatLine } from './vacancyView';
+import {
+  answerCard,
+  cellFace,
+  markLegend,
+  NOTICE_PERIODS,
+  noticeLine,
+  noticeRange,
+  placeLine,
+  vacancyQuery,
+  whenWhatLine,
+} from './vacancyView';
 
 describe('cellFace（マスの見た目と読み方）', () => {
   it('○ は人数（目安なら「約」）', () => {
@@ -202,5 +217,37 @@ describe('answerCard（結果の1枚目の答え。PRD D258）', () => {
     expect(answerCard(result({ 0: all3, 1: all3 }), { ...wish, weekdays: [0, 1], perWeek: 1 }).body).toMatch(
       /^月・日 /,
     );
+  });
+});
+
+describe('vacancyQuery（試算の条件）', () => {
+  it('間・1日の時間・刻みは既定', () => {
+    const q = vacancyQuery('t1', 60, [], null);
+    expect(q).toEqual({
+      typeId: 't1',
+      durationMinutes: 60,
+      requirements: [],
+      place: null,
+      marginMinutes: VACANCY_MARGIN_DEFAULT,
+      dayStart: VACANCY_DAY_START_DEFAULT,
+      dayEnd: VACANCY_DAY_END_DEFAULT,
+      stepMinutes: VACANCY_STEP_DEFAULT,
+    });
+  });
+});
+
+describe('noticeRange（案内文の期間）', () => {
+  // 2026-10-14 は水曜
+  it('今週は今日〜その週の日曜', () => {
+    expect(noticeRange('thisWeek', '2026-10-14')).toEqual({ from: '2026-10-14', to: '2026-10-18', weeks: 1 });
+  });
+  it('来週は次の月曜〜日曜', () => {
+    expect(noticeRange('nextWeek', '2026-10-14')).toEqual({ from: '2026-10-19', to: '2026-10-25', weeks: 1 });
+  });
+  it('先4週は今日から28日', () => {
+    expect(noticeRange('fourWeeks', '2026-10-14')).toEqual({ from: '2026-10-14', to: '2026-11-10', weeks: 4 });
+  });
+  it('期間の名前は今週・来週・先4週', () => {
+    expect(NOTICE_PERIODS.map((p) => p.label)).toEqual(['今週', '来週', '先4週']);
   });
 });
