@@ -7,7 +7,8 @@ import { hhmmToMinutes, minutesToHhmm } from '../domain/time';
 import { findVisit } from '../patterns';
 import { own } from './common';
 import { DAY_END, DAY_START } from './spans';
-import { draftOf, staffChoices } from './visitOps';
+import { draftOf } from './visitDraft';
+import { staffChoices } from './visitStaff';
 import { canMoveVisit, inDayRange } from './week';
 
 /** 落とし先：日付・開始（null は今の開始のまま）・担当（undefined は変えない）・行の〈利用者さん〉（表の行。違う人の行へは置かない） */

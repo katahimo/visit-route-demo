@@ -9,21 +9,10 @@ import { dateText } from '../lib/dateText';
 import { confirmLeave } from '../lib/leaveGuard';
 import { directionsHref } from '../lib/mapsLink';
 import { prevStopOf } from '../lib/prevStop';
-import {
-  applyVisitEdit,
-  cancelVisitOp,
-  draftOf,
-  newDraft,
-  restoreOccurrenceOp,
-  SCOPE_LABELS,
-  staffChoices,
-  toldDaysChanged,
-  uncancelVisitOp,
-  type VisitDraft,
-  type VisitInfo,
-  type VisitScope,
-} from '../lib/visitOps';
+import { draftOf, newDraft, SCOPE_LABELS, type VisitDraft, type VisitInfo, type VisitScope } from '../lib/visitDraft';
+import { applyVisitEdit, cancelVisitOp, restoreOccurrenceOp, toldDaysChanged, uncancelVisitOp } from '../lib/visitOps';
 import { savedText } from '../lib/visitPanelText';
+import { staffChoices } from '../lib/visitStaff';
 import { findVisit } from '../patterns';
 import { useDemoData } from '../store';
 import { useConfirm } from './ConfirmDialog';

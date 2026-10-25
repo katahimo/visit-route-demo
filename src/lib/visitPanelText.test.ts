@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { VisitDraft } from './visitOps';
+import type { VisitDraft } from './visitDraft';
 import { keptText, savedText, startPatch, windowShown } from './visitPanelText';
 
 const draft = (over: Partial<VisitDraft>): VisitDraft => ({

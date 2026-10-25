@@ -273,7 +273,7 @@ flowchart LR
   - `settleAnneal`：`keep` の訪問を落とした（`keepDropped`）、案A の `annealCost` が有限でない・案B の方が高い（`notBetter`）なら案A と理由を返す
 - `contactsOf`：元の案（`base.problem`）と今の案の lenient の差。担当が変わる訪問（入らない訪問も）、開始が四捨五入で1分以上変わる訪問、スタッフごとの増える・外れる・開始が変わる訪問（staff の順・開始の順）。`reassignDiff` と同じ規則
 - 依存するもの：contracts、matching（時刻と費用の計算だけ）。solver・evaluate・store・画面には依存しない
-- 配置：`src/reassign/`
+- 配置：`src/reassign/`（`greedy`＝targetsOf・leftOf・reassign、`candidates`＝candidatesFor・fitsOf・placeVisit、`diff`＝reassignDiff、`anneal`＝案B、`contacts`＝contactsOf、`shared`＝共通の下請け。`index.ts` はこれらと型を再 export するだけ）
 - 完了の条件：
   - [ ] 3種の振り直す訪問が上のとおり。seed の s4 の終日・午前の欠勤で該当の訪問が振り直される（テスト）
   - [ ] 他の人の担当・順番・開始時刻は変わらず、振り直した訪問は可・strict・上限内（性質テスト：seed の14日・各スタッフの終日・午前・午後）

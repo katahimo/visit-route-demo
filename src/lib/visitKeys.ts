@@ -7,8 +7,10 @@ import { addDays, hhmmToMinutes, minutesToHhmm } from '../domain/time';
 import { findVisit, visitsOn } from '../patterns';
 import { dateText } from './dateText';
 import { dayProblemOf, routesOf, visitIssues } from './dayPlan';
-import { applyVisitEdit, draftOf, SCOPE_LABELS, staffChoices, type VisitScope } from './visitOps';
+import { draftOf, SCOPE_LABELS, type VisitScope } from './visitDraft';
+import { applyVisitEdit } from './visitOps';
 import { isMultiClick, isMultiKey } from './visitSelect';
+import { staffChoices } from './visitStaff';
 
 /** 1回のキーで動かす時刻の幅（分） */
 export const KEY_STEP_MINUTES = 15;

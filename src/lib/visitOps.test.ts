@@ -3,26 +3,10 @@ import type { DemoData } from '../contracts/data';
 import type { Pattern, Visit } from '../contracts/documents';
 import { client, DATE, makeData, staff, visit } from '../matching/fixtures';
 import { findVisit, putVisits, visitsIn } from '../patterns';
-import {
-  applyVisitEdit,
-  assignOnDays,
-  cancelVisitOp,
-  clientVisitsIn,
-  dayVisitRows,
-  draftOf,
-  endPatternOp,
-  newDraft,
-  occurrenceChanges,
-  restoreOccurrenceOp,
-  scopeTexts,
-  staffChoices,
-  staffPickError,
-  staffVisitsIn,
-  timeChanged,
-  unassignedVisits,
-  uncancelVisitOp,
-  visitInfo,
-} from './visitOps';
+import { draftOf, newDraft, occurrenceChanges, scopeTexts, timeChanged, visitInfo } from './visitDraft';
+import { clientVisitsIn, dayVisitRows, staffVisitsIn, unassignedVisits } from './visitLists';
+import { applyVisitEdit, cancelVisitOp, endPatternOp, restoreOccurrenceOp, uncancelVisitOp } from './visitOps';
+import { assignOnDays, staffChoices, staffPickError } from './visitStaff';
 
 // DATE（2026-10-12）は月曜。今日は DATE。版2（ADR-0053）：繰り返しの回は計算し、変えた回だけ保存する
 

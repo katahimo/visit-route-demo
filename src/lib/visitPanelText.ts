@@ -2,7 +2,8 @@
 import type { Visit } from '../contracts/documents';
 import { hhmmToMinutes, minutesToHhmm } from '../domain/time';
 import { dateText } from './dateText';
-import type { AssignFail, VisitDraft } from './visitOps';
+import type { VisitDraft } from './visitDraft';
+import type { AssignFail } from './visitStaff';
 
 const hhmm = (s: string) => /^\d{2}:\d{2}$/.test(s);
 
