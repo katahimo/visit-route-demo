@@ -11,6 +11,7 @@
 const path = require('node:path');
 const { answerConfirms } = require('./lib/confirmDialog.cjs');
 const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, hashOf, runSteps, settle } = require('./lib/env.cjs');
+const { markStandard } = require('./lib/standard.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
 
 const YM = TODAY.slice(0, 7);
@@ -58,18 +59,8 @@ const assignedOn = (page, date) =>
     ({ k, d }) => JSON.parse(localStorage.getItem(k)).visits.filter((v) => v.date === d && v.staffId).length,
     { k: STORAGE_KEY, d: date },
   );
-/** 組み方の標準を登録したことにする（日の範囲でも考え方ごとの案にせず、ふだんの提案の帯にする） */
-async function markStandard(page) {
-  await editData(
-    page,
-    ({ key, today }) => {
-      const d = JSON.parse(localStorage.getItem(key));
-      d.standard = { at: 1, presetId: d.scorePresetId, from: today, weeks: 1 };
-      localStorage.setItem(key, JSON.stringify(d));
-    },
-    { key: STORAGE_KEY, today: TODAY },
-  );
-}
+/** 標準が無い間の週・月に出る案内（「AI で組む」の欄の代わり） */
+const NEED_STANDARD = '[data-testid="arrange-need-standard"]';
 const rangeBand = (page) => page.locator('[data-testid="proposal-band"][data-kind="range"]');
 const choiceBand = (page) => page.locator('[data-testid="proposal-band"][data-kind="choices"]');
 /** 帯が出るまで待つ（組み終わるまで） */
@@ -78,7 +69,7 @@ const waitBand = (page) => rangeBand(page).waitFor({ timeout: 90000 });
 // ---- 範囲：既定は月、月・週・日を選ぶと URL に書く ----
 async function range(page) {
   await editData(page, (key) => localStorage.removeItem(key), STORAGE_KEY);
-  await open(page, '/arrange');
+  await open(page, '/arrange', NEED_STANDARD);
   check((await page.locator('h1').innerText()) === '担当を組む', '見出し「担当を組む」');
   const tabs = page.getByTestId('arrange-tabs');
   check(
@@ -102,13 +93,40 @@ async function range(page) {
   await page.locator('[data-testid="arrange-scope"] [data-scope="day"]').click();
   await page.waitForFunction(() => /[?&]date=/.test(location.hash));
   check(/^#\/arrange\?date=\d{4}-\d{2}-\d{2}$/.test(hashOf(page)), '日を選ぶと ?date=', hashOf(page));
-  await open(page, `/arrange?d=${TODAY}`);
+  await open(page, `/arrange?d=${TODAY}`, NEED_STANDARD);
   check(
     (await page.locator('[data-testid="arrange-scope"] button[aria-pressed="true"]').getAttribute('data-scope')) ===
       'week' && (await page.getByTestId('arrange-date').inputValue()) === mondayOf(TODAY),
     'URL の ?d= で週を開く（その日の週の月曜）',
   );
   await page.screenshot({ path: path.join(OUT_DIR, 'arrange-1400.png') });
+}
+
+// ---- 標準が無い間の週・月：案内の文と［日の範囲へ］だけ（「AI で組む」の欄は出さない。ADR-0064） ----
+async function needStandard(page) {
+  await editData(page, (key) => localStorage.removeItem(key), STORAGE_KEY);
+  for (const [label, hash] of [
+    ['月', `/arrange?ym=${YM}`],
+    ['月（クエリ無し）', '/arrange'],
+    ['週', `/arrange?d=${TODAY}`],
+  ]) {
+    await open(page, hash, NEED_STANDARD);
+    check((await page.getByTestId('arrange-need-standard').count()) === 1, `標準が無い${label}：案内の文を出す`);
+    check((await page.getByTestId('arrange-to-day').count()) === 1, `標準が無い${label}：日の範囲へ移るボタンを出す`);
+    const hidden = [];
+    for (const id of ['arrange-start', 'arrange-mode-care', 'arrange-mode-all', 'arrange-preset', 'arrange-count']) {
+      if ((await page.getByTestId(id).count()) > 0) hidden.push(id);
+    }
+    check(hidden.length === 0, `標準が無い${label}：「AI で組む」の欄を出さない`, hidden);
+  }
+  await page.getByTestId('arrange-to-day').click();
+  await page.waitForFunction(() => /[?&]date=/.test(location.hash));
+  check(/^#\/arrange\?date=\d{4}-\d{2}-\d{2}$/.test(hashOf(page)), '［日の範囲へ］で ?date= になる', hashOf(page));
+  await page.getByTestId('arrange-start').waitFor({ timeout: 30000 });
+  check(
+    (await choiceBand(page).count()) === 0 && (await page.getByTestId('arrange-need-standard').count()) === 0,
+    '日の範囲では案内を出さず「AI で組む」（考え方ごとの案）に変わる',
+  );
 }
 
 // ---- 標準が無い日の範囲：考え方ごとの案 → この案を標準にする → 元に戻す（PRD D357） ----
@@ -221,6 +239,7 @@ async function preset(page) {
 
 // ---- 案を比べるへ移る・戻る ----
 async function compare(page) {
+  await markStandard(page);
   await open(page, `/arrange?ym=${YM}`);
   const date = await page.getByTestId('arrange-compare-date').inputValue();
   await page.getByTestId('arrange-compare-open').click();
@@ -235,6 +254,7 @@ async function compare(page) {
 
 // ---- スマホ（390px）：横にはみ出さない ----
 async function mobile(page) {
+  await markStandard(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await open(page, `/arrange?ym=${YM}`);
   const w = await page.evaluate(() => {
@@ -262,6 +282,7 @@ const steps = sharedPage({
   call: (fn, s) => fn(s.page, s),
   steps: [
     ['range', range],
+    ['need-standard', needStandard],
     ['choices', choices],
     ['run-apply', runApply],
     ['preset', preset],
