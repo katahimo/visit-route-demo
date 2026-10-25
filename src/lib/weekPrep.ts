@@ -1,7 +1,8 @@
 // 週の予定の準備（PRD D280・D282・D328。ADR-0046・ADR-0053・ADR-0054）の純粋関数：見出しの主ボタン（この週の問題の無い日を
-// まとめて確定 → 済み）を状態から1つ決める決まりと、日の見出しの件数の文。週の予定では AI で組まない（手で直す。ADR-0063）。
+// まとめて確定 → 済み）を状態から1つ決める決まり・この週の準備のまとめと、日の見出しの件数の文。週の予定では AI で組まない（手で直す。ADR-0063）。
 // データは書き換えない。画面は pages/WeekPage.tsx
-import type { BulkConfirm } from './confirmDay';
+import { type BulkConfirm, bulkConfirmTargets } from './confirmDay';
+import type { DayStatus, RangeProgress } from './month';
 
 /**
  * 週の主ボタンの状態：確定する／残りは日の予定で（ボタンなし）／済み（ボタンなし）／今日以降に訪問が無い（ボタンなし）
@@ -62,4 +63,27 @@ export function weekNext(x: WeekNextInput): WeekNext {
 /** 日の見出しの件数の文（PRD D282）：「N件」、担当なしがあれば「N件・担当なしM」 */
 export function weekDayCountText(x: { count: number; unassigned: number }): string {
   return `${x.count}件${x.unassigned > 0 ? `・担当なし${x.unassigned}` : ''}`;
+}
+
+/** この週の準備のまとめ（PRD D280・D332）：まとめて確定の振り分け・今日以降の訪問のある日の数・1行の状態 */
+export type WeekPrep = {
+  bulk: BulkConfirm;
+  futureDays: number;
+  /** 1行の状態：確定済み・未連絡の変更・まだ伝えていない日の数と要対応の件数 */
+  line: { told: number; changed: number; notYet: number; care: number };
+};
+
+/**
+ * この週の準備のまとめ。p は週の今日以降の rangeProgress（lib/month。月の予定と同じ数え方）、statusOf は日の状態。
+ * まとめて確定の振り分けは月と同じ決まり（lib/confirmDay の bulkConfirmTargets）
+ */
+export function weekPrepOf(
+  p: Pick<RangeProgress, 'unconfirmed' | 'attentionItems' | 'days' | 'confirmed' | 'changed' | 'notYet' | 'care'>,
+  statusOf: (date: string) => DayStatus | undefined,
+): WeekPrep {
+  return {
+    bulk: bulkConfirmTargets(p.unconfirmed, statusOf, p.attentionItems),
+    futureDays: p.days,
+    line: { told: p.confirmed, changed: p.changed, notYet: p.notYet, care: p.care },
+  };
 }

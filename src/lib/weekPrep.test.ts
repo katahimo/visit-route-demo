@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { BulkConfirm } from './confirmDay';
-import { weekConfirmLabel, weekDayCountText, weekNext } from './weekPrep';
+import type { DayStatus } from './month';
+import { weekConfirmLabel, weekDayCountText, weekNext, weekPrepOf } from './weekPrep';
 
 const bulk = (x: Partial<BulkConfirm> = {}): BulkConfirm => ({ targets: [], problem: [], changed: [], ...x });
 const base = { futureDays: 5, bulk: bulk(), running: false };
@@ -35,5 +36,32 @@ describe('weekDayCountText（日の見出しの件数。PRD D282）', () => {
     expect(weekDayCountText({ count: 0, unassigned: 0 })).toBe('0件');
     expect(weekDayCountText({ count: 17, unassigned: 0 })).toBe('17件');
     expect(weekDayCountText({ count: 17, unassigned: 2 })).toBe('17件・担当なし2');
+  });
+});
+
+describe('weekPrepOf（この週の準備のまとめ。PRD D280・D332）', () => {
+  const st = (date: string, x: Partial<DayStatus> = {}): DayStatus =>
+    ({ date, count: 2, state: 'none', care: 0, ...x }) as DayStatus;
+  it('まとめて確定の振り分け（月と同じ決まり）と1行の状態', () => {
+    const statuses = new Map([
+      ['2026-10-22', st('2026-10-22')],
+      ['2026-10-23', st('2026-10-23', { care: 1 })],
+      ['2026-10-24', st('2026-10-24', { state: 'changed' })],
+    ]);
+    const r = weekPrepOf(
+      {
+        unconfirmed: ['2026-10-22', '2026-10-23', '2026-10-24'],
+        attentionItems: [],
+        days: 4,
+        confirmed: 1,
+        changed: 1,
+        notYet: 2,
+        care: 1,
+      },
+      (d) => statuses.get(d),
+    );
+    expect(r.bulk).toEqual({ targets: ['2026-10-22'], problem: ['2026-10-23'], changed: ['2026-10-24'] });
+    expect(r.futureDays).toBe(4);
+    expect(r.line).toEqual({ told: 1, changed: 1, notYet: 2, care: 1 });
   });
 });
