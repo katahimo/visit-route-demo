@@ -6,7 +6,7 @@ import { type Client, type ClientStage, type Staff, stageOfLegacy, type Terms } 
 import type { Condition, Traits } from '../contracts/rules';
 import { STAGE_LABELS, stageFlags, withStage } from '../lib/clientStage';
 import { nameKey, newId } from '../lib/common';
-import { isImportError, migrate } from '../store';
+import { isImportError, migrate } from '../store/persist';
 import {
   Errors,
   loadWorkbook,
@@ -39,7 +39,7 @@ import {
 import { lookup, parseWorkDays, personSheetNames, splitList, travelModeLabels } from './text';
 
 /** 確認に出す名前の数（「ほか」で省く） */
-export const ROSTER_NAMES_SHOWN = 3;
+const ROSTER_NAMES_SHOWN = 3;
 
 /** 形の同じ値か（オブジェクトのキーの順は問わない） */
 function same(a: unknown, b: unknown): boolean {

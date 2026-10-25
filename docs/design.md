@@ -190,7 +190,7 @@ flowchart LR
   - [ ] 性別希望・NG・種類・繰り返し・訪問の ID が上のとおり、プリセットは §5 の3種（テスト）
 
 ### domain（PoC本体から写した純粋関数）
-- 責務：時刻（`hhmmToMinutes` など）、距離と移動の概算（`distanceMeters`・`estimateLeg`）、稼働時間帯（`availabilityOf`・`shiftOf`・`withinSlots`）、ルート評価（`evaluateRoute`）、手作業の割当の補助（PoC本体 `web/src/features/admin/schedule/model.ts` の `reconcile`・`assign`・`timesOf`・`warningsOf`）
+- 責務：時刻（`hhmmToMinutes` など）、距離と移動の概算（`distanceMeters`・`estimateLeg`）、稼働時間帯（`availabilityOf`・`withinSlots`）、手作業の割当の補助（PoC本体 `web/src/features/admin/schedule/model.ts` の `timesOf`）
 - 持つデータ（持ち主）：なし
 - 提供するAPI：PoC本体と同じ名前・引数（写したコミットをファイル先頭に書く）。デモ独自（コメントに明記）：`withoutAbsences(slots, absences)`（`domain/availability.ts`。「その日に働ける時間帯」を決めるのはこのファイルだけ）、`afterLastDay(base, date)`（`availabilityOf` は最終勤務日の後なら上書きがあっても空）、`leaveOn(leaves, clientId, date)`・`isOnLeave(leaves, visit)`（`domain/leaves.ts`。休みの判定はこれだけ）
 - 依存するもの：なし（zod のみ）
@@ -603,7 +603,7 @@ vacancyNotice(result, input)
 ### 機能の入り切り（`src/contracts/features.ts`。PRD D210〜D216。ADR-0028）
 
 - `FEATURE_IDS`（20）：`patternMonthly`・`clientLeave`・`requestedOff`・`monthPrint`・`compare`・`sudden`・`vacancy`・`vacancyNotice`・`compat`・`allowedStaff`・`clientStage`・`visitNotes`・`offboard`・`workload`・`fare`・`rules`・`mail`・`mapsLink`・`geocode`・`excel`
-- `Features`＝ID → boolean の部分的な表（無い ID は入）。`CALC_FEATURE_IDS = ['compat', 'allowedStaff']`。Excel には入れない
+- `Features`＝ID → boolean の部分的な表（無い ID は入）。Excel には入れない
 - 切ってもデータの形・検査・repair は変えない。`clientStage` が切なら段階は「利用中／終了」で選ばせ、ほかの段階の人はそのまま
 - エラーは無い（検査で落ちない）
 

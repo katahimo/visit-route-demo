@@ -1,6 +1,5 @@
 // 予定の画面の時間軸（PRD D58）の位置の計算
 import { describe, expect, it } from 'vitest';
-import type { VisitType } from '../contracts/documents';
 import type { StopTiming } from '../contracts/problem';
 import { compile } from '../matching';
 import { client, DATE, makeData, staff, visit } from '../matching/fixtures';
@@ -16,7 +15,6 @@ import {
   TL_START,
   timeRange,
   toY,
-  typeUnfitOf,
 } from './timeline';
 
 describe('縦の範囲と位置', () => {
@@ -138,32 +136,5 @@ describe('ドラッグ中の影', () => {
     const off = makeData({ ...data, staff: [staff('s1', 38.26, 140.87, { workDays: [] })] });
     const q = compile(off, DATE);
     expect(shadowOf(q, {}, 'v1', 's1')).toMatchObject({ ok: false, allowed: false });
-  });
-});
-
-describe('資格✗', () => {
-  const REHAB: VisitType = {
-    id: 'rehab',
-    name: 'リハビリ',
-    color: 1,
-    durationMinutes: 40,
-    requirements: [{ itemId: 'license', op: 'hasAny', value: ['看護師'] }],
-    note: '',
-  };
-  const data = makeData({
-    staff: [
-      staff('s1', 38.26, 140.87, { traits: { license: ['看護師'] } }),
-      staff('s2', 38.27, 140.88, { traits: { license: ['なし'] } }),
-    ],
-    clients: [client('c1', 38.265, 140.875)],
-    visits: [visit('v1', 'c1', '10:00', '11:00', { typeId: 'rehab' })],
-    visitTypes: [REHAB],
-  });
-  const p = compile(data, DATE);
-  it('種類の必要条件で可でない担当だけ true', () => {
-    expect(typeUnfitOf(p, 'v1', 's1')).toBe(false);
-    expect(typeUnfitOf(p, 'v1', 's2')).toBe(true);
-    expect(typeUnfitOf(p, 'v1', null)).toBe(false);
-    expect(typeUnfitOf(null, 'v1', 's2')).toBe(false);
   });
 });

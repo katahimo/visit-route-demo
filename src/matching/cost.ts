@@ -9,6 +9,12 @@ export function balanceOff(b: NonNullable<Problem['balance']>, staff: number, co
   return count < lo ? lo - count : count > hi ? count - hi : 0;
 }
 
+/** 件数 count が、必須の負担の均等の件数の上限（balance.cap）を超えるか。上限が無ければ false（reassign・vacancy・naive・solver で同じ） */
+export function overCap(b: Problem['balance'], staff: number, count: number): boolean {
+  const cap = b?.cap ?? null;
+  return cap !== null && count > cap[staff]!;
+}
+
 /** スタッフごとの件数から均等の点＝Σ perVisit × 外れた件数²（solver・evaluate で同じ） */
 export function balancePoints(problem: Problem, counts: ArrayLike<number>): number {
   const b = problem.balance;

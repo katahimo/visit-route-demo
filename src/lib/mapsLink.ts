@@ -9,7 +9,7 @@ import type { Place } from '../contracts/documents';
 export const MAPS_DIR_BASE = 'https://www.google.com/maps/dir/?api=1';
 
 /** 移動手段（TRAVEL_MODES）→ Maps URLs の travelmode（driving・walking・bicycling・transit） */
-export const MAPS_TRAVEL_MODE: Record<TravelMode, 'driving' | 'walking' | 'bicycling' | 'transit'> = {
+const MAPS_TRAVEL_MODE: Record<TravelMode, 'driving' | 'walking' | 'bicycling' | 'transit'> = {
   DRIVE: 'driving',
   BICYCLE: 'bicycling',
   WALK: 'walking',
@@ -23,7 +23,7 @@ export const MAPS_TRAVEL_MODE: Record<TravelMode, 'driving' | 'walking' | 'bicyc
  * 9（MAPS_MAX_WAYPOINTS）は PC・アプリで開くと分かっている場面のための上限（今は使っていない）
  */
 export const MAPS_MOBILE_WAYPOINTS = 3;
-export const MAPS_MAX_WAYPOINTS = 9;
+const MAPS_MAX_WAYPOINTS = 9;
 /** URL の長さの上限（同じ文書。Maps URLs は 2,048 字まで）。住所の文字の経由地が多く超えるときも分ける */
 export const MAPS_URL_LIMIT = 2048;
 

@@ -33,10 +33,18 @@ import {
   STAY_WEIGHT_MAX,
   STAY_WEIGHT_MIN,
 } from '../contracts/reassign';
-import { balanceOff, balancePoints, bestInsertion, dropPointsOf, routeCost, scheduleRoute } from '../matching';
+import {
+  balanceOff,
+  balancePoints,
+  bestInsertion,
+  dropPointsOf,
+  EPS,
+  overCap,
+  routeCost,
+  scheduleRoute,
+} from '../matching';
 
 const INF = Number.POSITIVE_INFINITY;
-const EPS = 1e-6;
 /** 「ずらせば入る」を探す刻みと幅（分） */
 const SHIFT_STEP = 5;
 const SHIFT_MAX = 120;
@@ -109,12 +117,6 @@ function balanceDelta(problem: Problem, s: number, count: number): number {
   const a = balanceOff(b, s, count);
   const c = balanceOff(b, s, count + 1);
   return (c * c - a * a) * b.perVisit;
-}
-
-/** 件数の上限（必須の負担の均等）を超えるか */
-function overCapOf(problem: Problem, s: number, count: number): boolean {
-  const cap = problem.balance?.cap ?? null;
-  return cap !== null && count + 1 > cap[s]!;
 }
 
 type Fit = { pos: number; addedCost: number; addedTravel: number };
@@ -278,7 +280,7 @@ export const reassign: Reassign = (problem, baseRoutes, targets) => {
       for (let s = 0; s < S; s++) {
         if (!problem.allowed[v]![s]) continue;
         const known = knowns[s]!;
-        if (overCapOf(problem, s, known.length)) continue;
+        if (overCap(problem.balance, s, known.length + 1)) continue;
         const fit = bestFit(problem, s, known, v);
         if (!fit) continue;
         count++;
@@ -410,14 +412,14 @@ export const candidatesFor: CandidatesFor = (problem, routes, visitId) => {
     const known = knownOf(colOf(rest, st.id), vIndex);
     const reasons = problem.reasons[v]![s]!;
     const violations: Reason[] = reasons.filter((r) => r.points === INF || r.points > 0);
-    const overCap = overCapOf(problem, s, known.length);
+    const over = overCap(problem.balance, s, known.length + 1);
     const allowed = problem.allowed[v]![s]!;
     const routeBroken = known.length > 0 && scheduleRoute(problem, s, known, 'strict') === null;
-    const fit = allowed && !overCap && !routeBroken ? bestFit(problem, s, known, v) : null;
+    const fit = allowed && !over && !routeBroken ? bestFit(problem, s, known, v) : null;
     let shiftMinutes: number | null = null;
     // ずらせば入るか：時刻に関わらない必須の原因が無く、件数の上限を超えず、列に元から違反の無い人だけ
     const timeOnly = reasons.every((r) => r.points !== INF || TIME_RULES.has(r.ruleId));
-    if (!fit && !overCap && !routeBroken && timeOnly) {
+    if (!fit && !over && !routeBroken && timeOnly) {
       for (let a = SHIFT_STEP; a <= SHIFT_MAX && shiftMinutes === null; a += SHIFT_STEP) {
         for (const d of [a, -a]) {
           if (bestFit(shifted(problem, v, d), s, known, v)) {
@@ -434,7 +436,7 @@ export const candidatesFor: CandidatesFor = (problem, routes, visitId) => {
       addedTravel: fit ? fit.addedTravel : null,
       addedCost: fit ? fit.addedCost : null,
       shiftMinutes,
-      overCap,
+      overCap: over,
       violations,
       routeBroken,
       delayedCount: effect.delayedCount,
@@ -477,7 +479,7 @@ export const fitsOf: FitsOf = (problem, routes, visitId) => {
   problem.staff.forEach((st, s) => {
     if (!problem.allowed[v]![s]) return;
     const known = knownOf(colOf(rest, st.id), vIndex);
-    if (overCapOf(problem, s, known.length)) return;
+    if (overCap(problem.balance, s, known.length + 1)) return;
     // いまの列が strict で回れない人は bestFit が null（candidatesFor の routeBroken と同じ）
     const fit = bestFit(problem, s, known, v);
     if (fit) list.push({ staffId: st.id, addedCost: fit.addedCost, addedTravel: fit.addedTravel, order: s });
@@ -594,12 +596,11 @@ export const prepareAnneal: PrepareAnneal = (problem, base, planA, targets, opti
   });
   const initial: Routes = {};
   const held: string[] = [];
-  const cap = problem.balance?.cap ?? null;
   problem.staff.forEach((st, s) => {
     const known = knownOf(colOf(planA, st.id), vIndex);
     const broken =
       known.some((v) => !problem.allowed[v]![s]) ||
-      (cap !== null && known.length > cap[s]!) ||
+      overCap(problem.balance, s, known.length) ||
       (known.length > 0 && routeCost(problem, s, known) === INF);
     if (!broken) {
       initial[st.id] = known.map((v) => problem.visits[v]!.id);

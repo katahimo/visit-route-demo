@@ -14,10 +14,6 @@ import { type CompileInput, compile, scheduleRoute } from '../matching';
 import { parsePatternVisitId, putVisits, visitsOn } from '../patterns';
 import { attempt, own } from './common';
 
-/** その日の訪問（保存した回＋繰り返しから計算した回。取り消し・休みも含む。開始の順） */
-export const dayVisits = (data: Pick<DemoData, 'visits' | 'patterns' | 'clients'>, date: string): Visit[] =>
-  visitsOn(data, date);
-
 /**
  * その日の計算に入れる訪問（取り消し・〈利用者さん〉の休み・利用中でない〈利用者さん〉の訪問を除く。compile と同じ）
  */

@@ -23,7 +23,7 @@ import { timeText } from '../domain/availability';
 import { addDays, hhmmToMinutes, minutesToHhmm, weekday } from '../domain/time';
 import { baseOf } from '../lib/absences';
 import { WEEKDAY_LABELS } from '../lib/common';
-import { compile, matches, scheduleRoute } from '../matching';
+import { compile, EPS, matches, overCap, scheduleRoute } from '../matching';
 import { fitsOf } from '../reassign';
 
 export type {
@@ -39,8 +39,6 @@ export type {
   Verdict,
 } from '../contracts/vacancy';
 export { INQUIRY_CLIENT_ID, INQUIRY_VISIT_ID } from '../contracts/vacancy';
-
-const EPS = 1e-6;
 
 /** 自分のキーだけを読む */
 function colOf(routes: Routes, staffId: string): string[] {
@@ -83,12 +81,6 @@ function timesOf(dayStart: string, dayEnd: string, step: number, duration: numbe
   const end = hhmmToMinutes(dayEnd);
   for (let t = hhmmToMinutes(dayStart); t + duration <= end + EPS; t += step) out.push(t);
   return out;
-}
-
-/** 件数の上限（必須の負担の均等）を超えるか（1件足すと） */
-function overCap(problem: Problem, s: number, count: number): boolean {
-  const cap = problem.balance?.cap ?? null;
-  return cap !== null && count + 1 > cap[s]!;
 }
 
 /**
@@ -222,7 +214,7 @@ function estimateOn(
   const people = problem.staff.flatMap((st, s) => {
     if (st.slots.length === 0 || !eligible.has(st.id)) return [];
     const known = knownOf(problem, colOf(routes, st.id));
-    if (overCap(problem, s, known.length)) return [];
+    if (overCap(problem.balance, s, known.length + 1)) return [];
     const t = scheduleRoute(problem, s, known, 'lenient');
     const busy = (t?.stops ?? []).map((x) => ({ start: x.start, end: x.end }));
     return [{ id: st.id, slots: st.slots, busy }];

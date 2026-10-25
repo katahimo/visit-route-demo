@@ -227,7 +227,6 @@ export const MAX_VISIT_TYPES = 20;
 
 /** 繰り返し方（ADR-0013）：'weekly'＝everyWeeks 週ごと、'monthly'＝毎月の第N週（monthWeeks） */
 export const PATTERN_REPEATS = ['weekly', 'monthly'] as const;
-export type PatternRepeat = (typeof PATTERN_REPEATS)[number];
 
 /** 曜日ごとの開始（早）〜（遅）の上書き（ADR-0013） */
 export const patternDayTimeSchema = z.object({
@@ -236,7 +235,6 @@ export const patternDayTimeSchema = z.object({
   earliestStart: hhmmSchema,
   latestStart: hhmmSchema,
 });
-export type PatternDayTime = z.infer<typeof patternDayTimeSchema>;
 
 /** 曜日ごとの標準の開始（組み方の標準。ADR-0062） */
 export const patternUsualStartSchema = z.object({
@@ -311,11 +309,9 @@ export type Pattern = z.infer<typeof patternSchema>;
  * edited は「この回だけ変えた」（時刻・日付・所要・種類・メモ。担当・開始・ピンだけの違いは edited にしない）
  */
 export const visitPatternRefSchema = z.object({ id: idSchema, date: dateSchema, edited: z.boolean() });
-export type VisitPatternRef = z.infer<typeof visitPatternRefSchema>;
 
 /** 取り消しの種類（PRD D74） */
 export const CANCEL_KINDS = ['sameDay'] as const;
-export type CancelKind = (typeof CANCEL_KINDS)[number];
 
 /**
  * 1回の訪問（版2。ADR-0053）。担当・開始・ピンを訪問が持ち、その日の割当は「その日の訪問の担当と開始の並び」から決まる。

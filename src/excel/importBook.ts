@@ -36,7 +36,7 @@ import { STAGE_LABELS } from '../lib/clientStage';
 import { MAX_OPTIONS, nameKey, newId, optionNameError } from '../lib/common';
 import { normalizeEmail } from '../lib/mailto';
 import { normalizePostalCode } from '../lib/postalCode';
-import { isImportError, migrate } from '../store';
+import { isImportError, migrate } from '../store/persist';
 import {
   absenceCols,
   availabilityCols,

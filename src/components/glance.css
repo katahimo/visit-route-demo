@@ -1,4 +1,4 @@
-/* 一目で分かる表示（PRD D78〜D81）。見た目の言葉は3段バーと同じ components/barMarks.css（PRD D85）：
+/* 一目で分かる表示（PRD D78〜D80）。見た目の言葉は3段バーと同じ components/barMarks.css（PRD D85）：
    柄は使わず、0人（受けられない）は薄い灰の地と灰の文字（×）、0人の週あり・1人は橙（注意）、2人以上は緑（多いほど濃い）、
    案なし＝淡い無地（？の文字）。受けられない時間帯は手当てが要るものではないので赤にしない（赤は要対応だけ。PRD D228）。
    文字（○△×？・数字）を上に載せるので塗りは淡い色にする */
@@ -77,61 +77,4 @@
   box-sizing: border-box;
   border: 1px dashed var(--bar-noplan-line);
   background: var(--bar-noplan);
-}
-
-/* 〈利用者さん〉の月の日ごとの点（D81。色は D85 の言葉）：形でも分ける。訪問あり＝濃い青の丸、当日キャンセル＝橙の三角、
-   取り消し＝白抜きの丸、休み＝淡い灰の四角、訪問なし＝小さな点 */
-.client-dots {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
-  font-size: 0.66rem;
-  color: var(--sub);
-  text-align: center;
-}
-.client-dots-head {
-  font-weight: 700;
-}
-.client-dot-cell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 20px;
-}
-.client-dot {
-  display: inline-block;
-  flex: none;
-}
-.client-dot.is-visit {
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: var(--bar-visit);
-}
-.client-dot.is-sameDay {
-  width: 12px;
-  height: 11px;
-  background: #d9822b;
-  clip-path: polygon(50% 0, 100% 100%, 0 100%);
-}
-.client-dot.is-cancelled {
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  border: 2px solid #9a8d82;
-  background: #fff;
-}
-.client-dot.is-leave {
-  width: 11px;
-  height: 11px;
-  border-radius: 2px;
-  box-sizing: border-box;
-  border: 1px solid #b3a99f;
-  background: var(--bar-rest);
-}
-.client-dot.is-none {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: #cfc4bb;
 }

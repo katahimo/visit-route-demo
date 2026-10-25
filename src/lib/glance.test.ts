@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { VacancyCell } from '../contracts/vacancy';
-import { clientDot, inquiryDayLevel, inquiryRows, prepParts, vacancyLevel } from './glance';
-import type { ClientVisitMark } from './month';
+import { inquiryDayLevel, inquiryRows, prepParts, vacancyLevel } from './glance';
 
 describe('vacancyLevel（空き状況のマスの段階。D78）', () => {
   const cell = (min: number, weeksOk: number, weeksTotal: number) => ({ min, weeksOk, weeksTotal });
@@ -101,28 +100,5 @@ describe('prepParts（今月の準備の積み上げ。D80）', () => {
       { kind: 'none', days: 3 },
     ]);
     expect(prepParts({ days: 0, planned: 0, confirmed: 0 }).every((x) => x.days === 0)).toBe(true);
-  });
-});
-
-describe('clientDot（〈利用者さん〉の日の点。D81）', () => {
-  const v = (over: Partial<ClientVisitMark>): ClientVisitMark => ({
-    visitId: 'v',
-    start: 540,
-    typeId: null,
-    staffId: null,
-    substitute: false,
-    edited: false,
-    cancelled: false,
-    sameDay: false,
-    leave: false,
-    unassigned: false,
-    ...over,
-  });
-  it('訪問が1件でもあれば訪問あり、無ければ 当日キャンセル＞取り消し＞休み、何も無ければ訪問なし', () => {
-    expect(clientDot({ visits: [] })).toBe('none');
-    expect(clientDot({ visits: [v({ cancelled: true }), v({})] })).toBe('visit');
-    expect(clientDot({ visits: [v({ cancelled: true }), v({ cancelled: true, sameDay: true })] })).toBe('sameDay');
-    expect(clientDot({ visits: [v({ cancelled: true }), v({ leave: true })] })).toBe('cancelled');
-    expect(clientDot({ visits: [v({ leave: true })] })).toBe('leave');
   });
 });

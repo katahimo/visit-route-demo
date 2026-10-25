@@ -45,12 +45,6 @@ export function isYm(ym: string): boolean {
 /** 日付（YYYY-MM-DD）の月（YYYY-MM） */
 export const ymOf = (date: string): string => date.slice(0, 7);
 
-/** 月の予定が見せている月（`?ym=` が正しければその月、無ければ選んでいる日付の月。MonthPage と同じ決め方） */
-export function monthShown(search: string, date: string): string {
-  const raw = new URLSearchParams(search).get('ym') ?? '';
-  return isYm(raw) ? raw : ymOf(date);
-}
-
 /** 月を n か月ずらす */
 export function addMonths(ym: string, n: number): string {
   const [y, m] = ym.split('-').map(Number);
@@ -504,57 +498,6 @@ export function clientDay(data: CompileInput, day: DayPlan, clientId: string): C
     })
     .sort((a, b) => a.start - b.start || a.visitId.localeCompare(b.visitId));
   return { date, visits };
-}
-
-/** 選んだ〈利用者さん〉の月の集計（D55） */
-export type ClientMonth = {
-  /** 予定の回数（取り消しを除く） */
-  planned: number;
-  /** この回だけ変えた回（取り消しを除く） */
-  edited: number;
-  /** 取り消した回 */
-  cancelled: number;
-  /** 取り消した回のうち、当日キャンセル（ADR-0015） */
-  sameDay: number;
-  /** 休み（ADR-0013）のため無しの回 */
-  leave: number;
-  /** いつもの担当でない回 */
-  substitute: number;
-  /** 担当した人の内訳（多い順。staffId が null＝担当なし） */
-  byStaff: { staffId: string | null; count: number }[];
-};
-
-/** 選んだ〈利用者さん〉の月の集計（days はその月の日） */
-export function clientMonth(data: CompileInput, days: readonly DayPlan[], clientId: string): ClientMonth {
-  const out: ClientMonth = { planned: 0, edited: 0, cancelled: 0, sameDay: 0, leave: 0, substitute: 0, byStaff: [] };
-  const by = new Map<string | null, number>();
-  for (const day of days) {
-    for (const v of clientDay(data, day, clientId).visits) {
-      if (v.cancelled) {
-        out.cancelled++;
-        if (v.sameDay) out.sameDay++;
-        continue;
-      }
-      if (v.leave) {
-        out.leave++;
-        continue;
-      }
-      out.planned++;
-      if (v.edited) out.edited++;
-      if (v.substitute) out.substitute++;
-      by.set(v.staffId, (by.get(v.staffId) ?? 0) + 1);
-    }
-  }
-  const nameOf = new Map(data.staff.map((s) => [s.id, s.name]));
-  out.byStaff = [...by]
-    .map(([staffId, count]) => ({ staffId, count }))
-    .sort(
-      (a, b) =>
-        b.count - a.count ||
-        (a.staffId === null ? 1 : 0) - (b.staffId === null ? 1 : 0) ||
-        (nameOf.get(a.staffId ?? '') ?? '').localeCompare(nameOf.get(b.staffId ?? '') ?? '', 'ja'),
-    );
-  return out;
 }
 
 /** 要対応の種類：要対応の訪問がある・未連絡の変更がある・拘束が上限を超える（ADR-0015） */

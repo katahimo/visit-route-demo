@@ -24,11 +24,6 @@ export function jstHhmm(ms: number): string {
   return new Date(ms + JST_OFFSET_MS).toISOString().slice(11, 16);
 }
 
-/** 日本時間の日付＋HH:mm → ms */
-export function jstToMs(date: string, hhmm: string): number {
-  return Date.parse(`${date}T${hhmm}:00+09:00`);
-}
-
 /** 日付の n 日後（YYYY-MM-DD） */
 export function addDays(date: string, n: number): string {
   const d = new Date(`${date}T00:00:00Z`);

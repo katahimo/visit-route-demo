@@ -109,43 +109,6 @@ export function loadEdgeTexts(load: readonly DayLoadSlot[]): BarEdgeTexts {
   return { early: text('early', early), late: text('late', late) };
 }
 
-/** 段の上の切れ端：row は段の番号、left・width は段の幅に対する割合（0〜1）。first はその区間の最初の切れ端 */
-export type RowPiece<T> = { row: number; left: number; width: number; first: boolean; item: T };
-
-/**
- * 時刻の区間（0時からの分。[start, end)）を段ごとの切れ端に分ける。段をまたぐ区間は段ごとに切る。
- * 段に少しも掛からない区間は early（終わりが 8時以前）・late（始まりが 20時以降）へ。
- * 段に掛かるが 8時より前・20時以降にはみ出す区間は、切れ端に加えて early・late にも入れる（端の印の title に出す）。
- * 長さ0の区間は、その時刻に幅0の切れ端を置く
- */
-export function placeOnRows<T extends { start: number; end: number }>(
-  items: readonly T[],
-): { pieces: RowPiece<T>[]; early: T[]; late: T[]; outside: T[] } {
-  const pieces: RowPiece<T>[] = [];
-  const early: T[] = [];
-  const late: T[] = [];
-  /** 段に少しも掛からない区間（端の印のボタンにする） */
-  const outside: T[] = [];
-  for (const it of items) {
-    const end = Math.max(it.start, it.end);
-    if (it.start < BAR_START) early.push(it);
-    if (end > BAR_END || it.start >= BAR_END) late.push(it);
-    let first = true;
-    BAR_ROWS.forEach(([a, b], row) => {
-      const from = a * 60;
-      const to = b * 60;
-      const s = Math.max(it.start, from);
-      const e = Math.min(end, to);
-      const touches = e > s || (it.start === end && it.start >= from && it.start < to);
-      if (!touches) return;
-      pieces.push({ row, left: (s - from) / (to - from), width: (e - s) / (to - from), first, item: it });
-      first = false;
-    });
-    if (first) outside.push(it);
-  }
-  return { pieces, early, late, outside };
-}
-
 /** 段の上の連続した塗り：left・width は段の幅に対する割合（0〜1）。level はその区間の状態（PRD D85） */
 export type RowRun<L extends string> = { left: number; width: number; level: L };
 

@@ -55,7 +55,3 @@ export const featuresSchema = z.preprocess(
     return out;
   }),
 );
-
-/** 計算（matching の compile）に効く機能：好み・社内の決まりだけ（相性・担当を限る。ADR-0028 の効き方の案B） */
-export const CALC_FEATURE_IDS = ['compat', 'allowedStaff'] as const satisfies readonly FeatureId[];
-export type CalcFeatureId = (typeof CALC_FEATURE_IDS)[number];

@@ -1,6 +1,6 @@
 import type { TravelMode } from '../contracts/codes';
 import type { Place, Terms } from '../contracts/documents';
-import { HARDABLE, type ItemKind, type Op, type RuleType } from '../contracts/rules';
+import { HARDABLE, type ItemKind, type RuleType } from '../contracts/rules';
 import { weekday } from '../domain/time';
 
 /** 画面の共通の表示（呼び方は org.terms から引く。「お客様」「シッター」を直書きしない） */
@@ -38,23 +38,6 @@ export const ITEM_KIND_LABELS: Record<ItemKind, string> = {
   choice: '選択肢から1つ',
   multi: '選択肢から複数',
   number: '数値',
-};
-
-export const OP_LABELS: Record<Op, string> = {
-  is: 'が次と同じ',
-  not: 'が次と違う',
-  in: 'が次のどれか',
-  hasAny: 'に次のどれかを含む',
-  hasAll: 'に次のすべてを含む',
-  gte: 'が次の値以上',
-  lte: 'が次の値以下',
-};
-/** 項目の種類ごとに使える演算子（contracts/rules.ts の OPS の説明に合わせる） */
-export const OPS_BY_KIND: Record<ItemKind, Op[]> = {
-  flag: ['is', 'not'],
-  choice: ['is', 'not', 'in'],
-  multi: ['hasAny', 'hasAll'],
-  number: ['gte', 'lte', 'is', 'not'],
 };
 
 /** 重みのスライダーを止めるか（必須の条件は重みを使わない。負担の均等は必須でも重みを使う） */

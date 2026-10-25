@@ -49,9 +49,6 @@ function countUnassigned(
   return n;
 }
 
-/** 来月を組んでいないとみなす日の数（ホームの「担当なし」のカードと同じ。2日以上） */
-export const PLAN_NEEDED_DAYS = 2;
-
 /** メニューの「◯月の予定」の名前 */
 export const planLabel = (today: string): string => `${monthLabel(planYm(today))}の予定`;
 

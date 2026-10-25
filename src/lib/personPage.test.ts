@@ -13,7 +13,6 @@ import {
   itemsByDate,
   mergeFields,
   monthWeeksMon,
-  personPathKind,
   pickFields,
   STAFF_TABS,
   shiftAnchor,
@@ -56,12 +55,6 @@ function data(): DemoData {
 }
 
 describe('ルートとタブ', () => {
-  it('人の画面のパスを見分ける（一覧・〈スタッフ〉の画面のスマホ版は含めない）', () => {
-    expect(personPathKind('/clients/c1')).toBe('client');
-    expect(personPathKind('/staff/new')).toBe('staff');
-    expect(personPathKind('/clients')).toBeNull();
-    expect(personPathKind('/staff-view/s1')).toBeNull();
-  });
   it('タブは知らない値なら先頭の予定。書くときは先頭を消し、ほかのクエリは残して edit は消す', () => {
     expect(tabOf(CLIENT_TABS, null)).toBe('schedule');
     expect(tabOf(CLIENT_TABS, 'leaves')).toBe('leaves');

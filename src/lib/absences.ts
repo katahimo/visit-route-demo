@@ -5,7 +5,7 @@ import type { Absence } from '../contracts/documents';
 import type { Problem } from '../contracts/problem';
 import { type ReassignResult, type Routes, STAY_WEIGHT_DEFAULT } from '../contracts/reassign';
 import { END_AFTER_START_ERROR, HALF_HOUR_ERROR, isHalfHour, timeText } from '../domain/availability';
-import { hhmmToMinutes, minutesToHhmm } from '../domain/time';
+import { hhmmToMinutes } from '../domain/time';
 import { visitsOn } from '../patterns';
 import { own } from './common';
 import { ownerOf, pinsOf, routesOf, writeRoutes } from './dayPlan';
@@ -49,12 +49,6 @@ export function absenceError(a: Pick<Absence, 'from' | 'to'>): string | null {
   if (!half(a.from) || !half(a.to)) return HALF_HOUR_ERROR;
   if (a.from !== null && a.to !== null && a.from >= a.to) return END_AFTER_START_ERROR;
   return null;
-}
-
-/** 30分単位に丸める（半端な時刻は近いほうへ。2026-10-13 利用者が決定） */
-export function roundToHalfHour(hhmm: string): string {
-  const m = hhmmToMinutes(hhmm);
-  return minutesToHhmm(Math.min(23 * 60 + 30, Math.round(m / 30) * 30));
 }
 
 /**

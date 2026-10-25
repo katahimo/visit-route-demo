@@ -5,7 +5,7 @@ import type { Condition, Item } from '../contracts/rules';
 import { visitsOn } from '../patterns';
 import { createDemoData } from '../seed';
 import { withSeedPlans } from '../seed/plans';
-import { isImportError, migrate } from '../store';
+import { isImportError, migrate } from '../store/persist';
 import { MAX_FILE_BYTES, MAX_ROWS, prim } from './importBook';
 import {
   exportRosterWorkbook,

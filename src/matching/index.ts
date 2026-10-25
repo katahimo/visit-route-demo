@@ -12,7 +12,7 @@ export {
   VISIT_TYPE_RULE_ID,
 } from './compile';
 export { conditionText, matches } from './conditions';
-export { balanceOff, balancePoints, dropPointsOf, totalPoints } from './cost';
+export { balanceOff, balancePoints, dropPointsOf, overCap, totalPoints } from './cost';
 export { bestInsertion } from './insertion';
 export { naiveSeqs } from './naive';
-export { fitStart, routeCost, scheduleRoute } from './timing';
+export { EPS, fitStart, routeCost, scheduleRoute } from './timing';

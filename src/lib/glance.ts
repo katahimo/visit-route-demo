@@ -1,12 +1,12 @@
 // 一目で分かる表示の段階（PRD D78〜D81。design.md §4 pages「数字より視覚で分かる表示（小さい4件）」）。
-// 空き状況の表・問い合わせの試算の週ごとのマス・今月の準備の積み上げ・〈利用者さん〉の月の日ごとの点の、
+// 空き状況の表・問い合わせの試算の週ごとのマス・今月の準備の積み上げの、
 // 色の段階を決める純粋関数（データは書き換えない）。色の言葉は混み具合バー（components/barMarks.css。PRD D85）にそろえる：
 // 0人＝赤の濃い枠、1人＝橙、2人以上＝緑（多いほど濃い）、案なし＝淡い無地（柄は使わない。印 ○△×？ と数字を載せる）
 
 import type { VacancyCell, VacancyResult } from '../contracts/vacancy';
 import { hhmmToMinutes, weekday } from '../domain/time';
 import { verdictOf } from '../vacancy';
-import type { ClientDay, MonthProgress } from './month';
+import type { MonthProgress } from './month';
 
 // ---- 空き状況の表（D78）----
 
@@ -105,19 +105,4 @@ export function prepParts(p: Pick<MonthProgress, 'days' | 'planned' | 'confirmed
     { kind: 'planned', days: planned },
     { kind: 'none', days: Math.max(0, p.days - confirmed - planned) },
   ];
-}
-
-// ---- 〈利用者さん〉の月の日ごとの点（D81）----
-
-/** 日の点：訪問あり／当日キャンセル／取り消し／休み（ADR-0013）／訪問なし */
-export type ClientDot = 'visit' | 'sameDay' | 'cancelled' | 'leave' | 'none';
-
-/** その日の点（訪問が1件でもあれば訪問あり。無ければ 当日キャンセル＞取り消し＞休み の順） */
-export function clientDot(day: Pick<ClientDay, 'visits'>): ClientDot {
-  const v = day.visits;
-  if (v.some((x) => !x.cancelled && !x.leave)) return 'visit';
-  if (v.some((x) => x.cancelled && x.sameDay)) return 'sameDay';
-  if (v.some((x) => x.cancelled)) return 'cancelled';
-  if (v.some((x) => x.leave)) return 'leave';
-  return 'none';
 }

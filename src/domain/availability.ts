@@ -101,20 +101,6 @@ export function withinSlots(slots: Slot[], startMinutes: number, endMinutes: num
   return slots.some((s) => hhmmToMinutes(s.start) <= startMinutes && endMinutes <= hhmmToMinutes(s.end));
 }
 
-/** 最適化の入力：勤務の始まり・終わりと、あいだの休み。時間帯が無ければ null（その日は働かない） */
-export function shiftOf(slots: Slot[]): { shiftStart: string; shiftEnd: string; breaks: Slot[] } | null {
-  const first = slots[0];
-  const last = slots[slots.length - 1];
-  if (!first || !last) return null;
-  const breaks: Slot[] = [];
-  for (let i = 1; i < slots.length; i++) {
-    const prev = slots[i - 1] as Slot;
-    const cur = slots[i] as Slot;
-    if (prev.end < cur.start) breaks.push({ start: prev.end, end: cur.start });
-  }
-  return { shiftStart: first.start, shiftEnd: last.end, breaks };
-}
-
 /** 表示用：「9:00〜18:00」「9:00〜12:00・14:00〜18:00」「休み」 */
 export function slotsText(slots: Slot[]): string {
   if (slots.length === 0) return '休み';

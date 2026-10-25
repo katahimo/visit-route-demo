@@ -2,12 +2,11 @@
 // 初期温度を改悪幅の中央値から・指数冷却・最後に貪欲な仕上げ。止めるのは反復回数（時刻は使わない）
 import type { Problem, SolveOptions, SolveResult, Solver } from '../contracts/problem';
 import { DROP_POINTS } from '../contracts/rules';
-import { balanceOff, balancePoints, dropPointsOf, totalPoints } from '../matching/cost';
+import { balanceOff, balancePoints, dropPointsOf, overCap, totalPoints } from '../matching/cost';
 import { naiveSeqs } from '../matching/naive';
-import { routeCost, scheduleRoute } from '../matching/timing';
+import { EPS, routeCost, scheduleRoute } from '../matching/timing';
 
 const INF = Number.POSITIVE_INFINITY;
-const EPS = 1e-9;
 /** 仕上げの繰り返しの上限 */
 const POLISH_PASSES = 10;
 
@@ -53,9 +52,8 @@ export function createSolver(problem: Problem, options: SolveOptions): Solver {
   const bufD = new Int32Array(V + 1);
 
   const bal = problem.balance;
-  const cap = bal?.cap ?? null;
   /** s の件数を1つ増やしても上限（必須の均等）を超えないか */
-  const roomFor = (s: number): boolean => !cap || counts[s]! + 1 <= cap[s]!;
+  const roomFor = (s: number): boolean => !overCap(bal, s, counts[s]! + 1);
   /** 件数を a: da, b: db だけ変えたときの均等の点の差（外れた件数の2乗） */
   const balDelta = (a: number, da: number, b: number, db: number): number => {
     if (!bal) return 0;
@@ -488,7 +486,6 @@ export function createSolver(problem: Problem, options: SolveOptions): Solver {
 function initialSeqs(problem: Problem, given: Record<string, string[]>): number[][] | null {
   const vIndex = new Map(problem.visits.map((v, i) => [v.id, i]));
   const seen = new Set<number>();
-  const cap = problem.balance?.cap ?? null;
   const out: number[][] = [];
   for (let s = 0; s < problem.staff.length; s++) {
     const id = problem.staff[s]!.id;
@@ -501,7 +498,7 @@ function initialSeqs(problem: Problem, given: Record<string, string[]>): number[
       seen.add(v);
       seq.push(v);
     }
-    if (cap && seq.length > cap[s]!) return null;
+    if (overCap(problem.balance, s, seq.length)) return null;
     if (seq.length > 0 && routeCost(problem, s, seq) === INF) return null;
     out.push(seq);
   }

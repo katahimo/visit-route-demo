@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import type { DemoData, ImportError } from '../contracts/data';
 import { setBasisWeight } from '../lib/presets';
 import { createDemoData, presetOf, scorePresetOf } from '../seed';
-import { isImportError } from '../store';
+import { isImportError } from '../store/persist';
 import { exportWorkbook, importWorkbook } from './index';
 
 const base = () => createDemoData('2026-10-13');

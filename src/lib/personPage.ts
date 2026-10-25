@@ -12,12 +12,6 @@ import { weekDates, weekStart } from './week';
 
 // ---- ルートとタブ ----
 
-/** 全画面の〈利用者さん〉・〈スタッフ〉の画面のパス（`/clients/:id`・`/staff/:id`）か。一覧（`/clients`）は含めない */
-export const personPathKind = (pathname: string): 'client' | 'staff' | null => {
-  const m = /^\/(clients|staff)\/[^/]+$/.exec(pathname);
-  return m ? (m[1] === 'clients' ? 'client' : 'staff') : null;
-};
-
 /** 新しい人の画面の ID（`/clients/new`・`/staff/new`） */
 export const NEW_PERSON_ID = 'new';
 
@@ -190,9 +184,6 @@ export function slotOf(a: number, b: number, fallback = 60, step = 15): { start:
   if (a === b) return { start: a, duration: fallback };
   return { start: Math.min(a, b), duration: Math.abs(b - a) + step };
 }
-
-/** 確定した（伝えた）日か（カレンダーの日の見出しの印） */
-export const confirmedOn = (d: Pick<DemoData, 'snapshots'>, date: string): boolean => !!own(d.snapshots, date);
 
 /** 〈利用者さん〉から見た〈スタッフ〉の相性（記号ごと。数えるのは渡した〈スタッフ〉。並びは渡した順） */
 export function clientStaffGroups<S extends { id: string }>(

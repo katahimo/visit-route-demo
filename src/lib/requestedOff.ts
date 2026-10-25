@@ -101,8 +101,3 @@ export function absentLeftIds(problem: Problem, routes: Record<string, string[]>
   }
   return out;
 }
-
-/** absentLeftIds の件数 */
-export function absentLeftOf(problem: Problem, routes: Record<string, string[]>, staffId?: string): number {
-  return absentLeftIds(problem, routes, staffId).length;
-}

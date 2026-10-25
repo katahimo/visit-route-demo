@@ -78,8 +78,6 @@ export function setDraft(draft: StandardDraft | null, key: string | null): void 
 /** 作っている計算（1つだけ） */
 let ctl: { stopped: boolean; stop: (() => void) | null } | null = null;
 
-export const isRunning = () => ctl !== null;
-
 /** 作るのを止める（作り終えた案は残す） */
 export function stopProposals(): void {
   if (!ctl) return;
@@ -159,10 +157,4 @@ export async function runProposals(data: DemoData, today: string): Promise<void>
     // 止めたときは作り終えていない案を外す
     standardWork.set((w) => ({ ...w, running: null, proposals: w.proposals.filter((p) => p.done) }));
   }
-}
-
-/** テスト用：入れ物を空に戻す */
-export function resetStandardWork(): void {
-  stopProposals();
-  standardWork.set(EMPTY);
 }

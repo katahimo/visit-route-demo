@@ -7,7 +7,7 @@ import { WEEKDAY_LABELS } from './common';
 export const EVERY_WEEKS_LABELS: Record<number, string> = { 1: '毎週', 2: '隔週', 3: '3週ごと', 4: '4週ごと' };
 
 /** 曜日の並び（例：「月・木」）。日曜はじまりの順 */
-export function weekdaysText(weekdays: readonly number[]): string {
+function weekdaysText(weekdays: readonly number[]): string {
   return [...new Set(weekdays)]
     .sort((a, b) => a - b)
     .map((w) => WEEKDAY_LABELS[w] ?? '?')

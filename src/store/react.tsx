@@ -18,7 +18,7 @@ import {
   samePreviousInfo,
   save,
   swapPrevious,
-} from './index';
+} from './persist';
 
 /**
  * update の扱い：history が false なら履歴に積まず履歴を捨てる（戻せない操作）。group を渡すと、同じ group の続けての update を

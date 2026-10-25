@@ -10,7 +10,7 @@ import { leaveOn } from '../domain/leaves';
 import { hhmmToMinutes } from '../domain/time';
 import { visitsOn } from '../patterns';
 import { conditionText, matches } from './conditions';
-import { fitStart } from './timing';
+import { EPS, fitStart } from './timing';
 
 const INF = Number.POSITIVE_INFINITY;
 /** infeasible に載せる原因の数 */
@@ -403,10 +403,10 @@ export function compile(data: CompileInput, date: string, pins?: Record<string, 
     const total = cap.reduce((a, b) => a + b, 0);
     if (total > 0) {
       const target = cap.map((c) => (n * c) / total);
-      const hi = target.map((t) => Math.ceil(t - 1e-9));
+      const hi = target.map((t) => Math.ceil(t - EPS));
       balance = {
         perVisit: wBalance * POINTS_PER_WEIGHT,
-        lo: target.map((t) => Math.floor(t + 1e-9)),
+        lo: target.map((t) => Math.floor(t + EPS)),
         hi,
         // 必須なら上限＝目安の上＋1（休みの人は 0＋1。休みの人はもともと可否で外れる）
         cap: hardBalance ? hi.map((h) => h + 1) : null,
