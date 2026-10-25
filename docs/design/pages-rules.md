@@ -1,6 +1,6 @@
 # AI の条件と設定（条件の重み・プリセット・種類・特性の項目）と比較の画面
 
-> この画面のファイル：`src/pages/RulesPage.tsx`・`TypesPage.tsx`・`ItemsPage.tsx`・`ComparePage.tsx`（区画の部品 `compareParts.tsx`・担当ごとの比較と地図 `compareStaff.tsx`・状態 `useCompareChoices.ts`・`useCompareProposal.ts`・`useCompareScores.ts`）、`src/components/conditions.tsx`・`routeView.tsx`・`useLeaveGuard.ts`、`src/lib/presets.ts`・`weightDraft.ts`・`leaveGuard.ts`・`emptyGuide.ts`・`scoreReason.ts`・`compareChoices.ts`（比べる案の一覧・A と B の選び方・条件の差）。関連 ADR：0002・0005・0007・0008・0010・0011・0012・0025 追記・0028・0035・0048・0053。関連 PRD：D20・D21・D23〜D25・D36・D173〜D175・D220・D233・D235・D286・D317・D318。
+> この画面のファイル：`src/pages/RulesPage.tsx`（区画の部品 `rulesParts.tsx`・プリセットの節 `presetSection.tsx`・状態 `useRulesDraft.ts`・`usePresetSection.ts`）・`TypesPage.tsx`（状態 `useTypeForm.ts`）・`ItemsPage.tsx`・`ComparePage.tsx`（区画の部品 `compareParts.tsx`・担当ごとの比較と地図 `compareStaff.tsx`・状態 `useCompareChoices.ts`・`useCompareProposal.ts`・`useCompareScores.ts`）、`src/components/conditions.tsx`・`routeView.tsx`・`useLeaveGuard.ts`、`src/lib/presets.ts`・`weightDraft.ts`・`ruleEdit.ts`（条件の名前・削除・乱数の種）・`visitTypes.ts`（訪問の種類の確かめ・保存・削除）・`items.ts`（項目の消去・形の変更・選択肢の名前の変更など）・`leaveGuard.ts`・`emptyGuide.ts`・`scoreReason.ts`・`compareChoices.ts`（比べる案の一覧・A と B の選び方・条件の差）。関連 ADR：0002・0005・0007・0008・0010・0011・0012・0025 追記・0028・0035・0048・0053。関連 PRD：D20・D21・D23〜D25・D36・D173〜D175・D220・D233・D235・D286・D317・D318。
 > 契約（`Preset`・`scorePresetId`）は design.md §5「項目・条件・プリセット」。版2（ADR-0053）：重みは1組（この日だけ試す重みは無い）、AI の記録は無い
 
 ### 条件の重み（`#/rules`）

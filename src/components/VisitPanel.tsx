@@ -3,7 +3,7 @@ import { createContext, type ReactNode, useCallback, useContext, useMemo, useRef
 import type { DemoData } from '../contracts/data';
 import { jstDate } from '../domain/time';
 import { typeOf } from '../lib/patternText';
-import { scopeTexts, type VisitDraft, visitInfo } from '../lib/visitOps';
+import { scopeTexts, type VisitDraft, visitInfo } from '../lib/visitDraft';
 import { useDemoData } from '../store';
 import { FieldError } from './FieldError';
 import { SidePanel } from './ui';

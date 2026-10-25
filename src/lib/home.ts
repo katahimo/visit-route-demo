@@ -49,6 +49,11 @@ export type HomeTask = {
   date?: string;
 };
 
+/** 今日の担当の人数（訪問の列が1件以上ある人。homeTasks の todayStaff） */
+export function routedStaffCount(routes: Readonly<Record<string, readonly string[]>>): number {
+  return Object.values(routes).filter((list) => list.length > 0).length;
+}
+
 export type HomeInput = {
   today: string;
   /** 今日以降の日の状態（homeDays の日。月の画面と同じ数え方。lib/useDayStatuses） */
