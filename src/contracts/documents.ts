@@ -1,8 +1,8 @@
 import { z } from 'zod';
-import { MAX_SLOTS, slotsError } from '../domain/availability';
 import { INDUSTRIES, TRAVEL_MODES, WINDOW_KINDS } from './codes';
 import { featuresSchema } from './features';
 import { conditionSchema, traitsSchema } from './rules';
+import { MAX_SLOTS, slotsError } from './slots';
 
 /**
  * データ一式（DemoData）の中の1件ごとの形。PoC本体 packages/shared/src/contracts/documents.ts を元に、
@@ -178,7 +178,7 @@ const clientObject = z.object({
   requirements: z.array(conditionSchema).max(20),
   /** 訪問先の希望（スタッフの特性に対して。例：経験3年以上）。rule 'clientPreference' */
   preferences: z.array(conditionSchema).max(20),
-  /** 仮押さえ（D47。問い合わせの試算から仮に押さえた〈利用者さん〉。ADR-0012 追記）。無い古いデータは false */
+  /** 仮押さえ（D47。問い合わせの試算から仮に押さえた〈利用者さん〉。ADR-0012）。無い古いデータは false */
   tentative: z.boolean().default(false),
   /** 訪問先の決まりごと（PRD D66。ADR-0013）：入り方（インターホン等）。無い古いデータは '' */
   entryNote: z.string().max(200).default(''),
@@ -227,7 +227,6 @@ export const MAX_VISIT_TYPES = 20;
 
 /** 繰り返し方（ADR-0013）：'weekly'＝everyWeeks 週ごと、'monthly'＝毎月の第N週（monthWeeks） */
 export const PATTERN_REPEATS = ['weekly', 'monthly'] as const;
-export type PatternRepeat = (typeof PATTERN_REPEATS)[number];
 
 /** 曜日ごとの開始（早）〜（遅）の上書き（ADR-0013） */
 export const patternDayTimeSchema = z.object({
@@ -236,7 +235,6 @@ export const patternDayTimeSchema = z.object({
   earliestStart: hhmmSchema,
   latestStart: hhmmSchema,
 });
-export type PatternDayTime = z.infer<typeof patternDayTimeSchema>;
 
 /** 曜日ごとの標準の開始（組み方の標準。ADR-0062） */
 export const patternUsualStartSchema = z.object({
@@ -311,11 +309,9 @@ export type Pattern = z.infer<typeof patternSchema>;
  * edited は「この回だけ変えた」（時刻・日付・所要・種類・メモ。担当・開始・ピンだけの違いは edited にしない）
  */
 export const visitPatternRefSchema = z.object({ id: idSchema, date: dateSchema, edited: z.boolean() });
-export type VisitPatternRef = z.infer<typeof visitPatternRefSchema>;
 
 /** 取り消しの種類（PRD D74） */
 export const CANCEL_KINDS = ['sameDay'] as const;
-export type CancelKind = (typeof CANCEL_KINDS)[number];
 
 /**
  * 1回の訪問（版2。ADR-0053）。担当・開始・ピンを訪問が持ち、その日の割当は「その日の訪問の担当と開始の並び」から決まる。

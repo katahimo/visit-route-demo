@@ -21,7 +21,7 @@ export const RULE_COLS = { id: 'ID', label: '名前', type: '種類', weight: '�
  * 点数の基準（○ を1行だけ。ADR-0010。列が無い・無印なら先頭のプリセット）
  */
 export const PRESET_COLS = { id: 'ID', name: '名前', note: '一言', hard: '必須', scoreBase: '点数の基準' } as const;
-export const WEIGHT_PREFIX = '重み：';
+const WEIGHT_PREFIX = '重み：';
 export const presetWeightHeader = (typeLabel: string) => `${WEIGHT_PREFIX}${typeLabel}`;
 export const STAFF_COLS = {
   id: 'ID',
@@ -52,7 +52,7 @@ export const CLIENT_COLS = {
   note: 'メモ',
 } as const;
 /**
- * 〈利用者さん〉の「仮押さえ」（○。ADR-0012 追記。段階3）。書き出しは「利用中」の次に置く。
+ * 〈利用者さん〉の「仮押さえ」（○。ADR-0012。段階3）。書き出しは「利用中」の次に置く。
  * 古いブックには無いので必須の列にしない（無ければ false）
  */
 export const CLIENT_TENTATIVE_COL = '仮押さえ';

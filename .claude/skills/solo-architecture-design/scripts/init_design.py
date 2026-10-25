@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""プロジェクトに設計用のひな形（docs/ と AGENTS.md）を作る。既存ファイルは上書きしない。
+"""プロジェクトに設計用のひな形（docs/・AGENTS.md・code-rules.json）を作る。既存ファイルは上書きしない。
 
 使い方:
   python3 init_design.py <プロジェクトのパス> [--name システム名] [--force]
@@ -18,6 +18,7 @@ PLAN = [
     ("openapi.yaml", "docs/api/openapi.yaml"),
     ("adr.md", "docs/adr/_template.md"),
     ("agents.md", "AGENTS.md"),
+    ("code-rules.json", "code-rules.json"),
 ]
 
 
@@ -52,7 +53,7 @@ def main() -> int:
         print(f"作成: {d}")
     for d in skipped:
         print(f"スキップ（既存）: {d}")
-    print("次の手順: docs/prd.md → docs/design.md → docs/api/openapi.yaml の順に埋め、check_design.py で検査する")
+    print("次の手順: docs/prd.md → docs/design.md → docs/api/openapi.yaml の順に埋め、check_design.py で検査する。コードを書き始めたら check_code.py で検査する")
     return 0
 
 

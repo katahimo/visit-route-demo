@@ -40,13 +40,12 @@ import { type Staff, staffSchema } from '../contracts/documents';
 import { availabilityOf, slotsText } from '../domain/availability';
 import { addDays, jstDate } from '../domain/time';
 import { absenceText } from '../lib/absences';
-import { dateText, nameTaken, newId, TRAVEL_MODE_LABELS, WEEKDAY_LABELS } from '../lib/common';
+import { nameTaken, newId, TRAVEL_MODE_LABELS, WEEKDAY_LABELS } from '../lib/common';
 import { encodeStaffFilter } from '../lib/compatView';
+import { dateText, mdText } from '../lib/dateText';
 import { linkIfOn, suddenHref, workloadHref } from '../lib/links';
 import { normalizeEmail } from '../lib/mailto';
-import { ymOf } from '../lib/month';
 import { offboardScope } from '../lib/offboard';
-import { mdText } from '../lib/patternText';
 import {
   type CalView,
   calDates,
@@ -64,6 +63,7 @@ import { staffColorMap, staffIconError, surnameInitial } from '../lib/staffMark'
 import { useFeature, useFeatures } from '../lib/useFeature';
 import { isDirty, orDash } from '../lib/viewMode';
 import { hmText, workDayOf, workTotals } from '../lib/workload';
+import { ymOf } from '../lib/ym';
 import { useDemoData } from '../store';
 import { OffboardPanel } from './OffboardPanel';
 import './settings.css';

@@ -10,11 +10,12 @@ import { timeText } from '../domain/availability';
 import { jstDate } from '../domain/time';
 import { areaOf } from '../lib/area';
 import { STAGE_LABELS } from '../lib/clientStage';
-import { dateText, TRAVEL_MODE_LABELS, WEEKDAY_LABELS } from '../lib/common';
+import { TRAVEL_MODE_LABELS, WEEKDAY_LABELS } from '../lib/common';
 import { staffCompatCounts, traitText, weeklyHours } from '../lib/compatView';
+import { condText } from '../lib/condText';
+import { dateText } from '../lib/dateText';
 import { isOn } from '../lib/features';
 import { usualStaffMap, usualStaffOf } from '../lib/usualStaff';
-import { condText } from './conditions';
 
 /** 〈スタッフ〉の詳細：名前・移動手段・特性・稼働時間・最終勤務日・相性の件数・いつもの担当の人数と「〈スタッフ〉の画面で開く」 */
 export function StaffDetail({

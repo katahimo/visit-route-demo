@@ -1,4 +1,4 @@
-// 「欠勤・キャンセル」の欄（PRD D167〜D172。ADR-0025 追記・ADR-0011・ADR-0015）の段階・選択肢・文を決める純粋関数。
+// 「欠勤・キャンセル」の欄（PRD D167〜D172。ADR-0025・ADR-0011・ADR-0015）の段階・選択肢・文を決める純粋関数。
 // 計算（振り直し）は足さない：見込みは absenceParts の previewOf（targetsOf と案A）、振り直しは日の画面の今の仕組みを呼ぶだけ。データは書き換えない
 import type { Absence } from '../contracts/documents';
 import type { ReassignDiff, ReassignTarget } from '../contracts/reassign';

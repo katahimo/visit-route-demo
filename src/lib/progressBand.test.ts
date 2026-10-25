@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MonthProgress } from './month';
-import { bandHref, bandMonth, bandNext, urgentCount, visitsText } from './progressBand';
+import { bandHref, bandNext, urgentCount, visitsText } from './progressBand';
 
 /** 進み具合（既定は訪問のある日10日・全部確定・要対応なし） */
 function pg(x: Partial<MonthProgress> = {}): MonthProgress {
@@ -54,11 +54,7 @@ describe('urgentCount', () => {
   });
 });
 
-describe('bandMonth・bandHref・visitsText', () => {
-  it('選んでいる日付の月（月をまたぐ週も選んでいる日の月）', () => {
-    expect(bandMonth('2026-10-31')).toBe('2026-10');
-    expect(bandMonth('2026-11-01')).toBe('2026-11');
-  });
+describe('bandHref・visitsText', () => {
   it('月の画面の欄へ', () => {
     expect(bandHref('2026-11', 'batch')).toBe('/arrange?ym=2026-11');
     expect(bandHref('2026-10', 'unconfirmed')).toBe('/month?ym=2026-10&do=unconfirmed');

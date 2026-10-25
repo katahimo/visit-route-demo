@@ -1,8 +1,8 @@
 // 1人のルートの時刻（contracts/problem.ts の規則の唯一の実装）。solver・evaluate はここを使う
 import type { Problem, RouteTiming, StopTiming } from '../contracts/problem';
 
-/** 浮動小数の誤差の許し */
-const EPS = 1e-9;
+/** 浮動小数の誤差の許し（matching・solver・evaluate・reassign・vacancy で同じ値を使う） */
+export const EPS = 1e-9;
 
 /**
  * t0 以降で、作業 [t, t+duration] が時間帯の1つに収まる最も早い t。無ければ Infinity。
@@ -72,7 +72,7 @@ export function scheduleRoute(
 /**
  * strict の scheduleRoute と同じ規則で、ルートの費用（移動分＋待ち分×waitPerMinute＋割当費用）だけを
  * 配列を作らずに求める（solver の差分評価用）。違反があれば Infinity。
- * problem.stay（案B の変更の減点。ADR-0011 追記）があれば、元の担当と違う訪問・元の開始からのずれの点も足す
+ * problem.stay（案B の変更の減点。ADR-0011）があれば、元の担当と違う訪問・元の開始からのずれの点も足す
  * （evaluate の採点には入れない）
  */
 export function routeCost(problem: Problem, staff: number, visits: ArrayLike<number>, length = visits.length): number {

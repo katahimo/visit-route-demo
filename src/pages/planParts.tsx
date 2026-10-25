@@ -24,13 +24,13 @@ import { jstDate, minutesToHhmm } from '../domain/time';
 import { BALANCE_RULE_KEY, explain, toHundred } from '../evaluate';
 import { attempt, deltaText, pointsText, r0, r1, ruleTypeLabel } from '../lib/common';
 import { nextUnconfirmed } from '../lib/confirmDay';
+import { mdText } from '../lib/dateText';
 import { unassignedHref } from '../lib/links';
-import { addMonths, monthDates, ymOf } from '../lib/month';
-import { mdText } from '../lib/patternText';
 import { addPresetError, addPresetFromRules, PRESET_NAME_MAX } from '../lib/presets';
 import { reasonFace, type ScoreReason, scoreReasonLabel } from '../lib/scoreReason';
 import { useCompileInput } from '../lib/useDayModel';
 import { useDayStatuses } from '../lib/useDayStatuses';
+import { addMonths, monthDates, ymOf } from '../lib/ym';
 import { ALLOWED_STAFF_RULE_ID, VISIT_TYPE_RULE_ID } from '../matching';
 import { useDemoData } from '../store';
 
@@ -395,7 +395,7 @@ export function SavePresetForm({
 }
 
 /** 達成の件数の1行の文（例「18/20件」「◎○ 6件・△ 1件」「7/8人」） */
-export function achievementText(a: RuleAchievement): string {
+function achievementText(a: RuleAchievement): string {
   if (a.compat) {
     const c = a.compat;
     const parts = [`◎○ ${c.great + c.good}件`];
@@ -407,7 +407,7 @@ export function achievementText(a: RuleAchievement): string {
 }
 
 /** 条件の名前（ID → 条件の名前。負担の均等のキーは「負担の均等」） */
-export function achievementLabel(ruleId: string, rules: Rule[], terms: Terms): string {
+function achievementLabel(ruleId: string, rules: Rule[], terms: Terms): string {
   const r = rules.find((x) => x.id === ruleId);
   if (r) return r.label;
   if (ruleId === BALANCE_RULE_KEY) return ruleTypeLabel('balance', terms);
@@ -434,22 +434,6 @@ export function AchievementList({ list: all, rules, terms }: { list: RuleAchieve
       })}
     </div>
   );
-}
-
-/**
- * カード用の短い要約（希望・相性・いつもの担当の達成率）。例「希望 90%・相性◎○ 6件・継続 75%」。
- * 対象の型の条件が無ければ空
- */
-export function achievementSummary(list: RuleAchievement[], rules: Rule[]): string {
-  const typeOf = (id: string) => rules.find((r) => r.id === id)?.type;
-  const pct = (a: RuleAchievement) => (a.total > 0 ? `${Math.round((100 * a.met) / a.total)}%` : '—');
-  const out: string[] = [];
-  // 希望・相性・いつもの担当の順
-  for (const a of list.filter((x) => typeOf(x.ruleId) === 'clientPreference')) out.push(`希望 ${pct(a)}`);
-  for (const a of list.filter((x) => typeOf(x.ruleId) === 'compatibility'))
-    if (a.compat) out.push(`相性◎○ ${a.compat.great + a.compat.good}件`);
-  for (const a of list.filter((x) => typeOf(x.ruleId) === 'continuity')) out.push(`いつもの担当 ${pct(a)}`);
-  return out.join('・');
 }
 
 /**

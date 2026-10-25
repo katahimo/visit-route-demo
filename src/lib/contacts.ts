@@ -1,7 +1,8 @@
-// 欠勤・キャンセルの連絡（PRD D35・D244〜D246。ADR-0011 追記・ADR-0038）：差（reassign.contactsOf の一覧）と取り消した訪問から、
+// 欠勤・キャンセルの連絡（PRD D35・D244〜D246。ADR-0011・ADR-0038）：差（reassign.contactsOf の一覧）と取り消した訪問から、
 // 誰に何を伝えるかの一覧と連絡文を作る。送信はしない（画面がコピー・メールアプリを開くだけ）。呼び方は org.terms から渡す。純粋関数
 import type { ContactList, ContactVisit, StaffContact } from '../contracts/reassign';
-import { minutesToHhmm, weekday } from '../domain/time';
+import { weekday } from '../domain/time';
+import { clockTime } from './dateText';
 
 /**
  * 連絡文に使う名前・呼び方。敬称（訪問先の「様」・スタッフの「さん」）は固定で、呼び方（「スタッフ」など）が出る箇所は
@@ -37,7 +38,7 @@ export function dateWordOf(date: string): string {
 
 /** 分 → 「9:00」（24時間・時の0は付けない。D245） */
 export function clock(minutes: number | null): string {
-  return minutes === null ? '' : minutesToHhmm(minutes).replace(/^0(\d)/, '$1');
+  return minutes === null ? '' : clockTime(minutes);
 }
 
 /** 約束の開始の書き方（「9:00」・幅があれば「9:00〜9:30の間」。D245） */

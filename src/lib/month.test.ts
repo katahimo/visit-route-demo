@@ -8,27 +8,20 @@ import { createDemoData } from '../seed';
 import { confirmDay } from './confirmDay';
 import { dayProblemOf } from './dayPlan';
 import {
-  addMonths,
   attentionList,
   batchTargets,
-  calendarWeeks,
   clientDay,
-  clientMonth,
   type DayStatus,
   dayMarks,
   dayPlanOf,
   dayStatus,
-  firstDayOf,
   issueBreakdown,
-  isYm,
-  monthDates,
   monthProgress,
-  monthShown,
   staffDay,
   staffMonth,
-  ymOf,
 } from './month';
 import { attentionCountByDate } from './monthRest';
+import { addMonths, calendarWeeks, firstDayOf, isYm, monthDates, ymOf } from './ym';
 
 const TODAY = '2026-11-10';
 /** 11月のデモのデータ（繰り返しの担当で回が計算される。版2） */
@@ -283,7 +276,7 @@ describe('選んだスタッフ（staffDay・staffMonth）', () => {
   });
 });
 
-describe('選んだ利用者さん（clientDay・clientMonth）', () => {
+describe('選んだ利用者さん（clientDay）', () => {
   it('訪問の時刻・種類・担当、繰り返しの担当でない日は「代」、この回だけ変えた・取り消し・担当なしの印', () => {
     const d = selData();
     const c = clientDay(d, dayPlanOf(d, DATE), 'c1');
@@ -298,24 +291,6 @@ describe('選んだ利用者さん（clientDay・clientMonth）', () => {
     expect(c.visits[2]).toMatchObject({ cancelled: true, staffId: null, unassigned: false });
     const t = clientDay(d, dayPlanOf(d, TUE), 'c1');
     expect(t.visits[0]).toMatchObject({ staffId: null, unassigned: true });
-  });
-
-  it('月の集計：予定の回数・変更・取り消し・代わり・担当した人の内訳', () => {
-    const d = selData();
-    const m = clientMonth(d, [dayPlanOf(d, DATE), dayPlanOf(d, TUE)], 'c1');
-    expect(m).toEqual({
-      planned: 3,
-      edited: 1,
-      cancelled: 1,
-      sameDay: 0,
-      leave: 0,
-      substitute: 1,
-      byStaff: [
-        { staffId: 's1', count: 1 },
-        { staffId: 's2', count: 1 },
-        { staffId: null, count: 1 },
-      ],
-    });
   });
 });
 
@@ -419,26 +394,13 @@ describe('最終勤務日・当日キャンセル（ADR-0015）', () => {
     expect(staffDay(d, dayPlanOf(d, DATE), 's3').retired).toBe(false);
   });
 
-  it('〈利用者さん〉の月の集計に当日キャンセルの回数', () => {
+  it('〈利用者さん〉の日の訪問に当日キャンセルの印', () => {
     const d = selData();
     const x = {
       ...d,
       visits: d.visits.map((v) => (v.id === 'x' ? { ...v, cancelKind: 'sameDay' as const } : v)),
     };
-    const sum = clientMonth(x, [dayPlanOf(x, DATE)], 'c1');
-    expect(sum.cancelled).toBe(1);
-    expect(sum.sameDay).toBe(1);
     expect(clientDay(x, dayPlanOf(x, DATE), 'c1').visits.find((v) => v.visitId === 'x')?.sameDay).toBe(true);
-    expect(clientMonth(d, [dayPlanOf(d, DATE)], 'c1').sameDay).toBe(0);
-  });
-});
-
-describe('monthShown（PRD D268）', () => {
-  it('?ym= が正しければその月、無い・正しくなければ選んでいる日付の月', () => {
-    expect(monthShown('?ym=2026-11', '2026-10-21')).toBe('2026-11');
-    expect(monthShown('?ym=2026-11&do=batch', '2026-10-21')).toBe('2026-11');
-    expect(monthShown('', '2026-10-21')).toBe('2026-10');
-    expect(monthShown('?ym=2026-13', '2026-10-21')).toBe('2026-10');
-    expect(monthShown('?ym=abc', '2026-10-21')).toBe('2026-10');
+    expect(clientDay(d, dayPlanOf(d, DATE), 'c1').visits.find((v) => v.visitId === 'x')?.sameDay).toBe(false);
   });
 });

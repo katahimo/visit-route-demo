@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DemoData } from '../contracts/data';
-import { isLateMonth, nextYm, planLabel, planYm, unassignedDays } from './scheduleMode';
+import { isLateMonth, nextYm, planLabel, planYm, unassignedDayCount } from './scheduleMode';
 
 describe('月の後半・組む月', () => {
   it('15日から後半', () => {
@@ -18,7 +18,7 @@ describe('月の後半・組む月', () => {
   });
 });
 
-describe('unassignedDays', () => {
+describe('unassignedDayCount', () => {
   const base = {
     patterns: [],
     clients: [{ id: 'c1', active: true }],
@@ -49,7 +49,7 @@ describe('unassignedDays', () => {
       ],
       snapshots: { '2026-11-06': {} },
     } as unknown as DemoData;
-    expect(unassignedDays(data, '2026-11', '2026-10-24')).toBe(2);
-    expect(unassignedDays(data, '2026-11', '2026-11-03')).toBe(1);
+    expect(unassignedDayCount(data, '2026-11', '2026-10-24')).toBe(2);
+    expect(unassignedDayCount(data, '2026-11', '2026-11-03')).toBe(1);
   });
 });

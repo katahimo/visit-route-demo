@@ -1,9 +1,9 @@
 // 素朴な案（solver の初期解の候補。ADR-0007。点数の基準には使わない）：AI案が素朴な案より悪くならないようにする。乱数・時刻は使わない（決定的）
 import type { Problem } from '../contracts/problem';
-import { routeCost } from './timing';
+import { overCap } from './cost';
+import { EPS, routeCost } from './timing';
 
 const INF = Number.POSITIVE_INFINITY;
-const EPS = 1e-9;
 
 /**
  * 素朴な案（staff 添字ごとの訪問添字の列）。訪問を、担当できる人の少ない順・開始（earliest）の早い順に、可否・件数の上限を満たす担当それぞれについて、
@@ -17,7 +17,6 @@ export function naiveSeqs(problem: Problem): number[][] {
   const cand = problem.visits.map((_, v) => problem.allowed[v]!.filter(Boolean).length);
   order.sort((a, b) => cand[a]! - cand[b]! || problem.visits[a]!.earliest - problem.visits[b]!.earliest || a - b);
   const seqs: number[][] = problem.staff.map(() => []);
-  const cap = problem.balance?.cap ?? null;
   const tr = problem.travel;
   for (const v of order) {
     const to = problem.visits[v]!.point;
@@ -27,7 +26,7 @@ export function naiveSeqs(problem: Problem): number[][] {
     for (let s = 0; s < problem.staff.length; s++) {
       if (!problem.allowed[v]![s]) continue;
       const seq = seqs[s]!;
-      if (cap && seq.length + 1 > cap[s]!) continue;
+      if (overCap(problem.balance, s, seq.length + 1)) continue;
       const home = problem.staff[s]!.point;
       for (let p = 0; p <= seq.length; p++) {
         const prev = p === 0 ? home : problem.visits[seq[p - 1]!]!.point;

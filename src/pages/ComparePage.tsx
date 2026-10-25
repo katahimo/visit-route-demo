@@ -32,9 +32,10 @@ import { Hint, IconButton, PageHeader, SectionTitle, Stat, WithIcon } from '../c
 import { useUndoAction } from '../components/undo';
 import type { Visit } from '../contracts/documents';
 import type { Reason, VisitExplain } from '../contracts/problem';
-import { HARDABLE, type Rule } from '../contracts/rules';
+import type { Rule } from '../contracts/rules';
 import { achievements, diff, hundredBreakdown, ruleLowerBounds, score, toHundred } from '../evaluate';
-import { attempt, dateText, deltaText, formError, newId, own, pointsText, r0 } from '../lib/common';
+import { attempt, deltaText, formError, newId, own, pointsText, r0, ruleWeightText } from '../lib/common';
+import { dateText } from '../lib/dateText';
 import { aiPinsOf, routesOf, unassignedOf, writeRoutes } from '../lib/dayPlan';
 import { compareEmptyGuide } from '../lib/emptyGuide';
 import { isDate } from '../lib/isDate';
@@ -73,13 +74,6 @@ type Choice = {
 };
 const CURRENT = 'current';
 const BEFORE = 'before';
-
-/** 条件の重みの短い表示（例「重み3」「必須」「無効」） */
-function weightText(r: Rule | undefined): string {
-  if (!r) return '（なし）';
-  if (r.hard && HARDABLE.has(r.type)) return r.type === 'balance' ? `必須・重み${r.weight}` : '必須';
-  return r.weight === 0 ? '無効' : `重み${r.weight}`;
-}
 
 export default function ComparePage() {
   const { date, setDate } = useDay();
@@ -398,7 +392,7 @@ export default function ComparePage() {
     return ids.map((id) => {
       const ra = A.rules.find((r) => r.id === id);
       const rb = B.rules.find((r) => r.id === id);
-      return { id, label: (rb ?? ra)?.label ?? id, a: weightText(ra), b: weightText(rb) };
+      return { id, label: (rb ?? ra)?.label ?? id, a: ruleWeightText(ra), b: ruleWeightText(rb) };
     });
   }, [A, B]);
 

@@ -1,29 +1,18 @@
 // 予定の画面の時間軸（PRD D58。design.md §4 pages「予定の画面の時間軸」）の位置の計算。
 // 分 → px、列の背景（稼働時間帯の外・欠勤）、移動・待ちの区間、ドラッグ中の影の可否。データは書き換えない
 import type { Problem, StopTiming } from '../contracts/problem';
-import { hhmmToMinutes } from '../domain/time';
-import { bestInsertion, scheduleRoute, VISIT_TYPE_RULE_ID } from '../matching';
+import { bestInsertion, scheduleRoute } from '../matching';
 import { own } from './common';
+import { DAY_END, DAY_START, type Span } from './spans';
 
-/** 時間軸の縦の範囲の初期値（0時からの分）：07:00〜20:00 */
-export const TL_START = 7 * 60;
-export const TL_END = 20 * 60;
 /** 1分の高さ（px） */
 export const TL_PX_PER_MIN = 1.1;
-
-/** 時刻の区間（0時からの分。start ＜ end） */
-export type Span = { start: number; end: number };
-
-/** "HH:mm" の時間帯を分の区間に */
-export function spansOf(slots: { start: string; end: string }[]): Span[] {
-  return slots.map((s) => ({ start: hhmmToMinutes(s.start), end: hhmmToMinutes(s.end) }));
-}
 
 /**
  * 時間軸の縦の範囲：07:00〜20:00 を基本に、spans（稼働時間帯・帯・移動）がはみ出せば1時間単位で広げる。
  * 0〜24時の外へは広げない。数でない値は無視する
  */
-export function timeRange(spans: Span[], base: Span = { start: TL_START, end: TL_END }): Span {
+export function timeRange(spans: Span[], base: Span = { start: DAY_START, end: DAY_END }): Span {
   let start = base.start;
   let end = base.end;
   for (const s of spans) {
@@ -143,15 +132,4 @@ export function shadowOf(
   const index = new Map(problem.visits.map((x, i) => [x.id, i]));
   const seq = col.map((id) => index.get(id)).filter((x): x is number => x !== undefined);
   return { ...span, ok: scheduleRoute(problem, s, seq, 'strict') !== null, allowed };
-}
-
-/** 担当が訪問の種類の必要条件で可でないか（「資格✗」の印）。問題に無い・担当がいないなら false */
-export function typeUnfitOf(problem: Problem | null, visitId: string, staffId: string | null): boolean {
-  if (!problem || !staffId) return false;
-  const v = problem.visits.findIndex((x) => x.id === visitId);
-  const s = problem.staff.findIndex((x) => x.id === staffId);
-  if (v < 0 || s < 0) return false;
-  return (problem.reasons[v]?.[s] ?? []).some(
-    (r) => r.ruleId === VISIT_TYPE_RULE_ID && r.points === Number.POSITIVE_INFINITY,
-  );
 }

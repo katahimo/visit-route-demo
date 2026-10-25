@@ -5,7 +5,7 @@ import type { Condition, Item } from '../contracts/rules';
 import { visitsOn } from '../patterns';
 import { createDemoData } from '../seed';
 import { withSeedPlans } from '../seed/plans';
-import { isImportError, migrate } from '../store';
+import { isImportError, migrate } from '../store/persist';
 import { MAX_FILE_BYTES, MAX_ROWS, prim } from './importBook';
 import {
   exportRosterWorkbook,
@@ -907,7 +907,7 @@ describe('種類・定期パターンのシート（ADR-0012）', () => {
   });
 });
 
-describe('〈利用者さん〉の仮押さえの列（ADR-0012 追記。段階3）', () => {
+describe('〈利用者さん〉の仮押さえの列（ADR-0012。段階3）', () => {
   const withTentative = (d: DemoData): DemoData => ({
     ...d,
     // 仮押さえは利用中の前の段階だけ（ADR-0015）

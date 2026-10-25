@@ -34,7 +34,6 @@ import {
 } from '../components/visitParts';
 import { TypeDot } from '../components/visitType';
 import type { Visit } from '../contracts/documents';
-import { timeText } from '../domain/availability';
 import { addDays, hhmmToMinutes, jstDate, minutesToHhmm, weekday } from '../domain/time';
 import { barEdgeNote, barRowsText } from '../lib/barRows';
 import {
@@ -49,8 +48,8 @@ import {
   WEEK_TABLE_FILTER,
 } from '../lib/clientFilter';
 import { colorOf } from '../lib/colors';
-import { dateText } from '../lib/common';
 import { bulkConfirmDialog, bulkConfirmTargets, confirmDay } from '../lib/confirmDay';
+import { clockTime, dateText, mdText } from '../lib/dateText';
 import { periodEmptyGuide } from '../lib/emptyGuide';
 import { isDate } from '../lib/isDate';
 import { attentionList } from '../lib/month';
@@ -58,6 +57,7 @@ import { monthBatch } from '../lib/monthBatch';
 import { staffLabels } from '../lib/monthPrint';
 import { typeOf } from '../lib/patternText';
 import { scrollLeftToShow } from '../lib/scrollEdge';
+import { DAY_END, DAY_START } from '../lib/spans';
 import {
   clientParamOf,
   handoffFromTable,
@@ -79,8 +79,6 @@ import {
   canMoveVisit,
   clientItemMark,
   clientWeekTable,
-  DAY_END,
-  DAY_START,
   insertIntoPlan,
   laneLayout,
   qualificationBadges,
@@ -98,9 +96,10 @@ import { isTimeline, WEEK_VIEWS, type WeekView, weekViewLabel, weekViewOf, weekV
 import { findVisit, visitsOn } from '../patterns';
 import { WeekMailPanel } from './mailPanels';
 import './week.css';
+import { paramOf } from '../lib/common';
 
 /**
- * 週間（ADR-0012 追記の段階2。PRD D49〜D51・D56・D57。design.md §4 pages「週間（段階2）」「月間・週間の改定（2026-10-17）」）。
+ * 週間（ADR-0012の段階2。PRD D49〜D51・D56・D57。design.md §4 pages「週間（段階2）」「月間・週間の改定（2026-10-17）」）。
  * 時間軸（月〜日 × 07:00〜20:00。訪問の帯を種類の色で。ドラッグ・キーボードで日時を動かす）と〈スタッフ〉×曜日・〈利用者さん〉×曜日の表。
  * 表示は1つの切り替え（時間軸：〈スタッフ〉／時間軸：〈利用者さん〉／〈スタッフ〉×曜日／〈利用者さん〉×曜日。PRD D188。lib/weekView）。〈スタッフ〉はチップで複数選ぶ（?staff=s1,s2。無ければ全員）。
  * 時間軸の〈利用者さん〉は、この週に訪問がある人をチップ PickChips で並べて選ぶ（PRD D136〜D139。?by=client・?client=c1,c2。
@@ -126,15 +125,9 @@ const VIEW_TEST_ID: Record<WeekView, string> = {
 /** 1分あたりの高さ（px） */
 const PX_PER_MIN = 0.8;
 const HOURS = Array.from({ length: (DAY_END - DAY_START) / 60 + 1 }, (_, i) => DAY_START + i * 60);
-
-const hm = (m: number) => timeText(minutesToHhmm(m));
 /** 日の見出しの件数：休み（ADR-0013）のため無しの訪問を除く */
 const liveCount = (day: WeekDay) => day.bands.filter((b) => !b.leave).length;
-const md = (d: string) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
 
-/** URL の ?staff= ?client= ?cf= の値（無ければ null） */
-const paramOf = (params: URLSearchParams, key: string): string | null =>
-  params.has(key) ? (params.get(key) ?? '') : null;
 /** 選んだ人（null＝全員、空なら []＝だれも選ばない） */
 const selectionOf = (raw: string | null): string[] | null => (raw === null ? null : raw.split(',').filter(Boolean));
 
@@ -619,7 +612,7 @@ export default function WeekPage() {
     const s = b.staffId ? staffById.get(b.staffId) : undefined;
     return {
       visitId: b.visitId,
-      time: `${hm(b.start)}〜${hm(b.end)}`,
+      time: `${clockTime(b.start)}〜${clockTime(b.end)}`,
       title: clientName(v),
       staff: s ?? null,
       staffName: b.staffId ? (s?.name ?? '（不明）') : '',
@@ -634,7 +627,7 @@ export default function WeekPage() {
     const s = it.staffId ? staffById.get(it.staffId) : undefined;
     return {
       visitId: it.visitId,
-      time: `${hm(it.start)}〜${hm(it.end)}`,
+      time: `${clockTime(it.start)}〜${clockTime(it.end)}`,
       title: clientName(visitById.get(it.visitId)),
       staff: s ?? null,
       staffName: it.staffId ? (s?.name ?? '（不明）') : '',
@@ -655,7 +648,7 @@ export default function WeekPage() {
       return;
     }
     update((d) => insertIntoPlan(d, notice.date, notice.visitId).data, '空き時間に入れる');
-    toast(`${md(notice.date)} の空き時間に入れました（担当：${staffName(r.staffId)}）`);
+    toast(`${mdText(notice.date)} の空き時間に入れました（担当：${staffName(r.staffId)}）`);
     setNotice(null);
   };
 
@@ -973,7 +966,7 @@ export default function WeekPage() {
           {notice.error && <p className="warn-text">{notice.error}</p>}
           <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
             <button type="button" className="btn btn-primary" onClick={insert} disabled={!!notice.error}>
-              <WithIcon icon={Sparkles}>{md(notice.date)} の空き時間に入れる</WithIcon>
+              <WithIcon icon={Sparkles}>{mdText(notice.date)} の空き時間に入れる</WithIcon>
             </button>
             <button type="button" className="btn" onClick={() => openDay(notice.date)}>
               <WithIcon icon={RefreshCw}>その日を開く</WithIcon>
@@ -1037,7 +1030,7 @@ export default function WeekPage() {
             <div className="week-gutter" style={{ height: (DAY_END - DAY_START) * PX_PER_MIN }}>
               {HOURS.map((h) => (
                 <span key={h} className="week-hour" style={{ top: (h - DAY_START) * PX_PER_MIN }}>
-                  {hm(h)}
+                  {clockTime(h)}
                 </span>
               ))}
             </div>
@@ -1163,10 +1156,10 @@ export default function WeekPage() {
                                 return (
                                   <VisitChip
                                     visitId={b.visitId}
-                                    time={hm(b.start)}
+                                    time={clockTime(b.start)}
                                     short={initialOf(name)}
-                                    label={`${hm(b.start)} ${name}さん${look?.text ? `・${look.text}` : ''}${on ? '（選択中）' : ''}（押すと訪問の詳細）`}
-                                    title={`${hm(b.start)}〜${hm(b.end)} ${name}${look?.text ? `（${look.text}）` : ''}`}
+                                    label={`${clockTime(b.start)} ${name}さん${look?.text ? `・${look.text}` : ''}${on ? '（選択中）' : ''}（押すと訪問の詳細）`}
+                                    title={`${clockTime(b.start)}〜${clockTime(b.end)} ${name}${look?.text ? `（${look.text}）` : ''}`}
                                     look={look}
                                     color={t ? colorOf(t.color) : null}
                                     selected={on}
@@ -1309,11 +1302,11 @@ export default function WeekPage() {
                                   const movable = canMoveVisit(it.date, today) && !it.leave && !it.cancelled;
                                   const look = lookOf(it.visitId);
                                   const on = multi.has(it.visitId);
-                                  const text = `${hm(it.start)}〜${hm(it.end)} ${type ? `${type.name}・` : ''}${mk.text}${look?.text ? `・${look.text}` : ''}`;
+                                  const text = `${clockTime(it.start)}〜${clockTime(it.end)} ${type ? `${type.name}・` : ''}${mk.text}${look?.text ? `・${look.text}` : ''}`;
                                   return (
                                     <VisitChip
                                       visitId={it.visitId}
-                                      time={hm(it.start)}
+                                      time={clockTime(it.start)}
                                       short={
                                         mk.kind === 'visit' && it.staffId ? (
                                           <>
@@ -1490,8 +1483,8 @@ function DayColumn({
               background: color ?? undefined,
               borderColor: !bad && b.staffId !== null && edge ? edge : undefined,
             }}
-            title={`${hm(b.start)}〜${hm(b.end)} ${client}・${staff}${look?.text ? `（${look.text}）` : ''}`}
-            aria-label={`${hm(b.start)} ${client}・${staff}${look?.text ? `・${look.text}` : ''}${on ? '（選択中）' : ''}（押すと訪問の詳細）`}
+            title={`${clockTime(b.start)}〜${clockTime(b.end)} ${client}・${staff}${look?.text ? `（${look.text}）` : ''}`}
+            aria-label={`${clockTime(b.start)} ${client}・${staff}${look?.text ? `・${look.text}` : ''}${on ? '（選択中）' : ''}（押すと訪問の詳細）`}
             {...drag.source(b.visitId, movable)}
             {...itemProps(b.visitId, { selectable: movable, movable, selected: on })}
             data-testid="week-band"
@@ -1500,7 +1493,7 @@ function DayColumn({
             data-marks={look?.kinds ?? ''}
           >
             <span className="week-band-time">
-              {hm(b.start)}
+              {clockTime(b.start)}
               <VisitMarks look={look} size={10} className="week-band-marks" />
             </span>
             <span className="week-band-client">{client}</span>

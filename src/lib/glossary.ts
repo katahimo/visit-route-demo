@@ -1,4 +1,4 @@
-// 画面に出る用語の言い換えと短い説明（PRD D174・D175。ADR-0025 追記）。
+// 画面に出る用語の言い換えと短い説明（PRD D174・D175。ADR-0025）。
 // 表示だけを変える：契約・データのキー名（span・wait・seed など）は変えない。説明は用語の説明の部品（components/Term）で出す。
 // 文の中の〈staff〉〈client〉は事業所の呼び方（org.terms）に置き換える（「お客様」「シッター」を直書きしない）
 import type { Terms } from '../contracts/documents';

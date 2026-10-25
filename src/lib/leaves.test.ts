@@ -5,8 +5,8 @@ import type { ClientLeave, Visit } from '../contracts/documents';
 import { addDays } from '../domain/time';
 import { compile } from '../matching';
 import { client, DATE, makeData, problemKey, staff, visit } from '../matching/fixtures';
-import { leaveConfirmedDates, leavesOf, leaveVisits, leaveVisitsOn, removeLeave, saveLeave } from './leaves';
-import { activeVisitsOn, batchTargets, clientDay, clientMonth, dayMarks, dayPlanOf, dayStatus } from './month';
+import { leaveConfirmedDates, leavesOf, leaveVisits, removeLeave, saveLeave } from './leaves';
+import { activeVisitsOn, batchTargets, clientDay, dayMarks, dayPlanOf, dayStatus } from './month';
 import { weekDay } from './week';
 
 const TUE = addDays(DATE, 1);
@@ -43,11 +43,9 @@ describe('lib/leaves', () => {
     expect(r.visits).toBe(d.visits);
   });
 
-  it('leaveVisits・leaveVisitsOn：期間の、その〈利用者さん〉の取り消しでない訪問だけ', () => {
+  it('leaveVisits：期間の、その〈利用者さん〉の取り消しでない訪問だけ', () => {
     const d = data({ clientLeaves: [L1] });
     expect(leaveVisits(d, L1).map((v) => v.id)).toEqual(['a1', 'b1']);
-    expect(leaveVisitsOn(d, TUE).map((x) => [x.visit.id, x.leave.id])).toEqual([['b1', 'l1']]);
-    expect(leaveVisitsOn(d, WED)).toEqual([]);
   });
 
   it('leaveConfirmedDates：伝えた内容にその〈利用者さん〉の担当のある訪問がある日だけ（担当なしは数えない）', () => {
@@ -93,8 +91,6 @@ describe('休みの訪問は派生で外す（ADR-0013）', () => {
     expect(all(data())).toContain(TUE);
     const day = clientDay(d, dayPlanOf(d, DATE), 'c1');
     expect(day.visits.map((v) => [v.visitId, v.leave, v.unassigned])).toEqual([['a1', true, false]]);
-    const sum = clientMonth(d, [dayPlanOf(d, DATE), dayPlanOf(d, TUE), dayPlanOf(d, WED)], 'c1');
-    expect(sum).toMatchObject({ planned: 1, leave: 2, cancelled: 1 });
   });
 
   it('週：休みの訪問は leave 付きの帯（担当なし・訪問の開始）', () => {

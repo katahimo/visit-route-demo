@@ -41,9 +41,9 @@ import { isBeforeActive, STAGE_LABELS, stageChoices, withStage } from '../lib/cl
 import { CLIENT_COLORS, colorOf, initialOf } from '../lib/colors';
 import { byName, hasLocation, nameTaken, newId } from '../lib/common';
 import { traitText } from '../lib/compatView';
+import { mdText } from '../lib/dateText';
 import { leavesOf } from '../lib/leaves';
 import { normalizeEmail } from '../lib/mailto';
-import { mdText } from '../lib/patternText';
 import {
   type CalView,
   CLIENT_TABS,

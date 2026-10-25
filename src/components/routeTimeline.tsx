@@ -5,14 +5,17 @@ import { Car, House } from 'lucide-react';
 import type { CSSProperties, DragEvent, KeyboardEvent, ReactNode } from 'react';
 import { minutesToHhmm } from '../domain/time';
 import { r0 } from '../lib/common';
-import { backgroundOf, boxOf, hourMarks, type LegSpan, type Span, TL_PX_PER_MIN, timeRange } from '../lib/timeline';
+import { clockTime } from '../lib/dateText';
+import type { Span } from '../lib/spans';
+import { backgroundOf, boxOf, hourMarks, type LegSpan, TL_PX_PER_MIN, timeRange } from '../lib/timeline';
+import { isMultiClick } from '../lib/visitSelect';
 import { EdgeScroll } from './EdgeScroll';
 
 /**
  * 列の最小の幅（px。PRD D269）：1366px の画面で多くの列が入るよう詰める（前は 150px）。名前は折り返して切らない
  * （routeTimeline.css の .tl-head）
  */
-export const TL_COL_MIN_PX = 128;
+const TL_COL_MIN_PX = 128;
 
 /** 時間軸の帯1つ（訪問） */
 export type TimelineBand = {
@@ -103,7 +106,7 @@ export function RouteTimeline({
         <div className="tl-gutter" style={{ height }} aria-hidden="true">
           {marks.map((m) => (
             <span key={m} className="tl-hour" style={{ top: (m - range.start) * px }}>
-              {minutesToHhmm(m).replace(/^0/, '')}
+              {clockTime(m)}
             </span>
           ))}
         </div>
@@ -218,7 +221,7 @@ function Band({
   alignRight: boolean;
 }) {
   const box = boxOf(b, range, px, MIN_BAND_PX);
-  const time = `${minutesToHhmm(b.start).replace(/^0/, '')}〜${minutesToHhmm(b.end).replace(/^0/, '')}`;
+  const time = `${clockTime(b.start)}〜${clockTime(b.end)}`;
   return (
     <>
       <div
@@ -245,7 +248,7 @@ function Band({
           aria-label={`${time} ${b.name}${b.note ? `（${b.note}）` : ''}${b.multi ? '（選択中）' : ''}`}
           title={`${time} ${b.name}${b.note ? `\n${b.note}` : ''}\n押すと理由を見られます。ドラッグで別の担当へ移せます${b.onMulti ? '。Shift・Ctrl＋クリックで複数選べます' : ''}${b.onKey ? '。↑↓で15分・←→で1日・Shift+←→で隣の担当・Enterで詳細・Deleteで取り消し' : ''}`}
           onClick={(ev) => {
-            if (b.onMulti && (ev.shiftKey || ev.ctrlKey || ev.metaKey)) {
+            if (b.onMulti && isMultiClick(ev)) {
               ev.preventDefault();
               b.onMulti();
               return;
@@ -259,7 +262,7 @@ function Band({
             if (b.onKey?.(ev)) return;
             if (ev.key === 'Enter' || ev.key === ' ') {
               ev.preventDefault();
-              if (b.onMulti && (ev.shiftKey || ev.ctrlKey || ev.metaKey)) b.onMulti();
+              if (b.onMulti && isMultiClick(ev)) b.onMulti();
               else b.onPick();
             }
           }}

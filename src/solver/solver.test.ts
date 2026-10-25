@@ -125,7 +125,7 @@ describe('solver', () => {
   }, 120000);
 });
 
-describe('初期解の候補（SolveOptions.initial。欠勤の振り直しの案B。ADR-0011 追記）', () => {
+describe('初期解の候補（SolveOptions.initial。欠勤の振り直しの案B。ADR-0011）', () => {
   it('候補より悪くならない。可でない・回れない候補は使わない（落ちない）。決定的', () => {
     const p = withConditions(11, 6, 30);
     const good = solve(p, { seed: 1, iterations: 200_000 });

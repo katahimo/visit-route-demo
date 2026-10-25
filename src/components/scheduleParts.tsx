@@ -8,7 +8,7 @@ import { type ReactNode, type Ref, useEffect, useMemo, useRef, useState } from '
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import type { DemoData } from '../contracts/data';
 import { jstDate } from '../domain/time';
-import { dateText } from '../lib/common';
+import { dateText } from '../lib/dateText';
 import { batchHref, monthBatch, proposalCounts, proposalDayFresh } from '../lib/monthBatch';
 import { assignMany, cancelMany, moveManyToDate, multiResultText, selectionText, shiftMany } from '../lib/multiEdit';
 import { absenceHref } from '../lib/nav';

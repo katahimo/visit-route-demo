@@ -3,20 +3,14 @@
 import type { DemoData } from '../contracts/data';
 import type { Absence, Visit } from '../contracts/documents';
 import { leaveOn } from '../domain/leaves';
-import { addDays, hhmmToMinutes, weekday } from '../domain/time';
-import { own, WEEKDAY_LABELS } from './common';
-import { addMonths, ymOf } from './month';
-import { mdText } from './patternText';
+import { addDays, hhmmToMinutes } from '../domain/time';
+import { own } from './common';
+import { dateText, ymText } from './dateText';
 import { clientVisitsIn, staffVisitsIn } from './visitOps';
 import { weekDates, weekStart } from './week';
+import { addMonths, ymOf } from './ym';
 
 // ---- ルートとタブ ----
-
-/** 全画面の〈利用者さん〉・〈スタッフ〉の画面のパス（`/clients/:id`・`/staff/:id`）か。一覧（`/clients`）は含めない */
-export const personPathKind = (pathname: string): 'client' | 'staff' | null => {
-  const m = /^\/(clients|staff)\/[^/]+$/.exec(pathname);
-  return m ? (m[1] === 'clients' ? 'client' : 'staff') : null;
-};
 
 /** 新しい人の画面の ID（`/clients/new`・`/staff/new`） */
 export const NEW_PERSON_ID = 'new';
@@ -86,10 +80,9 @@ export function shiftAnchor(view: CalView, anchor: string, dir: -1 | 1): string 
 
 /** 期間の見出し（「10/19（月）〜10/25（日）」「2026年10月」） */
 export function calTitle(view: CalView, anchor: string): string {
-  if (view === 'month') return `${anchor.slice(0, 4)}年${Number(anchor.slice(5, 7))}月`;
+  if (view === 'month') return ymText(anchor);
   const d = weekDates(anchor);
-  const t = (x: string) => `${mdText(x)}（${WEEKDAY_LABELS[weekday(x)]}）`;
-  return `${t(d[0]!)}〜${t(d[6]!)}`;
+  return `${dateText(d[0]!)}〜${dateText(d[6]!)}`;
 }
 
 /** カレンダーの回の様子 */
@@ -190,9 +183,6 @@ export function slotOf(a: number, b: number, fallback = 60, step = 15): { start:
   if (a === b) return { start: a, duration: fallback };
   return { start: Math.min(a, b), duration: Math.abs(b - a) + step };
 }
-
-/** 確定した（伝えた）日か（カレンダーの日の見出しの印） */
-export const confirmedOn = (d: Pick<DemoData, 'snapshots'>, date: string): boolean => !!own(d.snapshots, date);
 
 /** 〈利用者さん〉から見た〈スタッフ〉の相性（記号ごと。数えるのは渡した〈スタッフ〉。並びは渡した順） */
 export function clientStaffGroups<S extends { id: string }>(

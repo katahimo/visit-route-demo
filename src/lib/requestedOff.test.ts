@@ -2,17 +2,9 @@
 import { describe, expect, it } from 'vitest';
 import type { DemoData } from '../contracts/data';
 import type { Absence } from '../contracts/documents';
-import { compile } from '../matching';
 import { client, DATE, makeData, staff, visit } from '../matching/fixtures';
 import { attentionList, dayMarks, dayPlanOf, dayStatus, staffDay, staffMonth } from './month';
-import {
-  absentLeftOf,
-  isRequestedOff,
-  offDayState,
-  REQUESTED_OFF_NOTE,
-  requestedOffDates,
-  toggleRequestedOff,
-} from './requestedOff';
+import { isRequestedOff, offDayState, REQUESTED_OFF_NOTE, requestedOffDates, toggleRequestedOff } from './requestedOff';
 
 /** DATE は月曜。s1・s2 は平日勤務 */
 const SAT = '2026-10-17';
@@ -73,19 +65,7 @@ describe('希望休の判定と付け外し', () => {
   });
 });
 
-describe('休みの人に残る訪問（absentLeftOf）と月の印', () => {
-  it('希望休の人に案の訪問が残れば数える。時間帯の欠勤は重なる訪問だけ', () => {
-    const d = data({ absences: [off('a1', 's1', DATE)] });
-    const p = compile(d, DATE);
-    expect(absentLeftOf(p, { s1: ['v1'], s2: [] })).toBe(1);
-    expect(absentLeftOf(p, { s1: [], s2: ['v1'] })).toBe(0);
-    expect(absentLeftOf(p, { s1: ['v1'] }, 's2')).toBe(0);
-    const late = data({ absences: [off('a1', 's1', DATE, { from: '13:00', note: '' })] });
-    expect(absentLeftOf(compile(late, DATE), { s1: ['v1'] })).toBe(0);
-    const early = data({ absences: [off('a1', 's1', DATE, { to: '12:00', note: '' })] });
-    expect(absentLeftOf(compile(early, DATE), { s1: ['v1'] })).toBe(1);
-  });
-
+describe('休みの人の月の印', () => {
   it('dayStatus：休みの人に担当のある訪問は「担当が休み」の要対応（版2。訪問ごとの検査）', () => {
     const staffed = [visit('v1', 'c1', '10:00', '11:00', { staffId: 's1' })];
     const d = data({ absences: [off('a1', 's1', DATE)], visits: staffed });

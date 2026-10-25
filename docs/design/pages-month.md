@@ -77,7 +77,7 @@
 
 #### 表示の選択（PRD D55）
 
-数えるのはその日の今の案（無ければ確定した割当）。純粋関数 `lib/month` の `staffDay`・`clientDay`・`staffMonth`・`clientMonth`・`attentionList`（テストあり）。
+数えるのはその日の今の案（無ければ確定した割当）。純粋関数 `lib/month` の `staffDay`・`clientDay`・`staffMonth`・`attentionList`（テストあり）。
 
 - 〈スタッフ〉を選んだとき：
   - マスは短い文字（休・欠勤・欠勤あり・希望休（紫）・最終勤務日の後のときだけ。`month-shift`）＋3段バー（`StaffDay.bar`。案の無い日は勤務内を「案なし」。`month-staff-noplan`）。勤務の無い日の頭の「休」は `isAllRest` のとき `sr-only`（欠勤・希望休・最終勤務日の後の文字は理由なので残す）
@@ -155,12 +155,12 @@
 - `activeVisitsOn`：件数（訪問・種類ごと）・状態は取り消し・休みの訪問を数えない（訪問は `visitsOn`）
 - `dayStatus(data, date, view)`：`DayStatus`（上）。`needsCare`＝要対応の訪問がある
 - `batchTargets(data, dates, today, mode, statusOf)`：今日以降・伝えていない（`state` が none）日のうち、`'care'` なら要対応の訪問がある日、`'all'` なら訪問のある日すべて
-- `dayPlanOf`・`dayMarks`・`staffDay`・`staffMonth`・`clientDay`・`clientMonth`・`issueBreakdown`・`attentionList`（`care`・`changed`・`overSpan`）
+- `dayPlanOf`・`dayMarks`・`staffDay`・`staffMonth`・`clientDay`・`issueBreakdown`・`attentionList`（`care`・`changed`・`overSpan`）
 - `monthProgress(data, ym, today, statusOf)`：その月の今日以降について 訪問の件数・担当が全部入った日/訪問のある日・確定した日/訪問のある日・要対応の件数・確定していない日
 
 #### `lib/requestedOff.ts`（純粋関数。テストあり）
 
-`REQUESTED_OFF_NOTE`・`isRequestedOff`・`offDayState(data, staffId, date, today)`・`toggleRequestedOff(d, staffId, date, today, newId)`・`requestedOffDates(data, staffId, ym)`・`absentLeftIds(problem, routes, staffId?)`（最終勤務日の後の人に残る訪問も含む）・`absentLeftOf`（件数）
+`REQUESTED_OFF_NOTE`・`isRequestedOff`・`offDayState(data, staffId, date, today)`・`toggleRequestedOff(d, staffId, date, today, newId)`・`requestedOffDates(data, staffId, ym)`
 
 ### 月の印刷（`#/month/print?ym=&staff=`。PRD D70）
 

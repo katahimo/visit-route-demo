@@ -2,12 +2,13 @@
 import type { Pattern, VisitType } from '../contracts/documents';
 import { timesOn } from '../patterns';
 import { WEEKDAY_LABELS } from './common';
+import { mdText } from './dateText';
 
 /** 間隔の呼び方（1〜4週ごと） */
 export const EVERY_WEEKS_LABELS: Record<number, string> = { 1: '毎週', 2: '隔週', 3: '3週ごと', 4: '4週ごと' };
 
 /** 曜日の並び（例：「月・木」）。日曜はじまりの順 */
-export function weekdaysText(weekdays: readonly number[]): string {
+function weekdaysText(weekdays: readonly number[]): string {
   return [...new Set(weekdays)]
     .sort((a, b) => a - b)
     .map((w) => WEEKDAY_LABELS[w] ?? '?')
@@ -52,9 +53,6 @@ export function patternWhenText(
     .join('・')}`;
 }
 
-/** 日付の短い文（「11/14」） */
-export const mdText = (date: string) => `${Number(date.slice(5, 7))}/${Number(date.slice(8, 10))}`;
-
 /** 期間の文（「11/1から」「11/1〜12/31」） */
 export function periodText(p: Pick<Pattern, 'from' | 'to'>): string {
   const y = (d: string) => (d.slice(0, 4) === p.from.slice(0, 4) ? mdText(d) : `${d.slice(0, 4)}/${mdText(d)}`);
@@ -65,3 +63,9 @@ export function periodText(p: Pick<Pattern, 'from' | 'to'>): string {
 export function typeOf(types: readonly VisitType[], typeId: string | null | undefined): VisitType | null {
   return typeId ? (types.find((t) => t.id === typeId) ?? null) : null;
 }
+
+/** 標準の開始の文（「標準の開始：月 10:00・水 11:00」。無ければ空。ADR-0062） */
+export const usualStartsLabel = (p: Pick<Pattern, 'usualStarts'>): string => {
+  const us = [...(p.usualStarts ?? [])].sort((a, b) => a.weekday - b.weekday);
+  return us.length === 0 ? '' : `標準の開始：${us.map((u) => `${WEEKDAY_LABELS[u.weekday]} ${u.start}`).join('・')}`;
+};

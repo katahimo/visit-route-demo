@@ -2,7 +2,7 @@
 import type { LucideIcon } from 'lucide-react';
 import { CalendarDays, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { batchHref, type EmptyGuide } from '../lib/emptyGuide';
+import { arrangeMonthHref, type EmptyGuide } from '../lib/emptyGuide';
 import { WithIcon } from './ui';
 
 /**
@@ -37,7 +37,7 @@ export function EmptyNext({
         {guide.actions.map((a) => {
           const cls = `btn${compact ? ' btn-small' : ''}${primary && a.primary ? ' btn-primary' : ''}`;
           return a.kind === 'batch' ? (
-            <Link key={`b-${a.ym}`} className={cls} to={batchHref(a.ym)} data-testid="empty-next-batch">
+            <Link key={`b-${a.ym}`} className={cls} to={arrangeMonthHref(a.ym)} data-testid="empty-next-batch">
               <WithIcon icon={Sparkles}>{a.label}</WithIcon>
             </Link>
           ) : (

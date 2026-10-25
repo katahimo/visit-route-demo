@@ -6,12 +6,12 @@ import { createDemoData } from '../seed';
 import { dayLoad } from '../vacancy';
 import { dayRoutes, writeRoutes } from './dayPlan';
 import { dayPlanOf, staffDay } from './month';
+import { spansOf } from './spans';
 import {
   busyParts,
   isAllRest,
   type StaffSlot,
   spanParts,
-  spansOf,
   staffEdgeTexts,
   staffSlotSummary,
   staffSlots,

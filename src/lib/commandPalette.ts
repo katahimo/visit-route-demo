@@ -6,11 +6,11 @@ import type { Features } from '../contracts/features';
 import { addDays } from '../domain/time';
 import { visitsIn } from '../patterns';
 import { STAGE_LABELS } from './clientStage';
-import { dateText } from './common';
+import { dateText } from './dateText';
 import { isHrefOn } from './features';
-import { addMonths, ymOf } from './month';
 import { absenceHref, isNavAction, type MenuItem, type NavSection } from './nav';
 import { normalizeKana } from './search';
+import { addMonths, ymOf } from './ym';
 
 /** 候補の種類（出す順）：操作 → 画面 → 〈利用者さん〉 → 〈スタッフ〉 → 訪問（PRD D304） */
 export type PaletteKind = 'action' | 'screen' | 'client' | 'staff' | 'visit';
@@ -90,7 +90,7 @@ const GROUP_WORDS: Record<string, readonly string[]> = {
 
 /**
  * 呼び方の既定（domain/terms の DEFAULT_TERMS）のうち漢字を含むもののよみ。カタカナの呼び方（スタッフ・ヘルパー・シッター）は
- * そろえるとひらがなになるので要らない。事業所が呼び方を変えたときは、ここに無ければよみでは引けない（名前の漢字で引く。ADR-0027 追記）
+ * そろえるとひらがなになるので要らない。事業所が呼び方を変えたときは、ここに無ければよみでは引けない（名前の漢字で引く。ADR-0027）
  */
 export const TERM_READINGS: Readonly<Record<string, string>> = {
   利用者さん: 'りようしゃさん',

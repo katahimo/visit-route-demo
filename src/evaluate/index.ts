@@ -17,6 +17,7 @@ import {
   ALLOWED_STAFF_RULE_ID,
   balanceOff,
   balancePoints,
+  EPS,
   naiveSeqs,
   PIN_RULE_ID,
   scheduleRoute,
@@ -257,9 +258,6 @@ export function naivePlan(problem: Problem): Record<string, string[]> {
   });
   return routes;
 }
-
-/** 浮動小数の誤差の許し（matching/timing と同じ） */
-const EPS = 1e-9;
 
 /** u と v の両方を担当できる人がいるか */
 function shareStaff(problem: Problem, u: number, v: number): boolean {

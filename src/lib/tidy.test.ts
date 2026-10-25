@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { DemoData } from '../contracts/data';
 import { visit } from '../matching/fixtures';
 import { createDemoData } from '../seed';
-import { addMonths, sizeText, tidyMonthLabel, tidyMonthOptions, tidyOld, tidyPreview } from './tidy';
+import { sizeText, tidyMonthLabel, tidyMonthOptions, tidyOld, tidyPreview } from './tidy';
+import { addMonths } from './ym';
 
 /** 古い日の保存した訪問・伝えた内容・振り直しの情報を持つデータ（版2） */
 function withOld(): DemoData {

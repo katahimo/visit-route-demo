@@ -14,7 +14,6 @@ import {
   chooseReassign,
   removeAbsence,
   revertReassign,
-  roundToHalfHour,
   saveAbsence,
   withoutAbsencesOn,
 } from './absences';
@@ -69,8 +68,6 @@ describe('欠勤の保存・取り消し', () => {
     expect(absenceError(ab('a', 's', '12:00', '12:00'))).toBe('終了は開始より後にしてください');
     expect(absenceError(ab('a', 's', '10:15', null))).toBe('時間は30分単位で選んでください');
     expect(absenceError(ab('a', 's', null, '11:00'))).toBeNull();
-    expect(roundToHalfHour('10:15')).toBe('10:30');
-    expect(roundToHalfHour('10:14')).toBe('10:00');
   });
 });
 

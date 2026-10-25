@@ -58,7 +58,7 @@
 - 反映する（`apply({ choice?, andThen?, label? })`）：今のデータで反映する日を決め、1回の update（手の名前「AI の提案を反映（〈名前〉）」）。全体の「元に戻す」で1手戻る。考え方ごとの案なら `choice` の案を反映し、`andThen`（組み方の標準の登録）を同じ update の中で当てる
 - 考え方ごとの案（D357）：`BatchJob.variants`（`{ presetId, name, rules }[]`）があれば、`days` の最初の日を考え方ごとに組む（`run.targets` は同じ日が案の数だけ、`run.variants` は考え方の名前）。提案は `choices`（`{ presetId, name, days }[]`。`days` は空）、終わった知らせは `done.choices`（案の数。「〈日〉の案を3つ出しました。くらべて、気に入った案を選んでください」）
 - `proposalDayChanges(day)`：提案の1日の変わる訪問（`{ visitId, clientId, at, kind: 'staff' | 'time', from, to, minutes }`。提案での開始の順）
-- `batchBandText`・`batchDoneText`・`weekLabel`（「11/2〜11/8の週」）・`dayLabel`（「11/3」）・`batchHref`（月 `/arrange?ym=`・週 `/arrange?d=〈月曜〉`・日 `/arrange?date=`）
+- `batchBandText`・`batchDoneText`・`weekLabel`（「11/2〜11/8の週」。1日の範囲は `lib/dateText` の `mdText`「11/3」）・`batchHref`（月 `/arrange?ym=`・週 `/arrange?d=〈月曜〉`・日 `/arrange?date=`）
 - `components/batchBand.tsx` の `MonthBatchHost`（App の直下に1つ）：store の data と update をつなぎ、データを丸ごと差し替えたら止めて提案を捨てる（`abort`）。終わったら知らせを出す
 
 #### 完了の条件

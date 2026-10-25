@@ -1,4 +1,4 @@
-/* 空き状況と問い合わせの試算（#/vacancy。ADR-0012 追記。段階3） */
+/* 空き状況と問い合わせの試算（#/vacancy。ADR-0012。段階3） */
 .vacancy-more summary {
   cursor: pointer;
   font-weight: 700;

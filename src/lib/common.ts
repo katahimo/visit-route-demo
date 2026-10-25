@@ -1,7 +1,6 @@
 import type { TravelMode } from '../contracts/codes';
 import type { Place, Terms } from '../contracts/documents';
-import { HARDABLE, type ItemKind, type Op, type RuleType } from '../contracts/rules';
-import { weekday } from '../domain/time';
+import { HARDABLE, type ItemKind, type Rule, type RuleType } from '../contracts/rules';
 
 /** 画面の共通の表示（呼び方は org.terms から引く。「お客様」「シッター」を直書きしない） */
 
@@ -38,23 +37,6 @@ export const ITEM_KIND_LABELS: Record<ItemKind, string> = {
   choice: '選択肢から1つ',
   multi: '選択肢から複数',
   number: '数値',
-};
-
-export const OP_LABELS: Record<Op, string> = {
-  is: 'が次と同じ',
-  not: 'が次と違う',
-  in: 'が次のどれか',
-  hasAny: 'に次のどれかを含む',
-  hasAll: 'に次のすべてを含む',
-  gte: 'が次の値以上',
-  lte: 'が次の値以下',
-};
-/** 項目の種類ごとに使える演算子（contracts/rules.ts の OPS の説明に合わせる） */
-export const OPS_BY_KIND: Record<ItemKind, Op[]> = {
-  flag: ['is', 'not'],
-  choice: ['is', 'not', 'in'],
-  multi: ['hasAny', 'hasAll'],
-  number: ['gte', 'lte', 'is', 'not'],
 };
 
 /** 重みのスライダーを止めるか（必須の条件は重みを使わない。負担の均等は必須でも重みを使う） */
@@ -201,6 +183,13 @@ export const byName = (a: { name: string }, b: { name: string }) => a.name.local
 export const byDisplayName = (a: { displayName: string }, b: { displayName: string }) =>
   a.displayName.localeCompare(b.displayName, 'ja');
 
-/** 「10/12（月）」 */
-export const dateText = (d: string) =>
-  `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}（${WEEKDAY_LABELS[weekday(d)]}）`;
+/** URL のクエリの値（キーが無ければ null、値が空なら ''） */
+export const paramOf = (params: URLSearchParams, key: string): string | null =>
+  params.has(key) ? (params.get(key) ?? '') : null;
+
+/** 条件の重みの短い表示（比べる画面。例「重み3」「必須」「無効」。無い条件は「（なし）」） */
+export function ruleWeightText(r: Rule | undefined): string {
+  if (!r) return '（なし）';
+  if (r.hard && HARDABLE.has(r.type)) return r.type === 'balance' ? `必須・重み${r.weight}` : '必須';
+  return r.weight === 0 ? '無効' : `重み${r.weight}`;
+}

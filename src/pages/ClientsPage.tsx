@@ -11,7 +11,7 @@ import { useToast } from '../components/Toast';
 import { PageHeader, WithIcon } from '../components/ui';
 import type { Client } from '../contracts/documents';
 import { leaveOn } from '../domain/leaves';
-import { jstDate, weekday } from '../domain/time';
+import { jstDate } from '../domain/time';
 import {
   activeFilterCount,
   EMPTY_FILTER,
@@ -22,7 +22,7 @@ import {
 } from '../lib/clientFilter';
 import { STAGE_LABELS } from '../lib/clientStage';
 import { colorOf, initialOf } from '../lib/colors';
-import { byDisplayName, byName, hasLocation, WEEKDAY_LABELS } from '../lib/common';
+import { byDisplayName, byName, hasLocation } from '../lib/common';
 import { narrowRole } from '../lib/narrowRoles';
 import { formatPostalCode } from '../lib/postalCode';
 import { shouldOpenRow } from '../lib/rowOpen';
@@ -33,6 +33,7 @@ import { weekDates, weekDay } from '../lib/week';
 import { useDemoData } from '../store';
 import { PlaceAllPanel } from './PlaceAllPanel';
 import './settings.css';
+import { dateText } from '../lib/dateText';
 
 /**
  * 〈利用者さん〉一覧（PoC本体 ClientsPage.tsx を写し、性別希望・NG を特性・条件・相性に置き換えた）。
@@ -82,8 +83,7 @@ export default function ClientsPage() {
   const filterBodyId = useId();
   // 消えた種類を押したままでも数えない（今ある種類で絞る）
   const filterCount = activeFilterCount(knownTypes(filter, data.visitTypes));
-  const md = (d: string) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
-  const periodLabel = `${md(dates[0]!)}（${WEEKDAY_LABELS[weekday(dates[0]!)]}）からの週`;
+  const periodLabel = `${dateText(dates[0]!)}からの週`;
   const staffName = (id: string | null) => (id ? (staff.find((s) => s.id === id)?.name ?? '（不明）') : '');
   /** いつもの担当（繰り返しの担当。版2） */
   const usualMap = useMemo(() => usualStaffMap(data.patterns, date), [data.patterns, date]);

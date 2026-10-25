@@ -3,15 +3,14 @@
 // （PRD D77・D85。訪問＝濃い青、移動＝橙で高さ半分、待ち＝空きと同じ淡い緑（枠なし）。1日の時間軸の上の位置が大事なので3段にはしない）
 import './barMarks.css';
 import './workBars.css';
-import { timeText } from '../domain/availability';
-import { minutesToHhmm } from '../domain/time';
-import type { RoutePart, Span } from '../lib/staffBar';
+import { clockTime } from '../lib/dateText';
+import type { Span } from '../lib/spans';
+import type { RoutePart } from '../lib/staffBar';
 import type { WorkStat } from '../lib/workload';
 
 /** 内訳の種類 → 3段バーの状態の塗り（待ちは勤務内の空き） */
 const PART_LEVEL: Record<RoutePart['kind'], string> = { visit: 'st-visit', travel: 'st-travel', wait: 'st-free' };
 const PART_LABEL: Record<RoutePart['kind'], string> = { visit: '訪問', travel: '移動', wait: '空き時間（待ち）' };
-const clock = (m: number) => timeText(minutesToHhmm(Math.round(m)));
 
 /** 軸の中の正時（0時からの分）。両端は含まない（1時間の隙間の位置） */
 function hoursInside(range: { start: number; end: number }): number[] {
@@ -89,7 +88,7 @@ export function PartsBar({
           key={`rest-${x.start}`}
           className="work-part bar-seg is-st-rest"
           style={at(x)}
-          title={`${clock(x.start)}〜${clock(x.end)} 休み（欠勤）`}
+          title={`${clockTime(x.start)}〜${clockTime(x.end)} 休み（欠勤）`}
         />
       ))}
       {parts.map((x) => (
@@ -98,7 +97,7 @@ export function PartsBar({
           className={`work-part bar-seg is-${PART_LEVEL[x.kind]}`}
           style={at(x)}
           data-visit-id={x.visitId}
-          title={`${clock(x.start)}〜${clock(x.end)} ${PART_LABEL[x.kind]}`}
+          title={`${clockTime(x.start)}〜${clockTime(x.end)} ${PART_LABEL[x.kind]}`}
         />
       ))}
       {/* 1時間ごとの区切り：境界の前後 1px の隙間（3段バーの .bar-hours と同じ。両端には描かない。PRD D85） */}

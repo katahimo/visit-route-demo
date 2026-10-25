@@ -12,15 +12,15 @@ import { Term } from '../components/Term';
 import { useToast } from '../components/Toast';
 import { Hint, PageHeader, SectionTitle, WithIcon } from '../components/ui';
 import { SpanBar, SpanMini } from '../components/workBars';
-import { timeText } from '../domain/availability';
-import { jstDate, minutesToHhmm, weekday } from '../domain/time';
+import { jstDate, weekday } from '../domain/time';
 import { copyText } from '../lib/clipboard';
 import { byName, WEEKDAY_LABELS } from '../lib/common';
+import { clockTime, dateText, mdText, ymText } from '../lib/dateText';
 import { periodEmptyGuide } from '../lib/emptyGuide';
-import { activeVisitsOn, addMonths, isYm, monthDates, ymOf } from '../lib/month';
-import { mdText } from '../lib/patternText';
+import { activeVisitsOn } from '../lib/month';
 import { useFeature } from '../lib/useFeature';
 import { hmText, kmOf, type WorkDay, type WorkStat, workloadTsv, workMonth, workTotals } from '../lib/workload';
+import { addMonths, isYm, monthDates, ymOf } from '../lib/ym';
 import { useDemoData } from '../store';
 import './workload.css';
 
@@ -156,7 +156,7 @@ export default function WorkloadPage() {
   };
 
   const statTitle = (name: string, d: string, x: WorkStat) =>
-    `${name}さん ${mdText(d)}：${clock(x.start)}〜${clock(x.end)}・出勤〜退勤（拘束） ${hmText(x.span)}（訪問 ${hmText(x.visit)}・移動 ${hmText(
+    `${name}さん ${mdText(d)}：${clockTime(x.start)}〜${clockTime(x.end)}・出勤〜退勤（拘束） ${hmText(x.span)}（訪問 ${hmText(x.visit)}・移動 ${hmText(
       x.travel,
     )}・空き時間（待ち） ${hmText(x.wait)}）・訪問 ${x.count}件${x.over ? '・出勤〜退勤（拘束）が上限を超える' : ''}`;
 
@@ -185,7 +185,7 @@ export default function WorkloadPage() {
             <ChevronLeft size={18} aria-hidden="true" />
           </button>
           <h2 className="work-title" data-testid="work-title">
-            {ym.slice(0, 4)}年{Number(ym.slice(5, 7))}月
+            {ymText(ym)}
           </h2>
           <button
             type="button"
@@ -571,19 +571,19 @@ export default function WorkloadPage() {
                             type="button"
                             className="link-btn"
                             onClick={() => openDay(day.date)}
-                            aria-label={`${mdText(day.date)}（${WEEKDAY_LABELS[weekday(day.date)]}）（日の予定で開く）`}
+                            aria-label={`${dateText(day.date)}（日の予定で開く）`}
                             title="押すとその日の「日の予定」を開きます"
                             data-testid="work-day-open"
                             data-date={day.date}
                           >
-                            {mdText(day.date)}（{WEEKDAY_LABELS[weekday(day.date)]}）
+                            {dateText(day.date)}
                           </button>
                         </th>
                         <td className="work-axis-cell">
                           <SpanBar stat={stat} range={axis} />
                         </td>
                         <td className="nowrap">
-                          {clock(stat.start)}〜{clock(stat.end)}
+                          {clockTime(stat.start)}〜{clockTime(stat.end)}
                         </td>
                         <td className={`num${stat.over ? ' warn-text' : ''}`}>
                           {stat.over ? (
@@ -617,8 +617,6 @@ export default function WorkloadPage() {
 
 /** マスに出す拘束の時間（時間。小数1桁。読み上げの先頭にも同じ文字を置く） */
 const spanNum = (x: WorkStat): string => (Math.round((x.span / 60) * 10) / 10).toFixed(1);
-
-const clock = (m: number) => timeText(minutesToHhmm(Math.round(m)));
 
 /** 時間軸の目盛り（2時間ごと） */
 function axisMarks(axis: { start: number; end: number }): number[] {

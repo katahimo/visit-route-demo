@@ -21,7 +21,7 @@ import { StaffMarkById } from '../components/StaffMark';
 import { PageHeader } from '../components/ui';
 import { useOpenVisit } from '../components/VisitPanel';
 import { addDays, jstDate, jstHhmm } from '../domain/time';
-import { dateText } from '../lib/common';
+import { dateText } from '../lib/dateText';
 import {
   type HomeEntryKey,
   type HomeTask,

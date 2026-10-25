@@ -1,11 +1,11 @@
-// 月の予定の進み具合の帯（PRD D151〜D155・D332。ADR-0025 追記。週・日は1行の状態にした。ADR-0054）。
+// 月の予定の進み具合の帯（PRD D151〜D155・D332。ADR-0025。週・日は1行の状態にした。ADR-0054）。
 // 見ている月の今日以降について「訪問・担当が全部入った日・確定した日・要対応」と次の一手のボタンを1つ。
 // 数え方は月の画面の「今月の準備」・ホームと同じ（lib/useDayStatuses と lib/month の monthProgress・attentionList）。データは書き換えない
 import { Check, CircleAlert, Lock, type LucideIcon, Repeat, Sparkles } from 'lucide-react';
 import { type MouseEvent, memo, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { monthLabel } from '../lib/dateText';
 import { type PrepPart, prepParts } from '../lib/glance';
-import { monthLabel } from '../lib/home';
 import type { MonthProgress } from '../lib/month';
 import { type BandNextKind, type BandOp, bandHref, bandNext, visitsText } from '../lib/progressBand';
 import './glance.css';

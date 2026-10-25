@@ -2,7 +2,7 @@ import { type RefObject, useEffect } from 'react';
 import { panelFit, toastPlace } from '../lib/panelFit';
 
 /**
- * 右の欄の確定のボタンの帯（PRD D194〜D197。ADR-0025 追記）。帯は巻く領域（`.drawer-body`）の中で内容のすぐ後ろに置き、
+ * 右の欄の確定のボタンの帯（PRD D194〜D197。ADR-0025）。帯は巻く領域（`.drawer-body`）の中で内容のすぐ後ろに置き、
  * `position: sticky; bottom: 0` で欄の下に貼り付ける（CSS）。ここでは2つだけ JS で見る：
  * - 貼り付いているか：帯のすぐ後ろの番兵（高さ0）が巻く領域に見えていなければ、内容が帯の下に隠れている。
  *   帯の `data-stuck` に "true"／"false" を書き、区切り（背景・上の線・影）はそのときだけ CSS で出す

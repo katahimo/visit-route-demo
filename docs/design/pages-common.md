@@ -13,7 +13,7 @@
 - 見出しの右のボタンは上下 9px（`.page-actions .btn:not(.btn-small)`）で、見出しの段を低くする
 - 狭い画面では右の `.page-actions` が題名の下へ折り返す（`flex-wrap`。題名は `min-width: 200px`）
 
-#### `components/ScheduleNav.tsx`（予定の上のナビの行。PRD D347・D348。ADR-0060・ADR-0061）
+#### `components/ScheduleNav.tsx`（予定の上のナビの行。PRD D347・D348。ADR-0060）
 
 - 月・週・日の予定の `PageHeader`（題名・1行の説明だけ。`nav` も `actions` も渡さない）のすぐ下に置く1行（`div.sched-nav`・data-testid `sched-nav`・`data-view`＝`month|week|day`）。［月｜週｜日］は見出しの下ではなくこの行の中。並びは ①「今日」（`btn btn-small`・`sched-today`。今日を含む期間を見ていれば押せない）②`.period-switch`（‹ `icon-btn`・期間の `select`・› `icon-btn`。日だけ `.date-switch` も付ける）③`ViewSwitch` ④右に `actions`（`.sched-nav-actions`。日：状態の印・メールで送る・確定、週：メールで送る・まとめて確定、月：無し）
 - `ScheduleNav({ current, today, prev, next, picker, actions? })`：`prev`・`next` は `{ label, onClick, disabled? }`（読み上げ名「前の月／次の月」「前の週／次の週」「前の日／次の日」）、`picker` は `{ label, value, options, onChange, testId? }`（月「月を選ぶ」・`month-title`、週「週を選ぶ」・`week-title`、日「日付」）。`options` は `value` を含めて呼ぶ側が渡す（部品は足さない。日の「今日」はデータに無い日でも選べるので、呼ぶ側が選んだ日を足す）
@@ -72,7 +72,7 @@
 
 - 地図の浮かせた表示：`components/MapDock.tsx`（画面の外の地図を右下に浮かせる）。位置は `--map-dock-left`・`--map-dock-top`
 - `components/floating.ts`（`FLOATING_EVENT`・`useFloatingEdge(name)`）：知らせ（トースト）は欠勤の振り直しの帯・地図より上に出す（`--reassign-dock-top`・`--map-dock-top`）
-- `components/Toast.tsx`：z-index 1200。body の直下の `div.toast-layer[data-inert-keep]` に出す（右の欄の inert に巻き込まれず、欄が開いていても読み上げ・「元に戻す」を押せる。確認ダイアログ・パレット・ツアーの間は今までどおり inert）。`toast(msg)` は文だけ（`output.toast`・2.5秒・押しても下へ抜ける）。`toast(msg, { action })` はボタン1つ付き（`.toast.has-action`。文は中の `output`・ボタンだけ押せる・`toastMs`＝6秒から文の長さ（1字 120ms）で延ばし10秒まで・フォーカスがある間・マウスを重ねている間は消さず、両方が外れたら2.5秒で消す。ボタン付きの箱（文の幅だけ）はマウスを受ける（`pointer-events: auto`）。PRD D268）。使う所は全体の「元に戻す」（`components/undo` の `useUndoAction`。data-testid `toast-undo`。戻したあとは「やり直す」 `toast-redo`。PRD D329）と、範囲の AI で組むの終わりの［月の予定を見る］／［週の予定を見る］（`components/batchBand` の `MonthBatchHost`。提案を出したときに日・週・月の予定か（空き状況から始めたなら）空き状況にいれば、提案の帯が見えるのでボタンを付けない。提案が無いときは、その月の月の予定・その週の週の予定を見ていれば付けない（`lib/month` の `monthShown(search, date)`。テストあり）。PRD D268・D328）
+- `components/Toast.tsx`：z-index 1200。body の直下の `div.toast-layer[data-inert-keep]` に出す（右の欄の inert に巻き込まれず、欄が開いていても読み上げ・「元に戻す」を押せる。確認ダイアログ・パレット・ツアーの間は今までどおり inert）。`toast(msg)` は文だけ（`output.toast`・2.5秒・押しても下へ抜ける）。`toast(msg, { action })` はボタン1つ付き（`.toast.has-action`。文は中の `output`・ボタンだけ押せる・`toastMs`＝6秒から文の長さ（1字 120ms）で延ばし10秒まで・フォーカスがある間・マウスを重ねている間は消さず、両方が外れたら2.5秒で消す。ボタン付きの箱（文の幅だけ）はマウスを受ける（`pointer-events: auto`）。PRD D268）。使う所は全体の「元に戻す」（`components/undo` の `useUndoAction`。data-testid `toast-undo`。戻したあとは「やり直す」 `toast-redo`。PRD D329）と、範囲の AI で組むの終わりの［月の予定を見る］／［週の予定を見る］（`components/batchBand` の `MonthBatchHost`。提案を出したときに日・週・月の予定か（空き状況から始めたなら）空き状況にいれば、提案の帯が見えるのでボタンを付けない。提案が無いときは、担当を組むの画面にいれば付けない。PRD D268・D328）
 
 ### フォームの共通の決まり（PRD D250・D251。`components/FieldError.tsx`）
 
@@ -110,7 +110,7 @@
 予定のモードは無い（予定はいつも手で直せる。AI で組むのは予定を組む）。この部品は組む月の決まりとメニューの件数だけを持つ純粋関数（テストあり）。データは書き換えない。
 
 - `nextYm(today)`・`isLateMonth(today)`（`HOME_NEXT_MONTH_FROM_DAY` 日以降。PRD D255）・`planYm(today)`：組む月（月の後半は来月、前半は今月）。`planLabel(today)`：メニューの子の名前「◯月の予定」
-- `unassignedDays(data, ym, today)`：その月の、担当なしの訪問がある日（今日以降・まだ伝えていない日）の数（取り消し・〈利用者さん〉の休みの回は数えない。compile しないので軽い）。`PLAN_NEEDED_DAYS`（2）
+- `unassignedDayCount(data, ym, today)`：その月の、担当なしの訪問がある日（今日以降・まだ伝えていない日）の数（取り消し・〈利用者さん〉の休みの回は数えない。compile しないので軽い）
 - `menuBadges(data, today)`：メニューの件数の印 `{ planUnassignedDays, todayUntold }`（担当を組むの「N日」・今日の予定の「未確定」）
 
 ### 訪問の札の共通の部品（`lib/visitLook.ts`・`visitSelect.ts`・`visitDrop.ts`・`components/visitParts.tsx`・`visitParts.css`。PRD D339〜D342。ADR-0056・ADR-0057）
@@ -119,7 +119,7 @@
 
 #### 札の3段と入れ物（PRD D342。ADR-0057）
 
-- 訪問の札は3段の大きさ（`ChipSize`＝`l`・`m`・`s`。札の要素に `data-size`）。印（`VisitMarks`・`data-marks`）・選ぶ（`useVisitItem`）・キー（`useVisitKeys`）・ドラッグ（`useVisitDrag`）・全体の元に戻すは3段とも同じ
+- 訪問の札は3段の大きさ（`l`・`m`・`s`。札の要素に `data-size`）。印（`VisitMarks`・`data-marks`）・選ぶ（`useVisitItem`）・キー（`useVisitKeys`）・ドラッグ（`useVisitDrag`）・全体の元に戻すは3段とも同じ
 
 | 大きさ | 札 | 使う所 |
 |---|---|---|
@@ -206,7 +206,7 @@
 - 一覧：`unassignedVisits(data, from, to)`（今の案で入らない訪問）・`dayVisitRows(data, date, nowHm, limit)`（担当なし → 案なし → これからの近い順）・`clientVisitsIn(data, clientId, from, to)`・`staffVisitsIn(data, staffId, from, to)`（その日の今の案、無ければ確定した割当でその人の列にある訪問。取り消しは出さない。〈スタッフ〉の画面の予定）
 - 繰り返し：`endPatternOp(data, patternId, last, today)`（終了日を入れ、last より後で今日以降の、この回だけ変えていない・取り消していない回を消す。消す件数と確定した日の数。〈利用者さん〉の画面の「終わらせる」）
 
-### 名前から開く詳細（ADR-0022 追記。PRD D122〜D126・D205〜D209）
+### 名前から開く詳細（ADR-0022。PRD D122〜D126・D205〜D209）
 
 付けた所は各画面のファイル。付けない所：〈スタッフ〉のスマホ画面（見本）・比較・勤務の見込み・空き状況・月の印刷・連絡の一覧・行き先のリンク（D124）。
 
@@ -245,7 +245,7 @@
 - `ClientName` の `detail`：名前を `PersonButton` に（訪問のカードの中では使わない）
 - `DayLines` の `detailName`：渡すと行のボタンの外の右に i。返す名前が空の行には置かず、同じ幅を空ける。目盛りの行も同じ幅だけ右を空ける
 
-### 用語の説明（PRD D173〜D177・D240〜D242・D307。ADR-0025 追記・ADR-0037）
+### 用語の説明（PRD D173〜D177・D240〜D242・D307。ADR-0025・ADR-0037）
 
 - `lib/glossary.ts`（純粋関数。テストあり）：`GLOSSARY`（span＝出勤〜退勤（拘束）・wait＝空き時間（待ち）・seed・scoreBase＝点数の基準・dropped・hard＝守れない条件（D307 で「必須の違反」から言い換え）・travel・loadCount＝空きを数える人・freeZero・backup＝控え（バックアップ）・terms＝画面での呼び方・typeUnfit・limitUnfit・vacancyCount・vacancyEstimate、予定の組み方の言葉（D242）：aiPlan＝AI案・pinned＝ピン（D307 で「固定」から言い換え）・confirmed＝確定・unconfirmed＝未確定・confirmDiff＝未確定の変更あり・preset＝プリセット・attention＝要対応・stale＝条件が変わった、D307：score＝点数（100点満点・高いほど良い・いつも点数の基準の重みで付ける。日の予定の1行のまとめの点数に付ける）・dayWeights＝この日だけの重み（日の予定の「条件を調整する」で変えた重み。日の予定の作り直しの帯に付ける））、`glossaryText(key, terms)`（〈staff〉〈client〉を呼び方に）。表示だけで、契約・データのキー名は変えない（`evaluate` の減点の内訳の `wait` の表示名は「空き時間（待ち）」）
 - 説明の文の決まり（D307）：1〜2文・90文字まで・「です・ます」で終わる。内部の言葉（費用・内訳・稼働時間・必須の違反・プリセット「・試す重み・展開・inputKey・固定・記録）を使わず、括弧の中に括弧を重ねない（`glossary.test.ts` で確かめる）。帯・確認から外した仕組みの説明（点数の付け方・この日だけの重みの効き方・条件が変わったとき）はここに寄せる
@@ -265,7 +265,7 @@
 
 - `lib/emptyGuide.ts`（純粋関数。テストあり）：
   - `periodEmptyGuide({ period, dates, today, visitDays })`（週・勤務の見込み）：訪問のある日が1日でもあれば null。訪問が無い期間は「〈期間〉には訪問がありません」と［日の予定で訪問を足す］
-  - `compareEmptyGuide({ date })`（比較の画面）、`batchHref(ym)`（担当を組むの画面 `/arrange?ym=`）
+  - `compareEmptyGuide({ date })`（比較の画面）、`arrangeMonthHref(ym)`（担当を組むの画面 `/arrange?ym=`）
 - `components/EmptyNext.tsx`：見出し・補足・ボタン（担当を組むは `Link`、日の予定は呼ぶ側の `onOpenDay`＝選んでいる日付を変えて `/plan`）。`primary={false}` で主ボタンにしない。480px 以下は縦に並べ、印刷ではボタンを出さない。使う所：週（`week-empty`。`compact`）・勤務の見込み（`work-empty`）・比較（`compare-empty`）
 
 ### 初回の案内ツアー（PRD D192・D193・D226・D276・D277。ADR-0045）
@@ -332,7 +332,7 @@
 - `placeParam`：座標があれば「緯度,経度」、無ければ住所の文字、無ければ null
 - `directionsHref`：origin を null にすると出発地を書かない（今いる場所から）
 - `dayStops`（自宅→訪問…→自宅）・`legLinks`（区間ごと）・`tripLinks`（全行程。経由地の上限・URL の長さで分ける）
-- `MAPS_TRAVEL_MODE`・`MAPS_MOBILE_WAYPOINTS`（3。既定）・`MAPS_MAX_WAYPOINTS`（9）・`MAPS_URL_LIMIT`（2048）・`BICYCLE_NOTE`
+- `MAPS_TRAVEL_MODE`（中だけ）・`MAPS_MOBILE_WAYPOINTS`（3。既定。PC・アプリなら 9 まで入るが今は使わない）・`MAPS_URL_LIMIT`（2048）・`BICYCLE_NOTE`
 
 #### `components/mapsLinks.tsx`
 

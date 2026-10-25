@@ -1,4 +1,4 @@
-// 空の画面の「なぜ空か」と次の一手（PRD D176。ADR-0025 追記）。週・稼働の見込み・比較で、案や訪問が無いときに出す文とボタンを
+// 空の画面の「なぜ空か」と次の一手（PRD D176。ADR-0025）。週・稼働の見込み・比較で、案や訪問が無いときに出す文とボタンを
 // 決める純粋関数。ボタンは既存の行き先だけ：担当を組むの画面（`#/arrange?ym=`。ADR-0063）と、日の画面（選んだ日を開く）。
 // データは書き換えない
 
@@ -18,7 +18,7 @@ export type EmptyGuide = {
 };
 
 /** 担当を組むの画面の URL（lib/progressBand の bandHref と同じ形） */
-export const batchHref = (ym: string): string => `/arrange?ym=${ym}`;
+export const arrangeMonthHref = (ym: string): string => `/arrange?ym=${ym}`;
 
 export type PeriodInput = {
   /** 期間の呼び方（「この週」「この月」） */

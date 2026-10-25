@@ -1,8 +1,7 @@
-// 予定（月・週・日）に共通の進み具合の帯（PRD D151〜D155。ADR-0025 追記。design.md §4 pages「進み具合の帯」）の決まり。
+// 予定（月・週・日）に共通の進み具合の帯（PRD D151〜D155。ADR-0025。design.md §4 pages「進み具合の帯」）の決まり。
 // 見ている月の「今月の準備」（lib/month の monthProgress。ホーム・月の画面と同じ数え方）から、帯に出す次の一手を1つ決める純粋関数。
 // データは書き換えない
 import type { Attention, AttentionKind, MonthProgress } from './month';
-import { ymOf } from './month';
 
 /** 帯から行う操作：batch＝担当を組むの画面（#/arrange）、attention・unconfirmed＝月の画面の欄（?do=。PRD D143） */
 export type BandOp = 'batch' | 'attention' | 'unconfirmed';
@@ -54,9 +53,6 @@ export function bandNext(input: BandInput): BandNext {
   if (p.attention > 0) return { kind: 'attention', label: '要対応を見る', short: '要対応' };
   return { kind: 'done', label: '準備は済みました', short: '済み' };
 }
-
-/** 帯が見る月（PRD D151）：選んでいる日付の月。週の画面も選んでいる日付（週の中の日）の月で、［月｜週｜日］の「月」と同じ月 */
-export const bandMonth = (date: string): string => ymOf(date);
 
 /** 帯の数字・ボタンから移る先（担当を組むは担当を組むの画面のその月、ほかは月の画面の欄。PRD D153。ADR-0063） */
 export const bandHref = (ym: string, op: BandOp): string =>

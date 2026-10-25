@@ -1,17 +1,14 @@
 // 写した元：katahimo-dev/visit-route-poc @ a46e7db web/src/features/admin/schedule/model.ts
-import type { Staff, Visit } from '../contracts/documents';
-import { type Slot, withinSlots } from './availability';
-import { hhmmToMinutes, minutesToHhmm } from './time';
+import type { Visit } from '../contracts/documents';
+import type { Slot } from './availability';
+import { hhmmToMinutes } from './time';
 
 /**
- * 予定画面の手作業案（担当ごとの訪問の割当）の組み立て。画面と Firebase に依存しない。
+ * 予定画面の手作業案（担当ごとの訪問の割当）の時刻の見積もり。画面と Firebase に依存しない。
  * 回る順番は開始時刻の順で、手では並べ替えない（PRD R3）
  */
 
 export const NONE = '__none';
-export type Cols = Record<string, string[]>;
-export type View = { cols: Cols; unassigned: string[] };
-type V = Visit & { id: string };
 
 const byStart = (a: Visit, b: Visit) =>
   a.earliestStart.localeCompare(b.earliestStart) || a.latestStart.localeCompare(b.latestStart);
@@ -23,44 +20,6 @@ export function timeOrder(ids: string[], visitById: Map<string, Visit>): string[
     const y = visitById.get(b);
     return x && y ? byStart(x, y) : 0;
   });
-}
-
-/** 保存済み/編集中の割当と、いまある訪問を突き合わせる（消えた訪問を除き、新しい訪問は担当の列か未割当へ） */
-export function reconcile(base: Cols, visits: V[], staffIds: string[]): View {
-  // 自分のキーだけを見る（スタッフID が constructor などでも Object の組み込みを拾わない）
-  const colOf = (k: string): string[] => (Object.hasOwn(base, k) ? (base[k] ?? []) : []);
-  const byId = new Map(visits.map((v) => [v.id, v]));
-  const placed = new Set<string>();
-  const unassigned: string[] = [];
-  for (const id of colOf(NONE)) {
-    if (byId.has(id) && !placed.has(id)) {
-      unassigned.push(id);
-      placed.add(id);
-    }
-  }
-  const cols: Cols = {};
-  for (const s of staffIds) {
-    cols[s] = colOf(s).filter((id) => byId.has(id) && !placed.has(id));
-    for (const id of cols[s]) placed.add(id);
-  }
-  for (const v of visits) {
-    if (placed.has(v.id)) continue;
-    const col = v.staffId ? cols[v.staffId] : undefined;
-    if (col) col.push(v.id);
-    else unassigned.push(v.id);
-  }
-  for (const s of staffIds) cols[s] = timeOrder(cols[s] ?? [], byId);
-  return { cols, unassigned: timeOrder(unassigned, byId) };
-}
-
-/** 担当を変える（to は staffId か NONE）。移した先でも開始時刻の順 */
-export function assign(view: View, id: string, to: string, visitById: Map<string, V>): View {
-  const cols: Cols = {};
-  for (const [k, ids] of Object.entries(view.cols)) cols[k] = ids.filter((x) => x !== id);
-  const unassigned = view.unassigned.filter((x) => x !== id);
-  if (to === NONE || !visitById.has(id)) return { cols, unassigned: timeOrder([...unassigned, id], visitById) };
-  cols[to] = timeOrder([...((Object.hasOwn(cols, to) ? cols[to] : undefined) ?? []), id], visitById);
-  return { cols, unassigned };
 }
 
 /**
@@ -98,32 +57,6 @@ function fitInSlots(start: number, v: Visit, slots: Slot[] | undefined): number 
     if (at <= latest && at + v.durationMinutes <= hhmmToMinutes(s.end)) return at;
   }
   return start;
-}
-
-export const hhmm = (minutes: number) => minutesToHhmm(minutes);
-
-/**
- * 担当の割当で気をつけること（時刻だけ）。赤い枠になる。保存は止めない。
- * デモ版では性別・NG は条件（evaluate の hardViolations）で出すので、ここでは見ない（ADR-0002）
- */
-export type Warning = 'overlap' | 'outside';
-export const WARNING_LABELS: Record<Warning, string> = {
-  overlap: '時間が重なる',
-  outside: '働ける時間の外',
-};
-export const isRed = (w: Warning[]) => w.length > 0;
-
-export function warningsOf(
-  staff: Staff | undefined,
-  staffId: string | null,
-  slots: Slot[],
-  time: Slotted | undefined,
-): Warning[] {
-  if (!staff || !staffId) return [];
-  const w: Warning[] = [];
-  if (time?.overlap) w.push('overlap');
-  if (time && !withinSlots(slots, time.start, time.end)) w.push('outside');
-  return w;
 }
 
 /** 訪問の時間の表示（幅があれば「10:30〜11:30」に開始） */

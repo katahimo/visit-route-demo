@@ -1,0 +1,23 @@
+{
+  "src": "src",
+  "exclude": ["**/*.test.ts", "**/*.test.tsx", "**/*.d.ts"],
+  "maxFileLines": 600,
+  "maxFunctionLines": 150,
+  "layers": {
+    "src/contracts/**": { "forbid": ["react", "src/domain/**", "src/lib/**", "src/store/**", "src/components/**", "src/pages/**", "src/app/**"] },
+    "src/domain/**": { "forbid": ["react", "src/lib/**", "src/store/**", "src/components/**", "src/pages/**", "src/app/**", "src/matching/**", "src/solver/**"] },
+    "src/patterns/**": { "forbid": ["react", "src/store/**", "src/components/**", "src/pages/**", "src/app/**"] },
+    "src/matching/**": { "forbid": ["react", "src/store/**", "src/components/**", "src/pages/**", "src/app/**"] },
+    "src/solver/**": { "forbid": ["react", "src/store/**", "src/components/**", "src/pages/**", "src/app/**"] },
+    "src/evaluate/**": { "forbid": ["react", "src/store/**", "src/components/**", "src/pages/**", "src/app/**"] },
+    "src/reassign/**": { "forbid": ["react", "src/store/**", "src/components/**", "src/pages/**", "src/app/**"] },
+    "src/vacancy/**": { "forbid": ["react", "src/store/**", "src/components/**", "src/pages/**", "src/app/**"] },
+    "src/excel/**": { "forbid": ["react", "src/components/**", "src/pages/**", "src/app/**"] },
+    "src/seed/**": { "forbid": ["react", "src/store/**", "src/components/**", "src/pages/**", "src/app/**"] },
+    "src/lib/**": { "forbid": ["react", "react-dom", "src/store/**", "src/components/**", "src/pages/**", "src/app/**"] },
+    "src/store/**": { "forbid": ["src/components/**", "src/pages/**", "src/app/**"] },
+    "src/components/**": { "forbid": ["src/pages/**", "src/app/**"] }
+  },
+  "unusedExports": true,
+  "baseline": "code-rules.baseline.json"
+}

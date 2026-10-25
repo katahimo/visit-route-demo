@@ -1,4 +1,4 @@
-// 欠勤の振り直しの2回目（PRD D34・D35。ADR-0011 追記）：案B「少し動かしてよい」の欄と、連絡の一覧
+// 欠勤の振り直しの2回目（PRD D34・D35。ADR-0011）：案B「少し動かしてよい」の欄と、連絡の一覧
 import {
   ArrowUpToLine,
   ClipboardCopy,

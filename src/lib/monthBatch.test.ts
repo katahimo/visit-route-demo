@@ -14,7 +14,6 @@ import {
   batchHref,
   createMonthBatch,
   dayInputsOf,
-  dayLabel,
   proposalCounts,
   proposalDayChanges,
   proposalDayFresh,
@@ -354,7 +353,6 @@ describe('monthBatch（担当を AI で組む。PRD D256・D257。ADR-0042・ADR
     expect(batchDoneText({ ...done, made: 1, aborted: true })).toBe(
       'データを差し替えたので、11月の担当を組むのを止めました（提案は捨てました）',
     );
-    expect(dayLabel('2026-11-03')).toBe('11/3');
   });
 
   it('データを丸ごと差し替えたら捨てる（abort）：組んでいる日の結果は書かず、止めた知らせ', async () => {

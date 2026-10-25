@@ -9,7 +9,6 @@
 - `BAR_ROWS`（8〜12・12〜16・16〜20 時）・`BAR_START`・`BAR_END`・`BAR_STEP`（30分）・`DAY_MINUTES`
 - `barRowsOf(slots)`：30分のマスを段に分ける
 - `barEdges(slots, active)`：8時より前・20時以降で active なマス
-- `placeOnRows(items)`：時刻の区間を段ごとの位置（0〜1）に切り分け、段に掛からない区間を early・late に（今は画面からは使っていない）
 - `edgeLabel(side)`：「8時より前」「20時以降」
 - `barRowsText()`：「上から 8〜12時・12〜16時・16〜20時」
 - `rowRuns(slots, from, to)`：同じ level が続く30分を [left, width)（段に対する割合）の1本にまとめる。30分が抜ければ切る
@@ -106,7 +105,7 @@
 | 勤務の見込み | `WorkStat.parts`（`spanParts`）を `SpanBar` で。〈スタッフ〉×日は `SpanMini` |
 | 空き状況 | `lv-*` の段階の色（下） |
 
-### 一目で分かる小さい表示（`lib/glance.ts`・`components/glance.tsx`。PRD D78〜D81）
+### 一目で分かる小さい表示（`lib/glance.ts`・`components/glance.tsx`。PRD D78〜D80）
 
 #### `lib/glance.ts`（純粋関数。テストあり）
 
@@ -114,15 +113,13 @@
 - `inquiryRows(result, wish)`：希望の曜日（空＝全曜日。月〜日の順）×その曜日の日。行は希望の開始時刻 from〜to（両端を含む）の開始時刻ごとの `verdictOf` のうち一番良いもの（ok＞partial＞ng＞unknown、同じなら受けられる週の多い順・人数の最小の多い順・早い順）を開始時刻 start にし、判定もその時刻の `verdictOf`（要約 `inquirySummary` と同じ決め方。どこかの時刻に1人いるだけでは ○ にしない）。日のマスはその開始時刻のその日の人数 best と ○（best≥1）×？（案が無い日）。行の頭に開始時刻、目安のときは人数に「約」
 - `inquiryDayLevel`
 - `prepParts(progress)`：訪問のある日を 確定済み・案あり（未確定）・案なし の日数に（今日以降の訪問のある日。案あり（未確定）には未確定の変更ありの日も含む）。進み具合の帯の下の縁
-- `clientDot(clientDay)`：訪問が1件でもあれば訪問あり、無ければ 当日キャンセル＞取り消し＞休み、何も無ければ訪問なし
 
 #### `components/glance.tsx`（`glance.css`）
 
 - 段階の色 `lv-*`：0人（受けられない）＝薄い灰の地と灰の文字（×。枠なし）、0人の週がある・1人＝淡い橙、2人以上＝緑で多いほど濃い、案なし＝淡い無地（文字を載せるので淡い色）。受けられない時間帯は手当てが要るものではないので赤にしない（赤は要対応だけ。PRD D228）
 - `LevelLegend`
-- `ClientDots`：7列のカレンダーの並びの点。形でも分ける（丸・三角・白抜きの丸・灰の四角・小さな点）。月の〈利用者さん〉を選んだときの右の欄（数えるのは `clientDay`＝今の案、無ければ確定した割当）
 
 ### 完了の条件
 
-- [ ] `lib/barRows`（段・端の印・区間の切り分け・`rowRuns`）・`lib/staffBar`（30分の状態の決め方・`dayLoad` の空きの人数と一致（8時より前・20時以降でも）・週と月のバーが同じ・拘束の内訳の合計が訪問・移動・待ちと一致・`isAllRest`）・`lib/dayLine`・`lib/glance`（空き状況の段階・曜日×週のマス・準備の内訳・〈利用者さん〉の日の点）のテストが通る
+- [ ] `lib/barRows`（段・端の印・`rowRuns`）・`lib/staffBar`（30分の状態の決め方・`dayLoad` の空きの人数と一致（8時より前・20時以降でも）・週と月のバーが同じ・拘束の内訳の合計が訪問・移動・待ちと一致・`isAllRest`）・`lib/dayLine`・`lib/glance`（空き状況の段階・曜日×週のマス・準備の内訳）のテストが通る
 - [ ] 週（〈スタッフ〉×曜日）・月（全体・〈スタッフ〉選択）・日（担当ごとの1日）・空き状況・勤務の見込みを 1280px・390px で見て、1段が1時間の4ブロック・訪問が一目で分かる・3段とも休みの日が「休み」の1枚に見える

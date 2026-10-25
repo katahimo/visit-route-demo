@@ -1,4 +1,4 @@
-// 空き状況と問い合わせの試算（ADR-0012 追記。段階3）。design.md §4 vacancy の完了の条件
+// 空き状況と問い合わせの試算（ADR-0012。段階3）。design.md §4 vacancy の完了の条件
 import { describe, expect, it } from 'vitest';
 import type { DemoData } from '../contracts/data';
 import type { Client, Visit, VisitType } from '../contracts/documents';

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { batchHref, compareEmptyGuide, periodEmptyGuide } from './emptyGuide';
+import { arrangeMonthHref, compareEmptyGuide, periodEmptyGuide } from './emptyGuide';
 
 const week = ['2026-10-19', '2026-10-20', '2026-10-21', '2026-10-22', '2026-10-23', '2026-10-24', '2026-10-25'];
 const base = { period: 'この週', dates: week, today: '2026-10-21', visitDays: [] };
@@ -28,6 +28,6 @@ describe('compareEmptyGuide', () => {
     expect(g.actions).toEqual([{ kind: 'day', date: '2026-10-22', label: '日の予定で訪問を足す', primary: true }]);
   });
   it('まとめて組むの URL', () => {
-    expect(batchHref('2026-11')).toBe('/arrange?ym=2026-11');
+    expect(arrangeMonthHref('2026-11')).toBe('/arrange?ym=2026-11');
   });
 });

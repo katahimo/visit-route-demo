@@ -1,4 +1,4 @@
-// 欠勤の振り直しの2回目（案B「少し動かしてよい」・連絡の一覧。PRD D34・D35。ADR-0011 追記）
+// 欠勤の振り直しの2回目（案B「少し動かしてよい」・連絡の一覧。PRD D34・D35。ADR-0011）
 import { describe, expect, it } from 'vitest';
 import type { Absence } from '../contracts/documents';
 import type { Problem } from '../contracts/problem';
@@ -129,7 +129,7 @@ describe('案B（prepareAnneal・finishAnneal・annealCost）', () => {
   });
 });
 
-describe('案B は案A に入っていた訪問を落とさない（keep。ADR-0011 追記）', () => {
+describe('案B は案A に入っていた訪問を落とさない（keep。ADR-0011）', () => {
   it('seed の14日×全スタッフの終日の欠勤で、案B の入らない訪問（訪問ID）⊆ 案A の入らない訪問。保険（settleAnneal）で案A のままにすることもない（修正前の入れ替えは重み0の 10/17 s3 で出る）', () => {
     const today = '2026-10-12';
     const data = createDemoData(today);

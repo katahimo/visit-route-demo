@@ -1,4 +1,4 @@
-// 右の欄（SidePanel）を、スマホのキーボードが出て見えている所（visualViewport）が縮んだときに、そこへ合わせる（PRD D197。ADR-0025 追記）。
+// 右の欄（SidePanel）を、スマホのキーボードが出て見えている所（visualViewport）が縮んだときに、そこへ合わせる（PRD D197。ADR-0025）。
 // 欄は position: fixed; inset: 0 で、iOS・Android の Chrome はキーボードが出ても layout viewport を縮めないので、
 // 下に貼り付いた確定のボタンの帯がキーボードの裏に隠れる。見えている所の上端と高さを欄の入れ物に当てる
 

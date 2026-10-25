@@ -36,7 +36,7 @@ const addDays = (d, n) => {
   t.setUTCDate(t.getUTCDate() + n);
   return t.toISOString().slice(0, 10);
 };
-/** 「10/29（木）」（lib/common の dateText と同じ） */
+/** 「10/29（木）」（lib/dateText の dateText と同じ） */
 const dateText = (d) =>
   `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}（${WD[new Date(`${d}T00:00:00Z`).getUTCDay()]}）`;
 /** 今週の日付（月〜日） */

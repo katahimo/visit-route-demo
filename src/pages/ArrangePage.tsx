@@ -14,11 +14,10 @@ import { PageHeader, WithIcon } from '../components/ui';
 import { UndoButtons } from '../components/undo';
 import type { Rule } from '../contracts/rules';
 import { jstDate } from '../domain/time';
-import { dateText } from '../lib/common';
+import { dateText, mdText, monthLabel, ymText } from '../lib/dateText';
 import { isDate } from '../lib/isDate';
-import { addMonths, type BatchMode, batchTargets, monthDates, ymOf } from '../lib/month';
-import { type BatchSource, type BatchVariant, dayLabel, monthBatch, weekLabel } from '../lib/monthBatch';
-import { mdText } from '../lib/patternText';
+import { type BatchMode, batchTargets } from '../lib/month';
+import { type BatchSource, type BatchVariant, monthBatch, weekLabel } from '../lib/monthBatch';
 import { planYm } from '../lib/scheduleMode';
 import { hasStandard } from '../lib/standard';
 import { useCompileInput } from '../lib/useDayModel';
@@ -26,6 +25,7 @@ import { useDayStatuses } from '../lib/useDayStatuses';
 import { useFeature } from '../lib/useFeature';
 import { useValueStore } from '../lib/valueStore';
 import { weekDates, weekStart } from '../lib/week';
+import { addMonths, isYm, monthDates, ymOf } from '../lib/ym';
 import { applyPreset, scorePresetOf } from '../seed';
 import { useDemoData } from '../store';
 import './arrange.css';
@@ -44,9 +44,6 @@ function etaText(days: number): string {
   return `約${Math.max(1, Math.round(lo / 60))}〜${Math.ceil(hi / 60)}分`;
 }
 
-const ymText = (ym: string) => `${ym.slice(0, 4)}年${Number(ym.slice(5, 7))}月`;
-const YM_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
-
 /**
  * URL から範囲を読む：?date=（日）・?d=（週。その日の週）・?ym=（月）の順。無ければ月（月の後半なら来月、前半なら今月）
  */
@@ -56,7 +53,7 @@ function scopeOf(params: URLSearchParams, today: string): { scope: BatchSource; 
   const week = params.get('d');
   if (week && isDate(week)) return { scope: 'week', ym: ymOf(week), at: weekStart(week) };
   const ym = params.get('ym');
-  const m = ym && YM_RE.test(ym) ? ym : planYm(today);
+  const m = ym && isYm(ym) ? ym : planYm(today);
   return { scope: 'month', ym: m, at: m === ymOf(today) ? today : `${m}-01` };
 }
 
@@ -127,8 +124,7 @@ export default function ArrangePage() {
   const shownError = error ?? done?.error ?? null;
 
   /** 範囲の呼び名（「11月」「11/2〜11/8の週」「11/3」） */
-  const rangeLabel =
-    scope === 'month' ? `${Number(ym.slice(5, 7))}月` : scope === 'week' ? weekLabel(at) : dayLabel(at);
+  const rangeLabel = scope === 'month' ? monthLabel(ym) : scope === 'week' ? weekLabel(at) : mdText(at);
 
   /** 範囲を変える（URL に書く。ほかのクエリは残さない） */
   const pick = (next: BatchSource, value?: string) => {

@@ -32,14 +32,14 @@ import { addDays, hhmmToMinutes, jstDate, jstHhmm, minutesToHhmm, weekday } from
 import { pinnedAddressAfter, toPlace } from '../lib/addressLookup';
 import { copyText } from '../lib/clipboard';
 import { CLIENT_COLORS } from '../lib/colors';
-import { attempt, dateText, nameTaken, newId, WEEKDAY_LABELS } from '../lib/common';
+import { attempt, nameTaken, newId, WEEKDAY_LABELS } from '../lib/common';
+import { clockTime, dateText, mdText, monthLabel } from '../lib/dateText';
 import { unassignedDays } from '../lib/dayPlan';
 import { type InquiryDayMark, type InquiryRow, inquiryDayLevel, inquiryRows, vacancyLevel } from '../lib/glance';
 import { dayHref, unassignedHref } from '../lib/links';
 import { referrerRecipients, vacancySubject } from '../lib/mail';
 import { buildBccMails } from '../lib/mailto';
-import { ymOf } from '../lib/month';
-import { mdText, typeOf } from '../lib/patternText';
+import { typeOf } from '../lib/patternText';
 import { normalizePostalCode } from '../lib/postalCode';
 import { scrollLeftToShow } from '../lib/scrollEdge';
 import { useFeature } from '../lib/useFeature';
@@ -58,6 +58,7 @@ import {
   whenWhatLine,
 } from '../lib/vacancyView';
 import { insertAllIntoPlans, weekStart } from '../lib/week';
+import { ymOf } from '../lib/ym';
 import { visitsIn } from '../patterns';
 import { useDemoData } from '../store';
 import { inquirySummary, vacancyNotice, vacancyOf, verdictOf } from '../vacancy';
@@ -65,7 +66,7 @@ import './settings.css';
 import './vacancy.css';
 
 /**
- * 空き状況と問い合わせの試算（ADR-0012 追記。段階3＝PRD D45〜D48。design.md §4 pages「空き状況と問い合わせの試算」）。
+ * 空き状況と問い合わせの試算（ADR-0012。段階3＝PRD D45〜D48。design.md §4 pages「空き状況と問い合わせの試算」）。
  * 条件の欄 → 曜日×開始時刻の表（人数と ○△×？）→ マスを押すと日付ごとの人 → 問い合わせの試算の要約・コピー → 仮押さえ。
  * データは読むだけ。仮押さえだけが1回の update で〈利用者さん〉（仮）と定期パターンを入れる
  */
@@ -97,8 +98,6 @@ function StepNo({ n }: { n: number }) {
     </span>
   );
 }
-
-const hm = (t: number) => timeText(minutesToHhmm(t));
 
 /** 空き状況の表の凡例（PRD D78。どの週でも受けられる人数の段階） */
 const VACANCY_LEGEND: [string, string][] = [
@@ -138,11 +137,11 @@ function InquiryWeeks({ rows, exact }: { rows: InquiryRow[]; exact: boolean }) {
               <tr key={r.weekday}>
                 <th scope="row">
                   {WEEKDAY_LABELS[r.weekday]} {MARK[r.verdict]}
-                  {r.start !== null && <small> {hm(r.start)}〜</small>}
+                  {r.start !== null && <small> {clockTime(r.start)}〜</small>}
                   <span className="sr-only">（{VERDICT_TEXT[r.verdict]}）</span>
                 </th>
                 {r.days.map((x) => {
-                  const label = `${dateText(x.date)}${r.start !== null ? ` ${hm(r.start)}から` : ''}：${DAY_MARK[x.mark]} ${DAY_TEXT[x.mark]}${
+                  const label = `${dateText(x.date)}${r.start !== null ? ` ${clockTime(r.start)}から` : ''}：${DAY_MARK[x.mark]} ${DAY_TEXT[x.mark]}${
                     x.mark === 'ok' ? `（${exact ? '' : '約'}${x.best}人）` : ''
                   }`;
                   return (
@@ -858,7 +857,7 @@ export default function VacancyPage() {
                 to={`/month?ym=${ymOf(noPlan[0]!)}`}
                 data-testid="vacancy-noplan-month"
               >
-                {Number(noPlan[0]!.slice(5, 7))}月の予定を見る
+                {monthLabel(noPlan[0]!)}の予定を見る
               </Link>
             )}
           </div>
@@ -920,7 +919,7 @@ export default function VacancyPage() {
                   </th>
                   {result.times.map((t) => (
                     <th key={t} scope="col" className={t % 60 === 0 ? 'is-hour' : ''} data-start={minutesToHhmm(t)}>
-                      {hm(t)}
+                      {clockTime(t)}
                     </th>
                   ))}
                 </tr>
@@ -934,7 +933,7 @@ export default function VacancyPage() {
                     {result.times.map((t) => {
                       const c = cellOf.get(`${wd}-${t}`);
                       if (!c) return <td key={t} />;
-                      const f = cellFace(c, result.exact, `${WEEKDAY_LABELS[wd]} ${hm(t)}から`);
+                      const f = cellFace(c, result.exact, `${WEEKDAY_LABELS[wd]} ${clockTime(t)}から`);
                       return (
                         <td key={t}>
                           <button
@@ -1185,7 +1184,7 @@ export default function VacancyPage() {
         <SidePanel
           icon={Users}
           narrow
-          title={`${WEEKDAY_LABELS[picked.weekday]} ${hm(picked.start)}〜${hm(picked.start + durationNum)}`}
+          title={`${WEEKDAY_LABELS[picked.weekday]} ${clockTime(picked.start)}〜${clockTime(picked.start + durationNum)}`}
           onClose={() => setPicked(null)}
           footer={
             <button type="button" className="btn" onClick={() => setPicked(null)}>
@@ -1277,7 +1276,7 @@ export default function VacancyPage() {
             {slots.map((s) => (
               <li key={s.weekday}>
                 <strong>
-                  {WEEKDAY_LABELS[s.weekday]} {hm(s.start)}
+                  {WEEKDAY_LABELS[s.weekday]} {clockTime(s.start)}
                 </strong>
                 <span>
                   {vType ? `${vType.name}・` : ''}

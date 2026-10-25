@@ -22,7 +22,7 @@ const md = (date: string) => {
   return `${m}/${d}`;
 };
 /** 分 → 「9:00」 */
-export const clockText = (min: number) => `${Math.floor(min / 60)}:${String(Math.round(min % 60)).padStart(2, '0')}`;
+const clockText = (min: number) => `${Math.floor(min / 60)}:${String(Math.round(min % 60)).padStart(2, '0')}`;
 
 /** メールアドレスの無い人のボタンの理由（PRD D91） */
 export const NO_EMAIL = 'メールアドレスが未登録です';

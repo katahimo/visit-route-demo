@@ -5,9 +5,10 @@
 import type { DemoData } from '../contracts/data';
 import { addDays, hhmmToMinutes, minutesToHhmm } from '../domain/time';
 import { findVisit, visitsOn } from '../patterns';
-import { dateText } from './common';
+import { dateText } from './dateText';
 import { dayProblemOf, routesOf, visitIssues } from './dayPlan';
 import { applyVisitEdit, draftOf, SCOPE_LABELS, staffChoices, type VisitScope } from './visitOps';
+import { isMultiClick, isMultiKey } from './visitSelect';
 
 /** 1回のキーで動かす時刻の幅（分） */
 export const KEY_STEP_MINUTES = 15;
@@ -82,8 +83,8 @@ export function cellKeyOf(e: {
   altKey: boolean;
 }): CellKey | null {
   if (e.altKey) return null;
-  if (e.key === 'Enter') return e.shiftKey || e.ctrlKey || e.metaKey ? { kind: 'select' } : { kind: 'open' };
-  if (e.shiftKey || e.ctrlKey || e.metaKey) return null;
+  if (e.key === 'Enter') return isMultiKey(e) ? { kind: 'select' } : { kind: 'open' };
+  if (isMultiClick(e)) return null;
   switch (e.key) {
     case 'ArrowLeft':
       return { kind: 'go', days: -1 };

@@ -77,9 +77,10 @@ import {
   withoutAbsencesOn,
 } from '../lib/absences';
 import { colorOf } from '../lib/colors';
-import { attempt, dateText, formError, own, pointsText, r0 } from '../lib/common';
+import { attempt, formError, own, pointsText, r0 } from '../lib/common';
 import { confirmDay } from '../lib/confirmDay';
 import { type CancelledContact, type ContactRow, clock, contactCount, contactRows, dateWordOf } from '../lib/contacts';
+import { clockTime, dateText } from '../lib/dateText';
 import { dayLineRange, dayLines } from '../lib/dayLine';
 import {
   changeCount,
@@ -107,8 +108,9 @@ import { leavePeople } from '../lib/personLinks';
 import { CURRENT_TEXT, hardReasonLabels, NONE_TEXT, notAllowedText, reassignChoices } from '../lib/reassignMenu';
 import { buildRouteMap, homeLegKey, homeTravel, useRouteSelection } from '../lib/routeView';
 import { reasonFace, scoreReason } from '../lib/scoreReason';
+import { spansOf } from '../lib/spans';
 import { SUDDEN_DO, staffChoices, visitChoices } from '../lib/sudden';
-import { type LegSpan, legsOf, shadowOf, spansOf } from '../lib/timeline';
+import { type LegSpan, legsOf, shadowOf } from '../lib/timeline';
 import { useDayModel } from '../lib/useDayModel';
 import { useFeature } from '../lib/useFeature';
 import { COMPACT_QUERY, useMedia } from '../lib/useMedia';
@@ -948,7 +950,7 @@ export default function PlanPage() {
     return true;
   };
 
-  // ---- 案B「少し動かしてよい」・連絡の一覧（PRD D34・D35。ADR-0011 追記）----
+  // ---- 案B「少し動かしてよい」・連絡の一覧（PRD D34・D35。ADR-0011）----
   /** 「変更を減らす」の重み（反映した振り直しが案B ならその重み） */
   const [stayWeight, setStayWeight] = useState<number>(STAY_WEIGHT_DEFAULT);
   useEffect(() => {
@@ -2000,7 +2002,6 @@ export default function PlanPage() {
   const dayRows = useMemo((): DayListRow[] => {
     if (!compact) return [];
     const startOf = (v: Visit) => explained.get(v.id)?.timing?.start ?? hhmmToMinutes(v.earliestStart);
-    const hm = (x: number) => minutesToHhmm(Math.round(x)).replace(/^0/, '');
     return [...m.allVisits]
       .sort((a, b) => startOf(a) - startOf(b) || a.id.localeCompare(b.id))
       .map((v) => {
@@ -2012,7 +2013,7 @@ export default function PlanPage() {
         const type = typeOf(data.visitTypes, v.typeId);
         return {
           visitId: v.id,
-          time: `${hm(start)}〜${hm(start + v.durationMinutes)}`,
+          time: `${clockTime(start)}〜${clockTime(start + v.durationMinutes)}`,
           title: clientById.get(v.clientId)?.displayName ?? '（不明）',
           staff: s,
           staffName: sName,
@@ -3015,25 +3016,21 @@ export default function PlanPage() {
 }
 
 /** 時間軸をやめて順番にする幅（PRD D58） */
-const NARROW_QUERY = '(max-width: 900px)';
+const TIMELINE_NARROW_QUERY = '(max-width: 900px)';
 
 /** 地図を時間軸の横に並べる幅（PRD D63） */
 const WIDE_MAP_QUERY = '(min-width: 1280px)';
 
 /** 狭い幅（900px 以下）か印刷中か。印刷は beforeprint の中ですぐ描き直す（印刷の画像に間に合わせる） */
 function useNarrowOrPrint(): boolean {
-  const [narrow, setNarrow] = useState(() => window.matchMedia(NARROW_QUERY).matches);
+  const narrow = useMedia(TIMELINE_NARROW_QUERY);
   const [printing, setPrinting] = useState(false);
   useEffect(() => {
-    const mq = window.matchMedia(NARROW_QUERY);
-    const onChange = () => setNarrow(mq.matches);
     const before = () => flushSync(() => setPrinting(true));
     const after = () => setPrinting(false);
-    mq.addEventListener('change', onChange);
     window.addEventListener('beforeprint', before);
     window.addEventListener('afterprint', after);
     return () => {
-      mq.removeEventListener('change', onChange);
       window.removeEventListener('beforeprint', before);
       window.removeEventListener('afterprint', after);
     };

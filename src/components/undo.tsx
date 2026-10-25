@@ -13,8 +13,8 @@ import { WithIcon } from './ui';
 const IS_MAC = typeof navigator !== 'undefined' && isMacPlatform(navigator.platform || navigator.userAgent);
 
 /** キーの名前（ボタンの title・説明） */
-export const UNDO_KEY = IS_MAC ? '⌘Z' : 'Ctrl+Z';
-export const REDO_KEY = IS_MAC ? '⌘⇧Z' : 'Ctrl+Shift+Z';
+const UNDO_KEY = IS_MAC ? '⌘Z' : 'Ctrl+Z';
+const REDO_KEY = IS_MAC ? '⌘⇧Z' : 'Ctrl+Shift+Z';
 
 /** 戻す・やり直す（押したら知らせる。知らせにはもう一方のボタン） */
 export function useHistoryOps(): { undo(): void; redo(): void } {

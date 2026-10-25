@@ -6,8 +6,9 @@ import { isOnLeave } from '../domain/leaves';
 import { hhmmToMinutes, minutesToHhmm } from '../domain/time';
 import { findVisit } from '../patterns';
 import { own } from './common';
+import { DAY_END, DAY_START } from './spans';
 import { draftOf, staffChoices } from './visitOps';
-import { canMoveVisit, DAY_END, DAY_START, inDayRange } from './week';
+import { canMoveVisit, inDayRange } from './week';
 
 /** 落とし先：日付・開始（null は今の開始のまま）・担当（undefined は変えない）・行の〈利用者さん〉（表の行。違う人の行へは置かない） */
 export type DropTarget = {
@@ -36,8 +37,6 @@ export type DropVerdict =
     }
   | { ok: false; why: string };
 
-const hm = (m: number) => minutesToHhmm(m);
-
 /**
  * 訪問をその落とし先へ動かせるか。fit は落とし先に入れる人の数（数えない・数えられないなら null。0 なら「入らない」）、
  * staffWhy は担当を変えるときの「その人が担当できない理由」（できれば null）
@@ -59,7 +58,7 @@ export function dropVerdict(
     return { ok: false, why: 'ほかの人の行へは動かせません（同じ行の別の日へ）' };
   const start = t.start ?? hhmmToMinutes(v.earliestStart);
   if (!inDayRange(start, v.durationMinutes))
-    return { ok: false, why: `${hm(DAY_START)}〜${hm(DAY_END)} の中に置いてください` };
+    return { ok: false, why: `${minutesToHhmm(DAY_START)}〜${minutesToHhmm(DAY_END)} の中に置いてください` };
   const staffChanges = t.staffId !== undefined && t.staffId !== v.staffId;
   const same = t.date === v.date && start === hhmmToMinutes(v.earliestStart) && !staffChanges;
   const warn = same
@@ -89,7 +88,7 @@ export function dropVerdict(
 export function dropShadowText(v: DropVerdict, opts: { fit?: number | null; time?: boolean } = {}): string {
   if (!v.ok) return `置けません：${v.why}`;
   const parts: string[] = [];
-  if (opts.time !== false) parts.push(`ここへ（${hm(v.start)}）`);
+  if (opts.time !== false) parts.push(`ここへ（${minutesToHhmm(v.start)}）`);
   if (v.warn) parts.push(`入らない：${v.warn}`);
   else if (opts.fit !== undefined) parts.push(opts.fit === null ? '入れる人 —' : `入れる人 ${opts.fit}人`);
   else if (!v.same) parts.push('入る');

@@ -3,9 +3,8 @@
 // 休みの期間の訪問は消さない（domain/leaves の leaveOn で「休みのため無し」と派生で扱う）
 import type { DemoData } from '../contracts/data';
 import type { ClientLeave, Visit } from '../contracts/documents';
-import { leaveOn } from '../domain/leaves';
 import { addDays } from '../domain/time';
-import { visitsIn, visitsOn } from '../patterns';
+import { visitsIn } from '../patterns';
 
 /** その〈利用者さん〉の休み（開始日の順。同じなら終了日の順） */
 export function leavesOf(data: Pick<DemoData, 'clientLeaves'>, clientId: string): ClientLeave[] {
@@ -39,20 +38,6 @@ export function leaveVisits(
   return visitsIn(data, { from: leave.from, to })
     .filter((v) => v.clientId === leave.clientId && !v.cancelled)
     .sort((a, b) => a.date.localeCompare(b.date) || a.earliestStart.localeCompare(b.earliestStart));
-}
-
-/** その日の休みのため無しの訪問と、その休み（取り消しを除く。開始（早）の順） */
-export function leaveVisitsOn(
-  data: Pick<DemoData, 'visits' | 'patterns' | 'clients' | 'clientLeaves'>,
-  date: string,
-): { visit: Visit; leave: ClientLeave }[] {
-  const out: { visit: Visit; leave: ClientLeave }[] = [];
-  for (const v of visitsOn(data, date)) {
-    if (v.cancelled) continue;
-    const l = leaveOn(data.clientLeaves, v.clientId, date);
-    if (l) out.push({ visit: v, leave: l });
-  }
-  return out.sort((a, b) => a.visit.earliestStart.localeCompare(b.visit.earliestStart));
 }
 
 /**

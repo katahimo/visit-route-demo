@@ -6,8 +6,9 @@ import { useConfirm } from '../components/ConfirmDialog';
 import { PersonButton } from '../components/PersonPopover';
 import { useToast } from '../components/Toast';
 import { Hint, SectionTitle, SidePanel, WithIcon } from '../components/ui';
-import { addDays, jstDate, weekday } from '../domain/time';
-import { byName, newId, WEEKDAY_LABELS } from '../lib/common';
+import { addDays, jstDate } from '../domain/time';
+import { byName, newId } from '../lib/common';
+import { dateText, mdText, monthLabel } from '../lib/dateText';
 import {
   applyOffboard,
   applyOffboardWith,
@@ -17,7 +18,6 @@ import {
   offboardScope,
   unlimitedBy,
 } from '../lib/offboard';
-import { mdText } from '../lib/patternText';
 import { useDemoData } from '../store';
 
 /** 持ち方の文 */
@@ -255,16 +255,14 @@ export function OffboardPanel({ staffId, onClose }: { staffId: string; onClose: 
                 }}
               >
                 <WithIcon icon={CalendarDays} size={14}>
-                  {Number(scope.from.slice(5, 7))}月の「月の予定」を開く
+                  {monthLabel(scope.from)}の「月の予定」を開く
                 </WithIcon>
               </button>
               <ul className="offboard-days" data-testid="offboard-visits">
                 {byDate.map(([d, x]) => (
                   <li key={d}>
                     <button type="button" className="offboard-day-btn" onClick={() => openDay(d)}>
-                      <span>
-                        {mdText(d)}（{WEEKDAY_LABELS[weekday(d)]}）
-                      </span>
+                      <span>{dateText(d)}</span>
                       <span>
                         {x.count}件{x.confirmed > 0 ? `（確定 ${x.confirmed}件）` : ''}
                       </span>

@@ -1,27 +1,14 @@
 // 予定の画面の時間軸（PRD D58）の位置の計算
 import { describe, expect, it } from 'vitest';
-import type { VisitType } from '../contracts/documents';
 import type { StopTiming } from '../contracts/problem';
 import { compile } from '../matching';
 import { client, DATE, makeData, staff, visit } from '../matching/fixtures';
-import {
-  backgroundOf,
-  boxOf,
-  hourMarks,
-  legsOf,
-  shadowOf,
-  spansOf,
-  subtractSpans,
-  TL_END,
-  TL_START,
-  timeRange,
-  toY,
-  typeUnfitOf,
-} from './timeline';
+import { DAY_END, DAY_START, spansOf } from './spans';
+import { backgroundOf, boxOf, hourMarks, legsOf, shadowOf, subtractSpans, timeRange, toY } from './timeline';
 
 describe('縦の範囲と位置', () => {
   it('07:00〜20:00 が基本で、はみ出せば1時間単位で広げる', () => {
-    expect(timeRange([])).toEqual({ start: TL_START, end: TL_END });
+    expect(timeRange([])).toEqual({ start: DAY_START, end: DAY_END });
     expect(timeRange([{ start: 8 * 60, end: 18 * 60 }])).toEqual({ start: 420, end: 1200 });
     expect(timeRange([{ start: 6 * 60 + 30, end: 20 * 60 + 10 }])).toEqual({ start: 360, end: 1260 });
     // 数でない値は無視し、0〜24時の外へは広げない
@@ -138,32 +125,5 @@ describe('ドラッグ中の影', () => {
     const off = makeData({ ...data, staff: [staff('s1', 38.26, 140.87, { workDays: [] })] });
     const q = compile(off, DATE);
     expect(shadowOf(q, {}, 'v1', 's1')).toMatchObject({ ok: false, allowed: false });
-  });
-});
-
-describe('資格✗', () => {
-  const REHAB: VisitType = {
-    id: 'rehab',
-    name: 'リハビリ',
-    color: 1,
-    durationMinutes: 40,
-    requirements: [{ itemId: 'license', op: 'hasAny', value: ['看護師'] }],
-    note: '',
-  };
-  const data = makeData({
-    staff: [
-      staff('s1', 38.26, 140.87, { traits: { license: ['看護師'] } }),
-      staff('s2', 38.27, 140.88, { traits: { license: ['なし'] } }),
-    ],
-    clients: [client('c1', 38.265, 140.875)],
-    visits: [visit('v1', 'c1', '10:00', '11:00', { typeId: 'rehab' })],
-    visitTypes: [REHAB],
-  });
-  const p = compile(data, DATE);
-  it('種類の必要条件で可でない担当だけ true', () => {
-    expect(typeUnfitOf(p, 'v1', 's1')).toBe(false);
-    expect(typeUnfitOf(p, 'v1', 's2')).toBe(true);
-    expect(typeUnfitOf(p, 'v1', null)).toBe(false);
-    expect(typeUnfitOf(null, 'v1', 's2')).toBe(false);
   });
 });

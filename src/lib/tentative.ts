@@ -1,4 +1,4 @@
-// 〈利用者さん〉の画面の「仮押さえを取り消す」（D47。ADR-0012 追記）の純粋関数。データは書き換えず、新しい DemoData を返す
+// 〈利用者さん〉の画面の「仮押さえを取り消す」（D47。ADR-0012）の純粋関数。データは書き換えず、新しい DemoData を返す
 import type { DemoData } from '../contracts/data';
 import { removePattern } from '../patterns';
 import { repair } from '../store/repair';

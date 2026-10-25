@@ -28,7 +28,446 @@
       "recommended": true,
       "style": {
         "noNonNullAssertion": "off"
+      },
+      "complexity": {
+        "noExcessiveLinesPerFunction": {
+          "level": "warn",
+          "options": {
+            "maxLines": 150,
+            "skipBlankLines": true
+          }
+        }
       }
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["**/*.test.*", "**/*.spec.*", "e2e/**", "scripts/**"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noExcessiveLinesPerFunction": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/contracts/**", "!**/*.test.ts", "!**/*.test.tsx", "!**/*.d.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "react": "src/contracts/** は react に依存しない（code-rules.json）"
+                },
+                "patterns": [
+                  {
+                    "group": [
+                      "**/domain",
+                      "**/domain/**",
+                      "**/lib",
+                      "**/lib/**",
+                      "**/store",
+                      "**/store/**",
+                      "**/components",
+                      "**/components/**",
+                      "**/pages",
+                      "**/pages/**",
+                      "**/app",
+                      "**/app/**"
+                    ],
+                    "message": "src/contracts/** の層の決まりに反する import（code-rules.json）"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/domain/**", "!**/*.test.ts", "!**/*.test.tsx", "!**/*.d.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "react": "src/domain/** は react に依存しない（code-rules.json）"
+                },
+                "patterns": [
+                  {
+                    "group": [
+                      "**/lib",
+                      "**/lib/**",
+                      "**/store",
+                      "**/store/**",
+                      "**/components",
+                      "**/components/**",
+                      "**/pages",
+                      "**/pages/**",
+                      "**/app",
+                      "**/app/**",
+                      "**/matching",
+                      "**/matching/**",
+                      "**/solver",
+                      "**/solver/**"
+                    ],
+                    "message": "src/domain/** の層の決まりに反する import（code-rules.json）"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/patterns/**", "!**/*.test.ts", "!**/*.test.tsx", "!**/*.d.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "react": "src/patterns/** は react に依存しない（code-rules.json）"
+                },
+                "patterns": [
+                  {
+                    "group": [
+                      "**/store",
+                      "**/store/**",
+                      "**/components",
+                      "**/components/**",
+                      "**/pages",
+                      "**/pages/**",
+                      "**/app",
+                      "**/app/**"
+                    ],
+                    "message": "src/patterns/** の層の決まりに反する import（code-rules.json）"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/matching/**", "!**/*.test.ts", "!**/*.test.tsx", "!**/*.d.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "react": "src/matching/** は react に依存しない（code-rules.json）"
+                },
+                "patterns": [
+                  {
+                    "group": [
+                      "**/store",
+                      "**/store/**",
+                      "**/components",
+                      "**/components/**",
+                      "**/pages",
+                      "**/pages/**",
+                      "**/app",
+                      "**/app/**"
+                    ],
+                    "message": "src/matching/** の層の決まりに反する import（code-rules.json）"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/solver/**", "!**/*.test.ts", "!**/*.test.tsx", "!**/*.d.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "react": "src/solver/** は react に依存しない（code-rules.json）"
+                },
+                "patterns": [
+                  {
+                    "group": [
+                      "**/store",
+                      "**/store/**",
+                      "**/components",
+                      "**/components/**",
+                      "**/pages",
+                      "**/pages/**",
+                      "**/app",
+                      "**/app/**"
+                    ],
+                    "message": "src/solver/** の層の決まりに反する import（code-rules.json）"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/evaluate/**", "!**/*.test.ts", "!**/*.test.tsx", "!**/*.d.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "react": "src/evaluate/** は react に依存しない（code-rules.json）"
+                },
+                "patterns": [
+                  {
+                    "group": [
+                      "**/store",
+                      "**/store/**",
+                      "**/components",
+                      "**/components/**",
+                      "**/pages",
+                      "**/pages/**",
+                      "**/app",
+                      "**/app/**"
+                    ],
+                    "message": "src/evaluate/** の層の決まりに反する import（code-rules.json）"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/reassign/**", "!**/*.test.ts", "!**/*.test.tsx", "!**/*.d.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "react": "src/reassign/** は react に依存しない（code-rules.json）"
+                },
+                "patterns": [
+                  {
+                    "group": [
+                      "**/store",
+                      "**/store/**",
+                      "**/components",
+                      "**/components/**",
+                      "**/pages",
+                      "**/pages/**",
+                      "**/app",
+                      "**/app/**"
+                    ],
+                    "message": "src/reassign/** の層の決まりに反する import（code-rules.json）"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/vacancy/**", "!**/*.test.ts", "!**/*.test.tsx", "!**/*.d.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "react": "src/vacancy/** は react に依存しない（code-rules.json）"
+                },
+                "patterns": [
+                  {
+                    "group": [
+                      "**/store",
+                      "**/store/**",
+                      "**/components",
+                      "**/components/**",
+                      "**/pages",
+                      "**/pages/**",
+                      "**/app",
+                      "**/app/**"
+                    ],
+                    "message": "src/vacancy/** の層の決まりに反する import（code-rules.json）"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/excel/**", "!**/*.test.ts", "!**/*.test.tsx", "!**/*.d.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "react": "src/excel/** は react に依存しない（code-rules.json）"
+                },
+                "patterns": [
+                  {
+                    "group": ["**/components", "**/components/**", "**/pages", "**/pages/**", "**/app", "**/app/**"],
+                    "message": "src/excel/** の層の決まりに反する import（code-rules.json）"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/seed/**", "!**/*.test.ts", "!**/*.test.tsx", "!**/*.d.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "react": "src/seed/** は react に依存しない（code-rules.json）"
+                },
+                "patterns": [
+                  {
+                    "group": [
+                      "**/store",
+                      "**/store/**",
+                      "**/components",
+                      "**/components/**",
+                      "**/pages",
+                      "**/pages/**",
+                      "**/app",
+                      "**/app/**"
+                    ],
+                    "message": "src/seed/** の層の決まりに反する import（code-rules.json）"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "src/lib/**",
+        "!**/*.test.ts",
+        "!**/*.test.tsx",
+        "!**/*.d.ts",
+        "!src/lib/dirtyForms.ts",
+        "!src/lib/lazyComponent.tsx",
+        "!src/lib/reloadPage.ts",
+        "!src/lib/routeView.ts",
+        "!src/lib/tentative.ts",
+        "!src/lib/useDayModel.ts",
+        "!src/lib/useDayStatuses.ts",
+        "!src/lib/useFeature.ts",
+        "!src/lib/useMedia.ts",
+        "!src/lib/useScrollEdge.ts",
+        "!src/lib/valueStore.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "react": "src/lib/** は react に依存しない（code-rules.json）",
+                  "react-dom": "src/lib/** は react-dom に依存しない（code-rules.json）"
+                },
+                "patterns": [
+                  {
+                    "group": [
+                      "**/store",
+                      "**/store/**",
+                      "**/components",
+                      "**/components/**",
+                      "**/pages",
+                      "**/pages/**",
+                      "**/app",
+                      "**/app/**"
+                    ],
+                    "message": "src/lib/** の層の決まりに反する import（code-rules.json）"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/store/**", "!**/*.test.ts", "!**/*.test.tsx", "!**/*.d.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["**/components", "**/components/**", "**/pages", "**/pages/**", "**/app", "**/app/**"],
+                    "message": "src/store/** の層の決まりに反する import（code-rules.json）"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "src/components/**",
+        "!**/*.test.ts",
+        "!**/*.test.tsx",
+        "!**/*.d.ts",
+        "!src/components/CommandPalette.tsx",
+        "!src/components/ViewSwitch.tsx",
+        "!src/components/VisitPanel.tsx"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["**/pages", "**/pages/**", "**/app", "**/app/**"],
+                    "message": "src/components/** の層の決まりに反する import（code-rules.json）"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
 }

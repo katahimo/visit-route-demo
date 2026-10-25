@@ -388,9 +388,6 @@ export function VisitRow({
 
 // ---- 小さな札（表のマス） ----
 
-/** 札の大きさ（大＝日の時間軸の帯・中＝リストの行・小＝表のマスの札。PRD D342） */
-export type ChipSize = 'l' | 'm' | 's';
-
 /**
  * 小さな札（表のマスに積む。PRD D342）：「9:00 図」（時刻と頭文字）と印。印・選ぶ・キー・ドラッグは時間軸の帯・リストの行と同じ部品で、
  * 押し方は呼ぶ側の props（useVisitItem・useVisitDrag の source）。label は読み上げ（時刻・名前・担当・印・選択）

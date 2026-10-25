@@ -6,6 +6,7 @@ import type { Client, Staff } from '../contracts/documents';
 import type { StopTiming } from '../contracts/problem';
 import { minutesToHhmm } from '../domain/time';
 import { r0 } from '../lib/common';
+import { isMultiClick } from '../lib/visitSelect';
 import { ClientName } from './parts';
 import { StaffMark, StaffMarkById } from './StaffMark';
 import { WithIcon } from './ui';
@@ -136,7 +137,7 @@ export function VisitCard({
           aria-pressed={picked}
           aria-description={multi ? '選択中' : undefined}
           onClick={(ev) => {
-            if (onMulti && (ev.shiftKey || ev.ctrlKey || ev.metaKey)) {
+            if (onMulti && isMultiClick(ev)) {
               ev.preventDefault();
               onMulti();
               return;
@@ -146,7 +147,7 @@ export function VisitCard({
           onKeyDown={(ev) => {
             if (ev.key === 'Enter' || ev.key === ' ') {
               ev.preventDefault();
-              if (onMulti && (ev.shiftKey || ev.ctrlKey || ev.metaKey)) onMulti();
+              if (onMulti && isMultiClick(ev)) onMulti();
               else onPick();
             }
           }}

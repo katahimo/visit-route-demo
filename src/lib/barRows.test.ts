@@ -15,7 +15,6 @@ import {
   edgeLabel,
   inBar,
   loadEdgeTexts,
-  placeOnRows,
   rowRuns,
   withEdges,
 } from './barRows';
@@ -67,45 +66,6 @@ describe('3段の区切り（PRD D82）', () => {
     const e = barEdges(slots, (x) => x.on);
     expect(e.early.map((x) => x.start)).toEqual([m('07:30')]);
     expect(e.late.map((x) => x.start)).toEqual([m('20:00'), m('21:00')]);
-  });
-});
-
-describe('placeOnRows（〈利用者さん〉の帯。PRD D83）', () => {
-  it('段の中の区間は段の幅に対する位置。段をまたげば段ごとに切り、最初の切れ端に first', () => {
-    const r = placeOnRows([
-      { id: 'a', start: m('09:00'), end: m('10:00') },
-      { id: 'b', start: m('11:30'), end: m('12:30') },
-    ]);
-    expect(r.pieces).toEqual([
-      { row: 0, left: 0.25, width: 0.25, first: true, item: expect.objectContaining({ id: 'a' }) },
-      { row: 0, left: 0.875, width: 0.125, first: true, item: expect.objectContaining({ id: 'b' }) },
-      { row: 1, left: 0, width: 0.125, first: false, item: expect.objectContaining({ id: 'b' }) },
-    ]);
-    expect(r.early).toEqual([]);
-    expect(r.late).toEqual([]);
-    expect(r.outside).toEqual([]);
-  });
-
-  it('8時より前・20時以降：段に掛からない区間は outside と early・late、はみ出す区間は切れ端と early・late', () => {
-    const before = { id: 'x', start: m('07:00'), end: m('08:00') };
-    const over = { id: 'y', start: m('07:30'), end: m('08:30') };
-    const after = { id: 'z', start: m('20:00'), end: m('20:30') };
-    const tail = { id: 'w', start: m('19:30'), end: m('20:30') };
-    const r = placeOnRows([before, over, after, tail]);
-    expect(r.outside).toEqual([before, after]);
-    expect(r.early).toEqual([before, over]);
-    expect(r.late).toEqual([after, tail]);
-    expect(r.pieces.map((p) => [p.item.id, p.row, p.left, p.width])).toEqual([
-      ['y', 0, 0, 0.125],
-      ['w', 2, 0.875, 0.125],
-    ]);
-  });
-
-  it('長さ0の区間はその時刻に幅0の切れ端', () => {
-    const r = placeOnRows([{ start: m('12:00'), end: m('12:00') }]);
-    expect(r.pieces).toEqual([
-      { row: 1, left: 0, width: 0, first: true, item: { start: m('12:00'), end: m('12:00') } },
-    ]);
   });
 });
 

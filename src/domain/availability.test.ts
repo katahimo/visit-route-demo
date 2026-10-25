@@ -4,7 +4,6 @@ import { availabilitySchema } from '../contracts/documents';
 import {
   availabilityOf,
   normalizeSlots,
-  shiftOf,
   slotsError,
   slotsText,
   toHalfHours,
@@ -80,7 +79,7 @@ describe('toHalfHours', () => {
   });
 });
 
-describe('withinSlots・shiftOf・slotsText', () => {
+describe('withinSlots・slotsText', () => {
   const slots = [
     { start: '09:00', end: '12:00' },
     { start: '14:00', end: '18:00' },
@@ -89,14 +88,6 @@ describe('withinSlots・shiftOf・slotsText', () => {
     expect(withinSlots(slots, 9 * 60, 10 * 60)).toBe(true);
     expect(withinSlots(slots, 11 * 60 + 30, 12 * 60 + 30)).toBe(false);
     expect(withinSlots([], 9 * 60, 10 * 60)).toBe(false);
-  });
-  it('最適化の入力：勤務の始まり・終わりとあいだの休み', () => {
-    expect(shiftOf(slots)).toEqual({
-      shiftStart: '09:00',
-      shiftEnd: '18:00',
-      breaks: [{ start: '12:00', end: '14:00' }],
-    });
-    expect(shiftOf([])).toBeNull();
   });
   it('表示', () => {
     expect(slotsText(slots)).toBe('9:00〜12:00・14:00〜18:00');

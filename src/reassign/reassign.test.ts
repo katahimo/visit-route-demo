@@ -371,7 +371,7 @@ describe('leftOf（欠勤の人に残る、振り直すべき訪問）', () => {
   });
 });
 
-describe('fitsOf（他の人を変えずに入る人。ADR-0012 追記）', () => {
+describe('fitsOf（他の人を変えずに入る人。ADR-0012）', () => {
   /** candidatesFor の fits の人を同じ並びで */
   const expected = (p: Problem, routes: Routes, visitId: string) =>
     candidatesFor(p, routes, visitId)

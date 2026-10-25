@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { isStaleBuild, nameTaken, optionNameError, own } from './common';
+import type { Rule } from '../contracts/rules';
+import { isStaleBuild, nameTaken, optionNameError, own, paramOf, ruleWeightText } from './common';
 
 describe('own（自分のキーだけを引く）', () => {
   it('constructor・toString などの組み込みの名前は、記録に無ければ undefined（#/staff-view/constructor で落ちない）', () => {
@@ -51,5 +52,32 @@ describe('isStaleBuild', () => {
     expect(isStaleBuild(new TypeError('error loading dynamically imported module'))).toBe(true);
     expect(isStaleBuild(new TypeError('Importing a module script failed.'))).toBe(true);
     expect(isStaleBuild(new Error('ほかのエラー'))).toBe(false);
+  });
+});
+
+describe('paramOf（URL のクエリの値）', () => {
+  it('キーが無ければ null、値が空なら空の文字', () => {
+    const p = new URLSearchParams('staff=s1,s2&cf=');
+    expect(paramOf(p, 'staff')).toBe('s1,s2');
+    expect(paramOf(p, 'cf')).toBe('');
+    expect(paramOf(p, 'client')).toBeNull();
+  });
+});
+
+describe('ruleWeightText（比べる画面の条件の重み）', () => {
+  const r = (over: Partial<Rule>): Rule => ({
+    id: 'r',
+    type: 'clientPreference',
+    label: '希望',
+    weight: 3,
+    hard: false,
+    ...over,
+  });
+  it('重み・無効・必須（負担の均等は必須でも重みを出す）・無い条件', () => {
+    expect(ruleWeightText(r({}))).toBe('重み3');
+    expect(ruleWeightText(r({ weight: 0 }))).toBe('無効');
+    expect(ruleWeightText(r({ hard: true }))).toBe('必須');
+    expect(ruleWeightText(r({ type: 'balance', hard: true, weight: 2 }))).toBe('必須・重み2');
+    expect(ruleWeightText(undefined)).toBe('（なし）');
   });
 });

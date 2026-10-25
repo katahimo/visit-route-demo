@@ -11,25 +11,6 @@ export function distanceMeters(a: LatLng, b: LatLng): number {
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
-export type GeofenceState = 'inside' | 'outside' | 'unknown';
-
-/**
- * ジオフェンスの判定。精度が悪い位置（半径の2倍超）は判定しない。
- * 出入りのばたつきを防ぐため、外に出たとみなすのは半径の1.5倍を超えたとき。
- */
-export function geofenceState(
-  pos: LatLng & { accuracy: number },
-  center: LatLng,
-  radiusMeters: number,
-  previous: GeofenceState,
-): GeofenceState {
-  if (pos.accuracy > radiusMeters * 2) return previous;
-  const d = distanceMeters(pos, center);
-  if (d <= radiusMeters) return 'inside';
-  if (previous === 'inside' && d <= radiusMeters * 1.5) return 'inside';
-  return 'outside';
-}
-
 /** 移動手段ごとの平均速度（km/h）。地図APIが使えないときの概算に使う */
 const SPEED_KMH: Record<'DRIVE' | 'BICYCLE' | 'WALK' | 'TRANSIT', number> = {
   DRIVE: 25,

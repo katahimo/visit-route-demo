@@ -63,7 +63,6 @@
   4. 見るだけの要対応（未連絡の変更・拘束超） → 要対応を見る
   5. 無ければ済み。今日以降に訪問が無ければ empty
 - `urgentCount(attention)`：要対応の訪問のある日（`care`）
-- `bandMonth(date)`：選んでいる日付の月（週は週の中の選んでいる日の月）
 - `bandHref(ym, op)`：`batch` は担当を組むの画面 `/arrange?ym=…`（ADR-0063）、ほかは `/month?ym=…&do=…`
 - `visitsText`：「N件」
 

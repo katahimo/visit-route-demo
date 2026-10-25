@@ -1,4 +1,4 @@
-// 週間（ADR-0012 追記の段階2。PRD D49〜D51。design.md §4 pages「週間（段階2）」）の画面の純粋関数。
+// 週間（ADR-0012の段階2。PRD D49〜D51。design.md §4 pages「週間（段階2）」）の画面の純粋関数。
 // データは書き換えず、新しい DemoData を返す（書くのは画面の update(fn)）。今日・新しい ID・時刻は引数で受け取る
 import type { DemoData } from '../contracts/data';
 import type { Client, Pattern, Staff, Visit } from '../contracts/documents';
@@ -14,11 +14,9 @@ import { findVisit, nthOfMonth, patternVisitId, putVisits, splitPattern, timesOn
 import { fitsOf, placeVisit } from '../reassign';
 import { attempt, byDisplayName, byName, own } from './common';
 import { dayProblemOf, dayRoutes, pinsOf, routesOf, writeRoutes } from './dayPlan';
-import { busyParts, type StaffSlot, spansOf, staffSlots } from './staffBar';
+import { DAY_END, DAY_START, spansOf } from './spans';
+import { busyParts, type StaffSlot, staffSlots } from './staffBar';
 
-/** 時間軸の縦の範囲（0時からの分）：07:00〜20:00 */
-export const DAY_START = 7 * 60;
-export const DAY_END = 20 * 60;
 /** ドラッグの丸めの刻み（分） */
 export const SNAP_MINUTES = 15;
 

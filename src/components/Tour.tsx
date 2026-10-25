@@ -33,7 +33,7 @@ const Ctx = createContext<() => void>(() => {});
 export const useTour = () => useContext(Ctx);
 
 /**
- * 初回の案内ツアー（PRD D192・D193。ADR-0025 追記）。管理の画面（AdminShell）で1つ。
+ * 初回の案内ツアー（PRD D192・D193。ADR-0025）。管理の画面（AdminShell）で1つ。
  * まだ見ていない（とばしていない）ときは起動したときに開く（?id=・?do= のリンクで開いたときは開かない）。
  * 閉じたら（とばす・Esc・はじめる）・最後の枚まで進んだら、見たことを覚える（store/tour）
  */

@@ -10,7 +10,7 @@ import { leaveOn } from '../domain/leaves';
 import { hhmmToMinutes } from '../domain/time';
 import { visitsOn } from '../patterns';
 import { conditionText, matches } from './conditions';
-import { fitStart } from './timing';
+import { EPS, fitStart } from './timing';
 
 const INF = Number.POSITIVE_INFINITY;
 /** infeasible に載せる原因の数 */
@@ -129,6 +129,39 @@ export const AFTER_LAST_DAY = '最終勤務日の後';
 export const PIN_RULE_ID = 'pin';
 export const PIN_LABEL = 'ピン（手直し）';
 
+/** 稼働時間帯に収まらない原因（ruleId は 'slot'）を out に足す。収まるなら何も足さない */
+function pushSlotReason(
+  out: Reason[],
+  a: {
+    s: Staff;
+    /** 欠勤を差し引いた後の稼働時間帯 */
+    slots: MinuteSlot[];
+    day: ReturnType<typeof slotsOf>;
+    date: string;
+    earliest: number;
+    latest: number;
+    duration: number;
+  },
+): void {
+  const { s, slots, day, date, earliest, latest, duration } = a;
+  const fits = (xs: MinuteSlot[]) => xs.length > 0 && fitStart(xs, earliest, duration) <= latest;
+  if (slots.length === 0) {
+    // 欠勤（ADR-0011）：もともと働く日なら「欠勤（終日）」（途中の欠勤で全部なくなったら「欠勤で稼働時間がない」）、
+    // もともと休みなら「休み」
+    // 最終勤務日の後（ADR-0015）は「最終勤務日の後」
+    const absent = day.absence && day.base.length > 0;
+    const allDay = day.absence?.from === null && day.absence?.to === null;
+    out.push({
+      ruleId: 'slot',
+      label: afterLastDay(s, date) ? AFTER_LAST_DAY : absent ? (allDay ? ABSENT_ALL_DAY : ABSENT_NO_HOURS) : '休み',
+      points: INF,
+    });
+  } else if (earliest <= latest && !fits(slots)) {
+    const label = day.absence && fits(day.base) ? ABSENCE_OVERLAP : '働ける時間に収まらない';
+    out.push({ ruleId: 'slot', label, points: INF });
+  }
+}
+
 /**
  * その日の問題を作る（キャンセルした訪問・休止中のスタッフ/訪問先・休み（ADR-0013）の〈利用者さん〉の訪問は入れない）。
  * pins（訪問ID → 担当ID）の訪問は、固定した担当だけを可にする（他の担当は「固定（手直し）」で外す）。
@@ -234,23 +267,15 @@ export function compile(data: CompileInput, date: string, pins?: Record<string, 
       if (!places[S + j]) out.push({ ruleId: 'noPlace', label: `${terms.client}の位置が未登録`, points: INF });
       if (!places[i]) out.push({ ruleId: 'noPlace', label: `${terms.staff}の自宅の位置が未登録`, points: INF });
       if (pv.earliest > pv.latest) out.push({ ruleId: 'time', label: '時間の約束の幅が正しくない', points: INF });
-      const day = daySlots[i]!;
-      const fits = (xs: MinuteSlot[]) => xs.length > 0 && fitStart(xs, pv.earliest, pv.duration) <= pv.latest;
-      if (ps.slots.length === 0) {
-        // 欠勤（ADR-0011）：もともと働く日なら「欠勤（終日）」（途中の欠勤で全部なくなったら「欠勤で稼働時間がない」）、
-        // もともと休みなら「休み」
-        // 最終勤務日の後（ADR-0015）は「最終勤務日の後」
-        const absent = day.absence && day.base.length > 0;
-        const allDay = day.absence?.from === null && day.absence?.to === null;
-        out.push({
-          ruleId: 'slot',
-          label: afterLastDay(s, date) ? AFTER_LAST_DAY : absent ? (allDay ? ABSENT_ALL_DAY : ABSENT_NO_HOURS) : '休み',
-          points: INF,
-        });
-      } else if (pv.earliest <= pv.latest && !fits(ps.slots)) {
-        const label = day.absence && fits(day.base) ? ABSENCE_OVERLAP : '働ける時間に収まらない';
-        out.push({ ruleId: 'slot', label, points: INF });
-      }
+      pushSlotReason(out, {
+        s,
+        slots: ps.slots,
+        day: daySlots[i]!,
+        date,
+        earliest: pv.earliest,
+        latest: pv.latest,
+        duration: pv.duration,
+      });
       const level = compatOn ? (data.compat[client.id]?.[s.id] ?? 0) : 0;
       // 相性×は重み・hard にかかわらず外す
       if (level === -2) out.push({ ruleId: firstCompat, label: '相性×', points: INF, level: -2 });
@@ -350,8 +375,14 @@ export function compile(data: CompileInput, date: string, pins?: Record<string, 
             else out.push({ ruleId: r.id, label: 'いつもの担当でない', points: r.hard ? INF : w });
             break;
           }
-          default:
-            break; // balance・wait は割当費用に入らない
+          case 'balance':
+          case 'wait':
+            break; // 割当費用に入らない
+          default: {
+            // 条件の種類を足したら、ここが型の誤りになる（割当費用に入れるか、上の case に足す）
+            const _exhaustive: never = r.type;
+            void _exhaustive;
+          }
         }
       }
       out.sort((a, b) => b.points - a.points || 0);
@@ -403,10 +434,10 @@ export function compile(data: CompileInput, date: string, pins?: Record<string, 
     const total = cap.reduce((a, b) => a + b, 0);
     if (total > 0) {
       const target = cap.map((c) => (n * c) / total);
-      const hi = target.map((t) => Math.ceil(t - 1e-9));
+      const hi = target.map((t) => Math.ceil(t - EPS));
       balance = {
         perVisit: wBalance * POINTS_PER_WEIGHT,
-        lo: target.map((t) => Math.floor(t + 1e-9)),
+        lo: target.map((t) => Math.floor(t + EPS)),
         hi,
         // 必須なら上限＝目安の上＋1（休みの人は 0＋1。休みの人はもともと可否で外れる）
         cap: hardBalance ? hi.map((h) => h + 1) : null,

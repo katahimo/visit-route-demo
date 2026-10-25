@@ -1,12 +1,12 @@
-// 行き止まりの所から次の画面へ移る行き先（PRD D201〜D204。ADR-0025 追記）を決める純粋関数。
+// 行き止まりの所から次の画面へ移る行き先（PRD D201〜D204。ADR-0025）を決める純粋関数。
 // 行き先は今ある URL の形だけ（日の画面・`?do=absence`・稼働の見込みの `?ym=`・`?staff=`）と、日の画面の
 // 「入らなかった訪問」へ巻く `?do=unassigned`（日の画面が1回で URL から消す）。データは書き換えない。
 // 機能の入り切り（PRD D213。ADR-0028）：切った機能（欠勤・キャンセル・稼働の見込み）の行き先は出さない
 import type { Features } from '../contracts/features';
 import { isHrefOn } from './features';
 import type { Attention } from './month';
-import { ymOf } from './month';
 import { SUDDEN_DO } from './sudden';
+import { ymOf } from './ym';
 
 /** 日の画面の「入らなかった訪問」の列へ巻く `?do=` の値（PRD D201） */
 export const UNASSIGNED_DO = 'unassigned';

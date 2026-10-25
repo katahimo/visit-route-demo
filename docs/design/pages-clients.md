@@ -101,7 +101,7 @@
 
 #### `lib/personPage.ts`（純粋関数。テストあり）
 
-`personPathKind`・`tabOf`・`tabSearch`・`pickFields`・`mergeFields`・`calViewOf`・`monthWeeksMon`・`calDates`・`shiftAnchor`・`calTitle`・`clientCalItems`・`staffCalItems`・`itemsByDate`・`lastMadeDate`・`staffAbsencesIn`・`slotOf`・`clientStaffGroups`（〈利用者さん〉から見た相性の記号ごとの〈スタッフ〉）
+`tabOf`・`tabSearch`・`pickFields`・`mergeFields`・`calViewOf`・`monthWeeksMon`・`calDates`・`shiftAnchor`・`calTitle`・`clientCalItems`・`staffCalItems`・`itemsByDate`・`lastMadeDate`・`staffAbsencesIn`・`slotOf`・`clientStaffGroups`（〈利用者さん〉から見た相性の記号ごとの〈スタッフ〉）
 
 #### `lib/viewMode.ts`（純粋関数。テストあり）
 
@@ -109,7 +109,7 @@
 
 #### `lib/leaves.ts`（画面の純粋関数。テストあり）
 
-`leavesOf(data, clientId)`（開始の順）・`saveLeave(d, leave)`（同じ ID は置き換え）・`removeLeave(d, id)`・`leaveVisitsOn(data, date)`（その日の休みの訪問と休み）・`leaveConfirmedDates(data, leave)`（休みの期間で、確定した割当にその〈利用者さん〉の訪問がある日）・`leaveVisits(data, leave)`（休みの期間のその〈利用者さん〉の取り消しでない訪問）・`keepLeaveVisits(cols, leaveVisitIds, before)`（確定するとき、休みの訪問を前の確定した担当のまま残す）
+`leavesOf(data, clientId)`（開始の順）・`saveLeave(d, leave)`（同じ ID は置き換え）・`removeLeave(d, id)`・`leaveConfirmedDates(data, leave)`（休みの期間で、確定した割当にその〈利用者さん〉の訪問がある日）・`leaveVisits(data, leave)`（休みの期間のその〈利用者さん〉の取り消しでない訪問）・`keepLeaveVisits(cols, leaveVisitIds, before)`（確定するとき、休みの訪問を前の確定した担当のまま残す）
 
 #### 確かめ
 
@@ -171,10 +171,10 @@
 
 #### `components/ClientFilter.tsx`
 
-- 検索欄：Esc で文字を消す。文字はこの部品の中にも持ち、変換中（`compositionstart`〜`compositionend`）は呼ぶ側へ渡さず確定で渡す。ふつうの入力は 300ms 待って渡す（週は `replace` で URL へ）。呼ぶ側の値が外から変わったら入力欄を合わせる。チップなどを押したときは入力欄の文字もいっしょに渡す
+- 検索欄：Esc で文字を消す。文字はこの部品の中にも持ち、変換中（`compositionstart`〜`compositionend`）は呼ぶ側へ渡さず確定で渡す。ふつうの入力は 300ms 待って渡す（週は `replace` で URL へ）。呼ぶ側の値が外から変わったら入力欄を合わせる。チップなどを押したときは入力欄の文字もいっしょに渡す（このふるまいは `components/useImeQuery` の `useImeQuery(state, onChange)`。〈スタッフ〉の絞り込み `StaffFilter` も同じフックを使う。待ちは `QUERY_DELAY_MS`）
 - 「終了の人も出す」（`hideEnded` で出さない）・件数「N人／M人」・「絞り込みを戻す」（既定と違うときだけ）
 - 地区の1段目（市区）と選んだ市区ごとの2段目（町名）
-- 訪問の種類（`visitTypes` を渡し1件以上のとき。地区の下・「絞り込み」の上の別の欄「訪問の種類（どれか）」。`testId-type`・`data-key`＝種類の id）：種類ごとのチップ（人数つき・0人は `aria-disabled`）。ADR-0021 追記。訪問の種類の機能の入り切りは無い（`features` に無い）ので、種類が0件のときだけ出さない
+- 訪問の種類（`visitTypes` を渡し1件以上のとき。地区の下・「絞り込み」の上の別の欄「訪問の種類（どれか）」。`testId-type`・`data-key`＝種類の id）：種類ごとのチップ（人数つき・0人は `aria-disabled`）。ADR-0021。訪問の種類の機能の入り切りは無い（`features` に無い）ので、種類が0件のときだけ出さない
 - 絞り込みのチップ：「〈スタッフ〉が担当する人」を押すと〈スタッフ〉の select（人数は「その人で押したら何人か」。このチップは0人でも押せる）。`extraChips`（チップ「絞り込み」の後ろに並べる。判定は `facts.extraTests`、人数は `extraCounts`）
 - チップ・地区は `aria-pressed` のボタンで人数を読み上げ、0人で押していないものは `aria-disabled`（薄く、押しても何もしない）
 - 状態は呼ぶ側が持つ
@@ -209,5 +209,5 @@
 - [ ] （ADR-0052）一覧の行・「開く」・`?id=` でその人の画面（`#/clients/:id`）が開き、節は読むだけ。「直す」でその節だけ入力欄になり、保存・取り消しで戻る。変更があるまま取り消す・タブを替える・別の人を開く・画面を移ると確認が出る。「追加」は新しい人の画面（`scripts/e2e-view.cjs`）
 - [ ] （ADR-0056）人の予定表の回を Ctrl＋クリックで選べ（下に選んだ訪問の帯）、↓ で15分後へ動く（Ctrl+Z で戻る）。〈スタッフ〉の画面は ↓ で動かず、帯に時刻をずらすが無い。印は日・週・月と同じ。390px は「選ぶ」・長押しで選べ、2段目の行は日ごとのリストと同じ形（`scripts/e2e-shared-parts.cjs`）
 - [ ] （ADR-0052）予定のタブのカレンダーで回を押すと訪問の詳細の欄、空き枠を縦にドラッグすると所要の長さで新しい訪問、回をドラッグすると範囲を選んで動かせる。繰り返しを足す・直す・終わらせる（`scripts/e2e-person-page.cjs`）
-- [ ] （ADR-0016 追記）`scripts/e2e-address.cjs` が通る：開いた・打っただけでは送らず送るのは zipcode・q だけ、郵便番号の正規化、候補と元に戻す、見つからない・つながらない・時間切れで知らせてデータを変えない、連打で1回・途中で閉じたら書かない・途中の書き換えで古い応答を捨てる、〈利用者さん〉の data-testid と保存
+- [ ] （ADR-0016）`scripts/e2e-address.cjs` が通る：開いた・打っただけでは送らず送るのは zipcode・q だけ、郵便番号の正規化、候補と元に戻す、見つからない・つながらない・時間切れで知らせてデータを変えない、連打で1回・途中で閉じたら書かない・途中の書き換えで古い応答を捨てる、〈利用者さん〉の data-testid と保存
 - [ ] `lib/leaves`・`lib/patternText`・`lib/area`・`lib/clientFilter`・`lib/search`・`lib/viewMode`・`lib/personPage`・`lib/visitOps`・`lib/addressLookup`・`lib/postalCode`・`lib/geocode`（偽物）・`lib/clientStage` のテストが通る
