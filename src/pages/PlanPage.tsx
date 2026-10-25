@@ -63,35 +63,24 @@ import { KeyMoveBand, useVisitKeys } from '../components/visitKeys';
 import { useVisitSelection } from '../components/visitParts';
 import { TypeMark } from '../components/visitType';
 import type { DemoData } from '../contracts/data';
-import type { Absence, Client, Visit, VisitType } from '../contracts/documents';
-import type { PlanScore, Problem, ScoreScale, SolveResult } from '../contracts/problem';
-import { slotsText, timeText } from '../domain/availability';
+import type { Client, Visit, VisitType } from '../contracts/documents';
+import type { PlanScore, Problem, ScoreScale } from '../contracts/problem';
+import { slotsText } from '../domain/availability';
 import { leaveOn } from '../domain/leaves';
 import { NONE, timeOrder, windowText } from '../domain/scheduleModel';
 import { hhmmToMinutes, jstDate, minutesToHhmm } from '../domain/time';
 import { achievements, BALANCE_RULE_KEY, hundredBreakdown, ruleLowerBounds, score, toHundred } from '../evaluate';
-import {
-  absencesOn,
-  absenceText,
-  applyReassign,
-  baseOf,
-  chooseReassign,
-  removeAbsence,
-  revertReassign,
-  saveAbsence,
-  withoutAbsencesOn,
-} from '../lib/absences';
+import { absenceText } from '../lib/absences';
 import { colorOf } from '../lib/colors';
-import { attempt, formError, own, pointsText, r0 } from '../lib/common';
+import { attempt, own, pointsText, r0 } from '../lib/common';
 import { confirmDay } from '../lib/confirmDay';
-import { type CancelledContact, type ContactRow, clock, contactCount, contactRows, dateWordOf } from '../lib/contacts';
+import { dayContactWords } from '../lib/contacts';
 import { clockTime, dateText } from '../lib/dateText';
 import { dayLineRange, dayLines } from '../lib/dayLine';
 import {
   changeCount,
   ownerOf,
   pinsOf,
-  pointsOf,
   routesOf,
   toldChanges,
   toldStateOf,
@@ -101,7 +90,6 @@ import {
 } from '../lib/dayPlan';
 import { deferredDragStart } from '../lib/dragStart';
 import { hardLinks } from '../lib/hardLinks';
-import { appHistory } from '../lib/history';
 import { isDate } from '../lib/isDate';
 import { linkIfOn, UNASSIGNED_DO, workloadHref } from '../lib/links';
 import { contactMailText, mailTo } from '../lib/mail';
@@ -110,36 +98,22 @@ import { issueBreakdown } from '../lib/month';
 import { scrollBehavior } from '../lib/motion';
 import { typeOf } from '../lib/patternText';
 import { leavePeople } from '../lib/personLinks';
+import { hardLabelsOf, planColumns, toldMarksOf } from '../lib/planView';
 import { CURRENT_TEXT, hardReasonLabels, NONE_TEXT, notAllowedText, reassignChoices } from '../lib/reassignMenu';
 import { buildRouteMap, homeLegKey, homeTravel } from '../lib/routeView';
-import { reasonFace, scoreReason } from '../lib/scoreReason';
+import { reasonFace, reasonOfRoutes } from '../lib/scoreReason';
 import { spansOf } from '../lib/spans';
-import { SUDDEN_DO, staffChoices, visitChoices } from '../lib/sudden';
 import { type LegSpan, legsOf, shadowOf } from '../lib/timeline';
-import { createValueStore, type ReadableStore } from '../lib/valueStore';
+import type { ReadableStore } from '../lib/valueStore';
 import { dayLooks } from '../lib/visitLook';
 import { cancelVisitOp } from '../lib/visitOps';
 import { canSelectVisit } from '../lib/visitSelect';
 import { hmText, workStats } from '../lib/workload';
-import { bestInsertion, compile } from '../matching';
-import {
-  type ContactList,
-  contactsOf,
-  leftOf,
-  placeVisit,
-  prepareAnneal,
-  type ReassignCandidate,
-  type ReassignResult,
-  reassign,
-  reassignDiff,
-  STAY_WEIGHT_DEFAULT,
-  settleAnneal,
-  targetsOf,
-} from '../reassign';
-import { defaultIterations, runSolve } from '../solver';
+import { bestInsertion } from '../matching';
+import { placeVisit, type ReassignCandidate } from '../reassign';
 import './plan.css';
 import './schedule.css';
-import { CandidateBox, leftReasonText, ReassignBar, ReassignMoves, ReassignSummary } from './absenceParts';
+import { CandidateBox, leftReasonText, ReassignBar } from './absenceParts';
 import { DayMailPanel } from './mailPanels';
 import {
   AchievementList,
@@ -153,21 +127,11 @@ import {
   ScoreNextStep,
   ScoreReasonText,
 } from './planParts';
-import {
-  AnnealBox,
-  ContactButton,
-  ContactPanel,
-  type LeftContact,
-  ReassignDock,
-  type ReassignOption,
-} from './reassignParts';
-import { type SuddenInit, SuddenPanel } from './SuddenPanel';
-
-/** 振り直しの手の名前（「振り直す前に戻す」は直前の手がこの日のこれのときだけ全体の「元に戻す」で戻す） */
-const REASSIGN_LABEL = '欠勤の振り直し';
-
-/** 連絡の一覧が出せない（差を出せない）ときでも、欠勤の人に残る訪問だけで開くための空の一覧 */
-const EMPTY_CONTACTS: ContactList = { staffChanged: [], timeChanged: [], staff: [] };
+import { AnnealBox, ContactButton, ContactPanel, ReassignDock } from './reassignParts';
+import { SuddenPanel } from './SuddenPanel';
+import type { PlanProgress } from './usePlanRun';
+import { reassignShown, useReassignFlow } from './useReassignFlow';
+import { EMPTY_CONTACTS, useSuddenEntry, useSuddenFlow, useSuddenState } from './useSuddenFlow';
 
 /**
  * 日の予定（D4・D13・D18。版2：ADR-0053）：その日の訪問と担当を1画面で扱う。担当・開始・ピンは訪問が持ち、列はその日の訪問の
@@ -181,20 +145,9 @@ const EMPTY_CONTACTS: ContactList = { staffChanged: [], timeChanged: [], staff: 
 const PLAN_SET = 'plan';
 
 /**
- * hundred：いまの最良を点数の基準の物差しで点数（100点満点）にした値（物差しを作れなければ null）。
- * 最良が変わらず Worker が bestRoutes を送らなかった進捗では、前の値のまま
- */
-type Progress = { iteration: number; total: number; hundred: number | null };
-
-/**
- * 「元に戻す」（1手。PRD D218）の控え：書く前の訪問（と振り直しの情報）と、書いたあとの訪問。
- * 書いたあとに別の操作で訪問が変わっていれば戻さない
- */
-
-/**
  * 計算の進み具合のバーと回数（PRD D249）。進み具合は外の入れ物から読み、変わってもここだけ描き直す
  */
-function PlanProgressText({ store, prefix }: { store: ReadableStore<Progress | null>; prefix: string }) {
+function PlanProgressText({ store, prefix }: { store: ReadableStore<PlanProgress | null>; prefix: string }) {
   const progress = useValueStore(store);
   return (
     <>
@@ -213,17 +166,6 @@ function PlanProgressText({ store, prefix }: { store: ReadableStore<Progress | n
 function shortDate(date: string): string {
   const [, m, d] = date.split('-');
   return `${Number(m)}/${Number(d)}`;
-}
-
-/** 担当の並びを問題の〈スタッフ〉の順・問題の訪問だけにそろえる（比べるため。空の列は除く） */
-function routesOfIds(problem: Problem, r: Record<string, string[]>): Record<string, string[]> {
-  const ids = new Set(problem.visits.map((v) => v.id));
-  const out: Record<string, string[]> = {};
-  for (const s of problem.staff) {
-    const xs = (own(r, s.id) ?? []).filter((id) => ids.has(id));
-    if (xs.length > 0) out[s.id] = xs;
-  }
-  return out;
 }
 
 export default function PlanPage() {
@@ -270,15 +212,6 @@ export default function PlanPage() {
   );
   const toast = useToast();
   const confirmDialog = useConfirm();
-  /**
-   * 計算の進み具合（100msごとに変わる）。画面の state に置くと画面全体を描き直すので、外の入れ物に置き、
-   * 読む子の部品（PlanProgressText・AnnealBox の進み具合）だけを描き直す（PRD D249）
-   */
-  const [progressStore] = useState(() => createValueStore<Progress | null>(null));
-  const [running, setRunning] = useState<'anneal' | null>(null);
-  /** 計算している日と条件の名前（「組んでいます」の表示） */
-  const [runningFor, setRunningFor] = useState<{ date: string; label: string } | null>(null);
-  const [error, setError] = useState<string | null>(null);
   /** 地図で見る担当・強調する区間・選んだ訪問（列の見出し・凡例・訪問・区間を押す） */
   const sel = useRouteSelection(date, (_set, id) => owner.get(id));
   const { focusStaff, focusOn } = sel;
@@ -292,28 +225,8 @@ export default function PlanPage() {
   useEffect(() => {
     if (helpOpen) helpRef.current?.focus();
   }, [helpOpen]);
-  /**
-   * 「欠勤・キャンセル」の欄（PRD D167〜D172。null：閉じている）。日の画面の入口・ホーム（`?do=absence`）からは1段目、
-   * 列の見出しの「この人の欠勤を登録」「欠勤を直す」からはその人を選んだ2段目で開く
-   */
-  const [sudden, setSudden] = useState<SuddenInit | null>(null);
-  /** 「欠勤・キャンセル」の欄を閉じたあと、差の欄へ移るか（振り直したあと） */
-  const suddenToBar = useRef(false);
-  /** 日の予定の「欠勤・キャンセルを登録」のボタン（欄を閉じたときの戻り先が消えていたら） */
-  const suddenBtnRef = useRef<HTMLButtonElement>(null);
-  /** 欄を開く（前に振り直して閉じたときの「差の欄へ移る」を戻す。開き直して欠勤だけ登録したときに差の欄へ飛ばない） */
-  const openSudden = (init: SuddenInit) => {
-    suddenToBar.current = false;
-    setSuddenCancel(null);
-    setSudden(init);
-  };
-  /**
-   * 欄で取り消した訪問（5段目の連絡の「中止」。PRD D244）と、取り消す前の担当の並び・問題（連絡の差の「前」）。欄を開き直すと消す
-   */
-  const [suddenCancel, setSuddenCancel] = useState<{
-    cancelled: CancelledContact;
-    before: { problem: Problem; routes: Record<string, string[]> } | null;
-  } | null>(null);
+  /** 「欠勤・キャンセル」の欄の開け閉め（PRD D167〜D172） */
+  const suddenState = useSuddenState(date);
   /** 取り消しの欄を開いている訪問（PRD D74。null：閉じている）と、当日キャンセルか */
   const [cancelFor, setCancelFor] = useState<Visit | null>(null);
   const [cancelSameDay, setCancelSameDay] = useState(false);
@@ -351,22 +264,9 @@ export default function PlanPage() {
   const wideMap = useMedia(WIDE_MAP_QUERY);
   /** 「担当なしの訪問」の列（帯の近道の行き先） */
   const noneColId = useId();
-  const runRef = useRef<{ stop(): void } | null>(null);
-  /** 「登録して、少し動かしてよい（案B）も作る」で、振り直したあとに案B を始める日（日付を変えたら null） */
-  const pendingAnneal = useRef<string | null>(null);
-  /**
-   * 欠勤を登録して振り直したあと、差の欄へ移る（欄が閉じて振り直しが出てから）。立てた日付。
-   * 日付を変えたら・少し経っても振り直しが出なければ下ろす（あとの手直しで急に移らない）
-   */
-  const pendingBarFocus = useRef<string | null>(null);
-  /** 計算の世代。画面を離れると進め、前の世代の計算の結果は捨てる（開発時の StrictMode の付け外しでも） */
-  const generation = useRef(0);
-  /** いちばん新しいデータ（計算が終わったときに、最新の訪問と比べる） */
+  /** いちばん新しいデータ（書く前のデータと比べる） */
   const dataRef = useRef(data);
   dataRef.current = data;
-  /** いちばん新しい点数の物差し（計算中の「いまの最良 N点」を基準の物差しで付け直す。ADR-0010） */
-  const scoreRef = useRef({ problem: scoreProblem, scale: scoreScale });
-  scoreRef.current = { problem: scoreProblem, scale: scoreScale };
   /** 複数選択（Shift・Ctrl＋クリック。日付を変えたら外す。PRD D330） */
   const multi = useVisitSelection(date);
   // biome-ignore lint/correctness/useExhaustiveDependencies: 日付を変えたらスマホの「選ぶ」を抜ける（選んだ訪問は useVisitSelection が外す）
@@ -374,28 +274,11 @@ export default function PlanPage() {
     setSelecting(false);
   }, [date]);
 
-  // 画面を離れたら Worker を止める（止めた結果は保存しない）
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 日付を変えたら開いた欄を閉じる
   useEffect(() => {
-    setRunning(null);
-    setRunningFor(null);
-    progressStore.set(null);
-    return () => {
-      generation.current++;
-      runRef.current?.stop();
-      runRef.current = null;
-    };
-    // progressStore は作り直さない（一度だけ）
-  }, [progressStore]);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: 日付を変えたら開いた欄を閉じ、前の日のエラーを消す
-  useEffect(() => {
-    setSudden(null);
     setCancelFor(null);
-    setContactsOpen(false);
     setToldOpen(false);
     setPanel(null);
-    setError(null);
-    // 前の日に「案B も作る」を押して、まだ始まっていなければやめる（別の日で始めない）
-    pendingAnneal.current = null;
   }, [date]);
   /** いま見ている日（計算が終わったときに、まだその日を見ているか） */
   const dateRef = useRef(date);
@@ -467,104 +350,15 @@ export default function PlanPage() {
     );
   };
 
-  // ---- 計算（欠勤・キャンセルの振り直しの案B）----
-  /** 途中の最良は、解いている条件にかかわらず点数の基準の物差しで点数にする（ADR-0010） */
-  const run = (
-    kind: 'anneal',
-    target: Problem,
-    label: string,
-    onDone: (r: SolveResult) => void,
-    after?: () => void,
-    initial?: Record<string, string[]>,
-  ): boolean => {
-    const gen = generation.current;
-    const live = () => gen === generation.current;
-    const started = attempt(() =>
-      runSolve(
-        target,
-        { seed: dataRef.current.seed, iterations: defaultIterations(target), ...(initial ? { initial } : {}) },
-        (p) => {
-          if (!live()) return;
-          const { problem: sp, scale: ss } = scoreRef.current;
-          const best = p.bestRoutes;
-          if (!best) {
-            progressStore.set((prev) => ({ iteration: p.iteration, total: p.total, hundred: prev?.hundred ?? null }));
-            return;
-          }
-          const hundred = pointsOf(sp, ss, best);
-          progressStore.set({ iteration: p.iteration, total: p.total, hundred });
-        },
-      ),
-    );
-    if (!started.value) {
-      setError(started.error);
-      return false;
-    }
-    runRef.current = started.value;
-    setRunning(kind);
-    setRunningFor({ date, label });
-    progressStore.set(null);
-    started.value.promise
-      .then((result) => {
-        if (live()) onDone(result);
-      })
-      .catch((e) => {
-        if (live()) setError(`担当を組めませんでした（${formError(e)}）`);
-      })
-      .finally(() => {
-        if (!live()) return;
-        runRef.current = null;
-        setRunning(null);
-        setRunningFor(null);
-        progressStore.set(null);
-        after?.();
-      });
-    return true;
-  };
-  const stop = () => {
-    runRef.current?.stop();
-  };
-  /** 案B の計算だけを止める */
-  const stopAnneal = () => {
-    runRef.current?.stop();
-  };
-
   // ---- ?do= の入口（欠勤・キャンセル・担当なしの訪問）----
   const [params, setParams] = useSearchParams();
   const doParam = params.get('do');
-  /** ?do=absence で開く日（日付を切り替えたあとに開く。日付を変えると欄を閉じる effect より後で開くため）と、`&staff=` の人 */
-  const pendingSudden = useRef<string | null>(null);
-  const pendingSuddenStaff = useRef<string | null>(null);
-  // ホームの「急な欠勤・キャンセルを登録」（?date=今日&do=absence。PRD D172）：その日を選び、「欠勤・キャンセル」の欄を1段目で開き、
-  // URL から ?date= と ?do= を消す（1回だけ。戻るで繰り返さない）
-  // biome-ignore lint/correctness/useExhaustiveDependencies: ?do= が付いたときだけ
-  useEffect(() => {
-    if (doParam !== SUDDEN_DO) return;
-    const raw = params.get('date');
-    const target = raw && isDate(raw) ? raw : date;
-    if (target !== date) setDate(target);
-    pendingSudden.current = target;
-    // 稼働時間の右の欄から（PRD D203）：`&staff=` の人の欠勤（2段目）で開く。知らない人・その日に働かない人なら1段目
-    const sid = params.get('staff');
-    pendingSuddenStaff.current = sid && data.staff.some((s) => s.id === sid) ? sid : null;
-    setParams(
-      (p) => {
-        p.delete('do');
-        p.delete('date');
-        p.delete('staff');
-        return p;
-      },
-      { replace: true },
-    );
-  }, [doParam]);
-  useEffect(() => {
-    if (pendingSudden.current === null || pendingSudden.current !== date) return;
-    pendingSudden.current = null;
-    const sid = pendingSuddenStaff.current;
-    pendingSuddenStaff.current = null;
-    // その日に働く人のときだけ2段目。休みの日・最終勤務日の後の人は選択肢に無く2段目が壊れるので1段目（PR #48 のレビュー）
-    const works = !!sid && (slotsOf.get(sid)?.baseSlots.length ?? 0) > 0;
-    openSudden(works ? { kind: 'staff', staffId: sid } : {});
+  useSuddenEntry({
+    date,
+    setDate,
+    knownStaff: (sid) => data.staff.some((s) => s.id === sid),
+    works: (sid) => (slotsOf.get(sid)?.baseSlots.length ?? 0) > 0,
+    open: suddenState.open,
   });
   // ?date= だけのリンク（空き状況の「その日の予定を見る」。新しいタブでも開ける。PRD D204）：その日を選び、?date= を消す
   const dateParam = params.get('date');
@@ -642,6 +436,41 @@ export default function PlanPage() {
     nextPins: Record<string, string>,
     label = '担当を替える',
   ) => writeWith(label, (d) => writeRoutes(d, date, p, nextRoutes, { pins: nextPins }));
+  // ---- 急な欠勤と振り直し（ADR-0011。PRD D26〜D35）：差の欄・案A／案B・連絡の一覧・振り直す前に戻す ----
+  const flow = useReassignFlow({
+    date,
+    data,
+    update,
+    writeWith,
+    problem,
+    routes,
+    hasPlan,
+    compileInput,
+    scoreProblem,
+    scoreScale,
+    staffName,
+    visitById,
+    resetSelection: sel.reset,
+    closeSudden: () => suddenState.setSudden(null),
+  });
+  const {
+    info: reassignInfo,
+    diff: rDiff,
+    marks: reassignMarks,
+    cancelled: absenceCancelled,
+    absentStaff,
+    left,
+    leftById,
+    barId,
+    goToBar,
+    contacts,
+    contactsOpen,
+    setContactsOpen,
+    error,
+  } = flow;
+  const { running, runningFor, progressStore } = flow.planRun;
+  const annealDisabled = flow.anneal.disabled;
+  const { annealBox, leftContacts, contactsTotal, annealRecommended } = reassignShown(flow, visitById);
   /**
    * 「担当を変える ▾」で移したあとのフォーカス（PRD D217）：選んだ項目・ボタンは移した訪問の詳細ごと消える（列が替わる・
    * 選択が外れる）ので、移した先のカード、無ければ「元に戻す」、それも無ければ移した先の列の見出しへ
@@ -793,13 +622,7 @@ export default function PlanPage() {
   const toldState = toldStateOf(data, date, told);
   const toldCount = changeCount(told);
   /** 訪問ごとの未連絡の変更の文（「担当 A→B」「時刻 9:00→9:30」） */
-  const toldMarks = useMemo(() => {
-    const out = new Map<string, string>();
-    const name = (id: string | null) => (id ? (staffById.get(id)?.name ?? '（不明）') : 'なし');
-    for (const c of told?.staffChanged ?? []) out.set(c.visitId, `担当 ${name(c.fromStaffId)}→${name(c.toStaffId)}`);
-    for (const c of told?.timeChanged ?? []) out.set(c.visitId, `時刻 ${clock(c.fromStart)}→${clock(c.toStart)}`);
-    return out;
-  }, [told, staffById]);
+  const toldMarks = useMemo(() => toldMarksOf(told, (id) => staffById.get(id)?.name ?? '（不明）'), [told, staffById]);
   /** 訪問の見た目（要対応・未連絡の変更・ピンなど。週・月・人の予定表と同じ判定。lib/visitLook） */
   const looks = useMemo(
     () =>
@@ -825,7 +648,7 @@ export default function PlanPage() {
       confirmLabel: '確定する',
     });
     if (!ok) return false;
-    if (runRef.current) return false;
+    if (flow.planRun.busy()) return false;
     const p = hasPlan ? problem : null;
     const at = Date.now();
     update(
@@ -841,7 +664,7 @@ export default function PlanPage() {
   /** 全員分のメールを作ったので確定する（PRD D346。確認は出さず、知らせの「元に戻す」で戻せる） */
   const confirmByMail = () => {
     if ((!hasPlan || !problem) && toldState !== 'changed') return;
-    if (runRef.current) return;
+    if (flow.planRun.busy()) return;
     const p = hasPlan ? problem : null;
     const at = Date.now();
     update(
@@ -857,405 +680,27 @@ export default function PlanPage() {
     );
   };
 
-  // ---- 急な欠勤と振り直し（ADR-0011。PRD D26〜D32）----
-  /** その日の振り直しの情報（振り直しの提案を反映した日） */
-  const reassignInfo = own(data.reassigns, date) ?? null;
-  /** 振り直す前の時刻を出す問題（振り直しに使った欠勤を除いたデータで compile。差・案B・連絡の一覧の before） */
-  const reassignBefore = useMemo(() => {
-    if (!reassignInfo) return null;
-    const used = new Set(reassignInfo.absenceIds);
-    return (
-      attempt(() => compile({ ...compileInput, absences: compileInput.absences.filter((a) => !used.has(a.id)) }, date))
-        .value ?? null
-    );
-  }, [reassignInfo, compileInput, date]);
-  const rDiff = useMemo(() => {
-    if (!reassignInfo || !problem || !reassignBefore) return null;
-    return (
-      attempt(() => reassignDiff({ problem: reassignBefore, routes: reassignInfo.baseRoutes }, { problem, routes }))
-        .value ?? null
-    );
-  }, [reassignInfo, reassignBefore, problem, routes]);
-  /** 代行（訪問ID → 元の担当）・開始の変化（訪問ID → 分）・変わる人・地図で太くする訪問 */
-  const reassignMarks = useMemo(() => {
-    const substitute = new Map<string, string>();
-    for (const x of rDiff?.moved ?? []) if (x.from !== null && x.to !== null) substitute.set(x.visitId, x.from);
-    return {
-      substitute,
-      shifted: new Map((rDiff?.shifted ?? []).map((x) => [x.visitId, x.minutes])),
-      changed: new Set(rDiff?.changedStaff ?? []),
-      emphasize: new Set(substitute.keys()),
-      unplaced: new Set(rDiff?.unplaced ?? []),
-    };
-  }, [rDiff]);
-  /** 振り直しに使った欠勤が取り消されている */
-  const absenceCancelled = !!reassignInfo?.absenceIds.some((id) => !data.absences.some((a) => a.id === id));
+  /** この端末の mailto の長さの目安（ADR-0017） */
+  const mailLimit = useMailLimit();
+  const contactWords = dayContactWords({
+    date,
+    staffWord: terms.staff,
+    orgName: data.org.name,
+    staffName,
+    clientById,
+    visits: m.allVisits,
+  });
+  /** 〈スタッフ〉あての連絡のメール（PRD D94。メールを切っていれば出さない） */
+  const staffMail = mailOn
+    ? (staffId: string, text: string) =>
+        mailTo(staffById.get(staffId)?.email ?? '', contactMailText(data.org, date, text), mailLimit)
+    : undefined;
+  const onCopied = (ok: boolean, what: string) =>
+    toast(ok ? `${what}をコピーしました` : 'コピーできませんでした。文を選んでコピーしてください');
   /** 列の見出し（欠勤の欄を閉じたとき、フォーカスの戻り先が消えていたらここへ） */
   const colHeadOf = (sid: string) =>
     document.querySelector<HTMLElement>(`.route-col[data-staff="${CSS.escape(sid)}"] .col-focus`);
 
-  /**
-   * 「登録して振り直す」：欠勤を足したデータで compile し、今の担当の並びから振り直して訪問に書く（1回の update で書く）。
-   * stay：「欠勤・キャンセル」の欄から押した（欄は閉じず4段目へ進むので、差の欄へは移らない）。振り直せたら true
-   */
-  const registerAndReassign = async (absence: Absence, anneal = false, stay = false): Promise<boolean> => {
-    if (running) return false;
-    setError(null);
-    const d1 = saveAbsence(data, absence);
-    const built = attempt(() => compile(d1, date));
-    const p = built.value;
-    if (!p) {
-      setError(`振り直せませんでした（${built.error}）`);
-      if (stay) toast(`振り直せませんでした（${built.error}）`);
-      return false;
-    }
-    const base = baseOf(d1, date, p);
-    if (runRef.current) return false;
-    const used = absencesOn(d1, date);
-    const absent = [...new Set(used.map((a) => a.staffId))];
-    const result = attempt(() => {
-      // 振り直す前の時刻（欠勤と重なるか）は、その日の欠勤を除いた問題で出す
-      const before = { problem: compile(withoutAbsencesOn(d1, date), date), routes: base.routes };
-      return reassign(p, base.routes, targetsOf(p, before, absent));
-    });
-    if (!result.value) {
-      setError(`振り直せませんでした（${result.error}）`);
-      if (stay) toast(`振り直せませんでした（${result.error}）`);
-      return false;
-    }
-    const r = result.value;
-    setAnnealResult(null);
-    // 欠勤の登録と振り直しは別の手（「元に戻す」1回で振り直す前に戻り、欠勤は残る。PRD D329）
-    const registered = saveAbsence(data, absence);
-    update((d) => (d === data ? registered : saveAbsence(d, absence)), '欠勤を登録');
-    update(
-      (d) =>
-        applyReassign(d, date, {
-          problem: p,
-          result: r,
-          base: d === registered ? base : baseOf(d, date, p),
-          absenceIds: used.map((a) => a.id),
-        }),
-      REASSIGN_LABEL,
-    );
-    if (!stay) setSudden(null);
-    sel.reset();
-    toast(`振り直しました（振り直し ${r.placed.length}件・入らない ${r.unplaced.length}件）`);
-    // 案B も作る：書き込んだ振り直しと新しい問題が画面に出てから始める（下の effect）
-    if (anneal) pendingAnneal.current = date;
-    if (stay) return true;
-    pendingBarFocus.current = date;
-    const token = date;
-    window.setTimeout(() => {
-      if (pendingBarFocus.current === token) pendingBarFocus.current = null;
-    }, 1500);
-    return true;
-  };
-
-  // ---- 案B「少し動かしてよい」・連絡の一覧（PRD D34・D35。ADR-0011）----
-  /** 「変更を減らす」の重み（反映した振り直しが案B ならその重み） */
-  const [stayWeight, setStayWeight] = useState<number>(STAY_WEIGHT_DEFAULT);
-  useEffect(() => {
-    if (reassignInfo?.stayWeight !== undefined) setStayWeight(reassignInfo.stayWeight);
-  }, [reassignInfo?.stayWeight]);
-  /** 案B を案A のままにした理由（settleAnneal。key が今の振り直しと違えば見せない） */
-  const [annealNote, setAnnealNote] = useState<{ key: string; text: string } | null>(null);
-  const [contactsOpen, setContactsOpen] = useState(false);
-  /** 案A の列（振り直した直後） */
-  const planA = useMemo(() => {
-    if (!reassignInfo || !problem) return null;
-    const r = reassignInfo.insertRoutes ?? (reassignInfo.method === 'insert' ? routes : undefined);
-    if (!r) return null;
-    const ids = new Set(problem.visits.map((v) => v.id));
-    return Object.fromEntries(Object.entries(r).map(([k, xs]) => [k, xs.filter((id) => ids.has(id))]));
-  }, [reassignInfo, problem, routes]);
-  /** 今の振り直し（元の案・欠勤・案A）のキー。案B の結果がこの振り直しのものか */
-  const annealKey = reassignInfo
-    ? JSON.stringify([date, reassignInfo.baseRoutes, reassignInfo.absenceIds, reassignInfo.insertRoutes ?? null])
-    : null;
-  /** 作った案B（その場だけ。保存しない。決定2） */
-  const [annealResult, setAnnealResult] = useState<{
-    key: string;
-    weight: number;
-    result: ReassignResult;
-    stopped: boolean;
-  } | null>(null);
-  const anneal = annealResult && annealResult.key === annealKey ? annealResult : null;
-  const note = annealNote && annealNote.key === annealKey ? annealNote.text : null;
-  /** 振り直しに使った欠勤の人（まだある欠勤） */
-  const absentStaff = useMemo(() => {
-    const ids = new Set(reassignInfo?.absenceIds ?? []);
-    return new Set(data.absences.filter((a) => ids.has(a.id) && a.date === date).map((a) => a.staffId));
-  }, [reassignInfo, data.absences, date]);
-  /** 欠勤の人に残る、欠勤と重なる訪問（手直しで戻した等。leftOf） */
-  const left = useMemo(() => {
-    if (!reassignInfo || !problem || !reassignBefore || absentStaff.size === 0) return [];
-    return attempt(() => leftOf(problem, { problem: reassignBefore, routes }, [...absentStaff])).value ?? [];
-  }, [reassignInfo, problem, reassignBefore, absentStaff, routes]);
-  const leftById = useMemo(() => new Map(left.map((x) => [x.visitId, x])), [left]);
-  const barId = useId();
-  /** 差の欄へ移り、見出しにフォーカスする（欠勤の登録のあと・列の見出しの近道・下の帯） */
-  const goToBar = () => {
-    const el = document.getElementById(barId);
-    if (!el) return;
-    el.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
-    el.focus({ preventScroll: true });
-  };
-  // 欠勤を登録して振り直したら、差の欄（案A の結果・案B・連絡の一覧）へ移る
-  // biome-ignore lint/correctness/useExhaustiveDependencies: 振り直しが画面に出たときに1回だけ
-  useEffect(() => {
-    if (pendingBarFocus.current !== date || !reassignInfo) return;
-    pendingBarFocus.current = null;
-    const raf = requestAnimationFrame(goToBar);
-    return () => cancelAnimationFrame(raf);
-  }, [reassignInfo, date]);
-  // 日付を変えたら、差の欄へ移る予約を消す
-  useEffect(() => {
-    if (pendingBarFocus.current !== date) pendingBarFocus.current = null;
-  }, [date]);
-  /** もう一度振り直す（欠勤の人に残る訪問を、今の並びから振り直す。続けて振り直すのと同じ） */
-  const reassignAgain = () => {
-    const a = data.absences.find((x) => x.date === date && absentStaff.has(x.staffId));
-    if (!a) return;
-    void registerAndReassign(a);
-  };
-  const annealDisabled = !reassignInfo
-    ? '振り直しがありません'
-    : absenceCancelled
-      ? '欠勤が取り消されているので作れません'
-      : !planA
-        ? '案A がありません'
-        : running && running !== 'anneal'
-          ? '計算中は押せません'
-          : null;
-  /** 案B を Worker で作る（進み具合・止める）。初期解は案A。作った案B はその場だけ（選ぶと訪問に書く） */
-  const startAnneal = () => {
-    if (!problem || !reassignInfo || !reassignBefore || !planA || running || annealDisabled) return;
-    setError(null);
-    const before = { problem: reassignBefore, routes: reassignInfo.baseRoutes };
-    const weight = stayWeight;
-    const key = annealKey ?? '';
-    const prep = attempt(() =>
-      prepareAnneal(problem, before, planA, targetsOf(problem, before, [...absentStaff]), { weight }),
-    );
-    if (!prep.value) {
-      setError(`案B を作れませんでした（${prep.error}）`);
-      return;
-    }
-    const x = prep.value;
-    // 案A の列が使えない人（必須の違反・回れない列）は、その列だけ案A のまま動かさずに作る
-    const heldText =
-      x.held.length > 0
-        ? `${x.held.map(staffName).join('・')}さんの列は案A に守れない条件があるため、案A のまま動かしていません（その列は手で直してください）`
-        : null;
-    setAnnealNote(heldText ? { key, text: heldText } : null);
-    const routesA = planA;
-    run(
-      'anneal',
-      x.problem,
-      '少し動かす',
-      (res) => {
-        // 保険：案A に入っていた訪問を落とした・案A より良くならないときは案B として出さない（案A のまま）
-        const settled = attempt(() => settleAnneal(x, res.routes));
-        if (!settled.value) {
-          setError(`案B を作れませんでした（${settled.error}）`);
-          return;
-        }
-        const got = settled.value;
-        if (!got.ok) {
-          const text =
-            got.reason === 'keepDropped'
-              ? `案B が、案A に入っていた訪問（${got.visitIds.length}件）を外してしまったため、案A のままにしました`
-              : '案A を超えられませんでした（案A のままにしました）';
-          setAnnealNote({ key, text: heldText ? `${text}。${heldText}` : text });
-          toast(text);
-          return;
-        }
-        setAnnealResult({ key, weight, result: got.result, stopped: res.stopped });
-        const sameAsA = JSON.stringify(got.result.routes) === JSON.stringify(routesA);
-        toast(
-          sameAsA
-            ? '案B は案A と同じになりました。動かしても良くなりませんでした'
-            : res.stopped
-              ? '途中までの案B を出しました。案A と比べて選んでください'
-              : '案B を作りました。案A と比べて選んでください',
-        );
-      },
-      undefined,
-      x.initial,
-    );
-  };
-  // 「登録して、少し動かしてよい（案B）も作る」：振り直しが出たら案B を始める
-  // biome-ignore lint/correctness/useExhaustiveDependencies: 振り直しと問題が出そろったときに1回だけ
-  useEffect(() => {
-    if (pendingAnneal.current !== date || !reassignInfo || !problem || !planA || running) return;
-    pendingAnneal.current = null;
-    startAnneal();
-  }, [reassignInfo, problem, planA, running, date]);
-  /** 案A・案B のどちらかを反映する */
-  const chooseOption = async (key: 'insert' | 'anneal') => {
-    if (!problem || !reassignInfo || running) return;
-    // 今の並びが案A・案B のどちらとも違う（手直しした）ときだけ確認する
-    if (
-      !annealOptions.some((o) => o.current) &&
-      !(await confirmDialog({
-        title: `手直しを捨てて${key === 'anneal' ? '案B' : '案A'}に切り替えますか？`,
-        body: '今の担当の手直しは消えます。',
-        confirmLabel: '捨てて切り替える',
-        tone: 'danger',
-      }))
-    )
-      return;
-    if (runRef.current) return;
-    const p = problem;
-    if (key === 'anneal') {
-      if (!anneal) return;
-      const b = anneal;
-      writeWith('案B を反映', (d) =>
-        chooseReassign(d, date, { problem: p, result: b.result, method: 'anneal', stayWeight: b.weight }),
-      );
-      toast('案B（少し動かした案）を反映しました', { action: undoAction });
-    } else {
-      if (!planA) return;
-      const routesA = planA;
-      const placed = new Set(Object.values(routesA).flat());
-      const pinsA: Record<string, string> = {};
-      for (const [sid, ids] of Object.entries(routesA)) for (const id of ids) pinsA[id] = sid;
-      const resultA: ReassignResult = {
-        routes: routesA,
-        placed: [],
-        unplaced: [],
-        unassigned: p.visits.map((v) => v.id).filter((id) => !placed.has(id)),
-        pins: pinsA,
-      };
-      writeWith('案A を反映', (d) => chooseReassign(d, date, { problem: p, result: resultA, method: 'insert' }));
-      toast('案A（空き時間に入れた案）を反映しました', { action: undoAction });
-    }
-    sel.reset();
-  };
-  /** 案A・案B の比べる数（元の案との差・点数の基準の物差しの点数） */
-  const annealOptions: ReassignOption[] = useMemo(() => {
-    if (!problem || !reassignInfo || !reassignBefore) return [];
-    const before = { problem: reassignBefore, routes: reassignInfo.baseRoutes };
-    const norm = (r: Record<string, string[]>) => JSON.stringify(routesOfIds(problem, r));
-    const cur = norm(routes);
-    const option = (key: ReassignOption['key'], title: string, r: Record<string, string[]>): ReassignOption => ({
-      key,
-      title,
-      diff: attempt(() => reassignDiff(before, { problem, routes: r })).value,
-      hundred: pointsOf(scoreProblem, scoreScale, r),
-      current: norm(r) === cur,
-    });
-    const out: ReassignOption[] = [];
-    if (planA) out.push(option('insert', '案A（空き時間に入れる）', planA));
-    if (anneal) out.push(option('anneal', `案B（変更を減らす ${anneal.weight}）`, anneal.result.routes));
-    // 作った案B が無い（再読込・画面を移った）が反映したのが案B なら、今の並びを案B として並べる（案A に戻せる）
-    else if (reassignInfo.method === 'anneal')
-      out.push(option('anneal', `案B（変更を減らす ${reassignInfo.stayWeight ?? ''}）`, routes));
-    return out;
-  }, [problem, reassignInfo, reassignBefore, routes, planA, anneal, scoreProblem, scoreScale]);
-  /** 連絡の一覧（振り直す前と今の差。確定前でも見られる） */
-  const contacts = useMemo(() => {
-    if (!reassignInfo || !problem || !reassignBefore) return null;
-    return (
-      attempt(() => contactsOf({ problem: reassignBefore, routes: reassignInfo.baseRoutes }, { problem, routes }))
-        .value ?? null
-    );
-  }, [reassignInfo, reassignBefore, problem, routes]);
-  /** 連絡の一覧のいちばん上に出す、欠勤の人に残る訪問 */
-  const leftContacts: LeftContact[] = left.map((x) => {
-    const v = visitById.get(x.visitId);
-    return {
-      visitId: x.visitId,
-      clientId: v?.clientId ?? '',
-      staffId: x.staffId,
-      at: v ? timeText(v.earliestStart) : '',
-      reason: leftReasonText(x),
-    };
-  });
-  /** 案B を勧める（案A で入らない訪問があり、反映したのが案A で、まだ案B を作っていない） */
-  const annealRecommended =
-    !!reassignInfo && (rDiff?.unplaced.length ?? 0) > 0 && reassignInfo.method === 'insert' && !anneal;
-  const contactsTotal = contactCount(contacts) + left.length;
-  /** この端末の mailto の長さの目安（ADR-0017） */
-  const mailLimit = useMailLimit();
-  const contactWords = {
-    // 連絡文の日付は「本日」にせず「10月15日（木）」（あとから読まれても分かる。PRD D245）
-    day: dateWordOf(date),
-    staffWord: terms.staff,
-    staffName,
-    clientName: (id: string) => clientById.get(id)?.displayName ?? '（不明）',
-    clientAddress: (id: string) => clientById.get(id)?.place.address ?? '',
-    visitMinutes: (id: string) => m.allVisits.find((v) => v.id === id)?.durationMinutes ?? null,
-    promised: (id: string) => {
-      const v = m.allVisits.find((x) => x.id === id);
-      if (!v) return null;
-      const from = hhmmToMinutes(v.earliestStart);
-      return { from, to: v.windowKind === 'window' ? hhmmToMinutes(v.latestStart) : from };
-    },
-    orgName: data.org.name,
-  };
-  const saveAbsenceOnly = (absence: Absence) => {
-    update((d) => saveAbsence(d, absence), '欠勤を登録');
-    setSudden(null);
-    toast('欠勤を登録しました（担当はそのままです。休む人の訪問は要対応に出ます）');
-  };
-  const cancelAbsence = async (absence: Absence): Promise<boolean> => {
-    const ok = await confirmDialog({
-      title: `${staffName(absence.staffId)}さんの欠勤を取り消しますか？`,
-      body: '担当はそのままです。',
-      confirmLabel: '欠勤を取り消す',
-      cancelLabel: '残しておく',
-      tone: 'danger',
-    });
-    if (!ok) return false;
-    update((d) => removeAbsence(d, absence.id), '欠勤を取り消す');
-    setSudden(null);
-    // 担当は変えない。振り直したあとなら「振り直す前に戻す」で担当を戻せる（「元に戻す」だと欠勤が戻ってしまう。PR #81 のレビュー）
-    if (reassignInfo)
-      toast('欠勤を取り消しました。担当を戻すには「振り直す前に戻す」を押してください', {
-        action: { label: '振り直す前に戻す', onClick: () => void revertRef.current(), testId: 'toast-revert' },
-      });
-    else toast('欠勤を取り消しました');
-    return true;
-  };
-  /**
-   * 振り直す前に戻す（PRD D31・D329）：直前の手が振り直し（欠勤の登録とは別の手）なら、全体の「元に戻す」で1手戻す（欠勤は残る）。
-   * あとにほかの操作をしていたら、確かめてから振り直す前の担当・ピンに戻す（あとで足した訪問は今のまま。これも履歴の1手）
-   */
-  const revertToBase = async (): Promise<boolean> => {
-    if (!problem || !reassignInfo || runRef.current) return false;
-    // 近道：直前の手がこの日の「欠勤の振り直し」で、その手の前にこの日の振り直しが無く、手のあとに何も変わっていないときだけ
-    // 全体の「元に戻す」で1手戻す（別の日の振り直し・案A/案B の切り替えのあとで誤って戻さない。PR #81 のレビュー）
-    const last = appHistory.peek();
-    if (
-      last &&
-      last.label === REASSIGN_LABEL &&
-      last.after === dataRef.current &&
-      !!own(last.after.reassigns, date) &&
-      !own(last.before.reassigns, date)
-    ) {
-      historyOps.undo();
-    } else {
-      const ok = await confirmDialog({
-        title: '振り直す前の担当に戻しますか？',
-        body: '振り直したあとの手直しも含めて、振り直す前の担当とピンに戻します（あとで足した訪問は今のまま）。「元に戻す」で戻せます。',
-        confirmLabel: '振り直す前に戻す',
-      });
-      if (!ok || runRef.current) return false;
-      const p = problem;
-      writeWith('振り直す前に戻す', (d) => revertReassign(d, date, p));
-      toast('振り直す前に戻しました', { action: undoAction });
-    }
-    setAnnealResult(null);
-    sel.reset();
-    return true;
-  };
-  /** トーストの「振り直す前に戻す」は前の描画の関数を持つので、押したときの最新の revertToBase を呼ぶ */
-  const revertRef = useRef<() => Promise<boolean>>(async () => false);
-  useEffect(() => {
-    revertRef.current = revertToBase;
-  });
   /**
    * 担当なしの訪問を候補の人に入れる（ピン。時刻は変えない。間に合わなければ要対応の赤い枠）。
    * その人の既存の訪問の開始が遅れるときは確認を出す
@@ -1272,7 +717,7 @@ export default function PlanPage() {
       }))
     )
       return;
-    if (runRef.current) return;
+    if (flow.planRun.busy()) return;
     const p = problem;
     const saved = writeDay(
       p,
@@ -1314,37 +759,23 @@ export default function PlanPage() {
   }, [problem, hasPlan, routes, data.org]);
 
   // ---- 列：その日に働く人（と、訪問の担当になっている人）----
-  const columns = useMemo(() => {
-    // 欠勤で稼働時間帯が無くなった人（もともと働く日）も列を出す（欠勤の印・「欠勤を直す」。ADR-0011）
-    const absentToday = (id: string) => {
-      const a = slotsOf.get(id);
-      return !!a?.absence && a.baseSlots.length > 0;
-    };
-    const working = new Set(
-      problem?.staff.filter((s) => s.slots.length > 0 || absentToday(s.id)).map((s) => s.id) ?? [],
-    );
-    const withVisits = new Set(
-      Object.entries(routes)
-        .filter(([, ids]) => ids.length > 0)
-        .map(([k]) => k),
-    );
-    const order = staff.map((s) => s.id).filter((id) => working.has(id) || withVisits.has(id));
-    return [...order, ...[...withVisits].filter((id) => !order.includes(id) && id !== NONE)];
-  }, [problem, routes, staff, slotsOf]);
+  const columns = useMemo(
+    () =>
+      planColumns(
+        problem,
+        routes,
+        staff.map((s) => s.id),
+        slotsOf,
+      ),
+    [problem, routes, staff, slotsOf],
+  );
   /** 担当なしの訪問（問題の訪問のうち列に無いもの。問題の順） */
   const unassigned = useMemo(() => {
     if (!problem || !hasPlan) return [];
     return problem.visits.map((v) => v.id).filter((id) => !owner.has(id));
   }, [problem, hasPlan, owner]);
   /** 要対応の文（担当なし・担当が休みなど）の訪問ごとの一覧（カード・帯の赤い印） */
-  const hardOf = useMemo(() => {
-    const h = new Map<string, string[]>();
-    for (const [id, list] of issues) {
-      const xs = list.filter((x) => x.kind !== 'unassigned').map((x) => x.label);
-      if (xs.length > 0) h.set(id, xs);
-    }
-    return h;
-  }, [issues]);
+  const hardOf = useMemo(() => hardLabelsOf(issues), [issues]);
   /** 要対応の件数と内訳 */
   const careCount = issues.size;
   const careParts = useMemo(() => issueBreakdown(issues), [issues]);
@@ -1740,7 +1171,7 @@ export default function PlanPage() {
             <button
               type="button"
               className="link-btn absence-btn"
-              onClick={() => openSudden({ kind: 'staff', staffId: sid })}
+              onClick={() => suddenState.open({ kind: 'staff', staffId: sid })}
               aria-label={
                 avail?.absence ? `${staffName(sid)}さんの欠勤を直す` : `この人の欠勤を登録（${staffName(sid)}さん）`
               }
@@ -1778,7 +1209,7 @@ export default function PlanPage() {
                 type="button"
                 className="btn btn-small"
                 onClick={() => {
-                  startAnneal();
+                  flow.anneal.start();
                   goToBar();
                 }}
               >
@@ -1967,7 +1398,7 @@ export default function PlanPage() {
   /** 点を下げているいちばん大きい理由（PRD D173。減点の内訳と条件ごとの達成から） */
   const reasonNow =
     cs && scoreScale && scoreProblem
-      ? scoreReason(hundredBreakdown(cs, scoreScale, scoreProblem), cs, {
+      ? reasonOfRoutes({ problem: scoreProblem, scale: scoreScale }, cs, {
           achievements: curAch,
           rules: scoreRules,
           ruleLower: scoreLower,
@@ -2120,115 +1551,31 @@ export default function PlanPage() {
     </div>
   );
 
-  // ---- 「欠勤・キャンセル」の欄（PRD D167〜D172）：選択肢・訪問の担当・4段目の振り直しの結果 ----
-  /** いまの担当（訪問の担当） */
-  const suddenOwner = (visitId: string): string | null => {
-    const sid = owner.get(visitId);
-    return sid ? staffName(sid) : null;
-  };
-  const suddenStaff = useMemo(
-    () => staffChoices(staff, slotsOf, (sid) => (own(routes, sid) ?? []).length),
-    [staff, slotsOf, routes],
-  );
-  // biome-ignore lint/correctness/useExhaustiveDependencies: 訪問・〈利用者さん〉・担当が変わったときだけ
-  const suddenVisits = useMemo(
-    () =>
-      sudden
-        ? visitChoices(
-            visits,
-            (id) => clientById.get(id)?.displayName ?? '（不明）',
-            (id) => {
-              const v = visitById.get(id);
-              return v ? windowText(v) : '';
-            },
-            suddenOwner,
-          )
-        : [],
-    [sudden, visits, clientById, visitById, owner],
-  );
-  const suddenVisitInfo = (visitId: string) => {
-    const v = visitById.get(visitId);
-    return {
-      client: v ? (clientById.get(v.clientId)?.displayName ?? '（不明）') : '（不明）',
-      window: v ? windowText(v) : '',
-      owner: suddenOwner(visitId),
-    };
-  };
-  /**
-   * 欄からの取り消し：取り消す前の担当・開始と、取り消す前の担当の並び（取り消す訪問を除く）を覚えてから取り消す
-   * （5段目の連絡の「中止」と差の「前」。PRD D244）
-   */
-  const suddenCancelVisit = (visitId: string, sameDay: boolean) => {
-    const v = visitById.get(visitId);
-    const sid = owner.get(visitId) ?? null;
-    if (v && problem) {
-      const start = explained.get(visitId)?.timing?.start ?? hhmmToMinutes(v.earliestStart);
-      const before = Object.fromEntries(
-        Object.entries(routes).map(([k, ids]) => [k, ids.filter((x) => x !== visitId)]),
-      );
-      setSuddenCancel({
-        cancelled: { visitId, clientId: v.clientId, staffId: sid, start },
-        before: { problem, routes: before },
-      });
-    }
-    applyCancel(visitId, sameDay);
-  };
-  /**
-   * 5段目の連絡の差（PRD D244）：欠勤は振り直しの差（振り直す前 → 今）。キャンセルは取り消す前の並び → 今
-   * （取り消した訪問は「中止」として別に出す）
-   */
-  const suddenList = useMemo((): ContactList | null => {
-    if (!sudden) return null;
-    // 伝えた日は、伝えた内容 → 今の差（欠勤の振り直しのほか、手で変えた訪問も。「連絡したので確定」で伝えたことにするもの）。
-    // 取り消した訪問は「中止」として別に出すので、差からは外す
-    if (told) return suddenCancel ? withoutVisit(told, suddenCancel.cancelled.visitId) : told;
-    if (!suddenCancel) return contacts;
-    const b = suddenCancel.before;
-    if (!b || !problem) return EMPTY_CONTACTS;
-    return attempt(() => contactsOf({ problem, routes: b.routes }, { problem, routes })).value ?? null;
-  }, [sudden, suddenCancel, contacts, problem, routes, told]);
-  const suddenRows: ContactRow[] | null = suddenList
-    ? contactRows(suddenList, suddenCancel ? [suddenCancel.cancelled] : [], contactWords)
-    : null;
-  /** 4段目：今の案の振り直しのまとめと、案A・案B を選ぶ欄（差の欄と同じ部品・同じ操作） */
-  const suddenResult =
-    hasPlan && reassignInfo ? (
-      <div className="stack" style={{ gap: 8 }} data-testid="sudden-result">
-        <strong>
-          反映した振り直し：
-          {reassignInfo.method === 'anneal' ? '案B（少し動かした案）' : '案A（空き時間に入れた案）'}
-        </strong>
-        {rDiff && <ReassignSummary diff={rDiff} left={left.length} testId="sudden-summary" />}
-        {/* 誰のどの訪問が誰へ移るか（PRD D265）：確定の前に結果を見る */}
-        {rDiff && <ReassignMoves diff={rDiff} visitLabel={visitLabel} staffName={staffName} />}
-        {rDiff && rDiff.unplaced.length > 0 && (
-          <p className="sub">
-            入らない訪問は、下の案B を作るか、日の予定の「担当なしの訪問」の「受けられる人」から入れられます
-          </p>
-        )}
-        <AnnealBox
-          weight={stayWeight}
-          onWeight={setStayWeight}
-          recommended={(rDiff?.unplaced.length ?? 0) > 0 && reassignInfo.method === 'insert'}
-          disabledWhy={annealDisabled}
-          running={running === 'anneal'}
-          progress={progressStore}
-          onStart={startAnneal}
-          onStop={stopAnneal}
-          options={annealOptions}
-          absentStaff={absentStaff}
-          onChoose={chooseOption}
-          stopped={!!anneal?.stopped}
-          note={note}
-        />
-      </div>
-    ) : null;
-  /** 欄を閉じる（toBar：振り直したあとなので差の欄へ） */
-  const closeSudden = (toBar: boolean) => {
-    suddenToBar.current = toBar && !!reassignInfo;
-    setSudden(null);
-    if (suddenToBar.current) requestAnimationFrame(goToBar);
-  };
+  // ---- 「欠勤・キャンセル」の欄（PRD D167〜D172）：選択肢・訪問の担当・4段目の振り直しの結果・5段目の連絡 ----
+  const sudden = useSuddenFlow({
+    date,
+    data,
+    update,
+    terms,
+    state: suddenState,
+    flow,
+    day: { staff, slotsOf, visits, visitById, clientById, staffName, visitLabel },
+    plan: {
+      problem,
+      routes,
+      hasPlan,
+      owner,
+      startOf: (id) => explained.get(id)?.timing?.start ?? null,
+      told,
+      toldState,
+    },
+    contactWords,
+    applyCancel,
+    adopt,
+    staffMail,
+    onCopied,
+    colHeadOf,
+  });
 
   /** 訪問を追加を押せない理由（〈利用者さん〉がいない・スマホの幅） */
   const addWhy =
@@ -2438,9 +1785,9 @@ export default function PlanPage() {
         absence={
           suddenOn
             ? {
-                onClick: () => openSudden({}),
-                disabled: visits.length === 0 && suddenStaff.length === 0,
-                ref: suddenBtnRef,
+                onClick: () => suddenState.open({}),
+                disabled: visits.length === 0 && sudden.staffList.length === 0,
+                ref: sudden.btnRef,
               }
             : null
         }
@@ -2700,27 +2047,13 @@ export default function PlanPage() {
                 visitLabel={visitLabel}
                 visitNode={visitNode}
                 staffName={staffName}
-                onReassignAgain={reassignAgain}
+                onReassignAgain={flow.reassignAgain}
                 cancelled={absenceCancelled}
                 running={!!running}
-                onRevert={revertToBase}
+                onRevert={flow.revertToBase}
                 extraActions={<ContactButton count={contactsTotal} onOpen={() => setContactsOpen(true)} />}
               >
-                <AnnealBox
-                  weight={stayWeight}
-                  onWeight={setStayWeight}
-                  recommended={(rDiff?.unplaced.length ?? 0) > 0 && reassignInfo.method === 'insert'}
-                  disabledWhy={annealDisabled}
-                  running={running === 'anneal'}
-                  progress={progressStore}
-                  onStart={startAnneal}
-                  onStop={stopAnneal}
-                  options={annealOptions}
-                  absentStaff={absentStaff}
-                  onChoose={chooseOption}
-                  stopped={!!anneal?.stopped}
-                  note={note}
-                />
+                <AnnealBox {...annealBox} />
               </ReassignBar>
             )}
             {shownView === 'list' ? (
@@ -2812,7 +2145,7 @@ export default function PlanPage() {
           contactCount={contactsTotal}
           onGo={goToBar}
           onAnneal={() => {
-            startAnneal();
+            flow.anneal.start();
             goToBar();
           }}
           onContacts={() => setContactsOpen(true)}
@@ -2940,15 +2273,8 @@ export default function PlanPage() {
           left={leftContacts}
           words={contactWords}
           terms={terms}
-          staffMail={
-            mailOn
-              ? (staffId, text) =>
-                  mailTo(staffById.get(staffId)?.email ?? '', contactMailText(data.org, date, text), mailLimit)
-              : undefined
-          }
-          onCopied={(ok, what) =>
-            toast(ok ? `${what}をコピーしました` : 'コピーできませんでした。文を選んでコピーしてください')
-          }
+          staffMail={staffMail}
+          onCopied={onCopied}
           onClose={() => setContactsOpen(false)}
         />
       )}
@@ -2959,57 +2285,12 @@ export default function PlanPage() {
           left={[]}
           words={contactWords}
           terms={terms}
-          staffMail={
-            mailOn
-              ? (staffId, text) =>
-                  mailTo(staffById.get(staffId)?.email ?? '', contactMailText(data.org, date, text), mailLimit)
-              : undefined
-          }
-          onCopied={(ok, what) =>
-            toast(ok ? `${what}をコピーしました` : 'コピーできませんでした。文を選んでコピーしてください')
-          }
+          staffMail={staffMail}
+          onCopied={onCopied}
           onClose={() => setToldOpen(false)}
         />
       )}
-      {sudden && (
-        <SuddenPanel
-          key={date}
-          init={sudden}
-          date={date}
-          data={data}
-          terms={terms}
-          staffList={suddenStaff}
-          visitList={suddenVisits}
-          slotsOf={slotsOf}
-          staffName={staffName}
-          visitLabel={visitLabel}
-          visitInfo={suddenVisitInfo}
-          running={!!running}
-          hasPlan={hasPlan}
-          confirmState={toldState}
-          result={suddenResult}
-          onReassign={(a, anneal) => registerAndReassign(a, anneal, true)}
-          onSaveOnly={saveAbsenceOnly}
-          onRemoveAbsence={cancelAbsence}
-          onCancelVisit={suddenCancelVisit}
-          onAdopt={adopt}
-          onRevert={reassignInfo ? revertToBase : undefined}
-          contacts={suddenRows}
-          leftCount={left.length}
-          contactMail={
-            mailOn
-              ? (row) =>
-                  mailTo(staffById.get(row.id)?.email ?? '', contactMailText(data.org, date, row.text), mailLimit)
-              : undefined
-          }
-          onCopied={(ok, what) =>
-            toast(ok ? `${what}をコピーしました` : 'コピーできませんでした。文を選んでコピーしてください')
-          }
-          onClose={closeSudden}
-          fallbackFocus={() => (sudden.staffId ? colHeadOf(sudden.staffId) : suddenBtnRef.current)}
-          returnFocus={() => (suddenToBar.current ? document.getElementById(barId) : null)}
-        />
-      )}
+      {sudden.panel && <SuddenPanel key={date} {...sudden.panel} />}
       {/* 複数選択の帯（PRD D330。画面の下に貼り付く） */}
       {/* 選んだ訪問をまとめて動かす帯は、確認のモードでは出さない（札を動かさない。PRD D348） */}
       <SelectionBar ids={multi.ids} onClear={multi.clear} dates={[date]} />
@@ -3465,21 +2746,4 @@ function ReassignMenu({
       />
     </div>
   );
-}
-
-/** 連絡の一覧から1件の訪問を外す（取り消した訪問は「中止」として別に出す） */
-function withoutVisit(c: ContactList, visitId: string): ContactList {
-  const keep = (x: { visitId: string }) => x.visitId !== visitId;
-  return {
-    staffChanged: c.staffChanged.filter(keep),
-    timeChanged: c.timeChanged.filter(keep),
-    staff: c.staff
-      .map((x) => ({
-        ...x,
-        added: x.added.filter(keep),
-        removed: x.removed.filter(keep),
-        shifted: x.shifted.filter(keep),
-      }))
-      .filter((x) => x.added.length + x.removed.length + x.shifted.length > 0),
-  };
 }

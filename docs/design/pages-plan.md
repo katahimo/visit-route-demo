@@ -1,6 +1,6 @@
 # 日の予定（予定と手直し）
 
-> この画面のファイル：`src/pages/PlanPage.tsx`・`planParts.tsx`・`mailPanels.tsx`（`DayMailPanel`）・`plan.css`、`src/components/routeView.tsx`・`routeTimeline.tsx`・`MapDock.tsx`・`MenuButton.tsx`・`dayLines.tsx`・`visitType.tsx`・`VisitRules.tsx`・`mapsLinks.tsx`・`useDayModel.ts`・`useRouteSelection.ts`、`src/lib/dayModel.ts`・`dayPlan.ts`・`reassignMenu.ts`・`scoreReason.ts`・`routeView.ts`・`timeline.ts`・`dayLine.ts`・`confirmDay.ts`、`src/components/Toast.tsx`。関連 ADR：0004・0007〜0010・0012・0013・0015・0018・0025・0028・0030・0031・0044・0053・0056。関連 PRD：D16〜D18・D20・D21・D23〜D25・D58・D63・D84・D91〜D101・D157・D158・D173〜D174・D201〜D209・D217〜D219・D224・D266・D269・D314〜D319・D323・D339〜D341。
+> この画面のファイル：`src/pages/PlanPage.tsx`・`planParts.tsx`・`mailPanels.tsx`（`DayMailPanel`）・`plan.css`、`src/components/routeView.tsx`・`routeTimeline.tsx`・`MapDock.tsx`・`MenuButton.tsx`・`dayLines.tsx`・`visitType.tsx`・`VisitRules.tsx`・`mapsLinks.tsx`・`useDayModel.ts`・`useRouteSelection.ts`、`src/lib/dayModel.ts`・`dayPlan.ts`・`planView.ts`（`planColumns`・`hardLabelsOf`・`toldMarksOf`）・`reassignMenu.ts`・`scoreReason.ts`・`routeView.ts`・`timeline.ts`・`dayLine.ts`・`confirmDay.ts`、`src/components/Toast.tsx`。関連 ADR：0004・0007〜0010・0012・0013・0015・0018・0025・0028・0030・0031・0044・0053・0056。関連 PRD：D16〜D18・D20・D21・D23〜D25・D58・D63・D84・D91〜D101・D157・D158・D173〜D174・D201〜D209・D217〜D219・D224・D266・D269・D314〜D319・D323・D339〜D341。
 > 版2（ADR-0053）：担当は訪問に持ち（`Visit.staffId`・`start`・`pinned`）、その日の割当は `lib/dayPlan` の `dayRoutes`。この節で「今の案」とあるのはその日の訪問の担当のこと
 > 欠勤・キャンセルの欄と振り直しは [pages-plan-absence.md](pages-plan-absence.md)、バーの塗りは [pages-bars.md](pages-bars.md)。
 
@@ -47,6 +47,7 @@
   - 減点の合計が0.5点未満なら null
   - それ以外は減点の内訳（evaluate の `hundredBreakdown`）のいちばん大きい成分を短い文に：移動が長め（N分）・空き時間（待ち）が長め（N分）・担当の条件（`perRule` の points の下限 `ruleLower`（evaluate の `ruleLowerBounds`）からの超過が最大の条件。必須の条件は外す。相性△が N件・いつもの担当でない訪問 N件・「名前」に合わない訪問 N件、外れが無ければ「相性◎を取り逃した訪問がある」など）・件数の偏り（目安から外れた人 N人）
   - 新しい採点は足さない。`scoreReasonLabel`（読み上げ・title）
+  - `reasonOfRoutes({ problem, scale }, score, { achievements, rules, ruleLower })`：担当の並びの理由（減点の内訳を `hundredBreakdown` で出して `scoreReason` へ）。日の予定の今の案で使う（比較の画面の案ごとも同じ決まり。置き換えは B3 の担当）
   - evaluate の `ruleLowerBounds(problem)`：normalize の割当の下限を条件ごとに分けたもの（各訪問で割当費用が最小の担当の理由の点の和。和は lowerAssign と同じ）
   - 次の一手 `nextStep`（PRD D229。`NEXT_STEP_TEXT`）：移動が長め＝「「移動を短く」で組む」（`shortTravel`）、入らない訪問＝「受けられる人を見る」（`candidates`）、相性△・×・◎の取り逃し＝「相性の表を開く」（`compat`）。ほか（必須の違反・待ち・偏り・ほかの担当の条件）は無し
 - `components/useDayModel.ts` は `scoreRules`（点数の基準の条件。名前と重みを理由の文に使う）を返す

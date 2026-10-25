@@ -1,7 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import type { HundredPart, PlanScore, RuleAchievement } from '../contracts/problem';
 import type { Rule } from '../contracts/rules';
-import { NEXT_STEP_TEXT, REASON_MIN_POINTS, reasonFace, scoreReason, scoreReasonLabel } from './scoreReason';
+import { achievements, hundredBreakdown, normalize, ruleLowerBounds, score } from '../evaluate';
+import { compile } from '../matching';
+import { client, DATE, makeData, staff, visit } from '../matching/fixtures';
+import {
+  NEXT_STEP_TEXT,
+  REASON_MIN_POINTS,
+  reasonFace,
+  reasonOfRoutes,
+  scoreReason,
+  scoreReasonLabel,
+} from './scoreReason';
 
 const part = (key: HundredPart['key'], points: number): HundredPart => ({ key, label: key, points });
 type Sc = Pick<PlanScore, 'travelMinutes' | 'waitMinutes' | 'dropped' | 'perRule' | 'hardViolations'>;
@@ -175,5 +185,30 @@ describe('訪問ごとの理由の見せ方（PRD D229）', () => {
     const inf = reasonFace({ ruleId: 'slot', label: '時間が合わない', points: Number.POSITIVE_INFINITY });
     expect(inf).toMatchObject({ mark: '!', note: '担当にできない' });
     expect(inf.title).not.toContain('Infinity');
+  });
+});
+
+describe('reasonOfRoutes（担当の並びの点の理由。日の予定と比較の画面で共通）', () => {
+  it('物差しの減点の内訳から scoreReason と同じ理由を出す', () => {
+    const data = makeData({
+      staff: [staff('s1', 38.26, 140.87)],
+      clients: [client('c1', 38.3, 140.9), client('c2', 38.2, 140.8)],
+      visits: [visit('v1', 'c1', '09:00', '09:00'), visit('v2', 'c2', '13:00', '13:00')],
+    });
+    const problem = compile(data, DATE);
+    const scale = normalize(problem);
+    const routes = { s1: ['v1', 'v2'] };
+    const s = score(problem, routes);
+    const opts = {
+      achievements: achievements(problem, routes),
+      rules: data.rules,
+      ruleLower: ruleLowerBounds(problem),
+    };
+    expect(reasonOfRoutes({ problem, scale }, s, opts)).toEqual(
+      scoreReason(hundredBreakdown(s, scale, problem), s, opts),
+    );
+    // 入らない訪問があれば、それを先に出す
+    const dropped = score(problem, { s1: ['v1'] });
+    expect(reasonOfRoutes({ problem, scale }, dropped, opts)?.key).toBe('dropped');
   });
 });
