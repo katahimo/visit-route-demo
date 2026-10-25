@@ -23,6 +23,7 @@ const {
   withTimeout,
 } = require('./lib/env.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
+const { planDays } = require('./lib/plan.cjs');
 const { answerConfirms } = require('./lib/confirmDialog.cjs');
 
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
@@ -333,6 +334,8 @@ async function person(page) {
 async function sameLook(page) {
   // 今日より後の保存した訪問を1件ピン、1件担当なしにする（別のタブで書き換えたのと同じ）
   await fresh(page, '/home', 'h1');
+  // 初期データは今日からの日を繰り返しの担当のままにするので、保存した担当の入った訪問を用意する
+  await planDays(page);
   const picked = await page.evaluate(
     ({ k, today }) => {
       const d = JSON.parse(localStorage.getItem(k));

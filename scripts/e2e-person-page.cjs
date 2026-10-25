@@ -13,6 +13,7 @@
 const path = require('node:path');
 const { skipTour } = require('./lib/tourSeen.cjs');
 const { answerConfirms } = require('./lib/confirmDialog.cjs');
+const { visitsIn } = require('./lib/visits.cjs');
 const {
   BASE,
   OUT_DIR,
@@ -67,9 +68,10 @@ async function open(page, hash, ready) {
 async function futureSeries(page, clientId = 'c1') {
   const d = await stored(page);
   const end = addDays(weekStart(TODAY), 6);
-  const list = d.visits
-    .filter((v) => v.clientId === clientId && v.pattern && !v.cancelled && v.date > TODAY)
-    .sort((a, b) => (a.date < b.date ? -1 : 1));
+  // 初期データは保存した訪問が空なので、計算した繰り返しの回も合わせて見る
+  const list = visitsIn(d, addDays(TODAY, 1), addDays(TODAY, 28)).filter(
+    (v) => v.clientId === clientId && v.pattern && !v.cancelled,
+  );
   const v = list.find((x) => x.date <= end) ?? list[0];
   return v ? { v, anchor: v.date } : null;
 }
@@ -361,9 +363,8 @@ async function dragMove(page) {
     );
   }
   // これ以降：別の回（同じ繰り返し）をつかんで 14:00 へ（同じ日）
-  const s2 = (await stored(page)).visits.find(
-    (y) =>
-      y.pattern?.id === v.pattern.id && !y.pattern.edited && !y.cancelled && y.date > TODAY && y.date <= days.at(-1),
+  const s2 = visitsIn(await stored(page), addDays(TODAY, 1), days.at(-1)).find(
+    (y) => y.pattern?.id === v.pattern.id && !y.pattern.edited && !y.cancelled,
   );
   if (!s2) return check(true, 'これ以降：この週に別の回が無いので確かめない');
   await realDrag(
@@ -383,7 +384,8 @@ async function dragMove(page) {
   d = await dataWhen(page, (x) =>
     x.visits.some((y) => y.date === s2.date && y.clientId === 'c1' && y.earliestStart === '14:00'),
   );
-  const later = d.visits.filter(
+  const upto = addDays(TODAY, 28);
+  const later = visitsIn(d, s2.date, upto).filter(
     (y) =>
       y.clientId === 'c1' &&
       !y.cancelled &&
@@ -392,7 +394,7 @@ async function dragMove(page) {
       y.pattern &&
       !y.pattern.edited,
   );
-  const other = d.visits.find(
+  const other = visitsIn(d, TODAY, upto).find(
     (y) =>
       y.pattern?.id === v.pattern.id &&
       !y.pattern.edited &&

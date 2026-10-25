@@ -12,6 +12,7 @@
 // 終了コード：全部通れば 0、通らないものがあれば 1。ページのエラー（pageerror）も失敗に数える
 const path = require('node:path');
 const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, settle, stored, runSteps } = require('./lib/env.cjs');
+const { planDays } = require('./lib/plan.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
 
 /** 保存（少し遅れて書く）が条件を満たすまで待つ（満たさなければ時間切れで続ける） */
@@ -61,6 +62,8 @@ const visitsKey = (d) => JSON.stringify(d.visits);
 // ---- 担当を組むの「案を比べる」→ 比較の画面でその場で提案を作って並べる（保存しない） ----
 async function compare(page) {
   await editData(page, (key) => localStorage.removeItem(key), STORAGE_KEY);
+  // 初期データは今日からの日を繰り返しの担当のままにするので、保存した担当の入った訪問を用意する
+  await planDays(page);
   await openPlan(page);
   // 今日の担当のある訪問1件を担当なしにしておく（提案はそれに担当を入れるので、反映すると訪問が変わる）
   await editData(

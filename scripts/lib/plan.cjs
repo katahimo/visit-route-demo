@@ -27,13 +27,27 @@ async function clearStandard(page) {
   await page.locator('h1').waitFor();
 }
 
+/** cache 用：初期データから組んだ結果（データの JSON）。キーは今日・日数・標準を残すか */
+const cached = new Map();
+
 /**
  * 今日から days 日（既定7日）を含む週を AI で組んで反映し、訪問に担当を保存する（今日より前の日は組まない）。
  * 終わったらホーム（#/home）を開いた状態で返る。keepStandard を true にすると標準を残す
  * @param {import('playwright').Page} page
- * @param {{ days?: number, keepStandard?: boolean }} [opt]
+ * cache を true にすると、同じプロセスの2回目からは1回目の結果のデータをそのまま書き込む（速い）。
+ * 使えるのは「初期データ（localStorage を消した直後）から組む」ときだけ。何度も初期データから始める確認が使う
+ * @param {{ days?: number, keepStandard?: boolean, cache?: boolean }} [opt]
  */
-async function planDays(page, { days = 7, keepStandard = false } = {}) {
+async function planDays(page, { days = 7, keepStandard = false, cache = false } = {}) {
+  const key = `${TODAY}:${days}:${keepStandard}`;
+  if (cache && cached.has(key)) {
+    await page.goto(`${BASE}#/home`);
+    await page.locator('h1').waitFor();
+    await page.evaluate(([k, v]) => localStorage.setItem(k, v), [STORAGE_KEY, cached.get(key)]);
+    await page.reload();
+    await page.locator('h1').waitFor();
+    return;
+  }
   // 最初の文書が about:blank でも localStorage を読めるように、先にホームを開く
   await page.goto(`${BASE}#/home`);
   await page.locator('h1').waitFor();
@@ -44,7 +58,11 @@ async function planDays(page, { days = 7, keepStandard = false } = {}) {
   await markStandard(page);
   // 今日の週、その次の週…（今日から days 日が入るまで）。週の範囲は ?d= の日が属する週（今日より前の日は対象にならない）
   const last = addDays(TODAY, days - 1);
-  for (let from = TODAY; from <= last; from = addDays(from, 7 - ((new Date(`${from}T00:00:00Z`).getUTCDay() + 6) % 7))) {
+  for (
+    let from = TODAY;
+    from <= last;
+    from = addDays(from, 7 - ((new Date(`${from}T00:00:00Z`).getUTCDay() + 6) % 7))
+  ) {
     await page.goto(`${BASE}#/arrange?d=${from}`);
     await page.reload();
     await page.getByTestId('arrange-start').waitFor({ timeout: 30000 });
@@ -62,6 +80,7 @@ async function planDays(page, { days = 7, keepStandard = false } = {}) {
     await page.goto(`${BASE}#/home`);
     await page.locator('h1').waitFor();
   }
+  if (cache) cached.set(key, await page.evaluate((k) => localStorage.getItem(k), STORAGE_KEY));
 }
 
 module.exports = { planDays };

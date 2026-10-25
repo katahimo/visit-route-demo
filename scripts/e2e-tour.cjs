@@ -43,6 +43,7 @@ const {
   until,
 } = require('./lib/env.cjs');
 const { guard } = require('./lib/steps.cjs');
+const { visitsIn } = require('./lib/visits.cjs');
 
 const YM = TODAY.slice(0, 7);
 const TOUR_KEY = 'vrdemo:tour:seen';
@@ -233,8 +234,8 @@ async function tourStart(b) {
   const { ctx, page } = await newPage(b, { human: true });
   await open(page, '/', '[data-testid="tour"]');
   const data = () => page.evaluate((k) => JSON.parse(localStorage.getItem(k) ?? 'null'), STORAGE_KEY);
-  /** 初期データで担当を組んだ訪問（今日から7日。版2：担当は訪問に持つ） */
-  const assignedOf = (d) => (d?.visits ?? []).filter((v) => v.staffId).length;
+  /** 初期データの担当：繰り返しの担当（usualStaffId）の入った繰り返しの数。保存した訪問は空（AI で組まない。版2） */
+  const assignedOf = (d) => (d?.patterns ?? []).filter((p) => p.usualStaffId).length;
   let d = await data();
   const f0 = d?.org?.features ?? {};
   check(
@@ -242,7 +243,11 @@ async function tourStart(b) {
     '初めて開くと機能は「基本」（条件の重み・案を比べる・勤務の見込みは切）',
     f0,
   );
-  check(assignedOf(d) > 0, '初めて開いたときに初期データの担当（今日から7日）が入っている', assignedOf(d));
+  check(
+    assignedOf(d) > 0 && d?.visits?.length === 0,
+    '初めて開いたときに初期データの担当（繰り返しの担当）が入っていて、保存した訪問は空',
+    { usual: assignedOf(d), visits: d?.visits?.length },
+  );
   const start = page.getByTestId('tour-start');
   check(await start.isVisible(), '1枚目に「どこまで使いますか」を出す');
   check(
@@ -285,7 +290,7 @@ async function tourStart(b) {
     '「すべて」を選んで「次へ」で、すべての機能を入れる',
     f1,
   );
-  check(assignedOf(d) > 0, '「すべて」を当てると初期データを作り直し、担当も入っている', assignedOf(d));
+  check(assignedOf(d) > 0, '「すべて」を当てると初期データを作り直し、繰り返しの担当も入っている', assignedOf(d));
   // 戻って「基本」に戻せる
   await page.getByTestId('tour-back').click();
   check(await page.getByTestId('tour-start-all').isChecked(), '戻ると「すべて」を選んだ状態');
@@ -301,7 +306,7 @@ async function tourStart(b) {
   await until(async () => (await data())?.org?.features?.rules === true, 10000);
   check(
     Object.values((await data())?.org?.features ?? {}).every((v) => v === true) && assignedOf(await data()) > 0,
-    '「とばす」でも選んだもの（すべて）を当てる（担当も入っている）',
+    '「とばす」でも選んだもの（すべて）を当てる（繰り返しの担当も入っている）',
   );
   // 読み直しても入り切りは残り、ツアーは出ない
   await open(page, '/settings', '[data-testid="settings-tabs"]');
@@ -1004,10 +1009,15 @@ async function backupRemind(b) {
   // 確定した日があり、2週間以上書き出していなければ起動時に1回トースト（1日1回）
   const { ctx, page } = await newPage(b, { human: false });
   await open(page, '/home', 'h1');
+  // 今日の訪問（保存した訪問は空なので、計算した繰り返しの回）
+  const first = visitsIn(
+    await page.evaluate((k) => JSON.parse(localStorage.getItem(k)), STORAGE_KEY),
+    TODAY,
+    TODAY,
+  ).find((x) => !x.cancelled);
   await page.evaluate(
-    ({ k, last, today }) => {
+    ({ k, last, today, v }) => {
       const d = JSON.parse(localStorage.getItem(k));
-      const v = d.visits.find((x) => x.date === today && !x.cancelled);
       d.snapshots = {
         ...d.snapshots,
         [today]: {
@@ -1020,7 +1030,7 @@ async function backupRemind(b) {
       localStorage.setItem(last, JSON.stringify({ date: '2026-01-01', kind: 'json' }));
       localStorage.removeItem('vrdemo:backup:reminded');
     },
-    { k: STORAGE_KEY, last: BACKUP_LAST_KEY, today: TODAY },
+    { k: STORAGE_KEY, last: BACKUP_LAST_KEY, today: TODAY, v: first },
   );
   await page.reload();
   await page
