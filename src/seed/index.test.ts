@@ -154,11 +154,11 @@ describe('プリセット', () => {
   it('3種あり、標準は初期の条件と同じ', () => {
     const d = createDemoData(TODAY);
     expect(PRESETS).toHaveLength(3);
-    expect(d.presets.map((p) => p.id)).toEqual(['standard', 'travel', 'people']);
+    expect(d.presets.map((p) => p.id)).toEqual(['balance', 'travel', 'people']);
     expect(d.presets).toEqual(PRESETS);
     expect(d.presets[0]).not.toBe(PRESETS[0]);
     expect(applyPreset(d.rules, PRESETS[0]!)).toEqual(d.rules);
-    expect(presetOf(d.rules, d.presets)?.id).toBe('standard');
+    expect(presetOf(d.rules, d.presets)?.id).toBe('balance');
   });
   it('当てた条件はそのプリセットと分かる。重みを変えると null', () => {
     const d = createDemoData(TODAY);

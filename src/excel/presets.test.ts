@@ -110,13 +110,13 @@ describe('Excel のプリセットのシート', () => {
       ws.spliceColumns(col(ws, '点数の基準'), 1);
     });
     if (isImportError(noCol)) throw new Error(noCol.message);
-    expect(noCol.scorePresetId).toBe('standard');
+    expect(noCol.scorePresetId).toBe('balance');
     const blank = await editAndImport(d, (wb) => {
       const ws = wb.getWorksheet('プリセット')!;
       for (let n = 2; n <= 4; n++) ws.getRow(n).getCell(col(ws, '点数の基準')).value = null;
     });
     if (isImportError(blank)) throw new Error(blank.message);
-    expect(blank.scorePresetId).toBe('standard');
+    expect(blank.scorePresetId).toBe('balance');
     const two = await editAndImport(d, (wb) => {
       const ws = wb.getWorksheet('プリセット')!;
       ws.getRow(2).getCell(col(ws, '点数の基準')).value = '○';

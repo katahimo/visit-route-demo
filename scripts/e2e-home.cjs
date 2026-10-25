@@ -625,7 +625,7 @@ async function ready(page) {
     d.snapshots = {};
     d.absences = [];
     // 組み方の標準は登録済み（標準の案内のカードを出さない。PRD D354）
-    d.standard = { at: 1, presetId: d.scorePresetId ?? 'standard', from: d.baseDate, weeks: 1 };
+    d.standard = { at: 1, presetId: d.scorePresetId ?? 'balance', from: d.baseDate, weeks: 1 };
     localStorage.setItem(key, JSON.stringify(d));
   }, STORAGE_KEY);
   await page.reload();

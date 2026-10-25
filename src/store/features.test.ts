@@ -1,6 +1,6 @@
 // 機能の入り切り（org.features。PRD D216。ADR-0028）の読み書き：無い古いデータ・初期データ・初期状態に戻す・往復・知らない ID
 import { beforeEach, describe, expect, it } from 'vitest';
-import { type DemoData, STORAGE_KEY } from '../contracts/data';
+import { DATA_VERSION, type DemoData, STORAGE_KEY } from '../contracts/data';
 import { featuresSchema } from '../contracts/features';
 import { applyTemplate } from '../lib/features';
 import { createDemoData } from '../seed';
@@ -48,12 +48,12 @@ describe('org.features（PRD D216）', () => {
     expect(createDemoData('2026-10-12').org.features).toEqual({});
   });
 
-  it('org.features の無い古いデータは {} で読める（版は2のまま）', () => {
+  it('org.features の無い古いデータは {} で読める（版はそのまま）', () => {
     const d = createDemoData('2026-10-12');
     const { features: _drop, ...oldOrg } = d.org;
     const r = ok(importJson(JSON.stringify({ ...d, org: oldOrg })));
     expect(r.org.features).toEqual({});
-    expect(r.version).toBe(2);
+    expect(r.version).toBe(DATA_VERSION);
   });
 
   it('知らない ID・真偽でない値は捨て、検査で落とさない', () => {

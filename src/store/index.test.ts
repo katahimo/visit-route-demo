@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { type DemoData, STORAGE_KEY } from '../contracts/data';
+import { DATA_VERSION, type DemoData, STORAGE_KEY } from '../contracts/data';
 import { createDemoData } from '../seed';
 import {
   BROKEN_KEY,
@@ -96,11 +96,11 @@ describe('版1のデータ（ADR-0053。移行しない）', () => {
   it('読み込み（JSON）は「データの形が変わった」の ImportError', () => {
     expect(err(importJson(JSON.stringify(v1()))).message).toBe(OUTDATED_MESSAGE);
   });
-  it('起動のとき：退避して初期データ（版2）で始め、outdated。機能の入り切りだけ引き継ぐ', () => {
+  it('起動のとき：退避して初期データ（今の版）で始め、outdated。機能の入り切りだけ引き継ぐ', () => {
     mem.set(STORAGE_KEY, JSON.stringify(v1()));
     const r = loadWithStatus();
     expect(r).toMatchObject({ broken: true, outdated: true });
-    expect(r.data.version).toBe(2);
+    expect(r.data.version).toBe(DATA_VERSION);
     expect(r.data.org.features).toEqual({ compat: false });
     expect(mem.get(BROKEN_KEY)).toContain('"version":1');
   });
@@ -109,7 +109,7 @@ describe('版1のデータ（ADR-0053。移行しない）', () => {
 describe('load・save', () => {
   it('無ければ初期データを作って保存する', () => {
     const d = load();
-    expect(d.version).toBe(2);
+    expect(d.version).toBe(DATA_VERSION);
     expect(mem.has(STORAGE_KEY)).toBe(true);
     // 今日から7日分の担当を訪問に書く（PRD D225。ADR-0053）
     expect(new Set(d.visits.filter((v) => v.staffId !== null).map((v) => v.date)).size).toBe(7);

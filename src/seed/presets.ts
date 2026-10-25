@@ -11,7 +11,7 @@ const REQUIRED = { weight: 0, hard: true };
 /** 初期のプリセット3種（1つ目は初期の条件と同じ。id は変えない）。データへは initialPresets() で写して入れる */
 export const INITIAL_PRESETS: readonly Preset[] = [
   {
-    id: 'standard',
+    id: 'balance',
     name: 'バランス',
     note: '初期の重み。移動・相性・希望・負担をほどよく',
     weights: {
