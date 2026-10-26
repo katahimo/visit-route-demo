@@ -17,6 +17,9 @@ async function goStep(page, key) {
   await page.waitForFunction((k) => document.querySelector('[data-testid="standard-steps"]')?.dataset.step === k, key);
   await settle(page, 300);
 }
+/** 今の段の見出しにフォーカスがあるか（段が替わると見出しへ移る。ADR-0066） */
+const headFocused = (page) =>
+  page.evaluate(() => document.activeElement === document.querySelector('[data-testid="standard-steps"] > li h2'));
 /** 今の段（standard-steps の data-step） */
 const stepNow = (page) => page.getByTestId('standard-steps').getAttribute('data-step');
 /** ［次へ］を押して段を進める */
@@ -101,6 +104,11 @@ const steps = sharedPage({
             (await page.getByTestId('standard-register').count()) === 0,
           '下書きも登録も無い「標準にする」の段には案内だけ（標準にするボタンは出さない）',
         );
+        check(
+          (await page.locator('.standard-page .btn-primary').count()) === 0,
+          '下書きも登録も無い 3 では［次へ：担当を組む］を塗らない',
+        );
+        check(await headFocused(page), '段を移ると、その段の見出しにフォーカス');
         check((await page.getByTestId('standard-back').innerText()).includes('戻る'), '3 に［戻る］');
         await goStep(page, 'proposals');
         check(
@@ -259,6 +267,7 @@ const steps = sharedPage({
         await page.getByTestId('standard-table').waitFor();
         await settle(page, 300);
         check((await stepNow(page)) === 'draft', '［この案から作る］で「表で直す」の段へ移る');
+        check(await headFocused(page), '［この案から作る］のあと、「表で直す」の見出しにフォーカス');
         check(
           (await page.getByTestId('standard-card').count()) === 0 &&
             (await page.getByTestId('standard-run').count()) === 0,
@@ -281,6 +290,8 @@ const steps = sharedPage({
         await page.getByTestId('standard-back').click();
         await page.getByTestId('standard-card').first().waitFor();
         check((await stepNow(page)) === 'proposals', '［戻る］で 1 に戻る');
+        await settle(page, 200);
+        check(await headFocused(page), '［戻る］のあと、「案をくらべる」の見出しにフォーカス');
         await page.getByTestId('standard-card').first().getByTestId('standard-use').click();
         await page.getByTestId('confirm-dialog').waitFor();
         check((await page.getByTestId('confirm-title').innerText()).includes('置き換えますか'), '置き換える前に確認');

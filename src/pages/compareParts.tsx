@@ -16,7 +16,7 @@ import {
   Users,
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
-import { ArrangeSteps } from '../components/ArrangeTabs';
+import { ArrangeSteps } from '../components/ArrangeSteps';
 import { EmptyNext } from '../components/EmptyNext';
 import { FieldError } from '../components/FieldError';
 import { Term } from '../components/Term';

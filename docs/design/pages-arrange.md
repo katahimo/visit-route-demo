@@ -1,6 +1,6 @@
 # 担当を組むの画面
 
-> この画面のファイル：`src/pages/ArrangePage.tsx`（`arrange.css`。区画の部品 `arrangeParts.tsx`・始める処理 `useArrangeStart.ts`）、`src/lib/arrange.ts`（範囲の読み取り・見込み・担当なしと要対応の数え方）、`src/lib/monthBatch.ts`（計算の入れ物）・`monthBatchDay.ts`（1日分の計算の純粋関数）、`src/components/batchBand.tsx`（上の帯の進み具合・`MonthBatchHost`）・`scheduleParts.tsx`（`RangeProposalBand`・`confirmDropProposal`）・`ArrangeTabs.tsx`、`src/lib/month.ts`（`batchTargets`）。関連 ADR：0042・0053・0063・0065・0066。関連 PRD：D256・D257・D328・D355・D356・D359・D360。
+> この画面のファイル：`src/pages/ArrangePage.tsx`（`arrange.css`。区画の部品 `arrangeParts.tsx`・始める処理 `useArrangeStart.ts`）、`src/lib/arrange.ts`（範囲の読み取り・見込み・担当なしと要対応の数え方）、`src/lib/monthBatch.ts`（計算の入れ物）・`monthBatchDay.ts`（1日分の計算の純粋関数）、`src/components/batchBand.tsx`（上の帯の進み具合・`MonthBatchHost`）・`scheduleParts.tsx`（`RangeProposalBand`・`confirmDropProposal`）・`ArrangeSteps.tsx`、`src/lib/month.ts`（`batchTargets`）。関連 ADR：0042・0053・0063・0065・0066。関連 PRD：D256・D257・D328・D355・D356・D359・D360。
 > 予定（月・週・日）では AI で組まない（手で直す）。AI で組むのはこの画面と組み方の標準（[pages-standard.md](pages-standard.md)）。予定を組むの4段（案をくらべる → 表で直す → 標準にする → 担当を組む。ADR-0066）の最後の段で、標準で埋まらない所を点数の基準で埋める。
 
 ### 担当を組む（`#/arrange`）

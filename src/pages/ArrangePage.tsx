@@ -6,7 +6,7 @@
 import { Sparkles } from 'lucide-react';
 import { useId, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ArrangeSteps } from '../components/ArrangeTabs';
+import { ArrangeSteps } from '../components/ArrangeSteps';
 import { RangeProposalBand } from '../components/scheduleParts';
 import { PageHeader } from '../components/ui';
 import { useCompileInput } from '../components/useDayModel';

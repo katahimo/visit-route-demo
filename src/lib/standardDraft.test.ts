@@ -1,7 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { setStandardStep, standardStepOf, standardWork } from './standardDraft';
 
 describe('standardStepOf（組み方の標準の段。ADR-0066）', () => {
+  const initial = standardWork.get();
+  afterEach(() => standardWork.set(() => initial));
   const draft = { table: {}, from: null };
   const registered = { since: '2026-11-02', at: 1 };
   it('選んだ段が無ければ、登録した直後は 3・下書きがあれば 2・無ければ 1', () => {

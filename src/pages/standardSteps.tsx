@@ -1,5 +1,6 @@
 // 組み方の標準の画面（StandardPage）の3段：案をくらべる・表で直す（下書き）・標準にする（1段ずつ出す）と、段の下の［戻る］［次へ］（ADR-0066）
 import { Crown } from 'lucide-react';
+import type { Ref } from 'react';
 import { Link } from 'react-router-dom';
 import { WEEKDAY_LABELS } from '../lib/common';
 import { dateText, mdText } from '../lib/dateText';
@@ -35,6 +36,7 @@ export function ProposalsStep({
   tableProps,
   day,
   rulesOn,
+  headRef,
   onUse,
 }: {
   presetCount: number;
@@ -47,6 +49,8 @@ export function ProposalsStep({
   day: StandardDayViewState;
   /** 条件の重みの画面を開けるか（rules を切れば寄り道のリンクを出さない） */
   rulesOn: boolean;
+  /** 段の見出し（段が替わるとフォーカスする） */
+  headRef: Ref<HTMLHeadingElement>;
   onUse: (presetId: string, table: StandardTable) => void;
 }) {
   const { staffName } = tableProps;
@@ -54,7 +58,9 @@ export function ProposalsStep({
   const running = work.running;
   return (
     <li className="card stack" data-step="proposals">
-      <h2 tabIndex={-1}>1. 案をくらべる</h2>
+      <h2 ref={headRef} tabIndex={-1}>
+        1. 案をくらべる
+      </h2>
       <p className="sub" data-testid="standard-period">
         プリセット（考え方）ごとに、{mdText(period.from)}〜{mdText(period.to)}（{period.weeks}週。{cycleReason}
         ）の担当を AI
@@ -235,6 +241,7 @@ export function DraftStep({
   draftState,
   presetName,
   workingStaff,
+  headRef,
 }: {
   clientTerm: string;
   work: StandardWork;
@@ -243,6 +250,7 @@ export function DraftStep({
   draftState: StandardDraftState;
   presetName: StandardNames['presetName'];
   workingStaff: readonly { id: string; name: string }[];
+  headRef: Ref<HTMLHeadingElement>;
 }) {
   const { draft, draftDiff, editing, setEditing, cellRefs, closeEditor, fromCurrent, discard } = draftState;
   const { current, clientName } = tableProps;
@@ -250,7 +258,9 @@ export function DraftStep({
   const terms = { client: clientTerm };
   return (
     <li className="card stack" data-step="draft">
-      <h2 tabIndex={-1}>2. 表で直す（下書き）</h2>
+      <h2 ref={headRef} tabIndex={-1}>
+        2. 表で直す（下書き）
+      </h2>
       {!draft ? (
         <>
           <p className="sub">
@@ -333,18 +343,22 @@ export function RegisterStep({
   register: r,
   draftDiffCount,
   names,
+  headRef,
 }: {
   draft: boolean;
   registered: { since: string; at: number } | null;
   register: StandardRegisterState;
   draftDiffCount: number;
   names: Pick<StandardNames, 'staffName' | 'clientName'>;
+  headRef: Ref<HTMLHeadingElement>;
 }) {
   const { staffName, clientName } = names;
   const { minSince, since, setSinceIn, effectiveDiff, skippedDiff, temps, temp, setTemp, register } = r;
   return (
     <li className="card stack" data-step="register">
-      <h2 tabIndex={-1}>3. 標準にする</h2>
+      <h2 ref={headRef} tabIndex={-1}>
+        3. 標準にする
+      </h2>
       {draft ? (
         <>
           <label className="row">

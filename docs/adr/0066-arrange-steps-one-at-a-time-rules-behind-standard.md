@@ -35,11 +35,11 @@
 - 段の表示は見出しの下（`PageHeader` の nav）に `ol`（`aria-label`「予定を組むの段」・今の段に `aria-current="step"`）。各段は押して移れる（欠勤の欄と違い、前の段を終えていなくても移れる。標準がある人は 4 だけ使う）
 - 組み方の標準の画面は今の段のカードだけを出し、カードの下に［戻る］（2・3）と［次へ：〈次の段〉］を置く。今の段は画面の外の入れ物（`standardWork.step`）に置き、ほかの画面へ移っても残る。開いたときの既定は、登録した直後なら 3、下書きがあれば 2、無ければ 1
 - 段を移ると、その段の見出しへフォーカスして巻く
-- 主ボタンは画面に1つ：1 は「案を作る」（案があれば［次へ］は枠）、2 は［次へ：標準にする］（下書きがあるとき）、3 は［この表を標準にする］か、登録した直後の［次へ：担当を組む］
+- 主ボタンは画面に1つ：1 は「案を作る」（下書きがあれば［次へ］を塗り、「案を作る」は枠）、2 は［次へ：標準にする］（下書きがあるとき）、3 は［この表を標準にする］か、登録した直後の［次へ：担当を組む］（下書きも登録も無ければ塗らない）
 - メニューの「予定を組む」の子は 組み方の標準・担当を組む の2つ（組み方の標準の印は条件の重みの画面でも付ける）。コマンドパレットからは条件の重みを引ける
 
 ### 条件の重み（`#/rules`）
-- 予定を組むのタブ・メニューの子から外す。入口は組み方の標準の 1 のリンク（「考え方の重みを細かく直す（条件の重み）」と「触らなくても、初期の考え方で組めます」）とコマンドパレット。URL は変えない
+- 予定を組むのタブ・メニューの子から外す。入口は組み方の標準の 1 のリンク（「考え方の重みは触らなくても、初期の考え方で組めます。細かく直すときは条件の重みへ」）とコマンドパレット。URL は変えない
 - 見出しの右に［組み方の標準へ戻る］（`/standard`）。段の表示は出さない（1 の寄り道）
 - プリセットの節を重みの表の上へ置く（選んだ考え方の重みが下の表に出る）
 
@@ -52,6 +52,6 @@
 - 1-B は縦に長いまま。2-B は ADR-0065 で予定を組むへ移した理由（考え方と標準の流れが1本）に反する
 
 ## 影響
-- 実装：`lib/nav`（`ARRANGE_STEPS`・メニューの子・`ARRANGE_TABS`／`arrangeTabs` を消す）・`components/SettingsTabs`（`ArrangeTabs` → `ArrangeSteps`）・`components/ArrangeTabs`（`ArrangeSteps` を出す）・`lib/standardDraft`（`step`・`setStandardStep`・`standardStepOf`）・`pages/StandardPage`・`standardSteps`・`useStandardDraft`・`pages/ArrangePage`・`compareParts`・`pages/RulesPage`・`rulesParts`・`standard.css`・e2e（arrange・standard・rules・nav・mobile・words・dialog・features）
+- 実装：`lib/nav`（`ARRANGE_STEPS`・メニューの子・`ARRANGE_TABS`／`arrangeTabs` を消す）・`components/SettingsTabs`（`ArrangeTabs` → `ArrangeSteps`）・`components/ArrangeTabs` → `components/ArrangeSteps`（名前を替える）・`lib/standardDraft`（`step`・`setStandardStep`・`standardStepOf`）・`pages/StandardPage`・`standardSteps`・`useStandardDraft`・`pages/ArrangePage`・`compareParts`・`pages/RulesPage`・`rulesParts`・`styles.css`（`.arrange-steps`）・e2e（arrange・standard・nav・dialog・features・features2・schedule-v4）
 - 設計書：design.md・design/pages.md・pages-standard.md・pages-arrange.md・pages-rules.md・prd.md（D360。D349・D355・D359・D233 を直す）
 - 見直す条件：標準を毎月のように見直す人が多く、段を移る手間の声が出たら、3段を1画面に並べる表示を選べるようにする

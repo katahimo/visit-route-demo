@@ -5,7 +5,7 @@
 // 登録は store の update の1回（全体の「元に戻す」で戻せる）
 import { CalendarCheck } from 'lucide-react';
 import { useEffect, useMemo, useRef } from 'react';
-import { ArrangeSteps } from '../components/ArrangeTabs';
+import { ArrangeSteps } from '../components/ArrangeSteps';
 import { useConfirm } from '../components/ConfirmDialog';
 import { useToast } from '../components/Toast';
 import { PageHeader } from '../components/ui';
@@ -71,9 +71,10 @@ export default function StandardPage() {
   // 元に戻したら（登録の時刻が今のデータと違えば）完了の表示を出さない
   const registered = work.registered && data.standard?.at === work.registered.at ? work.registered : null;
   const step = standardStepOf(work);
-  // 主ボタンは画面に1つ（ADR-0066）：1 は案を作る（下書きがあれば次へ）、2 は下書きがあれば次へ、3 は標準にする（無ければ次へ）
-  const nextPrimary = step === 'register' ? draft === null : draft !== null;
-  useStepFocus(step, draft !== null);
+  // 主ボタンは画面に1つ（ADR-0066）：1 は案を作る（下書きがあれば次へ）、2 は下書きがあれば次へ、
+  // 3 は標準にする（登録した直後だけ次へ。下書きも登録も無ければ塗らない）
+  const nextPrimary = step === 'register' ? draft === null && registered !== null : draft !== null;
+  const stepHead = useStepFocus(step, draft !== null);
 
   return (
     <div className="stack standard-page">
@@ -100,6 +101,7 @@ export default function StandardPage() {
             tableProps={tableProps}
             day={day}
             rulesOn={rulesOn}
+            headRef={stepHead}
             onUse={(presetId, table) => void draftState.pickProposal(presetId, table)}
           />
         )}
@@ -113,6 +115,7 @@ export default function StandardPage() {
             draftState={draftState}
             presetName={presetName}
             workingStaff={workingStaff}
+            headRef={stepHead}
           />
         )}
 
@@ -123,6 +126,7 @@ export default function StandardPage() {
             register={register}
             draftDiffCount={draftDiff.length}
             names={{ staffName, clientName }}
+            headRef={stepHead}
           />
         )}
       </ol>
@@ -131,19 +135,21 @@ export default function StandardPage() {
   );
 }
 
-/** 段が替わったら・下書きができた／消えたら、その段の見出しへフォーカスして巻く（開いたときは動かさない。ADR-0066） */
+/**
+ * 段が替わったら・下書きができた／消えたら、その段の見出しへフォーカスして巻く（開いたときは動かさない。ADR-0066）。
+ * 前の値と比べるので、StrictMode で effect が2回走っても開いたときは動かない
+ */
 function useStepFocus(step: string, hasDraft: boolean) {
-  const first = useRef(true);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: 段と下書きの有無が変わったときだけ
+  const head = useRef<HTMLHeadingElement | null>(null);
+  const prev = useRef({ step, hasDraft });
   useEffect(() => {
-    if (first.current) {
-      first.current = false;
-      return;
-    }
-    requestAnimationFrame(() => {
-      const head = document.querySelector<HTMLElement>('.standard-steps > li h2');
-      head?.scrollIntoView({ block: 'start' });
-      head?.focus();
+    if (prev.current.step === step && prev.current.hasDraft === hasDraft) return;
+    prev.current = { step, hasDraft };
+    const id = requestAnimationFrame(() => {
+      head.current?.scrollIntoView({ block: 'start' });
+      head.current?.focus();
     });
+    return () => cancelAnimationFrame(id);
   }, [step, hasDraft]);
+  return head;
 }

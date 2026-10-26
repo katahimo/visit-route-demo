@@ -71,6 +71,12 @@ async function insideEntries(page, dlg, ctx) {
       `${label}：予定を組むの段（4段。今は担当を組む）`,
       asteps,
     );
+    // 組み方の標準の 1 の条件の重みへの寄り道は rules が入のときだけ（ADR-0066）
+    await open(page, '/standard', '[data-testid="standard-steps"]');
+    check(
+      (await count('standard-rules-link')) === (on('rules') ? 1 : 0),
+      `${label}：組み方の標準の条件の重みへのリンク`,
+    );
 
     // 〈利用者さん〉：その人の画面の節（PRD D308）
     const client = data.clients.find((c) => c.referrer.name) ?? data.clients[0];
