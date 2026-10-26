@@ -12,9 +12,12 @@ import {
   type ProposalStats,
   periodDates,
   proposalStats,
+  type StandardBaseDay,
   type StandardDay,
   type StandardPeriod,
   type StandardTable,
+  standardDayRoutes,
+  standardDayVisits,
   standardPatterns,
   standardPeriod,
   standardTemplate,
@@ -29,8 +32,8 @@ export type StandardProposal = {
   table: StandardTable | null;
   stats: ProposalStats | null;
   done: boolean;
-  /** 日ごとの問題と割当（日で見るに使う。ProposalDay と同じ形。訪問のある日だけ） */
-  days: StandardDay[];
+  /** 日ごとの割当（日で見るに使う。訪問のある日だけ。問題は日の元 StandardWork.dayBase に日に1つ） */
+  days: { date: string; routes: Record<string, string[]> }[];
 };
 
 /** 日で見るの選び（日付と案のタブ。null は既定＝最初の日・いちばん点の高い案。tab は案のプリセット ID か 'current'） */
@@ -44,6 +47,8 @@ export type StandardWork = {
   proposals: StandardProposal[];
   /** 日で見るの日付と案のタブ */
   dayView: StandardDaySelection;
+  /** 日で見るの日の元（案を作ったときのデータで作った問題・訪問・今の標準。日付の順） */
+  dayBase: StandardBaseDay[];
   /** 案を作った期間と、そのときの繰り返しの印（繰り返しが変わったら古い印を出す） */
   proposalsOf: { period: StandardPeriod; key: string } | null;
   running: { presetName: string; day: number; days: number } | null;
@@ -59,6 +64,7 @@ export type StandardWork = {
 const EMPTY: StandardWork = {
   proposals: [],
   dayView: { date: null, tab: null },
+  dayBase: [],
   proposalsOf: null,
   running: null,
   error: null,
@@ -95,6 +101,20 @@ export function templateScoreProblem(data: DemoData, date: string): Problem | nu
   return attempt(() => compile({ ...standardTemplate(data), rules: scoreRulesOf(data) }, date)).value ?? null;
 }
 
+/**
+ * 日で見るの日の元：点数の基準の物差しの問題 scoreProblem（templateScoreProblem。作れなければ fallback＝案の問題）・
+ * ひな形の訪問・今の標準
+ */
+export function standardBaseDay(
+  data: DemoData,
+  date: string,
+  scoreProblem: Problem | null,
+  fallback: Problem,
+): StandardBaseDay {
+  const problem = scoreProblem ?? fallback;
+  return { date, problem, visits: standardDayVisits(data, date), current: standardDayRoutes(data, problem) };
+}
+
 /** 作っている計算（1つだけ） */
 let ctl: { stopped: boolean; stop: (() => void) | null } | null = null;
 
@@ -127,17 +147,31 @@ export async function runProposals(data: DemoData, today: string): Promise<void>
     ...w,
     proposals: proposals.map((p) => ({ ...p })),
     dayView: { date: null, tab: null },
+    dayBase: [],
     proposalsOf: { period, key: patternsKey(data, today) },
     error: null,
   }));
-  const publish = () => standardWork.set((w) => ({ ...w, proposals: proposals.map((p) => ({ ...p })) }));
-  /** 点数の基準の物差しで 100点満点にする（日ごとに1回だけ作る） */
+  /** 日で見るの日の元（日に1つ。案を作ったときのデータで） */
+  const dayBase = new Map<string, StandardBaseDay>();
+  const publish = () =>
+    standardWork.set((w) => ({
+      ...w,
+      proposals: proposals.map((p) => ({ ...p })),
+      dayBase: [...dayBase.values()].sort((a, b) => (a.date < b.date ? -1 : 1)),
+    }));
+  /** 点数の基準の物差しのひな形の問題（日ごとに1回だけ作る。点と日で見るで同じもの） */
+  const scoreProblems = new Map<string, Problem | null>();
+  const scoreProblemOf = (date: string): Problem | null => {
+    if (!scoreProblems.has(date)) scoreProblems.set(date, templateScoreProblem(data, date));
+    return scoreProblems.get(date) ?? null;
+  };
+  /** 点数の基準の物差しで 100点満点にする */
   const pointsCache = new Map<string, number | null>();
   const toPoints = (day: StandardDay): number | null => {
     const key = `${day.date}|${JSON.stringify(day.routes)}`;
     const hit = pointsCache.get(key);
     if (hit !== undefined) return hit;
-    const p = templateScoreProblem(data, day.date);
+    const p = scoreProblemOf(day.date);
     const sc = p ? attempt(() => score(p, day.routes)).value : null;
     const scale = p ? attempt(() => normalize(p)).value : null;
     const out = sc && scale ? toHundred(sc.total, scale) : null;
@@ -160,12 +194,14 @@ export async function runProposals(data: DemoData, today: string): Promise<void>
         me.stop = null;
         if (me.stopped) break;
         days.push({ date, problem: p, routes: res.routes });
+        if (!dayBase.has(date)) dayBase.set(date, standardBaseDay(data, date, scoreProblemOf(date), p));
       }
       if (me.stopped) break;
       const prop = proposals[pi] as StandardProposal;
       prop.table = tableFromDays(data, days, today);
       prop.stats = days.length > 0 ? proposalStats(days, toPoints) : null;
-      prop.days = days;
+      // 日で見るには割当だけを残す（プリセットごとの問題は持ち続けない）
+      prop.days = days.map((d) => ({ date: d.date, routes: d.routes }));
       prop.done = true;
       publish();
     }

@@ -2,17 +2,10 @@
 // 日で見るの日付と入力
 import type { DemoData } from '../contracts/data';
 import type { Pattern } from '../contracts/documents';
-import type { Problem } from '../contracts/problem';
+import type { Preset } from '../contracts/rules';
 import type { ChoiceDayInput } from './choiceBandView';
 import { mdText } from './dateText';
-import {
-  type CellDiff,
-  type StandardDay,
-  standardDayRoutes,
-  standardPatterns,
-  type TemporaryChoice,
-  WEEKDAY_ORDER,
-} from './standard';
+import { type CellDiff, type StandardBaseDay, standardPatterns, type TemporaryChoice, WEEKDAY_ORDER } from './standard';
 
 /** 標準の表の行の並び：〈利用者さん〉の名前順（日本語）、同じなら最初の曜日（月曜はじまり）順 */
 export function standardRows(data: Pick<DemoData, 'patterns' | 'clients'>, today: string): Pattern[] {
@@ -73,13 +66,30 @@ export function registerLines(
 }
 
 /** 案の日ごとの割当（lib/standardDraft の StandardProposal のうち日で見るに使う所） */
-type DayProposal = { presetId: string; done: boolean; days: readonly StandardDay[] };
+type DayProposal = {
+  presetId: string;
+  done: boolean;
+  days: readonly { date: string; routes: Record<string, string[]> }[];
+};
+type PresetName = Pick<Preset, 'id' | 'name'>;
 
-/** 日で見るの日付（作り終えた案のどれかに訪問のある日。昇順。PRD D350） */
-export function standardDayDates(proposals: readonly DayProposal[]): string[] {
-  const out = new Set<string>();
-  for (const p of proposals) if (p.done) for (const d of p.days) out.add(d.date);
-  return [...out].sort();
+/** 日で見るに出す案：作り終えた、今もある（消していない）プリセットの案（PRD D350。ADR-0065） */
+function liveProposals<P extends DayProposal>(presets: readonly PresetName[], proposals: readonly P[]): P[] {
+  const ids = new Set(presets.map((p) => p.id));
+  return proposals.filter((p) => p.done && ids.has(p.presetId));
+}
+
+/** 日で見るの日付（日の元のうち、出す案のどれかに訪問のある日。昇順） */
+export function standardDayDates(
+  presets: readonly PresetName[],
+  proposals: readonly DayProposal[],
+  dayBase: readonly Pick<StandardBaseDay, 'date'>[],
+): string[] {
+  const has = new Set(liveProposals(presets, proposals).flatMap((p) => p.days.map((d) => d.date)));
+  return dayBase
+    .map((b) => b.date)
+    .filter((d) => has.has(d))
+    .sort();
 }
 
 /** 日で見るの日付：選んだ日が日付の中にあればそれ、無ければ最初の日（日が無ければ null） */
@@ -88,27 +98,33 @@ export function standardDayDate(picked: string | null, dates: readonly string[])
 }
 
 /**
- * 日で見るの入力（ChoiceDayInput。ADR-0065）：problem は点数の基準の物差しで作ったひな形のその日の問題（作れなければ最初の案の
- * その日の問題）、今の標準（standardDayRoutes）、作り終えた案ごとのその日の割当（その日の無い案は除く。名前は data.presets）。
- * どの案にもその日が無ければ null
+ * カードの［日で見る］で開く日：今見ている日にその案の日があればそのまま、無ければその案の最初の日（押した案が開くように）。
+ * 案に日が無ければ今の日のまま
+ */
+export function standardDayOpen(
+  shown: string | null,
+  proposalDays: readonly { date: string }[],
+  dates: readonly string[],
+): string | null {
+  if (shown !== null && proposalDays.some((d) => d.date === shown)) return shown;
+  return proposalDays.map((d) => d.date).find((d) => dates.includes(d)) ?? shown;
+}
+
+/**
+ * 日で見るの入力（ChoiceDayInput。ADR-0065）：日の元（案を作ったときの点数の基準の物差しの問題・今の標準）と、出す案
+ * （作り終えた・消していないプリセット）のその日の割当（名前は今のプリセット）。どの案にもその日が無ければ null。
+ * 案と同じときのデータで作ったものだけを使うので、そのあとに標準・訪問が変わっても突き合わせが食い違わない
  */
 export function standardDayInput(
-  data: DemoData,
+  presets: readonly PresetName[],
   proposals: readonly DayProposal[],
-  date: string,
-  scoreProblem: Problem | null,
+  base: Pick<StandardBaseDay, 'date' | 'problem' | 'current'>,
 ): ChoiceDayInput | null {
-  const name = new Map(data.presets.map((p) => [p.id, p.name]));
-  const choices: (ChoiceDayInput['choices'][number] & { problem: Problem })[] = [];
-  for (const p of proposals) {
-    const day = p.done ? p.days.find((d) => d.date === date) : undefined;
-    if (day) choices.push({ presetId: p.presetId, name: name.get(p.presetId) ?? '消したプリセット', ...day });
-  }
-  const problem = scoreProblem ?? choices[0]?.problem;
-  if (!problem || choices.length === 0) return null;
-  return {
-    problem,
-    current: standardDayRoutes(data, problem),
-    choices: choices.map(({ presetId, name: n, routes }) => ({ presetId, name: n, routes })),
-  };
+  const name = new Map(presets.map((p) => [p.id, p.name]));
+  const choices = liveProposals(presets, proposals).flatMap((p) => {
+    const day = p.days.find((d) => d.date === base.date);
+    return day ? [{ presetId: p.presetId, name: name.get(p.presetId) ?? '', routes: day.routes }] : [];
+  });
+  if (choices.length === 0) return null;
+  return { problem: base.problem, current: base.current, choices };
 }

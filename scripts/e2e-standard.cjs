@@ -393,6 +393,18 @@ const steps = sharedPage({
         check((await page.getByTestId('standard-same').count()) === 1, '「今の標準と同じです」');
       },
     ],
+    [
+      'day-view-after-register',
+      async (page) => {
+        // 登録で繰り返しが変わっても、日で見るは案を作ったときの問題・標準で見る（全部担当なしの比べ方にならない。ADR-0065）
+        const view = page.getByTestId('standard-day-view');
+        check((await view.count()) === 1, '登録したあとも日で見るは残る');
+        check((await view.getByTestId('standard-day-stale').count()) === 1, '案を作り直す案内の1行');
+        const unassigned = await view.getByTestId('choice-unassigned').count();
+        const bands = await view.locator('[data-testid="route-timeline"] [data-visit]').count();
+        check(bands > 0, '登録したあとも時間軸に訪問の帯が出る（担当が付いたまま）', { bands, unassigned });
+      },
+    ],
   ],
 });
 

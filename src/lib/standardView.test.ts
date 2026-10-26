@@ -6,6 +6,7 @@ import { client, makeData, staff } from '../matching/fixtures';
 import { initialPresets } from '../seed';
 import { dayProblemOf } from './dayPlan';
 import { standardDayRoutes } from './standard';
+import { standardBaseDay } from './standardDraft';
 import {
   effectiveDiff,
   endsBeforeIds,
@@ -13,6 +14,7 @@ import {
   standardDayDate,
   standardDayDates,
   standardDayInput,
+  standardDayOpen,
   standardRows,
   standardWeekdays,
   workingStaff,
@@ -122,32 +124,71 @@ describe('日で見る（PRD D350。ADR-0065）', () => {
   const presets = initialPresets();
   const d = data({ presets, staff: [staff('s1', 38.26, 140.87), staff('s2', 38.262, 140.872)] });
   const problem = dayProblemOf(d, MON)!;
-  const day = (date: string, routes: Record<string, string[]>) => ({ date, problem: dayProblemOf(d, date)!, routes });
-  const proposals = [
-    { presetId: presets[0]!.id, done: true, days: [day(WED, { s1: [`${WED}_p1`] }), day(MON, { s2: [`${MON}_p1`] })] },
-    { presetId: presets[1]!.id, done: true, days: [day(MON, { s1: [`${MON}_p1`] })] },
-    { presetId: presets[2]!.id, done: false, days: [day('2026-10-19', {})] },
+  type R = Record<string, string[]>;
+  const proposals: { presetId: string; done: boolean; days: { date: string; routes: R }[] }[] = [
+    {
+      presetId: presets[0]!.id,
+      done: true,
+      days: [
+        { date: WED, routes: { s1: [`${WED}_p1`] } },
+        { date: MON, routes: { s2: [`${MON}_p1`] } },
+      ],
+    },
+    { presetId: presets[1]!.id, done: true, days: [{ date: MON, routes: { s1: [`${MON}_p1`] } }] },
+    { presetId: presets[2]!.id, done: false, days: [{ date: '2026-10-19', routes: {} }] },
+    {
+      presetId: 'gone',
+      done: true,
+      days: [
+        { date: '2026-10-21', routes: {} },
+        { date: MON, routes: {} },
+      ],
+    },
   ];
+  const dayBase = [MON, WED, '2026-10-19', '2026-10-21'].map((date) => ({ date }));
 
-  it('日付は作り終えた案に訪問のある日（昇順）。選んだ日が無ければ最初の日', () => {
-    const dates = standardDayDates(proposals);
+  it('日付は日の元のうち、作り終えた・消していないプリセットの案に訪問のある日（昇順）', () => {
+    const dates = standardDayDates(presets, proposals, dayBase);
     expect(dates).toEqual([MON, WED]);
     expect(standardDayDate(WED, dates)).toBe(WED);
     expect(standardDayDate('2026-10-19', dates)).toBe(MON);
     expect(standardDayDate(null, [])).toBeNull();
   });
 
-  it('入力：点数の基準の問題・今の標準・案ごとのその日の割当（名前はプリセット）', () => {
-    const input = standardDayInput(d, proposals, MON, problem)!;
+  it('［日で見る］で開く日：見ている日にその案の日が無ければ、その案の最初の日', () => {
+    const dates = [MON, WED];
+    expect(standardDayOpen(WED, proposals[1]!.days, dates)).toBe(MON);
+    expect(standardDayOpen(WED, proposals[0]!.days, dates)).toBe(WED);
+    expect(standardDayOpen(MON, [], dates)).toBe(MON);
+  });
+
+  it('入力：日の元（問題・今の標準）と、消していないプリセットの案のその日の割当（名前は今のプリセット）', () => {
+    const base = standardBaseDay(d, MON, problem, problem);
+    expect(base.current).toEqual(standardDayRoutes(d, problem));
+    expect(base.current).toEqual({ s1: [`${MON}_p1`] });
+    expect(base.visits.map((v) => v.id)).toEqual([`${MON}_p1`]);
+    const input = standardDayInput(presets, proposals, base)!;
     expect(input.problem).toBe(problem);
-    expect(input.current).toEqual(standardDayRoutes(d, problem));
-    expect(input.current).toEqual({ s1: [`${MON}_p1`] });
+    expect(input.current).toBe(base.current);
     expect(input.choices).toEqual([
       { presetId: presets[0]!.id, name: presets[0]!.name, routes: { s2: [`${MON}_p1`] } },
       { presetId: presets[1]!.id, name: presets[1]!.name, routes: { s1: [`${MON}_p1`] } },
     ]);
-    // 点数の基準の問題が作れなければ最初の案の問題。その日の案が無ければ null
-    expect(standardDayInput(d, proposals, MON, null)!.problem).toBe(proposals[0]!.days[1]!.problem);
-    expect(standardDayInput(d, proposals, '2026-10-19', problem)).toBeNull();
+    expect(standardDayInput(presets, proposals, { ...base, date: '2026-10-19' })).toBeNull();
+  });
+
+  it('日の元は案を作ったときのデータのまま：あとで標準を登録して繰り返しの ID が変わっても、案の割当と突き合う', () => {
+    const base = standardBaseDay(d, MON, problem, problem);
+    const ids = new Set(base.problem.visits.map((v) => v.id));
+    const after = { ...d, patterns: d.patterns.map((p) => ({ ...p, id: 'p9', usualStaffId: 's2' })) };
+    // 今のデータで作り直すと訪問 ID が変わる（古い案の割当と合わない）が、残した日の元はそのまま
+    expect(dayProblemOf(after, MON)!.visits.map((v) => v.id)).toEqual([`${MON}_p9`]);
+    const input = standardDayInput(presets, proposals, base)!;
+    for (const c of input.choices) for (const id of Object.values(c.routes).flat()) expect(ids.has(id)).toBe(true);
+    expect(input.current).toEqual({ s1: [`${MON}_p1`] });
+  });
+
+  it('点数の基準の問題が作れなければ、案の問題を使う', () => {
+    expect(standardBaseDay(d, MON, null, problem).problem).toBe(problem);
   });
 });

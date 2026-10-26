@@ -480,6 +480,17 @@ export type ProposalStats = {
 export type StandardDay = { date: string; problem: Problem; routes: Record<string, string[]> };
 
 /**
+ * 日で見るの日の元（案を作ったときのデータで作り、案と一緒に残す。ADR-0065）：点数の基準の物差しで作ったひな形のその日の問題
+ * （プリセットに依らないので日に1つ）・ひな形の訪問・そのときの今の標準の割当（standardDayRoutes）
+ */
+export type StandardBaseDay = {
+  date: string;
+  problem: Problem;
+  visits: Visit[];
+  current: Record<string, string[]>;
+};
+
+/**
  * 考え方のカードの数（PRD D350）：points は toPoints（点数の基準の物差しで 100点満点にする。画面が渡す）の日ごとの平均
  */
 export function proposalStats(
