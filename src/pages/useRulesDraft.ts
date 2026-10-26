@@ -113,8 +113,12 @@ export function useRulesDraft() {
     });
     if (!ok) return;
     // 確認の間に別のタブで点数の基準が替わった・6つに達したら書かない（下書きは前の基準の重み。替わった基準では捨てられる）
-    if (basisRef.current !== basisId || dataRef.current.presets.length >= MAX_PRESETS) {
+    if (basisRef.current !== basisId) {
       toast('点数の基準が替わったので、保存しませんでした');
+      return;
+    }
+    if (dataRef.current.presets.length >= MAX_PRESETS) {
+      toast(`プリセットが${MAX_PRESETS}つになったので、保存しませんでした。使わない考え方を消してから保存してください`);
       return;
     }
     const error = addPresetError(dataRef.current, name);
