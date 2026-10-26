@@ -3,10 +3,16 @@ import { describe, expect, it } from 'vitest';
 import type { DemoData } from '../contracts/data';
 import type { Pattern } from '../contracts/documents';
 import { client, makeData, staff } from '../matching/fixtures';
+import { initialPresets } from '../seed';
+import { dayProblemOf } from './dayPlan';
+import { standardDayRoutes } from './standard';
 import {
   effectiveDiff,
   endsBeforeIds,
   registerLines,
+  standardDayDate,
+  standardDayDates,
+  standardDayInput,
   standardRows,
   standardWeekdays,
   workingStaff,
@@ -108,5 +114,40 @@ describe('standardView', () => {
     expect(registerLines(changes, MON, 1, 'drop', null)[2]).toBe(
       'すでに入っている予定で新しい標準と違う 1件は、消して標準どおりにします。',
     );
+  });
+});
+
+describe('日で見る（PRD D350。ADR-0065）', () => {
+  const WED = '2026-10-14';
+  const presets = initialPresets();
+  const d = data({ presets, staff: [staff('s1', 38.26, 140.87), staff('s2', 38.262, 140.872)] });
+  const problem = dayProblemOf(d, MON)!;
+  const day = (date: string, routes: Record<string, string[]>) => ({ date, problem: dayProblemOf(d, date)!, routes });
+  const proposals = [
+    { presetId: presets[0]!.id, done: true, days: [day(WED, { s1: [`${WED}_p1`] }), day(MON, { s2: [`${MON}_p1`] })] },
+    { presetId: presets[1]!.id, done: true, days: [day(MON, { s1: [`${MON}_p1`] })] },
+    { presetId: presets[2]!.id, done: false, days: [day('2026-10-19', {})] },
+  ];
+
+  it('日付は作り終えた案に訪問のある日（昇順）。選んだ日が無ければ最初の日', () => {
+    const dates = standardDayDates(proposals);
+    expect(dates).toEqual([MON, WED]);
+    expect(standardDayDate(WED, dates)).toBe(WED);
+    expect(standardDayDate('2026-10-19', dates)).toBe(MON);
+    expect(standardDayDate(null, [])).toBeNull();
+  });
+
+  it('入力：点数の基準の問題・今の標準・案ごとのその日の割当（名前はプリセット）', () => {
+    const input = standardDayInput(d, proposals, MON, problem)!;
+    expect(input.problem).toBe(problem);
+    expect(input.current).toEqual(standardDayRoutes(d, problem));
+    expect(input.current).toEqual({ s1: [`${MON}_p1`] });
+    expect(input.choices).toEqual([
+      { presetId: presets[0]!.id, name: presets[0]!.name, routes: { s2: [`${MON}_p1`] } },
+      { presetId: presets[1]!.id, name: presets[1]!.name, routes: { s1: [`${MON}_p1`] } },
+    ]);
+    // 点数の基準の問題が作れなければ最初の案の問題。その日の案が無ければ null
+    expect(standardDayInput(d, proposals, MON, null)!.problem).toBe(proposals[0]!.days[1]!.problem);
+    expect(standardDayInput(d, proposals, '2026-10-19', problem)).toBeNull();
   });
 });

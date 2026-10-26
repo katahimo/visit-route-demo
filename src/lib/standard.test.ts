@@ -19,6 +19,8 @@ import {
   registerStandard,
   type StandardTable,
   setCell,
+  standardDayRoutes,
+  standardDayVisits,
   standardPatterns,
   standardPeriod,
   startError,
@@ -414,5 +416,28 @@ describe('bestIndex', () => {
     });
     expect(bestIndex([s(80), s(90), s(90)])).toBe(1);
     expect(bestIndex([null, s(null)])).toBe(-1);
+  });
+});
+
+describe('standardDayRoutes（日で見るの今の標準。ADR-0065）', () => {
+  it('ひな形の問題の訪問を、今の標準の担当のまま並べる（保存した回の手直しは見ない）', () => {
+    const base = data({
+      patterns: [pattern(), pattern({ id: 'p2', usualStaffId: 's2', earliestStart: '13:00', latestStart: '15:00' })],
+    });
+    // 保存した回で担当を替えていても、ひな形は繰り返しの担当のまま
+    const d = { ...base, visits: [saved(base, MON, { staffId: 's2', pinned: true })] };
+    const problem = dayProblemOf({ ...d, visits: [] }, MON)!;
+    expect(standardDayVisits(d, MON).map((v) => [v.id, v.staffId])).toEqual([
+      [`${MON}_p1`, 's1'],
+      [`${MON}_p2`, 's2'],
+    ]);
+    expect(standardDayRoutes(d, problem)).toEqual({ s1: [`${MON}_p1`], s2: [`${MON}_p2`] });
+  });
+  it('担当がいない回（繰り返しの担当なし・その日に働かない人）は担当なし', () => {
+    const d = data({ patterns: [pattern({ usualStaffId: null })] });
+    const problem = dayProblemOf(d, MON)!;
+    expect(standardDayRoutes(d, problem)).toEqual({});
+    const p = dayProblemOf(data(), MON)!;
+    expect(standardDayRoutes(data(), { ...p, staff: p.staff.filter((x) => x.id !== 's1') })).toEqual({});
   });
 });

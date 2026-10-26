@@ -2,6 +2,7 @@
 // 案（プリセットごとの表と数字）・下書き・作っている途中の進み具合をここに置き、ほかの画面へ移っても残す
 // （読み直す・タブを閉じると消える。データには入れない）。案を作る計算も画面を離れても続ける
 import type { DemoData } from '../contracts/data';
+import type { Problem } from '../contracts/problem';
 import { normalize, score, toHundred } from '../evaluate';
 import { compile } from '../matching';
 import { applyPreset, scoreRulesOf } from '../seed';
@@ -16,6 +17,7 @@ import {
   type StandardTable,
   standardPatterns,
   standardPeriod,
+  standardTemplate,
   tableFromDays,
 } from './standard';
 import { createValueStore } from './valueStore';
@@ -27,7 +29,12 @@ export type StandardProposal = {
   table: StandardTable | null;
   stats: ProposalStats | null;
   done: boolean;
+  /** 日ごとの問題と割当（日で見るに使う。ProposalDay と同じ形。訪問のある日だけ） */
+  days: StandardDay[];
 };
+
+/** 日で見るの選び（日付と案のタブ。null は既定＝最初の日・いちばん点の高い案。tab は案のプリセット ID か 'current'） */
+export type StandardDaySelection = { date: string | null; tab: string | null };
 
 /** 下書き（from＝どこから作ったか。案のプリセット ID・今の標準は null） */
 export type StandardDraft = { table: StandardTable; from: string | null };
@@ -35,6 +42,8 @@ export type StandardDraft = { table: StandardTable; from: string | null };
 export type StandardWork = {
   /** 案（作り始めたプリセットの分。data.presets の順） */
   proposals: StandardProposal[];
+  /** 日で見るの日付と案のタブ */
+  dayView: StandardDaySelection;
   /** 案を作った期間と、そのときの繰り返しの印（繰り返しが変わったら古い印を出す） */
   proposalsOf: { period: StandardPeriod; key: string } | null;
   running: { presetName: string; day: number; days: number } | null;
@@ -49,6 +58,7 @@ export type StandardWork = {
 
 const EMPTY: StandardWork = {
   proposals: [],
+  dayView: { date: null, tab: null },
   proposalsOf: null,
   running: null,
   error: null,
@@ -75,6 +85,16 @@ export function setDraft(draft: StandardDraft | null, key: string | null): void 
   standardWork.set((w) => ({ ...w, draft, draftKey: draft ? key : null, registered: draft ? null : w.registered }));
 }
 
+/** 日で見るの日付・案のタブを替える（渡した方だけ） */
+export function setDayView(next: Partial<StandardDaySelection>): void {
+  standardWork.set((w) => ({ ...w, dayView: { ...w.dayView, ...next } }));
+}
+
+/** 点数の基準の物差しで作ったひな形のその日の問題（案の点・日で見るの点と時間軸。作れなければ null） */
+export function templateScoreProblem(data: DemoData, date: string): Problem | null {
+  return attempt(() => compile({ ...standardTemplate(data), rules: scoreRulesOf(data) }, date)).value ?? null;
+}
+
 /** 作っている計算（1つだけ） */
 let ctl: { stopped: boolean; stop: (() => void) | null } | null = null;
 
@@ -84,9 +104,6 @@ export function stopProposals(): void {
   ctl.stopped = true;
   ctl.stop?.();
 }
-
-/** ひな形の日の入力：保存した回・単発の訪問は見ず（visits を空にして繰り返しから計算した回だけ）、ピンも効かせない */
-const templateOf = (d: DemoData): DemoData => ({ ...d, visits: [] });
 
 /**
  * プリセットごとに案を作る（data.presets の順）。期間（standardPeriod）の日を1日ずつ、そのプリセットの重みで Worker で解き、
@@ -98,17 +115,18 @@ export async function runProposals(data: DemoData, today: string): Promise<void>
   ctl = me;
   const period = standardPeriod(data, today);
   const dates = periodDates(period);
-  const base = templateOf(data);
-  const basisRules = scoreRulesOf(data);
+  const base = standardTemplate(data);
   const proposals: StandardProposal[] = data.presets.map((p) => ({
     presetId: p.id,
     table: null,
     stats: null,
     done: false,
+    days: [],
   }));
   standardWork.set((w) => ({
     ...w,
     proposals: proposals.map((p) => ({ ...p })),
+    dayView: { date: null, tab: null },
     proposalsOf: { period, key: patternsKey(data, today) },
     error: null,
   }));
@@ -119,7 +137,7 @@ export async function runProposals(data: DemoData, today: string): Promise<void>
     const key = `${day.date}|${JSON.stringify(day.routes)}`;
     const hit = pointsCache.get(key);
     if (hit !== undefined) return hit;
-    const p = attempt(() => compile({ ...base, rules: basisRules }, day.date)).value;
+    const p = templateScoreProblem(data, day.date);
     const sc = p ? attempt(() => score(p, day.routes)).value : null;
     const scale = p ? attempt(() => normalize(p)).value : null;
     const out = sc && scale ? toHundred(sc.total, scale) : null;
@@ -147,6 +165,7 @@ export async function runProposals(data: DemoData, today: string): Promise<void>
       const prop = proposals[pi] as StandardProposal;
       prop.table = tableFromDays(data, days, today);
       prop.stats = days.length > 0 ? proposalStats(days, toPoints) : null;
+      prop.days = days;
       prop.done = true;
       publish();
     }

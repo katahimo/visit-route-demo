@@ -47,6 +47,25 @@
   font-size: 0.95rem;
   margin: 0;
 }
+.standard-card-actions {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+/* 日で見る（ADR-0065）：日付のタブは折り返す。狭い画面でも横にはみ出さない */
+.standard-day-view {
+  gap: 8px;
+  min-width: 0;
+  scroll-margin-top: 80px;
+}
+.standard-day-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.standard-day-tabs .is-on {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
 
 /* 表（行＝繰り返し・列＝曜日）。狭い画面は横に巻く */
 .standard-table-scroll {

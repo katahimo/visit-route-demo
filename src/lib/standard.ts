@@ -7,9 +7,9 @@ import type { Pattern, PatternUsualStart, Visit } from '../contracts/documents';
 import type { Problem } from '../contracts/problem';
 import { addDays, minutesToHhmm, weekday } from '../domain/time';
 import { score } from '../evaluate';
-import { occursOn, parsePatternVisitId, patternVisitId, timesOn, usualStartOn, visitOf } from '../patterns';
+import { occursOn, parsePatternVisitId, patternVisitId, timesOn, usualStartOn, visitOf, visitsOn } from '../patterns';
 import { own } from './common';
-import { ownerOf, startsOf } from './dayPlan';
+import { ownerOf, routesOf, startsOf } from './dayPlan';
 import { setScorePreset } from './presets';
 
 /** 標準の期間（両端を含む。from は来週の月曜） */
@@ -531,6 +531,23 @@ export function bestIndex(stats: readonly (Pick<ProposalStats, 'points'> | null)
     if (b == null || s.points > b) best = i;
   });
   return best;
+}
+
+/**
+ * ひな形の入力（案を作る・日で見る）：保存した回・単発の訪問は見ず（visits を空にして繰り返しから計算した回だけ）、
+ * ピンも効かせない（PRD D350）
+ */
+export const standardTemplate = <T extends Pick<DemoData, 'visits'>>(d: T): T => ({ ...d, visits: [] });
+
+/** ひな形のその日の訪問（繰り返しから計算した回。担当・開始は今の標準のまま。開始の順） */
+export const standardDayVisits = (data: DemoData, date: string): Visit[] => visitsOn(standardTemplate(data), date);
+
+/**
+ * 日で見るの「今の標準」（PRD D350。ADR-0065）：ひな形の問題の訪問を、今の標準の担当・開始のまま並べた割当
+ * （その日に担当がいない回は担当なし）。案と同じひな形どうしで比べる
+ */
+export function standardDayRoutes(data: DemoData, problem: Problem): Record<string, string[]> {
+  return routesOf(problem, standardDayVisits(data, problem.date));
 }
 
 /** 組み方の標準を登録したか */

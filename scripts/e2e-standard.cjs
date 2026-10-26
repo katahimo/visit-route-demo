@@ -1,5 +1,6 @@
-// 組み方の標準（PRD D350〜D354。ADR-0063）：#/standard を開くと予定を組むのタブ（組み方の標準が今のタブ）・案をくらべる
-// （カード・王冠・点・偏り・今の標準と違うマス）・表で見る（違うマスに「変更」）・この案から作る・ほかの画面へ移っても下書きと案が残る・
+// 組み方の標準（PRD D350〜D354・D359。ADR-0063・ADR-0065）：#/standard を開くと予定を組むのタブ（条件の重み・組み方の標準・
+// 担当を組む の3つ。組み方の標準が今のタブ）・案をくらべる（カード・王冠・点・偏り・今の標準と違うマス）・表で見る（違うマスに「変更」）・
+// 日で見る（日付と案のタブ・点・王冠・担当ごとの時間軸・地図・変わる訪問の印。読み取り専用）・この案から作る・ほかの画面へ移っても下書きと案が残る・
 // マスを直す（範囲外の時刻は受け付けない・Esc で閉じてフォーカスはマス）・違う所の数・390px で横にはみ出さない・
 // 標準にする（入れ替えるが既定・確認・完了の表示と週の予定へのリンク・点数の基準が案のプリセット）・登録後は今の標準と同じ。
 //
@@ -42,6 +43,14 @@ const steps = sharedPage({
         check(hashOf(page).startsWith('#/standard'), '#/standard を開く', hashOf(page));
         const tabs = page.getByTestId('arrange-tabs');
         check((await tabs.count()) === 1, '予定を組むのタブがある');
+        const order = await tabs
+          .locator('[data-tab]')
+          .evaluateAll((els) => els.map((el) => el.getAttribute('data-tab')));
+        check(
+          order.join(',') === 'rules,standard,arrange',
+          '予定を組むのタブは 条件の重み・組み方の標準・担当を組む の順（ADR-0065）',
+          order,
+        );
         const cur = tabs.locator('[aria-current="page"]');
         check(
           (await cur.count()) === 1 && (await cur.innerText()).includes('組み方の標準'),
@@ -121,6 +130,80 @@ const steps = sharedPage({
         await view.click();
         await settle(page, 200);
         check((await page.getByTestId('standard-view-table').count()) === 0, 'もう一度押すと閉じる');
+      },
+    ],
+    [
+      'day-view',
+      async (page) => {
+        const view = page.getByTestId('standard-day-view');
+        const cards = await page.getByTestId('standard-card').count();
+        check((await view.count()) === 1, '案を作ると「日で見る」の欄が出る');
+        const dates = view.getByTestId('standard-day-tabs').locator('[role="tab"]');
+        const nDates = await dates.count();
+        check(nDates >= 1, '日付のタブ（期間の訪問のある日）', nDates);
+        check(
+          (await dates.first().getAttribute('aria-selected')) === 'true' &&
+            /^\d+\/\d+（.）$/.test((await dates.first().innerText()).trim()),
+          '既定は最初の日（「M/D（曜）」）',
+          await dates.first().innerText(),
+        );
+        check((await view.getByTestId('standard-day-current').count()) === 1, '案のタブに「今の標準」がある');
+        const choices = view.getByTestId('standard-day-choice');
+        check((await choices.count()) === cards, '案のタブはカードの数だけ', await choices.count());
+        const pts = await view.getByTestId('choice-points').allInnerTexts();
+        check(pts.length === cards + 1 && pts.every((t) => /^\d+点$/.test(t.trim())), 'タブごとに点（100点満点）', pts);
+        check((await view.getByTestId('standard-day-crown').count()) === 1, 'いちばん点の高い案のタブに王冠');
+        check(
+          (await view.getByTestId('route-timeline').count()) === 1 &&
+            (await view.getByTestId('standard-day-map').count()) === 1,
+          '選んだ案を担当ごとの時間軸と地図で見る',
+        );
+        // カードの［日で見る］で、その案のタブで開く
+        const second = page.getByTestId('standard-card').nth(1);
+        const id = await second.getAttribute('data-preset');
+        await second.getByTestId('standard-day').click();
+        await settle(page, 400);
+        check(
+          (await view
+            .locator(`[data-testid="standard-day-choice"][data-preset="${id}"]`)
+            .getAttribute('aria-selected')) === 'true',
+          '［日で見る］でその案のタブを開く',
+        );
+        // 担当の変わる案では、変わる訪問に印（代・±分）と変わる訪問の一覧
+        const moved = await choices.evaluateAll((els) =>
+          els.map((el) => Number(/担当が変わる (\d+)件/.exec(el.textContent ?? '')?.[1] ?? 0)),
+        );
+        const k = moved.findIndex((n) => n > 0);
+        if (k >= 0) {
+          await choices.nth(k).click();
+          await settle(page, 300);
+          check((await view.getByTestId('choice-mark').count()) > 0, '今の標準から変わる訪問に印（代・±分）');
+          check((await view.locator('.reassign-moves-box').count()) === 1, '変わる訪問の一覧（畳む）');
+        }
+        // 時間軸の訪問を押すと地図をその担当に絞る
+        await view.locator('[data-testid="route-timeline"] [data-visit]').first().click();
+        check(
+          (await view.getByTestId('standard-day-map').getByRole('button', { name: '全員のルートを見る' }).count()) ===
+            1,
+          '時間軸の訪問を押すと地図をその担当に絞る（全員のルートを見るで戻せる）',
+        );
+        await page.screenshot({ path: path.join(OUT_DIR, 'standard-day-view.png'), fullPage: true });
+        // 今の標準のタブには印が無い
+        await view.getByTestId('standard-day-current').click();
+        await settle(page, 300);
+        check((await view.getByTestId('choice-mark').count()) === 0, '今の標準のタブには変わる訪問の印が無い');
+        // 日付を替える
+        if (nDates > 1) {
+          await dates.nth(1).click();
+          await settle(page, 300);
+          check((await dates.nth(1).getAttribute('aria-selected')) === 'true', '日付のタブで日を替える');
+        }
+        check(
+          (await view.locator('[data-testid="route-timeline"] [draggable="true"]').count()) === 0,
+          '札は動かさない',
+        );
+        const d = await stored(page);
+        check(!d?.standard, '日で見ても標準・予定は書かない', d?.standard);
       },
     ],
     [

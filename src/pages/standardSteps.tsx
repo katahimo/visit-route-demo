@@ -6,7 +6,9 @@ import { dateText, mdText } from '../lib/dateText';
 import type { StandardPeriod } from '../lib/standard';
 import { cellOf, diffCounts, mondayOf, type StandardTable, setCell } from '../lib/standard';
 import { type StandardWork, setDraft, standardWork, stopProposals } from '../lib/standardDraft';
+import { StandardDayView } from './standardDayView';
 import { CellEditor, cellKey, type StandardNames, StandardTableView, type TableProps } from './standardParts';
+import type { StandardDayViewState } from './useStandardDayView';
 import type { StandardDraftState } from './useStandardDraft';
 import type { StandardProposals } from './useStandardProposals';
 import type { StandardRegisterState } from './useStandardRegister';
@@ -14,7 +16,7 @@ import type { StandardRegisterState } from './useStandardRegister';
 /** 表の部品に共通で渡すもの */
 export type StandardTableBase = Pick<TableProps, 'rows' | 'weekdays' | 'current' | 'clientName' | 'staffName'>;
 
-/** 1. 案をくらべる：考え方ごとの案を作り、カードで比べ、表で見て、下書きにする */
+/** 1. 案をくらべる：考え方ごとの案を作り、カードで比べ、表で見て・日で見て、下書きにする */
 export function ProposalsStep({
   presetCount,
   period,
@@ -23,6 +25,7 @@ export function ProposalsStep({
   proposals,
   hasDraft,
   tableProps,
+  day,
   onUse,
 }: {
   presetCount: number;
@@ -32,6 +35,7 @@ export function ProposalsStep({
   proposals: StandardProposals;
   hasDraft: boolean;
   tableProps: StandardTableBase;
+  day: StandardDayViewState;
   onUse: (presetId: string, table: StandardTable) => void;
 }) {
   const { staffName } = tableProps;
@@ -77,70 +81,20 @@ export function ProposalsStep({
         </p>
       )}
       <ul className="standard-cards">
-        {cards.map(({ preset, prop, diff }, i) => {
-          const s = prop?.stats ?? null;
-          const ready = !!prop?.done && !!prop.table;
-          return (
-            <li key={preset.id} className="card standard-card" data-testid="standard-card" data-preset={preset.id}>
-              <h3>
-                {i === best && <Crown size={16} aria-label="いちばん点が高い" data-testid="standard-crown" />}
-                {preset.name}
-              </h3>
-              {preset.note && <p className="sub">{preset.note}</p>}
-              {ready ? (
-                <dl className="standard-stats">
-                  <dt>点</dt>
-                  <dd data-testid="standard-points">{s?.points ?? '—'}</dd>
-                  <dt>移動</dt>
-                  <dd>{s ? `${Math.round(s.travelMinutes / 6) / 10}時間` : '—'}</dd>
-                  <dt>担当なし</dt>
-                  <dd>{s ? `${s.unassigned}件` : '—'}</dd>
-                  <dt>件数の偏り</dt>
-                  <dd
-                    title={
-                      s?.most && s.least
-                        ? `いちばん多い：${staffName(s.most.staffId)} ${s.most.count}件・いちばん少ない：${staffName(s.least.staffId)} ${s.least.count}件`
-                        : undefined
-                    }
-                    data-testid="standard-spread"
-                  >
-                    {s ? `${s.spread}件` : '—'}
-                  </dd>
-                  <dt>今の標準と違う</dt>
-                  <dd data-testid="standard-card-diff" data-count={diff?.all ?? 0}>
-                    {diff ? `${diff.all}マス（担当 ${diff.staff}・時刻だけ ${diff.time}）` : '—'}
-                  </dd>
-                </dl>
-              ) : (
-                <p className="sub">
-                  {running && prop ? '作っています…' : running ? '順番を待っています' : 'まだ作っていません'}
-                </p>
-              )}
-              {ready && prop?.table && (
-                <div className="row">
-                  <button
-                    type="button"
-                    className="btn btn-small"
-                    aria-expanded={viewing === preset.id}
-                    aria-controls={viewId}
-                    onClick={() => setViewing((v) => (v === preset.id ? null : preset.id))}
-                    data-testid="standard-view"
-                  >
-                    {viewing === preset.id ? '表を閉じる' : '表で見る'}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-small"
-                    onClick={() => onUse(preset.id, prop.table as StandardTable)}
-                    data-testid="standard-use"
-                  >
-                    この案から作る
-                  </button>
-                </div>
-              )}
-            </li>
-          );
-        })}
+        {cards.map((card, i) => (
+          <ProposalCard
+            key={card.preset.id}
+            card={card}
+            best={i === best}
+            running={running !== null}
+            viewing={viewing === card.preset.id}
+            viewId={viewId}
+            staffName={staffName}
+            onView={() => setViewing((v) => (v === card.preset.id ? null : card.preset.id))}
+            onDay={() => day.open(card.preset.id)}
+            onUse={onUse}
+          />
+        ))}
       </ul>
       {viewed?.prop?.table && (
         <section id={viewId} className="stack" aria-label={`「${viewed.preset.name}」の案の表`}>
@@ -150,6 +104,105 @@ export function ProposalsStep({
           </h3>
           <StandardTableView {...tableProps} table={viewed.prop.table} testId="standard-view-table" />
         </section>
+      )}
+      <StandardDayView
+        day={day}
+        onUse={(presetId) => {
+          const table = cards.find((c) => c.preset.id === presetId)?.prop?.table;
+          if (table) onUse(presetId, table);
+        }}
+      />
+    </li>
+  );
+}
+
+/** 案のカード（考え方ごと）：名前・一言・数字と［表で見る］［日で見る］［この案から作る］ */
+function ProposalCard({
+  card,
+  best,
+  running,
+  viewing,
+  viewId,
+  staffName,
+  onView,
+  onDay,
+  onUse,
+}: {
+  card: StandardProposals['cards'][number];
+  best: boolean;
+  running: boolean;
+  viewing: boolean;
+  viewId: string;
+  staffName: StandardTableBase['staffName'];
+  onView: () => void;
+  onDay: () => void;
+  onUse: (presetId: string, table: StandardTable) => void;
+}) {
+  const { preset, prop, diff } = card;
+  const s = prop?.stats ?? null;
+  const ready = !!prop?.done && !!prop.table;
+  return (
+    <li className="card standard-card" data-testid="standard-card" data-preset={preset.id}>
+      <h3>
+        {best && <Crown size={16} aria-label="いちばん点が高い" data-testid="standard-crown" />}
+        {preset.name}
+      </h3>
+      {preset.note && <p className="sub">{preset.note}</p>}
+      {ready ? (
+        <dl className="standard-stats">
+          <dt>点</dt>
+          <dd data-testid="standard-points">{s?.points ?? '—'}</dd>
+          <dt>移動</dt>
+          <dd>{s ? `${Math.round(s.travelMinutes / 6) / 10}時間` : '—'}</dd>
+          <dt>担当なし</dt>
+          <dd>{s ? `${s.unassigned}件` : '—'}</dd>
+          <dt>件数の偏り</dt>
+          <dd
+            title={
+              s?.most && s.least
+                ? `いちばん多い：${staffName(s.most.staffId)} ${s.most.count}件・いちばん少ない：${staffName(s.least.staffId)} ${s.least.count}件`
+                : undefined
+            }
+            data-testid="standard-spread"
+          >
+            {s ? `${s.spread}件` : '—'}
+          </dd>
+          <dt>今の標準と違う</dt>
+          <dd data-testid="standard-card-diff" data-count={diff?.all ?? 0}>
+            {diff ? `${diff.all}マス（担当 ${diff.staff}・時刻だけ ${diff.time}）` : '—'}
+          </dd>
+        </dl>
+      ) : (
+        <p className="sub">
+          {running && prop ? '作っています…' : running ? '順番を待っています' : 'まだ作っていません'}
+        </p>
+      )}
+      {ready && prop?.table && (
+        <div className="row standard-card-actions">
+          <button
+            type="button"
+            className="btn btn-small"
+            aria-expanded={viewing}
+            aria-controls={viewId}
+            onClick={onView}
+            data-testid="standard-view"
+          >
+            {viewing ? '表を閉じる' : '表で見る'}
+          </button>
+          {prop.days.length > 0 && (
+            <button type="button" className="btn btn-small" onClick={onDay} data-testid="standard-day">
+              日で見る
+            </button>
+          )}
+          <button
+            type="button"
+            className="btn btn-small"
+            onClick={() => onUse(preset.id, prop.table as StandardTable)}
+            data-testid="standard-use"
+          >
+            この案から作る
+          </button>
+        </div>
       )}
     </li>
   );
