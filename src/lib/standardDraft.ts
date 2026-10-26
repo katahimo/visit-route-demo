@@ -9,6 +9,7 @@ import { applyPreset, scoreRulesOf } from '../seed';
 import { defaultIterations, runSolve } from '../solver';
 import { attempt } from './common';
 import {
+  hasStandard,
   type ProposalStats,
   periodDates,
   proposalStats,
@@ -103,7 +104,7 @@ export function templateScoreProblem(data: DemoData, date: string): Problem | nu
 
 /**
  * 日で見るの日の元：点数の基準の物差しの問題 scoreProblem（templateScoreProblem。作れなければ fallback＝案の問題）・
- * ひな形の訪問・今の標準
+ * ひな形の訪問・今の標準（標準を登録する前は null）
  */
 export function standardBaseDay(
   data: DemoData,
@@ -112,7 +113,12 @@ export function standardBaseDay(
   fallback: Problem,
 ): StandardBaseDay {
   const problem = scoreProblem ?? fallback;
-  return { date, problem, visits: standardDayVisits(data, date), current: standardDayRoutes(data, problem) };
+  return {
+    date,
+    problem,
+    visits: standardDayVisits(data, date),
+    current: hasStandard(data) ? standardDayRoutes(data, problem) : null,
+  };
 }
 
 /** 作っている計算（1つだけ） */

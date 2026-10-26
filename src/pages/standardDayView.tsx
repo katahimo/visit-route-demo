@@ -1,6 +1,6 @@
 // 組み方の標準の画面の「1. 案をくらべる」の中の「日で見る」（PRD D350。ADR-0065）：表だけでは判断しにくいので、
 // 期間の日を選び、案のその日を今日の予定と同じ見せ方（担当ごとの時間軸と地図。components/choiceBand の ChoiceDayView）で見る。
-// タブは今の標準（同じ日の計算した回を今の標準の担当・開始のまま並べたもの）と案ごと。読み取り専用で、［この案から作る］はカードと同じ
+// タブは今の標準（同じ日の計算した回を今の標準の担当・開始のまま並べたもの。標準を登録する前は出さない）と案ごと。読み取り専用で、［この案から作る］はカードと同じ
 import { CalendarSearch } from 'lucide-react';
 import { ChoiceDayView } from '../components/choiceBand';
 import { WithIcon } from '../components/ui';
@@ -27,8 +27,10 @@ export function StandardDayView({
           日で見る
         </WithIcon>
       </h3>
-      <p className="sub">
-        日を選び、案のその日を今日の予定と同じ時間軸と地図で見ます。「今の標準」は同じ日を今の標準の担当・時刻のまま並べたものです（読み取り専用）
+      <p className="sub" data-testid="standard-day-lead">
+        {input && input.current === null
+          ? '日を選び、案のその日を今日の予定と同じ時間軸と地図で見ます。標準はまだ登録していないので、案どうしをくらべます（読み取り専用）'
+          : '日を選び、案のその日を今日の予定と同じ時間軸と地図で見ます。「今の標準」は同じ日を今の標準の担当・時刻のまま並べたものです（読み取り専用）'}
       </p>
       {stale && (
         <p className="sub warn" data-testid="standard-day-stale">

@@ -82,4 +82,14 @@ describe('choiceBandView（点・列・差）', () => {
     expect(choiceTab('gone', choices, -1)).toBe(0);
     expect(choiceTab(null, [], -1)).toBe(-1);
   });
+
+  it('今の割当が無い（標準の登録前）：今の点は無く、差も無く、current のタブは既定の案（ADR-0065）', () => {
+    expect(choicePoints(problem, null, choices).current).toBeNull();
+    expect([...choiceStaffIds(problem, null, choices)].sort()).toEqual(
+      [...choiceStaffIds(problem, {}, choices)].sort(),
+    );
+    expect(choiceDiff(problem, null, solved)).toEqual({ diff: null, changes: [] });
+    expect(choiceTab('current', choices, 1, false)).toBe(1);
+    expect(choiceTab('current', choices, 1, true)).toBe(-1);
+  });
 });
