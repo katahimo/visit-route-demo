@@ -1,8 +1,9 @@
-// 組み方の標準の画面の「2. 表で直す（下書き）」の状態と処理：下書きの作り直し・捨てる・マスを直す欄の開け閉め
+// 組み方の標準の画面の「2. 表で直す（下書き）」の状態と処理：下書きの作り直し・捨てる・マスを直す欄の開け閉め。
+// 案から作ると 2 の段へ移る（見出しへのフォーカスは画面が段の変わり目で行う。ADR-0066）
 import { useMemo, useRef, useState } from 'react';
 import type { ConfirmFn } from '../components/ConfirmDialog';
 import { type CellRef, type StandardTable, tableDiff } from '../lib/standard';
-import { type StandardWork, setDraft } from '../lib/standardDraft';
+import { type StandardWork, setDraft, setStandardStep } from '../lib/standardDraft';
 import { cellKey } from './standardParts';
 
 export function useStandardDraft(
@@ -16,12 +17,6 @@ export function useStandardDraft(
   const draftDiff = useMemo(() => (draft ? tableDiff(draft.table, current) : []), [draft, current]);
   const [editing, setEditing] = useState<CellRef | null>(null);
   const cellRefs = useRef(new Map<string, HTMLButtonElement>());
-  const draftHead = useRef<HTMLHeadingElement>(null);
-  const focusDraft = () =>
-    requestAnimationFrame(() => {
-      draftHead.current?.scrollIntoView({ block: 'start' });
-      draftHead.current?.focus();
-    });
   const pickProposal = async (presetId: string, table: StandardTable) => {
     if (work.draft) {
       const ok = await confirmDialog({
@@ -33,7 +28,7 @@ export function useStandardDraft(
     }
     setDraft({ table, from: presetId }, key);
     setEditing(null);
-    focusDraft();
+    setStandardStep('draft');
   };
   const closeEditor = (ref: CellRef | null) => {
     setEditing(null);
@@ -43,7 +38,6 @@ export function useStandardDraft(
   const fromCurrent = () => {
     setDraft({ table: current, from: null }, key);
     setEditing(null);
-    focusDraft();
   };
   const discard = async () => {
     if (!draft) return;
@@ -65,7 +59,6 @@ export function useStandardDraft(
     editing,
     setEditing,
     cellRefs,
-    draftHead,
     pickProposal,
     closeEditor,
     fromCurrent,

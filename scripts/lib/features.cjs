@@ -55,8 +55,8 @@ const asFeatures = (on) => Object.fromEntries(FEATURE_IDS.map((id) => [id, on.in
 
 /** メニューの最上位（6項目。予定・予定を組む・人・設定は畳める子の項目を持つ。PRD D349。ADR-0063） */
 const MENU = ['ホーム', '予定を組む', '予定', '空き状況', '人', '設定'];
-/** 予定を組むの子の項目の key（すべて入：条件の重み・組み方の標準・担当を組む。作業の順。ADR-0063・ADR-0065） */
-const ARRANGE_KIDS = ['arrange:rules', 'arrange:standard', 'arrange:assign'];
+/** 予定を組むの子の項目の key（すべて入：組み方の標準・担当を組む。作業の順。条件の重みは子に入れない。ADR-0063・ADR-0066） */
+const ARRANGE_KIDS = ['arrange:standard', 'arrange:assign'];
 /** 人の子の項目（人のタブ。相性はどのひな形でも入） */
 const PEOPLE_KIDS = ['利用者さん', 'スタッフ', '相性', '勤務時間（シフト）'];
 /** すべて入の画面の一覧（パレットの画面。メニューから外した画面も1つずつ。PRD D273・D275） */
@@ -87,9 +87,9 @@ const HIDDEN = {
   all: [],
 };
 const screensFor = (t) => ALL_SCREENS.filter((l) => !HIDDEN[t].includes(l));
-/** 予定を組むの子の項目の key（ひな形ごと。条件の重みは rules を切ると出さない。ADR-0065） */
-const arrangeKidsFor = (t) => ARRANGE_KIDS.filter((k) => k !== 'arrange:rules' || !HIDDEN[t].includes('条件の重み'));
-/** 設定のタブ（ひな形ごと。特性の項目は rules を切ると出さない。条件の重み・組み方の標準は予定を組むのタブ。ADR-0063・ADR-0065） */
+/** 予定を組むの子の項目の key（ひな形ごと。子は機能の入り切りで変わらない。ADR-0066） */
+const arrangeKidsFor = (_t) => ARRANGE_KIDS;
+/** 設定のタブ（ひな形ごと。特性の項目は rules を切ると出さない。条件の重み・組み方の標準は予定を組む。ADR-0063・ADR-0066） */
 const SETTINGS_TABS = ['訪問の種類', '特性の項目', '管理者設定', 'データ'];
 const settingsTabsFor = (t) => SETTINGS_TABS.filter((l) => !HIDDEN[t].includes(l));
 /** メニューの最上位は空き状況を切ると減る */

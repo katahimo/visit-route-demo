@@ -40,6 +40,9 @@ export type StandardProposal = {
 /** 日で見るの選び（日付と案のタブ。null は既定＝最初の日・いちばん点の高い案。tab は案のプリセット ID か 'current'） */
 export type StandardDaySelection = { date: string | null; tab: string | null };
 
+/** 組み方の標準の画面の段（予定を組むの 1〜3。4 の担当を組むは別の画面。ADR-0066） */
+export type StandardStep = 'proposals' | 'draft' | 'register';
+
 /** 下書き（from＝どこから作ったか。案のプリセット ID・今の標準は null） */
 export type StandardDraft = { table: StandardTable; from: string | null };
 
@@ -60,6 +63,8 @@ export type StandardWork = {
   /** 登録した直後の完了の表示（いつから） */
   /** 登録した「いつから」と登録の時刻（元に戻したら data.standard.at と合わなくなり、完了の表示を出さない） */
   registered: { since: string; at: number } | null;
+  /** 今出している段（null は既定。standardStepOf。ADR-0066） */
+  step: StandardStep | null;
 };
 
 const EMPTY: StandardWork = {
@@ -72,6 +77,7 @@ const EMPTY: StandardWork = {
   draft: null,
   draftKey: null,
   registered: null,
+  step: null,
 };
 
 export const standardWork = createValueStore<StandardWork>(EMPTY);
@@ -90,6 +96,16 @@ export function patternsKey(data: Pick<DemoData, 'patterns' | 'clients'>, today:
 /** 下書きを置く（完了の表示は消す） */
 export function setDraft(draft: StandardDraft | null, key: string | null): void {
   standardWork.set((w) => ({ ...w, draft, draftKey: draft ? key : null, registered: draft ? null : w.registered }));
+}
+
+/** 段を替える（ADR-0066） */
+export function setStandardStep(step: StandardStep): void {
+  standardWork.set((w) => ({ ...w, step }));
+}
+
+/** 今出す段：選んだ段、無ければ 登録した直後は 3・下書きがあれば 2・無ければ 1（ADR-0066） */
+export function standardStepOf(w: Pick<StandardWork, 'step' | 'draft' | 'registered'>): StandardStep {
+  return w.step ?? (w.registered ? 'register' : w.draft ? 'draft' : 'proposals');
 }
 
 /** 日で見るの日付・案のタブを替える（渡した方だけ） */

@@ -1,5 +1,5 @@
 // 担当を組むの画面（#/arrange。ADR-0063・ADR-0065）を本物のブラウザで確かめる：
-// 見出しの下の予定を組むのタブ（条件の重み・組み方の標準・担当を組む の作業の順）、範囲（月・週・日。既定は月で URL の
+// 見出しの下の予定を組むの段（案をくらべる・表で直す・標準にする・担当を組む の作業の順）、範囲（月・週・日。既定は月で URL の
 // ?ym=・?d=・?date= に書く）と選んだ範囲の担当なし・要対応の件数、組み方の標準が無い間は範囲にかかわらず「AI で組む」の欄を出さず
 // ［組み方の標準を決める］で #/standard へ（PRD D356）、標準があれば月・週・日とも「AI で組む」と「考え方：〈点数の基準〉」
 // （考え方の選ぶ欄は無い）、「AI で組む」で範囲の提案の帯が出て反映するまで訪問は変わらない・［反映する］で担当が入り
@@ -71,14 +71,18 @@ async function range(page) {
   await editData(page, (key) => localStorage.removeItem(key), STORAGE_KEY);
   await open(page, '/arrange', NEED_STANDARD);
   check((await page.locator('h1').innerText()) === '担当を組む', '見出し「担当を組む」');
-  const tabs = await page
-    .locator('[data-testid="arrange-tabs"] [data-tab]')
-    .evaluateAll((els) => els.map((el) => el.getAttribute('data-tab')));
+  const steps = await page
+    .locator('[data-testid="arrange-steps"] li')
+    .evaluateAll((els) => els.map((el) => el.getAttribute('data-step')));
   check(
-    tabs.join(',') === 'rules,standard,arrange',
-    '見出しの下に予定を組むのタブ（条件の重み・組み方の標準・担当を組む の順。ADR-0065）',
-    tabs,
+    steps.join(',') === 'proposals,draft,register,arrange',
+    '見出しの下に予定を組むの段（案をくらべる・表で直す・標準にする・担当を組む の順。ADR-0066）',
+    steps,
   );
+  const stepNow = await page
+    .locator('[data-testid="arrange-steps"] [aria-current="step"]')
+    .evaluateAll((els) => els.map((el) => el.closest('li')?.getAttribute('data-step')));
+  check(stepNow.join(',') === 'arrange', '今の段は「担当を組む」だけに aria-current="step"', stepNow);
   const on = await page.locator('[data-testid="arrange-scope"] button[aria-pressed="true"]').getAttribute('data-scope');
   check(on === 'month', '範囲の既定は月', on);
   const ym = await page.getByTestId('arrange-month').inputValue();
@@ -157,6 +161,11 @@ async function basis(page) {
       name,
       text,
     });
+    check(
+      text.includes('替えるのは「組み方の標準」の「案をくらべる」'),
+      `標準がある${label}：考え方の替え先は「組み方の標準」の「案をくらべる」（ADR-0066）`,
+      text,
+    );
     check((await page.getByTestId('arrange-preset').count()) === 0, `標準がある${label}：考え方の選ぶ欄は無い`);
   }
 }
@@ -221,7 +230,10 @@ async function compare(page) {
   await page.waitForURL(/#\/compare/, { timeout: 10000 });
   check(hashOf(page) === `#/compare?date=${date}`, '「案を比べる」で比較の画面（その日）へ', hashOf(page));
   await page.locator('h1').filter({ hasText: '提案を比べる' }).waitFor({ timeout: 30000 });
-  check((await page.getByTestId('arrange-tabs').count()) === 1, '比較の画面にも予定を組むのタブ');
+  check(
+    (await page.getByTestId('arrange-steps').locator('li[data-step="arrange"] [aria-current="step"]').count()) === 1,
+    '比較の画面にも予定を組むの段（今の段は担当を組む）',
+  );
   await page.getByTestId('compare-back').click();
   await page.waitForURL(/#\/arrange/, { timeout: 10000 });
   check(hashOf(page) === `#/arrange?date=${date}`, '比較の画面から担当を組む（その日）へ戻る', hashOf(page));

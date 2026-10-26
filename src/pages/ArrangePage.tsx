@@ -6,7 +6,7 @@
 import { Sparkles } from 'lucide-react';
 import { useId, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ArrangeTabs } from '../components/ArrangeTabs';
+import { ArrangeSteps } from '../components/ArrangeSteps';
 import { RangeProposalBand } from '../components/scheduleParts';
 import { PageHeader } from '../components/ui';
 import { useCompileInput } from '../components/useDayModel';
@@ -32,7 +32,6 @@ export default function ArrangePage() {
   const compileInput = useCompileInput(data);
   const [params, setParams] = useSearchParams();
   const compareOn = useFeature('compare');
-  const rulesOn = useFeature('rules');
   const ids = useId();
   const today = jstDate(Date.now());
   const { scope, ym, at } = scopeOf(params, today);
@@ -53,7 +52,7 @@ export default function ArrangePage() {
   const allTargets = targetsOf('all');
   const targets = mode === 'care' ? careTargets : allTargets;
 
-  /** 考え方：いつも点数の基準（替えるのは条件の重み・組み方の標準。ADR-0065） */
+  /** 考え方：いつも点数の基準（替えるのは組み方の標準の案をくらべる（と寄り道の条件の重み）。ADR-0065・ADR-0066） */
   const basisName = scorePresetOf(data.presets, data.scorePresetId)?.name ?? '今の重み';
   /** 組み方の標準がまだ無い（範囲にかかわらず AI で組まない。PRD D356） */
   const needStandard = !hasStandard(data);
@@ -88,7 +87,7 @@ export default function ArrangePage() {
   return (
     <div className="stack arrange-page">
       <PageHeader
-        nav={<ArrangeTabs />}
+        nav={<ArrangeSteps current="arrange" />}
         icon={Sparkles}
         title="担当を組む"
         lead="範囲を選んで AI で担当を組み、提案を見て反映します。予定（月・週・日）では手で直します"
@@ -113,7 +112,6 @@ export default function ArrangePage() {
           careDays: careTargets.length,
           allDays: allTargets.length,
           basisName,
-          rulesOn,
           runDays: targets.length,
           run,
           error: shownError,
