@@ -58,7 +58,7 @@
 - `startError(pattern, wd, start)`・`earliestSince`（今日と、最後に伝えた日（動かした回は元の日も）の翌日の遅い方）・`defaultSince(data, today)`
 - `temporaryChanges(data, table, since, today)`
 - `registerStandard(data, table, since, today, { newId, temp, at, presetId? })`：違うマスのある、`since` 以降に続く繰り返しごとに、`since` ≤ `from` ならその場で書き換え（分けるときは最初のまとまりが元の ID）、後なら元の `to` を `since` の前日にして新しい ID の繰り返しを足す（隔週・3週・4週ごとは `since` 以降で最初に回のある日を開始日にして周期をずらさない。終わった繰り返しの `to` は延ばさない）。曜日で担当が違えば担当ごとのまとまり（`weekdays`・`dayTimes`・`usualStarts`）に分ける。`since` 以降・伝えていない日のその繰り返しの保存した回は：この回だけ変えた回は残して新しい ID に付け直す、標準と同じ回（ピンでない）は消す、ピンの回は残す、違う回は `temp`＝`'drop'` で消し `'pin'` でピンを立てて残す。`since` は `earliestSince` より前なら `earliestSince`。`standard`＝`{ at, presetId, from: since, weeks: cycleWeeks }`。`presetId` を渡すとそのプリセットを点数の基準にする（`setScorePreset`）。違うマスが無ければ同じデータ
-- `standardDayRoutes(problem)`：ひな形の問題の訪問を今の標準の担当・開始のまま並べた割当（日で見るの「今の標準」）
+- `standardDayRoutes(data, problem)`：ひな形の問題（繰り返しの担当はデータから引く）の訪問を今の標準の担当・開始のまま並べた割当（日で見るの「今の標準」）
 - `proposalStats(days, toPoints)`・`bestIndex(stats)`・`hasStandard(data)`
 
 #### 確かめ
