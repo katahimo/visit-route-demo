@@ -14,11 +14,11 @@ import {
 } from 'lucide-react';
 import { useLayoutEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ARRANGE_TABS, activeNavPath, peopleTabs, settingsTabs } from '../lib/nav';
+import { activeNavPath, arrangeTabs, peopleTabs, settingsTabs } from '../lib/nav';
 import { useDemoData } from '../store';
 import { useFeatures } from './useFeature';
 
-/** タブのアイコン（メニューの前の項目と同じ。並びは lib/nav の SETTINGS_TABS と同じ） */
+/** タブのアイコン（メニューの前の項目と同じ。並びは lib/nav の SETTINGS_TABS・ARRANGE_TABS・PEOPLE_TABS） */
 const ICONS: Record<string, LucideIcon> = {
   '/arrange': Sparkles,
   '/standard': CalendarCheck,
@@ -100,9 +100,9 @@ export function PeopleTabs() {
 }
 
 /**
- * 設定のタブ（PRD D275。ADR-0045）：訪問の種類・特性の項目・条件の重み・管理者設定・データ（相性は「人」の画面）。
+ * 設定のタブ（PRD D275。ADR-0045）：訪問の種類・特性の項目・管理者設定・データ（相性は「人」の画面、条件の重みは予定を組む。ADR-0065）。
  * メニューは「設定」1項目にし、画面の見出しの下のこのタブで切り替える（予定の［月｜週｜日］と同じ形。リンクのナビで、
- * 今の画面は aria-current と太字・下線）。URL は前のまま（`#/rules` など）。切った機能のタブは出さない
+ * 今の画面は aria-current と太字・下線）。URL は前のまま（`#/types` など）。切った機能のタブは出さない
  */
 export function SettingsTabs() {
   const { pathname } = useLocation();
@@ -119,14 +119,15 @@ export function SettingsTabs() {
 }
 
 /**
- * 予定を組むのタブ（ADR-0063）：担当を組む・組み方の標準。AI で組む機能はこの2つの画面に集める。
- * 案を比べる（`#/compare`）は担当を組むの続き（印は担当を組む）
+ * 予定を組むのタブ（ADR-0063・ADR-0065）：条件の重み → 組み方の標準 → 担当を組む（作業の順）。AI で組む機能はこの画面に集める。
+ * 案を比べる（`#/compare`）は担当を組むの続き（印は担当を組む）。rules を切れば条件の重みは出さない
  */
 export function ArrangeTabs() {
   const { pathname } = useLocation();
+  const tabs = arrangeTabs(useFeatures());
   return (
     <TabNav
-      tabs={ARRANGE_TABS}
+      tabs={tabs}
       on={(to) => to === pathname || (to === '/arrange' && pathname === '/compare')}
       label="予定を組むの切り替え"
       testId="arrange-tabs"

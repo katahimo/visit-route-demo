@@ -313,8 +313,8 @@ async function tourStart(b) {
   await settle(page, 400);
   const tabs = await page.getByTestId('settings-tabs').locator('a').allInnerTexts();
   check(
-    tabs.length === 5 && (await tour(page).count()) === 0,
-    '読み直しても「すべて」のまま（設定のタブ5つ）・ツアーは出ない',
+    tabs.length === 4 && (await tour(page).count()) === 0,
+    '読み直しても「すべて」のまま（設定のタブ4つ。条件の重みは予定を組む）・ツアーは出ない',
     tabs,
   );
   await ctx.close();
@@ -359,8 +359,8 @@ async function tourStart(b) {
   await h.page.getByTestId('tour-skip').click();
   await open(h.page, '/settings', '[data-testid="settings-tabs"]');
   check(
-    (await h.page.getByTestId('settings-tabs').locator('a').count()) === 5,
-    'features の無い保存データは今までどおりすべて入（設定のタブ5つ）',
+    (await h.page.getByTestId('settings-tabs').locator('a').count()) === 4,
+    'features の無い保存データは今までどおりすべて入（設定のタブ4つ）',
   );
   await h.ctx.close();
 }

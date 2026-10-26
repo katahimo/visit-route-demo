@@ -28,6 +28,7 @@ const {
   asFeatures,
   MENU,
   ARRANGE_KIDS,
+  arrangeKidsFor,
   PEOPLE_KIDS,
   screensFor,
   SETTINGS_TABS,
@@ -195,10 +196,10 @@ async function checkTemplate(page, t) {
   check(same(m.labels, menuFor(on)), `${label}：メニューの最上位の項目（空き状況の入り切りだけで変わる）`, m.labels);
   check(
     same(m.schedule, scheduleKidsFor(on)) &&
-      same(m.arrange, ARRANGE_KIDS) &&
+      same(m.arrange, arrangeKidsFor(t)) &&
       same(m.people, PEOPLE_KIDS) &&
       same(m.settings, settingsTabsFor(t)),
-    `${label}：メニューの子の項目（予定は欠勤・キャンセルの入り切り、予定を組むは2つ、設定は設定のタブと同じ）`,
+    `${label}：メニューの子の項目（予定は欠勤・キャンセルの入り切り、予定を組むは条件の重みの入り切り、設定は設定のタブと同じ）`,
     m,
   );
   const tabs = await page.getByTestId('bottom-tab').allInnerTexts();
@@ -336,7 +337,7 @@ async function mobile(page, dlg) {
   check(
     same(drawer.labels, menuFor(TEMPLATE_ON.basic)) &&
       same(drawer.schedule, scheduleKidsFor(TEMPLATE_ON.basic)) &&
-      same(drawer.arrange, ARRANGE_KIDS) &&
+      same(drawer.arrange, arrangeKidsFor('basic')) &&
       same(drawer.people, PEOPLE_KIDS) &&
       same(drawer.settings, settingsTabsFor('basic')),
     '390px：引き出しもメニューと同じ項目（最上位と子）',

@@ -23,6 +23,11 @@ describe('toRequest', () => {
     expect([r.body, r.cancelLabel, r.tone]).toEqual(['a\nb', '編集を続ける', 'danger']);
     expect(toRequest(3, { title: 't', confirmLabel: 'x', cancelLabel: '  ' }).cancelLabel).toBe(CANCEL_LABEL);
   });
+  it('入力欄はそのまま渡す（無ければ持たない）', () => {
+    const field = { label: '名前', initial: 'a', error: () => null, onValue: () => {} };
+    expect(toRequest(4, { title: 't', confirmLabel: 'x', field }).field).toBe(field);
+    expect('field' in toRequest(5, { title: 't', confirmLabel: 'x' })).toBe(false);
+  });
 });
 
 describe('enqueue・settle', () => {
