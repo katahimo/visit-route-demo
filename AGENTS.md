@@ -27,7 +27,7 @@
 ```
 src/
   contracts/   … 型と Worker メッセージ（境界の契約）
-  store/       … localStorage（データのほか、ツアー・メニューの開け閉めの覚え）・JSON入出力・版の確かめ（データの持ち主。古い版は移さず初期データで始める。ADR-0053）
+  store/       … localStorage（データのほか、ツアー・メニューの開け閉め・組み直しの知らせの鍵の覚え）・JSON入出力・版の確かめ（データの持ち主。古い版は移さず初期データで始める。ADR-0053）
   seed/        … デモの初期データ（PoC本体 scripts/seedDemo.ts から写す）
   domain/      … PoC本体 packages/shared 等から写した純粋関数（先頭に写した元のコミットを書く）
   matching/    … 項目・条件 → Problem（可否・費用表）と理由

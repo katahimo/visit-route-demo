@@ -22,7 +22,7 @@ AI・人が「何を知りたいときに、どのファイルを読むか」を
 
 | ファイル | 中身 |
 |---|---|
-| [pages.md](design/pages.md) | 共通事項（〈スタッフ〉の印を含む）・ルート一覧・メニュー（5項目と畳める子の項目）・下のタブ・設定のタブ・人のタブ・Ctrl+Z・コマンドパレット・確認ダイアログ・機能の入り切り（画面側） |
+| [pages.md](design/pages.md) | 共通事項（〈スタッフ〉の印を含む）・ルート一覧・メニュー（5項目と畳める子の項目）・下のタブ・設定のタブ・基本情報のタブ・Ctrl+Z・コマンドパレット・確認ダイアログ・機能の入り切り（画面側） |
 | [pages-common.md](design/pages-common.md) | 右の欄・予定の共通の部品（モードの切り替え・操作の行・AI で組む ▾ の範囲・提案の帯・複数選択・全体の元に戻す）・訪問の札の共通の部品（札の3段と入れ物・見た目の印・選ぶ・1行1訪問の行・表のマスの札と「+N」・ドラッグの落とし先の判定）・スマホの日ごとのリスト・帯をキーで動かす・訪問の詳細の欄（VisitPanel・visitOps）・名前の詳細の吹き出し・用語・ツアー・作り直しの帯・リンク・メール・道順 |
 | [pages-bars.md](design/pages-bars.md) | 3段の時間帯のバー・ひと目で分かる表示（月・週・日・空き状況・稼働で共通） |
 | [pages-home.md](design/pages-home.md) | ホーム（今日やること） |
@@ -31,12 +31,13 @@ AI・人が「何を知りたいときに、どのファイルを読むか」を
 | [pages-month.md](design/pages-month.md) | 月の予定（マスを押すと右の欄のその日の行・マスのキー・別の日へ・スマホの下から出る欄）・まとめて作る・まとめて確定・希望休・印刷 |
 | [pages-week.md](design/pages-week.md) | 週の予定（時間軸・〈スタッフ〉×曜日・〈利用者さん〉×曜日の表のマスの札と「+N」） |
 | [pages-vacancy.md](design/pages-vacancy.md) | 空き状況・問い合わせの試算・案内文 |
+| [pages-basics.md](design/pages-basics.md) | 基本情報の予定と相性の表（行＝繰り返し・列＝曜日・マスで時刻を直す・相性の列。予定を組むの1段目） |
 | [pages-clients.md](design/pages-clients.md) | 〈利用者さん〉の一覧・〈利用者さん〉と〈スタッフ〉の画面（タブ・予定のカレンダー・節）・住所の入力・絞り込み |
 | [pages-compat.md](design/pages-compat.md) | 相性の表 |
 | [pages-staff.md](design/pages-staff.md) | 〈スタッフ〉の一覧と画面・勤務時間（シフト）・勤務の見込み・スマホ画面 |
 | [pages-rules.md](design/pages-rules.md) | 条件・プリセット・訪問の種類・項目・案の比較 |
-| [pages-arrange.md](design/pages-arrange.md) | 担当を組む（範囲・AI で組む・提案の帯。予定を組むの4段目） |
-| [pages-standard.md](design/pages-standard.md) | 組み方の標準（1段ずつ進む段・標準の週の期間・考え方ごとの案の比較（表と日で見る時間軸・地図）・登録・`lib/standard`。予定を組むの1〜3段目） |
+| [pages-arrange.md](design/pages-arrange.md) | 担当を組む（範囲・AI で組む・提案の帯・基本情報が変わったときの組み直しの知らせ。予定を組むの最後の段） |
+| [pages-standard.md](design/pages-standard.md) | 組み方の標準（1段ずつ進む段・標準の週の期間・考え方ごとの案の比較（表と日で見る時間軸・地図）・登録・`lib/standard`。予定を組むの2〜3段目） |
 | [pages-data.md](design/pages-data.md) | データ（控え・直前の状態・Excel・初期化・片づけ・データを守る知らせ）・管理者設定 |
 
 ## ADR 一覧
@@ -86,7 +87,7 @@ AI・人が「何を知りたいときに、どのファイルを読むか」を
 | [0044](adr/0044-next-step-first-and-show-result.md) | 次の一手を1つに絞り、押した結果を確定の前に見せる |
 | [0045](adr/0045-show-less-menu-settings-tour.md) | 見せる量を減らす（初回は基本・設定はタブ・ツアー3枚・その他 ▾） |
 | [0046](adr/0046-week-make-confirm-attention-unmade.md) | 週の予定で見ながら確定でき、月をまたぐ週は1度に扱う |
-| [0047](adr/0047-compat-to-people-settings-order.md) | 相性を設定から「人」へ移し、設定の先頭を訪問の種類にする |
+| [0047](adr/0047-compat-to-people-settings-order.md) | 相性を設定から「人」へ移し、設定の先頭を訪問の種類にする（0067 で「人」は予定を組むの基本情報へ） |
 | [0048](adr/0048-rules-weight-draft-and-confirm.md) | 条件の重みの表は下書きにし、確定と確認のあとで保存する |
 | [0050](adr/0050-staff-mark-and-icon.md) | 〈スタッフ〉の印を1つの部品にそろえ、任意のアイコン（1〜2文字）を持たせる |
 | [0051](adr/0051-visit-panel-and-ux-stages.md) | 訪問の詳細の欄を1つにし、日時・担当・取り消し・範囲を同じ欄で扱う |
@@ -103,7 +104,8 @@ AI・人が「何を知りたいときに、どのファイルを読むか」を
 | [0063](adr/0063-ai-only-in-standard-manual-schedule.md) | AI で組むのは「予定を組む」に集め、予定の画面は手で直す（メニューの子の項目） |
 | [0064](adr/0064-day-three-choices-until-standard.md) | 標準が無い間は考え方ごとの日の案を並べて選ぶ（0065 で置き換え） |
 | [0065](adr/0065-standard-flow-one-path-rules-under-arrange.md) | 予定を組むを 条件の重み → 組み方の標準 → 担当を組む の3段にし、標準を決める道を組み方の標準の1本に（段の出し方は 0066 で置き換え） |
-| [0066](adr/0066-arrange-steps-one-at-a-time-rules-behind-standard.md) | 予定を組むを1段ずつ進む4段（案をくらべる → 表で直す → 標準にする → 担当を組む）にし、条件の重みを組み方の標準の寄り道に |
+| [0066](adr/0066-arrange-steps-one-at-a-time-rules-behind-standard.md) | 予定を組むを1段ずつ進む4段（案をくらべる → 表で直す → 標準にする → 担当を組む）にし、条件の重みを組み方の標準の寄り道に（0067 で段を置き換え） |
+| [0067](adr/0067-arrange-basics-first-people-under-arrange.md) | 予定を組むの1段目を「基本情報」にし、メニュー「人」の項目を予定を組むへ移す（段は 基本情報 → 案をくらべる → 標準にする → 担当を組む。前提が変われば組み直しを知らせる） |
 
 ## 文書の保ち方
 
