@@ -535,6 +535,32 @@ const steps = sharedPage({
         check((await view.getByTestId('choice-mark').count()) === 0, '今の標準のタブには変わる訪問の印が無い');
       },
     ],
+    [
+      'arrange-after-register',
+      async (page) => {
+        // 登録したあとの担当を組むには予定を組むの段を出さず、［標準の組み方を変える］で 1 へ戻れる（ADR-0066）
+        await goStep(page, 'register');
+        await page.getByTestId('standard-next').click();
+        await page.waitForURL(/#\/arrange/, { timeout: 10000 });
+        await page.getByTestId('arrange-change-standard').waitFor({ timeout: 30000 });
+        check((await page.getByTestId('arrange-steps').count()) === 0, '登録したあとの担当を組むに段は出さない');
+        check(
+          (await page.getByTestId('arrange-change-standard').getAttribute('href')) === '#/standard',
+          '担当を組むに［標準の組み方を変える］（#/standard へ）',
+        );
+        await page.getByTestId('arrange-change-standard').click();
+        await page.waitForURL(/#\/standard/, { timeout: 10000 });
+        await page.getByTestId('standard-steps').waitFor({ timeout: 30000 });
+        check(
+          (await stepNow(page)) === 'proposals',
+          '［標準の組み方を変える］で組み方の標準の 1（案をくらべる）が開く',
+        );
+        check(
+          (await page.getByTestId('arrange-steps').locator('li').count()) === 4,
+          '組み方の標準は標準があっても予定を組むの 4 段を出す',
+        );
+      },
+    ],
   ],
 });
 
