@@ -1155,6 +1155,12 @@ async function menuWithStandard(page) {
       (await page.getByTestId('arrange-change-standard').count()) === 0,
     '標準が無い：担当を組むに予定を組むの段を出し、［標準の組み方を変える］は出さない',
   );
+  await open(page, '/compare');
+  await page.getByTestId('arrange-steps').waitFor({ timeout: 30000 });
+  check(
+    (await page.locator('[data-testid="arrange-steps"] li.is-current').getAttribute('data-step')) === 'arrange',
+    '標準が無い：案を比べるにも予定を組むの段（4 担当を組むが今の段）',
+  );
   for (const t of await side.locator('[data-testid="nav-toggle"][aria-expanded="false"]').all()) await t.click();
   const kids0 = await side
     .locator('[data-parent="arrange"] > .nav-sub > .nav-link.nav-child')
