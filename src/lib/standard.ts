@@ -487,7 +487,8 @@ export type StandardBaseDay = {
   date: string;
   problem: Problem;
   visits: Visit[];
-  current: Record<string, string[]>;
+  /** 今の標準の割当。標準を登録する前は null（くらべる元が無いので、日で見るは案どうしだけ。ADR-0065） */
+  current: Record<string, string[]> | null;
 };
 
 /**

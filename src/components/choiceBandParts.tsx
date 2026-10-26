@@ -13,7 +13,10 @@ import { SectionTitle } from './ui';
 
 type RouteMapData = { points: MapPoint[]; lines: MapLine[] };
 
-/** 案のタブ（今・案ごと。点と今から担当が変わる件数。いちばん点の高い案に王冠）。k は見ているタブ（-1 は今） */
+/**
+ * 案のタブ（今・案ごと。点と今から担当が変わる件数。いちばん点の高い案に王冠）。k は見ているタブ（-1 は今）。
+ * currentLabel が null（今の割当が無い）なら今のタブと担当が変わる件数を出さず、案どうしだけ
+ */
 export function ChoiceTabs({
   currentLabel,
   choices,
@@ -23,7 +26,7 @@ export function ChoiceTabs({
   points,
   onPick,
 }: {
-  currentLabel: string;
+  currentLabel: string | null;
   choices: readonly DayChoice[];
   /** 案ごとの今から担当が変わる件数 */
   moved: readonly number[];
@@ -34,19 +37,21 @@ export function ChoiceTabs({
 }) {
   return (
     <div className="choice-tabs" role="tablist" aria-label="案">
-      <button
-        type="button"
-        role="tab"
-        aria-selected={k < 0}
-        className={`choice-tab${k < 0 ? ' is-on' : ''}`}
-        onClick={() => onPick(-1)}
-        data-testid="standard-day-current"
-      >
-        <span className="choice-tab-name">{currentLabel}</span>
-        <span className="choice-tab-points" data-testid="choice-points">
-          {pointText(points.current)}
-        </span>
-      </button>
+      {currentLabel !== null && (
+        <button
+          type="button"
+          role="tab"
+          aria-selected={k < 0}
+          className={`choice-tab${k < 0 ? ' is-on' : ''}`}
+          onClick={() => onPick(-1)}
+          data-testid="standard-day-current"
+        >
+          <span className="choice-tab-name">{currentLabel}</span>
+          <span className="choice-tab-points" data-testid="choice-points">
+            {pointText(points.current)}
+          </span>
+        </button>
+      )}
       {choices.map((c, i) => (
         <button
           key={c.presetId}
@@ -67,7 +72,7 @@ export function ChoiceTabs({
           <span className="choice-tab-points" data-testid="choice-points">
             {pointText(points.choices[i] ?? null)}
           </span>
-          <span className="choice-tab-sub">担当が変わる {moved[i] ?? 0}件</span>
+          {currentLabel !== null && <span className="choice-tab-sub">担当が変わる {moved[i] ?? 0}件</span>}
         </button>
       ))}
     </div>

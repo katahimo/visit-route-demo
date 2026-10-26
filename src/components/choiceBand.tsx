@@ -32,7 +32,7 @@ export type ChoiceDayViewProps = {
   /** 見ているタブ（'current' か案のプリセット ID。null は既定＝いちばん点の高い案） */
   tab: string | null;
   onTab: (tab: string) => void;
-  /** 今のタブの名前（「今の標準」） */
+  /** 今のタブの名前（「今の標準」。input.current が null ならタブを出さない） */
   currentLabel: string;
   /** 選んだ案の操作（［この案から作る］など） */
   action?: (choice: DayChoice) => ReactNode;
@@ -54,10 +54,10 @@ export function ChoiceDayView({ input, visits, tab, onTab, currentLabel, action 
   /** 案ごとの今 → 案の差（担当が変わる・時刻が変わる） */
   const diffs = useMemo(() => choices.map((c) => choiceDiff(problem, current, c.routes)), [problem, current, choices]);
   const best = bestIndex(points.choices.map((p) => ({ points: p })));
-  const k = choiceTab(tab, choices, best);
+  const k = choiceTab(tab, choices, best, current !== null);
   const chosen = k >= 0 ? choices[k] : undefined;
   const d = k >= 0 ? diffs[k] : undefined;
-  const routes = chosen?.routes ?? current;
+  const routes = chosen?.routes ?? current ?? {};
   owners.current = ownerOf(routes);
   const pick = (next: number) => {
     onTab(next < 0 ? 'current' : (choices[next]?.presetId ?? 'current'));
@@ -107,7 +107,7 @@ export function ChoiceDayView({ input, visits, tab, onTab, currentLabel, action 
   return (
     <div className="choice-day stack">
       <ChoiceTabs
-        currentLabel={currentLabel}
+        currentLabel={current ? currentLabel : null}
         choices={choices}
         moved={diffs.map((x) => x.diff?.moved.length ?? 0)}
         k={k}
@@ -126,7 +126,7 @@ export function ChoiceDayView({ input, visits, tab, onTab, currentLabel, action 
           unassignedCount={unassigned.length}
           action={chosen && action ? action(chosen) : undefined}
         />
-        {chosen && changes.size === 0 && (
+        {chosen && current && changes.size === 0 && (
           <p className="sub" data-testid="choice-same">
             変わる訪問はありません（{currentLabel}と同じ）
           </p>

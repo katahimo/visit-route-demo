@@ -147,11 +147,20 @@ const steps = sharedPage({
           '既定は最初の日（「M/D（曜）」）',
           await dates.first().innerText(),
         );
-        check((await view.getByTestId('standard-day-current').count()) === 1, '案のタブに「今の標準」がある');
+        // 標準を登録する前は「今の標準」のタブも担当が変わる件数も出さず、案どうしだけをくらべる（ADR-0065）
+        check(
+          (await view.getByTestId('standard-day-current').count()) === 0 &&
+            (await view.getByTestId('standard-day-lead').innerText()).includes('標準はまだ登録していない'),
+          '登録前は「今の標準」のタブが無く、案どうしをくらべる旨の文',
+        );
         const choices = view.getByTestId('standard-day-choice');
         check((await choices.count()) === cards, '案のタブはカードの数だけ', await choices.count());
+        check(
+          !(await view.getByTestId('standard-day-tabs').locator('..').innerText()).includes('担当が変わる'),
+          '登録前は案のタブに担当が変わる件数を出さない',
+        );
         const pts = await view.getByTestId('choice-points').allInnerTexts();
-        check(pts.length === cards + 1 && pts.every((t) => /^\d+点$/.test(t.trim())), 'タブごとに点（100点満点）', pts);
+        check(pts.length === cards && pts.every((t) => /^\d+点$/.test(t.trim())), 'タブごとに点（100点満点）', pts);
         check((await view.getByTestId('standard-day-crown').count()) === 1, 'いちばん点の高い案のタブに王冠');
         check(
           (await view.getByTestId('route-timeline').count()) === 1 &&
@@ -169,17 +178,7 @@ const steps = sharedPage({
             .getAttribute('aria-selected')) === 'true',
           '［日で見る］でその案のタブを開く',
         );
-        // 担当の変わる案では、変わる訪問に印（代・±分）と変わる訪問の一覧
-        const moved = await choices.evaluateAll((els) =>
-          els.map((el) => Number(/担当が変わる (\d+)件/.exec(el.textContent ?? '')?.[1] ?? 0)),
-        );
-        const k = moved.findIndex((n) => n > 0);
-        if (k >= 0) {
-          await choices.nth(k).click();
-          await settle(page, 300);
-          check((await view.getByTestId('choice-mark').count()) > 0, '今の標準から変わる訪問に印（代・±分）');
-          check((await view.locator('.reassign-moves-box').count()) === 1, '変わる訪問の一覧（畳む）');
-        }
+        check((await view.getByTestId('choice-mark').count()) === 0, '登録前は変わる訪問の印が無い');
         // 時間軸の訪問を押すと地図をその担当に絞る
         await view.locator('[data-testid="route-timeline"] [data-visit]').first().click();
         check(
@@ -188,10 +187,6 @@ const steps = sharedPage({
           '時間軸の訪問を押すと地図をその担当に絞る（全員のルートを見るで戻せる）',
         );
         await page.screenshot({ path: path.join(OUT_DIR, 'standard-day-view.png'), fullPage: true });
-        // 今の標準のタブには印が無い
-        await view.getByTestId('standard-day-current').click();
-        await settle(page, 300);
-        check((await view.getByTestId('choice-mark').count()) === 0, '今の標準のタブには変わる訪問の印が無い');
         // 日付を替える
         if (nDates > 1) {
           await dates.nth(1).click();
@@ -403,6 +398,41 @@ const steps = sharedPage({
         const unassigned = await view.getByTestId('choice-unassigned').count();
         const bands = await view.locator('[data-testid="route-timeline"] [data-visit]').count();
         check(bands > 0, '登録したあとも時間軸に訪問の帯が出る（担当が付いたまま）', { bands, unassigned });
+        // 登録したあとに案を作り直すと、「今の標準」のタブと担当が変わる件数が出て、変わる訪問に印
+        await page.getByTestId('standard-run').click();
+        await page.getByTestId('standard-progress').waitFor({ timeout: 10000 });
+        const cards = await page.getByTestId('standard-card').count();
+        await page.waitForFunction(
+          (n) =>
+            document.querySelectorAll('[data-testid="standard-use"]').length === n &&
+            !document.querySelector('[data-testid="standard-progress"]'),
+          cards,
+          { timeout: 5 * 60 * 1000 },
+        );
+        await settle(page, 300);
+        check((await view.getByTestId('standard-day-stale').count()) === 0, '作り直すと案内の1行は消える');
+        check((await view.getByTestId('standard-day-current').count()) === 1, '登録後は案のタブに「今の標準」がある');
+        const pts = await view.getByTestId('choice-points').allInnerTexts();
+        check(pts.length === cards + 1, '登録後は今の標準にも点', pts);
+        const choices = view.getByTestId('standard-day-choice');
+        const moved = await choices.evaluateAll((els) =>
+          els.map((el) => /担当が変わる (\d+)件/.exec(el.textContent ?? '')?.[1] ?? null),
+        );
+        check(
+          moved.every((n) => n !== null),
+          '登録後は案のタブに担当が変わる件数',
+          moved,
+        );
+        const k = moved.findIndex((n) => Number(n) > 0);
+        if (k >= 0) {
+          await choices.nth(k).click();
+          await settle(page, 300);
+          check((await view.getByTestId('choice-mark').count()) > 0, '今の標準から変わる訪問に印（代・±分）');
+          check((await view.locator('.reassign-moves-box').count()) === 1, '変わる訪問の一覧（畳む）');
+        }
+        await view.getByTestId('standard-day-current').click();
+        await settle(page, 300);
+        check((await view.getByTestId('choice-mark').count()) === 0, '今の標準のタブには変わる訪問の印が無い');
       },
     ],
   ],

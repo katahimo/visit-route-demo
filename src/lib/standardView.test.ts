@@ -122,7 +122,10 @@ describe('standardView', () => {
 describe('日で見る（PRD D350。ADR-0065）', () => {
   const WED = '2026-10-14';
   const presets = initialPresets();
-  const d = data({ presets, staff: [staff('s1', 38.26, 140.87), staff('s2', 38.262, 140.872)] });
+  const d = {
+    ...data({ presets, staff: [staff('s1', 38.26, 140.87), staff('s2', 38.262, 140.872)] }),
+    standard: { at: 0, presetId: presets[0]!.id, from: MON, weeks: 1 },
+  };
   const problem = dayProblemOf(d, MON)!;
   type R = Record<string, string[]>;
   const proposals: { presetId: string; done: boolean; days: { date: string; routes: R }[] }[] = [
@@ -186,6 +189,13 @@ describe('日で見る（PRD D350。ADR-0065）', () => {
     const input = standardDayInput(presets, proposals, base)!;
     for (const c of input.choices) for (const id of Object.values(c.routes).flat()) expect(ids.has(id)).toBe(true);
     expect(input.current).toEqual({ s1: [`${MON}_p1`] });
+  });
+
+  it('標準を登録する前は今の標準を持たない（日で見るは案どうしだけ。ADR-0065）', () => {
+    const before = { ...d, standard: undefined };
+    const base = standardBaseDay(before, MON, problem, problem);
+    expect(base.current).toBeNull();
+    expect(standardDayInput(presets, proposals, base)!.current).toBeNull();
   });
 
   it('点数の基準の問題が作れなければ、案の問題を使う', () => {

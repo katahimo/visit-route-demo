@@ -28,7 +28,7 @@
 - 作ったあとに行の繰り返し（ID・曜日）が変わったら「案を作ったあとに繰り返しが変わりました…」（`standard-proposals-stale`）
 - 日で見る（`standard-day-view`。案が1つ以上あるとき。PRD D350。ADR-0065）：表だけでは判断しにくいので、案のその日を今日の予定と同じ見せ方で見る
   - 日付のタブ（`standard-day-tabs`。期間の日のうち訪問のある日。既定は最初の日。「11/3（火）」）
-  - 案のタブ（`role=tab`。今の標準 `standard-day-current`・案ごと `standard-day-choice`（`data-preset`）。点 `choice-points`（点数の基準の物差し・100点満点）・今の標準から担当が変わる件数。いちばん点の高い案に王冠）。今の標準＝同じ日の計算した回を今の標準の担当・開始のまま並べたもの（`standardDayRoutes`。ひな形どうしで比べる）
+  - 案のタブ（`role=tab`。今の標準 `standard-day-current`・案ごと `standard-day-choice`（`data-preset`）。点 `choice-points`（点数の基準の物差し・100点満点）・今の標準から担当が変わる件数。いちばん点の高い案に王冠）。標準を登録する前（`hasStandard` が偽のときに作った案）は今の標準のタブと担当が変わる件数・変わる訪問の印を出さず、案どうしだけをくらべる（文 `standard-day-lead`「標準はまだ登録していないので、案どうしをくらべます」）。今の標準＝同じ日の計算した回を今の標準の担当・開始のまま並べたもの（`standardDayRoutes`。ひな形どうしで比べる）
   - 選んだ案を担当ごとの時間軸（`ChoiceDayView`。今の担当を組むの考え方ごとの案の帯 `ChoiceBand` の中身を、`monthBatch` の提案に縛られない入力 `{ problem, current, choices: { presetId, name, routes }[] }` にしたもの。`RouteTimeline` を読み取り専用で。列は今の標準かどれかの案で訪問のある人（`choiceColumns`）。担当・時刻が変わる訪問の帯に予定の画面と同じ印（代・±分））と、時間軸の下に全幅の地図（`standard-day-map`。画面の外なら `MapDock`。予定の画面と同じ部品：`buildRouteMap`・`RouteMap`・`StaffLegend`・`useRouteSelection`・列の見出しの `StaffFocusButton`。名前・訪問・区間を押すと地図をその担当に絞り、ほかの列を薄くする）で見る。担当が変わる・時刻が変わる件数・移動の増減・担当なしの1行と、変わる訪問の一覧（畳む。`proposalDayChanges` と同じ「9:30 山田さん　佐藤さん → 鈴木さん」）
   - 読み取り専用（札は動かさない）。選んだ案の［この案から作る］はカードと同じ
 
