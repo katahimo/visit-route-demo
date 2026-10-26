@@ -105,6 +105,19 @@ describe('プリセットの節（ADR-0008・ADR-0065）', () => {
     expect(removePreset(d, 'only')).toBe(d);
   });
 
+  it('既定の名前は上限に収める', () => {
+    const long = 'あ'.repeat(20);
+    expect(draftPresetName(long, [])).toBe(`${'あ'.repeat(17)}（改）`);
+    expect(draftPresetName(long, [{ name: `${'あ'.repeat(17)}（改）` }])).toBe(`${'あ'.repeat(16)}（改2）`);
+  });
+
+  it('基準を消したとき、バランスが先頭でなくてもバランスへ移る', () => {
+    const d0 = base();
+    const d = { ...d0, presets: [...d0.presets.slice(1), d0.presets[0]!] };
+    const a = saveDraftAsPreset(d, { wait: { weight: 1 } }, 'A');
+    expect(removePreset(a, a.scorePresetId!).scorePresetId).toBe('balance');
+  });
+
   it('基準のプリセットを消すと、基準は残りの先頭（バランス）に移り、条件の重みもそろう。ほかを消しても変わらない', () => {
     const d0 = base();
     const a = saveDraftAsPreset(d0, { wait: { weight: 1 } }, 'A');

@@ -32,6 +32,7 @@ export default function ArrangePage() {
   const compileInput = useCompileInput(data);
   const [params, setParams] = useSearchParams();
   const compareOn = useFeature('compare');
+  const rulesOn = useFeature('rules');
   const ids = useId();
   const today = jstDate(Date.now());
   const { scope, ym, at } = scopeOf(params, today);
@@ -112,6 +113,7 @@ export default function ArrangePage() {
           careDays: careTargets.length,
           allDays: allTargets.length,
           basisName,
+          rulesOn,
           runDays: targets.length,
           run,
           error: shownError,

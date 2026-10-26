@@ -174,6 +174,8 @@ export type ArrangeRunProps = {
   allDays: number;
   /** 点数の基準のプリセットの名前（いつもこの考え方で組む） */
   basisName: string;
+  /** 条件の重み（rules）が入か。切なら考え方を替える所に条件の重みを挙げない */
+  rulesOn: boolean;
   /** 組む日の数 */
   runDays: number;
   /** 組んでいる最中の状態（無ければ null） */
@@ -219,7 +221,9 @@ export function ArrangeRunSection({ view, actions }: { view: ArrangeRunProps; ac
           <ArrangeModeFields mode={mode} careDays={view.careDays} allDays={view.allDays} onMode={actions.onMode} />
           <p data-testid="arrange-basis">
             考え方：<strong>{view.basisName}</strong>
-            <span className="sub">（点数の基準。替えるのは「条件の重み」・「組み方の標準」）</span>
+            <span className="sub">
+              （点数の基準。替えるのは{view.rulesOn ? '「条件の重み」・' : ''}「組み方の標準」）
+            </span>
           </p>
           <p data-testid="arrange-count">
             組む日：<strong>{runDays}日</strong>

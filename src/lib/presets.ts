@@ -24,12 +24,14 @@ export function addPresetError(d: Pick<DemoData, 'presets'>, name: string): stri
 }
 
 /**
- * 表の下書きを新しい考え方として保存するときの既定の名前（ADR-0065）：「〈元の名前〉（改）」、同じ名前があれば「（改2）」「（改3）」…
+ * 表の下書きを新しい考え方として保存するときの既定の名前（ADR-0065）：「〈元の名前〉（改）」、同じ名前があれば「（改2）」「（改3）」…。
+ * 名前の上限を超えるときは元の名前を詰めて収める
  */
 export function draftPresetName(baseName: string, presets: readonly Pick<Preset, 'name'>[]): string {
   const names = new Set(presets.map((p) => p.name));
   for (let i = 1; ; i++) {
-    const name = `${baseName}（改${i === 1 ? '' : i}）`;
+    const suffix = `（改${i === 1 ? '' : i}）`;
+    const name = `${baseName.slice(0, PRESET_NAME_MAX - suffix.length)}${suffix}`;
     if (!names.has(name)) return name;
   }
 }
@@ -44,13 +46,14 @@ export function withBasisRules(d: DemoData): DemoData {
 }
 
 /**
- * プリセットを消す（初期の3つと最後の1つは消さない。ADR-0065）。点数の基準のプリセットを消したら、基準は残りの先頭に移り、
+ * プリセットを消す（初期の3つと最後の1つは消さない。ADR-0065）。点数の基準のプリセットを消したら、基準はバランス（無ければ残りの先頭）に移り、
  * 条件の重みも新しい基準にそろえる（ADR-0010・ADR-0035）
  */
 export function removePreset(d: DemoData, id: string): DemoData {
   if (d.presets.length <= 1 || isInitialPreset(id)) return d;
   const presets = d.presets.filter((p) => p.id !== id);
-  const scorePresetId = presets.some((p) => p.id === d.scorePresetId) ? d.scorePresetId : presets[0]?.id;
+  const fallback = presets.find((p) => p.id === INITIAL_PRESETS[0]?.id) ?? presets[0];
+  const scorePresetId = presets.some((p) => p.id === d.scorePresetId) ? d.scorePresetId : fallback?.id;
   const next = { ...d, presets, scorePresetId };
   return scorePresetId === d.scorePresetId ? next : withBasisRules(next);
 }
