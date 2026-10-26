@@ -3,12 +3,12 @@
 // ほかの画面へ移っても続く。ADR-0042）。提案は範囲の提案の帯で見て［反映する］［捨てる］（反映は全体の「元に戻す」で1手戻る）。
 // いつも点数の基準（標準の考え方）で組む。組み方の標準が無い間は組まず、組み方の標準へ案内する（ADR-0065）。
 // 日を選んで「案を比べる」（#/compare）へ移れる
-import { Sparkles } from 'lucide-react';
+import { CalendarCheck, Sparkles } from 'lucide-react';
 import { useId, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { ArrangeSteps } from '../components/ArrangeSteps';
 import { RangeProposalBand } from '../components/scheduleParts';
-import { PageHeader } from '../components/ui';
+import { PageHeader, WithIcon } from '../components/ui';
 import { useCompileInput } from '../components/useDayModel';
 import { useDayStatuses } from '../components/useDayStatuses';
 import { useFeature } from '../components/useFeature';
@@ -19,6 +19,7 @@ import { mdText, monthLabel } from '../lib/dateText';
 import { type BatchMode, batchTargets } from '../lib/month';
 import { type BatchSource, monthBatch, weekLabel } from '../lib/monthBatch';
 import { hasStandard } from '../lib/standard';
+import { setStandardStep } from '../lib/standardDraft';
 import { weekDates, weekStart } from '../lib/week';
 import { addMonths, monthDates, ymOf } from '../lib/ym';
 import { scorePresetOf } from '../seed';
@@ -86,11 +87,24 @@ export default function ArrangePage() {
 
   return (
     <div className="stack arrange-page">
+      {/* 段の表示は標準が無い間だけ（標準を決める手順の途中）。標準があれば［標準の組み方を変える］でその手順へ戻る（ADR-0066 追記） */}
       <PageHeader
-        nav={<ArrangeSteps current="arrange" />}
+        nav={needStandard ? <ArrangeSteps current="arrange" /> : undefined}
         icon={Sparkles}
         title="担当を組む"
         lead="範囲を選んで AI で担当を組み、提案を見て反映します。予定（月・週・日）では手で直します"
+        actions={
+          needStandard ? undefined : (
+            <Link
+              to="/standard"
+              className="btn"
+              onClick={() => setStandardStep('proposals')}
+              data-testid="arrange-change-standard"
+            >
+              <WithIcon icon={CalendarCheck}>標準の組み方を変える</WithIcon>
+            </Link>
+          )
+        }
       />
 
       <ArrangeRangeSection

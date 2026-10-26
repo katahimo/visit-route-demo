@@ -142,7 +142,7 @@
 
 ### メニューとナビゲーション（ADR-0024・ADR-0027・ADR-0045・ADR-0054・ADR-0055・ADR-0063。PRD D132・D133・D135・D179〜D183・D239・D273・D275・D326・D336・D348・D349）
 
-- メニューは ホーム・予定を組む・予定・空き状況・人・設定 の6項目（見出しなし。PRD D326・D349・D355）。予定・予定を組む・人・設定は子の項目を持つ親で、親の行の右の ▾（`button.nav-toggle`・data-testid `nav-toggle`・`aria-expanded`・`aria-controls`＝`nav-sub-<key>`・名前「◯の項目を畳む／開く」）で畳める。子は親の下の字下げした小さな行（`.nav-sub`・`.nav-child`）。予定の子はリンク（今日の予定・◯月の予定・欠勤・キャンセル）、予定を組むの子は組み方の標準・担当を組む（作業の順。条件の重みは組み方の標準の寄り道。PRD D360）、人の子は人のタブ、設定の子は設定のタブ
+- メニューは ホーム・予定を組む・予定・空き状況・人・設定 の6項目（見出しなし。PRD D326・D349・D355）。予定・予定を組む・人・設定は子の項目を持つ親で、親の行の右の ▾（`button.nav-toggle`・data-testid `nav-toggle`・`aria-expanded`・`aria-controls`＝`nav-sub-<key>`・名前「◯の項目を畳む／開く」）で畳める。子は親の下の字下げした小さな行（`.nav-sub`・`.nav-child`）。予定の子はリンク（今日の予定・◯月の予定・欠勤・キャンセル）、予定を組むの子は組み方の標準・担当を組む（作業の順。条件の重みは組み方の標準の寄り道。標準を登録したあとは担当を組むだけ。PRD D360）、人の子は人のタブ、設定の子は設定のタブ
 - 畳み：既定は `NAV_OPEN_DEFAULT`＝予定・人を開き、設定を畳む。開け閉めは localStorage の `visit-route-demo:nav-open`（`store/navOpen` の `navOpenMemory`。`{ 親の key: boolean }` の JSON。この端末に残す。読めなければ既定）に覚える。今の画面の親が畳んであれば、画面を移ったときに開く（開いたまま自分で畳んだ開け閉めは、移るまで変えない）
 - 今の画面の印（`aria-current="page"`・`.active`）：親が開いていれば子に付け（今日の予定は日の予定、◯月の予定は月・週の予定、担当を組むは担当を組む・案を比べる）、畳んでいれば親に付ける。開いていても子のどれにも当たらなければ親に付ける。親の行は子が今の画面のとき太字だけ（`.has-current`）
 - 件数の印（`span.nav-badge`・data-testid `nav-badge`・見える文字と `.sr-only` の読み上げ）：担当を組む に「N日」（組む月の担当なしの訪問がある日の数。0なら出さない）、今日の予定 に「未確定」（今日に訪問があってまだ伝えていない）。数えるのは `lib/scheduleMode` の `menuBadges`
@@ -152,13 +152,13 @@
 
 #### `lib/nav.ts`（純粋関数。テストあり）
 
-- `menuSections(terms, today, features, last, badges)`：メニューの並びの1か所（PRD D273〜D275・D326・D349・D355・D359・D360。ADR-0054・ADR-0063・ADR-0065・ADR-0066）。見出しの無い1つのグループに6項目（ホーム・予定を組む・予定・空き状況・人・設定）。項目は `MenuItem`＝`{ key, to, label, short?, match?, icon, children?, badge? }`（`key` は下のタブで引く名前、`match` はその項目が受け持つ画面のパス（今の画面の印。無ければ `to`）、アイコンは名前 `NavIcon`、`short` は下のタブの短い名前、`children` は畳める子の項目、`badge` は件数の印 `{ text, label }`）。`last`（`LastViews`＝`{ schedule?, settings?, people? }`）は最後に開いた予定の表示・設定のタブ・人のタブ。`badges`（`MenuBadges`＝`{ planUnassignedDays?, todayUntold? }`）は `menuBadges` の値。切った機能の項目・子は出さない
+- `menuSections(terms, today, features, last, badges)`：メニューの並びの1か所（PRD D273〜D275・D326・D349・D355・D359・D360。ADR-0054・ADR-0063・ADR-0065・ADR-0066）。見出しの無い1つのグループに6項目（ホーム・予定を組む・予定・空き状況・人・設定）。項目は `MenuItem`＝`{ key, to, label, short?, match?, icon, children?, badge? }`（`key` は下のタブで引く名前、`match` はその項目が受け持つ画面のパス（今の画面の印。無ければ `to`）、アイコンは名前 `NavIcon`、`short` は下のタブの短い名前、`children` は畳める子の項目、`badge` は件数の印 `{ text, label }`）。`last`（`LastViews`＝`{ schedule?, settings?, people? }`）は最後に開いた予定の表示・設定のタブ・人のタブ。`badges`（`MenuBadges`＝`{ planUnassignedDays?, todayUntold?, hasStandard? }`）は `menuBadges` の値（`hasStandard` は組み方の標準があるか。ADR-0066 追記）。切った機能の項目・子は出さない
 
 | 項目（`key`・`to`。下のタブは `short`） | 子の項目 |
 |---|---|
 | ホーム（`home`・`/home`。short「ホーム」） | なし |
 | 予定（`schedule`・`scheduleHref(last.schedule)`＝最後に開いた `/month`・`/week`・`/plan`、無ければ `/plan`。short「予定」。`match`＝`SCHEDULE_PATHS`：月・週・日） | 下の3つ |
-| 予定を組む（`arrange`・`/arrange`。short「組む」。`match`＝`ARRANGE_PATHS`：条件の重み・組み方の標準・担当を組む・比較） | 組み方の標準（`arrange:standard`・`/standard`・`match` 組み方の標準・条件の重み）・担当を組む（`arrange:assign`・`/arrange?ym=<planYm(today)>`・`match` 担当を組む・比較・件数の印「N日」） |
+| 予定を組む（`arrange`・`/arrange`。short「組む」。`match`＝`ARRANGE_PATHS`：条件の重み・組み方の標準・担当を組む・比較） | 組み方の標準（`arrange:standard`・`/standard`・`match` 組み方の標準・条件の重み。`badges.hasStandard` なら出さない）・担当を組む（`arrange:assign`・`/arrange?ym=<planYm(today)>`・`match` 担当を組む・比較（標準があれば組み方の標準・条件の重みも）・件数の印「N日」） |
 | 空き状況（`vacancy`・`/vacancy`。short「空き状況」） | なし |
 | 人（`people`・`peopleHref(features, last.people)`＝最後に開いた人のタブ（勤務の見込みは `/availability`）、無ければ `/clients`。`match`＝`PEOPLE_PATHS`：`/clients`・`/staff`・`/compat`・`/availability`・`/workload`（`/clients/:id`・`/staff/:id` は `activeNavPath` で一覧に当てる）。アイコンは `Users`） | 人のタブ（`peopleTabs`。key `people:<to>`。勤務時間（シフト）の `match` に `/workload` も） |
 | 設定（`settings`・`settingsHref(features, last.settings)`＝最後に開いた設定のタブ、無ければ先頭の訪問の種類。`match`＝切っていない設定のタブ） | 設定のタブ（`settingsTabs`。key `settings:<to>`） |

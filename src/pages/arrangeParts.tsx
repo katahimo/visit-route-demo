@@ -225,7 +225,7 @@ export function ArrangeRunSection({ view, actions }: { view: ArrangeRunProps; ac
           <ArrangeModeFields mode={mode} careDays={view.careDays} allDays={view.allDays} onMode={actions.onMode} />
           <p data-testid="arrange-basis">
             考え方：<strong>{view.basisName}</strong>
-            <span className="sub">（点数の基準。替えるのは「組み方の標準」の「案をくらべる」）</span>
+            <span className="sub">（点数の基準。替えるのは［標準の組み方を変える］）</span>
           </p>
           <p data-testid="arrange-count">
             組む日：<strong>{runDays}日</strong>

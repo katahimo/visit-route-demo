@@ -101,6 +101,11 @@ describe('menuSections（PRD D326・D349。ADR-0054・0063）', () => {
     expect(nextArrangeStep('arrange')).toBeNull();
     expect(prevArrangeStep('proposals')).toBeNull();
     expect(prevArrangeStep('register')?.key).toBe('draft');
+    // 標準を登録したあとは子は担当を組むだけで、組み方の標準・条件の重みも担当を組むに印（ADR-0066 追記）
+    const std = menuSections(terms, TODAY, {}, {}, { hasStandard: true });
+    expect(item('arrange', std).children?.map((i) => i.key)).toEqual(['arrange:assign']);
+    expect(isActiveNav(item('arrange:assign', std), '/standard')).toBe(true);
+    expect(isActiveNav(item('arrange:assign', std), '/rules')).toBe(true);
     const off = menuSections(terms, TODAY, { rules: false });
     expect(item('arrange', off).children?.map((i) => i.key)).toEqual(['arrange:standard', 'arrange:assign']);
     expect(settingsTabs({}).map((t) => t.label)).toEqual(['訪問の種類', '特性の項目', '管理者設定', 'データ']);
