@@ -1,7 +1,7 @@
 import { Plus, UserRound } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { PeopleTabs } from '../components/SettingsTabs';
+import { BasicsNav } from '../components/SettingsTabs';
 import { useToast } from '../components/Toast';
 import { PageHeader, WithIcon } from '../components/ui';
 import { useFeature } from '../components/useFeature';
@@ -74,7 +74,7 @@ export default function StaffPage() {
   return (
     <div className="stack">
       <PageHeader
-        nav={<PeopleTabs />}
+        nav={<BasicsNav />}
         icon={UserRound}
         title={`${terms.staff}一覧`}
         lead={`${terms.staff}の勤務・特性・条件を決めます`}

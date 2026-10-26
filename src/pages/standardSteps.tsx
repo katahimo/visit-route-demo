@@ -1,10 +1,11 @@
-// 組み方の標準の画面（StandardPage）の3段：案をくらべる・表で直す（下書き）・標準にする（1段ずつ出す）と、段の下の［戻る］［次へ］（ADR-0066）
+// 組み方の標準の画面（StandardPage）の2段：案をくらべる・標準にする（表で直す（下書き）と登録。1段ずつ出す）と、
+// 段の下の［戻る］［次へ］（ADR-0066・ADR-0067）
 import { Crown } from 'lucide-react';
 import type { Ref } from 'react';
 import { Link } from 'react-router-dom';
 import { WEEKDAY_LABELS } from '../lib/common';
 import { dateText, mdText } from '../lib/dateText';
-import { type ArrangeStepKey, nextArrangeStep, prevArrangeStep } from '../lib/nav';
+import { ARRANGE_STEPS, type ArrangeStepKey, nextArrangeStep, prevArrangeStep } from '../lib/nav';
 import type { StandardPeriod } from '../lib/standard';
 import { cellOf, diffCounts, mondayOf, type StandardTable, setCell } from '../lib/standard';
 import {
@@ -25,7 +26,10 @@ import type { StandardRegisterState } from './useStandardRegister';
 /** 表の部品に共通で渡すもの */
 export type StandardTableBase = Pick<TableProps, 'rows' | 'weekdays' | 'current' | 'clientName' | 'staffName'>;
 
-/** 1. 案をくらべる：考え方ごとの案を作り、カードで比べ、表で見て・日で見て、下書きにする */
+/** 段の見出しの番号（予定を組むの4段の中の何番目か。ADR-0067） */
+export const stepNo = (key: ArrangeStepKey): number => ARRANGE_STEPS.findIndex((s) => s.key === key) + 1;
+
+/** 2. 案をくらべる：考え方ごとの案を作り、カードで比べ、表で見て・日で見て、下書きにする */
 export function ProposalsStep({
   presetCount,
   period,
@@ -59,7 +63,7 @@ export function ProposalsStep({
   return (
     <li className="card stack" data-step="proposals">
       <h2 ref={headRef} tabIndex={-1}>
-        1. 案をくらべる
+        {stepNo('proposals')}. 案をくらべる
       </h2>
       <p className="sub" data-testid="standard-period">
         プリセット（考え方）ごとに、{mdText(period.from)}〜{mdText(period.to)}（{period.weeks}週。{cycleReason}
@@ -232,7 +236,7 @@ function ProposalCard({
   );
 }
 
-/** 2. 表で直す（下書き） */
+/** 3. 標準にするの前半：表で直す（下書き）。段の見出しは StandardPage の RegisterStepCard */
 export function DraftStep({
   clientTerm,
   work,
@@ -241,7 +245,6 @@ export function DraftStep({
   draftState,
   presetName,
   workingStaff,
-  headRef,
 }: {
   clientTerm: string;
   work: StandardWork;
@@ -250,22 +253,19 @@ export function DraftStep({
   draftState: StandardDraftState;
   presetName: StandardNames['presetName'];
   workingStaff: readonly { id: string; name: string }[];
-  headRef: Ref<HTMLHeadingElement>;
 }) {
   const { draft, draftDiff, editing, setEditing, cellRefs, closeEditor, fromCurrent, discard } = draftState;
   const { current, clientName } = tableProps;
   const key = stateKey;
   const terms = { client: clientTerm };
   return (
-    <li className="card stack" data-step="draft">
-      <h2 ref={headRef} tabIndex={-1}>
-        2. 表で直す（下書き）
-      </h2>
+    <section className="stack" data-step-part="draft">
+      <h3>表で直す（下書き）</h3>
       {!draft ? (
         <>
           <p className="sub">
             下書きの表で、{terms.client}
-            の繰り返しごと・曜日ごとに担当と時刻を直します。「1.
+            の繰り返しごと・曜日ごとに担当と時刻を直します。「{stepNo('proposals')}.
             案をくらべる」の案から作るか、今の標準から作ります。下書きは標準にするまで予定に書きません
           </p>
           <div className="row">
@@ -332,33 +332,29 @@ export function DraftStep({
           </div>
         </>
       )}
-    </li>
+    </section>
   );
 }
 
-/** 3. 標準にする（下書きがあれば登録の操作、登録した直後なら完了の表示、どちらも無ければ 2 への案内） */
+/** 3. 標準にするの後半（下書きがあれば登録の操作、登録した直後なら完了の表示、どちらも無ければ 2 への案内） */
 export function RegisterStep({
   draft,
   registered,
   register: r,
   draftDiffCount,
   names,
-  headRef,
 }: {
   draft: boolean;
   registered: { since: string; at: number } | null;
   register: StandardRegisterState;
   draftDiffCount: number;
   names: Pick<StandardNames, 'staffName' | 'clientName'>;
-  headRef: Ref<HTMLHeadingElement>;
 }) {
   const { staffName, clientName } = names;
   const { minSince, since, setSinceIn, effectiveDiff, skippedDiff, temps, temp, setTemp, register } = r;
   return (
-    <li className="card stack" data-step="register">
-      <h2 ref={headRef} tabIndex={-1}>
-        3. 標準にする
-      </h2>
+    <section className="stack" data-step-part="register">
+      <h3>標準にする</h3>
       {draft ? (
         <>
           <label className="row">
@@ -442,7 +438,7 @@ export function RegisterStep({
         </>
       ) : !registered ? (
         <p className="sub" data-testid="standard-register-empty">
-          下書きがありません。「2. 表で直す」で下書きを作ると、ここで標準にできます
+          下書きがありません。上の「表で直す」で下書きを作ると、ここで標準にできます
         </p>
       ) : (
         <div className="standard-done stack" data-testid="standard-done">
@@ -456,28 +452,33 @@ export function RegisterStep({
           </div>
         </div>
       )}
-    </li>
+    </section>
   );
 }
 
 /**
- * 段の下の［戻る］［次へ：〈次の段〉］（ADR-0066）。3 の次は担当を組むの画面へのリンク。
+ * 段の下の［戻る］［次へ：〈次の段〉］（ADR-0066・ADR-0067）。案をくらべるの前は基本情報、標準にするの次は担当を組むの画面へのリンク。
  * nextPrimary のときだけ［次へ］を塗る（主ボタンは画面に1つ）
  */
 export function StandardStepNav({ step, nextPrimary }: { step: StandardStep; nextPrimary: boolean }) {
-  const prev = prevArrangeStep(step);
-  const next = nextArrangeStep(step);
+  const prev = prevArrangeStep(ARRANGE_STEPS, step);
+  const next = nextArrangeStep(ARRANGE_STEPS, step);
   const nextClass = nextPrimary ? 'btn btn-primary' : 'btn';
   const go = (key: ArrangeStepKey) => {
-    if (key !== 'arrange') setStandardStep(key);
+    if (key === 'proposals' || key === 'register') setStandardStep(key);
   };
   return (
     <div className="row standard-step-nav" data-testid="standard-step-nav">
-      {prev && (
-        <button type="button" className="btn" onClick={() => go(prev.key)} data-testid="standard-back">
-          戻る
-        </button>
-      )}
+      {prev &&
+        (prev.key === 'basics' ? (
+          <Link to={prev.to} className="btn" data-testid="standard-back">
+            戻る：{prev.label}
+          </Link>
+        ) : (
+          <button type="button" className="btn" onClick={() => go(prev.key)} data-testid="standard-back">
+            戻る
+          </button>
+        ))}
       {next &&
         (next.key === 'arrange' ? (
           <Link to="/arrange" className={nextClass} data-testid="standard-next">

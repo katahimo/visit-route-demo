@@ -2,7 +2,7 @@ import { ChevronDown, House, ListFilter, Plus } from 'lucide-react';
 import { useId, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ClientFilter } from '../components/ClientFilter';
-import { PeopleTabs } from '../components/SettingsTabs';
+import { BasicsNav } from '../components/SettingsTabs';
 import { PageHeader, WithIcon } from '../components/ui';
 import { useFeature } from '../components/useFeature';
 import { COMPACT_QUERY, useMedia } from '../components/useMedia';
@@ -41,7 +41,7 @@ export default function ClientsPage() {
   return (
     <div className="stack">
       <PageHeader
-        nav={<PeopleTabs />}
+        nav={<BasicsNav />}
         icon={House}
         title={`${terms.client}一覧`}
         lead={`${terms.client}の住所・特性・条件を決めます`}

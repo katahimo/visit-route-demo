@@ -86,6 +86,7 @@ describe('候補', () => {
       '組み方の標準',
       '担当を組む',
       '空き状況',
+      '予定と相性',
       '利用者さん一覧',
       'スタッフ一覧',
       '相性',
@@ -96,7 +97,7 @@ describe('候補', () => {
       '管理者設定',
       'データ',
     ]);
-    expect(s.find((x) => x.to === '/clients')!.hint).toBe('人');
+    expect(s.find((x) => x.to === '/clients')!.hint).toBe('基本情報');
     expect(s.find((x) => x.to === '/data')!.hint).toBe('設定');
     expect(s.find((x) => x.to === '/plan')!.hint).toBe('予定');
     // 条件の重みは予定を組むの1段目（ADR-0065）

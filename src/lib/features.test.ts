@@ -38,6 +38,7 @@ const BASE_PATHS = new Set([
   '/month',
   '/week',
   '/plan',
+  '/basics',
   '/clients',
   '/staff',
   '/availability',
@@ -247,23 +248,23 @@ describe('ひな形（ADR-0028 の表）', () => {
 });
 
 describe('menuSections（ひな形ごとの項目。PRD D213・D275）', () => {
-  const labels = (f: Features) => menuSections(terms, TODAY, f).flatMap((g) => g.items.map((i) => i.label));
-  const titles = (f: Features) => menuSections(terms, TODAY, f).map((g) => g.title ?? null);
+  const labels = (f: Features) => menuSections(TODAY, f).flatMap((g) => g.items.map((i) => i.label));
+  const titles = (f: Features) => menuSections(TODAY, f).map((g) => g.title ?? null);
   const screens = (f: Features) => screenSections(terms, f).flatMap((g) => g.items.map((i) => i.label));
-  it('すべて：6項目（{} と同じ。欠勤・キャンセルは予定の子。PRD D326・D349。ADR-0063）', () => {
+  it('すべて：5項目（{} と同じ。欠勤・キャンセルは予定の子、人の項目は予定を組むの基本情報。PRD D326・D349・D364。ADR-0063・ADR-0067）', () => {
     expect(labels(applyTemplate('all'))).toEqual(labels({}));
-    expect(labels({})).toHaveLength(6);
+    expect(labels({})).toHaveLength(5);
   });
   it('欠勤・キャンセルを切ると予定の子から消える', () => {
     const kids = (f: Features) =>
-      menuSections(terms, TODAY, f)
+      menuSections(TODAY, f)
         .flatMap((g) => g.items)
         .find((i) => i.key === 'schedule')
         ?.children?.map((i) => i.key);
     expect(kids({})).toEqual(['today', 'month-view', 'absence']);
     expect(kids({ sudden: false })).toEqual(['today', 'month-view']);
   });
-  it('基本も6項目（人・設定はタブ）。画面の一覧は勤務の見込み・条件の重み・特性の項目が無い（案を比べるはいつも無い）', () => {
+  it('基本も5項目（基本情報・設定はタブ）。画面の一覧は勤務の見込み・条件の重み・特性の項目が無い（案を比べるはいつも無い）', () => {
     expect(labels(applyTemplate('basic'))).toEqual(labels({}));
     expect(screens(applyTemplate('basic'))).toEqual([
       'ホーム',
@@ -273,6 +274,7 @@ describe('menuSections（ひな形ごとの項目。PRD D213・D275）', () => {
       '組み方の標準',
       '担当を組む',
       '空き状況',
+      '予定と相性',
       '利用者さん一覧',
       'スタッフ一覧',
       '相性',
@@ -293,7 +295,7 @@ describe('menuSections（ひな形ごとの項目。PRD D213・D275）', () => {
   });
   it('見出しは無い。欠勤・キャンセルと空き状況を切ると項目が消える', () => {
     expect(titles({})).toEqual([null]);
-    expect(labels({ sudden: false, vacancy: false })).toEqual(['ホーム', '予定を組む', '予定', '人', '設定']);
+    expect(labels({ sudden: false, vacancy: false })).toEqual(['ホーム', '予定を組む', '予定', '設定']);
   });
   it('「設定」のタブは切った機能を出さない（基本は特性の項目が無い。条件の重みは予定を組む。ADR-0065）', () => {
     expect(settingsTabs({}).map((t) => t.to)).toEqual(['/types', '/items', '/settings', '/data']);
@@ -305,13 +307,13 @@ describe('menuSections（ひな形ごとの項目。PRD D213・D275）', () => {
     expect(screens({})).toContain('相性');
   });
   it('下のタブは欠勤・キャンセルを切ると減る（空き状況は下のタブに出さない。PRD D336）', () => {
-    expect(bottomTabs(menuSections(terms, TODAY, {})).map((t) => t.key)).toEqual(['home', 'schedule', 'absence']);
-    expect(bottomTabs(menuSections(terms, TODAY, { vacancy: false })).map((t) => t.key)).toEqual([
+    expect(bottomTabs(menuSections(TODAY, {})).map((t) => t.key)).toEqual(['home', 'schedule', 'absence']);
+    expect(bottomTabs(menuSections(TODAY, { vacancy: false })).map((t) => t.key)).toEqual([
       'home',
       'schedule',
       'absence',
     ]);
-    expect(bottomTabs(menuSections(terms, TODAY, { sudden: false, vacancy: false })).map((t) => t.key)).toEqual([
+    expect(bottomTabs(menuSections(TODAY, { sudden: false, vacancy: false })).map((t) => t.key)).toEqual([
       'home',
       'schedule',
     ]);
@@ -354,7 +356,7 @@ const homeInput = (features: Features = {}) => ({
 
 describe('表の整合（メニュー・パレット・ホーム・ツアー・links の行き先が、土台か表のどれかに属する）', () => {
   it('メニューの項目', () => {
-    for (const g of menuSections(terms, TODAY, {})) for (const i of g.items) expect(belongs(i.to), i.to).toBe(true);
+    for (const g of menuSections(TODAY, {})) for (const i of g.items) expect(belongs(i.to), i.to).toBe(true);
     for (const g of screenSections(terms, {})) for (const i of g.items) expect(belongs(i.to), i.to).toBe(true);
   });
   it('パレットの操作', () => {

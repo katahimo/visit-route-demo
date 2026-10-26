@@ -23,9 +23,13 @@ export function useArrangeStart(plan: ArrangeStartPlan) {
   const confirmDialog = useConfirm();
   const [error, setError] = useState<string | null>(null);
 
-  /** 選んだ範囲を AI で組む（ピンの訪問はそのまま。終わったら提案の帯。反映するまで訪問は変わらない） */
-  const start = async () => {
-    const { scope, ym, at, today, rangeLabel, mode, targets } = plan;
+  /**
+   * 選んだ範囲を AI で組む（ピンの訪問はそのまま。終わったら提案の帯。反映するまで訪問は変わらない）。
+   * days を渡すとその作り方・日で組む（基本情報が変わったときの［組み直す］は伝えていない日をすべて。ADR-0067）
+   */
+  const start = async (days?: { mode: BatchMode; targets: readonly string[] }) => {
+    const { scope, ym, at, today, rangeLabel } = plan;
+    const { mode, targets } = days ?? plan;
     if (monthBatch.running()) return;
     setError(null);
     if (targets.length === 0) {

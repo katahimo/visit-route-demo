@@ -37,8 +37,6 @@ import { dateText } from '../lib/dateText';
 import { compareEmptyGuide } from '../lib/emptyGuide';
 import { narrowRole } from '../lib/narrowRoles';
 import type { ScoreReason } from '../lib/scoreReason';
-import { hasStandard } from '../lib/standard';
-import { useDemoData } from '../store';
 import { CompareTable, RefMark, rulerText, SCORE_TEXT, ScoreReasonText } from './planParts';
 import type { CompareProposal } from './useCompareProposal';
 
@@ -520,12 +518,11 @@ export function NotInProblemCard({
   );
 }
 
-/** 画面の見出し（担当を組むに戻るリンク。段の表示は標準が無い間だけ。ADR-0066 追記） */
+/** 画面の見出し（担当を組むに戻るリンク。段の表示は担当を組むと同じ。ADR-0067） */
 export function CompareHeader({ date }: { date: string }) {
-  const { data } = useDemoData();
   return (
     <PageHeader
-      nav={hasStandard(data) ? undefined : <ArrangeSteps current="arrange" />}
+      nav={<ArrangeSteps current="arrange" />}
       icon={GitCompareArrows}
       title="提案を比べる"
       lead="今の担当と、考え方（プリセット）ごとに作った提案を2つ選んで比べます。提案は保存しません。よければ「反映する」"

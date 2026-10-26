@@ -28,7 +28,7 @@ export function useStandardDraft(
     }
     setDraft({ table, from: presetId }, key);
     setEditing(null);
-    setStandardStep('draft');
+    setStandardStep('register');
   };
   const closeEditor = (ref: CellRef | null) => {
     setEditing(null);
