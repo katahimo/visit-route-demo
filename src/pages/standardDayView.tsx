@@ -9,9 +9,12 @@ import type { StandardDayViewState } from './useStandardDayView';
 
 export function StandardDayView({
   day,
+  stale,
   onUse,
 }: {
   day: StandardDayViewState;
+  /** 案を作ったあとに繰り返しが変わった（日で見るは案を作ったときの標準・訪問のまま） */
+  stale: boolean;
   /** ［この案から作る］（カードと同じ） */
   onUse: (presetId: string) => void;
 }) {
@@ -27,6 +30,11 @@ export function StandardDayView({
       <p className="sub">
         日を選び、案のその日を今日の予定と同じ時間軸と地図で見ます。「今の標準」は同じ日を今の標準の担当・時刻のまま並べたものです（読み取り専用）
       </p>
+      {stale && (
+        <p className="sub warn" data-testid="standard-day-stale">
+          案を作ったときの標準・繰り返しで見ています。今の標準とくらべるには案を作り直してください
+        </p>
+      )}
       <div className="standard-day-tabs" role="tablist" aria-label="日付" data-testid="standard-day-tabs">
         {dates.map((d) => (
           <button

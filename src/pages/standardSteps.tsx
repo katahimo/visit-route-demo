@@ -107,6 +107,7 @@ export function ProposalsStep({
       )}
       <StandardDayView
         day={day}
+        stale={proposalsStale}
         onUse={(presetId) => {
           const table = cards.find((c) => c.preset.id === presetId)?.prop?.table;
           if (table) onUse(presetId, table);
