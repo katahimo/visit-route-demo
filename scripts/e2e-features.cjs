@@ -200,7 +200,7 @@ async function checkTemplate(page, t) {
       same(m.arrange, arrangeKidsFor(t)) &&
       same(m.people, PEOPLE_KIDS) &&
       same(m.settings, settingsTabsFor(t)),
-    `${label}：メニューの子の項目（予定は欠勤・キャンセルの入り切り、予定を組むは条件の重みの入り切り、設定は設定のタブと同じ）`,
+    `${label}：メニューの子の項目（予定は欠勤・キャンセルの入り切り、予定を組むは組み方の標準・担当を組む、設定は設定のタブと同じ）`,
     m,
   );
   const tabs = await page.getByTestId('bottom-tab').allInnerTexts();

@@ -74,9 +74,9 @@ async function shape(page, where) {
 
 // ---- 条件の名前（PRD D271）：ふだんは文字・［名前を変える］で入力欄・Enter で決める・Esc で取り消す、必須の条件を消す確認の本文 ----
 async function ruleNames(page) {
-  await open(page, '/rules', 'table');
+  await open(page, '/rules', '[data-testid="narrow-rules"]');
   const r0 = (await stored(page)).rules[0];
-  const row = page.locator('.rules-table tbody > tr').first();
+  const row = page.locator('[data-testid="narrow-rules"] tbody > tr').first();
   check(
     (await row.locator('input:not([type="range"]):not([type="checkbox"])').count()) === 0 &&
       (await row.getByTestId('rule-name').textContent()) === r0.label,
@@ -134,7 +134,7 @@ async function ruleNames(page) {
 
 // ---- 条件を消す（#/rules）：Esc・取り消す・背景は何もしない、確定で消える、フォーカスの戻り、Tab が中で回る ----
 async function rules(page) {
-  await open(page, '/rules', 'table');
+  await open(page, '/rules', '[data-testid="narrow-rules"]');
   const before = (await stored(page)).rules;
   const r0 = before[0];
   const btn = page.getByRole('button', { name: `条件「${r0.label}」を消す` });
@@ -216,13 +216,25 @@ async function rules(page) {
   );
 }
 
-// ---- 条件の重みの「新しい考え方として保存」（ADR-0065。PRD D286）：名前の欄つきの確認・元のプリセットは変えず新しいプリセットを
+// ---- 条件の重みの「新しい考え方として保存」（ADR-0065・ADR-0066。PRD D286）：名前の欄つきの確認・元のプリセットは変えず新しいプリセットを
 // 足して点数の基準にする・プリセットの節は重みを変えられず初期の3つは消せない・6つあると保存できない ----
 async function rulesSave(page) {
   await open(page, '/rules', '[data-testid="preset-section"]');
   const d0 = await stored(page);
   const basis0 = d0.presets.find((p) => p.id === d0.scorePresetId);
   const section = page.getByTestId('preset-section');
+  // ADR-0066：プリセットの節は条件の表より上・「組み方の標準へ戻る」がある
+  const order = await page.evaluate(() => {
+    const sec = document.querySelector('[data-testid="preset-section"]');
+    const tbl = document.querySelector('[data-testid="narrow-rules"]');
+    return !!sec && !!tbl && !!(sec.compareDocumentPosition(tbl) & Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+  check(order, 'プリセットの節は条件の表より上にある（ADR-0066）');
+  check(
+    (await page.getByTestId('rules-back').innerText()).includes('組み方の標準へ戻る') &&
+      (await page.getByTestId('rules-back').getAttribute('href')) === '#/standard',
+    '条件の重みに「組み方の標準へ戻る」（#/standard）',
+  );
   check(
     (await section.locator('input[type="range"], input[type="checkbox"]').count()) === 0 &&
       (await section.getByRole('button', { name: /初期値に戻す|基準の重みを写して保存/ }).count()) === 0,
@@ -359,7 +371,7 @@ async function rulesSave(page) {
 async function backWhileAsking(page) {
   await open(page, '/data', 'h1');
   await page.goto(`${BASE}#/rules`);
-  await page.locator('table').first().waitFor();
+  await page.getByTestId('narrow-rules').waitFor();
   await settle(page, 400);
   const before = (await stored(page)).rules.length;
   const r0 = (await stored(page)).rules[0];
