@@ -411,9 +411,6 @@
 .preset-edit .rules-table td:first-child {
   white-space: nowrap;
 }
-.preset-edit .rules-table td:nth-child(2) {
-  min-width: 150px;
-}
 
 /* 表の見出しの補足（小さく薄く） */
 .th-note {

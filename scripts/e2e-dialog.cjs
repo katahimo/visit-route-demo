@@ -1,5 +1,6 @@
 // 独自の確認ダイアログ（PRD D146〜D150。ADR-0026）を本物のブラウザで確かめる：
-// 代表の数か所（条件を消す・項目を消す・データを初期状態に戻す・日の画面の「この割当で確定」・〈スタッフ〉の変更を捨てる）で、
+// 代表の数か所（条件を消す・項目を消す・データを初期状態に戻す・日の画面の「この割当で確定」・〈スタッフ〉の変更を捨てる・
+// 条件の重みの「新しい考え方として保存」（名前の欄つき。ADR-0065））で、
 // 画面の中央に独自のダイアログが出て、ブラウザのネイティブのダイアログは出ない（page.on('dialog') が呼ばれたら失敗）。
 // role=alertdialog・aria-modal・見出しと本文の aria-labelledby/describedby、最初のフォーカスは取り消し、Tab・Shift+Tab は中で回る、
 // 裏（#root）は inert・巻かない。Esc・取り消す・背景を押すでは何も変わらず、確定で処理が進む。閉じたら押したボタンへフォーカスが戻る。
@@ -11,7 +12,7 @@
 // 終了コード：全部通れば 0、通らないものがあれば 1。ページのエラー（pageerror）も失敗に数える
 const path = require('node:path');
 const { skipTour } = require('./lib/tourSeen.cjs');
-const { BASE, OUT_DIR, NOW, check, settle, stored, runSteps } = require('./lib/env.cjs');
+const { BASE, OUT_DIR, NOW, STORAGE_KEY, check, settle, stored, runSteps } = require('./lib/env.cjs');
 const { pagePerStep } = require('./lib/steps.cjs');
 
 const dialog = (page) => page.getByTestId('confirm-dialog');
@@ -215,6 +216,145 @@ async function rules(page) {
   );
 }
 
+// ---- 条件の重みの「新しい考え方として保存」（ADR-0065。PRD D286）：名前の欄つきの確認・元のプリセットは変えず新しいプリセットを
+// 足して点数の基準にする・プリセットの節は重みを変えられず初期の3つは消せない・6つあると保存できない ----
+async function rulesSave(page) {
+  await open(page, '/rules', '[data-testid="preset-section"]');
+  const d0 = await stored(page);
+  const basis0 = d0.presets.find((p) => p.id === d0.scorePresetId);
+  const section = page.getByTestId('preset-section');
+  check(
+    (await section.locator('input[type="range"], input[type="checkbox"]').count()) === 0 &&
+      (await section.getByRole('button', { name: /初期値に戻す|基準の重みを写して保存/ }).count()) === 0,
+    'プリセットの節：重み・必須の入力欄と「初期値に戻す」「基準の重みを写して保存」が無い',
+  );
+  check(
+    (await section.getByTestId('preset-initial').count()) === 3 &&
+      (await section.getByTestId('preset-remove').count()) === 0,
+    'プリセットの節：初期の3つに「初期」の札・消すボタンは無い',
+  );
+  check(
+    (await page.getByTestId('rules-next-note').locator('a').count()) === 2 &&
+      (await page.getByTestId('rules-trial-note').count()) === 0,
+    '次の段の案内（組み方の標準・担当を組むへのリンク）',
+  );
+  // 表の重みを1つ動かす → 保存の帯
+  const range = page.getByTestId('narrow-rules').locator('input[type="range"]:not([disabled])').first();
+  const v0 = Number(await range.inputValue());
+  await range.focus();
+  await page.keyboard.press(v0 > 0 ? 'ArrowLeft' : 'ArrowRight');
+  const confirm = page.getByTestId('rules-draft-confirm');
+  await confirm.waitFor();
+  check(
+    (await confirm.innerText()).trim() === '新しい考え方として保存（1件）',
+    '保存の帯：主ボタンの名前',
+    await confirm.innerText(),
+  );
+  await confirm.click();
+  const a = await shape(page, '新しい考え方として保存');
+  const name = page.getByTestId('rules-draft-name');
+  check(
+    a.title === '新しい考え方として保存しますか？（1件）' &&
+      (await name.inputValue()) === `${basis0.name}（改）` &&
+      a.body.includes(`「${basis0.name}」はそのまま残ります`),
+    '保存の確認：見出し・名前の既定「〈元の名前〉（改）」・本文',
+    { title: a.title, name: await name.inputValue(), body: a.body },
+  );
+  // 空・重なる名前は保存できない（文で知らせ、確定を押しても閉じない）
+  await name.fill('');
+  check(
+    (await page.getByTestId('confirm-ok').getAttribute('aria-disabled')) === 'true' &&
+      (await page.getByTestId('rules-draft-name-error').innerText()) === '名前を入れてください',
+    '保存の確認：名前が空なら保存できない',
+  );
+  await name.fill(basis0.name);
+  // aria-disabled のボタンは Playwright が押せないものと見るので、押す操作を直に送る（押しても閉じないことを見る）
+  await page.getByTestId('confirm-ok').dispatchEvent('click');
+  await settle(page);
+  check(
+    (await dialog(page).count()) === 1 &&
+      (await page.getByTestId('rules-draft-name-error').innerText()) === '同じ名前のプリセットがあります',
+    '保存の確認：同じ名前は保存できない（押しても閉じない）',
+  );
+  // Esc は取り消し（何も書かない・下書きは残る）
+  await page.keyboard.press('Escape');
+  await settle(page);
+  check(
+    (await dialog(page).count()) === 0 &&
+      (await stored(page)).presets.length === d0.presets.length &&
+      (await page.getByTestId('rules-draft-bar').count()) === 1,
+    '保存の確認：Esc で何も書かず、下書きは残る',
+  );
+  await confirm.click();
+  await dialog(page).waitFor();
+  await page.getByTestId('rules-draft-name').fill('ふだん（改）');
+  await page.getByTestId('rules-draft-name').press('Enter');
+  await page.locator('.toast').filter({ hasText: '「ふだん（改）」を保存して、ふだんの考え方にしました' }).waitFor();
+  // 保存（localStorage）は少し遅れて書くので、足したプリセットが入るまで待つ
+  await page.waitForFunction(
+    ([k, n]) => (JSON.parse(localStorage.getItem(k) ?? 'null')?.presets?.length ?? 0) > n,
+    [STORAGE_KEY, d0.presets.length],
+  );
+  const d1 = await stored(page);
+  const added = d1.presets.at(-1);
+  check(
+    d1.presets.length === d0.presets.length + 1 &&
+      added.name === 'ふだん（改）' &&
+      d1.scorePresetId === added.id &&
+      JSON.stringify(d1.presets.find((p) => p.id === basis0.id).weights) === JSON.stringify(basis0.weights) &&
+      JSON.stringify(added.weights) !== JSON.stringify(basis0.weights),
+    '保存：元のプリセットは変えず、新しいプリセットを足して点数の基準にする',
+    { n: d1.presets.length, added: added.name, score: d1.scorePresetId },
+  );
+  check(
+    (await page.getByTestId('rules-draft-bar').count()) === 0 &&
+      (await page.evaluate(() => document.activeElement?.tagName)) === 'H1' &&
+      (await page.getByTestId('rules-basis').innerText()).includes('ふだん（改）'),
+    '保存のあと：帯は消え、フォーカスは見出し・直しているのは新しい考え方',
+  );
+  // 足したものは消せる（基準を消すと基準はバランスへ）
+  const row = section.locator(`[data-testid="preset-edit"][data-preset="${added.id}"]`);
+  await row.locator('summary').click();
+  await row.getByTestId('preset-remove').click();
+  const r = await shape(page, 'プリセットを消す');
+  check(r.body.includes('点数の基準は「バランス」に移り'), 'プリセットを消す：基準がバランスへ移ると知らせる', r.body);
+  await page.getByTestId('confirm-ok').click();
+  await page.waitForFunction(
+    ([k, n]) => (JSON.parse(localStorage.getItem(k) ?? 'null')?.presets?.length ?? 0) === n,
+    [STORAGE_KEY, d0.presets.length],
+  );
+  const d2 = await stored(page);
+  check(
+    d2.presets.length === d0.presets.length && d2.scorePresetId === 'balance',
+    'プリセットを消す：消えて基準はバランス',
+    d2.scorePresetId,
+  );
+  // 6つあるときは保存できない
+  await page.evaluate((k) => {
+    const d = JSON.parse(localStorage.getItem(k));
+    const base = d.presets[0];
+    while (d.presets.length < 6)
+      d.presets.push({ ...base, id: `full${d.presets.length}`, name: `満杯${d.presets.length}`, note: '' });
+    localStorage.setItem(k, JSON.stringify(d));
+  }, STORAGE_KEY);
+  await open(page, '/rules', '[data-testid="preset-section"]');
+  await range.focus();
+  await page.keyboard.press(v0 > 0 ? 'ArrowLeft' : 'ArrowRight');
+  await page.getByTestId('rules-draft-full').waitFor();
+  check(
+    (await confirm.getAttribute('aria-disabled')) === 'true' &&
+      (await page.getByTestId('rules-draft-full').innerText()).includes('プリセットは6つまでです'),
+    '6つあるとき：保存の主ボタンは押せず、消すよう知らせる',
+  );
+  await confirm.dispatchEvent('click');
+  await settle(page);
+  check(
+    (await dialog(page).count()) === 0 && (await stored(page)).presets.length === 6,
+    '6つあるとき：押しても確認を出さない',
+  );
+  await page.getByTestId('rules-draft-discard').click();
+}
+
 // ---- 確認中に「戻る」で別の画面へ：確認が閉じ、外れた画面の続きはデータを書かない ----
 async function backWhileAsking(page) {
   await open(page, '/data', 'h1');
@@ -365,7 +505,7 @@ const steps = pagePerStep({
     });
     return { ctx, page, native };
   },
-  steps: [ruleNames, rules, backWhileAsking, dataReset, adopt, staffDiscard, narrow],
+  steps: [ruleNames, rules, rulesSave, backWhileAsking, dataReset, adopt, staffDiscard, narrow],
   label: (name) => `${name}：途中で止まった`,
   after: (name, { native }) => check(native.length === 0, `${name}：ブラウザのダイアログを出さない`, native),
   end: () => check(errors.length === 0, 'ページのエラーが無い', errors),

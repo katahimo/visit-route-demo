@@ -2583,15 +2583,6 @@ html[data-drawer-toast="side"] body:has(.drawer-wrap) .toast {
   .narrow-preset-summary > .ellipsis {
     flex: 1 1 100%;
   }
-  /* ボタンを縦に幅いっぱいで並べ、文字を折り返さない */
-  .narrow-stack {
-    flex-direction: column;
-    align-items: stretch !important;
-  }
-  .narrow-stack > .btn {
-    justify-content: center;
-    white-space: nowrap;
-  }
   /* 案が1つの比較の画面の「もう1案作って比べる」：下のタブに隠れないよう、右の欄の確定のボタンの帯（panel-foot）と同じく
      カードの下に貼り付け、巻いても下のタブのすぐ上に見せる。外の箱は display: contents にして（下の screen だけ。印刷では出さない）、
      カード全体を貼り付く範囲にする */

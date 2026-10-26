@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { applyTemplate } from './features';
 import {
+  ARRANGE_PATHS,
   absenceHref,
   activeNavPath,
+  arrangeTabs,
   bottomTabs,
   isActiveNav,
   isNavAction,
@@ -20,6 +22,7 @@ import {
   scheduleHref,
   screenSections,
   settingsHref,
+  settingsTabs,
   showsDateSwitch,
   tabClick,
   tabLabel,
@@ -45,18 +48,19 @@ describe('menuSections（PRD D326・D349。ADR-0054・0063）', () => {
       '設定',
     ]);
   });
-  it('予定の子はリンク（今日の予定・◯月の予定・欠勤・キャンセル）、予定を組むの子は担当を組む・組み方の標準', () => {
+  it('予定の子はリンク（今日の予定・◯月の予定・欠勤・キャンセル）、予定を組むの子は条件の重み・組み方の標準・担当を組む（ADR-0065）', () => {
     expect(item('schedule').children?.map((i) => [i.label, i.to])).toEqual([
       ['今日の予定', '/plan?date=2026-10-21'],
       ['11月の予定', '/month?ym=2026-11'],
       ['欠勤・キャンセル', '/plan?date=2026-10-21&do=absence'],
     ]);
-    expect(item('arrange').children?.map((i) => [i.label, i.to])).toEqual([
-      ['担当を組む', '/arrange?ym=2026-11'],
-      ['組み方の標準', '/standard'],
+    expect(item('arrange').children?.map((i) => [i.key, i.label, i.to])).toEqual([
+      ['arrange:rules', '条件の重み', '/rules'],
+      ['arrange:standard', '組み方の標準', '/standard'],
+      ['arrange:assign', '担当を組む', '/arrange?ym=2026-11'],
     ]);
     expect(item('people').children?.map((i) => i.to)).toEqual(['/clients', '/staff', '/compat', '/availability']);
-    expect(item('settings').children?.map((i) => i.to)).toEqual(['/types', '/items', '/rules', '/settings', '/data']);
+    expect(item('settings').children?.map((i) => i.to)).toEqual(['/types', '/items', '/settings', '/data']);
     // 前半は今月
     const early = menuSections(terms, '2026-10-03', {});
     expect(item('month-view', early).to).toBe('/month?ym=2026-10');
@@ -78,6 +82,21 @@ describe('menuSections（PRD D326・D349。ADR-0054・0063）', () => {
     expect(isActiveNav(item('arrange'), '/compare')).toBe(true);
     expect(isActiveNav(item('arrange:assign'), '/compare')).toBe(true);
     expect(isActiveNav(item('arrange:standard'), '/standard')).toBe(true);
+    expect(isActiveNav(item('arrange'), '/rules')).toBe(true);
+    expect(isActiveNav(item('arrange:rules'), '/rules')).toBe(true);
+    expect(isActiveNav(item('settings'), '/rules')).toBe(false);
+  });
+  it('予定を組むのタブ：条件の重み → 組み方の標準 → 担当を組む。rules を切れば条件の重みのタブ・子を出さない（ADR-0065）', () => {
+    expect(ARRANGE_PATHS).toEqual(['/rules', '/standard', '/arrange', '/compare']);
+    expect(arrangeTabs({}).map((t) => [t.to, t.label])).toEqual([
+      ['/rules', '条件の重み'],
+      ['/standard', '組み方の標準'],
+      ['/arrange', '担当を組む'],
+    ]);
+    expect(arrangeTabs({ rules: false }).map((t) => t.to)).toEqual(['/standard', '/arrange']);
+    const off = menuSections(terms, TODAY, { rules: false });
+    expect(item('arrange', off).children?.map((i) => i.key)).toEqual(['arrange:standard', 'arrange:assign']);
+    expect(settingsTabs({}).map((t) => t.label)).toEqual(['訪問の種類', '特性の項目', '管理者設定', 'データ']);
   });
   it('下のタブは子の項目からも引く（欠勤）', () => {
     expect(bottomTabs(groups).map((i) => i.key)).toEqual(['home', 'schedule', 'absence']);
@@ -117,13 +136,17 @@ describe('menuSections（PRD D326・D349。ADR-0054・0063）', () => {
     expect(settingsHref(applyTemplate('basic'))).toBe('/types');
     expect(settingsHref({}, '/data')).toBe('/data');
     expect(settingsHref({ rules: false }, '/rules')).toBe('/types');
+    // 前に覚えた条件の重み（設定のタブから外した。ADR-0065）は先頭のタブ
+    expect(settingsHref({}, '/rules')).toBe('/types');
+    expect(item('settings', menuSections(terms, TODAY, {}, { settings: '/rules' })).to).toBe('/types');
     expect(settingsHref({}, '/compat')).toBe('/types');
     expect(item('settings', menuSections(terms, TODAY, {}, { settings: '/types' })).to).toBe('/types');
   });
   it('isScheduleView・isSettingsPath', () => {
     for (const p of ['/month', '/week', '/plan', '/schedule']) expect(isScheduleView(p)).toBe(true);
     expect(isScheduleView('/compare')).toBe(false);
-    for (const p of ['/types', '/items', '/rules', '/settings', '/data']) expect(isSettingsPath(p)).toBe(true);
+    for (const p of ['/types', '/items', '/settings', '/data']) expect(isSettingsPath(p)).toBe(true);
+    expect(isSettingsPath('/rules')).toBe(false);
     expect(isSettingsPath('/staff')).toBe(false);
     expect(isSettingsPath('/compat')).toBe(false);
   });
@@ -135,8 +158,7 @@ describe('isActiveNav（今の画面の印。PRD D273・D275）', () => {
     expect(isActiveNav(item('schedule'), '/home')).toBe(false);
   });
   it('「設定」は設定のタブ。勤務の見込みは勤務時間（シフト）', () => {
-    for (const p of ['/types', '/items', '/rules', '/settings', '/data'])
-      expect(isActiveNav(item('settings'), p)).toBe(true);
+    for (const p of ['/types', '/items', '/settings', '/data']) expect(isActiveNav(item('settings'), p)).toBe(true);
     expect(isActiveNav(item('settings'), '/compat')).toBe(false);
     for (const p of ['/clients', '/staff', '/compat', '/availability', '/workload'])
       expect(isActiveNav(item('people'), p)).toBe(true);
@@ -174,8 +196,21 @@ describe('navTitle（上の帯の名前。画面の一覧から引く）', () =>
     expect(navTitle(screens, '/compare')).toBe('提案を比べる');
     expect(navTitleParts(screens, '/plan')).toEqual({ group: null, item: '日の予定' });
   });
-  it('設定のタブは「設定・〜」、見出しの無いグループは項目名だけ', () => {
-    expect(navTitle(screens, '/rules')).toBe('設定・条件の重み');
+  it('設定のタブは「設定・〜」、予定を組むは「予定を組む・〜」、見出しの無いグループは項目名だけ', () => {
+    expect(navTitle(screens, '/rules')).toBe('予定を組む・条件の重み');
+    expect(navTitle(screens, '/standard')).toBe('予定を組む・組み方の標準');
+    expect(navTitle(screens, '/arrange')).toBe('予定を組む・担当を組む');
+    expect(screens.find((g) => g.title === '予定を組む')?.items.map((i) => i.to)).toEqual([
+      '/rules',
+      '/standard',
+      '/arrange',
+    ]);
+    expect(screens.find((g) => g.title === '設定')?.items.map((i) => i.to)).toEqual([
+      '/types',
+      '/items',
+      '/settings',
+      '/data',
+    ]);
     expect(navTitle(screens, '/data')).toBe('設定・データ');
     expect(navTitle(screens, '/settings')).toBe('設定・管理者設定');
     expect(navTitle(screens, '/types')).toBe('設定・訪問の種類');
