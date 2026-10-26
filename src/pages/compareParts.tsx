@@ -16,7 +16,7 @@ import {
   Users,
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
-import { ArrangeTabs } from '../components/ArrangeTabs';
+import { ArrangeSteps } from '../components/ArrangeTabs';
 import { EmptyNext } from '../components/EmptyNext';
 import { FieldError } from '../components/FieldError';
 import { Term } from '../components/Term';
@@ -522,7 +522,7 @@ export function NotInProblemCard({
 export function CompareHeader({ date }: { date: string }) {
   return (
     <PageHeader
-      nav={<ArrangeTabs />}
+      nav={<ArrangeSteps current="arrange" />}
       icon={GitCompareArrows}
       title="提案を比べる"
       lead="今の担当と、考え方（プリセット）ごとに作った提案を2つ選んで比べます。提案は保存しません。よければ「反映する」"

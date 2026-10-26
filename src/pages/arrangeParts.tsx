@@ -9,6 +9,7 @@ import { dateText, mdText, ymText } from '../lib/dateText';
 import { isDate } from '../lib/isDate';
 import type { BatchMode } from '../lib/month';
 import { type BatchRun, type BatchSource, monthBatch } from '../lib/monthBatch';
+import { setStandardStep } from '../lib/standardDraft';
 
 /** 範囲の呼び名 */
 const SCOPE_LABEL: Record<BatchSource, string> = { month: '月', week: '週', day: '日' };
@@ -174,8 +175,6 @@ export type ArrangeRunProps = {
   allDays: number;
   /** 点数の基準のプリセットの名前（いつもこの考え方で組む） */
   basisName: string;
-  /** 条件の重み（rules）が入か。切なら考え方を替える所に条件の重みを挙げない */
-  rulesOn: boolean;
   /** 組む日の数 */
   runDays: number;
   /** 組んでいる最中の状態（無ければ null） */
@@ -198,7 +197,12 @@ function NeedStandard() {
         AI で埋めます
       </p>
       <div className="row">
-        <Link className="btn btn-primary" to="/standard" data-testid="arrange-to-standard">
+        <Link
+          className="btn btn-primary"
+          to="/standard"
+          onClick={() => setStandardStep('proposals')}
+          data-testid="arrange-to-standard"
+        >
           <WithIcon icon={CalendarCheck}>組み方の標準を決める</WithIcon>
         </Link>
       </div>
@@ -221,9 +225,7 @@ export function ArrangeRunSection({ view, actions }: { view: ArrangeRunProps; ac
           <ArrangeModeFields mode={mode} careDays={view.careDays} allDays={view.allDays} onMode={actions.onMode} />
           <p data-testid="arrange-basis">
             考え方：<strong>{view.basisName}</strong>
-            <span className="sub">
-              （点数の基準。替えるのは{view.rulesOn ? '「条件の重み」・' : ''}「組み方の標準」）
-            </span>
+            <span className="sub">（点数の基準。替えるのは「組み方の標準」の「案をくらべる」）</span>
           </p>
           <p data-testid="arrange-count">
             組む日：<strong>{runDays}日</strong>

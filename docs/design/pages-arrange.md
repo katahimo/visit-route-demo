@@ -1,11 +1,11 @@
 # 担当を組むの画面
 
-> この画面のファイル：`src/pages/ArrangePage.tsx`（`arrange.css`。区画の部品 `arrangeParts.tsx`・始める処理 `useArrangeStart.ts`）、`src/lib/arrange.ts`（範囲の読み取り・見込み・担当なしと要対応の数え方）、`src/lib/monthBatch.ts`（計算の入れ物）・`monthBatchDay.ts`（1日分の計算の純粋関数）、`src/components/batchBand.tsx`（上の帯の進み具合・`MonthBatchHost`）・`scheduleParts.tsx`（`RangeProposalBand`・`confirmDropProposal`）・`ArrangeTabs.tsx`、`src/lib/month.ts`（`batchTargets`）。関連 ADR：0042・0053・0063・0065。関連 PRD：D256・D257・D328・D355・D356・D359。
-> 予定（月・週・日）では AI で組まない（手で直す）。AI で組むのはこの画面と組み方の標準（[pages-standard.md](pages-standard.md)）。予定を組むの3段（条件の重み → 組み方の標準 → 担当を組む。ADR-0065）の最後の段で、標準で埋まらない所を点数の基準で埋める。
+> この画面のファイル：`src/pages/ArrangePage.tsx`（`arrange.css`。区画の部品 `arrangeParts.tsx`・始める処理 `useArrangeStart.ts`）、`src/lib/arrange.ts`（範囲の読み取り・見込み・担当なしと要対応の数え方）、`src/lib/monthBatch.ts`（計算の入れ物）・`monthBatchDay.ts`（1日分の計算の純粋関数）、`src/components/batchBand.tsx`（上の帯の進み具合・`MonthBatchHost`）・`scheduleParts.tsx`（`RangeProposalBand`・`confirmDropProposal`）・`ArrangeTabs.tsx`、`src/lib/month.ts`（`batchTargets`）。関連 ADR：0042・0053・0063・0065・0066。関連 PRD：D256・D257・D328・D355・D356・D359・D360。
+> 予定（月・週・日）では AI で組まない（手で直す）。AI で組むのはこの画面と組み方の標準（[pages-standard.md](pages-standard.md)）。予定を組むの4段（案をくらべる → 表で直す → 標準にする → 担当を組む。ADR-0066）の最後の段で、標準で埋まらない所を点数の基準で埋める。
 
 ### 担当を組む（`#/arrange`）
 
-範囲（月・週・日）を選び、その範囲の担当を AI で組んで提案を出し、見て反映する画面。メニューの「予定を組む」の子「担当を組む」（3つ目）。見出しの下に予定を組むのタブ（`ArrangeTabs`：条件の重み `#/rules`・組み方の標準 `#/standard`・担当を組む `#/arrange`。比較の画面 `#/compare` でも担当を組むに印。条件の重み `rules` を切れば条件の重みのタブは出さない）。
+範囲（月・週・日）を選び、その範囲の担当を AI で組んで提案を出し、見て反映する画面。メニューの「予定を組む」の子「担当を組む」（2つ目）。見出しの下に予定を組むの段（`ArrangeSteps`。4 担当を組むが今の段。1〜3 を押すと組み方の標準のその段へ。比較の画面 `#/compare` でも 4 に印。ADR-0066）。
 
 #### URL とクエリ
 
@@ -20,20 +20,20 @@
 
 #### 並び
 
-1. 見出し（`PageHeader`。nav は `ArrangeTabs`）：題名「担当を組む」・`lead`「範囲を選んで AI で担当を組み、提案を見て反映します。予定（月・週・日）では手で直します」
+1. 見出し（`PageHeader`。nav は `ArrangeSteps`（4 が今の段））：題名「担当を組む」・`lead`「範囲を選んで AI で担当を組み、提案を見て反映します。予定（月・週・日）では手で直します」
 2. 範囲のカード（`arrange-range`）：
    - ［月｜週｜日］（`fieldset.segmented`・`arrange-scope`・`aria-pressed`・ボタンの `data-scope`）
    - 月なら月を選ぶ欄（`arrange-month`。今月から6か月と見ている月）、週・日なら日付の欄（`arrange-date`）。横に範囲の呼び名（`arrange-range-label`：「2026年11月」「11/2〜11/8の週」「11/3（火）」）
    - 「今日以降：担当なしの訪問 N件（M日）・要対応 N件」（`arrange-counts`。`arrange-unassigned`・`arrange-care` の `data-count`）。数え方は月の予定と同じ `useDayStatuses` の日の状態（範囲の今日以降の日だけ）
 3. AI で組むのカード（`arrange-run`）：
    - 組む日（ラジオ）：「要対応のある日だけ（N日）」（`arrange-mode-care`。既定。手で決めた担当を変えうる組み直しを既定にしない）／「伝えていない日をすべて組み直す（N日）」（`arrange-mode-all`）。日は `batchTargets(data, dates, today, mode, statusOf)`（今日以降・伝えていない・計算に入れる訪問がある日。care はそのうち要対応のある日）
-   - 考え方：「考え方：〈点数の基準のプリセット名〉」（`arrange-basis`。選ぶ欄は置かない。いつも点数の基準で組む。替えるのは条件の重み・組み方の標準。ADR-0065）
+   - 考え方：「考え方：〈点数の基準のプリセット名〉（点数の基準。替えるのは「組み方の標準」の「案をくらべる」）」（`arrange-basis`。選ぶ欄は置かない。いつも点数の基準で組む。ADR-0065・ADR-0066）
    - 「組む日：N日（見込み 約a〜b秒／分）」（`arrange-count`。1日 約3〜5秒）
    - 主ボタン「AI で組む」（`arrange-start`。組んでいる間・組む日が0日なら `aria-disabled`。組んでいる間の文は「組んでいます…」）と「元に戻す」「やり直す」（`UndoButtons`。反映した提案を1手戻す）
    - 組んでいる間の進み具合（`arrange-progress`。「〈名前〉：M/D・3/22日（組めた日 N日）」とバー）と［止める］（`arrange-stop`）
    - 計算できずに止まった理由（`FieldError`。`monthBatch.done.error`）
    - 注記：ピンの訪問（手で替えた訪問・組み方の標準の担当）はそのまま・今日より前の日と確定した日は組まない・1日ずつ組み終わったら提案・見て「反映する」と担当が変わる・ほかの画面へ移っても組み続ける
-   - 組み方の標準が無いとき（`hasStandard(data)` が偽。範囲にかかわらず。PRD D356。ADR-0065）：上の欄（組む日・考え方・見込み・主ボタン）を出さず、文（`arrange-need-standard`）「組み方の標準がまだありません。先に「組み方の標準」で、考え方ごとの案をくらべて標準の週を決めてください。標準を決めると、この画面では標準で埋まらない所を AI で埋めます」と主ボタン［組み方の標準を決める］（`arrange-to-standard`。`/standard`）
+   - 組み方の標準が無いとき（`hasStandard(data)` が偽。範囲にかかわらず。PRD D356。ADR-0065）：上の欄（組む日・考え方・見込み・主ボタン）を出さず、文（`arrange-need-standard`）「組み方の標準がまだありません。先に「組み方の標準」で、考え方ごとの案をくらべて標準の週を決めてください。標準を決めると、この画面では標準で埋まらない所を AI で埋めます」と主ボタン［組み方の標準を決める］（`arrange-to-standard`。`/standard` の 1 の段）
 4. 範囲の提案の帯（`RangeProposalBand`。[pages-common.md](pages-common.md) の「予定の共通の部品」）：［反映する］［捨てる］。同じ帯は日・週・月の予定にも出る
 5. 案を比べるのカード（`arrange-compare`。提案を比べる `compare` を切れば出さない）：日付の欄（`arrange-compare-date`。範囲の中。既定は範囲の今日以降の最初の訪問のある日）・［〈日〉の案を比べる］（`arrange-compare-open`。`/compare?date=`）・［日の予定を見る］（`arrange-day-open`。`/plan?date=`）
 

@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { applyTemplate } from './features';
 import {
   ARRANGE_PATHS,
+  ARRANGE_STEPS,
   absenceHref,
   activeNavPath,
-  arrangeTabs,
   bottomTabs,
   isActiveNav,
   isNavAction,
@@ -16,8 +16,10 @@ import {
   NAV_OPEN_DEFAULT,
   navTitle,
   navTitleParts,
+  nextArrangeStep,
   peopleHref,
   peopleTabs,
+  prevArrangeStep,
   SCHEDULE_DEFAULT,
   scheduleHref,
   screenSections,
@@ -48,14 +50,13 @@ describe('menuSections（PRD D326・D349。ADR-0054・0063）', () => {
       '設定',
     ]);
   });
-  it('予定の子はリンク（今日の予定・◯月の予定・欠勤・キャンセル）、予定を組むの子は条件の重み・組み方の標準・担当を組む（ADR-0065）', () => {
+  it('予定の子はリンク（今日の予定・◯月の予定・欠勤・キャンセル）、予定を組むの子は組み方の標準・担当を組む（ADR-0066）', () => {
     expect(item('schedule').children?.map((i) => [i.label, i.to])).toEqual([
       ['今日の予定', '/plan?date=2026-10-21'],
       ['11月の予定', '/month?ym=2026-11'],
       ['欠勤・キャンセル', '/plan?date=2026-10-21&do=absence'],
     ]);
     expect(item('arrange').children?.map((i) => [i.key, i.label, i.to])).toEqual([
-      ['arrange:rules', '条件の重み', '/rules'],
       ['arrange:standard', '組み方の標準', '/standard'],
       ['arrange:assign', '担当を組む', '/arrange?ym=2026-11'],
     ]);
@@ -83,17 +84,23 @@ describe('menuSections（PRD D326・D349。ADR-0054・0063）', () => {
     expect(isActiveNav(item('arrange:assign'), '/compare')).toBe(true);
     expect(isActiveNav(item('arrange:standard'), '/standard')).toBe(true);
     expect(isActiveNav(item('arrange'), '/rules')).toBe(true);
-    expect(isActiveNav(item('arrange:rules'), '/rules')).toBe(true);
+    // 条件の重みは組み方の標準の寄り道（ADR-0066）
+    expect(isActiveNav(item('arrange:standard'), '/rules')).toBe(true);
     expect(isActiveNav(item('settings'), '/rules')).toBe(false);
   });
-  it('予定を組むのタブ：条件の重み → 組み方の標準 → 担当を組む。rules を切れば条件の重みのタブ・子を出さない（ADR-0065）', () => {
+  it('予定を組むの段：案をくらべる → 表で直す → 標準にする → 担当を組む。条件の重みは段・子に入れない（ADR-0066）', () => {
     expect(ARRANGE_PATHS).toEqual(['/rules', '/standard', '/arrange', '/compare']);
-    expect(arrangeTabs({}).map((t) => [t.to, t.label])).toEqual([
-      ['/rules', '条件の重み'],
-      ['/standard', '組み方の標準'],
-      ['/arrange', '担当を組む'],
+    expect(ARRANGE_STEPS.map((s) => [s.key, s.to, s.label])).toEqual([
+      ['proposals', '/standard', '案をくらべる'],
+      ['draft', '/standard', '表で直す'],
+      ['register', '/standard', '標準にする'],
+      ['arrange', '/arrange', '担当を組む'],
     ]);
-    expect(arrangeTabs({ rules: false }).map((t) => t.to)).toEqual(['/standard', '/arrange']);
+    expect(nextArrangeStep('proposals')?.key).toBe('draft');
+    expect(nextArrangeStep('register')?.key).toBe('arrange');
+    expect(nextArrangeStep('arrange')).toBeNull();
+    expect(prevArrangeStep('proposals')).toBeNull();
+    expect(prevArrangeStep('register')?.key).toBe('draft');
     const off = menuSections(terms, TODAY, { rules: false });
     expect(item('arrange', off).children?.map((i) => i.key)).toEqual(['arrange:standard', 'arrange:assign']);
     expect(settingsTabs({}).map((t) => t.label)).toEqual(['訪問の種類', '特性の項目', '管理者設定', 'データ']);

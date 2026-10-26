@@ -1,5 +1,4 @@
 import {
-  CalendarCheck,
   Clock,
   Database,
   HeartHandshake,
@@ -7,24 +6,20 @@ import {
   Layers,
   type LucideIcon,
   Settings,
-  SlidersHorizontal,
-  Sparkles,
   Tags,
   UserRound,
 } from 'lucide-react';
 import { useLayoutEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { activeNavPath, arrangeTabs, peopleTabs, settingsTabs } from '../lib/nav';
+import { ARRANGE_STEPS, type ArrangeStepKey, activeNavPath, peopleTabs, settingsTabs } from '../lib/nav';
+import { setStandardStep } from '../lib/standardDraft';
 import { useDemoData } from '../store';
 import { useFeatures } from './useFeature';
 
-/** タブのアイコン（メニューの前の項目と同じ。並びは lib/nav の SETTINGS_TABS・ARRANGE_TABS・PEOPLE_TABS） */
+/** タブのアイコン（メニューの前の項目と同じ。並びは lib/nav の SETTINGS_TABS・PEOPLE_TABS） */
 const ICONS: Record<string, LucideIcon> = {
-  '/arrange': Sparkles,
-  '/standard': CalendarCheck,
   '/types': Layers,
   '/items': Tags,
-  '/rules': SlidersHorizontal,
   '/settings': Settings,
   '/data': Database,
   '/clients': House,
@@ -119,19 +114,45 @@ export function SettingsTabs() {
 }
 
 /**
- * 予定を組むのタブ（ADR-0063・ADR-0065）：条件の重み → 組み方の標準 → 担当を組む（作業の順）。AI で組む機能はこの画面に集める。
- * 案を比べる（`#/compare`）は担当を組むの続き（印は担当を組む）。rules を切れば条件の重みは出さない
+ * 予定を組むの段（ADR-0066）：案をくらべる → 表で直す → 標準にする（組み方の標準の画面で1段ずつ）→ 担当を組む。
+ * 欠勤・キャンセルの欄の段階と同じ形で、今の段は aria-current="step"。ほかの段は押して移れる（前の段を終えていなくてもよい）。
+ * 組み方の標準の段は画面の外の入れ物（standardWork.step）で替える。条件の重みは段に入れない（組み方の標準の 1 からの寄り道）
  */
-export function ArrangeTabs() {
-  const { pathname } = useLocation();
-  const tabs = arrangeTabs(useFeatures());
+export function ArrangeSteps({ current }: { current: ArrangeStepKey }) {
   return (
-    <TabNav
-      tabs={tabs}
-      on={(to) => to === pathname || (to === '/arrange' && pathname === '/compare')}
-      label="予定を組むの切り替え"
-      testId="arrange-tabs"
-      className="settings-tabs arrange-tabs"
-    />
+    <nav aria-label="予定を組むの段" data-testid="arrange-steps">
+      <ol className="arrange-steps">
+        {ARRANGE_STEPS.map((s, i) => {
+          const on = s.key === current;
+          const body = (
+            <>
+              <span className="arrange-step-no" aria-hidden="true">
+                {i + 1}
+              </span>
+              <span className="arrange-step-name">{s.label}</span>
+            </>
+          );
+          return (
+            <li key={s.key} className={on ? 'is-current' : undefined} data-step={s.key}>
+              {on ? (
+                <span className="arrange-step" aria-current="step">
+                  {body}
+                </span>
+              ) : (
+                <Link
+                  to={s.to}
+                  className="arrange-step"
+                  onClick={() => {
+                    if (s.key !== 'arrange') setStandardStep(s.key);
+                  }}
+                >
+                  {body}
+                </Link>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
   );
 }

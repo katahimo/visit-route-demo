@@ -1,24 +1,26 @@
-// 組み方の標準（標準の週。PRD D350〜D354・D359。ADR-0063・ADR-0065）の画面。3段：案をくらべる（カード・表で見る・日で見る）→
-// 表で直す（下書き） → 標準にする。標準を決める道はこの画面だけ。
+// 組み方の標準（標準の週。PRD D350〜D354・D359・D360。ADR-0063・ADR-0065・ADR-0066）の画面。3段：案をくらべる（カード・表で見る・
+// 日で見る）→ 表で直す（下書き） → 標準にする を1段ずつ出し、段の下の［戻る］［次へ］で進む（予定を組むの 1〜3。4 は担当を組む）。
+// 標準を決める道はこの画面だけ。
 // 案・下書きは画面の外の入れ物（lib/standardDraft）に置き、ほかの画面へ移っても残す。実際の予定（訪問）には登録まで書かない。
 // 登録は store の update の1回（全体の「元に戻す」で戻せる）
 import { CalendarCheck } from 'lucide-react';
-import { useMemo } from 'react';
-import { ArrangeTabs } from '../components/ArrangeTabs';
+import { useEffect, useMemo, useRef } from 'react';
+import { ArrangeSteps } from '../components/ArrangeTabs';
 import { useConfirm } from '../components/ConfirmDialog';
 import { useToast } from '../components/Toast';
 import { PageHeader } from '../components/ui';
 import { useUndoAction } from '../components/undo';
+import { useFeature } from '../components/useFeature';
 import { useValueStore } from '../components/valueStore';
 import { jstDate } from '../domain/time';
 import { mdText } from '../lib/dateText';
 import { currentTable, cycleWeeks, standardPeriod } from '../lib/standard';
-import { patternsKey, standardWork } from '../lib/standardDraft';
+import { patternsKey, standardStepOf, standardWork } from '../lib/standardDraft';
 import { standardRows, standardWeekdays, workingStaff as workingStaffOf } from '../lib/standardView';
 import { useDemoData } from '../store';
 import './settings.css';
 import './standard.css';
-import { DraftStep, ProposalsStep, RegisterStep } from './standardSteps';
+import { DraftStep, ProposalsStep, RegisterStep, StandardStepNav } from './standardSteps';
 import { useStandardDayView } from './useStandardDayView';
 import { useStandardDraft } from './useStandardDraft';
 import { useStandardProposals } from './useStandardProposals';
@@ -31,6 +33,7 @@ export default function StandardPage() {
   const toast = useToast();
   const undoAction = useUndoAction();
   const work = useValueStore(standardWork);
+  const rulesOn = useFeature('rules');
   const staffName = (id: string | null) =>
     id === null ? '担当なし' : (data.staff.find((s) => s.id === id)?.name ?? '（いない人）');
   const clientName = (id: string) => data.clients.find((c) => c.id === id)?.displayName ?? id;
@@ -67,11 +70,15 @@ export default function StandardPage() {
   const std = data.standard;
   // 元に戻したら（登録の時刻が今のデータと違えば）完了の表示を出さない
   const registered = work.registered && data.standard?.at === work.registered.at ? work.registered : null;
+  const step = standardStepOf(work);
+  // 主ボタンは画面に1つ（ADR-0066）：1 は案を作る（下書きがあれば次へ）、2 は下書きがあれば次へ、3 は標準にする（無ければ次へ）
+  const nextPrimary = step === 'register' ? draft === null : draft !== null;
+  useStepFocus(step, draft !== null);
 
   return (
     <div className="stack standard-page">
       <PageHeader
-        nav={<ArrangeTabs />}
+        nav={<ArrangeSteps current={step} />}
         icon={CalendarCheck}
         title="組み方の標準"
         lead="誰が・何曜・何時に行くかの標準を表で決めます。登録すると、先の週・月はこの表のとおりに並びます"
@@ -81,30 +88,35 @@ export default function StandardPage() {
           ? `標準：${mdText(std.from)}から・考え方「${presetName(data.scorePresetId ?? std.presetId)}」・${std.weeks}週の周期（${mdText(jstDate(std.at))}に登録）`
           : 'まだ標準を登録していません'}
       </p>
-      <ol className="standard-steps stack" data-testid="standard-steps">
-        <ProposalsStep
-          presetCount={data.presets.length}
-          period={period}
-          cycleReason={cycle.reason}
-          work={work}
-          proposals={proposals}
-          hasDraft={draft !== null}
-          tableProps={tableProps}
-          day={day}
-          onUse={(presetId, table) => void draftState.pickProposal(presetId, table)}
-        />
+      <ol className="standard-steps stack" data-testid="standard-steps" data-step={step}>
+        {step === 'proposals' && (
+          <ProposalsStep
+            presetCount={data.presets.length}
+            period={period}
+            cycleReason={cycle.reason}
+            work={work}
+            proposals={proposals}
+            hasDraft={draft !== null}
+            tableProps={tableProps}
+            day={day}
+            rulesOn={rulesOn}
+            onUse={(presetId, table) => void draftState.pickProposal(presetId, table)}
+          />
+        )}
 
-        <DraftStep
-          clientTerm={data.org.terms.client}
-          work={work}
-          stateKey={key}
-          tableProps={tableProps}
-          draftState={draftState}
-          presetName={presetName}
-          workingStaff={workingStaff}
-        />
+        {step === 'draft' && (
+          <DraftStep
+            clientTerm={data.org.terms.client}
+            work={work}
+            stateKey={key}
+            tableProps={tableProps}
+            draftState={draftState}
+            presetName={presetName}
+            workingStaff={workingStaff}
+          />
+        )}
 
-        {(draft || registered) && (
+        {step === 'register' && (
           <RegisterStep
             draft={draft !== null}
             registered={registered}
@@ -114,6 +126,24 @@ export default function StandardPage() {
           />
         )}
       </ol>
+      <StandardStepNav step={step} nextPrimary={nextPrimary} />
     </div>
   );
+}
+
+/** 段が替わったら・下書きができた／消えたら、その段の見出しへフォーカスして巻く（開いたときは動かさない。ADR-0066） */
+function useStepFocus(step: string, hasDraft: boolean) {
+  const first = useRef(true);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 段と下書きの有無が変わったときだけ
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    requestAnimationFrame(() => {
+      const head = document.querySelector<HTMLElement>('.standard-steps > li h2');
+      head?.scrollIntoView({ block: 'start' });
+      head?.focus();
+    });
+  }, [step, hasDraft]);
 }

@@ -21,18 +21,23 @@ export const SCHEDULE_GROUP = '予定';
 
 /** メニューの「予定」が受け持つ画面（月・週・日の予定と、その日の案を比べる。PRD D273） */
 export const SCHEDULE_PATHS: readonly string[] = ['/month', '/week', '/plan'];
-/** メニューの「予定を組む」が受け持つ画面（ADR-0063・ADR-0065）：条件の重み・組み方の標準・担当を組む・案を比べる */
+/** メニューの「予定を組む」が受け持つ画面（ADR-0063・ADR-0065・ADR-0066）：条件の重み・組み方の標準・担当を組む・案を比べる */
 export const ARRANGE_PATHS: readonly string[] = ['/rules', '/standard', '/arrange', '/compare'];
-/** 予定を組むのタブ（作業の順。ADR-0065）：条件の重み → 組み方の標準 → 担当を組む。案を比べるは担当を組むの続き */
-export const ARRANGE_TABS: readonly { to: string; label: string }[] = [
-  { to: '/rules', label: '条件の重み' },
-  { to: '/standard', label: '組み方の標準' },
-  { to: '/arrange', label: '担当を組む' },
+/** 予定を組むの段（ADR-0066）：組み方の標準の3段（同じ画面で1段ずつ出す）と担当を組む */
+export type ArrangeStepKey = 'proposals' | 'draft' | 'register' | 'arrange';
+/** 予定を組むの段の並び（作業の順。ADR-0066）。to は段の画面。条件の重みは段に入れない（組み方の標準の 1 からの寄り道） */
+export const ARRANGE_STEPS: readonly { key: ArrangeStepKey; to: string; label: string }[] = [
+  { key: 'proposals', to: '/standard', label: '案をくらべる' },
+  { key: 'draft', to: '/standard', label: '表で直す' },
+  { key: 'register', to: '/standard', label: '標準にする' },
+  { key: 'arrange', to: '/arrange', label: '担当を組む' },
 ];
-
-/** 切っていない予定を組むのタブ（rules を切れば条件の重みは出さない。ADR-0065） */
-export const arrangeTabs = (features: Features): { to: string; label: string }[] =>
-  ARRANGE_TABS.filter((t) => isHrefOn(features, t.to));
+/** 段の次（最後の段なら null） */
+export const nextArrangeStep = (key: ArrangeStepKey): (typeof ARRANGE_STEPS)[number] | null =>
+  ARRANGE_STEPS[ARRANGE_STEPS.findIndex((s) => s.key === key) + 1] ?? null;
+/** 段の前（最初の段なら null） */
+export const prevArrangeStep = (key: ArrangeStepKey): (typeof ARRANGE_STEPS)[number] | null =>
+  ARRANGE_STEPS[ARRANGE_STEPS.findIndex((s) => s.key === key) - 1] ?? null;
 /** メニューの「予定」で開く表示として覚える画面（比較は覚えない） */
 export const SCHEDULE_VIEWS: readonly string[] = ['/month', '/week', '/plan'];
 /** メニューの「予定」の既定（まだどの表示も開いていないとき）：日の予定（PRD D273） */
@@ -257,8 +262,8 @@ export const scheduleHref = (last?: string | null): string =>
  * メニューの並び（PRD D326・D349・D355。ADR-0054・0063）：見出しの無い6項目 ホーム・予定を組む・予定・空き状況・人・設定。
  * 「予定」「予定を組む」「人」「設定」は畳める子の項目を持つ（既定は設定だけ畳む。今の画面の親はいつも開く）。
  * 「予定」の子：今日の予定（今日の日の予定）・◯月の予定（月の後半は来月、前半は今月の月の予定）・欠勤・キャンセル（今日の日の予定で
- * 欠勤・キャンセルの欄を開く）。親を押すと最後に開いた表示（既定は日の予定）。「予定を組む」の子：条件の重み・組み方の標準・
- * 担当を組む（作業の順。ADR-0065。rules を切れば条件の重みは出さない）。
+ * 欠勤・キャンセルの欄を開く）。親を押すと最後に開いた表示（既定は日の予定）。「予定を組む」の子：組み方の標準・
+ * 担当を組む（作業の順。条件の重みは組み方の標準の寄り道で、組み方の標準に印。ADR-0066）。
  * 「人」の子は人のタブ、「設定」の子は設定のタブ。親を押すと最後に開いたタブ。
  * 案を比べるは担当を組むから開く（メニュー・パレットには出さない）。
  * 下のタブに出す項目は短い名前（short）も持つ。today は今日。badges は件数の印。
@@ -289,10 +294,15 @@ export function menuSections(
     },
     { key: 'absence', to: absenceHref(today), label: '欠勤・キャンセル', short: '欠勤', icon: 'absence' },
   ];
-  // 予定を組む（ADR-0063・ADR-0065）：AI で組む機能を作業の順に。条件の重み・組み方の標準・担当を組む（担当なしの日の数の印）
+  // 予定を組む（ADR-0063・ADR-0066）：AI で組む機能を作業の順に。組み方の標準（条件の重みもここ）・担当を組む（担当なしの日の数の印）
   const arrangeChildren: MenuItem[] = [
-    { key: 'arrange:rules', to: '/rules', label: '条件の重み', icon: 'rules' },
-    { key: 'arrange:standard', to: '/standard', label: '組み方の標準', icon: 'standard' },
+    {
+      key: 'arrange:standard',
+      to: '/standard',
+      label: '組み方の標準',
+      icon: 'standard',
+      match: ['/standard', '/rules'],
+    },
     {
       key: 'arrange:assign',
       to: `/arrange?ym=${planYm(today)}`,

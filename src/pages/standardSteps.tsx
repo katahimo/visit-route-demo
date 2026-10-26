@@ -1,11 +1,19 @@
-// 組み方の標準の画面（StandardPage）の3段：案をくらべる・表で直す（下書き）・標準にする
+// 組み方の標準の画面（StandardPage）の3段：案をくらべる・表で直す（下書き）・標準にする（1段ずつ出す）と、段の下の［戻る］［次へ］（ADR-0066）
 import { Crown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { WEEKDAY_LABELS } from '../lib/common';
 import { dateText, mdText } from '../lib/dateText';
+import { type ArrangeStepKey, nextArrangeStep, prevArrangeStep } from '../lib/nav';
 import type { StandardPeriod } from '../lib/standard';
 import { cellOf, diffCounts, mondayOf, type StandardTable, setCell } from '../lib/standard';
-import { type StandardWork, setDraft, standardWork, stopProposals } from '../lib/standardDraft';
+import {
+  type StandardStep,
+  type StandardWork,
+  setDraft,
+  setStandardStep,
+  standardWork,
+  stopProposals,
+} from '../lib/standardDraft';
 import { StandardDayView } from './standardDayView';
 import { CellEditor, cellKey, type StandardNames, StandardTableView, type TableProps } from './standardParts';
 import type { StandardDayViewState } from './useStandardDayView';
@@ -26,6 +34,7 @@ export function ProposalsStep({
   hasDraft,
   tableProps,
   day,
+  rulesOn,
   onUse,
 }: {
   presetCount: number;
@@ -36,6 +45,8 @@ export function ProposalsStep({
   hasDraft: boolean;
   tableProps: StandardTableBase;
   day: StandardDayViewState;
+  /** 条件の重みの画面を開けるか（rules を切れば寄り道のリンクを出さない） */
+  rulesOn: boolean;
   onUse: (presetId: string, table: StandardTable) => void;
 }) {
   const { staffName } = tableProps;
@@ -43,12 +54,18 @@ export function ProposalsStep({
   const running = work.running;
   return (
     <li className="card stack" data-step="proposals">
-      <h2>1. 案をくらべる</h2>
+      <h2 tabIndex={-1}>1. 案をくらべる</h2>
       <p className="sub" data-testid="standard-period">
         プリセット（考え方）ごとに、{mdText(period.from)}〜{mdText(period.to)}（{period.weeks}週。{cycleReason}
         ）の担当を AI
         で組み、標準の表の案を作ります。繰り返しだけから作り（ピン・今の予定の手直しは見ません）、今の予定は変わりません
       </p>
+      {rulesOn && (
+        <p className="sub" data-testid="standard-rules-link">
+          考え方の重みは触らなくても、初期の考え方で組めます。細かく直すときは
+          <Link to="/rules">条件の重み</Link>へ
+        </p>
+      )}
       <div className="row">
         <button
           type="button"
@@ -227,20 +244,19 @@ export function DraftStep({
   presetName: StandardNames['presetName'];
   workingStaff: readonly { id: string; name: string }[];
 }) {
-  const { draft, draftDiff, editing, setEditing, cellRefs, draftHead, closeEditor, fromCurrent, discard } = draftState;
+  const { draft, draftDiff, editing, setEditing, cellRefs, closeEditor, fromCurrent, discard } = draftState;
   const { current, clientName } = tableProps;
   const key = stateKey;
   const terms = { client: clientTerm };
   return (
     <li className="card stack" data-step="draft">
-      <h2 ref={draftHead} tabIndex={-1}>
-        2. 表で直す（下書き）
-      </h2>
+      <h2 tabIndex={-1}>2. 表で直す（下書き）</h2>
       {!draft ? (
         <>
           <p className="sub">
             下書きの表で、{terms.client}
-            の繰り返しごと・曜日ごとに担当と時刻を直します。上の案から作るか、今の標準から作ります。下書きは標準にするまで予定に書きません
+            の繰り返しごと・曜日ごとに担当と時刻を直します。「1.
+            案をくらべる」の案から作るか、今の標準から作ります。下書きは標準にするまで予定に書きません
           </p>
           <div className="row">
             <button type="button" className="btn" onClick={fromCurrent} data-testid="standard-from-current">
@@ -310,7 +326,7 @@ export function DraftStep({
   );
 }
 
-/** 3. 標準にする（下書きがあれば登録の操作、登録した直後なら完了の表示） */
+/** 3. 標準にする（下書きがあれば登録の操作、登録した直後なら完了の表示、どちらも無ければ 2 への案内） */
 export function RegisterStep({
   draft,
   registered,
@@ -328,7 +344,7 @@ export function RegisterStep({
   const { minSince, since, setSinceIn, effectiveDiff, skippedDiff, temps, temp, setTemp, register } = r;
   return (
     <li className="card stack" data-step="register">
-      <h2>3. 標準にする</h2>
+      <h2 tabIndex={-1}>3. 標準にする</h2>
       {draft ? (
         <>
           <label className="row">
@@ -410,20 +426,54 @@ export function RegisterStep({
             )}
           </div>
         </>
+      ) : !registered ? (
+        <p className="sub" data-testid="standard-register-empty">
+          下書きがありません。「2. 表で直す」で下書きを作ると、ここで標準にできます
+        </p>
       ) : (
-        registered && (
-          <div className="standard-done stack" data-testid="standard-done">
-            <p>
-              <strong>{mdText(registered.since)} から毎週この表のとおりに並びます</strong>
-            </p>
-            <div className="row">
-              <Link to={`/week?d=${mondayOf(registered.since)}`} className="btn" data-testid="standard-week-link">
-                週の予定で見る
-              </Link>
-            </div>
+        <div className="standard-done stack" data-testid="standard-done">
+          <p>
+            <strong>{mdText(registered.since)} から毎週この表のとおりに並びます</strong>
+          </p>
+          <div className="row">
+            <Link to={`/week?d=${mondayOf(registered.since)}`} className="btn" data-testid="standard-week-link">
+              週の予定で見る
+            </Link>
           </div>
-        )
+        </div>
       )}
     </li>
+  );
+}
+
+/**
+ * 段の下の［戻る］［次へ：〈次の段〉］（ADR-0066）。3 の次は担当を組むの画面へのリンク。
+ * nextPrimary のときだけ［次へ］を塗る（主ボタンは画面に1つ）
+ */
+export function StandardStepNav({ step, nextPrimary }: { step: StandardStep; nextPrimary: boolean }) {
+  const prev = prevArrangeStep(step);
+  const next = nextArrangeStep(step);
+  const nextClass = nextPrimary ? 'btn btn-primary' : 'btn';
+  const go = (key: ArrangeStepKey) => {
+    if (key !== 'arrange') setStandardStep(key);
+  };
+  return (
+    <div className="row standard-step-nav" data-testid="standard-step-nav">
+      {prev && (
+        <button type="button" className="btn" onClick={() => go(prev.key)} data-testid="standard-back">
+          戻る
+        </button>
+      )}
+      {next &&
+        (next.key === 'arrange' ? (
+          <Link to="/arrange" className={nextClass} data-testid="standard-next">
+            次へ：{next.label}
+          </Link>
+        ) : (
+          <button type="button" className={nextClass} onClick={() => go(next.key)} data-testid="standard-next">
+            次へ：{next.label}
+          </button>
+        ))}
+    </div>
   );
 }

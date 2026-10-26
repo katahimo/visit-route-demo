@@ -59,7 +59,7 @@ export function RulesIntro({ basisName }: { basisName: string | undefined }) {
         直しているのは
         <Term k="scoreBase" testId="term-score-base" />
         の「<strong>{basisName ?? '—'}</strong>
-        」の重みです。基準は下のプリセットの節で替えられます。同じ種類の条件は同じ重みになります。
+        」の重みです。基準は上のプリセットの節で替えられます。同じ種類の条件は同じ重みになります。
       </p>
       <p className="sub" data-testid="rules-next-note">
         重みを変えても今の担当は変わりません。標準の週を見直すなら「<Link to="/standard">組み方の標準</Link>
@@ -362,7 +362,7 @@ export function RulesDraftBar({
         <span>プリセットは書き換えません。保存すると新しい考え方として足し、ふだんの考え方（点数の基準）にします</span>
         {full && (
           <span className="error" data-testid="rules-draft-full">
-            プリセットは{MAX_PRESETS}つまでです。使わない考え方を下の節で消してから保存してください
+            プリセットは{MAX_PRESETS}つまでです。使わない考え方を上の節で消してから保存してください
           </span>
         )}
       </p>
