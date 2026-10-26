@@ -29,6 +29,7 @@ const {
   runSteps,
   settle,
 } = require('./lib/env.cjs');
+const { markStandard } = require('./lib/standard.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
 
 const PERF_MS = perfMs('PERF_MS_NAV', 100);
@@ -1096,6 +1097,81 @@ async function fullscreen(page) {
   });
 }
 
+/**
+ * 組み方の標準を登録したあと（ADR-0066）：予定を組むの子は担当を組むだけ、担当を組む・比較・組み方の標準・条件の重みで印は担当を組む、
+ * 予定を組むの段は担当を組む・比較に出さず（組み方の標準にだけ出す）、担当を組むの見出しに［標準の組み方を変える］
+ */
+async function menuWithStandard(page) {
+  await open(page, '/home');
+  await markStandard(page);
+  const side = page.locator('.side-nav');
+  for (const t of await side.locator('[data-testid="nav-toggle"][aria-expanded="false"]').all()) await t.click();
+  const kids = await side
+    .locator('[data-parent="arrange"] > .nav-sub > .nav-link.nav-child')
+    .evaluateAll((els) => els.map((e) => e.dataset.key));
+  check(JSON.stringify(kids) === '["arrange:assign"]', '標準がある：予定を組むの子は担当を組むだけ', kids);
+  const current = () => side.locator('[aria-current="page"]').evaluateAll((els) => els.map((e) => e.dataset.key));
+  for (const [hash, withSteps] of [
+    ['/arrange', false],
+    ['/compare', false],
+    ['/standard', true],
+    ['/rules', false],
+  ]) {
+    await open(page, hash);
+    check(
+      JSON.stringify(await current()) === '["arrange:assign"]',
+      `標準がある：${hash} はメニューの予定を組むの子「担当を組む」に印`,
+      await current(),
+    );
+    check(
+      (await page.getByTestId('arrange-steps').count()) === (withSteps ? 1 : 0),
+      `標準がある：${hash} の予定を組むの段は${withSteps ? '出す（1〜4）' : '出さない'}`,
+    );
+  }
+  await open(page, '/arrange');
+  const change = page.getByTestId('arrange-change-standard');
+  check(
+    (await change.count()) === 1 && (await change.getAttribute('href')) === '#/standard',
+    '標準がある：担当を組むの見出しに［標準の組み方を変える］（#/standard へ）',
+  );
+  await change.click();
+  await page.getByTestId('standard-steps').waitFor({ timeout: 30000 });
+  check(
+    hashOf(page) === '#/standard' &&
+      (await page.getByTestId('standard-steps').getAttribute('data-step')) === 'proposals',
+    '［標準の組み方を変える］で組み方の標準の 1（案をくらべる）が開く',
+    hashOf(page),
+  );
+  // 標準が無いときは子が2つ・担当を組むに段を出し、［標準の組み方を変える］は無い（あとの確認のため元に戻す）
+  await page.evaluate((key) => {
+    const d = JSON.parse(localStorage.getItem(key));
+    delete d.standard;
+    localStorage.setItem(key, JSON.stringify(d));
+  }, STORAGE_KEY);
+  await page.reload();
+  await open(page, '/arrange');
+  check(
+    (await page.getByTestId('arrange-steps').count()) === 1 &&
+      (await page.getByTestId('arrange-change-standard').count()) === 0,
+    '標準が無い：担当を組むに予定を組むの段を出し、［標準の組み方を変える］は出さない',
+  );
+  await open(page, '/compare');
+  await page.getByTestId('arrange-steps').waitFor({ timeout: 30000 });
+  check(
+    (await page.locator('[data-testid="arrange-steps"] li.is-current').getAttribute('data-step')) === 'arrange',
+    '標準が無い：案を比べるにも予定を組むの段（4 担当を組むが今の段）',
+  );
+  for (const t of await side.locator('[data-testid="nav-toggle"][aria-expanded="false"]').all()) await t.click();
+  const kids0 = await side
+    .locator('[data-parent="arrange"] > .nav-sub > .nav-link.nav-child')
+    .evaluateAll((els) => els.map((e) => e.dataset.key));
+  check(
+    JSON.stringify(kids0) === '["arrange:standard","arrange:assign"]',
+    '標準が無い：予定を組むの子は組み方の標準・担当を組む',
+    kids0,
+  );
+}
+
 const steps = sharedPage({
   open: async () => {
     const s = await openPage();
@@ -1105,6 +1181,7 @@ const steps = sharedPage({
   call: (fn, s) => fn(s.page, s),
   steps: [
     ['menu', menu],
+    ['menu-with-standard', menuWithStandard],
     ['keyboard', keyboard],
     ['people', people],
     ['focus', focus],

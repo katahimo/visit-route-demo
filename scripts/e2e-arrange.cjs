@@ -76,7 +76,7 @@ async function range(page) {
     .evaluateAll((els) => els.map((el) => el.getAttribute('data-step')));
   check(
     steps.join(',') === 'proposals,draft,register,arrange',
-    '見出しの下に予定を組むの段（案をくらべる・表で直す・標準にする・担当を組む の順。ADR-0066）',
+    '標準が無い間は見出しの下に予定を組むの段（案をくらべる・表で直す・標準にする・担当を組む の順。ADR-0066）',
     steps,
   );
   const stepNow = await page
@@ -162,12 +162,34 @@ async function basis(page) {
       text,
     });
     check(
-      text.includes('替えるのは「組み方の標準」の「案をくらべる」'),
-      `標準がある${label}：考え方の替え先は「組み方の標準」の「案をくらべる」（ADR-0066）`,
+      text.includes('替えるのは［標準の組み方を変える］'),
+      `標準がある${label}：考え方の替え先は［標準の組み方を変える］（ADR-0066）`,
       text,
+    );
+    check(
+      (await page.getByTestId('arrange-steps').count()) === 0,
+      `標準がある${label}：予定を組むの段は出さない（標準が無い間だけ）`,
+    );
+    const change = page.getByTestId('arrange-change-standard');
+    check(
+      (await change.count()) === 1 &&
+        (await change.innerText()).trim() === '標準の組み方を変える' &&
+        (await change.getAttribute('href')) === '#/standard',
+      `標準がある${label}：見出しに［標準の組み方を変える］（#/standard へ）`,
     );
     check((await page.getByTestId('arrange-preset').count()) === 0, `標準がある${label}：考え方の選ぶ欄は無い`);
   }
+  // ［標準の組み方を変える］で組み方の標準の 1（案をくらべる）が開く
+  await open(page, `/arrange?ym=${YM}`);
+  await page.getByTestId('arrange-change-standard').click();
+  await page.waitForURL(/#\/standard/, { timeout: 10000 });
+  await page.getByTestId('standard-steps').waitFor({ timeout: 30000 });
+  check(hashOf(page) === '#/standard', '［標準の組み方を変える］で組み方の標準へ', hashOf(page));
+  check(
+    (await page.getByTestId('standard-steps').getAttribute('data-step')) === 'proposals' &&
+      (await page.getByTestId('arrange-steps').count()) === 1,
+    '標準があっても組み方の標準は 1（案をくらべる）から開き、段を出す',
+  );
 }
 
 // ---- AI で組む → 提案の帯 → 反映 → 元に戻す ----
@@ -230,10 +252,7 @@ async function compare(page) {
   await page.waitForURL(/#\/compare/, { timeout: 10000 });
   check(hashOf(page) === `#/compare?date=${date}`, '「案を比べる」で比較の画面（その日）へ', hashOf(page));
   await page.locator('h1').filter({ hasText: '提案を比べる' }).waitFor({ timeout: 30000 });
-  check(
-    (await page.getByTestId('arrange-steps').locator('li[data-step="arrange"] [aria-current="step"]').count()) === 1,
-    '比較の画面にも予定を組むの段（今の段は担当を組む）',
-  );
+  check((await page.getByTestId('arrange-steps').count()) === 0, '標準があれば比較の画面にも予定を組むの段を出さない');
   await page.getByTestId('compare-back').click();
   await page.waitForURL(/#\/arrange/, { timeout: 10000 });
   check(hashOf(page) === `#/arrange?date=${date}`, '比較の画面から担当を組む（その日）へ戻る', hashOf(page));

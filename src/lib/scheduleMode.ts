@@ -6,6 +6,7 @@ import { own } from './common';
 import { monthLabel } from './dateText';
 import { activeDayVisits } from './dayPlan';
 import { HOME_NEXT_MONTH_FROM_DAY } from './home';
+import { hasStandard } from './standard';
 import { monthDates, ymOf } from './ym';
 
 /** 来月（YYYY-MM） */
@@ -54,14 +55,16 @@ function countUnassigned(
 export const planLabel = (today: string): string => `${monthLabel(planYm(today))}の予定`;
 
 /**
- * メニューの件数の印（PRD D349）：組む月の担当なしの日の数（unassignedDayCount）と、今日に訪問があってまだ伝えていないか。
+ * メニューの件数の印（PRD D349）：組む月の担当なしの日の数（unassignedDayCount）と、今日に訪問があってまだ伝えていないか、
+ * 組み方の標準があるか（PRD D360）。
  * compile しないので画面を移るたびに数えても軽い
  */
 export function menuBadges(
-  data: Pick<DemoData, 'visits' | 'patterns' | 'clients' | 'clientLeaves' | 'snapshots'>,
+  data: Pick<DemoData, 'visits' | 'patterns' | 'clients' | 'clientLeaves' | 'snapshots' | 'standard'>,
   today: string,
-): { planUnassignedDays: number; todayUntold: boolean } {
+): { planUnassignedDays: number; todayUntold: boolean; hasStandard: boolean } {
   return {
+    hasStandard: hasStandard(data),
     planUnassignedDays: unassignedDayCount(data, planYm(today), today),
     todayUntold: !own(data.snapshots, today) && activeDayVisits(data, today).length > 0,
   };

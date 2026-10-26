@@ -212,8 +212,11 @@ export type MenuItem = NavEntry & {
   badge?: { text: string; label: string };
 };
 
-/** メニューの件数の印（PRD D349）：組む月の担当なしの日の数・今日をまだ伝えていないか */
-export type MenuBadges = { planUnassignedDays?: number; todayUntold?: boolean };
+/**
+ * メニューの件数の印と状態（PRD D349・D360）：組む月の担当なしの日の数・今日をまだ伝えていないか・組み方の標準があるか
+ * （あれば予定を組むの子は担当を組むだけ。ADR-0066 追記）
+ */
+export type MenuBadges = { planUnassignedDays?: number; todayUntold?: boolean; hasStandard?: boolean };
 
 /** 畳める項目（親の key）と既定で開いておくか（設定はふだん畳む。PRD D349） */
 export const NAV_OPEN_DEFAULT: Readonly<Record<string, boolean>> = {
@@ -294,21 +297,23 @@ export function menuSections(
     },
     { key: 'absence', to: absenceHref(today), label: '欠勤・キャンセル', short: '欠勤', icon: 'absence' },
   ];
-  // 予定を組む（ADR-0063・ADR-0066）：AI で組む機能を作業の順に。組み方の標準（条件の重みもここ）・担当を組む（担当なしの日の数の印）
+  // 予定を組む（ADR-0063・ADR-0066）：AI で組む機能を作業の順に。組み方の標準（条件の重みもここ）・担当を組む（担当なしの日の数の印）。
+  // 標準を登録したあとは担当を組むだけ（標準の見直しは担当を組むの［標準の組み方を変える］から。印は担当を組む。ADR-0066 追記）
+  const standardChild: MenuItem = {
+    key: 'arrange:standard',
+    to: '/standard',
+    label: '組み方の標準',
+    icon: 'standard',
+    match: ['/standard', '/rules'],
+  };
   const arrangeChildren: MenuItem[] = [
-    {
-      key: 'arrange:standard',
-      to: '/standard',
-      label: '組み方の標準',
-      icon: 'standard',
-      match: ['/standard', '/rules'],
-    },
+    ...(badges.hasStandard ? [] : [standardChild]),
     {
       key: 'arrange:assign',
       to: `/arrange?ym=${planYm(today)}`,
       label: '担当を組む',
       icon: 'arrange',
-      match: ['/arrange', '/compare'],
+      match: badges.hasStandard ? ['/arrange', '/compare', '/standard', '/rules'] : ['/arrange', '/compare'],
       badge: badges.planUnassignedDays
         ? { text: `${badges.planUnassignedDays}日`, label: `担当なしの訪問がある日 ${badges.planUnassignedDays}日` }
         : undefined,

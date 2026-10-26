@@ -55,3 +55,14 @@
 - 実装：`lib/nav`（`ARRANGE_STEPS`・メニューの子・`ARRANGE_TABS`／`arrangeTabs` を消す）・`components/SettingsTabs`（`ArrangeTabs` → `ArrangeSteps`）・`components/ArrangeTabs` → `components/ArrangeSteps`（名前を替える）・`lib/standardDraft`（`step`・`setStandardStep`・`standardStepOf`）・`pages/StandardPage`・`standardSteps`・`useStandardDraft`・`pages/ArrangePage`・`compareParts`・`pages/RulesPage`・`rulesParts`・`styles.css`（`.arrange-steps`）・e2e（arrange・standard・nav・dialog・features・features2・schedule-v4）
 - 設計書：design.md・design/pages.md・pages-standard.md・pages-arrange.md・pages-rules.md・prd.md（D360。D349・D355・D359・D233 を直す）
 - 見直す条件：標準を毎月のように見直す人が多く、段を移る手間の声が出たら、3段を1画面に並べる表示を選べるようにする
+
+## 追記（2026-10-26）：段を出すのは標準を決める手順の間だけ
+- 利用者の声：標準を登録したあとは「1 案をくらべる・2 表で直す・3 標準にする」をいつも出す必要は無い。標準が無いときだけ手順に沿って登録し、あとは担当を組むだけにして、そこから「標準の組み方を変える」で標準の手順に戻る方がよい
+- 決定（利用者が決めた）：
+  - 担当を組む・案を比べるの画面は、標準が無い間だけ段の表示を出す（4 が今の段）。標準があれば出さず、担当を組むの見出しの右に［標準の組み方を変える］（`arrange-change-standard`。`/standard` の 1 の段を開く）
+  - 組み方の標準の画面はいつも段の表示を出す（手順の中にいるため）。3 の［次へ：担当を組む］で担当を組むへ戻る
+  - メニューの「予定を組む」の子は、標準があれば担当を組むだけ（組み方の標準・条件の重みの画面でも担当を組むに印）。標準が無ければ 組み方の標準・担当を組む
+  - 担当を組むの「考え方」の文は「替えるのは［標準の組み方を変える］」
+- 得るもの：ふだん（標準がある間）は担当を組むの画面が手順の飾り無しで1枚になり、標準を見直すときだけ手順に入る
+- 失うもの：標準がある間、組み方の標準をメニューから直接開けない（担当を組むの［標準の組み方を変える］かコマンドパレットから）
+- 影響：`lib/nav`（`MenuBadges.hasStandard`）・`lib/scheduleMode`（`menuBadges`）・`pages/ArrangePage`・`compareParts`・`arrangeParts`・e2e
