@@ -7,7 +7,6 @@ import type { DemoData } from '../contracts/data';
 import type { Visit } from '../contracts/documents';
 import type { Problem, SolveOptions, SolveResult } from '../contracts/problem';
 import type { ReassignDiff } from '../contracts/reassign';
-import type { Rule } from '../contracts/rules';
 import { addDays } from '../domain/time';
 import { visitsOn } from '../patterns';
 import { defaultIterations, runSolve } from '../solver';
@@ -15,7 +14,7 @@ import { own } from './common';
 import { mdText } from './dateText';
 import { startsOf, writeRoutes } from './dayPlan';
 import type { BatchMode } from './month';
-import { batchDayProblem, batchTasksOf, proposalDayOf } from './monthBatchDay';
+import { batchDayProblem, proposalDayOf } from './monthBatchDay';
 import { createValueStore, type ReadableStore } from './valueStore';
 
 /** 組む日（日ごとの選び方：care＝要対応のある日、all＝伝えていない日すべて） */
@@ -37,21 +36,8 @@ export type BatchJob = {
   source: BatchSource;
   /** 週・日の範囲の始まり（週は月曜、日はその日。知らせ・上の帯の行き先。月は null） */
   rangeStart?: string | null;
-  /** 考え方（プリセット）を当てた条件（無ければ今の条件＝点数の基準の重み。データの条件は書き換えない） */
-  rules?: Rule[];
-  /**
-   * 考え方ごとの案（範囲が日で、組み方の標準がまだ無いとき。PRD D357）。あれば days の最初の日を考え方ごとに組み、
-   * 提案は考え方ごとの案（choices）にする。rules は使わない
-   */
-  variants?: readonly BatchVariant[];
   today: string;
 };
-
-/** 考え方ごとの案の1つの組み方（プリセットの ID・名前と、そのプリセットを当てた条件） */
-export type BatchVariant = { presetId: string; name: string; rules: Rule[] };
-
-/** 考え方ごとの案の1つ（その考え方で組んだ日の提案） */
-export type ProposalChoice = { presetId: string; name: string; days: ProposalDay[] };
 
 /** 提案の1日（組み始めたときの訪問と、組んだ担当の並び・今との差） */
 export type ProposalDay = {
@@ -78,8 +64,6 @@ export type BatchProposal = {
   source: BatchSource;
   rangeStart: string | null;
   days: ProposalDay[];
-  /** 考え方ごとの案（BatchJob の variants で組んだとき。days は空） */
-  choices?: ProposalChoice[];
   /** ［止める］で途中まで */
   stopped: boolean;
 };
@@ -190,10 +174,8 @@ export function applyProposal(
   return { data: out, applied, skipped };
 }
 
-/** 反映の指定（考え方ごとの案の番号・続けて当てる変更・元に戻すの名前） */
+/** 反映の指定（元に戻すの名前） */
 export type ApplyOptions = {
-  choice?: number;
-  andThen?: (d: DemoData) => DemoData;
   label?: string;
   /** 見ていた提案の番号（BatchProposal.id）。今の提案と違えば反映しない（確認を待つ間に提案が替わったとき） */
   id?: number;
@@ -215,8 +197,6 @@ export type BatchRun = {
   made: number;
   iteration: number;
   total: number;
-  /** 考え方ごとの案を組むときの考え方の名前（targets と同じ並び） */
-  variants?: string[];
 };
 
 /** 終わったときの知らせ（終わるたびに新しい物。画面はこれを見てトーストを出す） */
@@ -237,8 +217,6 @@ export type BatchDone = {
   aborted: boolean;
   /** 出した提案（変わる訪問の数。提案が無ければ null） */
   proposal: { moved: number; shifted: number } | null;
-  /** 考え方ごとの案を出したときの案の数 */
-  choices?: number;
 };
 
 /** データの持ち主（App が store の data と update をつなぐ） */
@@ -257,10 +235,7 @@ export type MonthBatch = {
   done: ReadableStore<BatchDone | null>;
   /** 今の提案（無ければ null。反映する・捨てる・新しく組み始めると消える） */
   proposal: ReadableStore<BatchProposal | null>;
-  /**
-   * 提案を反映する（1回の update。反映した日・反映しなかった日。提案が無ければ null）。考え方ごとの案なら choice の案を反映する。
-   * andThen は反映した日があるときに同じ update の中で続けて当てる（組み方の標準の登録。元に戻すの1手にまとめる）
-   */
+  /** 提案を反映する（1回の update。反映した日・反映しなかった日。提案が無ければ null） */
   apply(opts?: ApplyOptions): { applied: string[]; skipped: string[] } | null;
   /** 提案を捨てる */
   discard(): void;
@@ -283,8 +258,6 @@ export function batchDoneText(d: BatchDone): string {
   if (d.aborted) return `データを差し替えたので、${d.label}の担当を組むのを止めました（提案は捨てました）`;
   const counts = d.proposal ? `・担当が変わる ${d.proposal.moved}件・時刻が変わる ${d.proposal.shifted}件` : '';
   if (d.error) return `${d.label}の担当を${d.made}日分組んだところで止まりました（${d.error}）`;
-  if (d.choices)
-    return `${d.label}の案を${d.choices}つ${d.stopped ? '組んだところで止めました' : '出しました'}。くらべて、気に入った案を選んでください`;
   if (d.stopped) return `${d.label}の担当を${d.made}日分組んだところで止めました（${d.made}日分の提案${counts}）`;
   if (d.made === 0) return `${d.label}に組める日がありませんでした`;
   return `${d.label}の提案を出しました（${d.made}日分${counts}）。見て「反映する」と担当が変わります`;
@@ -292,8 +265,6 @@ export function batchDoneText(d: BatchDone): string {
 
 /** 上の帯の文（「11月の担当を組んでいます 8/22日」） */
 export function batchBandText(r: BatchRun): string {
-  if (r.variants)
-    return `${r.label}の案を組んでいます ${Math.min(r.index + 1, r.targets.length)}/${r.targets.length}つ目（${r.variants[r.index] ?? ''}）`;
   return `${r.label}の担当を組んでいます ${Math.min(r.index + 1, r.targets.length)}/${r.targets.length}日`;
 }
 
@@ -310,12 +281,7 @@ export function batchHref(x: Pick<BatchRun, 'ym' | 'source' | 'rangeStart'>): st
 }
 
 /** 始めたときの進み具合 */
-function firstRun(
-  job: BatchJob,
-  rangeStart: string | null,
-  targets: string[],
-  variants: readonly BatchVariant[] | null,
-): BatchRun {
+function firstRun(job: BatchJob, rangeStart: string | null, targets: string[]): BatchRun {
   return {
     ym: job.ym,
     label: job.label,
@@ -327,39 +293,23 @@ function firstRun(
     made: 0,
     iteration: 0,
     total: 1,
-    ...(variants ? { variants: variants.map((x) => x.name) } : {}),
   };
 }
 
-/** 終わったときの提案（番号の前。組んだ日も案も無ければ null）と知らせ */
+/** 終わったときの提案（番号の前。組んだ日が無ければ null）と知らせ */
 function finishedOf(a: {
   job: BatchJob;
   rangeStart: string | null;
-  variants: readonly BatchVariant[] | null;
   days: ProposalDay[];
-  choiceDays: ProposalDay[][];
   made: number;
   unassignedDays: number;
   stopped: boolean;
   error: string | null;
 }): { proposal: Omit<BatchProposal, 'id'> | null; done: BatchDone } {
-  const { job, rangeStart, variants, days, choiceDays, made, unassignedDays, stopped } = a;
+  const { job, rangeStart, days, made, unassignedDays, stopped } = a;
   const counts = proposalCounts({ days });
-  const choices: ProposalChoice[] = (variants ?? [])
-    .map((x, v) => ({ presetId: x.presetId, name: x.name, days: [...(choiceDays[v] ?? [])] }))
-    .filter((c) => c.days.length > 0);
   const proposal =
-    days.length > 0 || choices.length > 0
-      ? {
-          ym: job.ym,
-          label: job.label,
-          source: job.source,
-          rangeStart,
-          days: [...days],
-          ...(variants ? { choices } : {}),
-          stopped,
-        }
-      : null;
+    days.length > 0 ? { ym: job.ym, label: job.label, source: job.source, rangeStart, days: [...days], stopped } : null;
   const done: BatchDone = {
     ym: job.ym,
     label: job.label,
@@ -371,7 +321,6 @@ function finishedOf(a: {
     error: a.error,
     aborted: false,
     proposal: days.length > 0 ? { moved: counts.moved, shifted: counts.shifted } : null,
-    ...(choices.length > 0 ? { choices: choices.length } : {}),
   };
   return { proposal, done };
 }
@@ -392,22 +341,13 @@ function abortedDone(r: BatchRun): BatchDone {
   };
 }
 
-/**
- * 提案 p を反映する（考え方ごとの案なら opts.choice の案。その案が無ければ null）。
- * 反映するかどうかを今のデータで決めてから、1回の update で書く（全体の「元に戻す」の1手）
- */
-function applyTo(h: BatchHost, p: BatchProposal, opts?: ApplyOptions): { applied: string[]; skipped: string[] } | null {
-  const chosen = p.choices ? p.choices[opts?.choice ?? 0] : undefined;
-  if (p.choices && !chosen) return null;
-  const all = chosen ? chosen.days : p.days;
-  const r = applyProposal(h.get(), { days: all });
+/** 提案 p を反映する。反映するかどうかを今のデータで決めてから、1回の update で書く（全体の「元に戻す」の1手） */
+function applyTo(h: BatchHost, p: BatchProposal, opts?: ApplyOptions): { applied: string[]; skipped: string[] } {
+  const r = applyProposal(h.get(), { days: p.days });
   if (r.applied.length > 0)
     h.update(
-      (d) => {
-        const out = applyProposal(d, { days: all.filter((x) => r.applied.includes(x.date)) }).data;
-        return opts?.andThen ? opts.andThen(out) : out;
-      },
-      opts?.label ?? `AI の提案を反映（${chosen ? `${p.label}・${chosen.name}` : p.label}）`,
+      (d) => applyProposal(d, { days: p.days.filter((x) => r.applied.includes(x.date)) }).data,
+      opts?.label ?? `AI の提案を反映（${p.label}）`,
     );
   return { applied: r.applied, skipped: r.skipped };
 }
@@ -437,18 +377,15 @@ export function createMonthBatch(solve: Solve = runSolve): MonthBatch {
     const h = host;
     const gen = ++generation;
     const live = () => gen === generation;
-    const variants = job.variants && job.variants.length > 0 ? job.variants : null;
-    const tasks = batchTasksOf(job, variants);
-    const targets = tasks.map((x) => x.date);
+    const targets = job.days.map((x) => x.date);
     const rangeStart = job.rangeStart ?? null;
-    const choiceDays: ProposalDay[][] = (variants ?? []).map(() => []);
     stopped = false;
     // 新しく組み始めたら前の提案は捨てる（提案は1つだけ）
     proposal.set(null);
     let made = 0;
     let unassignedDays = 0;
     const days: ProposalDay[] = [];
-    run.set(firstRun(job, rangeStart, targets, variants));
+    run.set(firstRun(job, rangeStart, targets));
     const patch = (p: Partial<BatchRun>) => run.set((b) => (b ? { ...b, ...p } : b));
 
     const finish = (why?: string) => {
@@ -457,9 +394,7 @@ export function createMonthBatch(solve: Solve = runSolve): MonthBatch {
       const f = finishedOf({
         job,
         rangeStart,
-        variants,
         days,
-        choiceDays,
         made,
         unassignedDays,
         stopped,
@@ -471,14 +406,14 @@ export function createMonthBatch(solve: Solve = runSolve): MonthBatch {
 
     const step = (i: number) => {
       if (!live()) return;
-      if (i >= tasks.length || stopped) {
+      if (i >= targets.length || stopped) {
         finish();
         return;
       }
-      const task = tasks[i]!;
+      const date = targets[i]!;
       const latest = h.get();
       patch({ index: i, iteration: 0, total: 1 });
-      const planned = batchDayProblem(latest, task);
+      const planned = batchDayProblem(latest, date);
       if (!planned) {
         step(i + 1);
         return;
@@ -500,9 +435,7 @@ export function createMonthBatch(solve: Solve = runSolve): MonthBatch {
       started.promise
         .then((result) => {
           if (!live()) return;
-          (task.v >= 0 ? (choiceDays[task.v] ?? days) : days).push(
-            proposalDayOf(task.date, planned, result, dayInputsOf(latest, task.date)),
-          );
+          days.push(proposalDayOf(date, planned, result, dayInputsOf(latest, date)));
           made++;
           if (result.unassigned.length > 0) unassignedDays++;
           patch({ made });
@@ -529,7 +462,7 @@ export function createMonthBatch(solve: Solve = runSolve): MonthBatch {
       if (!p || !host || run.get() !== null) return null;
       if (opts?.id !== undefined && opts.id !== p.id) return null;
       const result = applyTo(host, p, opts);
-      if (result) proposal.set(null);
+      proposal.set(null);
       return result;
     },
     discard: () => proposal.set(null),

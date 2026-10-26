@@ -112,7 +112,7 @@ const assignedIn = (page, ym) =>
 async function monthEntry(page) {
   await editData(page, (key) => localStorage.removeItem(key), STORAGE_KEY);
   await clearPlans(page);
-  await markStandard(page); // 標準が無い間は月を組めない（ADR-0064）
+  await markStandard(page); // 標準が無い間は担当を組むで組めない（ADR-0065）
   await open(page, `/month?ym=${YM}`, '[data-testid="month-grid"]');
   check(
     (await page.getByTestId('progress-band').isVisible()) &&

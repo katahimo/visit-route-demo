@@ -8,7 +8,7 @@ import { addRule } from '../lib/presets';
 import { isSavedHard, RULE_DEFAULTS, removeRule, renameRule } from '../lib/ruleEdit';
 import { useDemoData } from '../store';
 import './settings.css';
-import { SettingsTabs } from '../components/SettingsTabs';
+import { ArrangeTabs } from '../components/ArrangeTabs';
 import { PresetSection } from './presetSection';
 import { RulesAdd, RulesAdvanced, RulesDraftBar, RulesIntro, RulesTable } from './rulesParts';
 import { useRulesDraft } from './useRulesDraft';
@@ -22,10 +22,10 @@ function useShownTypes(): { compatOn: boolean; shownTypes: readonly RuleType[] }
 }
 
 /**
- * 条件（ルール）の一覧。ClassClassify の Setup にならい、重み 0〜5（0.5刻み、0 で半透明＝無効）と必須の切り替え。
- * この画面の重み・必須は点数の基準のプリセット（ふだんの考え方）のもの（ADR-0035。PRD D233）：確定すると基準のプリセットの
- * その型を直し、条件（data.rules）も基準にそろえる。AI で組む・点数・検査はこの重みで計算する（版2：重みは1組）。
- * 表の重み・必須は動かしても保存せず、画面の中の下書きに置く（PRD D286。ADR-0048。状態と処理は useRulesDraft）。
+ * 条件の重み（予定を組むの1段目。PRD D233・D359。ADR-0035・ADR-0065）。条件（ルール）の一覧に、重み 0〜5（0.5刻み、0 で半透明＝無効）と
+ * 必須の切り替え。表の重み・必須は点数の基準のプリセット（ふだんの考え方）のものから始まり、動かしても保存せず画面の中の下書きに置く
+ * （PRD D286。ADR-0048。状態と処理は useRulesDraft）。保存するとプリセットは書き換えず、新しい考え方（プリセット）として足して
+ * 点数の基準にする（ADR-0065）。担当を組む・点数・検査はこの重みで計算する（重みは1組。ADR-0053）。
  * 区画の部品は rulesParts、プリセットの節は presetSection
  */
 export default function RulesPage() {
@@ -36,7 +36,7 @@ export default function RulesPage() {
   const draft = useRulesDraft();
   const { changes } = draft;
   const add = (type: RuleType) => {
-    // 足す条件の重み・必須は、押した時点のデータで決める（試す重みが当てはまるプリセット、無ければ基準のその型。lib/presets の addRule）
+    // 足す条件の重み・必須は、押した時点のデータで決める（点数の基準のプリセットのその型。lib/presets の addRule）
     const rule = { id: newId('r'), type, label: ruleTypeLabel(type, terms) };
     update((d) => addRule(d, rule, RULE_DEFAULTS[type]), '条件を足す');
   };
@@ -60,10 +60,10 @@ export default function RulesPage() {
   return (
     <div className="stack">
       <PageHeader
-        nav={<SettingsTabs />}
+        nav={<ArrangeTabs />}
         icon={SlidersHorizontal}
         title="条件の重み"
-        lead="ふだん使う重みを決めます。AI で組む・点数・要対応の検査に、この重みを使います"
+        lead="ふだんの考え方（点数の基準）の重みを決めます。担当を組むはこの重みで組み、組み方の標準ではプリセットごとに案を作ってくらべます"
       />
       <div className="card stack">
         <RulesIntro basisName={draft.basis?.name} />
@@ -81,12 +81,12 @@ export default function RulesPage() {
         <RulesAdd types={shownTypes} terms={terms} primary={changes.length === 0} onAdd={add} />
       </div>
 
-      <PresetSection draftCount={changes.length} onReset={draft.reset} shownTypes={shownTypes} />
+      <PresetSection draftCount={changes.length} shownTypes={shownTypes} />
 
       <RulesAdvanced />
 
       {changes.length > 0 && (
-        <RulesDraftBar count={changes.length} onDiscard={draft.discard} onConfirm={draft.confirmDraft} />
+        <RulesDraftBar count={changes.length} full={draft.full} onDiscard={draft.discard} onConfirm={draft.saveDraft} />
       )}
     </div>
   );

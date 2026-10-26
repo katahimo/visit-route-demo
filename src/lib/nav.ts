@@ -21,13 +21,18 @@ export const SCHEDULE_GROUP = '予定';
 
 /** メニューの「予定」が受け持つ画面（月・週・日の予定と、その日の案を比べる。PRD D273） */
 export const SCHEDULE_PATHS: readonly string[] = ['/month', '/week', '/plan'];
-/** メニューの「予定を組む」が受け持つ画面（ADR-0063）：担当を組む・組み方の標準・案を比べる */
-export const ARRANGE_PATHS: readonly string[] = ['/arrange', '/standard', '/compare'];
-/** 予定を組むのタブ（ADR-0063）。案を比べるは担当を組むの続き */
+/** メニューの「予定を組む」が受け持つ画面（ADR-0063・ADR-0065）：条件の重み・組み方の標準・担当を組む・案を比べる */
+export const ARRANGE_PATHS: readonly string[] = ['/rules', '/standard', '/arrange', '/compare'];
+/** 予定を組むのタブ（作業の順。ADR-0065）：条件の重み → 組み方の標準 → 担当を組む。案を比べるは担当を組むの続き */
 export const ARRANGE_TABS: readonly { to: string; label: string }[] = [
-  { to: '/arrange', label: '担当を組む' },
+  { to: '/rules', label: '条件の重み' },
   { to: '/standard', label: '組み方の標準' },
+  { to: '/arrange', label: '担当を組む' },
 ];
+
+/** 切っていない予定を組むのタブ（rules を切れば条件の重みは出さない。ADR-0065） */
+export const arrangeTabs = (features: Features): { to: string; label: string }[] =>
+  ARRANGE_TABS.filter((t) => isHrefOn(features, t.to));
 /** メニューの「予定」で開く表示として覚える画面（比較は覚えない） */
 export const SCHEDULE_VIEWS: readonly string[] = ['/month', '/week', '/plan'];
 /** メニューの「予定」の既定（まだどの表示も開いていないとき）：日の予定（PRD D273） */
@@ -36,11 +41,10 @@ export const SCHEDULE_DEFAULT = '/plan';
 /** 予定の表示として覚える画面か（古い #/schedule は日の予定） */
 export const isScheduleView = (pathname: string): boolean => SCHEDULE_VIEWS.includes(activeNavPath(pathname));
 
-/** 設定のタブ（並び。PRD D275）。メニューは「設定」1項目で、画面の上のタブで切り替える */
+/** 設定のタブ（並び。PRD D275。条件の重みは予定を組むへ移した。ADR-0065）。メニューは「設定」1項目で、画面の上のタブで切り替える */
 export const SETTINGS_TABS: readonly { to: string; label: string }[] = [
   { to: '/types', label: '訪問の種類' },
   { to: '/items', label: '特性の項目' },
-  { to: '/rules', label: '条件の重み' },
   { to: '/settings', label: '管理者設定' },
   { to: '/data', label: 'データ' },
 ];
@@ -218,7 +222,6 @@ export const NAV_OPEN_DEFAULT: Readonly<Record<string, boolean>> = {
 const SETTINGS_ICON: Record<string, NavIcon> = {
   '/types': 'types',
   '/items': 'items',
-  '/rules': 'rules',
   '/settings': 'settings',
   '/data': 'data',
 };
@@ -238,7 +241,7 @@ export type LastViews = { schedule?: string | null; settings?: string | null; pe
 
 /**
  * メニューの「設定」で開くタブ：最後に開いた設定のタブ（切っていなければ）、無ければ先頭のタブ
- * （訪問の種類は土台で切れないので、いつも訪問の種類。ADR-0047・PRD D275）
+ * （訪問の種類は土台で切れないので、いつも訪問の種類。ADR-0047・PRD D275）。設定のタブに無い画面（前に覚えた条件の重みなど）は先頭のタブ
  */
 export function settingsHref(features: Features, last?: string | null): string {
   const tabs = settingsTabs(features);
@@ -254,7 +257,8 @@ export const scheduleHref = (last?: string | null): string =>
  * メニューの並び（PRD D326・D349・D355。ADR-0054・0063）：見出しの無い6項目 ホーム・予定を組む・予定・空き状況・人・設定。
  * 「予定」「予定を組む」「人」「設定」は畳める子の項目を持つ（既定は設定だけ畳む。今の画面の親はいつも開く）。
  * 「予定」の子：今日の予定（今日の日の予定）・◯月の予定（月の後半は来月、前半は今月の月の予定）・欠勤・キャンセル（今日の日の予定で
- * 欠勤・キャンセルの欄を開く）。親を押すと最後に開いた表示（既定は日の予定）。「予定を組む」の子：担当を組む・組み方の標準。
+ * 欠勤・キャンセルの欄を開く）。親を押すと最後に開いた表示（既定は日の予定）。「予定を組む」の子：条件の重み・組み方の標準・
+ * 担当を組む（作業の順。ADR-0065。rules を切れば条件の重みは出さない）。
  * 「人」の子は人のタブ、「設定」の子は設定のタブ。親を押すと最後に開いたタブ。
  * 案を比べるは担当を組むから開く（メニュー・パレットには出さない）。
  * 下のタブに出す項目は短い名前（short）も持つ。today は今日。badges は件数の印。
@@ -285,8 +289,10 @@ export function menuSections(
     },
     { key: 'absence', to: absenceHref(today), label: '欠勤・キャンセル', short: '欠勤', icon: 'absence' },
   ];
-  // 予定を組む（ADR-0063）：AI で組む機能を集める。担当を組む（担当なしの日の数の印）・組み方の標準
+  // 予定を組む（ADR-0063・ADR-0065）：AI で組む機能を作業の順に。条件の重み・組み方の標準・担当を組む（担当なしの日の数の印）
   const arrangeChildren: MenuItem[] = [
+    { key: 'arrange:rules', to: '/rules', label: '条件の重み', icon: 'rules' },
+    { key: 'arrange:standard', to: '/standard', label: '組み方の標準', icon: 'standard' },
     {
       key: 'arrange:assign',
       to: `/arrange?ym=${planYm(today)}`,
@@ -297,7 +303,6 @@ export function menuSections(
         ? { text: `${badges.planUnassignedDays}日`, label: `担当なしの訪問がある日 ${badges.planUnassignedDays}日` }
         : undefined,
     },
-    { key: 'arrange:standard', to: '/standard', label: '組み方の標準', icon: 'standard' },
   ];
   const items: MenuItem[] = [
     { key: 'home', to: '/home', label: 'ホーム', short: 'ホーム', icon: 'home' },
@@ -308,7 +313,7 @@ export function menuSections(
       short: '組む',
       icon: 'arrange',
       match: ARRANGE_PATHS,
-      children: arrangeChildren,
+      children: arrangeChildren.filter((i) => isHrefOn(features, i.to)),
     },
     {
       key: 'schedule',
@@ -334,7 +339,7 @@ export function menuSections(
         match: t.match,
       })),
     },
-    // 設定：訪問の種類・特性の項目・条件の重み・管理者設定（PRD D210。だれでも開ける）・データを1つにまとめる（タブ。PRD D275）
+    // 設定：訪問の種類・特性の項目・管理者設定（PRD D210。だれでも開ける）・データを1つにまとめる（タブ。PRD D275）
     {
       key: 'settings',
       to: settingsHref(features, last.settings),
@@ -357,7 +362,8 @@ export function menuSections(
  * 画面の一覧（PRD D182・D230・D273・D275・D331）：コマンドパレットの「画面」と上の帯の画面の名前はここから引く（案を比べるは出さない）。
  * メニューでタブにまとめた画面（月・週・日の予定・人のタブ・勤務の見込み・設定のタブ）も1つずつ持つ。
  * ホーム／予定（月の予定・週の予定・日の予定）／空き状況／人（〈利用者さん〉一覧・〈スタッフ〉一覧・
- * 相性・勤務時間（シフト）・勤務の見込み）／設定（訪問の種類・特性の項目・条件の重み・管理者設定・データ）。
+ * 相性・勤務時間（シフト）・勤務の見込み）／予定を組む（条件の重み・組み方の標準・担当を組む）／
+ * 設定（訪問の種類・特性の項目・管理者設定・データ）。
  * 項目名は画面の見出しと同じ。切った機能の画面は出さない
  */
 export function screenSections(terms: Pick<Terms, 'client' | 'staff'>, features: Features): NavSection<MenuItem>[] {
@@ -374,8 +380,9 @@ export function screenSections(terms: Pick<Terms, 'client' | 'staff'>, features:
     {
       title: '予定を組む',
       items: [
-        { key: 'arrange', to: '/arrange', label: '担当を組む', icon: 'arrange' },
+        { key: 'rules', to: '/rules', label: '条件の重み', icon: 'rules' },
         { key: 'standard', to: '/standard', label: '組み方の標準', icon: 'standard' },
+        { key: 'arrange', to: '/arrange', label: '担当を組む', icon: 'arrange' },
       ],
     },
     { items: [{ key: 'vacancy', to: '/vacancy', label: '空き状況', icon: 'vacancy' }] },
@@ -394,7 +401,6 @@ export function screenSections(terms: Pick<Terms, 'client' | 'staff'>, features:
       items: [
         { key: 'types', to: '/types', label: '訪問の種類', icon: 'types' },
         { key: 'items', to: '/items', label: '特性の項目', icon: 'items' },
-        { key: 'rules', to: '/rules', label: '条件の重み', icon: 'rules' },
         { key: 'settings', to: '/settings', label: '管理者設定', icon: 'settings' },
         { key: 'data', to: '/data', label: 'データ', icon: 'data' },
       ],

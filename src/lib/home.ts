@@ -148,8 +148,7 @@ export function homeTasks(input: HomeInput): { tasks: HomeTask[]; ready: boolean
       });
     }
   }
-  // 組み方の標準を登録していなければ先頭に（PRD D354・D357。ADR-0064）：訪問のある伝えていない最初の日を、担当を組むで考え方ごとの案にする
-  const firstDay = future.find((s) => s.count > 0 && s.state === 'none')?.date ?? today;
+  // 組み方の標準を登録していなければ先頭に（PRD D354・D359。ADR-0065）：組み方の標準の画面で考え方ごとの案をくらべて決める
   const standard: HomeTask[] = data.standard
     ? []
     : [
@@ -157,8 +156,9 @@ export function homeTasks(input: HomeInput): { tasks: HomeTask[]; ready: boolean
           kind: 'standard',
           tone: 'todo',
           title: 'はじめに組み方の標準を決める',
-          detail: '1日を考え方ごとに組んでくらべ、気に入った案を標準にします。これからはその考え方で組みます',
-          to: `/arrange?date=${firstDay}`,
+          detail:
+            '考え方ごとの案をくらべて標準の週を決めます。これからは標準の週で並び、埋まらない所はその考え方で組みます',
+          to: '/standard',
         },
       ];
   // 切った機能へ向かうカードは出さない（PRD D213）

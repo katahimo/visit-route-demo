@@ -1,54 +1,32 @@
-// 考え方ごとの案の帯の見た目の部品：見出し・タブ・要約と操作・地図の欄
-import { CircleCheck, Crown, Map as MapIcon, Sparkles, X } from 'lucide-react';
-import type { RefObject } from 'react';
+// 案を日で見る（ChoiceDayView）の見た目の部品：案のタブ・要約・地図の欄
+import { Crown, Map as MapIcon } from 'lucide-react';
+import type { ReactNode, RefObject } from 'react';
 import type { Staff } from '../contracts/documents';
-import { diffSign, pointText } from '../lib/choiceBandView';
+import type { ReassignDiff } from '../contracts/reassign';
+import { type DayChoice, diffSign, pointText } from '../lib/choiceBandView';
 import { deltaText, r0 } from '../lib/common';
-import { monthBatch, type ProposalChoice, type ProposalDay } from '../lib/monthBatch';
 import type { MapLine, MapPoint } from '../lib/routeView';
 import { MapDock } from './MapDock';
 import { RouteMap } from './RouteMap';
 import { StaffLegend } from './routeView';
-import { SectionTitle, WithIcon } from './ui';
+import { SectionTitle } from './ui';
 
 type RouteMapData = { points: MapPoint[]; lines: MapLine[] };
 
-/** 帯の見出し（案の数・説明・捨てる） */
-export function ChoiceHead({ label, count }: { label: string; count: number }) {
-  return (
-    <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
-      <WithIcon icon={Sparkles} size={16}>
-        <span className="band-text">
-          <strong>
-            {label}の案（{count}つ）
-          </strong>
-          ：タブで切り替えて、今の担当とくらべてください。気に入った案を「この案を標準にする」で選ぶと、これから AI
-          はその考え方で組みます
-        </span>
-      </WithIcon>
-      <button
-        type="button"
-        className="btn btn-small"
-        onClick={() => monthBatch.discard()}
-        data-testid="proposal-discard"
-      >
-        <WithIcon icon={X} size={14}>
-          捨てる
-        </WithIcon>
-      </button>
-    </div>
-  );
-}
-
-/** 案のタブ（今の担当・案ごと）。k は見ているタブ（-1 は今の担当） */
+/** 案のタブ（今・案ごと。点と今から担当が変わる件数。いちばん点の高い案に王冠）。k は見ているタブ（-1 は今） */
 export function ChoiceTabs({
+  currentLabel,
   choices,
+  moved,
   k,
   best,
   points,
   onPick,
 }: {
-  choices: readonly ProposalChoice[];
+  currentLabel: string;
+  choices: readonly DayChoice[];
+  /** 案ごとの今から担当が変わる件数 */
+  moved: readonly number[];
   k: number;
   best: number;
   points: { current: number | null; choices: (number | null)[] };
@@ -62,101 +40,78 @@ export function ChoiceTabs({
         aria-selected={k < 0}
         className={`choice-tab${k < 0 ? ' is-on' : ''}`}
         onClick={() => onPick(-1)}
-        data-testid="choice-current"
+        data-testid="standard-day-current"
       >
-        <span className="choice-tab-name">今の担当</span>
-        <span className="choice-tab-points">{pointText(points.current)}</span>
+        <span className="choice-tab-name">{currentLabel}</span>
+        <span className="choice-tab-points" data-testid="choice-points">
+          {pointText(points.current)}
+        </span>
       </button>
-      {choices.map((c, i) => {
-        const d = c.days[0];
-        return (
-          <button
-            key={c.presetId}
-            type="button"
-            role="tab"
-            aria-selected={k === i}
-            className={`choice-tab${k === i ? ' is-on' : ''}`}
-            onClick={() => onPick(i)}
-            data-testid="choice-card"
-            data-preset={c.presetId}
-          >
-            <span className="choice-tab-name">
-              {best === i && choices.length > 1 && <Crown size={14} aria-label="いちばん点の高い案" />}
-              {c.name}
-            </span>
-            <span className="choice-tab-points" data-testid="choice-points">
-              {pointText(points.choices[i] ?? null)}
-            </span>
-            <span className="choice-tab-sub">担当が変わる {d?.diff?.moved.length ?? 0}件</span>
-          </button>
-        );
-      })}
+      {choices.map((c, i) => (
+        <button
+          key={c.presetId}
+          type="button"
+          role="tab"
+          aria-selected={k === i}
+          className={`choice-tab${k === i ? ' is-on' : ''}`}
+          onClick={() => onPick(i)}
+          data-testid="standard-day-choice"
+          data-preset={c.presetId}
+        >
+          <span className="choice-tab-name">
+            {best === i && choices.length > 1 && (
+              <Crown size={14} aria-label="いちばん点の高い案" data-testid="standard-day-crown" />
+            )}
+            {c.name}
+          </span>
+          <span className="choice-tab-points" data-testid="choice-points">
+            {pointText(points.choices[i] ?? null)}
+          </span>
+          <span className="choice-tab-sub">担当が変わる {moved[i] ?? 0}件</span>
+        </button>
+      ))}
     </div>
   );
 }
 
-/** 要約（点・変わる件数）と「この案を標準にする」「この日だけ反映」 */
+/** 要約（点と今との差・変わる件数・移動の増減・担当なし）と、選んだ案の操作（action） */
 export function ChoiceSummary({
-  k,
-  chosen,
-  day,
+  name,
+  isChoice,
+  diff,
   shown,
   currentPoints,
+  currentLabel,
   unassignedCount,
-  canAct,
-  onAdopt,
-  onApplyOnly,
+  action,
 }: {
-  k: number;
-  chosen: ProposalChoice | undefined;
-  day: ProposalDay | undefined;
+  name: string;
+  /** 案のタブを見ている（今のタブなら false） */
+  isChoice: boolean;
+  diff: ReassignDiff | null;
   shown: number | null;
   currentPoints: number | null;
+  currentLabel: string;
   unassignedCount: number;
-  /** 押せるか（組んでいる最中でなく、訪問が変わっていない） */
-  canAct: boolean;
-  onAdopt: () => void;
-  onApplyOnly: () => void;
+  action?: ReactNode;
 }) {
-  const diff = shown !== null && currentPoints !== null ? shown - currentPoints : null;
+  const delta = shown !== null && currentPoints !== null ? shown - currentPoints : null;
   return (
     <div className="row choice-summary" style={{ flexWrap: 'wrap', gap: 8 }}>
       <p className="choice-stats" data-testid="choice-stats">
-        <strong>{k >= 0 ? chosen?.name : '今の担当'}</strong>：{pointText(shown)}
-        {k >= 0 && diff !== null && `（今 ${pointText(currentPoints)}・${diffSign(diff)}${Math.abs(diff)}）`}
-        {day && (
+        <strong>{name}</strong>：{pointText(shown)}
+        {isChoice &&
+          delta !== null &&
+          `（${currentLabel} ${pointText(currentPoints)}・${diffSign(delta)}${Math.abs(delta)}）`}
+        {isChoice && diff && (
           <>
-            ・担当が変わる <strong>{day.diff?.moved.length ?? 0}</strong>件・時刻が変わる{' '}
-            <strong>{day.diff?.shifted.length ?? 0}</strong>件
-            {day.diff ? `・移動 ${deltaText(r0(day.diff.travelDelta), '分')}` : ''}
+            ・担当が変わる <strong>{diff.moved.length}</strong>件・時刻が変わる <strong>{diff.shifted.length}</strong>
+            件・移動 {deltaText(r0(diff.travelDelta), '分')}
           </>
         )}
         {unassignedCount > 0 && <span className="warn-text">・担当なし {unassignedCount}件</span>}
       </p>
-      {k >= 0 && (
-        <div className="row choice-actions">
-          <button
-            type="button"
-            className="btn btn-primary btn-small"
-            disabled={!canAct}
-            onClick={onAdopt}
-            data-testid="choice-adopt"
-          >
-            <WithIcon icon={CircleCheck} size={14}>
-              この案を標準にする
-            </WithIcon>
-          </button>
-          <button
-            type="button"
-            className="btn btn-small"
-            disabled={!canAct}
-            onClick={onApplyOnly}
-            data-testid="choice-apply"
-          >
-            この日だけ反映
-          </button>
-        </div>
-      )}
+      {action && <div className="row choice-actions">{action}</div>}
     </div>
   );
 }
@@ -185,7 +140,7 @@ export function ChoiceMapCard({
 }) {
   return (
     <>
-      <div ref={cardRef} className="choice-map stack" data-testid="choice-map">
+      <div ref={cardRef} className="choice-map stack" data-testid="standard-day-map">
         <SectionTitle
           icon={MapIcon}
           aside={

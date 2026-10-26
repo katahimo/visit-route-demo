@@ -58,10 +58,10 @@ async function menu(page) {
     JSON.stringify(kids) ===
       JSON.stringify({
         schedule: ['today', 'month-view', 'absence'],
-        arrange: ['arrange:assign', 'arrange:standard'],
+        arrange: ['arrange:rules', 'arrange:standard', 'arrange:assign'],
         people: ['people:/clients', 'people:/staff', 'people:/compat', 'people:/availability'],
       }),
-    '予定の子は今日の予定・◯月の予定・欠勤・キャンセル、予定を組むの子は担当を組む・組み方の標準、人の子は〈利用者さん〉・〈スタッフ〉・相性・勤務時間（シフト）',
+    '予定の子は今日の予定・◯月の予定・欠勤・キャンセル、予定を組むの子は条件の重み・組み方の標準・担当を組む（ADR-0065）、人の子は〈利用者さん〉・〈スタッフ〉・相性・勤務時間（シフト）',
     kids,
   );
   await shot(page, 'menu-1400');
@@ -192,7 +192,7 @@ async function scope(page) {
   );
   await page.reload();
   await page.locator('h1').waitFor();
-  await markStandard(page); // 標準が無い間は週を組めない（ADR-0064）
+  await markStandard(page); // 標準が無い間は担当を組むで組めない（ADR-0065）
   await openView(page, '/week');
   const before = await stored(page);
   // 週を組むのは担当を組むの画面（ADR-0063）

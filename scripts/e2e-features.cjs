@@ -19,6 +19,7 @@ const path = require('node:path');
 const { answerConfirms } = require('./lib/confirmDialog.cjs');
 const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, hashOf, runSteps, settle } = require('./lib/env.cjs');
 const { planDays } = require('./lib/plan.cjs');
+const { markStandard } = require('./lib/standard.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
 const {
   same,
@@ -28,6 +29,7 @@ const {
   asFeatures,
   MENU,
   ARRANGE_KIDS,
+  arrangeKidsFor,
   PEOPLE_KIDS,
   screensFor,
   SETTINGS_TABS,
@@ -195,10 +197,10 @@ async function checkTemplate(page, t) {
   check(same(m.labels, menuFor(on)), `${label}：メニューの最上位の項目（空き状況の入り切りだけで変わる）`, m.labels);
   check(
     same(m.schedule, scheduleKidsFor(on)) &&
-      same(m.arrange, ARRANGE_KIDS) &&
+      same(m.arrange, arrangeKidsFor(t)) &&
       same(m.people, PEOPLE_KIDS) &&
       same(m.settings, settingsTabsFor(t)),
-    `${label}：メニューの子の項目（予定は欠勤・キャンセルの入り切り、予定を組むは2つ、設定は設定のタブと同じ）`,
+    `${label}：メニューの子の項目（予定は欠勤・キャンセルの入り切り、予定を組むは条件の重みの入り切り、設定は設定のタブと同じ）`,
     m,
   );
   const tabs = await page.getByTestId('bottom-tab').allInnerTexts();
@@ -336,7 +338,7 @@ async function mobile(page, dlg) {
   check(
     same(drawer.labels, menuFor(TEMPLATE_ON.basic)) &&
       same(drawer.schedule, scheduleKidsFor(TEMPLATE_ON.basic)) &&
-      same(drawer.arrange, ARRANGE_KIDS) &&
+      same(drawer.arrange, arrangeKidsFor('basic')) &&
       same(drawer.people, PEOPLE_KIDS) &&
       same(drawer.settings, settingsTabsFor('basic')),
     '390px：引き出しもメニューと同じ項目（最上位と子）',
@@ -512,7 +514,8 @@ async function deadEnds(page, dlg, ctx) {
     (await page.getByTestId('plan-menu').count()) === 0,
     '日の予定：「AI で組む ▾」は無い（AI で組むのは担当を組む。ADR-0063）',
   );
-  // 担当を組む：提案を比べるを切ると「案を比べる」の欄を出さない（AI で組むは残る）
+  // 担当を組む：提案を比べるを切ると「案を比べる」の欄を出さない（AI で組むは残る。標準が無い間は組めないので先に登録。ADR-0065）
+  await markStandard(page);
   await open(page, `/arrange?date=${second}`, '[data-testid="arrange-start"]');
   check(
     (await page.getByTestId('arrange-compare').count()) === 0 &&

@@ -115,9 +115,15 @@
     width: 100%;
     flex-wrap: nowrap;
   }
+  /* 主ボタンの文字が長いので、取り消すは文字の幅だけにして残りを主ボタンへ。入らない字体なら主ボタンの中で折り返す */
   .rules-draft-actions .btn {
-    flex: 1 1 0;
+    padding-inline: 10px;
     white-space: nowrap;
+  }
+  .rules-draft-actions .btn-primary {
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: normal;
   }
 }
 @media print {
@@ -410,9 +416,6 @@
 }
 .preset-edit .rules-table td:first-child {
   white-space: nowrap;
-}
-.preset-edit .rules-table td:nth-child(2) {
-  min-width: 150px;
 }
 
 /* 表の見出しの補足（小さく薄く） */

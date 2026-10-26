@@ -1,9 +1,10 @@
-// 担当を組むの画面（#/arrange。ADR-0063）を本物のブラウザで確かめる：
-// 見出しの下のタブ（担当を組む・組み方の標準）、範囲（月・週・日。既定は月で URL の ?ym=・?d=・?date= に書く）と
-// 選んだ範囲の担当なし・要対応の件数、「AI で組む」で範囲の提案の帯が出て反映するまで訪問は変わらない・
-// ［反映する］で担当が入り「元に戻す」で1手戻る・［捨てる］で何も変えない、考え方（プリセット）を選んで組むと帯にその名前、
-// 組み方の標準がまだ無い日の範囲は考え方ごとの案（3つ）を並べ、［この案を標準にする］でその日に反映して標準を登録する（PRD D357）、
-// 「案を比べる」で比較の画面（#/compare?date=）へ移り、比較の画面から担当を組むへ戻れる、スマホ（390px）で横にはみ出さない。
+// 担当を組むの画面（#/arrange。ADR-0063・ADR-0065）を本物のブラウザで確かめる：
+// 見出しの下の予定を組むのタブ（条件の重み・組み方の標準・担当を組む の作業の順）、範囲（月・週・日。既定は月で URL の
+// ?ym=・?d=・?date= に書く）と選んだ範囲の担当なし・要対応の件数、組み方の標準が無い間は範囲にかかわらず「AI で組む」の欄を出さず
+// ［組み方の標準を決める］で #/standard へ（PRD D356）、標準があれば月・週・日とも「AI で組む」と「考え方：〈点数の基準〉」
+// （考え方の選ぶ欄は無い）、「AI で組む」で範囲の提案の帯が出て反映するまで訪問は変わらない・［反映する］で担当が入り
+// 「元に戻す」で1手戻る・［捨てる］で何も変えない、「案を比べる」で比較の画面（#/compare?date=）へ移り、比較の画面から
+// 担当を組むへ戻れる、スマホ（390px）で横にはみ出さない。
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-arrange.cjs
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）
@@ -59,10 +60,9 @@ const assignedOn = (page, date) =>
     ({ k, d }) => JSON.parse(localStorage.getItem(k)).visits.filter((v) => v.date === d && v.staffId).length,
     { k: STORAGE_KEY, d: date },
   );
-/** 標準が無い間の週・月に出る案内（「AI で組む」の欄の代わり） */
+/** 標準が無い間に出る案内（「AI で組む」の欄の代わり） */
 const NEED_STANDARD = '[data-testid="arrange-need-standard"]';
 const rangeBand = (page) => page.locator('[data-testid="proposal-band"][data-kind="range"]');
-const choiceBand = (page) => page.locator('[data-testid="proposal-band"][data-kind="choices"]');
 /** 帯が出るまで待つ（組み終わるまで） */
 const waitBand = (page) => rangeBand(page).waitFor({ timeout: 90000 });
 
@@ -71,10 +71,13 @@ async function range(page) {
   await editData(page, (key) => localStorage.removeItem(key), STORAGE_KEY);
   await open(page, '/arrange', NEED_STANDARD);
   check((await page.locator('h1').innerText()) === '担当を組む', '見出し「担当を組む」');
-  const tabs = page.getByTestId('arrange-tabs');
+  const tabs = await page
+    .locator('[data-testid="arrange-tabs"] [data-tab]')
+    .evaluateAll((els) => els.map((el) => el.getAttribute('data-tab')));
   check(
-    (await tabs.count()) === 1 && /組み方の標準/.test(await tabs.innerText()),
-    '見出しの下に予定を組むのタブ（担当を組む・組み方の標準）',
+    tabs.join(',') === 'rules,standard,arrange',
+    '見出しの下に予定を組むのタブ（条件の重み・組み方の標準・担当を組む の順。ADR-0065）',
+    tabs,
   );
   const on = await page.locator('[data-testid="arrange-scope"] button[aria-pressed="true"]').getAttribute('data-scope');
   check(on === 'month', '範囲の既定は月', on);
@@ -102,141 +105,60 @@ async function range(page) {
   await page.screenshot({ path: path.join(OUT_DIR, 'arrange-1400.png') });
 }
 
-// ---- 標準が無い間の週・月：案内の文と［日の範囲へ］だけ（「AI で組む」の欄は出さない。ADR-0064） ----
+// ---- 標準が無い間：範囲にかかわらず案内の文と［組み方の標準を決める］だけ（「AI で組む」の欄は出さない。ADR-0065） ----
 async function needStandard(page) {
   await editData(page, (key) => localStorage.removeItem(key), STORAGE_KEY);
   for (const [label, hash] of [
     ['月', `/arrange?ym=${YM}`],
     ['月（クエリ無し）', '/arrange'],
     ['週', `/arrange?d=${TODAY}`],
+    ['日', `/arrange?date=${TODAY}`],
   ]) {
     await open(page, hash, NEED_STANDARD);
-    check((await page.getByTestId('arrange-need-standard').count()) === 1, `標準が無い${label}：案内の文を出す`);
-    check((await page.getByTestId('arrange-to-day').count()) === 1, `標準が無い${label}：日の範囲へ移るボタンを出す`);
+    check(
+      /先に「組み方の標準」で、考え方ごとの案をくらべて標準の週を決めてください/.test(
+        await page.getByTestId('arrange-need-standard').innerText(),
+      ),
+      `標準が無い${label}：案内の文を出す`,
+    );
+    check(
+      (await page.getByTestId('arrange-to-standard').innerText()).trim() === '組み方の標準を決める',
+      `標準が無い${label}：［組み方の標準を決める］を出す`,
+    );
     const hidden = [];
-    for (const id of ['arrange-start', 'arrange-mode-care', 'arrange-mode-all', 'arrange-preset', 'arrange-count']) {
+    for (const id of ['arrange-start', 'arrange-mode-care', 'arrange-mode-all', 'arrange-basis', 'arrange-count']) {
       if ((await page.getByTestId(id).count()) > 0) hidden.push(id);
     }
     check(hidden.length === 0, `標準が無い${label}：「AI で組む」の欄を出さない`, hidden);
   }
-  check(
-    /^\d+\/\d+を考え方ごとの案で組む$/.test((await page.getByTestId('arrange-to-day').innerText()).trim()),
-    '案内のボタン「M/Dを考え方ごとの案で組む」',
-    await page.getByTestId('arrange-to-day').innerText(),
-  );
-  await page.getByTestId('arrange-to-day').click();
-  await page.waitForFunction(() => /[?&]date=/.test(location.hash));
-  check(/^#\/arrange\?date=\d{4}-\d{2}-\d{2}$/.test(hashOf(page)), '［日の範囲へ］で ?date= になる', hashOf(page));
-  await page.getByTestId('arrange-start').waitFor({ timeout: 30000 });
-  check(
-    (await choiceBand(page).count()) === 0 && (await page.getByTestId('arrange-need-standard').count()) === 0,
-    '日の範囲では案内を出さず「AI で組む」（考え方ごとの案）に変わる',
-  );
+  await page.getByTestId('arrange-to-standard').click();
+  await page.waitForURL(/#\/standard/, { timeout: 10000 });
+  check(hashOf(page) === '#/standard', '［組み方の標準を決める］で組み方の標準の画面へ', hashOf(page));
+  await page.locator('h1').filter({ hasText: '組み方の標準' }).waitFor({ timeout: 30000 });
 }
 
-// ---- 標準が無い日の範囲：考え方ごとの案 → この案を標準にする → 元に戻す（PRD D357） ----
-async function choices(page, { dlg }) {
-  await clearPlans(page);
-  await open(page, `/arrange?date=${TODAY}`);
-  check(
-    (await page.getByTestId('arrange-choices-note').count()) === 1,
-    '標準が無い日の範囲：考え方ごとの案を組むと書く',
-  );
-  check((await page.getByTestId('arrange-preset').count()) === 0, '考え方ごとの案のときは考え方の選ぶ欄を出さない');
-  check(/つの案を組む/.test(await page.getByTestId('arrange-start').innerText()), 'ボタン「3つの案を組む」');
-  await page.getByTestId('arrange-start').click();
-  await choiceBand(page).waitFor({ timeout: 150000 });
-  const cards = choiceBand(page).getByTestId('choice-card');
-  check((await cards.count()) === 3, '考え方ごとの案のタブが3つ（初期データのプリセットの数）', await cards.count());
-  const pts = await choiceBand(page).getByTestId('choice-points').allInnerTexts();
-  check(pts.length === 3 && pts.every((t) => /^\d+点$/.test(t)), '案ごとに点（100点満点）', pts);
-  check(
-    (await choiceBand(page).getByTestId('route-timeline').count()) === 1 &&
-      (await choiceBand(page).getByTestId('choice-current').count()) === 1,
-    '選んだ案を今日の予定と同じ時間軸で見る（今の担当のタブもある）',
-  );
-  // 地図も予定の画面と同じに出て、時間軸の訪問を押すとその担当のルートに絞る
-  check((await choiceBand(page).getByTestId('choice-map').count()) === 1, '案の地図が出る');
-  await choiceBand(page).locator('[data-testid="route-timeline"] [data-visit]').first().click();
-  check(
-    (await choiceBand(page).getByTestId('choice-map').getByRole('button', { name: '全員のルートを見る' }).count()) ===
-      1,
-    '時間軸の訪問を押すと地図をその担当に絞る（全員のルートを見るで戻せる）',
-  );
-  check((await assignedOn(page, TODAY)) === 0, '案が出ても、選ぶまで訪問は変わらない');
-  check((await choiceBand(page).getByTestId('proposal-change').count()) > 0, '変わる訪問（誰の訪問が誰へ）の一覧');
-  await page.screenshot({ path: path.join(OUT_DIR, 'arrange-choices.png') });
-  // 案を比べる（その日）にも考え方ごとの案が出る（ADR-0064）
-  await page.goto(`${BASE}#/compare?date=${TODAY}`);
-  await page.getByTestId('compare-apply').first().waitFor({ timeout: 30000 });
-  const inCompare = await page.getByTestId('compare-apply').count();
-  check(inCompare === 3, '案を比べるにも考え方ごとの案が並ぶ', inCompare);
-  // 予定（日）では案を重ねず、1行の知らせと「担当を組むで見る」だけ
-  await page.goto(`${BASE}#/plan?date=${TODAY}`);
-  await page.locator('[data-testid="proposal-band"][data-kind="choices-note"]').waitFor({ timeout: 30000 });
-  check(
-    (await page.getByTestId('choice-card').count()) === 0 && (await page.getByTestId('choice-open').count()) === 1,
-    '予定（日）では案を重ねず、1行の知らせと「担当を組むで見る」',
-  );
-  await page.getByTestId('choice-open').click();
-  await choiceBand(page).waitFor({ timeout: 10000 });
-  const preset = await cards.nth(1).getAttribute('data-preset');
-  const n = dlg.messages.length;
-  await cards.nth(1).click();
-  await choiceBand(page).getByTestId('choice-adopt').click();
-  await choiceBand(page).waitFor({ state: 'detached', timeout: 10000 });
-  check(
-    /組み方の標準にしますか/.test(dlg.messages[n] ?? ''),
-    '［この案を標準にする］は何が起きるかを確かめる',
-    dlg.messages[n],
-  );
-  await page.waitForFunction(
-    ({ k }) => JSON.parse(localStorage.getItem(k)).standard !== undefined,
-    { k: STORAGE_KEY },
-    { timeout: 10000 },
-  );
-  const saved = await page.evaluate((k) => JSON.parse(localStorage.getItem(k)), STORAGE_KEY);
-  check(
-    saved.standard?.presetId === preset && saved.scorePresetId === preset,
-    '選んだ案の考え方が標準の考え方（点数の基準）になる',
-    { standard: saved.standard, scorePresetId: saved.scorePresetId, preset },
-  );
-  check((await page.getByTestId('arrange-choices-note').count()) === 0, '標準を登録したら日の範囲もふだんの提案に戻る');
-  // 全体の「元に戻す」で1手戻る（反映と標準の登録をまとめて）
-  await page.getByTestId('undo-btn').click();
-  await page.waitForFunction(
-    ({ k }) => JSON.parse(localStorage.getItem(k)).standard === undefined,
-    { k: STORAGE_KEY },
-    { timeout: 10000 },
-  );
-  check((await assignedOn(page, TODAY)) === 0, '「元に戻す」で案を選ぶ前に戻る（標準も消える）');
-}
-
-// ---- 考え方ごとの案はすべてのプリセット（最大6つ）：プリセットを1つ足すとカードが4枚（ADR-0064） ----
-async function choicesAll(page) {
-  await clearPlans(page);
-  await editData(
-    page,
-    (key) => {
-      const d = JSON.parse(localStorage.getItem(key));
-      d.presets.push({ ...d.presets[0], id: 'extra', name: '追加の考え方' });
-      localStorage.setItem(key, JSON.stringify(d));
-    },
-    STORAGE_KEY,
-  );
-  await open(page, `/arrange?date=${TODAY}`);
-  const n = await page.evaluate((k) => JSON.parse(localStorage.getItem(k)).presets.length, STORAGE_KEY);
-  check(n === 4, '用意：プリセットが4つ', n);
-  check(/4つの案を組む/.test(await page.getByTestId('arrange-start').innerText()), 'ボタン「4つの案を組む」');
-  await page.getByTestId('arrange-start').click();
-  await choiceBand(page).waitFor({ timeout: 200000 });
-  const cards = choiceBand(page).getByTestId('choice-card');
-  check((await cards.count()) === 4, 'プリセットの数だけ（4枚）カードが並ぶ', await cards.count());
-  check(
-    (await choiceBand(page).locator('[data-testid="choice-card"][data-preset="extra"]').count()) === 1,
-    '足したプリセットのカードがある',
-  );
-  check((await assignedOn(page, TODAY)) === 0, '案が出ても、選ぶまで訪問は変わらない');
+// ---- 標準があれば月・週・日とも「AI で組む」と「考え方：〈点数の基準〉」（選ぶ欄は無い。ADR-0065） ----
+async function basis(page) {
+  await editData(page, (key) => localStorage.removeItem(key), STORAGE_KEY);
+  await markStandard(page);
+  const name = await page.evaluate((k) => {
+    const d = JSON.parse(localStorage.getItem(k));
+    return d.presets.find((p) => p.id === d.scorePresetId)?.name ?? '';
+  }, STORAGE_KEY);
+  for (const [label, hash] of [
+    ['月', `/arrange?ym=${YM}`],
+    ['週', `/arrange?d=${TODAY}`],
+    ['日', `/arrange?date=${TODAY}`],
+  ]) {
+    await open(page, hash);
+    check((await page.getByTestId('arrange-need-standard').count()) === 0, `標準がある${label}：案内を出さない`);
+    const text = (await page.getByTestId('arrange-basis').innerText()).trim();
+    check(name !== '' && text.startsWith(`考え方：${name}`), `標準がある${label}：「考え方：〈点数の基準〉」`, {
+      name,
+      text,
+    });
+    check((await page.getByTestId('arrange-preset').count()) === 0, `標準がある${label}：考え方の選ぶ欄は無い`);
+  }
 }
 
 // ---- AI で組む → 提案の帯 → 反映 → 元に戻す ----
@@ -276,21 +198,15 @@ async function runApply(page) {
   check((await assignedOn(page, TODAY)) === 0, '「元に戻す」で反映の前に戻る');
 }
 
-// ---- 考え方（プリセット）を選んで組む・捨てる ----
-async function preset(page) {
+// ---- 組んで捨てる：帯の題は範囲の名前だけ（考え方の名前を付けない）、［捨てる］で何も変えない ----
+async function discard(page) {
+  await clearPlans(page);
   await markStandard(page);
   await open(page, `/arrange?date=${TODAY}`);
-  const select = page.getByTestId('arrange-preset');
-  const options = await select.locator('option').allInnerTexts();
-  check(options.length >= 2 && /^点数の基準/.test(options[0]), '考え方の選ぶ欄（既定は点数の基準）', options);
-  if (options.length < 2) return;
-  const value = await select.locator('option').nth(1).getAttribute('value');
-  await select.selectOption(value);
-  const name = options[1];
   await page.getByTestId('arrange-start').click();
   await waitBand(page);
-  const title = await rangeBand(page).innerText();
-  check(title.includes(name), '選んだ考え方の名前が提案の帯に出る', { name, title: title.split('\n')[0] });
+  const title = (await rangeBand(page).innerText()).split('\n')[0];
+  check(/^提案（\d+\/\d+・1日分）/.test(title), '提案の帯の題は「提案（M/D・1日分）」', title);
   await rangeBand(page).getByTestId('proposal-discard').click();
   await rangeBand(page).waitFor({ state: 'detached', timeout: 10000 });
   check((await assignedOn(page, TODAY)) === 0, '［捨てる］で訪問は変わらない');
@@ -342,10 +258,9 @@ const steps = sharedPage({
   steps: [
     ['range', range],
     ['need-standard', needStandard],
-    ['choices', choices],
-    ['choices-all', choicesAll],
+    ['basis', basis],
     ['run-apply', runApply],
-    ['preset', preset],
+    ['discard', discard],
     ['compare', compare],
     ['mobile', mobile],
   ],

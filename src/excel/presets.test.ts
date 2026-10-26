@@ -2,7 +2,7 @@
 import type ExcelJS from 'exceljs';
 import { describe, expect, it } from 'vitest';
 import type { DemoData } from '../contracts/data';
-import { setBasisWeight } from '../lib/presets';
+import { saveDraftAsPreset } from '../lib/presets';
 import { createDemoData, presetOf, scorePresetOf } from '../seed';
 import { isImportError } from '../store/persist';
 import { editAndImport, toBuffer } from './excel.testkit';
@@ -126,8 +126,9 @@ describe('Excel のプリセットのシート', () => {
 });
 
 describe('Excel の条件のシート＝この日だけ試す重み（ADR-0035）', () => {
-  it('基準の重みを直したデータは、書き出し → 読み込みで試す重みが基準のまま（「どのプリセットとも違う」案内が出ない）', async () => {
-    const d = setBasisWeight(base(), 'wait', { weight: 1 });
+  it('重みを変えた新しい考え方を基準にしたデータは、書き出し → 読み込みで条件の重みが基準のまま（「どのプリセットとも違う」案内が出ない）', async () => {
+    const d = saveDraftAsPreset(base(), { wait: { weight: 1 } }, '待ち軽め');
+    expect(scorePresetOf(d.presets, d.scorePresetId)?.name).toBe('待ち軽め');
     const r = await importWorkbook(await toBuffer(d), base());
     if (isImportError(r)) throw new Error(r.message);
     expect(r.rules).toEqual(d.rules);

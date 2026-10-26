@@ -2,15 +2,16 @@ import { describe, expect, it } from 'vitest';
 import type { Rule } from '../contracts/rules';
 import { createDemoData, scorePresetOf, scoreRulesOf } from '../seed';
 import { leaveTarget } from './leaveGuard';
-import { setBasisWeight } from './presets';
 import {
-  applyDraft,
   changeText,
   confirmBody,
+  confirmTitle,
   draftChanges,
+  draftWeights,
   editDraft,
   leaveDialog,
   pruneDraft,
+  savedText,
   savedWeights,
   type WeightDraft,
   weightText,
@@ -66,21 +67,30 @@ describe('下書きの差分（PRD D286）', () => {
     });
   });
 
-  it('下書きは触った欄だけを保存済みに重ねる：別のタブで変わった必須を確定で上書きしない', () => {
+  it('下書きは触った欄だけを保存済みに重ねる：保存済みの必須（別のタブで変わったもの）を上書きしない', () => {
     const d = createDemoData(TODAY);
-    const saved0 = savedWeights(scoreRulesOf(d));
-    const t = 'continuity' as const;
-    const w = saved0[t]!.weight === 5 ? 4 : saved0[t]!.weight + 1;
-    const draft = editDraft({}, saved0, t, { weight: w });
-    // 別のタブで必須にした
-    const other = setBasisWeight(d, t, { hard: !saved0[t]!.hard });
-    const next = applyDraft(other, draft);
-    const p = scorePresetOf(next.presets, next.scorePresetId)!;
-    expect(p.weights[t]).toEqual({ weight: w, hard: !saved0[t]!.hard });
+    const basis = scorePresetOf(d.presets, d.scorePresetId)!;
+    const t = 'clientPreference' as const;
+    // 保存済みの必須が別のタブで変わった（基準のプリセットの必須が反対）
+    const other = { ...basis.weights, [t]: { ...basis.weights[t], hard: !basis.weights[t].hard } };
+    const w = basis.weights[t].weight === 5 ? 4 : basis.weights[t].weight + 1;
+    const draft: WeightDraft = { [t]: { weight: w } };
+    const out = draftWeights(other, draft);
+    expect(out[t]).toEqual({ weight: w, hard: !basis.weights[t].hard });
+    // ほかの型は保存済みのまま・深く写す（元と中身を共有しない）
+    expect(out.wait).toEqual(other.wait);
+    expect(out.wait).not.toBe(other.wait);
     // 表にも保存済みの必須で出す
-    const shown = withDraft(scoreRulesOf(other), draft).find((r) => r.type === t)!;
-    expect(shown.hard).toBe(!saved0[t]!.hard);
+    const shown = withDraft(scoreRulesOf({ ...d, presets: [{ ...basis, weights: other }] }), draft).find(
+      (r) => r.type === t,
+    )!;
+    expect(shown.hard).toBe(!basis.weights[t].hard);
     expect(shown.weight).toBe(w);
+  });
+
+  it('必須にできない型の下書きの必須は保存する重みでも必須にしない', () => {
+    const basis = scorePresetOf(createDemoData(TODAY).presets, 'balance')!;
+    expect(draftWeights(basis.weights, { wait: { hard: true } }).wait.hard).toBe(false);
   });
 
   it('重みの文：0 は「使わない」、重みを使わない必須は「必須」、バランスの必須は重みも', () => {
@@ -94,28 +104,18 @@ describe('下書きの差分（PRD D286）', () => {
   });
 });
 
-describe('確定と影響する日（PRD D286）', () => {
-  const data = () => createDemoData(TODAY);
-
-  it('確定すると基準のプリセットのその型が下書きの値になり、試す重みも基準にそろう', () => {
-    const d = data();
-    const saved = savedWeights(scoreRulesOf(d));
-    const t = d.rules[0]!.type;
-    const w = saved[t]!.weight === 5 ? 4 : saved[t]!.weight + 1;
-    const next = applyDraft(d, editDraft({}, saved, t, { weight: w }));
-    expect(scorePresetOf(next.presets, next.scorePresetId)?.weights[t].weight).toBe(w);
-    expect(next.rules.filter((r) => r.type === t).every((r) => r.weight === w)).toBe(true);
-    expect(applyDraft(d, {})).toBe(d);
-  });
-
-  it('確認の本文：変わる条件（前→後）・基準の名前・何に使うか・今の担当は変わらない', () => {
+describe('新しい考え方として保存する確認（PRD D286。ADR-0065）', () => {
+  it('見出し・本文：変わる条件（前→後）・元のプリセットは残る・新しい考え方を基準にする・今の担当は変わらない', () => {
+    expect(confirmTitle(2)).toBe('新しい考え方として保存しますか？（2件）');
     const rules = [rule('a', 'wait', 3, false, '待ち')];
     const ch = draftChanges(rules, { wait: { weight: 4, hard: false } });
-    const body = confirmBody(ch, '標準');
+    const body = confirmBody(ch, 'バランス');
     expect(body).toContain('・待ち：3→4');
-    expect(body).toContain('「標準」の重みが変わります');
-    expect(body).toContain('AI で組む・点数・要対応の検査に、この重みを使います');
+    expect(body).toContain(
+      '「バランス」はそのまま残ります。新しい考え方を点数の基準にし、AI で組む・点数・要対応の検査に使います。',
+    );
     expect(body).toContain('今の担当は変わりません');
+    expect(savedText('バランス（改）')).toBe('「バランス（改）」を保存して、ふだんの考え方にしました');
   });
 
   it('離れるときの確認は〈スタッフ〉の変更を捨てる確認と同じ形（危険の色・「編集を続ける」）', () => {

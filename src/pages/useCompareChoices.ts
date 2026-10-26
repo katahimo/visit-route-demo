@@ -64,10 +64,7 @@ export function useCompareChoices({
   const made = proposals.date === date ? proposals.list : [];
   /** 担当を組むの提案のうちこの画面で消した・反映したもの */
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
-  const fromArrange = useMemo(
-    () => arrangeChoices(batch, date, data.presets, data.rules, hidden),
-    [batch, date, data.presets, data.rules, hidden],
-  );
+  const fromArrange = useMemo(() => arrangeChoices(batch, date, data.rules, hidden), [batch, date, data.rules, hidden]);
   // 日付を変えたら選んだ案・作った提案を外す（選んだ訪問・区間は useRouteSelection が外す）
   useEffect(() => {
     setSel({ a: null, b: null });

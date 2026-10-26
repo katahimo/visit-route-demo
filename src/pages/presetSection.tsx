@@ -1,18 +1,16 @@
-// 条件の重みの画面のプリセットの節（D20・D24・D235。ADR-0008・ADR-0035）：点数の基準の選択・プリセットごとの名前・一言・
-// 型ごとの重み・必須（変えるとすぐ保存）・消す（最後の1つは消せない）・基準の重みを写して保存（6つまで）・初期値に戻す。
-// 状態と処理は usePresetSection
-import { LayoutGrid, RotateCcw, ShieldCheck, Trash2 } from 'lucide-react';
+// 条件の重みの画面のプリセットの節（D20・D235。ADR-0008・ADR-0035・ADR-0065）：点数の基準の選択・プリセットごとの名前・一言の編集
+// （変えるとすぐ保存）・型ごとの重み・必須の読み取り専用の一覧・消す（初期の3つと最後の1つは消せない）。プリセットの重みは変えない
+// （重みを変えるときは上の表で直して新しい考え方として保存する）。状態と処理は usePresetSection
+import { LayoutGrid, ShieldCheck, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { WeightSlider } from '../components/parts';
 import { Term } from '../components/Term';
 import { Hint, SectionTitle, WithIcon } from '../components/ui';
 import type { Terms } from '../contracts/documents';
 import { HARDABLE, MAX_PRESETS, type Preset, type RuleType } from '../contracts/rules';
 import { ruleTypeLabel, weightLocked } from '../lib/common';
 import { narrowRole } from '../lib/narrowRoles';
-import { PRESET_NAME_MAX, PRESET_NOTE_MAX } from '../lib/presets';
+import { isInitialPreset, PRESET_NAME_MAX, PRESET_NOTE_MAX } from '../lib/presets';
 import { useDemoData } from '../store';
-import { SavePresetForm } from './planParts';
 import { RULE_ICONS } from './rulesParts';
 import { usePresetSection } from './usePresetSection';
 
@@ -20,17 +18,15 @@ type PresetFlow = ReturnType<typeof usePresetSection>;
 
 export function PresetSection({
   draftCount,
-  onReset,
   shownTypes,
 }: {
   draftCount: number;
-  onReset: () => void;
   /** 出す条件の型（相性を切っているときは相性を除く） */
   shownTypes: readonly RuleType[];
 }) {
   const { data } = useDemoData();
   const terms = data.org.terms;
-  const flow = usePresetSection({ draftCount, onReset });
+  const flow = usePresetSection({ draftCount });
   return (
     <div className="card stack" ref={flow.ref} data-testid="preset-section">
       <SectionTitle
@@ -38,9 +34,11 @@ export function PresetSection({
         aside={
           <Hint>
             <ul className="hint-list">
-              <li>日の予定で、プリセットで試して提案を比べられます（比べた提案は保存しません）。</li>
-              <li>点数の基準に選んだプリセットの重みで、AI で組みます。</li>
-              <li>{MAX_PRESETS}つまで作れます。変えるとすぐ保存します。</li>
+              <li>
+                プリセットの重み・必須は変えられません。重みを変えるときは、上の表で直して新しい考え方として保存します。
+              </li>
+              <li>組み方の標準の「案をくらべる」は、すべてのプリセットで案を作ります。</li>
+              <li>{MAX_PRESETS}つまで作れます。名前・一言は変えるとすぐ保存します。初期の3つは消せません。</li>
             </ul>
           </Hint>
         }
@@ -63,17 +61,11 @@ export function PresetSection({
           />
         ))}
       </div>
-      <div className="row narrow-stack" style={{ flexWrap: 'wrap', alignItems: 'flex-start' }}>
-        <SavePresetForm from="basis" />
-        <button type="button" className="btn" onClick={flow.reset}>
-          <WithIcon icon={RotateCcw}>初期値に戻す</WithIcon>
-        </button>
-      </div>
     </div>
   );
 }
 
-/** 点数の基準の選択（ラジオ。ふだん使う重み） */
+/** 点数の基準の選択（ラジオ。ふだん使う考え方） */
 function ScoreRulerChoice({
   presets,
   rulerId,
@@ -89,9 +81,12 @@ function ScoreRulerChoice({
         点数の基準
         <Hint ariaLabel="点数の基準の説明">
           <ul className="hint-list">
-            <li>ここで選んだプリセットが、ふだん使う重みです。</li>
-            <li>AI で組む・点数・要対応の検査に、この重みを使います。</li>
-            <li>上の表で直すのは、このプリセットの重みです。</li>
+            <li>ここで選んだプリセットが、ふだんの考え方です。</li>
+            <li>担当を組む・訪問ごとの検査はこの重み・必須で計算し、画面の点数（100点満点）もこれで付けます。</li>
+            <li>上の表はこのプリセットの重みから始め、変えると新しいプリセットとして保存します。</li>
+            <li>
+              組み方の標準の「案をくらべる」はすべてのプリセットで案を作り、案から作った表を登録するとそのプリセットが点数の基準になります。
+            </li>
           </ul>
         </Hint>
       </legend>
@@ -113,7 +108,7 @@ function ScoreRulerChoice({
   );
 }
 
-/** プリセット1つの編集（畳める。名前・一言・型ごとの重み・必須・消す） */
+/** プリセット1つ（畳める。名前・一言の編集・重みの読み取り専用の一覧・消す） */
 function PresetEdit({
   preset: p,
   no,
@@ -131,14 +126,18 @@ function PresetEdit({
   terms: Terms;
   flow: PresetFlow;
 }) {
-  const { current, ruler, set, remove } = flow;
+  const { ruler, rename, remove } = flow;
+  const initial = isInitialPreset(p.id);
   return (
-    <details className="preset-edit" data-testid="preset-edit">
+    <details className="preset-edit" data-testid="preset-edit" data-preset={p.id}>
       <summary className="narrow-preset-summary">
         <span className="preset-no">{no}</span>
         <strong>{p.name}</strong>
-        {/* 日の予定で試している重みが基準と違うプリセットに当たるときだけ（ADR-0035） */}
-        {current?.id === p.id && ruler?.id !== p.id && <span className="chip chip-primary">日の予定で使用中</span>}
+        {initial && (
+          <span className="chip" data-testid="preset-initial">
+            初期
+          </span>
+        )}
         {ruler?.id === p.id && <span className="chip">点数の基準</span>}
         <span className="sub ellipsis">{p.note}</span>
       </summary>
@@ -151,7 +150,7 @@ function PresetEdit({
               max={PRESET_NAME_MAX}
               required
               ariaLabel="プリセットの名前"
-              onChange={(name) => set(p.id, { name })}
+              onChange={(name) => rename(p.id, { name })}
             />
           </div>
           <div className="stack" style={{ flex: 1, minWidth: 200, gap: 2 }}>
@@ -160,85 +159,72 @@ function PresetEdit({
               value={p.note}
               max={PRESET_NOTE_MAX}
               ariaLabel="プリセットの一言"
-              onChange={(note) => set(p.id, { note })}
+              onChange={(note) => rename(p.id, { note })}
             />
           </div>
         </div>
-        <PresetWeights preset={p} shownTypes={shownTypes} terms={terms} onWeight={flow.setWeight} />
-        <div className="row">
-          <button
-            type="button"
-            className="btn btn-small"
-            disabled={only}
-            title={only ? '最後の1つは消せません' : undefined}
-            onClick={() => remove(p)}
-          >
-            <WithIcon icon={Trash2} size={14}>
-              このプリセットを消す
-            </WithIcon>
-          </button>
-        </div>
+        <PresetWeights preset={p} shownTypes={shownTypes} terms={terms} />
+        {!initial && !only && (
+          <div className="row">
+            <button type="button" className="btn btn-small" onClick={() => void remove(p)} data-testid="preset-remove">
+              <WithIcon icon={Trash2} size={14}>
+                このプリセットを消す
+              </WithIcon>
+            </button>
+          </div>
+        )}
       </div>
     </details>
   );
 }
 
-/** プリセットの型ごとの重み・必須の表（狭い画面では行をカードにする） */
+/** 重みの読み取り専用の文（重みを使わない必須は「—」、0 は「0（使わない）」） */
+const weightCell = (t: RuleType, w: { weight: number; hard: boolean }): string =>
+  weightLocked({ type: t, hard: w.hard }) ? '—' : w.weight === 0 ? '0（使わない）' : String(w.weight);
+
+/** プリセットの型ごとの重み・必須の読み取り専用の一覧（変えられない。ADR-0065。狭い画面では行をカードにする） */
 function PresetWeights({
   preset: p,
   shownTypes,
   terms,
-  onWeight,
 }: {
   preset: Preset;
   shownTypes: readonly RuleType[];
   terms: Terms;
-  onWeight: (p: Preset, t: RuleType, w: Partial<{ weight: number; hard: boolean }>) => void;
 }) {
   return (
     <div className="table-scroll">
-      <table {...narrowRole.table} className="rules-table narrow-cards">
+      <table {...narrowRole.table} className="rules-table narrow-cards" data-testid="preset-weights">
         <thead {...narrowRole.rowgroup}>
           <tr {...narrowRole.row}>
             <th {...narrowRole.columnheader}>条件の種類</th>
-            <th {...narrowRole.columnheader} style={{ width: 220 }}>
-              重み
-            </th>
+            <th {...narrowRole.columnheader}>重み</th>
             <th {...narrowRole.columnheader}>必須</th>
           </tr>
         </thead>
         <tbody {...narrowRole.rowgroup}>
           {shownTypes.map((t) => {
             const w = p.weights[t];
-            const hardable = HARDABLE.has(t);
-            const locked = weightLocked({ type: t, hard: w.hard });
+            const hard = HARDABLE.has(t) && w.hard;
             return (
-              <tr {...narrowRole.row} key={t} className={w.weight === 0 && !w.hard ? 'is-dim' : ''}>
+              <tr {...narrowRole.row} key={t} className={w.weight === 0 && !hard ? 'is-dim' : ''}>
                 <td {...narrowRole.cell} className="narrow-title" data-label="条件の種類">
                   <WithIcon icon={RULE_ICONS[t]} size={14}>
                     {ruleTypeLabel(t, terms)}
                   </WithIcon>
                 </td>
                 <td {...narrowRole.cell} data-label="重み">
-                  <WeightSlider
-                    label={`${p.name}の${ruleTypeLabel(t, terms)}`}
-                    value={w.weight}
-                    disabled={locked}
-                    onChange={(weight) => onWeight(p, t, { weight })}
-                  />
+                  {weightCell(t, w)}
                 </td>
-                <td {...narrowRole.cell} className={hardable ? 'nowrap narrow-head' : 'nowrap'} data-label="必須">
-                  {hardable ? (
-                    <label className={`hard-toggle${w.hard ? ' is-on' : ''}`}>
-                      <input
-                        type="checkbox"
-                        checked={w.hard}
-                        onChange={(e) => onWeight(p, t, { hard: e.target.checked })}
-                      />
-                      <WithIcon icon={ShieldCheck} size={14}>
-                        必須
-                      </WithIcon>
-                    </label>
+                <td
+                  {...narrowRole.cell}
+                  className={HARDABLE.has(t) ? 'nowrap narrow-head' : 'nowrap'}
+                  data-label="必須"
+                >
+                  {hard ? (
+                    <WithIcon icon={ShieldCheck} size={14}>
+                      必須
+                    </WithIcon>
                   ) : (
                     <span className="sub">—</span>
                   )}

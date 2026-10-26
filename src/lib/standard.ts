@@ -7,9 +7,9 @@ import type { Pattern, PatternUsualStart, Visit } from '../contracts/documents';
 import type { Problem } from '../contracts/problem';
 import { addDays, minutesToHhmm, weekday } from '../domain/time';
 import { score } from '../evaluate';
-import { occursOn, parsePatternVisitId, patternVisitId, timesOn, usualStartOn, visitOf } from '../patterns';
+import { occursOn, parsePatternVisitId, patternVisitId, timesOn, usualStartOn, visitOf, visitsOn } from '../patterns';
 import { own } from './common';
-import { ownerOf, startsOf } from './dayPlan';
+import { ownerOf, routesOf, startsOf } from './dayPlan';
 import { setScorePreset } from './presets';
 
 /** 標準の期間（両端を含む。from は来週の月曜） */
@@ -140,13 +140,12 @@ export function tableDiff(table: StandardTable, current: StandardTable): CellDif
 /**
  * AI の案（日ごとの割当）から標準の表を作る：standardPatterns の繰り返しの回（問題の訪問 ID が計算した回の ID）から、
  * 曜日ごとに最初の回の担当と lenient の開始を取る（担当なしは担当も開始も無し。開始が時間の約束の外なら開始は無し）。
- * 期間に回の無いマスは今の標準のまま。only を渡すと、通った回だけを見る（ほかのマスは今の標準のまま）
+ * 期間に回の無いマスは今の標準のまま
  */
 export function tableFromDays(
   data: PatternData,
   days: readonly Pick<StandardDay, 'problem' | 'routes'>[],
   today: string,
-  only?: (visitId: string, refDate: string, p: Pattern) => boolean,
 ): StandardTable {
   const patterns = new Map(standardPatterns(data, today).map((p) => [p.id, p]));
   const out = currentTable(data, today);
@@ -159,7 +158,6 @@ export function tableFromDays(
       const ref = parsePatternVisitId(pv.id);
       const p = ref ? patterns.get(ref.patternId) : undefined;
       if (!ref || !p) continue;
-      if (only && !only(pv.id, ref.date, p)) continue;
       const wd = weekday(ref.date);
       const key = `${p.id}|${wd}`;
       if (seen.has(key) || !p.weekdays.includes(wd)) continue;
@@ -383,7 +381,7 @@ export function registerStandard(
   table: StandardTable,
   sinceIn: string,
   today: string,
-  opts: { newId: () => string; temp: TemporaryChoice; at: number; presetId?: string | null; keepDate?: string },
+  opts: { newId: () => string; temp: TemporaryChoice; at: number; presetId?: string | null },
 ): DemoData {
   const since = clampSince(data, sinceIn, today);
   const rows = changedRows(data, table, since, today);
@@ -441,14 +439,13 @@ export function registerStandard(
       continue;
     }
     if (!visit.pinned && sameAsStandard(t)) continue; // 計算した回と同じになる（ピンは残す）
-    const keep = visit.pattern.date === opts.keepDate;
-    if (!visit.pinned && opts.temp === 'drop' && !keep) continue; // 標準どおりに入れ替える
-    // ピンの回・残す回・keepDate の回：新しい繰り返しの回にして、担当・開始を残す（keepDate の回はピンを足さない）
+    if (!visit.pinned && opts.temp === 'drop') continue; // 標準どおりに入れ替える
+    // ピンの回・残す回：新しい繰り返しの回にして、担当・開始を残す（ピンを立てる）
     put.push({
       ...visitOf(target, visit.pattern.date),
       staffId: visit.staffId,
       start: visit.start,
-      pinned: visit.pinned || !keep,
+      pinned: true,
       note: visit.note,
     });
   }
@@ -460,58 +457,6 @@ export function registerStandard(
   const standard: StandardInfo = { at: opts.at, presetId, from: since, weeks: cycleWeeks(data, today).weeks };
   const out: DemoData = { ...data, patterns, visits, standard };
   return opts.presetId ? setScorePreset(out, presetId) : out;
-}
-
-/**
- * 1日の案を標準にするときの見込み（PRD D357）：その日の曜日の表（tableFromDays。ほかの曜日は今の標準のまま）・今の標準と違うマス・
- * いつから（defaultSince）。表に使うのは、その日の曜日の計算した回のうち、別の日へ動かした回・この回だけ変えた回でなく、
- * 今の標準の担当がその日に働ける（欠勤・休みでない）回だけ（その日だけの事情を毎週の標準にしない）。ほかのマスは今の標準のまま
- */
-export function dayStandardPreview(
-  data: DemoData,
-  day: Pick<StandardDay, 'date' | 'problem' | 'routes'>,
-  today: string,
-): { table: StandardTable; diff: CellDiff[]; since: string; weekday: number } {
-  const wd = weekday(day.date);
-  const saved = new Map(data.visits.map((v) => [v.id, v]));
-  const working = new Set(day.problem.staff.map((s) => s.id));
-  const table = tableFromDays(data, [day], today, (id, refDate, p) => {
-    const v = saved.get(id);
-    if (weekday(refDate) !== wd || (v && isEdited(v))) return false;
-    return p.usualStaffId === null || working.has(p.usualStaffId);
-  });
-  return {
-    table,
-    diff: tableDiff(table, currentTable(data, today)),
-    since: defaultSince(data, today),
-    weekday: weekday(day.date),
-  };
-}
-
-/**
- * 1日の案を組み方の標準として登録する（PRD D357）：その日の曜日のマスを案の担当・開始にして registerStandard（いつからは来週の月曜。
- * すでに入っている予定で違うものは標準どおりに入れ替える。その日の回は残す）、プリセットを標準の考え方（点数の基準）にする。
- * 違うマスが無くても標準は登録したことにする（考え方といつからを残す）
- */
-export function registerDayStandard(
-  data: DemoData,
-  day: Pick<StandardDay, 'date' | 'problem' | 'routes'>,
-  presetId: string,
-  today: string,
-  opts: { newId: () => string; at: number },
-): DemoData {
-  const { table, since } = dayStandardPreview(data, day, today);
-  // その日（反映したばかり）の回は、いつから以降でも消さずに残す
-  const out = registerStandard(data, table, since, today, { ...opts, temp: 'drop', presetId, keepDate: day.date });
-  if (out !== data) return out;
-  const id = data.presets.some((p) => p.id === presetId) ? presetId : (data.scorePresetId ?? data.presets[0]?.id ?? '');
-  const standard: StandardInfo = {
-    at: opts.at,
-    presetId: id,
-    from: clampSince(data, since, today),
-    weeks: cycleWeeks(data, today).weeks,
-  };
-  return setScorePreset({ ...data, standard }, id);
 }
 
 /** 考え方のカードの数（PRD D350） */
@@ -533,6 +478,17 @@ export type ProposalStats = {
 
 /** 1日の提案（採点の物差しで作った問題・その問題の訪問 ID が並ぶ担当の列） */
 export type StandardDay = { date: string; problem: Problem; routes: Record<string, string[]> };
+
+/**
+ * 日で見るの日の元（案を作ったときのデータで作り、案と一緒に残す。ADR-0065）：点数の基準の物差しで作ったひな形のその日の問題
+ * （プリセットに依らないので日に1つ）・ひな形の訪問・そのときの今の標準の割当（standardDayRoutes）
+ */
+export type StandardBaseDay = {
+  date: string;
+  problem: Problem;
+  visits: Visit[];
+  current: Record<string, string[]>;
+};
 
 /**
  * 考え方のカードの数（PRD D350）：points は toPoints（点数の基準の物差しで 100点満点にする。画面が渡す）の日ごとの平均
@@ -586,6 +542,23 @@ export function bestIndex(stats: readonly (Pick<ProposalStats, 'points'> | null)
     if (b == null || s.points > b) best = i;
   });
   return best;
+}
+
+/**
+ * ひな形の入力（案を作る・日で見る）：保存した回・単発の訪問は見ず（visits を空にして繰り返しから計算した回だけ）、
+ * ピンも効かせない（PRD D350）
+ */
+export const standardTemplate = <T extends Pick<DemoData, 'visits'>>(d: T): T => ({ ...d, visits: [] });
+
+/** ひな形のその日の訪問（繰り返しから計算した回。担当・開始は今の標準のまま。開始の順） */
+export const standardDayVisits = (data: DemoData, date: string): Visit[] => visitsOn(standardTemplate(data), date);
+
+/**
+ * 日で見るの「今の標準」（PRD D350。ADR-0065）：ひな形の問題の訪問を、今の標準の担当・開始のまま並べた割当
+ * （その日に担当がいない回は担当なし）。案と同じひな形どうしで比べる
+ */
+export function standardDayRoutes(data: DemoData, problem: Problem): Record<string, string[]> {
+  return routesOf(problem, standardDayVisits(data, problem.date));
 }
 
 /** 組み方の標準を登録したか */

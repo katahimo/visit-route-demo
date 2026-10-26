@@ -1,5 +1,5 @@
 // 機能の入り切り その2（PRD D211・D213〜D215）：ひな形の4通りごとに画面の中の入口（日の画面の欠勤・キャンセル・メール・点数の理由、
-// 担当を組むの「AI で組む」・考え方（プリセット）の数・「案を比べる」、〈利用者さん〉の欄の段階の選択・紹介元・担当できる人・休み・決まりごと・住所の検索・絞り込みのチップ、
+// 担当を組むの「AI で組む」・考え方（プリセット）の数・「案を比べる」・予定を組むのタブの条件の重み、〈利用者さん〉の欄の段階の選択・紹介元・担当できる人・休み・決まりごと・住所の検索・絞り込みのチップ、
 // 〈利用者さん〉の画面の紹介元・決まりごと・休みのタブ、〈スタッフ〉の画面のメールアドレス・最終勤務日、月の「休みを入れる」・印刷、空き状況の案内文、
 // データの Excel、稼働の見込みの交通費の単価）。相性を切るときの独自の確認（件数と効き方。取り消すと変わらない）と、
 // 相性×の組は AI で組むと担当にならず、切ると担当に入ること（別のタブで×を書き、担当を組むの日の範囲（#/arrange?date=）で AI で組んで反映する）。
@@ -36,7 +36,7 @@ async function insideEntries(page, dlg, ctx) {
     await writeFeaturesInOtherTab(ctx, asFeatures(TEMPLATE_ON[t]));
     const data = await page.evaluate((k) => JSON.parse(localStorage.getItem(k)), STORAGE_KEY);
     check(same(data.org.features, asFeatures(TEMPLATE_ON[t])), `${label}：入り切りを書いた`);
-    await markStandard(page); // 標準が無い間は週を組めない（ADR-0064）
+    await markStandard(page); // 標準が無い間は担当を組むで組めない（ADR-0065）
     const count = (id) => page.getByTestId(id).count();
 
     // 日の画面（今日）
@@ -52,17 +52,21 @@ async function insideEntries(page, dlg, ctx) {
     check((await count('day-mail')) === (on('mail') ? 1 : 0), `${label}：日の予定の見出しの「予定をメールで送る」`);
     if (!on('rules')) check((await count('plan-reason')) === 0, `${label}：点数の横の理由を出さない`);
     check((await count('plan-menu')) === 0, `${label}：日の予定に「AI で組む ▾」は無い`);
-    // 担当を組む（週の範囲）：AI で組む・考え方（プリセット）・案を比べる（ADR-0063。日の範囲は標準が無いと考え方ごとの案。D357）
+    // 担当を組む（週の範囲）：AI で組む・考え方（点数の基準。選ぶ欄は無い）・案を比べる（ADR-0063・ADR-0065）
     await open(page, `/arrange?d=${TODAY}`, '[data-testid="arrange-start"]');
     check((await count('arrange-start')) === 1, `${label}：担当を組むの「AI で組む」`);
-    // 点数の基準のほかのプリセットで組める（条件の重みを切ると考え方の欄ごと出さない）
-    const presets = await page.locator('[data-testid="arrange-preset"] option:not([value=""])').count();
-    check(presets === (on('rules') ? data.presets.length - 1 : 0), `${label}：考え方（プリセット）の数`, presets);
     check(
-      (await count('arrange-preset')) === (on('rules') ? 1 : 0),
-      `${label}：考え方（プリセット）の欄（条件の重みの入り切り）`,
+      (await count('arrange-basis')) === 1 && (await count('arrange-preset')) === 0,
+      `${label}：担当を組むは「考え方：〈点数の基準〉」だけ（選ぶ欄は無い）`,
     );
     check((await count('arrange-compare-open')) === (on('compare') ? 1 : 0), `${label}：担当を組むの「案を比べる」`);
+    // 予定を組むのタブ：条件の重みは rules を切ると出さない（ADR-0065）
+    const atabs = (await page.getByTestId('arrange-tabs').locator('a').allInnerTexts()).map((x) => x.trim());
+    check(
+      same(atabs, on('rules') ? ['条件の重み', '組み方の標準', '担当を組む'] : ['組み方の標準', '担当を組む']),
+      `${label}：予定を組むのタブ（条件の重みの入り切り）`,
+      atabs,
+    );
 
     // 〈利用者さん〉：その人の画面の節（PRD D308）
     const client = data.clients.find((c) => c.referrer.name) ?? data.clients[0];
@@ -283,14 +287,15 @@ async function keepData(page, dlg, ctx) {
 /**
  * 担当を組む（#/arrange?date=。日の範囲）で「AI で組む」の提案を出して反映する（版2：提案は反映するまで担当を変えない。
  * ADR-0053・ADR-0063）。担当の入った訪問も組み直すので、組む日は「伝えていない日をすべて組み直す」。
- * 組み方の標準が無ければ考え方ごとの案（D357）になるので、最初の案を［この日だけ反映］
+ * 組み方の標準が無いと組めない（ADR-0065）ので、先に標準を登録したデータにする
  */
 async function proposeAndApply(page, date) {
+  await markStandard(page);
   await open(page, `/arrange?date=${date}`, '[data-testid="arrange-start"]');
   if ((await page.getByTestId('arrange-mode-all').count()) > 0) await page.getByTestId('arrange-mode-all').check();
   await page.getByTestId('arrange-start').click();
   const band = page.locator('[data-testid="proposal-band"]');
-  const apply = band.locator('[data-testid="proposal-apply"], [data-testid="choice-apply"]').first();
+  const apply = band.getByTestId('proposal-apply');
   await apply.waitFor({ timeout: 150000 });
   await apply.click();
   await band.waitFor({ state: 'detached', timeout: 10000 });

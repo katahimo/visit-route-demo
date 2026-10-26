@@ -1,4 +1,5 @@
-// 組み方の標準（標準の週。PRD D350〜D354。ADR-0063）の画面。3段：案をくらべる → 表で直す（下書き） → 標準にする。
+// 組み方の標準（標準の週。PRD D350〜D354・D359。ADR-0063・ADR-0065）の画面。3段：案をくらべる（カード・表で見る・日で見る）→
+// 表で直す（下書き） → 標準にする。標準を決める道はこの画面だけ。
 // 案・下書きは画面の外の入れ物（lib/standardDraft）に置き、ほかの画面へ移っても残す。実際の予定（訪問）には登録まで書かない。
 // 登録は store の update の1回（全体の「元に戻す」で戻せる）
 import { CalendarCheck } from 'lucide-react';
@@ -18,6 +19,7 @@ import { useDemoData } from '../store';
 import './settings.css';
 import './standard.css';
 import { DraftStep, ProposalsStep, RegisterStep } from './standardSteps';
+import { useStandardDayView } from './useStandardDayView';
 import { useStandardDraft } from './useStandardDraft';
 import { useStandardProposals } from './useStandardProposals';
 import { useStandardRegister } from './useStandardRegister';
@@ -44,6 +46,7 @@ export default function StandardPage() {
   const tableProps = { rows, weekdays, current, clientName, staffName };
 
   const proposals = useStandardProposals(data, today, current, key, work);
+  const day = useStandardDayView(data, work);
   const draftState = useStandardDraft(work, current, key, confirmDialog, presetName);
   const { draft, draftDiff } = draftState;
   const register = useStandardRegister(
@@ -87,6 +90,7 @@ export default function StandardPage() {
           proposals={proposals}
           hasDraft={draft !== null}
           tableProps={tableProps}
+          day={day}
           onUse={(presetId, table) => void draftState.pickProposal(presetId, table)}
         />
 

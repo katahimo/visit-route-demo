@@ -2,7 +2,15 @@ import { CircleQuestionMark, TriangleAlert } from 'lucide-react';
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
-import { type ConfirmOptions, type ConfirmRequest, enqueue, settle, toRequest, trapTarget } from '../lib/confirmDialog';
+import {
+  type ConfirmField,
+  type ConfirmOptions,
+  type ConfirmRequest,
+  enqueue,
+  settle,
+  toRequest,
+  trapTarget,
+} from '../lib/confirmDialog';
 import { FOCUSABLE } from './ui';
 import { inertLock, useBodyScrollLock } from './useBodyScrollLock';
 import './confirmDialog.css';
@@ -69,6 +77,14 @@ export function ConfirmDialog({
   }, []);
   const danger = request.tone === 'danger';
   const Icon = danger ? TriangleAlert : CircleQuestionMark;
+  const [value, setValue] = useState(request.field?.initial ?? '');
+  /** 入力欄の値で確定できない理由（入力欄が無ければ null） */
+  const fieldError = request.field?.error(value) ?? null;
+  const ok = () => {
+    if (fieldError) return;
+    request.field?.onValue(value.trim());
+    onClose(true);
+  };
   return createPortal(
     <div ref={wrapRef} className="confirm-wrap" data-testid="confirm-wrap">
       {/* 背景を押すと取り消し（キーボードは Esc・取り消しのボタン） */}
@@ -99,6 +115,9 @@ export function ConfirmDialog({
             {request.title}
           </h2>
         </div>
+        {request.field && (
+          <ConfirmInput field={request.field} value={value} error={fieldError} onChange={setValue} onEnter={ok} />
+        )}
         {request.body && (
           <p id={bodyId} className="confirm-body" data-testid="confirm-body">
             {request.body}
@@ -117,7 +136,8 @@ export function ConfirmDialog({
           <button
             type="button"
             className={danger ? 'btn btn-danger-solid' : 'btn btn-primary'}
-            onClick={() => onClose(true)}
+            onClick={ok}
+            aria-disabled={fieldError ? true : undefined}
             data-testid="confirm-ok"
           >
             {request.confirmLabel}
@@ -126,6 +146,46 @@ export function ConfirmDialog({
       </div>
     </div>,
     document.body,
+  );
+}
+
+/** 確認の中の入力欄（名前など）。誤りは欄の下に文で出す。Enter で確定（変換中は除く） */
+function ConfirmInput({
+  field,
+  value,
+  error,
+  onChange,
+  onEnter,
+}: {
+  field: ConfirmField;
+  value: string;
+  error: string | null;
+  onChange: (v: string) => void;
+  onEnter: () => void;
+}) {
+  const errorId = useId();
+  return (
+    <label className="confirm-field">
+      <span>{field.label}</span>
+      <input
+        value={value}
+        maxLength={field.maxLength}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? errorId : undefined}
+        data-testid={field.testId}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key !== 'Enter' || e.nativeEvent.isComposing || e.keyCode === 229) return;
+          e.preventDefault();
+          onEnter();
+        }}
+      />
+      {error && (
+        <span id={errorId} className="error" data-testid={field.testId ? `${field.testId}-error` : undefined}>
+          {error}
+        </span>
+      )}
+    </label>
   );
 }
 

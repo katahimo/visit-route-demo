@@ -1,4 +1,4 @@
-// 考え方ごとの案の時間軸の列（予定の画面と同じ時間軸。担当ごとの列・訪問の帯・印）
+// 案を日で見る（ChoiceDayView）の時間軸の列（予定の画面と同じ時間軸。担当ごとの列・訪問の帯・変わる訪問の印）
 import { Clock } from 'lucide-react';
 import type { DemoData } from '../contracts/data';
 import type { Staff } from '../contracts/documents';

@@ -13,6 +13,7 @@
 // 終了コード：全部通れば 0、通らないものがあれば 1。ページのエラー（pageerror）も失敗に数える
 const path = require('node:path');
 const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, settle, stored, until, runSteps } = require('./lib/env.cjs');
+const { markStandard } = require('./lib/standard.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
 
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
@@ -663,7 +664,8 @@ async function palette(page) {
 // ---- 1400px：範囲の提案は画面を移っても残る ----
 async function keepRange(page) {
   await freshPlan(page, '/week');
-  // 範囲の提案は担当を組むの画面で出す（ADR-0063。標準が無い日の範囲は考え方ごとの案。D357）
+  // 範囲の提案は担当を組むの画面で出す（ADR-0063。標準が無い間は組めないので先に登録。ADR-0065）
+  await markStandard(page);
   await page.goto(`${BASE}#/arrange?date=${TODAY}`);
   await page.getByTestId('arrange-start').click();
   const band = page.locator('[data-testid="proposal-band"]');

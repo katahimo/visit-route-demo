@@ -161,7 +161,7 @@ export function startsOf(problem: Problem, routes: Routes): Map<string, { staffI
   return out;
 }
 
-/** 点数の基準の物差しでの点（100点満点）。採点できなければ null（予定の画面・考え方ごとの案で同じ数え方） */
+/** 点数の基準の物差しでの点（100点満点）。採点できなければ null（予定の画面と同じ数え方） */
 export function pointsOf(scoreProblem: Problem | null, scale: ScoreScale | null, routes: Routes): number | null {
   if (!scoreProblem || !scale) return null;
   return attempt(() => toHundred(score(scoreProblem, routes).total, scale)).value ?? null;

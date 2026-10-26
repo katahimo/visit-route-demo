@@ -465,7 +465,7 @@ const viewBand = (page) =>
 
 /**
  * 条件の重み（PRD D220）：行がカード（display: flex）・1つ目の条件のスライダーと必須の切り替えが画面の中・横にはみ出さない。
- * プリセットの名前とボタンの文字が1字ずつ折り返さない
+ * プリセットの名前が1字ずつ折り返さない・重みの読み取り専用の一覧（ADR-0065）もカードで横にはみ出さない
  */
 async function narrowRules(page) {
   await open(page, '/rules', '[data-testid="narrow-rules"]');
@@ -483,18 +483,30 @@ async function narrowRules(page) {
     const h = (el) => Math.round(el.getBoundingClientRect().height);
     const lh = (el) => Number.parseFloat(getComputedStyle(el).lineHeight) || 24;
     const names = [...document.querySelectorAll('.narrow-preset-summary > strong')].map((el) => h(el) / lh(el));
-    const btns = [...document.querySelectorAll('.narrow-stack > .btn')].map((el) => {
-      const r = document.createRange();
-      r.selectNodeContents(el);
-      return r.getClientRects().length > 0 ? h(el) : 0;
-    });
-    return { names, btns };
+    return { names };
   });
   check(
-    lines.names.length >= 3 && lines.names.every((n) => n < 1.6) && lines.btns.every((b) => b > 0 && b < 60),
-    'プリセット：名前は1行・「いまの重みをプリセットとして保存」「初期値に戻す」は折り返さない',
+    lines.names.length >= 3 && lines.names.every((n) => n < 1.6),
+    'プリセット：名前は1行（初期値に戻す・基準の重みを写して保存のボタンは無い。ADR-0065）',
     lines,
   );
+  await page.getByTestId('preset-edit').first().locator('summary').click();
+  const weights = page.getByTestId('preset-edit').first().getByTestId('preset-weights');
+  await weights.waitFor();
+  const wrow = await weights
+    .locator('tbody > tr')
+    .first()
+    .evaluate((el) => getComputedStyle(el).display);
+  const wright = await weights.evaluate((el) => Math.round(el.getBoundingClientRect().right));
+  check(
+    wrow === 'flex' &&
+      wright <= 390 &&
+      (await pageWidth(page)) <= 390 &&
+      (await weights.locator('input').count()) === 0,
+    'プリセット：重みの読み取り専用の一覧はカードで画面の中（入力欄なし。ADR-0065）',
+    { wrow, wright },
+  );
+  await page.getByTestId('preset-edit').first().locator('summary').click();
   await page.screenshot({ path: path.join(OUT_DIR, 'narrow-rules.png') });
   // 重みの下書き（PRD D286）：動かすと確定の帯が下のタブのすぐ上に出て、2つのボタンが画面の中・巻いても見える。取り消すと消える
   const range = page.getByTestId('narrow-rules').locator('input[type="range"]:not([disabled])').first();
@@ -511,18 +523,21 @@ async function narrowRules(page) {
         const r = (el) => el.getBoundingClientRect();
         const b = r(document.querySelector('[data-testid="rules-draft-bar"]'));
         const tabs = r(document.querySelector('.bottom-tabs'));
-        const btns = [...document.querySelectorAll('[data-testid="rules-draft-bar"] .btn')].map(r);
+        const btnEls = [...document.querySelectorAll('[data-testid="rules-draft-bar"] .btn')];
+        const btns = btnEls.map(r);
         return {
           top: Math.round(b.top),
           bottom: Math.round(b.bottom),
           tabs: Math.round(tabs.top),
           right: Math.max(...btns.map((x) => x.right)),
           rows: new Set(btns.map((x) => Math.round(x.top))).size,
+          // ボタンの文字がボタンからはみ出さない
+          clipped: btnEls.some((el) => el.scrollWidth > el.clientWidth + 1),
         };
       });
       check(
-        box.top >= 0 && box.bottom <= box.tabs + 1 && box.right <= 390 && box.rows === 1,
-        `条件の重み：下書きの確定の帯が下のタブの上で、ボタンは1行で画面の中（${where}。PRD D286）`,
+        box.top >= 0 && box.bottom <= box.tabs + 1 && box.right <= 390 && box.rows === 1 && !box.clipped,
+        `条件の重み：下書きの保存の帯が下のタブの上で、ボタンは1行で画面の中・文字がはみ出さない（${where}。PRD D286）`,
         box,
       );
     }

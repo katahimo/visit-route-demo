@@ -35,8 +35,8 @@ AI・人が「何を知りたいときに、どのファイルを読むか」を
 | [pages-compat.md](design/pages-compat.md) | 相性の表 |
 | [pages-staff.md](design/pages-staff.md) | 〈スタッフ〉の一覧と画面・勤務時間（シフト）・勤務の見込み・スマホ画面 |
 | [pages-rules.md](design/pages-rules.md) | 条件・プリセット・訪問の種類・項目・案の比較 |
-| [pages-arrange.md](design/pages-arrange.md) | 担当を組む（範囲・AI で組む・提案の帯） |
-| [pages-standard.md](design/pages-standard.md) | 組み方の標準（標準の週の期間・考え方の比較・登録・`lib/standard`） |
+| [pages-arrange.md](design/pages-arrange.md) | 担当を組む（範囲・AI で組む・提案の帯。予定を組むの3段目） |
+| [pages-standard.md](design/pages-standard.md) | 組み方の標準（標準の週の期間・考え方ごとの案の比較（表と日で見る時間軸・地図）・登録・`lib/standard`。予定を組むの2段目） |
 | [pages-data.md](design/pages-data.md) | データ（控え・直前の状態・Excel・初期化・片づけ・データを守る知らせ）・管理者設定 |
 
 ## ADR 一覧
@@ -101,7 +101,8 @@ AI・人が「何を知りたいときに、どのファイルを読むか」を
 | [0060](adr/0060-schedule-nav-row-same-for-month-week-day.md) | 予定の日・週・月に同じナビの行を置く |
 | [0062](adr/0062-standard-week-and-two-modes.md) | 組み方の標準を繰り返しの担当・開始で持ち、標準の担当は AI で組んでも動かさない |
 | [0063](adr/0063-ai-only-in-standard-manual-schedule.md) | AI で組むのは「予定を組む」に集め、予定の画面は手で直す（メニューの子の項目） |
-| [0064](adr/0064-day-three-choices-until-standard.md) | 標準が無い間は考え方ごとの日の案を並べて選ぶ |
+| [0064](adr/0064-day-three-choices-until-standard.md) | 標準が無い間は考え方ごとの日の案を並べて選ぶ（0065 で置き換え） |
+| [0065](adr/0065-standard-flow-one-path-rules-under-arrange.md) | 予定を組むを 条件の重み → 組み方の標準 → 担当を組む の3段にし、標準を決める道を組み方の標準の1本に |
 
 ## 文書の保ち方
 

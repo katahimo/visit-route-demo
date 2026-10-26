@@ -47,7 +47,7 @@ export function MonthBatchHost(): ReactNode {
     // 提案が無い（止めた・組めなかった）ときは、担当を組むの画面にいればボタンを出さない
     const here = viewing.current;
     const bandShown = ['/arrange', '/plan', '/week', '/month'].includes(here.pathname);
-    const same = ((done.proposal !== null || done.choices !== undefined) && bandShown) || here.pathname === '/arrange';
+    const same = (done.proposal !== null && bandShown) || here.pathname === '/arrange';
     toast(
       batchDoneText(done),
       same

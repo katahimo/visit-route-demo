@@ -1,4 +1,4 @@
-// 考え方ごとの案の時間軸（PRD D357。ADR-0064）
+// 案の時間軸の列（組み方の標準の日で見る。PRD D350。ADR-0065）
 import { describe, expect, it } from 'vitest';
 import { createDemoData } from '../seed';
 import { solve } from '../solver';
