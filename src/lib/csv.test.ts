@@ -1,6 +1,6 @@
 // CSV の文字と表の変換（ADR-0068）
 import { describe, expect, it } from 'vitest';
-import { CSV_BOM, decodeText, parseCsv, toCsv } from './csv';
+import { CSV_BOM, decodeText, parseCsv, toCsv, unguardCell } from './csv';
 
 /** テストのための Shift_JIS・EUC-JP の書き方（TextDecoder で2バイトの並びを全部読んで逆引きを作る） */
 function legacyEncoder(label: 'shift_jis' | 'euc-jp'): (s: string) => Uint8Array {
@@ -13,6 +13,8 @@ function legacyEncoder(label: 'shift_jis' | 'euc-jp'): (s: string) => Uint8Array
       const ch = dec.decode(new Uint8Array([a, b]));
       if (ch.length === 1 && ch !== '�' && !map.has(ch)) map.set(ch, [a, b]);
     }
+  // Shift_JIS の半角カナは1バイト（0xA1〜0xDF）
+  if (label === 'shift_jis') for (const a of range(0xa1, 0xdf)) map.set(dec.decode(new Uint8Array([a])), [a]);
   return (s) => {
     const out: number[] = [];
     for (const ch of s) {
@@ -44,6 +46,10 @@ describe('decodeText（文字コードの見分け）', () => {
   it('Shift_JIS（Excel の「CSV（コンマ区切り）」の保存）', () => {
     expect(decodeText(legacyEncoder('shift_jis')(SAMPLE))).toEqual({ text: SAMPLE, encoding: 'Shift_JIS' });
   });
+  it('Shift_JIS の半角カナだけの値でも、漢字の見出しがあれば EUC-JP と取り違えない', () => {
+    const text = '名前,よみ\r\n山田,ﾔﾏﾀﾞ ﾊﾅｺ\r\n';
+    expect(decodeText(legacyEncoder('shift_jis')(text))).toEqual({ text, encoding: 'Shift_JIS' });
+  });
   it('EUC-JP', () => {
     expect(decodeText(legacyEncoder('euc-jp')(SAMPLE))).toEqual({ text: SAMPLE, encoding: 'EUC-JP' });
   });
@@ -73,6 +79,12 @@ describe('parseCsv・toCsv', () => {
       ['名前', '住所'],
       ['山田', '北1条,西2丁目'],
     ]);
+  });
+  it("数式と読まれる先頭（= + - @）には「'」を付け、unguardCell で外す（数は付けない）", () => {
+    const text = toCsv([['=HYPERLINK("x")', '-鍵はポスト', '+1', '-1.5', '@a', "'通常"]]);
+    const cells = parseCsv(text)[0]!;
+    expect(cells).toEqual(['\'=HYPERLINK("x")', "'-鍵はポスト", '+1', '-1.5', "'@a", "'通常"]);
+    expect(cells.map(unguardCell)).toEqual(['=HYPERLINK("x")', '-鍵はポスト', '+1', '-1.5', '@a', "'通常"]);
   });
   it('書いて読むと同じに戻る（null は空、数は文字）', () => {
     const rows = [

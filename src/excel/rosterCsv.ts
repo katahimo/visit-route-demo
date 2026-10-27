@@ -3,9 +3,11 @@
 // Excel の無い環境でも、表計算のアプリやメモ帳で名簿を直せるようにする
 import ExcelJS from 'exceljs';
 import type { DemoData, ImportError, RosterKind, RosterSource } from '../contracts/data';
-import { CSV_BOM, CSV_MIME, decodeText, parseCsv, toCsv } from '../lib/csv';
+import { nameKey } from '../lib/common';
+import { CSV_BOM, CSV_MIME, decodeText, parseCsv, toCsv, unguardCell } from '../lib/csv';
 import { exportProblem } from './exportBook';
 import { clientTable, staffTable } from './exportPersonTables';
+import { CLIENT_POSTAL_COL } from './layout';
 import { loadWorkbook, MAX_FILE_BYTES } from './reader';
 import { personSheetNames } from './text';
 
@@ -23,7 +25,7 @@ export function exportRosterCsv(data: DemoData, kind: RosterKind): Blob {
 
 /**
  * 名簿のファイル → ブック。.xlsx（zip）ならそのまま開き、ほかは CSV として文字コードを見分けて読み、
- * 名簿のシート名（呼び方）のシート1枚に写す（値はすべて文字。日付・時刻・数は rosterRows が文字から読む）
+ * 名簿のシート名（呼び方）のシート1枚に写す（値は文字。日付・時刻・数は rosterRows が文字から読む。書き出しで付けた数式よけの「'」は外す）
  */
 export async function loadRosterBook(
   buf: ArrayBuffer,
@@ -45,6 +47,13 @@ export async function loadRosterBook(
   if (rows.length === 0) return { code: 'INVALID_ARGUMENT', message: 'CSV のファイルが空です' };
   const book = new ExcelJS.Workbook();
   const ws = book.addWorksheet(personSheetNames(base.org.terms)[kind]);
-  for (const r of rows) ws.addRow(r);
+  // 郵便番号の列の数字だけの値は数のセルにする（Excel で CSV を開いて保存すると先頭の0が落ちる。数なら readPostal が7桁に戻す）
+  const postal = kind === 'client' ? (rows[0] ?? []).findIndex((h) => nameKey(h) === nameKey(CLIENT_POSTAL_COL)) : -1;
+  rows.forEach((r, n) => {
+    const cells: (string | number)[] = r.map(unguardCell);
+    const p = cells[postal];
+    if (n > 0 && typeof p === 'string' && /^\d{1,6}$/.test(p)) cells[postal] = Number(p);
+    ws.addRow(cells);
+  });
   return { book, source: { format: 'csv', encoding } };
 }

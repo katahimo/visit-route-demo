@@ -155,11 +155,12 @@ export async function importRoster(
 
   const { added, updated, unchanged } = countPeople(kind, reads, r);
   const { allowedRemoved, allowedEmptied } = allowedChanges(kind, base, r);
-  // 最終勤務日が入った・変わった〈スタッフ〉（ADR-0015。担当の振り直しは〈スタッフ〉の画面から）
+  // 最終勤務日が入った・変わった利用中の〈スタッフ〉（ADR-0015。担当の振り直しは〈スタッフ〉一覧の「最終勤務日のある〈スタッフ〉」の欄から。
+  // その欄は利用中の人だけを出すので、休止の人は数えない）
   const lastDaySet =
     kind === 'staff'
       ? r.staff
-          .filter((s) => s.lastDay !== null && base.staff.find((b) => b.id === s.id)?.lastDay !== s.lastDay)
+          .filter((s) => s.active && s.lastDay !== null && base.staff.find((b) => b.id === s.id)?.lastDay !== s.lastDay)
           .map((s) => s.name)
       : [];
   const activeBefore =

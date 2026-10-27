@@ -5,6 +5,8 @@ import { FileSpreadsheet, FileText, RotateCcw, Sheet, X } from 'lucide-react';
 import { useId } from 'react';
 import type { RosterKind } from '../contracts/data';
 import { EXCEL_STALE_TEXT } from '../lib/dataScreen';
+import { reloadPage } from '../lib/reloadPage';
+import { flushSave } from '../store';
 import { FieldError } from './FieldError';
 import { FilePick } from './FilePick';
 import { Hint, SectionTitle, WithIcon } from './ui';
@@ -30,13 +32,32 @@ export function RosterButton({ open, onToggle, controls }: { open: boolean; onTo
   );
 }
 
-/** 名簿の欄。id は見出しのボタンの aria-controls が指す */
-export function RosterCard({ kind, id, onClose }: { kind: RosterKind; id: string; onClose: () => void }) {
+/**
+ * 名簿の欄。id は見出しのボタンの aria-controls が指す。閉じても消さずに隠す（読み込みの途中で閉じても、
+ * 入ったかの見届け（トースト・控えを戻す）が続くように）
+ */
+export function RosterCard({
+  kind,
+  id,
+  open,
+  onClose,
+}: {
+  kind: RosterKind;
+  id: string;
+  open: boolean;
+  onClose: () => void;
+}) {
   const roster = useRosterCard(kind);
   const titleId = useId();
   const { term } = roster;
   return (
-    <section id={id} className="card stack roster-card" aria-labelledby={titleId} data-testid="roster-card">
+    <section
+      id={id}
+      className="card stack roster-card"
+      aria-labelledby={titleId}
+      hidden={!open}
+      data-testid="roster-card"
+    >
       <SectionTitle
         icon={FileSpreadsheet}
         aside={
@@ -95,8 +116,8 @@ export function RosterCard({ kind, id, onClose }: { kind: RosterKind; id: string
           type="button"
           className="btn"
           style={{ alignSelf: 'flex-start' }}
-          // 保存は間引いているので、書き終わるのを少し待ってから読み直す
-          onClick={() => setTimeout(() => location.reload(), 500)}
+          // 保存は間引いているので、待っている保存を書いてから読み直す
+          onClick={() => reloadPage(flushSave)}
         >
           <WithIcon icon={RotateCcw}>画面を読み直す</WithIcon>
         </button>

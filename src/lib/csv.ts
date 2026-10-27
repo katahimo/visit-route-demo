@@ -11,19 +11,26 @@ const LEGACY: readonly { name: TextEncodingName; label: string }[] = [
   { name: 'EUC-JP', label: 'euc-jp' },
 ];
 
-/** 読めない文字（U+FFFD）と半角カナ（EUC-JP を Shift_JIS で読むと多く出る）を数えて、取り違えらしさの点にする（小さいほど良い） */
+/** 読めない文字（U+FFFD）の数（どちらの文字コードでも読めてしまうときの取り違えらしさ。小さいほど良い） */
 function badness(text: string): number {
   let n = 0;
-  for (const ch of text) {
-    if (ch === '�') n += 10;
-    else if (ch >= '｡' && ch <= 'ﾟ') n += 1;
-  }
+  for (const ch of text) if (ch === '\uFFFD') n++;
   return n;
 }
 
+/** 誤りのある並びがあれば null（fatal で読む） */
+function strictDecode(label: string, bytes: Uint8Array): string | null {
+  try {
+    return new TextDecoder(label, { fatal: true }).decode(bytes);
+  } catch {
+    return null;
+  }
+}
+
 /**
- * バイト列 → 文字（文字コードを見分ける）。BOM があればそれに従い、無ければ UTF-8 として正しく読めるか確かめ、
- * 読めなければ Shift_JIS と EUC-JP で読んで取り違えらしさの少ないほう。先頭の BOM は落とす
+ * バイト列 → 文字（文字コードを見分ける）。BOM があればそれに従い、無ければ UTF-8 → Shift_JIS → EUC-JP の順に
+ * 誤りなく読めるものを選ぶ（Shift_JIS の漢字の先頭のバイト 0x81〜0x9F は EUC-JP では読めないので、漢字があれば取り違えない）。
+ * どれも誤りがあれば、読めない文字の少ないほう。先頭の BOM は落とす
  */
 export function decodeText(bytes: Uint8Array): { text: string; encoding: TextEncodingName } {
   if (bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf)
@@ -32,10 +39,11 @@ export function decodeText(bytes: Uint8Array): { text: string; encoding: TextEnc
     return { text: new TextDecoder('utf-16le').decode(bytes.subarray(2)), encoding: 'UTF-16LE' };
   if (bytes[0] === 0xfe && bytes[1] === 0xff)
     return { text: new TextDecoder('utf-16be').decode(bytes.subarray(2)), encoding: 'UTF-16BE' };
-  try {
-    return { text: new TextDecoder('utf-8', { fatal: true }).decode(bytes), encoding: 'UTF-8' };
-  } catch {
-    // UTF-8 ではない：古い日本語の文字コードの中から選ぶ
+  const utf8 = strictDecode('utf-8', bytes);
+  if (utf8 !== null) return { text: utf8, encoding: 'UTF-8' };
+  for (const c of LEGACY) {
+    const text = strictDecode(c.label, bytes);
+    if (text !== null) return { text, encoding: c.name };
   }
   let best: { text: string; encoding: TextEncodingName; bad: number } | null = null;
   for (const c of LEGACY) {
@@ -110,10 +118,20 @@ export function parseCsv(text: string): string[][] {
   return rows;
 }
 
-/** 1つの値を CSV の形に（区切り・改行・「"」・前後の空白があれば引用符で囲む） */
+/** 表計算のアプリが数式として読む先頭の文字（= + - @。数は除く） */
+const FORMULA_START = /^[=+\-@]/;
+const NUMBER_TEXT = /^[-+]?\d+(\.\d+)?$/;
+/** 数式と読まれないよう、先頭に「'」を付けた印（読み込みで外す） */
+const GUARD = "'";
+
+/**
+ * 1つの値を CSV の形に。数式と読まれる先頭（= + - @）の文字の値は「'」を前に付ける（数式の差し込み・#NAME? を防ぐ。
+ * 読み込みでは unguardCell で外す）。区切り・改行・「"」・前後の空白があれば引用符で囲む
+ */
 function csvCell(v: string | number | null): string {
   if (v === null) return '';
-  const s = String(v);
+  const raw = String(v);
+  const s = typeof v === 'string' && FORMULA_START.test(raw) && !NUMBER_TEXT.test(raw) ? GUARD + raw : raw;
   return /[",\r\n]|^\s|\s$/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
@@ -121,6 +139,10 @@ function csvCell(v: string | number | null): string {
 export function toCsv(rows: readonly (readonly (string | number | null)[])[]): string {
   return `${rows.map((r) => r.map(csvCell).join(',')).join('\r\n')}\r\n`;
 }
+
+/** 書き出しで数式よけに付けた「'」を外す（「'」の次が = + - @ のときだけ） */
+export const unguardCell = (s: string): string =>
+  s.startsWith(GUARD) && FORMULA_START.test(s.slice(1)) ? s.slice(1) : s;
 
 /** BOM 付きの UTF-8（Excel で開いても文字化けしない） */
 export const CSV_BOM = '﻿';

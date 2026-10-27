@@ -478,8 +478,8 @@ async function roster(page, dlg) {
   await page.getByTestId('roster-close').click();
   await settle(page);
   check(
-    (await card.count()) === 0 && (await toggle.getAttribute('aria-expanded')) === 'false',
-    '名簿の欄：閉じると消える',
+    !(await card.isVisible()) && (await toggle.getAttribute('aria-expanded')) === 'false',
+    '名簿の欄：閉じると隠れる',
   );
   // 〈利用者さん〉一覧にも同じ欄
   await page.goto(`${BASE}#/clients`);

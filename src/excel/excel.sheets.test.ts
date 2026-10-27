@@ -1222,6 +1222,15 @@ describe('名簿のブック（PRD D103〜D107。ADR-0020）', () => {
     );
     expect(r.lastDaySet).toEqual([s1.name]);
     expect(r.updated).toEqual([s1.name]);
+    // 休止にした人は振り直しの欄に出ないので数えない
+    const off = rok(
+      await editRoster(d, 'staff', (ws) => {
+        const row = ws.getRow(rowOf(ws, '名前', s1.name));
+        row.getCell(col(ws, '最終勤務日')).value = '2026-10-31';
+        row.getCell(col(ws, '利用中')).value = null;
+      }),
+    );
+    expect(off.lastDaySet).toEqual([]);
   });
 
   it('シートが無いブックは、呼び方のシート名を示して止める', async () => {

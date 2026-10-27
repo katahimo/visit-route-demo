@@ -96,7 +96,7 @@ export default function StaffPage() {
         }
       />
 
-      {excelOn && rosterOpen && <RosterCard kind="staff" id={rosterId} onClose={() => setRosterOpen(false)} />}
+      {excelOn && <RosterCard kind="staff" id={rosterId} open={rosterOpen} onClose={() => setRosterOpen(false)} />}
 
       {offboardOn && leaving.length > 0 && <StaffLeavingCard leaving={leaving} terms={terms} onOpen={setOffboardFor} />}
 

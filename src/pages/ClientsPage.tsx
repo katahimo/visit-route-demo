@@ -63,7 +63,7 @@ export default function ClientsPage() {
         }
       />
 
-      {excelOn && rosterOpen && <RosterCard kind="client" id={rosterId} onClose={() => setRosterOpen(false)} />}
+      {excelOn && <RosterCard kind="client" id={rosterId} open={rosterOpen} onClose={() => setRosterOpen(false)} />}
 
       <div className="card stack" data-testid="clients-filter">
         {narrow && (

@@ -45,6 +45,21 @@ describe('名簿の CSV（ADR-0068）', () => {
     expect(r.data.staff.find((s) => s.id === rows[1]![idAt])?.name).toBe('名前を直した人');
   });
 
+  it("Excel で開いて保存し先頭の0が落ちた郵便番号は7桁に戻す。数式よけの「'」は外す", async () => {
+    const d = base();
+    const c = d.clients[0]!;
+    d.clients[0] = { ...c, place: { ...c.place, postalCode: '0380000' }, note: '-鍵はポスト' };
+    const { text } = decodeText(new Uint8Array(await exportRosterCsv(d, 'client').arrayBuffer()));
+    expect(text).toContain("'-鍵はポスト");
+    const rows = parseCsv(text);
+    const at = rows[0]!.indexOf('郵便番号');
+    rows[1]![at] = '380000';
+    const r = rok(await importRoster(csvBuf(toCsv(rows)), d, 'client', 'merge'));
+    expect(r.updated).toEqual([]);
+    expect(r.data.clients[0]?.place.postalCode).toBe('0380000');
+    expect(r.data.clients[0]?.note).toBe('-鍵はポスト');
+  });
+
   it('全体の列が無い CSV（名前だけ）でも読み、知らない列は場所付きで止める', async () => {
     const d = base();
     const r = rok(await importRoster(csvBuf('名前\r\n新しい人\r\n'), d, 'staff', 'merge'));
