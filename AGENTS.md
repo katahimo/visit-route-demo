@@ -1,7 +1,7 @@
 # AGENTS.md
 
 このリポジトリで作業するAIコーディングエージェント向けのルール。
-文書の索引は `docs/README.md`（読む前にここで該当ファイルを選ぶ）。要件の正は `docs/prd.md`、設計の正は `docs/design.md`（画面の詳細は `docs/design/`）、境界の契約の正は `src/contracts/`（TypeScript の型と Worker のメッセージ）、判断の記録は `docs/adr/`。これらと矛盾する実装をしない。
+文書の索引は `docs/README.md`（読む前にここで該当ファイルを選ぶ）。要件の正は `docs/prd.md`（要件の表はテーマ別の `docs/prd/`）、設計の正は `docs/design.md`（画面の詳細は `docs/design/`）、境界の契約の正は `src/contracts/`（TypeScript の型と Worker のメッセージ）、判断の記録は `docs/adr/`。これらと矛盾する実装をしない。
 
 このリポジトリは `katahimo-dev/visit-route-poc`（PoC本体）の**デモ版**。PoC本体の Firebase・Callable・`orgs/{orgId}` の規約は適用しない（ADR-0001）。
 
@@ -40,12 +40,12 @@ src/
   pages/       … 画面（components と lib を組み合わせる）
   app/         … 殻（App・ErrorBoundary・ルートと分けた画面 lazyPages）
 .github/workflows/deploy.yml … test → build → GitHub Pages
-.github/workflows/e2e.yml … PR・手動・夜間の速い検査（lint・型・check:code・vitest）と e2e（4つに分けて並列）・perf（ADR-0029）。Playwright の版を上げるときはイメージの版も上げる
+.github/workflows/e2e.yml … PR・手動・夜間の速い検査（lint・型・check:code・check:prd・vitest）と e2e（4つに分けて並列）・perf（ADR-0029）。Playwright の版を上げるときはイメージの版も上げる
 e2e/ … @playwright/test の spec（scripts/e2e-*.cjs の段を test.step で回す。ADR-0041）
 scripts/ … e2e のスクリプト（e2e-*.cjs）と共通の部品（lib/）
 gas/ … メールの予約送信の Google Apps Script のひな型（Code.gs）と手順（README.md）。やりとりの正は src/contracts/mailSchedule.ts（ADR-0069）
 code-rules.json・code-rules.baseline.json … コードの検査（npm run check:code）の決まりと、今ある違反の基準
-docs/ … README.md（索引）/ prd.md / design.md / design/（画面の詳細）/ adr/
+docs/ … README.md（索引）/ prd.md・prd/（テーマ別の要件の表） / design.md / design/（画面の詳細）/ adr/
 ```
 
 ## コマンド
@@ -55,6 +55,7 @@ docs/ … README.md（索引）/ prd.md / design.md / design/（画面の詳細�
 - フォーマット・リント：`npm run lint`（biome と、競合の印 `<<<<<<<`・`>>>>>>>` の検査 `scripts/check-conflict-markers.cjs`）
 - 型チェック：`npm run typecheck`
 - コードの検査：`npm run check:code`（層の依存・循環 import・長いファイルと関数・使われない export。`code-rules.baseline.json` の基準より増えたら失敗。`-- --all` で基準にあるものも表示。`biome.json` が `code-rules.json` とずれていても失敗。Python 3 が要る）
+- PRD の検査：`npm run check:prd`（索引とテーマ別ファイルの一致・D番号の重複と使い回し・廃止の行・表の並び・大きさ。`-- --fix` で索引と並びを作り直す）
 - ビルド：`npm run build`（`dist/`、`base: './'`）
 - e2e（本物のブラウザ。ADR-0029）：`npm run e2e`（速さを見る5本を除く残りを4本ずつ並列）・`npm run e2e:perf`（速さを見る5本を1本ずつ）・`npm run e2e:all`（e2e のあとに e2e:perf。同時には走らせない）。1本だけは `npx playwright test --grep <スクリプトの名前>`（例 `--grep "e2e-details\.cjs"`。部分一致なので `e2e-details` だけでは e2e-details2 も走る）。サイトは webServer がビルドして `vite preview --port 4183` で出す。4183 で動いている配信があればビルドせずにそれを使い回すので、古いビルドの配信が残っていれば止めるか、確かめたい配信を `BASE=http://localhost:4183/` で渡す。報告は `npx playwright show-report`（落ちた test に記録が付き、`NG  ` の行が見える）。`playwright-report/` と `test-results/` は実行のたびに上書きされるので、`npm run e2e` のあと `npm run e2e:perf`（`e2e:all` も同じ）を走らせると残るのは perf の報告だけ。e2e の報告を見るなら e2e:perf の前に開く。`node scripts/e2e-xxx.cjs` で1本ずつ単独でも今どおり走る（先に `npm run build && npx vite preview --port 4183`）
 - e2e の書き方（段階2。ADR-0041）：スクリプトは段（`[名前, 関数]` の並び）を `module.exports = { steps }` で出し、末尾に `if (require.main === module) runSteps(steps)`。段の型は `scripts/lib/steps.cjs` の `sharedPage`（1つのページを使い回す）・`pagePerStep`（段ごとに新しい文脈）・`guard`。包みは段を `test.step`、`check` を `expect.soft`（名前はそのまま）に写すので、段を足すときは並びに1行足すだけ。押したあとの待ちは `settle(page, ms)`（描画・DOM の変化・終わりのある CSS の動き・期限の近いタイマーが落ち着くまで。最長 max(3×ms, 1500ms)）か目印（`locator.waitFor`・`until(fn)`）で待ち、`waitForTimeout` は速さの計測・外の遅れ・時間そのものを見る所だけ（前の行に理由と「固定の待ち」と書く）。`E2E_SETTLE_LOG=1` で落ち着かずに最長まで待った所を、`=2` で1回ずつの待った時間を出す（`E2E_SETTLE=fixed` で前の固定の待ちに戻して切り分け）。1つの段は最長3分（`E2E_STEP_TIMEOUT_MS`）。保存した担当の入った訪問を用意する `planDays`（`scripts/lib/plan.cjs`。AI で組むので重い）は、初期データ（localStorage を消した直後・新しい文脈）から組む所なら `{ cache: true }` を付ける（2回目からは結果の写し。包みの中では `E2E_PLAN_CACHE_DIR`＝`test-results/.plan-cache` で同じ実行のスクリプトと分け合う。画面の手順そのものは e2e-arrange が確かめる）。落ちた test には trace・動画（perf は取らない）・`-fail-` のスクリーンショット・記録が付く（`npx playwright show-report`・`npx playwright show-trace`）
@@ -97,10 +98,11 @@ docs/ … README.md（索引）/ prd.md / design.md / design/（画面の詳細�
 - 外部送信は地図タイルの取得と、利用者がボタンを押したときの郵便番号・住所の検索（`src/lib/geocode.ts` の1か所。ADR-0016）と、日の予定のメールの予約送信（押したときに事業所自身の Google Apps Script へ。`src/lib/mailSchedule.ts` の1か所。ADR-0069）だけ。解析・ログ送信を入れない
 - リンク（Google マップの Maps URLs）・mailto は、押すのが人でアプリは送らないので外部送信に当たらない（ADR-0017・0018）
 - 同梱するデータは架空のものだけ。公開リポジトリに実在の人・住所・パスワード・キーを置かない
+- 要件（PRD）：要件の表は `docs/prd/<テーマ>.md` に置き、`docs/prd.md` には置かない。足すときは該当テーマの表に `npm run check:prd` が示す次の D番号で行を足す（ADR 単位・追加順の節は作らない）。置き換えた要件は表から消し、`docs/prd.md` の「廃止した D番号」に置き換え先を足す。D番号は振り直さない・使い回さない。索引は手で直さず `npm run check:prd -- --fix` で作る（手順は `.claude/skills/solo-architecture-design/SKILL.md`「設計書を育てる」）
 - 画面：主ボタン（濃い朱）は画面に1つ（多くて2つ）。呼び方は `org.terms` から引き、「お客様」「シッター」を直書きしない。表記は常用漢字
 
 ## 完了の定義
-- [ ] テスト・リント・型チェック・ビルド・コードの検査がすべて通る
+- [ ] テスト・リント・型チェック・ビルド・コードの検査・PRD の検査がすべて通る
 - [ ] 足した計算（純粋関数）にテストがある。使われなくなったコードを消した
 - [ ] 契約（`src/contracts/`）どおりの入出力・エラーになっている
 - [ ] 変更点と、推測した箇所（あれば）を報告した

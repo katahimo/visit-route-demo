@@ -3,14 +3,14 @@
 AI・人が「何を知りたいときに、どのファイルを読むか」を選ぶための地図。全部を読まず、該当するファイル・節だけ読む。
 
 - どの文書も**今の仕様だけ**を書く。変更の経緯は git のコミット、判断の理由は ADR にある
-- 食い違ったら：契約は `src/contracts/`、要件は `prd.md`、設計は `design.md`（＋ `design/`）が正
+- 食い違ったら：契約は `src/contracts/`、要件は `prd.md`（＋ `prd/`）、設計は `design.md`（＋ `design/`）が正
 
 ## 目的別
 
 | 知りたいこと | 読むファイル |
 |---|---|
 | 作業のルール・コマンド・ディレクトリ構成 | [../AGENTS.md](../AGENTS.md) |
-| 何を作るか・やらないこと・D番号の要件 | [prd.md](prd.md)（§3 冒頭のテーマ別索引から該当の表だけ） |
+| 何を作るか・やらないこと・D番号の要件 | [prd.md](prd.md) §3 の索引 → テーマ別の `prd/*.md` を1つだけ |
 | 全体図・コンポーネントの責務・データの持ち主 | [design.md](design.md) §3・§4 |
 | 型・データの版・エラー・費用の物差し（契約） | [design.md](design.md) §5 と `src/contracts/` |
 | 画面の仕様（ルート・部品・文言・data-testid） | [design/pages.md](design/pages.md) のルート一覧 → 画面別の `design/pages-*.md` |
