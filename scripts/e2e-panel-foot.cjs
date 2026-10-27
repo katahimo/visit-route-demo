@@ -29,7 +29,7 @@ async function open(page, hash, ready) {
   await page.locator(ready).first().waitFor({ timeout: 60000 });
   await settle(page, 400);
 }
-/** 今の案が出て計算が終わるまで待つ */
+/** 今の担当が出て計算が終わるまで待つ */
 async function waitPlan(page) {
   await page.getByTestId('confirm-state').waitFor({ state: 'attached', timeout: 60000 });
   await page.getByTestId('plan-progress').waitFor({ state: 'detached', timeout: 60000 });

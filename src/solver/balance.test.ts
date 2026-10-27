@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { DemoData } from '../contracts/data';
 import { score } from '../evaluate';
 import { compile } from '../matching';
-import { client, DATE, makeData, randomData, rule, staff, visit } from '../matching/fixtures';
+import { client, DATE, makeData, randomData, rule, staff, visit } from '../matching/fixtures.testkit';
 import { createDemoData } from '../seed';
 import { defaultIterations, solve } from './index';
 
@@ -15,7 +15,7 @@ const withHardBalance = (d: DemoData): DemoData => ({
 describe('負担の均等（D17）', () => {
   const demo = createDemoData('2026-10-12');
   for (const date of ['2026-10-12', '2026-10-13', '2026-10-14']) {
-    it(`デモデータ ${date}：既定の条件の AI案の件数が全員 目安の帯±1 に収まり、必須なら上限＋1を超えない`, () => {
+    it(`デモデータ ${date}：既定の条件の AI の提案の件数が全員 目安の帯±1 に収まり、必須なら上限＋1を超えない`, () => {
       for (const data of [demo, withHardBalance(demo)]) {
         const p = compile(data, date);
         const b = p.balance!;
@@ -72,7 +72,7 @@ describe('負担の均等（D17）', () => {
     expect(sc.perRule.balance).toEqual({ hits: 0, misses: 2, points: 240 });
   });
 
-  it('必須の均等で上限を超えた手作業案は、超えた分の訪問を hardViolations（notAllowed）に出す', () => {
+  it('必須の均等で上限を超えた手で入れた担当は、超えた分の訪問を hardViolations（notAllowed）に出す', () => {
     const d = randomData(2, 6, 9, [rule('bal', 'balance', 3, true)]);
     const p = compile(d, DATE);
     const ids = p.visits.map((v) => v.id);

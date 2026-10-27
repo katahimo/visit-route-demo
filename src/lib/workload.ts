@@ -58,22 +58,16 @@ export const fareOf = (meters: number, fareYenPerKm: number): number => Math.rou
 
 /**
  * 担当ごとの列から見込みを出す（problem の〈スタッフ〉の順。訪問の無い人・問題に無い人・未割当の列は出さない）。
- * sortByStart なら列を訪問の開始（早）の順に並べ直す（確定した割当は順番を持たないため。印刷と同じ）。時刻は lenient
+ * 時刻は lenient
  */
-export function workStats(
-  problem: Problem,
-  routes: Record<string, readonly string[]>,
-  opts: WorkOptions,
-  sortByStart = false,
-): WorkStat[] {
+export function workStats(problem: Problem, routes: Record<string, readonly string[]>, opts: WorkOptions): WorkStat[] {
   const vIndex = new Map(problem.visits.map((v, i) => [v.id, i]));
   const out: WorkStat[] = [];
   problem.staff.forEach((st, s) => {
     const ids = own(routes as Record<string, string[]>, st.id);
     if (!ids || st.id === '__none') return;
-    let seq = ids.map((id) => vIndex.get(id)).filter((x): x is number => x !== undefined);
+    const seq = ids.map((id) => vIndex.get(id)).filter((x): x is number => x !== undefined);
     if (seq.length === 0) return;
-    if (sortByStart) seq = [...seq].sort((a, b) => problem.visits[a]!.earliest - problem.visits[b]!.earliest || a - b);
     const t = scheduleRoute(problem, s, seq, 'lenient');
     if (!t || t.stops.length === 0) return;
     const first = t.stops[0]!;

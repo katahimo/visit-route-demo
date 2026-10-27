@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { compile } from '../matching';
-import { client, DATE, makeData, rule, staff, visit } from '../matching/fixtures';
+import { client, DATE, makeData, rule, staff, visit } from '../matching/fixtures.testkit';
 import { diff, explain, score } from './index';
 
 /** s1（看護師・女性）、s2（なし・男性）。c1 は看護師が必要、c2 は希望 経験3年以上 */
@@ -34,7 +34,7 @@ function problem() {
 }
 
 describe('score', () => {
-  it('手作業案の違反（可否・時間）を記録し、それでも移動・割当費用は数える', () => {
+  it('手で入れた担当の違反（可否・時間）を記録し、それでも移動・割当費用は数える', () => {
     const p = problem();
     // s2 は c1 の必要条件を満たさない。s1 は v1（9:00〜）と v3（9:00 固定）を両方は回れない
     const sc = score(p, { s1: ['v1', 'v3'], s2: ['v2'], __none: [] });

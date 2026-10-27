@@ -121,22 +121,14 @@ export const DATE_PAGES: readonly string[] = ['/compare', '/workload', '/availab
 /** 上の帯に日付の選択を出すか（古い #/schedule は日の予定） */
 export const showsDateSwitch = (pathname: string): boolean => DATE_PAGES.includes(activeNavPath(pathname));
 
-/**
- * 上の帯に出す今の画面の名前：グループの見出し＋項目名（例「人・利用者さん一覧」）。groups は画面の一覧（screenSections）。
- * 見出しの無いグループ（ホーム）と「予定」のグループ（項目名が「月の予定」などで見出しと重なる）は項目名だけ。
- * 一覧に無い画面は null（PRD D132・D179・D230・D273）
- */
-export function navTitle(groups: readonly NavSection[], pathname: string): string | null {
-  const parts = navTitleParts(groups, pathname);
-  if (!parts) return null;
-  return parts.group ? `${parts.group}・${parts.item}` : parts.item;
-}
-
 /** 画面の一覧（パレット）に出さない画面の名前（上の帯。案を比べるは担当を組むから開く。ADR-0063） */
 const EXTRA_TITLES: Record<string, string> = { '/compare': '提案を比べる' };
 
 /**
- * navTitle の見出しと項目名を分けたもの（狭い画面で入りきらないとき、項目名をまとめて次の行へ送るため。PRD D179）
+ * 上の帯に出す今の画面の名前：グループの見出しと項目名（例「人」と「利用者さん一覧」。帯では「人・利用者さん一覧」と並べ、
+ * 狭い画面で入りきらないときは項目名をまとめて次の行へ送る。PRD D179）。groups は画面の一覧（screenSections）。
+ * 見出しの無いグループ（ホーム）と「予定」のグループ（項目名が「月の予定」などで見出しと重なる）は group が null。
+ * 一覧に無い画面は null（PRD D132・D179・D230・D273）
  */
 export function navTitleParts(
   groups: readonly NavSection[],

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { DemoData } from '../contracts/data';
 import type { Pattern } from '../contracts/documents';
 import { addDays } from '../domain/time';
-import { client, DATE, makeData, staff, visit } from '../matching/fixtures';
+import { client, DATE, makeData, staff, visit } from '../matching/fixtures.testkit';
 import { findVisit, visitsOn } from '../patterns';
 import { createDemoData } from '../seed';
 import {

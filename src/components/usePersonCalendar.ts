@@ -50,7 +50,7 @@ export function usePersonCalendar({ kind, personId, view, anchor, onChange, high
   const clientById = useMemo(() => new Map(data.clients.map((c) => [c.id, c])), [data.clients]);
   const text: CalTextCtx = { isClient, staffById, clientById, visitTypes: data.visitTypes };
   /**
-   * ドラッグで日時を動かし、担当を選ばずに保存した回の知らせ（新しい日に今の案があるとき。週の予定と同じ「空き時間に入れる」）
+   * ドラッグで日時を動かし、担当を選ばずに保存した回の知らせ（週の予定と同じ「空き時間に入れる」）
    */
   const notice = useInsertNotice({
     failText: '空き時間に入りません。日の予定で手で入れるか、AI で組んでください',

@@ -95,7 +95,7 @@ export const targetsOf: TargetsOf = (problem, base, absentStaffIds) => {
 };
 
 /**
- * 欠勤の人に残る、振り直すべき訪問（今の案に targetsOf を当てたもの）。振り直したあとは、ふつうは無い。
+ * 欠勤の人に残る、振り直すべき訪問（今の担当に targetsOf を当てたもの）。振り直したあとは、ふつうは無い。
  * 手直しで欠勤の人へ戻した・振り直したあとに欠勤や条件を変えた、などで残る（理由は targetsOf の absence・unreachable）。
  * 欠勤と関係ない元からの違反（notAllowed）は欠勤のせいではないので含めない（必須の違反の赤い枠で出る）
  */

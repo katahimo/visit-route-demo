@@ -1,6 +1,6 @@
 // 日の予定の手で直す操作と比較の画面を本物のブラウザで確かめる（日の予定に「AI で組む ▾」は無い。ADR-0063）：
 // 担当を組むの「案を比べる」で比較の画面へ・その場で提案を作って並べる（保存しない）・反映するとトーストの「元に戻す」で1手戻る。
-// 訪問の詳細の「担当を変える ▾」（PRD D217〜D219。ADR-0030）：まとまりと項目（role="menuitem"・説明・今の担当・押せない理由・
+// 訪問の詳細の「担当を変える ▾」（PRD D217・D219・D329。ADR-0030）：まとまりと項目（role="menuitem"・説明・今の担当・押せない理由・
 // 「担当なしにする」）、キーボード（Enter で開いて ↓・Enter）で移すと担当が変わりピン、トーストの「元に戻す」で担当・ピンが戻る、
 // 「担当なしにする」のあとの確定の確認の本文の先頭に要対応の件数、操作の行の「元に戻す」（キーボード）、390px で押せて収まる。
 // 操作の行（PRD D278・D279・D344。ADR-0045）：日の予定は訪問を追加・使い方を操作の行に出し（その他 ▾ はスマホだけ。メールで送るは見出し。PRD D306）
@@ -32,7 +32,7 @@ const focusedId = (page) =>
     return el ? (el.getAttribute('data-testid') ?? el.getAttribute('data-key') ?? el.tagName) : '';
   });
 
-/** 日の画面を開き、今の案が出て計算が終わるまで待つ */
+/** 日の画面を開き、今の担当が出て計算が終わるまで待つ */
 async function openPlan(page) {
   await page.goto(`${BASE}#/plan`);
   await page.reload();
@@ -109,7 +109,7 @@ async function compare(page) {
   );
 }
 
-// ---- 担当を変える ▾・元に戻す・確定の確認の件数（PRD D217〜D219。ADR-0030） ----
+// ---- 担当を変える ▾（PRD D217）・全体の元に戻す（PRD D329）・確定の確認の件数（PRD D219）。ADR-0030 ----
 const reBtn = (page) => page.getByTestId('plan-reassign');
 const reList = (page) => page.getByTestId('plan-reassign-list');
 /** 開いた「担当を変える」の一覧の中身（まとまり・項目の名前・説明・押せないか・今の担当） */

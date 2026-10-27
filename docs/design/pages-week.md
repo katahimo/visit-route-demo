@@ -1,6 +1,6 @@
 # 週の予定
 
-> この画面のファイル：`src/pages/WeekPage.tsx`（`week.css`。区画の部品 `weekParts.tsx`・表 `weekTables.tsx`・時間軸 `weekTimeline.tsx`、状態と処理のフック `useWeekNav`・`useWeekModel`・`useWeekPrep`・`useWeekClients`・`useWeekVisits`・`useWeekTodayScroll`）・`mailPanels.tsx`（`WeekMailPanel`）、`src/components/PickChips.tsx`・`staffBar.tsx`・`visitParts.tsx`（札 `VisitChip`・マスに積む `ChipStack`）、`src/lib/week.ts`・`weekView.ts`・`weekPrep.ts`・`weekScreen.ts`・`timelineClients.ts`・`fold.ts`・`clientFilter.ts`。関連 ADR：0012 追記・0013・0014・0021・0024 追記・0025 追記・0033・0042・0046・0056・0057。関連 PRD：D49〜D51・D56〜D57・D62・D65・D75・D93・D108・D285・D136〜D140・D175・D188・D221・D222・D228・D280・D282・D339〜D342。
+> この画面のファイル：`src/pages/WeekPage.tsx`（`week.css`。区画の部品 `weekParts.tsx`・表 `weekTables.tsx`・時間軸 `weekTimeline.tsx`、状態と処理のフック `useWeekNav`・`useWeekModel`・`useWeekPrep`・`useWeekClients`・`useWeekVisits`・`useWeekTodayScroll`。まとめて確定は `components/useBulkConfirm`、空き時間に入れる知らせは `components/useInsertNotice`）・`mailPanels.tsx`（`WeekMailPanel`）、`src/components/PickChips.tsx`・`staffBar.tsx`・`visitParts.tsx`（札 `VisitChip`・マスに積む `ChipStack`）、`src/lib/week.ts`・`weekView.ts`・`weekPrep.ts`・`weekScreen.ts`・`timelineClients.ts`・`fold.ts`・`clientFilter.ts`。関連 ADR：0012 追記・0013・0014・0021・0024 追記・0025 追記・0033・0042・0046・0056・0057。関連 PRD：D49〜D51・D56〜D57・D62・D65・D75・D93・D108・D285・D136〜D140・D175・D188・D221・D222・D228・D280・D282・D339〜D342。
 > 3段のバーの塗りは [pages-bars.md](pages-bars.md)、札の3段と入れ物（`VisitChip`・`ChipStack`）・印・選ぶ・キー・ドラッグの落とし先の判定の共通の部品は [pages-common.md](pages-common.md) の「訪問の札の共通の部品」、絞り込みの欄 `ClientFilter` は [pages-clients.md](pages-clients.md)。
 > 版2（ADR-0053）：担当は訪問に持つ。週の帯・表の担当は訪問の担当（`weekDay` は `visitsOn` の訪問から）。「未作成」「案なし」は無い
 
@@ -22,7 +22,7 @@ URL を書くときは履歴を増やさない `replace`（表示の切り替え
 
 - `lead`「この週の担当を見て、日時をドラッグでずらし、〈スタッフ〉に伝えたら確定します」。見出しは題名と1行の説明だけで、［月｜週｜日］・「予定をメールで送る」・週の主ボタンは下のナビの行（PRD D347 で書き直し）。「予定をメールで送る」（`week-mail`。日と同じ枠のボタン。どの表示でも出す。`mail` が入のとき。→ 右の欄 `WeekMailPanel`（最終勤務日が週の初めより前の人は出さない。宛先ごとに `MailButton`）。週のメールは見通しで、送っても確定にしない。PRD D346）。週の主ボタンは下の「この週の準備」
 - 1行の状態（`week-status`。今日以降に訪問がある週だけ）：「この週の今日以降：確定済み N日・まだ伝えていない N日・未連絡の変更 N日（あるときだけ）・要対応 N件」。進み具合の帯は出さない（月の予定だけ）
-- 操作の行（`ScheduleToolbar zoom="week"`。日・週・月で同じ並び。[pages-common.md](pages-common.md) の「予定の共通の部品」）：欠勤・キャンセルを登録（`sudden-open`。選んでいる日（今日より前なら今日）の日の予定で欄を開くリンク）・元に戻す・やり直す。「その他 ▾」は出さない（メールで送るは表の上のボタン。PRD D344。ADR-0058）。「AI で組む ▾」は無い（週を組むのは担当を組むの画面 `/arrange?d=`。ADR-0063）
+- 操作の行（`ScheduleToolbar zoom="week"`。日・週・月で同じ並び。[pages-common.md](pages-common.md) の「予定の共通の部品」）：欠勤・キャンセルを登録（`sudden-open`。選んでいる日（今日より前なら今日）の日の予定で欄を開くリンク）・元に戻す・やり直す。「その他 ▾」は出さない（メールで送るは表の上のボタン。PRD D344。ADR-0058）。週を AI で組むのは担当を組むの画面（`/arrange?d=`。ADR-0063）
 - 範囲の提案の帯（`RangeProposalBand`。担当を組むの画面で組んだ提案）
 - 週の前後の送り・「今日」・週を選ぶ欄（`week-title`）は見出しの下のナビの行（`ScheduleNav`。PRD D347。メールで送る・まとめて確定もこの行の右）。表示の切り替え `week-views` は週のカードの1行目（下）
 - 空の画面（`week-empty`。時間軸の上に横1行の帯 `compact`。主ボタンにしない（主ボタンは見出しの1つ））：`periodEmptyGuide({ period: 'この週', dates, today, visitDays })`（この週に訪問が1日も無いとき「この週には訪問がありません」。ボタンは日の予定で訪問を足すだけ）
@@ -68,7 +68,7 @@ URL を書くときは履歴を増やさない `replace`（表示の切り替え
 #### 時間軸（PRD D49・D56・D57）
 
 - 列＝月〜日、縦＝`DAY_START` 07:00〜`DAY_END` 20:00（1時間ごとの目盛り。`lib/spans`。日の時間軸の初期値と同じ）
-- 訪問の帯：その日の今の案（無ければ確定した割当、どちらも無ければ訪問の開始（早））の lenient の開始〜終了の位置に、種類の色で（文字：時刻・〈利用者さん〉・担当の名前）。帯の縁は〈スタッフ〉で見るとき担当の色、〈利用者さん〉で見るとき〈利用者さん〉の色
+- 訪問の帯：その日の担当の並び（`dayRoutes`）の lenient の開始〜終了の位置（並びに入らない訪問は開始（早））に、種類の色で（文字：時刻・〈利用者さん〉・担当の名前）。帯の縁は〈スタッフ〉で見るとき担当の色、〈利用者さん〉で見るとき〈利用者さん〉の色
 - 全員のとき、同じ時刻に重なる帯は列の中で横に並べる（`laneLayout`）
 - 担当の無い帯は「担当なし」・要対応の赤い破線（`is-unassigned`。PRD D228）。凡例も「担当なし（要対応）」。帯の印は共通の判定（`useVisitLooks`。要対応・資格✗／限✗・未連絡の変更・ピン・この回だけ変更・仮押さえ。PRD D339）を時刻の横に（`VisitMarks`。帯は大の札で `data-size="l"`・`data-marks`）。担当が種類の必要条件・担当できる人に合わなければ赤い枠と「資格✗」「限✗」。今日より前の日の帯には要対応・資格✗／限✗を出さない
 - 休みの訪問は薄い破線の帯で、担当の所に「休みのため無し」（ドラッグしない。押すと訪問の詳細の欄）
@@ -90,9 +90,9 @@ URL を書くときは履歴を増やさない `replace`（表示の切り替え
 - ドラッグ中は、その訪問を担当できる人（可否。compile の allowed。`allowedStaffOf`）の名前のチップを強調し（チップの畳みは測り直さない）、落とす先の列に「入れる人 N人」（落とす日・時刻にした問題で reassign の `fitsOf` の人数。15分刻みのマスごとに memo。`fitCountAt`）
 - 帯を押す（Enter も）と訪問の詳細の欄（`components/VisitPanel.tsx`。[pages-common.md](pages-common.md)。PRD D301〜D304）。今日より前の訪問は見るだけ
 - 離すと同じ欄が落とした日付・開始（幅は保つ）を入れた形で開き、繰り返しの回なら範囲（この回だけ（初期値）／これ以降／すべて）を選んで「保存」（週の移動の欄はこの欄にした）
-  - この回だけ：`lib/visitEdit` の `savedVisit`（日付が変われば手作業の担当を外し `pattern.edited` を true）
+  - この回だけ：`lib/visitEdit` の `savedVisit`（担当・ピンは引き継ぎ、日時を変えたら組んだ開始を外し `pattern.edited` を true）
   - これ以降・すべて：`lib/weekOps` の `moveFollowing`（元の日以降の同じ曜日の回を新しい曜日・時刻に分ける。すべては今日以降で最初の回から）。確定した日が含まれれば確認
-- 保存で日時が変わり、担当を選ばず、新しい日に今の案があれば知らせに「〈日〉の案に空き時間で入れる」（`insertIntoPlan`：その日の問題で reassign の `fitsOf` の先頭の人に `placeVisit` で入れ、固定。他の人の訪問の開始は変わらない。入らなければ「空き時間に入りません。その日を作り直すか、日の予定で手で入れてください」）と「その日を作り直す」（日の予定へ）
+- 保存で日時が変わり、担当が空いた（担当なしの）ときは知らせ（`week-notice`）「〈日〉 へ動かしました。担当なしです」と主ボタン［M/D の空き時間に入れる］（`insertIntoPlan`：その日の問題で reassign の `fitsOf` の先頭の人に `placeVisit` で入れ、ピン。他の人の訪問の開始は変わらない。入らなければ「空き時間に入りません。「担当を組む」の画面の「AI で組む」か、手で担当を選んでください」）と［その日を開く］（日の予定へ）
 - キーボード：帯にフォーカスして Enter で訪問の詳細の欄を開き、日付・時刻を変えて保存できる。閉じるとフォーカスは帯
 
 #### 〈スタッフ〉×曜日（PRD D51・D75・D342）
@@ -151,17 +151,17 @@ URL を書くときは履歴を増やさない `replace`（表示の切り替え
 #### `lib/week.ts`（画面の純粋関数。テストあり）
 
 - `weekDates(date)`（月曜はじまりの7日）。時間軸の範囲 `DAY_START`・`DAY_END` は `lib/spans`
-- `laneLayout(blocks)`（重なる帯の横の並び）
-- `canMoveVisit`・`changedDates`・`fitCountAt`・`allowedStaffOf`
-- データを書く操作は `lib/weekOps.ts`（テストあり）：`moveOnce(d, visitId, date, start)`・`moveFollowing(d, visitId, date, start, today, newId)`（`splitPattern` を使う。パターンの訪問でなければ `moveOnce`）・`insertIntoPlan(d, date, visitId, problem)`・`insertAllIntoPlans`
-- `staffWeekTable(data, dates, problems)`（行・列・合計・平均との差・`WeekCell.bar`）
+- `laneLayout(items)`（重なる帯の横の並び）
+- `canMoveVisit`・`shiftedTimes`・`fitCountAt`・`allowedStaffOf`・`unfitMarks`
+- データを書く操作は `lib/weekOps.ts`（テストあり）：`moveFollowing(d, visitId, date, start, today, newId)`（`splitPattern` を使う。この回だけ動かすのは `lib/visitEdit`・`visitOps`）・`insertIntoPlan(d, date, visitId)`・`insertAllIntoPlans`
+- `weekDay(data, date, problem?)`（その日の帯）・`staffWeekTable(data, days)`（行・列・合計・平均との差・`WeekCell.bar`）・`clientWeekTable`
 - `qualificationBadges(items, staff)`・`staffWithQualification`
 - `clientWeekTable`・`clientItemMark`（表の札の短い文字）
 
 #### 確かめ
 
 - `scripts/e2e-drag.cjs`：6種類のドラッグと week-clients-ime（日本語の変換）。週の〈利用者さん〉で見るで、`?client=` なしで先頭8人のチップが選ばれ URL に書かない・9人目で上限の文・「全部外す」「先頭8人に戻す」（week-client-default・week-client-max・week-client-none-reset）
-- `scripts/e2e-mobile.cjs`：390px で `?view=` なしは〈スタッフ〉×曜日の表で今日の列が見える。案の無い週は案内が見え、縦に巻かない（week-narrow-default）
+- `scripts/e2e-mobile.cjs`：390px で `?view=` なしは〈スタッフ〉×曜日の表で今日の列が見える。訪問の無い週は案内が見え、縦に巻かない（week-narrow-default）
 - `scripts/e2e-week.cjs`：表示の切り替え（4つ・古い `?view=`・`?by=` の URL 9通りで同じ表示・押したときの URL・今の表示・戻る・390px で2段まで）、表からの引き継ぎ（絞り込みなし・あり）、9人目の上限の文、戻るボタン（選択が戻り上限の文が消える）、畳む・あと N人（1400px・390px。選んでいる人はいつも見え、選んでいない人は2行まで、開いた状態が残る）、週を送るとその週の先頭8人、「ほかの人を探す」で選んだ人がチップの後ろ
 - `scripts/e2e-details.cjs`：チップの i・表の名前
 - `scripts/e2e-shared-parts.cjs`：表の札の複数選択・帯の見た目（時間軸と同じ `data-marks`）・ドラッグの落とし先の判定（今日より前の日は置けない・入る日へ落とすと落とした日の欄）、390px の長押しの選ぶ（`week-table-1400`・`week-clients-1400`・`week-table-390`）
@@ -170,11 +170,11 @@ URL を書くときは履歴を増やさない `replace`（表示の切り替え
 #### 完了の条件
 
 - [ ] 時間軸に、その週の訪問が種類の色の帯で出て、〈スタッフ〉で絞れる。帯を押すと訪問の詳細の欄が開く。帯をドラッグして別の日へ落とすと同じ欄がその日時で開き、「この回だけ」で保存すると、その訪問だけが動き、パターンの他の回は変わらない。「これ以降」で保存すると、元の日以降の回が新しい曜日・時刻になる
-- [ ] 動かしたあと「〈日〉の案に空き時間で入れる」で、その日の今の案に入り、他の人の訪問の開始は変わらない
+- [ ] 担当なしで動かしたあと「M/D の空き時間に入れる」で、その日の担当の並びに入り、他の人の訪問の開始は変わらない
 - [ ] 〈スタッフ〉×曜日の表に件数・稼働時間・移動・種類ごとの件数・週の合計・平均との差が出る
 - [ ] （ADR-0014）担当できる人を限った〈利用者さん〉の訪問をドラッグすると「入れる人」はその人たちだけ
 - [ ] （ADR-0021）〈利用者さん〉×曜日の表を開くと、この週に訪問がある人が全員出る。地区・チップで減らせ、`?cf=` で開き直しても同じ。この週に訪問がある終了の人は表に出る。「訪問の種類」のチップで種類の訪問がある人に絞れる
 - [ ] （ADR-0024）`#/week?by=client` を開くと、この週に訪問がある人がチップで並び（表と同じ順）、先頭8人が選ばれ、URL に `?client=` が無い。押すと付け外しでき、9人目は選ばずに上限の文。「全部外す」で「選んでいません」、「先頭8人に戻す」で URL から消える。週を送るとその週の先頭8人。「ほかの人を探す」でこの週に訪問の無い人を選ぶとチップの後ろに出る。表で絞り込んで時間軸へ移るとその先頭8人、絞り込まずに移ると初期値。チップの欄は選んでいる人と2行ぶんで「あと N人」
-- [ ] （PRD D222）390px で `#/week` を開くと〈スタッフ〉×曜日の表で、URL に `?view=` が無く、今日の列が画面に見える（案の無い週は案内が見え、縦に巻かない）。時間軸を押すと `?view=timeline` を書く
+- [ ] （PRD D222）390px で `#/week` を開くと〈スタッフ〉×曜日の表で、URL に `?view=` が無く、今日の列が画面に見える（訪問の無い週は案内が見え、縦に巻かない）。時間軸を押すと `?view=timeline` を書く
 - [ ] （ADR-0056・ADR-0057）〈スタッフ〉×曜日の表のマスに、その人のその日の訪問が小さな札（「9:00 図」）で3件まで出て、4件目からは「+N」（押すと一覧・Esc で閉じフォーカスは「+N」）。札を押すと欄・Ctrl＋クリックで選べ、→ で次の日・↓ で下の担当へ動く（時刻はそのまま。Ctrl+Z で戻る）。動かした札は「+N」に隠れない。別の人・日のマスへドラッグすると、その人を担当に選んだ欄が開く（担当できない人・今日より前の日は影と理由）。〈利用者さん〉×曜日のマスも札（時刻と担当の印）で、選ぶ・キーで動かす・同じ行の別の日へドラッグができる。札の印は時間軸・月・人の予定表と同じ。390px は「選ぶ」と長押しで選べる
 - [ ] `lib/week`（週の日付・重なりの並び・表の合計と平均との差・`clientWeekTable`）・`lib/weekOps`（この回だけ・これ以降（`moveFollowing` の over も）・空き時間に入れる）・`lib/weekView`・`lib/timelineClients`・`lib/fold` のテストが通る

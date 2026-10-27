@@ -1,6 +1,6 @@
 # 画面共通の部品
 
-> この部品のファイル：`src/components/ui.tsx`・`FieldError.tsx`・`usePanelFoot.ts`・`floating.ts`・`MapDock.tsx`・`Toast.tsx`・`DetailPopover.tsx`・`PersonPopover.tsx`・`personDetail.tsx`・`Term.tsx`・`EmptyNext.tsx`・`Tour.tsx`・`mailParts.tsx`・`mapsLinks.tsx`、`src/pages/mailPanels.tsx`、`src/components/visitParts.tsx`（`visitParts.css`）、`src/components/ScheduleNav.tsx`・`useScheduleMode.ts`、`src/lib/scheduleMode.ts`・`visitLook.ts`・`visitSelect.ts`・`visitDrop.ts`・`visitKeys.ts`・`multiEdit.ts`・`panelFit.ts`・`personPopover.ts`・`glossary.ts`・`emptyGuide.ts`・`tour.ts`・`links.ts`・`mailto.ts`・`mail.ts`・`mapsLink.ts`。関連 ADR：0017・0018・0022 追記・0025 追記・0031・0036・0037・0045・0056・0057・0061。関連 PRD：D91〜D101・D122〜D126・D173〜D177・D193〜D197・D201〜D209・D226・D236〜D238・D240〜D242・D250〜D252・D276・D277・D339〜D343・D348。
+> この部品のファイル：`src/components/ui.tsx`・`FieldError.tsx`・`usePanelFoot.ts`・`floating.ts`・`MapDock.tsx`・`Toast.tsx`・`DetailPopover.tsx`・`PersonPopover.tsx`・`personDetail.tsx`・`Term.tsx`・`EmptyNext.tsx`・`Tour.tsx`・`mailParts.tsx`・`mapsLinks.tsx`、`src/pages/mailPanels.tsx`、`src/components/visitParts.tsx`（`visitParts.css`）・複数選択の帯の処理 `useSelectionBar.ts`・日ごとのリストの押し方 `useDayListPress.ts`（`src/lib/swipe.ts`）・欄のフォーカス `useSidePanelFocus.ts`・ツアーの閉じ込め `useTourModal.ts`、`src/components/ScheduleNav.tsx`、`src/lib/scheduleMode.ts`・`visitLook.ts`・`visitSelect.ts`・`visitDrop.ts`・`visitKeys.ts`・`multiEdit.ts`・`panelFit.ts`・`personPopover.ts`・`glossary.ts`・`emptyGuide.ts`・`tour.ts`・`links.ts`・`mailto.ts`・`mail.ts`・`mapsLink.ts`。関連 ADR：0017・0018・0022 追記・0025 追記・0031・0036・0037・0045・0056・0057。関連 PRD：D91〜D101・D122〜D126・D173〜D177・D193〜D197・D201〜D209・D226・D236〜D238・D240〜D242・D250〜D252・D276・D277・D339〜D343・D348。
 > 画面全体の決まり・メニュー・確認ダイアログ・機能の入り切りは [pages.md](pages.md)。
 
 ### 画面の見出しとボタンの3段（ADR-0036。PRD D236〜D238）
@@ -107,7 +107,7 @@
 
 ### `lib/scheduleMode.ts`（組む月とメニューの件数。PRD D349・D355。ADR-0063）
 
-予定のモードは無い（予定はいつも手で直せる。AI で組むのは予定を組む）。この部品は組む月の決まりとメニューの件数だけを持つ純粋関数（テストあり）。データは書き換えない。
+予定はいつも手で直せる（AI で組むのは予定を組む）。この部品は組む月の決まりとメニューの件数だけを持つ純粋関数（テストあり）。データは書き換えない。
 
 - `nextYm(today)`・`isLateMonth(today)`（`HOME_NEXT_MONTH_FROM_DAY` 日以降。PRD D255）・`planYm(today)`：組む月（月の後半は来月、前半は今月）。`planLabel(today)`：メニューの子の名前「◯月の予定」
 - `unassignedDayCount(data, ym, today)`：その月の、担当なしの訪問がある日（今日以降・まだ伝えていない日）の数（取り消し・〈利用者さん〉の休みの回は数えない。compile しないので軽い）
@@ -204,9 +204,9 @@
 
 - 欄がデータを読む・書く薄い層（段3でデータの形を変えるときはここを差し替える）。書いたデータは呼ぶ側が `update` で反映する。今日・時刻・新しい ID は引数
 - 置き場所：入力・欄の情報・範囲の文（`VisitDraft`・`draftOf`〜`scopeTexts`）は `visitDraft`、担当の候補・割り当て（`staffChoices`・`staffPickError`・`assignOnDays`）は `visitStaff`、一覧は `visitLists`、書く操作・`endPatternOp`・`toldDaysChanged` は `visitOps`
-- 読む：`draftOf`・`newDraft`・`timeChanged`・`assignmentOf`（今の案、無ければ確定した割当）・`visitInfo`（繰り返しの文・この回の変更・いつもの担当・休み・変えられるか）・`occurrenceChanges`・`scopeTexts`（「M/D 以降の〈曜日〉曜の回」・ほかの曜日の有無・そのままにする回）・`staffChoices(data, visitId, draft)`（欄の日時でその日の問題を日の予定と同じ作り方で作り、「担当を変える ▾」と同じ `lib/reassignMenu` の `reassignChoices`。出す人は `workingStaff`（稼働時間帯がある・列に訪問がある）と今の担当）・`staffPickError`（保存の前に今の入力で選んだ担当を見直す）
-- 書く：`applyVisitEdit(data, { visitId, draft, staff, scope }, today, ids, now)`（今ある訪問の〈利用者さん〉は変えない。新規・この回だけ＝`savedVisit`・これ以降＝`moveFollowing`（開いた回を欄の日付へ。over で所要・種類・時間の約束・幅・いつもの担当）・すべて＝今日以降で最初の、この回だけ変えていない・取り消していない同じ曜日の回から、元の日から欄の日付までの差で。メモだけならこの回だけ。担当は `assignOnDays`（その日の今の案で `bestInsertion`・固定。担当なしは外す）、これ以降・すべては範囲の回と手直しの記憶にも）・`cancelVisitOp`・`uncancelVisitOp`（ほかに変えた所が無ければ edited も外す）・`restoreOccurrenceOp`
-- 一覧：`unassignedVisits(data, from, to)`（今の案で入らない訪問）・`dayVisitRows(data, date, nowHm, limit)`（担当なし → 案なし → これからの近い順）・`clientVisitsIn(data, clientId, from, to)`・`staffVisitsIn(data, staffId, from, to)`（その日の今の案、無ければ確定した割当でその人の列にある訪問。取り消しは出さない。〈スタッフ〉の画面の予定）
+- 読む：`draftOf`・`newDraft`・`timeChanged`・`visitInfo`（繰り返しの文・この回の変更・いつもの担当・休み・変えられるか）・`occurrenceChanges`・`scopeTexts`（「M/D 以降の〈曜日〉曜の回」・ほかの曜日の有無・そのままにする回）・`staffChoices(data, visitId, draft)`（欄の日時でその日の問題を日の予定と同じ作り方で作り、「担当を変える ▾」と同じ `lib/reassignMenu` の `reassignChoices`。出す人は `workingStaff`（稼働時間帯がある・列に訪問がある）と今の担当）・`staffPickError`（保存の前に今の入力で選んだ担当を見直す）
+- 書く：`applyVisitEdit(data, { visitId, draft, staff, scope }, today, ids, now)`（今ある訪問の〈利用者さん〉は変えない。新規・この回だけ＝`savedVisit`・これ以降＝`moveFollowing`（開いた回を欄の日付へ。over で所要・種類・時間の約束・幅・いつもの担当）・すべて＝今日以降で最初の、この回だけ変えていない・取り消していない同じ曜日の回から、元の日から欄の日付までの差で。メモだけならこの回だけ。担当は、この回だけならその日の担当の並びに入れてピン（`assignOnDays`。担当なしは外す）、これ以降・すべては分けた繰り返しの担当にする（範囲の回は見るときにその担当で出る））・`cancelVisitOp`・`uncancelVisitOp`（ほかに変えた所が無ければ edited も外す）・`restoreOccurrenceOp`
+- 一覧：`unassignedVisits(data, today, until)`（担当なしの訪問）・`dayVisitRows(data, date, nowHm, limit)`（取り消し・休みを除き、担当なし → これからの近い順 → 済んだ時刻の順）・`clientVisitsIn(data, clientId, from, to)`（取り消しも）・`staffVisitsIn(data, staffId, from, to)`（訪問の担当がその人。取り消しは出さない。〈スタッフ〉の画面の予定）
 - 繰り返し：`endPatternOp(data, patternId, last, today)`（終了日を入れ、last より後で今日以降の、この回だけ変えていない・取り消していない回を消す。消す件数と確定した日の数。〈利用者さん〉の画面の「終わらせる」）
 
 ### 名前から開く詳細（ADR-0022。PRD D122〜D126・D205〜D209）
@@ -250,8 +250,8 @@
 
 ### 用語の説明（PRD D173〜D177・D240〜D242・D307。ADR-0025・ADR-0037）
 
-- `lib/glossary.ts`（純粋関数。テストあり）：`GLOSSARY`（span＝出勤〜退勤（拘束）・wait＝空き時間（待ち）・seed・scoreBase＝点数の基準・dropped・hard＝守れない条件（D307 で「必須の違反」から言い換え）・travel・loadCount＝空きを数える人・freeZero・backup＝控え（バックアップ）・terms＝画面での呼び方・typeUnfit・limitUnfit・vacancyCount・vacancyEstimate、予定の組み方の言葉（D242）：aiPlan＝AI案・pinned＝ピン（D307 で「固定」から言い換え）・confirmed＝確定・unconfirmed＝未確定・confirmDiff＝未確定の変更あり・preset＝プリセット・attention＝要対応・stale＝条件が変わった、D307：score＝点数（100点満点・高いほど良い・いつも点数の基準の重みで付ける。日の予定の1行のまとめの点数に付ける）・dayWeights＝この日だけの重み（日の予定の「条件を調整する」で変えた重み。日の予定の作り直しの帯に付ける））、`glossaryText(key, terms)`（〈staff〉〈client〉を呼び方に）。表示だけで、契約・データのキー名は変えない（`evaluate` の減点の内訳の `wait` の表示名は「空き時間（待ち）」）
-- 説明の文の決まり（D307）：1〜2文・90文字まで・「です・ます」で終わる。内部の言葉（費用・内訳・稼働時間・必須の違反・プリセット「・試す重み・展開・inputKey・固定・記録）を使わず、括弧の中に括弧を重ねない（`glossary.test.ts` で確かめる）。帯・確認から外した仕組みの説明（点数の付け方・この日だけの重みの効き方・条件が変わったとき）はここに寄せる
+- `lib/glossary.ts`（純粋関数。テストあり）：`GLOSSARY`（span＝出勤〜退勤（拘束）・wait＝空き時間（待ち）・seed・scoreBase＝点数の基準・dropped・hard＝守れない条件（D307 で「必須の違反」から言い換え）・travel・loadCount＝空きを数える人・freeZero・backup＝控え（バックアップ）・terms＝画面での呼び方・typeUnfit・limitUnfit・vacancyCount・vacancyEstimate、予定の組み方の言葉（D323。ADR-0053）：proposal＝提案（AI）・pinned＝ピン・confirmed＝確定（伝えた）・unconfirmed＝未確定（まだ伝えていない）・confirmDiff＝未連絡の変更あり・preset＝プリセット・attention＝要対応、D307：score＝点数（100点満点・高いほど良い・いつも点数の基準の重みで付ける。日の予定の今の担当の1行の点数に付ける））、`glossaryText(key, terms)`（〈staff〉〈client〉を呼び方に）。表示だけで、契約・データのキー名は変えない（`evaluate` の減点の内訳の `wait` の表示名は「空き時間（待ち）」）
+- 説明の文の決まり（D307）：1〜2文・90文字まで・「です・ます」で終わる。内部の言葉（費用・内訳・稼働時間・必須の違反・プリセット「・固定・記録）を使わず、括弧の中に括弧を重ねない（`glossary.test.ts` で確かめる）。帯・確認から外した仕組みの説明（点数の付け方など）はここに寄せる
 - `components/Term.tsx`（`term.css`）：
   - `Term`：用語の文字と後ろの小さな ⓘ（lucide の `Info`。`term-i`・`aria-hidden`）を1つにしたボタン。下線は付けない（D240）。読み上げの名前・`innerText` は用語の文字のまま。`aria-describedby` の先は `role="tooltip"` の説明で、閉じている間も `hidden` で文書に置く
   - フォーカスの輪はボタン全体。`pointer: coarse` では ⓘ のまわり 24px 角を押せる（`term-i::after`。WCAG 2.5.8。見た目は変えない。44px は 390px で隣の操作（選ぶ欄・凡例の開け閉め・畳んだ節）に重なった）。ⓘ は 1em。見出しのアイコンの色には引かれない。flex の中（`WithIcon`・`SectionTitle` の見出し）では文と `Term` を1つの `span` に包む（隙間で文が切れない）
@@ -262,32 +262,28 @@
   - `TipBubble`：body の直下の浮かせた説明。位置は `popoverPlace`
   - 印刷では説明も ⓘ も出さない
 - 同じ語は1か所（D241）：同じ画面で同じキーの `Term` は最初の1か所だけ説明つき、ほかは `plain`。勤務の見込みは上限の設定の span・月の合計の表の wait に付け、合計の表の span と日ごとの表の span・wait は `plain`。日の予定の一覧の「ピン」は最初のピンの行だけ。開く欄（右の欄・吹き出し）は別に数える
-- 用語を使う所：日の予定の確定の状態（まだ伝えていない・確定済み・未連絡の変更あり）・「ピン」の札（`tagsOf(id, pinHint)`。順番のカードは入らなかった訪問 → 列の順で最初のピンの訪問だけ、一覧は最初のピンの行だけ、時間軸の帯を押して開く説明は別に数えて説明つき）・案の無い日の「AI案」・条件が変わった帯（`stale`）・この日だけの重みを変えた帯（`dayWeights`）・条件を調整するの「プリセットごとの案」、月の予定の凡例（確定済み・未確定の変更あり）・右の欄の見出し「要対応」・まとめて作るの「使うプリセット」、条件の重みの「プリセット」の節、作り直しの帯の「条件が変わりました」、日の予定の今の案の帯（入らない・守れない条件・移動・点数）・詳しくの「空き時間（待ち）」と「点数の基準」・条件を調整するの「点数の基準」・比較の画面の「点数の基準」・勤務の見込みの表の見出しと上限の設定・条件の重みの「詳細設定」・月の「混み具合：空きを数える人」と凡例の「空き 0人」・空き状況のマスの読み方・データの「控え（バックアップ）」「画面での呼び方」。点のしくみ・点数の決め方は `Hint`
+- 用語を使う所：日の予定の確定の状態（まだ伝えていない・確定済み・未連絡の変更あり）・「ピン」の札（`tagsOf(id, pinHint)`。順番のカードは入らなかった訪問 → 列の順で最初のピンの訪問だけ、一覧は最初のピンの行だけ、時間軸の帯を押して開く説明は別に数えて説明つき）、月の予定の凡例（確定済み・未連絡の変更あり）・右の欄の見出し「要対応」、条件の重みの「プリセット」の節、日の予定の今の担当の1行（入らない・守れない条件・移動・点数）・詳しくの「空き時間（待ち）」と「点数の基準」・比較の画面の「点数の基準」・勤務の見込みの表の見出しと上限の設定・条件の重みの「詳細設定」・月の「混み具合：空きを数える人」と凡例の「空き 0人」・空き状況のマスの読み方・データの「控え（バックアップ）」「画面での呼び方」。点のしくみ・点数の決め方は `Hint`
 
 ### 空の画面の次の一手（PRD D175）
 
 - `lib/emptyGuide.ts`（純粋関数。テストあり）：
   - `periodEmptyGuide({ period, dates, today, visitDays })`（週・勤務の見込み）：訪問のある日が1日でもあれば null。訪問が無い期間は「〈期間〉には訪問がありません」と［日の予定で訪問を足す］
-  - `compareEmptyGuide({ date })`（比較の画面）、`arrangeMonthHref(ym)`（担当を組むの画面 `/arrange?ym=`）
-- `components/EmptyNext.tsx`：見出し・補足・ボタン（担当を組むは `Link`、日の予定は呼ぶ側の `onOpenDay`＝選んでいる日付を変えて `/plan`）。`primary={false}` で主ボタンにしない。480px 以下は縦に並べ、印刷ではボタンを出さない。使う所：週（`week-empty`。`compact`）・勤務の見込み（`work-empty`）・比較（`compare-empty`）
+  - `compareEmptyGuide({ date })`（比較の画面）：「この日には訪問がありません」と［日の予定で訪問を足す］
+- `components/EmptyNext.tsx`：見出し・補足・ボタン（日の予定は呼ぶ側の `onOpenDay`＝選んでいる日付を変えて `/plan`）。`primary={false}` で主ボタンにしない。480px 以下は縦に並べ、印刷ではボタンを出さない。使う所：週（`week-empty`。`compact`）・勤務の見込み（`work-empty`）・比較（`compare-empty`）
 
 ### 初回の案内ツアー（PRD D192・D193・D226・D276・D277。ADR-0045）
 
-- `lib/tour.ts`（純粋関数。テストあり）：`tourSteps(terms, features)`（3枚：home・plan・absence。見出し・本文・場所、plan は `points`（3段の説明：AI案／手直し（ピン。PRD D307）／確定）と［月｜週｜日］の切り替え。場所はメニュー・下のタブの名前（「予定」「欠勤・キャンセルを登録」・下のタブの「欠勤」）。切った機能の枚（absence）は出さない）、`TOUR_START_CHOICES`（基本・すべての名前と1行の説明）・`TOUR_START_QUESTION`（「どこまで使いますか」）・`TOUR_START_NOTE`、`tourMove(index, count, 'next'|'back'|'skip')`（閉じるときは null。最初の「戻る」は動かない）、`tourNextLabel`（最後は「閉じる」）、`TOUR_TODAY_LABEL`（「今日の予定を開く」）、`tourCountText`、`shouldAutoOpenTour(seen, search)`（`?id=`・`?do=` があれば開かない）
+- `lib/tour.ts`（純粋関数。テストあり）：`tourSteps(terms, features)`（3枚：home・plan・absence。見出し・本文・場所、plan は `points`（3段の説明：組む（AI。予定を組むの担当を組む）／ピン（手で替えた訪問）／確定（伝えた））と［月｜週｜日］の切り替え。場所はメニュー・下のタブの名前（「予定」「欠勤・キャンセルを登録」・下のタブの「欠勤」）。切った機能の枚（absence）は出さない）、`TOUR_START_CHOICES`（基本・すべての名前と1行の説明）・`TOUR_START_QUESTION`（「どこまで使いますか」）・`TOUR_START_NOTE`、`tourMove(index, count, 'next'|'back'|'skip')`（閉じるときは null。最初の「戻る」は動かない）、`tourNextLabel`（最後は「閉じる」）、`TOUR_TODAY_LABEL`（「今日の予定を開く」）、`tourCountText`、`shouldAutoOpenTour(seen, search)`（`?id=`・`?do=` があれば開かない）
 - 見たことは DemoData と別のキーに覚える（`tourMemory`。初期状態に戻しても残る）
 - `components/Tour.tsx`（`tour.css`）：
   - `TourProvider`：`AdminShell` の外側。はじめに `shouldAutoOpenTour(tourMemory.seen(), location.search)` で開く（月の印刷の画面では出ない）。自動で開いたときに store の `startedFresh`（保存データが無く初めて開いた）なら、1枚目に「どこまで使いますか」（`StartChoice`）を出す（「案内をもう一度見る」では出さない。PRD D276）。閉じたら・最後の枚まで進んだら `tourMemory.markSeen()`。「今日の予定を開く」は閉じて `dayHref(今日)`（`/plan?date=今日`）へ移る（PRD D226）
   - `useTour()`：開く関数（データの画面の「案内をもう一度見る」`tour-again`）
   - `TourDialog`：body の直下の中央のカード `role="dialog"`・`aria-modal`・`aria-labelledby`・`aria-describedby`。`inertLock`・`useBodyScrollLock`・捕捉の段で Esc（とばすと同じ）と Tab（`trapTarget`）。Ctrl+K を開かない。最初のフォーカスは「次へ」、枚が変わってフォーカスが外れたら「次へ」へ、閉じたら開く前の要素へ。見出しと本文は `aria-live="polite"`。z-index 1250（トーストより前・確認ダイアログより後ろ）。印刷では出さない
   - 本文 `tour-body` は文と、`points` があれば番号付きの一覧 `tour-points`（aria-describedby は両方を含む）
-  - `StartChoice`（1枚目の場所の下）：`fieldset.tour-choice`（`legend`「どこまで使いますか」・data-testid `tour-start`）にラジオ2つ（`tour-start-basic`・`tour-start-all`。名前と1行の説明。今の入り切りが `matchTemplate` で基本・すべてのどちらかならそれを選んだ状態）と注記「あとから「設定」の「管理者設定」で、機能を1つずつ入り切りできます。」。ネイティブのラジオ（Tab は選んでいる方だけ・矢印で選び直す。カードの Tab の閉じ込めも選んでいないラジオを飛ばす）。選んでもすぐには当てず、1枚目を離れるとき（次へ・とばす・Esc）に `TourProvider` の `choose(id)` で当てる：起動してから（または前に当ててから）データが変わっていなければ store の `reset(applyTemplate(id))`（その入り切りで初期データを作り直す。案の記録の入り切りとそろう）、変わっていれば `update` で `org.features` だけ書き換える（別のタブの変更を消さない）
+  - `StartChoice`（1枚目の場所の下）：`fieldset.tour-choice`（`legend`「どこまで使いますか」・data-testid `tour-start`）にラジオ2つ（`tour-start-basic`・`tour-start-all`。名前と1行の説明。今の入り切りが `matchTemplate` で基本・すべてのどちらかならそれを選んだ状態）と注記「あとから「設定」の「管理者設定」で、機能を1つずつ入り切りできます。」。ネイティブのラジオ（Tab は選んでいる方だけ・矢印で選び直す。カードの Tab の閉じ込めも選んでいないラジオを飛ばす）。選んでもすぐには当てず、1枚目を離れるとき（次へ・とばす・Esc）に `TourProvider` の `choose(id)` で当てる：起動してから（または前に当ててから）データが変わっていなければ store の `reset(applyTemplate(id))`（その入り切りで初期データを作り直す）、変わっていれば `update` で `org.features` だけ書き換える（別のタブの変更を消さない）
   - 最後の枚：「次へ」は「閉じる」（主ボタンにしない）、その右に主ボタン「今日の予定を開く」（`tour-today`）。「とばす」は出さない。最後の枚に入るとフォーカスは「今日の予定を開く」
   - data-testid：`tour`（`data-step`）・`tour-count`・`tour-title`・`tour-body`・`tour-points`・`tour-next`・`tour-back`・`tour-skip`・`tour-today`
 - e2e は文脈を作ったらすぐ `scripts/lib/tourSeen.cjs` の `skipTour(ctx)` を呼ぶ（e2e-tour は除く）。`skipTour` は既定で `scripts/lib/startFeatures.cjs` の `startAll` も呼び、初めて開いたときの入り切りを「すべて」にする（初回の「基本」を確かめるときは `skipTour(ctx, { start: 'basic' })`）
-
-### 条件を変えたら出す作り直しの帯（廃止。ADR-0053）
-
-- 版2で無くした（`lib/rebuildBand`・`components/rebuildBand.tsx`・`store/conditions.ts`・`scripts/e2e-rebuild.cjs` を消した）。条件を変えても今の担当は変えず、訪問ごとの検査（`lib/dayPlan` の `visitIssues`）で要対応が出る
 
 ### 行き先のリンク（`lib/links.ts`。PRD D201〜D204）
 
@@ -317,7 +313,7 @@
 
 #### `lib/mail.ts`（純粋関数）
 
-- 件名・本文。担当は `lib/monthPrint` の `printDay`（確定した割当、無ければ今の案。`PrintEntry.staffId`・`PrintOff.staffId`）
+- 件名・本文。担当は `lib/monthPrint` の `printDay`（その日の訪問の担当。伝えた日かは `source`）
 - `dayByStaff`・`dayMailText`（鍵は `includeKeys` のときだけ。〈スタッフ〉の `home`・`travelMode` があれば道順のリンクを入れ、長いときの段階を足す（design.md §5「道順のリンク」））・`dayRouteLinks`（全行程・区間ごと・帰りの道順の行）・`weekByStaff`・`weekMailText`・`contactMailText`・`vacancySubject`・`referrerRecipients`・`mailTo`・`NO_EMAIL`
 
 #### `components/mailParts.tsx`（`mailParts.css`）
@@ -347,10 +343,10 @@
 コマンドと環境変数は AGENTS.md。
 
 - `scripts/e2e-mobile.cjs`（390×844）：上の帯・引き出しの開閉と Esc・外・画面を選ぶ・フォーカスの戻りと閉じ込め・裏を巻かない・下のタブの active と比較・本文の最後が隠れない・浮いている部品と重ならない（同じクラスの箱を置いて確かめ、本物の地図のボタンが出ればそれも）・印刷・1400px で左のメニューと上の帯 72px。今の画面の項目・タブで URL のクエリが残る、`aria-controls`・`aria-haspopup`・inert・h2、本物の地図のボタンと開いた地図、開いたまま広い画面へ戻す、右の欄と引き出しが重なったときのロック。`fabWithToast`（本物の地図ボタンと本物のトースト・本文の下・safe-area）。下のタブは5つ
-- `scripts/e2e-dialog.cjs`：条件を消す（ARIA・中央・最初のフォーカス・Tab が回る・Esc・取り消す・背景で変わらない・閉じたらボタンへフォーカス・inert とロックを戻す・確定（キーボード）で消える）／初期状態に戻す（取り消すと知らせなし・確定で知らせ）／この割当で確定（Esc で未確定のまま・確定で「確定済み」）／確認中に「戻る」（確認が閉じデータが変わらない）／ダブルクリックでも確認が残る／〈スタッフ〉の変更を捨てる（右の欄の上で Esc は確認だけを閉じる・「捨てて閉じる」で保存しない）／選択肢を消す／390px で収まりボタンが縦・印刷で出さない。どれもネイティブのダイアログが出たら失敗
-- `scripts/e2e-nav.cjs`：メニューの並び・名前・aria-current・見出し・欠勤・キャンセルの項目、Ctrl+K で開く・ARIA・inert・↑↓ が回る・Enter で移る・見つからない・Ctrl+K で閉じる・操作（欠勤・まとめて作る）・右の欄の上では開かない、よみ（カタカナ）で〈利用者さん〉・名前で〈スタッフ〉の画面、Tab が回る・Esc・背景・×でフォーカスがボタンへ・入力欄の中の Ctrl+K・今の画面は閉じるだけ、390px（上の帯に「探す」は無く下のタブの「探す」で開く・パレットが収まる・上の帯の名前（人・利用者さん一覧・予定は項目名だけ）・引き出しの並び・下のタブ5つ（ホーム・予定・欠勤・探す・メニュー）・比較は「予定」のタブ・「予定」のタブは最後に開いた表示・「欠勤」のタブで今日の欠勤・キャンセルの欄）、印刷、300人×60人で1文字の中央値 `PERF_MS_NAV`（既定 100ms）と「要対応」を打ったときのいちばん長く止まる時間 `PERF_MS_NAV_CARE`（既定 300ms。検査は1日ずつ間を空ける）
-- `scripts/e2e-panel-foot.cjs`（1400px・390px）：欠勤・キャンセルの1〜4段目・キャンセルの2・3段目・訪問の詳細の欄（〈利用者さん〉の画面の予定の回から）・月の「まとめて作る」・日の差の欄の「連絡の一覧」。短い欄（広い画面は欄の高さが内容に合い、上に寄り、画面の下端まで伸びない）・長い欄・Tab で帯の裏の入力欄が隠れない・Tab が回る・Esc で戻る・裏を巻かない・390px の並び・タブに隠れない・safe-area・visualViewport を差し替えたキーボード・印刷で帯を出さない
-- `scripts/e2e-tour.cjs`：ツアー（初めて開くと出る・ARIA・中央・フォーカス・inert とロック・Tab が回る・Ctrl+K を開かない・次へ／戻る・3枚・予定の枚の3段・初めて開くと「基本」で1枚目に「どこまで使いますか」・「すべて」を選ぶとメニューと入り切りが変わり「条件が変わった」にならない・もう一度見るでは聞かない・「閉じる」・「今日の予定を開く」で今日の日の予定・覚える（別のキー）・読み直しても出ない・Esc・とばす・月の印刷では出ない・`?id=`・`?do=` のリンクでは出ない・印があれば自動で出ない・最後の枚で覚える・もう一度見る・フォーカスを戻す・初期状態に戻しても残る・390px・印刷）、ファイル選択、月の一覧
+- `scripts/e2e-dialog.cjs`：条件を消す（ARIA・中央・最初のフォーカス・Tab が回る・Esc・取り消す・背景で変わらない・閉じたらボタンへフォーカス・inert とロックを戻す・確定（キーボード）で消える）／初期状態に戻す（取り消すと知らせなし・確定で知らせ）／日の予定の確定（伝えた）（Esc で未確定のまま・確定で「確定済み」）／確認中に「戻る」（確認が閉じデータが変わらない）／ダブルクリックでも確認が残る／〈スタッフ〉の変更を捨てる（右の欄の上で Esc は確認だけを閉じる・「捨てて閉じる」で保存しない）／選択肢を消す／390px で収まりボタンが縦・印刷で出さない。どれもネイティブのダイアログが出たら失敗
+- `scripts/e2e-nav.cjs`：メニューの並び・名前・aria-current・見出し・欠勤・キャンセルの項目、Ctrl+K で開く・ARIA・inert・↑↓ が回る・Enter で移る・見つからない・Ctrl+K で閉じる・操作（欠勤・キャンセル・N月の担当を組む）・右の欄の上では開かない、よみ（カタカナ）で〈利用者さん〉・名前で〈スタッフ〉の画面、Tab が回る・Esc・背景・×でフォーカスがボタンへ・入力欄の中の Ctrl+K・今の画面は閉じるだけ、390px（上の帯に「探す」は無く下のタブの「探す」で開く・パレットが収まる・上の帯の名前（人・利用者さん一覧・予定は項目名だけ）・引き出しの並び・下のタブ5つ（ホーム・予定・欠勤・探す・メニュー）・比較は「予定」のタブ・「予定」のタブは最後に開いた表示・「欠勤」のタブで今日の欠勤・キャンセルの欄）、印刷、300人×60人で1文字の中央値 `PERF_MS_NAV`（既定 100ms）と「要対応」を打ったときのいちばん長く止まる時間 `PERF_MS_NAV_CARE`（既定 300ms。検査は1日ずつ間を空ける）
+- `scripts/e2e-panel-foot.cjs`（1400px・390px）：欠勤・キャンセルの1〜4段目・キャンセルの2・3段目・訪問の詳細の欄（〈利用者さん〉の画面の予定の回から）・日の差の欄の「連絡の一覧」。短い欄（広い画面は欄の高さが内容に合い、上に寄り、画面の下端まで伸びない）・長い欄・Tab で帯の裏の入力欄が隠れない・Tab が回る・Esc で戻る・裏を巻かない・390px の並び・タブに隠れない・safe-area・visualViewport を差し替えたキーボード・印刷で帯を出さない
+- `scripts/e2e-tour.cjs`：ツアー（初めて開くと出る・ARIA・中央・フォーカス・inert とロック・Tab が回る・Ctrl+K を開かない・次へ／戻る・3枚・予定の枚の3段・初めて開くと「基本」で1枚目に「どこまで使いますか」・「すべて」を選ぶとメニューと入り切りが変わる（その入り切りで初期データを作り直す）・もう一度見るでは聞かない・「閉じる」・「今日の予定を開く」で今日の日の予定・覚える（別のキー）・読み直しても出ない・Esc・とばす・月の印刷では出ない・`?id=`・`?do=` のリンクでは出ない・印があれば自動で出ない・最後の枚で覚える・もう一度見る・フォーカスを戻す・初期状態に戻しても残る・390px・印刷）、ファイル選択、月の一覧
 - `scripts/e2e-words.cjs`：点数の理由・用語の説明（マウス・Tab・Esc・タッチ・同時に1つ・入力欄の名前）・言い換え・空の画面・月の凡例・相性のセルの記号・390px・印刷
 - `scripts/e2e-links.cjs`：行き先のリンク（月の要対応の4種類・`?do=unassigned`・勤務の見込み・勤務時間（シフト）・空き状況）
 - `scripts/e2e-shared-parts.cjs`（1400px・390px）：訪問の札の共通の部品（ADR-0056）を週の表の札（〈スタッフ〉×曜日・〈利用者さん〉×曜日）・月のカレンダー（マスのキー・その日の回の一覧）・人の予定表で確かめる。複数選択（Ctrl＋クリック・Shift＋Enter・Esc）とキー（↓ 15分・Enter 欄・Ctrl+Z）、〈スタッフ〉の画面は日時を動かさない、帯の見た目（`data-marks`）が3画面と週の時間軸で同じ、ドラッグの落とし先の判定（今日より前の日は置けない・同じ理由の文・入る日へ落とすと落とした日の欄）、390px で長押しの選ぶ・2段目の行が日ごとのリストと同じ形

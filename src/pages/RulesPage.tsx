@@ -36,7 +36,7 @@ export default function RulesPage() {
   const draft = useRulesDraft();
   const { changes } = draft;
   const add = (type: RuleType) => {
-    // 足す条件の重み・必須は、押した時点のデータで決める（試す重みが当てはまるプリセット、無ければ基準のその型。lib/presets の addRule）
+    // 足す条件の重み・必須は、押した時点のデータで決める（点数の基準のプリセットのその型。lib/presets の addRule）
     const rule = { id: newId('r'), type, label: ruleTypeLabel(type, terms) };
     update((d) => addRule(d, rule, RULE_DEFAULTS[type]), '条件を足す');
   };

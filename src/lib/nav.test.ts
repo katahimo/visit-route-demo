@@ -12,7 +12,6 @@ import {
   type MenuItem,
   menuSections,
   NAV_OPEN_DEFAULT,
-  navTitle,
   navTitleParts,
   peopleHref,
   peopleTabs,
@@ -157,37 +156,31 @@ describe('isActiveNav（今の画面の印。PRD D273・D275）', () => {
   });
 });
 
-describe('navTitle（上の帯の名前。画面の一覧から引く）', () => {
+describe('navTitleParts（上の帯の名前。画面の一覧から引く）', () => {
   it('グループの見出し＋項目名で、〈利用者さん〉と〈スタッフ〉の一覧を見分ける', () => {
-    expect(navTitle(screens, '/clients')).toBe('人・利用者さん一覧');
-    expect(navTitle(screens, '/staff')).toBe('人・スタッフ一覧');
-    expect(navTitle(screens, '/availability')).toBe('人・勤務時間（シフト）');
-    expect(navTitle(screens, '/compat')).toBe('人・相性');
-    expect(navTitle(screens, '/workload')).toBe('人・勤務の見込み');
-    expect(navTitle(screens, '/vacancy')).toBe('空き状況');
+    expect(navTitleParts(screens, '/clients')).toEqual({ group: '人', item: '利用者さん一覧' });
+    expect(navTitleParts(screens, '/staff')).toEqual({ group: '人', item: 'スタッフ一覧' });
+    expect(navTitleParts(screens, '/availability')).toEqual({ group: '人', item: '勤務時間（シフト）' });
+    expect(navTitleParts(screens, '/compat')).toEqual({ group: '人', item: '相性' });
+    expect(navTitleParts(screens, '/workload')).toEqual({ group: '人', item: '勤務の見込み' });
+    expect(navTitleParts(screens, '/vacancy')).toEqual({ group: null, item: '空き状況' });
   });
   it('予定は項目名だけ（「日の予定」にそろえる。PRD D230・D273）', () => {
-    expect(navTitle(screens, '/plan')).toBe('日の予定');
-    expect(navTitle(screens, '/schedule')).toBe('日の予定');
-    expect(navTitle(screens, '/month')).toBe('月の予定');
-    expect(navTitle(screens, '/week')).toBe('週の予定');
-    expect(navTitle(screens, '/compare')).toBe('提案を比べる');
     expect(navTitleParts(screens, '/plan')).toEqual({ group: null, item: '日の予定' });
+    expect(navTitleParts(screens, '/schedule')).toEqual({ group: null, item: '日の予定' });
+    expect(navTitleParts(screens, '/month')).toEqual({ group: null, item: '月の予定' });
+    expect(navTitleParts(screens, '/week')).toEqual({ group: null, item: '週の予定' });
+    expect(navTitleParts(screens, '/compare')).toEqual({ group: null, item: '提案を比べる' });
   });
-  it('設定のタブは「設定・〜」、見出しの無いグループは項目名だけ', () => {
-    expect(navTitle(screens, '/rules')).toBe('設定・条件の重み');
-    expect(navTitle(screens, '/data')).toBe('設定・データ');
-    expect(navTitle(screens, '/settings')).toBe('設定・管理者設定');
-    expect(navTitle(screens, '/types')).toBe('設定・訪問の種類');
-    expect(navTitle(screens, '/home')).toBe('ホーム');
+  it('設定のタブは見出しが「設定」、見出しの無いグループは項目名だけ', () => {
+    expect(navTitleParts(screens, '/rules')).toEqual({ group: '設定', item: '条件の重み' });
+    expect(navTitleParts(screens, '/data')).toEqual({ group: '設定', item: 'データ' });
+    expect(navTitleParts(screens, '/settings')).toEqual({ group: '設定', item: '管理者設定' });
+    expect(navTitleParts(screens, '/types')).toEqual({ group: '設定', item: '訪問の種類' });
+    expect(navTitleParts(screens, '/home')).toEqual({ group: null, item: 'ホーム' });
   });
   it('一覧に無い画面は null', () => {
-    expect(navTitle(screens, '/nowhere')).toBeNull();
     expect(navTitleParts(screens, '/nowhere')).toBeNull();
-  });
-  it('navTitleParts：見出しと項目名を分ける（見出しの無いグループは null）', () => {
-    expect(navTitleParts(screens, '/clients')).toEqual({ group: '人', item: '利用者さん一覧' });
-    expect(navTitleParts(screens, '/home')).toEqual({ group: null, item: 'ホーム' });
   });
 });
 

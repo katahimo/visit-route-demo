@@ -1,7 +1,7 @@
 // 条件の重みの画面のプリセットの節（D20・D24・D235。ADR-0008・ADR-0035）：点数の基準の選択・プリセットごとの名前・一言・
 // 型ごとの重み・必須（変えるとすぐ保存）・消す（最後の1つは消せない）・基準の重みを写して保存（6つまで）・初期値に戻す。
 // 状態と処理は usePresetSection
-import { LayoutGrid, RotateCcw, ShieldCheck, Trash2 } from 'lucide-react';
+import { BookmarkPlus, LayoutGrid, RotateCcw, ShieldCheck, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { WeightSlider } from '../components/parts';
 import { Term } from '../components/Term';
@@ -10,9 +10,8 @@ import type { Terms } from '../contracts/documents';
 import { HARDABLE, MAX_PRESETS, type Preset, type RuleType } from '../contracts/rules';
 import { ruleTypeLabel, weightLocked } from '../lib/common';
 import { narrowRole } from '../lib/narrowRoles';
-import { PRESET_NAME_MAX, PRESET_NOTE_MAX } from '../lib/presets';
+import { addPresetError, addPresetFromBasis, PRESET_NAME_MAX, PRESET_NOTE_MAX } from '../lib/presets';
 import { useDemoData } from '../store';
-import { SavePresetForm } from './planParts';
 import { RULE_ICONS } from './rulesParts';
 import { usePresetSection } from './usePresetSection';
 
@@ -38,7 +37,9 @@ export function PresetSection({
         aside={
           <Hint>
             <ul className="hint-list">
-              <li>日の予定で、プリセットで試して提案を比べられます（比べた提案は保存しません）。</li>
+              <li>
+                担当を組むでプリセットごとの案を出し、提案を比べるの画面で比べられます（比べた提案は保存しません）。
+              </li>
               <li>点数の基準に選んだプリセットの重みで、AI で組みます。</li>
               <li>{MAX_PRESETS}つまで作れます。変えるとすぐ保存します。</li>
             </ul>
@@ -64,7 +65,7 @@ export function PresetSection({
         ))}
       </div>
       <div className="row narrow-stack" style={{ flexWrap: 'wrap', alignItems: 'flex-start' }}>
-        <SavePresetForm from="basis" />
+        <SavePresetForm />
         <button type="button" className="btn" onClick={flow.reset}>
           <WithIcon icon={RotateCcw}>初期値に戻す</WithIcon>
         </button>
@@ -131,14 +132,12 @@ function PresetEdit({
   terms: Terms;
   flow: PresetFlow;
 }) {
-  const { current, ruler, set, remove } = flow;
+  const { ruler, set, remove } = flow;
   return (
     <details className="preset-edit" data-testid="preset-edit">
       <summary className="narrow-preset-summary">
         <span className="preset-no">{no}</span>
         <strong>{p.name}</strong>
-        {/* 日の予定で試している重みが基準と違うプリセットに当たるときだけ（ADR-0035） */}
-        {current?.id === p.id && ruler?.id !== p.id && <span className="chip chip-primary">日の予定で使用中</span>}
         {ruler?.id === p.id && <span className="chip">点数の基準</span>}
         <span className="sub ellipsis">{p.note}</span>
       </summary>
@@ -279,5 +278,69 @@ function PresetText({
       }}
       onBlur={() => setDraft(null)}
     />
+  );
+}
+
+/**
+ * 点数の基準の重みを写してプリセットとして保存（D24。ADR-0008・ADR-0035）。押すと名前の欄が出て、入れて保存すると最後に足す。
+ * 6つあれば押せない
+ */
+function SavePresetForm() {
+  const { data, update } = useDemoData();
+  const [name, setName] = useState<string | null>(null);
+  const full = data.presets.length >= MAX_PRESETS;
+  const error = name === null ? null : addPresetError(data, name);
+  const save = () => {
+    if (name === null || error) return;
+    update((d) => addPresetFromBasis(d, name));
+    setName(null);
+  };
+  if (name === null) {
+    return (
+      <button
+        type="button"
+        className="btn"
+        disabled={full}
+        onClick={() => setName('')}
+        title={
+          full ? `プリセットは${MAX_PRESETS}つまでです` : 'ふだんの重みと必須を写して、新しいプリセットとして足します'
+        }
+      >
+        <WithIcon icon={BookmarkPlus} size={14}>
+          基準の重みを写して保存
+        </WithIcon>
+      </button>
+    );
+  }
+  return (
+    <form
+      className="stack preset-save"
+      style={{ gap: 4 }}
+      onSubmit={(e) => {
+        e.preventDefault();
+        save();
+      }}
+    >
+      <label className="stack" style={{ gap: 2 }}>
+        <span className="sub">新しいプリセットの名前</span>
+        <input
+          value={name}
+          maxLength={PRESET_NAME_MAX}
+          // biome-ignore lint/a11y/noAutofocus: 押したらすぐ名前を入れられるように
+          autoFocus
+          aria-label="新しいプリセットの名前"
+          onChange={(e) => setName(e.target.value)}
+        />
+      </label>
+      {error && name.trim() !== '' && <span className="error">{error}</span>}
+      <div className="row" style={{ gap: 4 }}>
+        <button type="submit" className="btn btn-small" disabled={!!error}>
+          保存
+        </button>
+        <button type="button" className="btn btn-small" onClick={() => setName(null)}>
+          やめる
+        </button>
+      </div>
+    </form>
   );
 }

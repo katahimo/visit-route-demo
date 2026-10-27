@@ -1,19 +1,8 @@
 // 予定（#/plan）と比較（#/compare）で共通に使う部品
 
 import type { LucideIcon } from 'lucide-react';
-import {
-  ArrowRight,
-  BookmarkPlus,
-  Car,
-  CircleOff,
-  Clock,
-  Gauge,
-  Hourglass,
-  MapPin,
-  ShieldAlert,
-  TrendingDown,
-} from 'lucide-react';
-import { type ReactNode, useDeferredValue, useMemo, useState } from 'react';
+import { ArrowRight, Car, CircleOff, Clock, Gauge, Hourglass, MapPin, ShieldAlert, TrendingDown } from 'lucide-react';
+import { type ReactNode, useDeferredValue, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Hint, WithIcon } from '../components/ui';
 import { useCompileInput } from '../components/useDayModel';
@@ -21,14 +10,13 @@ import { useDayStatuses } from '../components/useDayStatuses';
 import type { DemoData } from '../contracts/data';
 import type { Terms } from '../contracts/documents';
 import type { HundredPart, PlanScore, Problem, RuleAchievement, ScoreScale, VisitExplain } from '../contracts/problem';
-import { MAX_PRESETS, type Rule } from '../contracts/rules';
+import type { Rule } from '../contracts/rules';
 import { jstDate, minutesToHhmm } from '../domain/time';
 import { BALANCE_RULE_KEY, explain, toHundred } from '../evaluate';
 import { attempt, deltaText, pointsText, r0, r1, ruleTypeLabel } from '../lib/common';
 import { nextUnconfirmed } from '../lib/confirmDay';
 import { mdText } from '../lib/dateText';
 import { unassignedHref } from '../lib/links';
-import { addPresetError, addPresetFromRules, PRESET_NAME_MAX } from '../lib/presets';
 import { reasonFace, type ScoreReason, scoreReasonLabel } from '../lib/scoreReason';
 import { addMonths, monthDates, ymOf } from '../lib/ym';
 import { ALLOWED_STAFF_RULE_ID, VISIT_TYPE_RULE_ID } from '../matching';
@@ -65,31 +53,23 @@ export function ScoreReasonText({ reason, testId }: { reason: ScoreReason; testI
 }
 
 /**
- * 点を下げているいちばんの理由の次の一手（PRD D229）。理由の下に1行：「次の一手：［「移動を短く」で組む］」など。
- * onShortTravel が無い（「移動を短く」のプリセットが無い・今の案がそれ・計算中）、相性を切っている（compatOn=false）ときは出さない
+ * 点を下げているいちばんの理由の次の一手（PRD D229）。理由の下に1行：「次の一手：［受けられる人を見る］」など。
+ * 「移動を短く」で組む（shortTravel）は出さない（日の予定では AI で組まない。ADR-0063）。相性を切っている（compatOn=false）ときは相性も出さない
  */
 export function ScoreNextStep({
   reason,
   date,
-  onShortTravel,
   compatOn,
 }: {
   reason: ScoreReason;
   /** 日の画面の日付（受けられる人の欄へ巻くリンク） */
   date: string;
-  onShortTravel?: () => void;
   compatOn: boolean;
 }) {
   const next = reason.nextStep;
   if (!next) return null;
   let action: ReactNode = null;
-  if (next.kind === 'shortTravel' && onShortTravel) {
-    action = (
-      <button type="button" className="link-btn" onClick={onShortTravel} data-testid="reason-next-action">
-        {next.text}
-      </button>
-    );
-  } else if (next.kind === 'candidates') {
+  if (next.kind === 'candidates') {
     action = (
       <Link to={unassignedHref(date)} data-testid="reason-next-action">
         {next.text}
@@ -314,83 +294,6 @@ export function CompareTable({
         </p>
       )}
     </div>
-  );
-}
-
-/**
- * 重みをプリセットとして保存（D24。ADR-0008）。押すと名前の欄が出て、入れて保存すると最後に足す。
- * from：'basis'＝点数の基準の重み（条件の重みの画面のプリセットの節。ADR-0035）。'trial' は版1の「この日だけ試す重み」の名残で、版2は data.rules が基準と同じ。
- * 6つあれば押せない。compact は予定の画面の右の欄用（小さいボタン）
- */
-export function SavePresetForm({
-  compact = false,
-  disabled = false,
-  from = 'trial',
-}: {
-  compact?: boolean;
-  disabled?: boolean;
-  from?: 'trial' | 'basis';
-}) {
-  const { data, update } = useDemoData();
-  const [name, setName] = useState<string | null>(null);
-  const full = data.presets.length >= MAX_PRESETS;
-  const error = name === null ? null : addPresetError(data, name);
-  const save = () => {
-    if (name === null || error) return;
-    update((d) => addPresetFromRules(d, name, '', from));
-    setName(null);
-  };
-  if (name === null) {
-    return (
-      <button
-        type="button"
-        className={`btn ${compact ? 'btn-small' : ''}`}
-        disabled={full || disabled}
-        onClick={() => setName('')}
-        title={
-          full
-            ? `プリセットは${MAX_PRESETS}つまでです`
-            : from === 'basis'
-              ? 'ふだんの重みと必須を写して、新しいプリセットとして足します'
-              : '今の重みと必須を、新しいプリセットとして足します'
-        }
-      >
-        <WithIcon icon={BookmarkPlus} size={14}>
-          {from === 'basis' ? '基準の重みを写して保存' : 'この重みをプリセットとして保存'}
-        </WithIcon>
-      </button>
-    );
-  }
-  return (
-    <form
-      className="stack preset-save"
-      style={{ gap: 4 }}
-      onSubmit={(e) => {
-        e.preventDefault();
-        save();
-      }}
-    >
-      <label className="stack" style={{ gap: 2 }}>
-        <span className="sub">新しいプリセットの名前</span>
-        <input
-          value={name}
-          maxLength={PRESET_NAME_MAX}
-          // biome-ignore lint/a11y/noAutofocus: 押したらすぐ名前を入れられるように
-          autoFocus
-          aria-label="新しいプリセットの名前"
-          onChange={(e) => setName(e.target.value)}
-        />
-      </label>
-      {error && name.trim() !== '' && <span className="error">{error}</span>}
-      <div className="row" style={{ gap: 4 }}>
-        <button type="submit" className="btn btn-small" disabled={!!error || disabled}>
-          保存
-        </button>
-        <button type="button" className="btn btn-small" onClick={() => setName(null)}>
-          やめる
-        </button>
-      </div>
-    </form>
   );
 }
 

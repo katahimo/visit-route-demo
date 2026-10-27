@@ -237,9 +237,9 @@ function waitQuiet([maxMs, quietMs, horizonMs]) {
 
 /**
  * 押したあとの描き直しを待つ（web-first の待ち。ADR-0041）：2回の描画のあと、DOM の変化が続けて SETTLE_QUIET_MS 無く、
- * 終わりのある CSS の動きが走っておらず、期限の近いタイマー（入力の間引き・保存・吹き出しの出し入れ・作り直しの帯の数え直し）が残っていないこと。
+ * 終わりのある CSS の動きが走っておらず、期限の近いタイマー（入力の間引き・保存・吹き出しの出し入れ）が残っていないこと。
  * ms は前の固定の待ちの長さ：最長は max(3×ms, 1500ms)。ページが移っている最中なら読み込みを待ってもう1回。
- * Worker の計算（AI案を作る）は待たないので、その所は目印（locator.waitFor・until）で待つ。
+ * Worker の計算（AI で組む）は待たないので、その所は目印（locator.waitFor・until）で待つ。
  * E2E_SETTLE_LOG=1 なら最長まで待った所を、2 なら1回ずつの待った時間を出す。E2E_SETTLE=fixed なら前の固定の待ち（切り分け用）
  */
 async function settle(page, ms = 250) {

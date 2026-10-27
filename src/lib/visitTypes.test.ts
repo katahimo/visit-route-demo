@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MAX_VISIT_TYPES, type VisitType } from '../contracts/documents';
-import { visit } from '../matching/fixtures';
+import { visit } from '../matching/fixtures.testkit';
 import { createDemoData } from '../seed';
 import {
   blankVisitType,

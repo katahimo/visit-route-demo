@@ -1,7 +1,7 @@
 // 位置の無い〈利用者さん〉をまとめて地図に置く（PRD D89。ADR-0016）。外部には出さず、検索の偽物で確かめる
 import { describe, expect, it } from 'vitest';
 import type { Client } from '../contracts/documents';
-import { client, makeData } from '../matching/fixtures';
+import { client, makeData } from '../matching/fixtures.testkit';
 import type { GeoHit, LookupResult, PostalHit } from './geocode';
 import { keepStorePlace, type PlaceAllResult, placeAll, placeAllTargets, sleep, withFoundPlace } from './placeAll';
 

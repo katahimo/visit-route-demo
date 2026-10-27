@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { DemoData, ReassignInfo } from '../contracts/data';
 import type { Absence } from '../contracts/documents';
 import { compile } from '../matching';
-import { client, DATE, makeData, staff, visit } from '../matching/fixtures';
+import { client, DATE, makeData, staff, visit } from '../matching/fixtures.testkit';
 import { reassign, targetsOf } from '../reassign';
 import { absencesOn, baseOf, saveAbsence, withoutAbsencesOn } from './absences';
 import {

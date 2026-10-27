@@ -21,7 +21,7 @@ export type MenuItem = {
   note?: ReactNode;
   icon?: LucideIcon;
   disabled?: boolean | string;
-  /** 今の案など、選んである項目（印を付ける） */
+  /** 選んである項目（印を付ける） */
   current?: boolean;
   /** この項目の前に区切りの線を入れる */
   separatorBefore?: boolean;

@@ -15,7 +15,7 @@ export function buildInitial(st: AnnealState, initial: Record<string, string[]> 
   greedyInitial(st);
   st.current = recomputeTotal(st);
   const { problem, S, V } = st;
-  // 素朴な案の方が良ければ、そこから始める（AI案の費用 ≤ 素朴な案。決定的）
+  // 素朴な案の方が良ければ、そこから始める（AI の提案の費用 ≤ 素朴な案。決定的）
   if (V > 0 && S > 0) {
     const greedy = copyRoutes(st);
     const greedyTotal = st.current;

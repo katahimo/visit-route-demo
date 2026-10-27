@@ -53,7 +53,7 @@ async function editData(page, fn, arg) {
 }
 /**
  * 今日より後の担当を外す（繰り返しの担当と保存した回の担当。担当なしの日ができて、次の一手が「担当を AI で組む」になる形を作る。
- * 月末に近い日は初期データの担当（今日から7日分。PRD D225）と担当を AI で組むで今月が埋まることがあるため）
+ * 月末に近い日は初期データの繰り返しの担当（PRD D322。ADR-0064）で今月が埋まることがあるため）
  */
 async function dropLaterPlan(page) {
   await editData(

@@ -11,7 +11,7 @@ import './planIssueCount.css';
 /** 一覧の1行（訪問1件） */
 export type IssueRow = {
   visitId: string;
-  /** 時刻（今の案の開始。無ければ約束の開始） */
+  /** 時刻（今の担当の開始。無ければ約束の開始） */
   time: string;
   clientName: string;
   /** 担当の名前（入らない訪問は無し） */

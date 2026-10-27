@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DemoData } from '../contracts/data';
 import type { Pattern, Visit } from '../contracts/documents';
-import { client, DATE, makeData, staff, visit } from '../matching/fixtures';
+import { client, DATE, makeData, staff, visit } from '../matching/fixtures.testkit';
 import { findVisit, putVisits, visitsIn } from '../patterns';
 import { draftOf, newDraft, occurrenceChanges, scopeTexts, timeChanged, visitInfo } from './visitDraft';
 import { clientVisitsIn, dayVisitRows, staffVisitsIn, unassignedVisits } from './visitLists';

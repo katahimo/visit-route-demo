@@ -1,4 +1,4 @@
-/* AI案・比較の画面の見た目（plan.css） */
+/* 日の予定・比較の画面の見た目（plan.css） */
 
 .plan-compare-link {
   display: inline-flex;
@@ -22,7 +22,7 @@
  * 日の画面の並び（PRD D63）：見出し → 1行のまとめ → あるときだけの帯 → 操作の行 → 本体と地図。
  * ドラッグ中は本体より上の高さを変えない（帯・まとめはドラッグで増減しない。メニューは浮かせて出す）
  */
-/* 段の間。担当ごとの1日を今の案の1行につなげる所（components/dayLines.css）も同じ値を使う */
+/* 段の間。担当ごとの1日を今の担当の1行につなげる所（components/dayLines.css）も同じ値を使う */
 .plan-page {
   --plan-gap: 10px;
   gap: var(--plan-gap);
@@ -149,13 +149,6 @@ p.plan-band.error {
 }
 .plan-progress progress {
   width: 160px;
-}
-.plan-meta {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--sub);
-  font-size: 0.75rem;
 }
 /* 比較の画面の「もう1案作って比べる」（PRD D159）。狭い画面では縦に並べ、ボタンは幅いっぱい */
 .compare-another {
@@ -434,123 +427,6 @@ p.plan-band.error {
   }
   .runs-table {
     min-width: 560px;
-  }
-}
-
-/* プリセットごとの案のカード（ADR-0008） */
-.preset-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  gap: 10px;
-}
-.preset-card {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 6px;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--soft);
-  min-width: 0;
-  /* カード全体がボタン（ADR-0010） */
-  font: inherit;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s,
-    background 0.15s;
-}
-.preset-card > span {
-  display: block;
-}
-.preset-card > .spread {
-  display: flex;
-}
-.preset-card:hover:not(:disabled):not([aria-disabled='true']) {
-  border-color: var(--primary);
-  box-shadow: 0 2px 8px rgba(232, 115, 95, 0.18);
-}
-.preset-card:focus-visible {
-  outline: 3px solid var(--focus);
-  outline-offset: 2px;
-}
-.preset-card:disabled {
-  cursor: progress;
-  opacity: 0.75;
-}
-.preset-card[aria-disabled='true'] {
-  cursor: default;
-}
-.preset-card-note {
-  font-size: 0.75rem;
-}
-.preset-card-action {
-  display: inline-block;
-  margin-top: 4px;
-  color: var(--primary-dark);
-  font-weight: 700;
-  font-size: 0.85rem;
-}
-.preset-card.is-best {
-  border-color: var(--warn);
-  box-shadow: 0 0 0 2px #f5dfb5 inset;
-}
-.preset-card.is-current {
-  background: var(--primary-soft);
-  border: 2px solid var(--primary);
-  padding: 11px;
-}
-.preset-card-name {
-  font-size: 0.95rem;
-}
-.preset-crown {
-  color: var(--warn-ink);
-  display: inline-flex;
-}
-.preset-card-score {
-  font-size: 1.8rem;
-  font-weight: 800;
-  line-height: 1;
-}
-.preset-card-score small {
-  font-size: 0.8rem;
-  margin-left: 2px;
-  color: var(--sub);
-}
-.preset-card > .preset-card-stats {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.preset-card-remake {
-  font-size: 0.75rem;
-}
-.preset-card-stats svg,
-.preset-card-ach svg,
-.preset-card-remake svg {
-  vertical-align: -1px;
-}
-.preset-card .preset-card-now {
-  display: inline-flex;
-  align-self: flex-start;
-  margin-top: auto;
-}
-.preset-card-empty {
-  padding: 12px 0;
-}
-@media (max-width: 640px) {
-  .preset-cards {
-    display: flex;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    padding-bottom: 4px;
-  }
-  .preset-card {
-    flex: 0 0 72%;
-    scroll-snap-align: start;
   }
 }
 
@@ -835,17 +711,6 @@ p.plan-band.error {
   }
 }
 
-/* （D43）今の案を作ったあとに条件が変わった（ADR-0012） */
-.stale-note {
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px;
-  background: #fbefd6;
-  border: 1.5px solid #ecc97e;
-  color: #7a5208;
-  padding: 10px 14px;
-}
-
 /* 表示の切り替え（時間軸／順番／一覧。PRD D58・D63）。狭い幅・印刷では時間軸の代わりに順番なので、時間軸のボタンを出さない */
 @media (max-width: 900px) {
   .plan-view-toggle .plan-view-timeline {
@@ -1115,7 +980,7 @@ p.plan-band.error {
 .reason-line.is-bad .reason-mark {
   color: var(--warn-ink);
 }
-/* いちばんの理由の次の一手（PRD D229）：今の案の1行の中、理由のすぐ後ろ（PRD D237） */
+/* いちばんの理由の次の一手（PRD D229）：今の担当の1行の中、理由のすぐ後ろ（PRD D237） */
 .score-next {
   font-size: 0.85rem;
 }
@@ -1129,14 +994,6 @@ p.plan-band.error {
   color: var(--primary-dark);
   text-decoration: underline;
   cursor: pointer;
-}
-/* 比較の画面の詳細設定（記録ごとの乱数の種。PRD D229） */
-.compare-advanced summary {
-  cursor: pointer;
-}
-.compare-advanced-list {
-  margin: 4px 0 0;
-  padding-left: 1.2em;
 }
 @media print {
   .score-next {

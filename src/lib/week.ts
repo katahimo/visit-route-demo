@@ -1,5 +1,5 @@
 // 週間（ADR-0012の段階2。PRD D49〜D51。design.md §4 pages「週間（段階2）」）の画面の純粋関数。
-// 表・帯の形を作る計算だけ（データを書く操作 moveOnce・moveFollowing・insertIntoPlan は lib/weekOps）。今日・時刻は引数で受け取る
+// 表・帯の形を作る計算だけ（データを書く操作 moveFollowing・insertIntoPlan は lib/weekOps）。今日・時刻は引数で受け取る
 import type { Client, Pattern, Staff, Visit } from '../contracts/documents';
 import type { Problem, StopTiming } from '../contracts/problem';
 import type { Routes } from '../contracts/reassign';
@@ -154,7 +154,7 @@ export function shiftedTimes(v: Pick<Visit, 'earliestStart' | 'latestStart'>, st
   return { earliestStart: minutesToHhmm(start), latestStart: minutesToHhmm(start + width) };
 }
 
-/** 今日より前の日の訪問・今日より前の日へは動かさない（帯のドラッグ・drop・日付の選択・moveOnce・moveFollowing で共通） */
+/** 今日より前の日の訪問・今日より前の日へは動かさない（帯のドラッグ・drop・日付の選択・moveFollowing で共通） */
 export const canMoveVisit = (date: string, today: string): boolean => date >= today;
 
 // ---- 〈スタッフ〉×曜日の表（D51） ----
@@ -166,7 +166,7 @@ export type WeekCell = {
   count: number;
   /** 稼働時間（時間。その日の稼働時間帯の長さ。欠勤を差し引く） */
   hours: number;
-  /** 移動（分。今の案の列の lenient の移動。自宅へ帰る移動も含む） */
+  /** 移動（分。今の担当の列の lenient の移動。自宅へ帰る移動も含む） */
   travel: number;
   /** 種類ごとの件数（種類なしは数えない。種類の並びの順） */
   types: { typeId: string; count: number }[];

@@ -37,7 +37,7 @@ export function useWeekVisits(model: WeekModel, nav: WeekNav) {
   /** 確定の確認のあいだ・欄を保存したあとに変わったデータを読む */
   const dataRef = useRef(data);
   dataRef.current = data;
-  /** 動かしたあとの「空き時間に入れる」の知らせ（新しい日に今の案があるとき。〈利用者さん〉の画面のカレンダーと同じ） */
+  /** 動かしたあとの「空き時間に入れる」の知らせ（動かした回に担当が無いとき。〈利用者さん〉の画面のカレンダーと同じ） */
   const notice = useInsertNotice({
     failText: '空き時間に入りません。「担当を組む」の画面の「AI で組む」か、手で担当を選んでください',
     staffName,
@@ -61,7 +61,7 @@ export function useWeekVisits(model: WeekModel, nav: WeekNav) {
   // ---- 動かす（訪問の詳細の欄。PRD D301）----
   /**
    * 訪問の詳細の欄を開く。d・s が今の日時と違えば（ドラッグで落とした先）、その日時を入れた形で開き、保存のときに範囲
-   * （この回だけ／これ以降／すべて）を選ぶ。保存で日時が変わり、担当を選ばず、新しい日に今の案があれば「空き時間に入れる」の知らせ
+   * （この回だけ／これ以降／すべて）を選ぶ。保存で日時が変わり、担当を選ばず担当が無ければ「空き時間に入れる」の知らせ
    */
   const openMove = (visitId: string, d?: string, s?: number, staffId?: string | null) => {
     const v = visitById.get(visitId);

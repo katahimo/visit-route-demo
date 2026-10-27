@@ -118,7 +118,7 @@ export function draftChanges(rules: readonly Rule[], draft: WeightDraft): Weight
 }
 
 /** 重み・必須の短い文（「3」「0（使わない）」「必須」。重みを使わない必須は「必須」だけ、バランスの必須は「3・必須」） */
-export function weightText(type: RuleType, v: WeightValue): string {
+function weightText(type: RuleType, v: WeightValue): string {
   if (weightLocked({ type, hard: v.hard })) return '必須';
   const w = v.weight === 0 ? '0（使わない）' : String(v.weight);
   return v.hard ? `${w}・必須` : w;
@@ -129,7 +129,7 @@ export const changeText = (c: Pick<WeightChange, 'type' | 'before' | 'after'>): 
   `${weightText(c.type, c.before)}→${weightText(c.type, c.after)}`;
 
 /**
- * 確定：下書きの型ごとに点数の基準のプリセットを直す（試す重みも基準にそろう。ADR-0035 の setBasisWeight）。
+ * 確定：下書きの型ごとに点数の基準のプリセットを直す（条件の重みも基準にそろう。ADR-0035 の setBasisWeight）。
  * 書くのは触った欄だけで、ほかの欄は d の保存済みの値のまま（別のタブで変わった必須などを上書きしない）
  */
 export function applyDraft(d: DemoData, draft: WeightDraft): DemoData {

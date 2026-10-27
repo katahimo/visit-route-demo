@@ -3,7 +3,7 @@
 import ExcelJS from 'exceljs';
 import type { DemoData, ImportError } from '../contracts/data';
 import { createDemoData } from '../seed';
-import { withSeedPlans } from '../seed/plans';
+import { withSeedPlans } from '../seed/plans.testkit';
 import { isImportError } from '../store/persist';
 import { exportWorkbook, importWorkbook } from './index';
 

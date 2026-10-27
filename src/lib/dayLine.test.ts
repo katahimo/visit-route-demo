@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { compile } from '../matching';
-import { client, DATE, makeData, staff, visit } from '../matching/fixtures';
+import { client, DATE, makeData, staff, visit } from '../matching/fixtures.testkit';
 import { dayLineRange, dayLines, dayLineText, subtractSpans } from './dayLine';
 import { workStats } from './workload';
 

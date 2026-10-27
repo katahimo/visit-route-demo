@@ -36,7 +36,7 @@ export function useMonthDays(data: DemoData, compileInput: CompileInput, ym: str
   const perDay = useDayStatuses(data, compileInput, days);
   const statuses = useMemo(() => new Map([...perDay].map(([d, x]) => [d, x.status])), [perDay]);
 
-  /** その日の数える案（今の案、無ければ確定した割当）。問題は上で作ったものを使う */
+  /** その日の担当の並び（訪問の今の担当）。問題は上で作ったものを使う */
   const dayPlans = useMemo(() => {
     const out = new Map<string, DayPlan>();
     for (const d of days) out.set(d, dayPlanOf(data, d, perDay.get(d)?.problem ?? null));

@@ -280,7 +280,7 @@ function CellHead({
   );
 }
 
-/** 日のマス（memo。月まとめ作成の進み具合などで、変わらないマスは描き直さない） */
+/** 日のマス（memo。範囲の AI で組むの進み具合などで、変わらないマスは描き直さない） */
 export const DayCell = memo(function DayCell(props: CellProps) {
   const { date: d, status: s, ctx, making, marks: mk, load, offState } = props;
   const { today, focus, typeById, staffById } = ctx;

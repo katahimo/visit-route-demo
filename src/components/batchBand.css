@@ -1,4 +1,4 @@
-/* 上の帯の月まとめ作成の進み具合（PRD D256。ADR-0042） */
+/* 上の帯の範囲の AI で組む（担当を組む）の進み具合（PRD D256。ADR-0042・ADR-0063） */
 .batch-band {
   display: inline-flex;
   align-items: center;

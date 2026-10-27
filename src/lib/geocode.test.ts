@@ -2,7 +2,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   type FetchFn,
-  GSI_ADDRESS_URL,
   type JsonpDoc,
   type JsonpScript,
   jsonp,
@@ -11,7 +10,6 @@ import {
   parseGsiAddress,
   parseZipcloud,
   searchAddress,
-  ZIPCLOUD_URL,
 } from './geocode';
 import { formatPostalCode, normalizePostalCode } from './postalCode';
 
@@ -127,7 +125,7 @@ describe('lookupPostalCode（郵便番号 → 住所）', () => {
     const { f, urls } = fakeFetch(() => ZIP_OK);
     const r = await lookupPostalCode('980-0811', { fetch: f });
     expect(r).toEqual({ ok: true, hits: [{ address: '宮城県仙台市青葉区一番町' }] });
-    expect(urls).toEqual([`${ZIPCLOUD_URL}?zipcode=9800811`]);
+    expect(urls).toEqual(['https://zipcloud.ibsnet.co.jp/api/search?zipcode=9800811']);
   });
   it('7桁にできなければ送らずに invalid', async () => {
     const { f, urls } = fakeFetch(() => ZIP_OK);
@@ -145,7 +143,7 @@ describe('lookupPostalCode（郵便番号 → 住所）', () => {
       },
     });
     expect(r.ok).toBe(true);
-    expect(calls).toEqual([`${ZIPCLOUD_URL}?zipcode=9800811`]);
+    expect(calls).toEqual(['https://zipcloud.ibsnet.co.jp/api/search?zipcode=9800811']);
   });
   it('時間切れ・HTTP のエラー・形の違いでは JSONP へ切り替えない', async () => {
     let jsonpCalls = 0;
@@ -226,7 +224,9 @@ describe('searchAddress（住所 → 位置）', () => {
     const { f, urls } = fakeFetch(() => GSI_OK);
     const r = await searchAddress(' 宮城県仙台市青葉区一番町1-1 ', { fetch: f });
     expect(r.ok && r.hits[0]).toEqual({ title: '宮城県仙台市青葉区一番町一丁目', lat: 38.2601, lng: 140.8716 });
-    expect(urls).toEqual([`${GSI_ADDRESS_URL}?q=${encodeURIComponent('宮城県仙台市青葉区一番町1-1')}`]);
+    expect(urls).toEqual([
+      `https://msearch.gsi.go.jp/address-search/AddressSearch?q=${encodeURIComponent('宮城県仙台市青葉区一番町1-1')}`,
+    ]);
   });
   it('空の住所は送らない。見つからない・時間切れ・つながらない・形の違いを分ける', async () => {
     const { f, urls } = fakeFetch(() => GSI_OK);
@@ -276,7 +276,7 @@ describe('jsonp（script 要素で呼ぶ）', () => {
   it('callback を足して呼び、応答を返したら script とグローバルの関数を片付ける', async () => {
     const { doc, added } = fakeDoc();
     const win: Record<string, unknown> = {};
-    const p = jsonp(`${ZIPCLOUD_URL}?zipcode=9800811`, { timeoutMs: 1000, doc, win });
+    const p = jsonp('https://zipcloud.ibsnet.co.jp/api/search?zipcode=9800811', { timeoutMs: 1000, doc, win });
     expect(added).toHaveLength(1);
     const name = callbackOf(added[0].src);
     expect(name).toMatch(/^__vrdJsonp_\d+_\d+$/);

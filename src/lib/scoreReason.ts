@@ -1,4 +1,4 @@
-// 点数の理由を一言（PRD D173。ADR-0025）：今の案の点を下げているいちばん大きい理由を短い文にする純粋関数。
+// 点数の理由を一言（PRD D173。ADR-0025）：今の担当の点を下げているいちばん大きい理由を短い文にする純粋関数。
 // 新しい採点は足さない。evaluate の減点の内訳（hundredBreakdown）・採点（score）・下限の条件ごとの内訳（ruleLowerBounds）・
 // 条件ごとの達成（achievements）から選ぶだけ
 import type { HundredPart, PlanScore, Problem, Reason, RuleAchievement, ScoreScale } from '../contracts/problem';
@@ -10,7 +10,7 @@ export const REASON_MIN_POINTS = 0.5;
 
 /**
  * 次の一手（PRD D229）：いちばんの理由の下に1行で出す操作。
- * shortTravel＝「移動を短く」のプリセットで作る（「AI で組む ▾」の項目と同じ）、candidates＝入らなかった訪問の「受けられる人」を見る、
+ * shortTravel＝「移動を短く」のプリセットで作る（日の予定では出さない。AI で組むのは担当を組む。ADR-0063）、candidates＝入らなかった訪問の「受けられる人」を見る、
  * compat＝相性の表を開く
  */
 export type NextStep = { kind: 'shortTravel' | 'candidates' | 'compat'; text: string };
@@ -147,7 +147,7 @@ export function scoreReason(
 }
 
 /**
- * 担当の並びの点を下げているいちばん大きい理由（日の予定の今の案・比較の画面の案ごとで同じ決まり。PRD D173）。
+ * 担当の並びの点を下げているいちばん大きい理由（日の予定の今の担当・比較の画面の案ごとで同じ決まり。PRD D173）。
  * 点数の基準の物差し（ADR-0010）の問題・物差しで、採点 sc と条件ごとの達成から scoreReason を呼ぶ
  */
 export function reasonOfRoutes(

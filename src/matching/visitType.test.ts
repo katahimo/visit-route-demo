@@ -1,7 +1,7 @@
 // 訪問の種類の必要条件・パターンのいつもの担当（ADR-0012）
 import { describe, expect, it } from 'vitest';
 import type { Pattern, VisitType } from '../contracts/documents';
-import { client, DATE, makeData, problemKey, randomData, rule, staff, visit } from './fixtures';
+import { client, DATE, makeData, problemKey, randomData, rule, staff, visit } from './fixtures.testkit';
 import { compile, VISIT_TYPE_RULE_ID } from './index';
 
 const REHAB: VisitType = {

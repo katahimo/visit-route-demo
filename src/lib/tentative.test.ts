@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DATE } from '../matching/fixtures';
+import { DATE } from '../matching/fixtures.testkit';
 import { confirmedDatesOf } from './tentative';
 
 describe('confirmedDatesOf', () => {

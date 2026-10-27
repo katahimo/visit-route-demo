@@ -1,6 +1,6 @@
 // 日の予定のメールの欄の行と確定の文：lib/dayMail
 import { describe, expect, it } from 'vitest';
-import { client, DATE, makeData, staff, visit } from '../matching/fixtures';
+import { client, DATE, makeData, staff, visit } from '../matching/fixtures.testkit';
 import { dayMailProgress, dayMailRows, sendableKeys } from './dayMail';
 import { MAILTO_LIMIT } from './mailto';
 

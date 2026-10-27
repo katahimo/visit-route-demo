@@ -809,7 +809,7 @@ describe('名簿のブック（PRD D103〜D107。ADR-0020）', () => {
     for (let n = 2; n <= ws.rowCount; n++) if (ws.getRow(n).getCell(c).value === name) return n;
     throw new Error(`${name} の行がない`);
   };
-  /** 案・記録・確定した割当の入ったデータ */
+  /** 版1の形（案・確定した割当）の保存データを移したデータ（担当が訪問に入る。store の migrate） */
   const withPlans = (): DemoData => {
     const d = base();
     const v = d.visits.find((x) => x.date === d.baseDate && !x.cancelled);

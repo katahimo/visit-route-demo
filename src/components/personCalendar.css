@@ -95,11 +95,6 @@
   border-color: var(--danger);
   background: #fbeceb;
 }
-.pcal-item.is-noplan {
-  border-style: dashed;
-  border-color: var(--warn-line);
-  background: #fffaf0;
-}
 /* 取り消し・休みは白抜き（押すと欄で取り消しをやめる） */
 .pcal-item.is-cancelled,
 .pcal-item.is-sameDay,

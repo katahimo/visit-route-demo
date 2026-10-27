@@ -34,7 +34,7 @@ export function MonthGrid({
   ym: string;
   /** 選んでいる日付 */
   date: string;
-  /** いま作っている日（月まとめ作成） */
+  /** いま作っている日（範囲の AI で組む（担当を組む）） */
   current: string | undefined;
   month: Pick<MonthDays, 'weeks' | 'statuses' | 'marks' | 'attentionByDate' | 'usualRest'>;
   focusDays: Pick<MonthFocusDays, 'loads' | 'staffDays' | 'clientDays'>;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { VacancyCell, VacancyResult } from '../contracts/vacancy';
-import { client, DATE, makeData, staff } from '../matching/fixtures';
+import { client, DATE, makeData, staff } from '../matching/fixtures.testkit';
 import { HOLD_DAYS, holdData, holdPatterns, holdSlots } from './hold';
 
 // DATE（2026-10-12）は月曜

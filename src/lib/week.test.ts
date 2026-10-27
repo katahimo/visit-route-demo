@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { DemoData } from '../contracts/data';
 import type { Pattern } from '../contracts/documents';
 import { compile } from '../matching';
-import { client, DATE, ITEMS, makeData, staff, visit } from '../matching/fixtures';
+import { client, DATE, ITEMS, makeData, staff, visit } from '../matching/fixtures.testkit';
 import {
   allowedStaffOf,
   clientItemMark,

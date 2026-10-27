@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DATE, staff } from '../matching/fixtures';
+import { DATE, staff } from '../matching/fixtures.testkit';
 import { daySlotsOf, ownerMap } from './dayModel';
 
 describe('daySlotsOf（その日の稼働時間帯）', () => {

@@ -74,7 +74,7 @@ const TABLE: Record<TemplateId, FeatureId[]> = {
 };
 
 describe('機能の表（ADR-0028 の機能の一覧）', () => {
-  it('20の機能が契約の ID と同じ順に1つずつ。グループは決まった6つのどれか（メニューのグループにそろえる。ADR-0034）', () => {
+  it('20の機能が契約の ID と同じ順に1つずつ。グループは決まった6つのどれか（管理者設定のスイッチの並び）', () => {
     expect(FEATURE_GROUPS).toEqual(['予定', '当日・問い合わせ', '人', 'AI の条件', '連絡', 'データ']);
     expect(featureDef('compat').group).toBe('AI の条件');
     expect(featureDef('allowedStaff').group).toBe('AI の条件');

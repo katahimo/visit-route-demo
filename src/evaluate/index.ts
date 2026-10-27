@@ -1,4 +1,4 @@
-// 入口（evaluate：手作業案・AI案を同じ Problem で採点・説明・差分）
+// 入口（evaluate：手で入れた担当・AI の提案を同じ Problem で採点・説明・差分）
 import {
   type HundredPart,
   type PlanDiff,
@@ -82,7 +82,7 @@ function scorePlaced(problem: Problem, p: Placed): PlanScore {
     wait += t.waitMinutes;
     meters += t.meters;
     for (const v of p.seqs[s]!) {
-      // 手作業案は可否で外れた組でも割当費用（有限の部分）を数える
+      // 手で入れた担当は可否で外れた組でも割当費用（有限の部分）を数える
       assign += problem.assignCost[v]![s]!;
       const rs = problem.reasons[v]![s]!;
       for (const r of rs) {
@@ -187,7 +187,7 @@ const hm = (m: number) => `${Math.floor(m / 60)}:${String(Math.round(m % 60)).pa
 
 /**
  * 担当の候補はいるのに入らなかった訪問の理由（どの担当も可にならない訪問は Problem.infeasible が持つ）。
- * 候補ごとに、今の案のその人の列に strict で入るかを試し、入らなければ重なる訪問の時刻を出す。
+ * 候補ごとに、今の担当のその人の列に strict で入るかを試し、入らなければ重なる訪問の時刻を出す。
  * 候補でない人は可否の原因ごとに人数をまとめる。例「さくら：14:00〜15:00・16:00〜16:45 と重なる」「必要条件：資格に保育士を含む ✗（6人）」
  */
 function whyUnassigned(problem: Problem, p: Placed, v: number): Reason[] {
@@ -247,7 +247,7 @@ export function diff(problem: Problem, from: Record<string, string[]>, to: Recor
 // ---- 点数（ADR-0007 案A。表示だけ。solver の費用は変えない。100 −（費用 − 下限）÷ 訪問の件数）----
 
 /**
- * 素朴な案（staffId → 訪問ID。回る順）。solver の初期解の候補（AI案が素朴な案より悪くならない）。点数の基準には使わない。中身は matching の naiveSeqs：担当できる人の少ない順（同じなら開始の早い順）に、増える移動が最も少ない担当の、
+ * 素朴な案（staffId → 訪問ID。回る順）。solver の初期解の候補（AI の提案が素朴な案より悪くならない）。点数の基準には使わない。中身は matching の naiveSeqs：担当できる人の少ない順（同じなら開始の早い順）に、増える移動が最も少ない担当の、
  * その順番の中で最も安い位置（strict で入る位置）に挟む。入らない訪問だけ落とす。決定的
  */
 export function naivePlan(problem: Problem): Record<string, string[]> {

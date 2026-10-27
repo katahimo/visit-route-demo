@@ -7,7 +7,7 @@ import type { Attention, AttentionKind, MonthProgress } from './month';
 export type BandOp = 'batch' | 'attention' | 'unconfirmed';
 
 /**
- * 帯の次の一手：まとめて作る／要対応を見る／確定していない日を見る／済み（ボタンなし）／今日以降に訪問が無い（ボタンなし）
+ * 帯の次の一手：担当を AI で組む（担当を組むの画面）／要対応を見る／確定していない日を見る／済み（ボタンなし）／今日以降に訪問が無い（ボタンなし）
  */
 export type BandNextKind = BandOp | 'done' | 'empty';
 

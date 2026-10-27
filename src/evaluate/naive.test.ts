@@ -1,7 +1,7 @@
-// 素朴な案（solver の初期解の候補）と、AI案がそれより悪くならないこと（ADR-0007。レビュー H1・H2）
+// 素朴な案（solver の初期解の候補）と、AI の提案がそれより悪くならないこと（ADR-0007。レビュー H1・H2）
 import { describe, expect, it } from 'vitest';
 import { compile } from '../matching';
-import { client, DATE, makeData, randomData, rule, staff, visit } from '../matching/fixtures';
+import { client, DATE, makeData, randomData, rule, staff, visit } from '../matching/fixtures.testkit';
 import { solve } from '../solver';
 import { naivePlan, normalize, score, toHundred } from './index';
 import { SEED_DATES, SEED_PARTS } from './naiveSeed.testkit';
@@ -60,7 +60,7 @@ describe('素朴な案', () => {
     expect(routes.s2).toContain('v3');
   });
 
-  it('手作業案（必須の違反あり）の点も 0〜100 に収まり、違反は hardViolations に出る（画面は「参考」）', () => {
+  it('手で入れた担当（必須の違反あり）の点も 0〜100 に収まり、違反は hardViolations に出る（画面は「参考」）', () => {
     const d = randomData(4, 20, 3, [rule('req', 'clientRequirement', 0, true)]);
     const p = compile(d, DATE);
     const s = normalize(p);
@@ -77,8 +77,8 @@ describe('素朴な案', () => {
   });
 });
 
-describe('AI案は素朴な案より悪くならない（初期解の候補に素朴な案）', () => {
-  it('ランダムな問題で、反復が少なくても AI案の費用 ≤ 素朴な案', () => {
+describe('AI の提案は素朴な案より悪くならない（初期解の候補に素朴な案）', () => {
+  it('ランダムな問題で、反復が少なくても AI の提案の費用 ≤ 素朴な案', () => {
     for (const seed of [1, 2, 3, 4, 5, 6]) {
       const q = compile(randomData(5, 25, seed), DATE);
       const naive = score(q, naivePlan(q)).total;

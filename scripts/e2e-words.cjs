@@ -1,10 +1,9 @@
 // 言葉と案内（PRD D173〜D177。ADR-0025）を本物のブラウザで確かめる：
-// 点数の理由（日の画面の今の案の帯の点数の横・比較の画面の記録の表。読み上げの前置き）、
+// 点数の理由（日の画面の今の担当の帯の点数の横・比較の画面の記録の表。読み上げの前置き）、
 // 用語の説明（マウスを重ねると出て離れると消える・Tab のフォーカスで出て Esc で消える（フォーカスは用語のまま）・Tab で外れると消える・
 // aria-describedby の先が role="tooltip" で説明の文・タッチで押すと開き、もう一度押すと閉じる・外を押すと閉じる・画面に収まる）、
 // 言い換え（稼働の見込みの「出勤〜退勤（拘束）」「空き時間（待ち）」、乱数の種は「詳細設定」に畳む）、
-// 空の画面（週：案が無い／訪問が無い、稼働の見込み、比較：なぜ空かと次の一手。まとめて作るのボタンで月の画面の欄が開き ?do= が消える・
-// 日の画面のボタンでその日の日の画面）、空き状況の案の無い日の注意は1か所、
+// 空の画面（週：訪問が無い、稼働の見込み、比較：なぜ空かと次の一手。ボタンは日の予定だけで、押すとその日の日の画面）、空き状況の案の無い日の注意は1か所、
 // 月の凡例（はじめは畳む・開く・読み直すと畳む（保存しない）・マスにマウスを重ねる／フォーカスで読み方・Esc で消す）、
 // 相性のセルの記号の意味（title・aria-label）、390px で収まる・印刷で用語の説明・ボタン・凡例の開け閉めを出さない、ブラウザの確認を出さない。
 // 理由の見せ方と警告の色（PRD D228・D229）：訪問ごとの理由は「✓ 相性◎（選ばれやすい）」のような符号の無い言葉で「費用」を出さず内部の値は title、
@@ -59,7 +58,7 @@ async function clearVisits(page) {
   await page.reload();
   await page.locator('h1').waitFor();
 }
-/** 日の画面を開き、今の案が出て計算が終わるまで待つ */
+/** 日の画面を開き、今の担当が出て計算が終わるまで待つ */
 async function openPlan(page) {
   await open(page, '/plan', '[data-testid="confirm-state"]');
   await page.getByTestId('plan-progress').waitFor({ state: 'detached', timeout: 60000 });
@@ -104,7 +103,7 @@ async function reason(page) {
   const sameLine = await page
     .getByTestId('plan-summary')
     .evaluate((el) => el.contains(document.querySelector('[data-testid="plan-reason"]')));
-  check(sameLine, '理由は今の案の帯（訪問・入らない・守れない条件・移動・点数）の中');
+  check(sameLine, '理由は今の担当の帯（訪問・入らない・守れない条件・移動・点数）の中');
   await page.screenshot({
     path: path.join(OUT_DIR, 'plan-reason.png'),
     clip: { x: 0, y: 0, width: 1400, height: 400 },
@@ -117,7 +116,7 @@ async function reason(page) {
   const ct = n > 0 ? await page.getByTestId('compare-reason').first().innerText() : '';
   check(
     ct.length > 0 && ct.replace(/\s/g, '') === text.replace(/\s/g, ''),
-    '比較の画面：今の案と同じ記録なら日の予定と同じ文',
+    '比較の画面：今の担当と同じ記録なら日の予定と同じ文',
     {
       plan: text,
       compare: ct,

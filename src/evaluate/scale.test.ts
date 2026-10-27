@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { type Problem, SCORE_MAX } from '../contracts/problem';
 import { compile } from '../matching';
-import { DATE, randomData } from '../matching/fixtures';
+import { DATE, randomData } from '../matching/fixtures.testkit';
 import { createDemoData } from '../seed';
 import { defaultIterations, solve } from '../solver';
 import { hundredBreakdown, naivePlan, normalize, ruleLowerBounds, score, toHundred } from './index';
@@ -52,7 +52,7 @@ describe('点数（ADR-0007 案A。100 −（費用 − 下限）÷ 訪問の件
     expect(again).toEqual(scale);
   });
 
-  it(`デモデータ ${DEMO_DATE}：AI案は素朴な案より点が高く、内訳の合計はおおむね 100−点数`, () => {
+  it(`デモデータ ${DEMO_DATE}：AI の提案は素朴な案より点が高く、内訳の合計はおおむね 100−点数`, () => {
     const r = solve(p, { seed: demo.seed, iterations: defaultIterations(p) });
     const sc = score(p, r.routes);
     expect(scale.lowerBound).toBeLessThanOrEqual(sc.total + 1e-6);
@@ -63,14 +63,14 @@ describe('点数（ADR-0007 案A。100 −（費用 − 下限）÷ 訪問の件
     const sum = parts.reduce((a, x) => a + x.points, 0);
     expect(Math.abs(sum - (100 - h))).toBeLessThanOrEqual(0.5 + 1e-9);
     console.info(
-      `[点数] ${DEMO_DATE} AI案 費用${Math.round(sc.total)}→${h}点 / 素朴な案 費用${Math.round(naiveCost)}→${toHundred(naiveCost, scale)}点 / 下限 ${Math.round(scale.lowerBound)}（割当${Math.round(scale.lowerAssign)}・移動${Math.round(scale.lowerTravel)}）・${scale.visits}件`,
+      `[点数] ${DEMO_DATE} AI の提案 費用${Math.round(sc.total)}→${h}点 / 素朴な案 費用${Math.round(naiveCost)}→${toHundred(naiveCost, scale)}点 / 下限 ${Math.round(scale.lowerBound)}（割当${Math.round(scale.lowerAssign)}・移動${Math.round(scale.lowerTravel)}）・${scale.visits}件`,
       parts.map((x) => `${x.label} −${x.points.toFixed(1)}`).join('・'),
     );
   }, 30000);
 
-  // 各プリセットの AI案・素朴な案が下限以上の費用であることは、seed の14日（この日を含む）で naive.seed*.test.ts が確かめる
+  // 各プリセットの AI の提案・素朴な案が下限以上の費用であることは、seed の14日（この日を含む）で naive.seed*.test.ts が確かめる
 
-  it('ランダムな問題でも、下限は素朴な案・AI案・適当な案の費用以下', () => {
+  it('ランダムな問題でも、下限は素朴な案・AI の提案・適当な案の費用以下', () => {
     for (const seed of [1, 2, 3, 4, 5]) {
       const q: Problem = compile(randomData(5, 25, seed), DATE);
       const s = normalize(q);

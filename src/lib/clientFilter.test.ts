@@ -1,7 +1,7 @@
 // 〈利用者さん〉の絞り込み（PRD D108〜D112。ADR-0021）
 import { describe, expect, it } from 'vitest';
 import type { Pattern } from '../contracts/documents';
-import { client, DATE, makeData, staff, visit } from '../matching/fixtures';
+import { client, DATE, makeData, staff, visit } from '../matching/fixtures.testkit';
 import {
   activeFilterCount,
   type ClientFilterState,

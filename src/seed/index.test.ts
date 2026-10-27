@@ -3,7 +3,7 @@ import { demoDataSchema } from '../contracts/data';
 import { addDays, weekday } from '../domain/time';
 import { compile } from '../matching';
 import { visitsIn } from '../patterns';
-import { visitsOf } from './generate';
+import { visitsOf } from './generate.testkit';
 import {
   applyPreset,
   createDemoData,

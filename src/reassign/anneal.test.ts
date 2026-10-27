@@ -5,7 +5,7 @@ import type { Problem } from '../contracts/problem';
 import { addDays } from '../domain/time';
 import { score } from '../evaluate';
 import { compile, routeCost, scheduleRoute } from '../matching';
-import { client, DATE, makeData, staff, visit } from '../matching/fixtures';
+import { client, DATE, makeData, staff, visit } from '../matching/fixtures.testkit';
 import { createDemoData } from '../seed';
 import { solve } from '../solver';
 import {

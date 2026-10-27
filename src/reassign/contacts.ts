@@ -1,11 +1,11 @@
-// 連絡の一覧（PRD D35。ADR-0011）：元の案と今の案の差から、誰に何を連絡するかをまとめる。
+// 連絡の一覧（PRD D35。ADR-0011）：元の担当と今の担当の差から、誰に何を連絡するかをまとめる。
 // どれも純粋関数で決定的。DemoData は読まない・書かない
 import type { ContactList, ContactsOf, ContactVisit, StaffContact } from '../contracts/reassign';
 import { timesOf } from './diff';
 
 /**
- * 元の案と今の案の差から、連絡の一覧を作る（時刻は lenient。開始の変化は四捨五入で1分以上。reassignDiff と同じ）。
- * 訪問の順は今の案の開始（無ければ元の案の開始）の順
+ * 元の担当と今の担当の差から、連絡の一覧を作る（時刻は lenient。開始の変化は四捨五入で1分以上。reassignDiff と同じ）。
+ * 訪問の順は今の担当の開始（無ければ元の担当の開始）の順
  */
 export const contactsOf: ContactsOf = (before, after) => {
   const a = timesOf(before.problem, before.routes).at;

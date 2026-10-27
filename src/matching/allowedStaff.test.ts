@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { explain } from '../evaluate';
 import { fitsOf, reassign, targetsOf } from '../reassign';
-import { client, DATE, makeData, problemKey, staff, visit } from './fixtures';
+import { client, DATE, makeData, problemKey, staff, visit } from './fixtures.testkit';
 import { ALLOWED_STAFF_RULE_ID, compile } from './index';
 
 const INF = Number.POSITIVE_INFINITY;

@@ -17,13 +17,13 @@
 
 - データの形は変えない。「ふだんの考え方」＝点数の基準のプリセット（`scorePresetId`）
 - 表の名前・種類・並びは `data.rules`、重み・必須は基準のプリセット（`scoreRulesOf(data)`）。変えると `setBasisWeight` で基準のプリセットのその型を直す。プリセットは型ごとの重みなので、同じ型の条件はどれも同じ重みになる
-- `data.rules` の重み・必須は、基準が変わるたびに `withBasisRules` で基準にそろえる（ADR-0053 以降は store の repair も読み込みのたびにそろえる）。月のまとめて作る・自動作成・作り直しは `scoreRulesOf(data)` で作る
+- `data.rules` の重み・必須は、基準が変わるたびに `withBasisRules` で基準にそろえる。store の repair も読み込みのたびにそろえる（ADR-0053）。AI で組む（担当を組む・欠勤の振り直し）・訪問ごとの検査・点数は `scoreRulesOf(data)`（＝`data.rules`）で計算する
 - Excel の「条件」シートの重みは `data.rules`（＝基準と同じ）。ふだんの重みは「プリセット」シートの「点数の基準」に ○ を付けた行（ADR-0006・ADR-0008）
 
 ## 理由とトレードオフ
-- 得るもの：直した重みが月のまとめて作る・自動作成・作り直し・点数のすべてに効き、画面の名前どおりに動く。データの形も点数の物差し（ADR-0010）も変えずに済む
+- 得るもの：直した重みが AI で組む・訪問ごとの検査・点数のすべてに効き、画面の名前どおりに動く。データの形も点数の物差し（ADR-0010）も変えずに済む
 - 失うもの：同じ型の条件を別々の重みにできない。基準を直すと点数も変わる（ADR-0010）
 - 見直す条件：同じ型の条件に別の重みを付けたい声が出たとき（プリセットを条件ごとの重みにする）
 
 ## 影響
-- `lib/presets`（`withBasisRules`・`setBasisWeight`）、`RulesPage` の表、`seed/plans`・`MonthPage` は `scoreRulesOf`。PRD D233・D235。docs/design/pages-rules.md
+- `lib/presets`（`withBasisRules`・`setBasisWeight`・`addRule`）、`RulesPage` の表（下書きは ADR-0048）、重みを読むのは `data.rules`（基準にそろっている）と `scoreRulesOf`（`lib/weightDraft`・`lib/standardDraft`）。PRD D233・D235。docs/design/pages-rules.md

@@ -66,7 +66,7 @@
 .tour-body p {
   margin: 0;
 }
-/* 3段の説明（AI案 → 手直し → 確定。PRD D226） */
+/* 3段の説明（組む（AI）→ ピン → 確定。PRD D226） */
 .tour-points {
   margin: 8px 0 0;
   padding-left: 1.6em;

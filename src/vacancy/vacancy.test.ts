@@ -9,7 +9,7 @@ import { addDays, hhmmToMinutes, minutesToHhmm, weekday } from '../domain/time';
 import { baseOf } from '../lib/absences';
 import { writeRoutes } from '../lib/dayPlan';
 import { compile, naiveSeqs, scheduleRoute } from '../matching';
-import { client, DATE, makeData, staff, visit } from '../matching/fixtures';
+import { client, DATE, makeData, staff, visit } from '../matching/fixtures.testkit';
 import { placeVisit } from '../reassign';
 import { createDemoData } from '../seed';
 import {
@@ -449,7 +449,7 @@ describe('性質：seed の日', () => {
     expect(checked).toBeGreaterThan(50);
   });
 
-  it('同じ入力で同じ結果。データ・今の案を書き換えない', () => {
+  it('同じ入力で同じ結果。データを書き換えない', () => {
     const before = JSON.stringify(data);
     const a = vacancyOf(data, q, { from, weeks: 2 });
     const b = vacancyOf(data, q, { from, weeks: 2 });

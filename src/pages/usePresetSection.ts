@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useConfirm } from '../components/ConfirmDialog';
 import type { Preset, RuleType } from '../contracts/rules';
-import { patchPreset, removePreset, resetPresets, setScorePreset, trialPresetOf } from '../lib/presets';
+import { patchPreset, removePreset, resetPresets, setScorePreset } from '../lib/presets';
 import { scorePresetOf } from '../seed';
 import { useDemoData } from '../store';
 
@@ -13,8 +13,6 @@ export function usePresetSection({ draftCount, onReset }: { draftCount: number; 
   const confirmDialog = useConfirm();
   const location = useLocation();
   const ref = useRef<HTMLDivElement>(null);
-  /** 条件の重みが当てはまるプリセット（基準を先に見る。版2ではいつも基準） */
-  const current = trialPresetOf(data);
   /** 点数の基準のプリセット（ADR-0010） */
   const ruler = scorePresetOf(data.presets, data.scorePresetId);
   // 予定の画面の「プリセットを編集する」（#/rules#presets）から来たら、この節を見せる
@@ -67,5 +65,5 @@ export function usePresetSection({ draftCount, onReset }: { draftCount: number; 
     // 初期の3つに戻したら、表の重みの下書きも捨てる（戻した重みと比べる下書きは意味が変わるので）
     onReset();
   };
-  return { ref, current, ruler, set, choose, setWeight, remove, reset };
+  return { ref, ruler, set, choose, setWeight, remove, reset };
 }

@@ -4,7 +4,7 @@ import type { DemoData } from '../contracts/data';
 import type { Pattern } from '../contracts/documents';
 import { afterLastDay, availabilityOf } from '../domain/availability';
 import { AFTER_LAST_DAY, compile } from '../matching';
-import { client, DATE, makeData, staff } from '../matching/fixtures';
+import { client, DATE, makeData, staff } from '../matching/fixtures.testkit';
 import { findVisit, putVisits, visitsOn } from '../patterns';
 import { applyOffboard, applyOffboardWith, defaultChoice, offboardScope, unlimitedBy } from './offboard';
 
@@ -89,8 +89,8 @@ describe('振り直しの範囲と候補（offboardScope。版2）', () => {
     expect(sc.lastDay).toBe(DATE);
     expect(sc.from).toBe(TUE);
     expect(sc.visits.filter((v) => v.date === TUE)).toEqual([
-      { date: TUE, visitId: `${TUE}_p1`, clientId: 'c1', confirmed: true, plan: true },
-      { date: TUE, visitId: `${TUE}_p2`, clientId: 'c2', confirmed: true, plan: true },
+      { date: TUE, visitId: `${TUE}_p1`, clientId: 'c1', confirmed: true },
+      { date: TUE, visitId: `${TUE}_p2`, clientId: 'c2', confirmed: true },
     ]);
     expect(new Map(sc.clients.map((c) => [c.clientId, c.roles]))).toEqual(
       new Map([

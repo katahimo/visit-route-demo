@@ -13,7 +13,6 @@ import {
   pruneDraft,
   savedWeights,
   type WeightDraft,
-  weightText,
   withDraft,
 } from './weightDraft';
 
@@ -84,10 +83,12 @@ describe('下書きの差分（PRD D286）', () => {
   });
 
   it('重みの文：0 は「使わない」、重みを使わない必須は「必須」、バランスの必須は重みも', () => {
-    expect(weightText('wait', { weight: 2.5, hard: false })).toBe('2.5');
-    expect(weightText('wait', { weight: 0, hard: false })).toBe('0（使わない）');
-    expect(weightText('clientRequirement', { weight: 3, hard: true })).toBe('必須');
-    expect(weightText('balance', { weight: 3, hard: true })).toBe('3・必須');
+    expect(changeText({ type: 'wait', before: { weight: 2.5, hard: false }, after: { weight: 0, hard: false } })).toBe(
+      '2.5→0（使わない）',
+    );
+    expect(changeText({ type: 'balance', before: { weight: 3, hard: false }, after: { weight: 3, hard: true } })).toBe(
+      '3→3・必須',
+    );
     expect(
       changeText({ type: 'clientRequirement', before: { weight: 3, hard: false }, after: { weight: 3, hard: true } }),
     ).toBe('3→必須');
@@ -97,7 +98,7 @@ describe('下書きの差分（PRD D286）', () => {
 describe('確定と影響する日（PRD D286）', () => {
   const data = () => createDemoData(TODAY);
 
-  it('確定すると基準のプリセットのその型が下書きの値になり、試す重みも基準にそろう', () => {
+  it('確定すると基準のプリセットのその型が下書きの値になり、条件の重みも基準にそろう', () => {
     const d = data();
     const saved = savedWeights(scoreRulesOf(d));
     const t = d.rules[0]!.type;

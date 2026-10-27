@@ -153,12 +153,6 @@ h3 {
   border-color: var(--danger);
   background: #fbeceb;
 }
-.btn-big {
-  width: 100%;
-  padding: 20px;
-  font-size: 1.5rem;
-  border-radius: 20px;
-}
 .btn-small {
   padding: 6px 10px;
   font-size: 0.85rem;
@@ -378,61 +372,10 @@ tbody tr:hover td {
   padding: calc(16px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 96px
     max(16px, env(safe-area-inset-left, 0px));
 }
-.tabbar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: #fff;
-  border-top: 1px solid var(--line);
-  display: flex;
-  justify-content: center;
-  padding-bottom: env(safe-area-inset-bottom);
-  z-index: 10;
-}
-.tabbar a {
-  flex: 1;
-  max-width: 130px;
-  text-align: center;
-  padding: 10px 0;
-  text-decoration: none;
-  color: var(--sub);
-  font-size: 0.85rem;
-}
-.tabbar a.active {
-  color: var(--primary);
-  font-weight: 700;
-}
-.tabbar .icon {
-  font-size: 1.4rem;
-  display: block;
-}
-.tracking {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.85rem;
-  color: var(--ok-ink);
-}
-.tracking::before {
-  content: "";
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--ok);
-  animation: pulse 1.6s infinite;
-}
 @keyframes pulse {
   50% {
     opacity: 0.3;
   }
-}
-.offline {
-  background: #fbefd6;
-  color: var(--warn-ink);
-  padding: 6px 12px;
-  border-radius: 10px;
-  font-size: 0.85rem;
 }
 .stop {
   display: flex;
@@ -449,39 +392,6 @@ tbody tr:hover td {
   font-size: 0.85rem;
   border-left: 3px dotted var(--line);
   margin-left: 20px;
-}
-
-/* 管理者（PC） */
-.admin-shell {
-  display: grid;
-  grid-template-columns: 200px 1fr;
-  min-height: 100dvh;
-}
-.admin-nav {
-  background: #fff;
-  border-right: 1px solid var(--line);
-  padding: 16px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.admin-nav a {
-  padding: 10px 12px;
-  border-radius: 10px;
-  text-decoration: none;
-  color: var(--ink);
-}
-.admin-nav a.active {
-  background: #fde3dd;
-  color: var(--primary-dark);
-  font-weight: 700;
-}
-.admin-main {
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  min-width: 0;
 }
 .grid2 {
   display: grid;
@@ -638,36 +548,6 @@ tbody tr:hover td {
   top: 1px;
   right: 2px;
 }
-.my-avail {
-  border-bottom: 1px solid var(--line);
-}
-.my-avail:last-child {
-  border-bottom: 0;
-}
-.my-avail-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  width: 100%;
-  padding: 12px 0;
-  border: 0;
-  background: none;
-  font: inherit;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-.my-avail-date {
-  min-width: 112px;
-  font-weight: 700;
-}
-.my-avail-date.dow-0 {
-  color: var(--danger);
-}
-.my-avail-date.dow-6 {
-  color: #4a7fc1;
-}
 
 /* 予定：ドラッグと赤い枠 */
 .chip-red {
@@ -752,38 +632,6 @@ tbody tr:hover td {
 .segmented button:focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: -3px;
-}
-
-/* AI案：手作業案と並べて比較 */
-.method-help {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 10px 14px;
-  border-radius: 12px;
-  background: #faf6f2;
-  font-size: 0.85rem;
-  line-height: 1.6;
-}
-.kpi-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: 12px;
-}
-.kpi {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 12px;
-  border: 1.5px solid var(--line);
-  border-radius: 14px;
-}
-.kpi .chip {
-  align-self: flex-start;
-}
-.kpi-value {
-  font-size: 1.15rem;
-  font-variant-numeric: tabular-nums;
 }
 .compare {
   display: flex;
@@ -1841,15 +1689,9 @@ label.check input {
 .rules-table td {
   vertical-align: top;
 }
-/* AI案：横の重みの欄・理由 */
+/* 横の欄・担当の列のカード */
 .side-panel {
   gap: 10px;
-}
-.side-rule-label {
-  font-size: 0.85rem;
-  display: flex;
-  gap: 4px;
-  align-items: center;
 }
 .route-btn {
   width: 100%;
@@ -1957,10 +1799,6 @@ label.check input {
 .runs-table tr.is-a td:first-child,
 .runs-table tr.is-b td:nth-child(2) {
   background: #fde3dd;
-}
-.weights-text {
-  font-size: 0.8rem;
-  color: var(--sub);
 }
 
 /* 画面をまたいで使う小物 */

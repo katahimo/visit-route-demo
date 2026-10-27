@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DemoData } from '../contracts/data';
 import { compile } from '../matching';
-import { client, DATE, makeData, staff, visit } from '../matching/fixtures';
+import { client, DATE, makeData, staff, visit } from '../matching/fixtures.testkit';
 import { fareOf, hmText, isOverSpan, workDayOf, workloadTsv, workMonth, workStats, workTotals } from './workload';
 
 /** 訪問に担当を書く（版2。ADR-0053：担当は訪問に持つ） */
@@ -74,14 +74,6 @@ describe('稼働の見込み（workStats）', () => {
     expect(hmText(600.4)).toBe('10:00');
     expect(isOverSpan(600.6, 10)).toBe(true);
     expect(isOverSpan(9999, 0)).toBe(false);
-  });
-
-  it('確定した割当は開始（早）の順に並べ直して数える（順番を持たないため）', () => {
-    const d = data();
-    const p = compile(d, DATE);
-    const a = workStats(p, { s1: ['v3', 'v1', 'v2'] }, d.org, true)[0]!;
-    const b = workStats(p, { s1: ['v1', 'v2', 'v3'] }, d.org)[0]!;
-    expect(a).toEqual(b);
   });
 });
 

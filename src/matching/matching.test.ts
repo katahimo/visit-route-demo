@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Pattern } from '../contracts/documents';
 import type { Problem } from '../contracts/problem';
-import { client, DATE, ITEMS, makeData, randomData, rule, staff, visit } from './fixtures';
+import { client, DATE, ITEMS, makeData, randomData, rule, staff, visit } from './fixtures.testkit';
 import { compile, conditionText, matches, routeCost, scheduleRoute } from './index';
 
 const [gender, license, years, pet] = ITEMS;

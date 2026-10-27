@@ -92,7 +92,7 @@ export type ProblemStay = {
  * - 各訪問の開始＝max(到着, earliest) から、作業 [開始, 開始+duration] が稼働時間帯の1つに収まる最も早い時刻
  * - 開始が latest を超える、または収まる時間帯がない＝時間の違反（strict ではそのルートは不可）
  * - 待ち＝開始−到着（最初の訪問は0）。最後の訪問のあと自宅へ帰る移動も数える。帰着が最後の時間帯の終了を超えても違反にしない
- * - lenient（手作業案の採点）では違反しても続けて計算し、違反を記録する
+ * - lenient（手で入れた担当の採点）では違反しても続けて計算し、違反を記録する
  */
 export type StopTiming = {
   visitId: string;
@@ -111,7 +111,7 @@ export type RouteTiming = {
   violations: { visitId: string; kind: 'time' | 'slot' }[];
 };
 
-/** AI案。routes は staffId → 訪問IDの列（回る順） */
+/** AI の提案。routes は staffId → 訪問IDの列（回る順） */
 export type SolveResult = {
   routes: Record<string, string[]>;
   unassigned: string[];
@@ -169,7 +169,7 @@ export type PlanScore = {
   dropped: number;
   /** Rule.id → 達成（points<0 または条件を満たした件数）・違反（points>0 の件数）・点 */
   perRule: Record<string, { hits: number; misses: number; points: number }>;
-  /** 必須の違反（手作業案だけで起きる。AI案では常に空） */
+  /** 必須の違反（手で入れた担当だけで起きる。AI の提案では常に空） */
   hardViolations: { visitId: string; staffId: string; kind: 'time' | 'slot' | 'notAllowed'; label: string }[];
 };
 

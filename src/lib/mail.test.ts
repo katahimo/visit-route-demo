@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { DemoData } from '../contracts/data';
 import { clientSchema, staffSchema } from '../contracts/documents';
 import { addDays } from '../domain/time';
-import { client, DATE, makeData, staff, visit } from '../matching/fixtures';
+import { client, DATE, makeData, staff, visit } from '../matching/fixtures.testkit';
 import {
   contactMailText,
   dayByStaff,
@@ -18,23 +18,23 @@ import {
 import { mailtoHref } from './mailto';
 import { REQUESTED_OFF_NOTE } from './requestedOff';
 
-/** 担当の並び（版2：担当は訪問に持つ。data の aiPlans・manualPlans で訪問に書く） */
+/** 担当の並び（版2：担当は訪問に持つ。data の routesByDate・toldRoutes で訪問に書く。日付は読みやすさのためだけ） */
 const plan = (_date: string, routes: Record<string, string[]>) => routes;
 type Routes = Record<string, string[]>;
 
 /**
- * テストのデータ。aiPlans は日ごとの担当の並び（訪問に担当を書く）、manualPlans はそれに加えて伝えた（確定）日にする
+ * テストのデータ。routesByDate は日ごとの担当の並び（訪問に担当を書く）、toldRoutes はそれに加えて伝えた（確定）日にする（版2）
  */
 function data(
-  over: Partial<DemoData> & { aiPlans?: Record<string, Routes>; manualPlans?: Record<string, Routes> } = {},
+  over: Partial<DemoData> & { routesByDate?: Record<string, Routes>; toldRoutes?: Record<string, Routes> } = {},
 ): DemoData {
-  const { aiPlans = {}, manualPlans = {}, ...rest } = over;
+  const { routesByDate = {}, toldRoutes = {}, ...rest } = over;
   const owner = new Map<string, string>();
-  for (const routes of [...Object.values(aiPlans), ...Object.values(manualPlans)])
+  for (const routes of [...Object.values(routesByDate), ...Object.values(toldRoutes)])
     for (const [sid, ids] of Object.entries(routes)) for (const id of ids) owner.set(id, sid);
   const d = base(rest);
   const visits = d.visits.map((v) => (owner.has(v.id) ? { ...v, staffId: owner.get(v.id)! } : v));
-  const snapshots = Object.fromEntries(Object.keys(manualPlans).map((date) => [date, { date, at: 1, visits: [] }]));
+  const snapshots = Object.fromEntries(Object.keys(toldRoutes).map((date) => [date, { date, at: 1, visits: [] }]));
   return { ...d, visits, snapshots: { ...d.snapshots, ...snapshots } };
 }
 
@@ -73,18 +73,18 @@ describe('mdw', () => {
 
 describe('日の予定（PRD D92）', () => {
   it('訪問の担当で、担当ごとに開始の順。確定（伝えた）日は confirmed', () => {
-    const d = data({ aiPlans: { [DATE]: plan(DATE, { s1: ['v2', 'v1'], s2: ['v3'] }) } });
+    const d = data({ routesByDate: { [DATE]: plan(DATE, { s1: ['v2', 'v1'], s2: ['v3'] }) } });
     const p = dayByStaff(d, DATE);
     expect(p.day.source).toBe('plan');
     expect(p.byStaff.get('s1')?.map((v) => v.client?.displayName)).toEqual(['泉', '青葉']);
-    const c = dayByStaff(data({ manualPlans: { [DATE]: { s2: ['v1', 'v2', 'v3'] } } }), DATE);
+    const c = dayByStaff(data({ toldRoutes: { [DATE]: { s2: ['v1', 'v2', 'v3'] } } }), DATE);
     expect(c.day.source).toBe('confirmed');
     expect(c.byStaff.get('s1')).toBeUndefined();
     expect(c.byStaff.get('s2')?.length).toBe(3);
   });
 
   it('件名と本文：順番・時刻・〈利用者さん〉・住所・入り方・駐車場・注意。鍵は選んだときだけ', () => {
-    const d = data({ aiPlans: { [DATE]: plan(DATE, { s1: ['v2', 'v1'] }) } });
+    const d = data({ routesByDate: { [DATE]: plan(DATE, { s1: ['v2', 'v1'] }) } });
     const { day, byStaff } = dayByStaff(d, DATE);
     const t = dayMailText(d.org, d.staff[0]!, DATE, day.source, byStaff.get('s1')!, false);
     expect(t.subject).toBe('10/12（月）の訪問予定');
@@ -124,7 +124,7 @@ describe('日の予定（PRD D92）', () => {
   });
 
   it('メールアドレスの無い人は null。長い本文は段階を追って短く（URL は目安以内）', () => {
-    const d = data({ aiPlans: { [DATE]: plan(DATE, { s1: ['v2', 'v1'] }) } });
+    const d = data({ routesByDate: { [DATE]: plan(DATE, { s1: ['v2', 'v1'] }) } });
     const { day, byStaff } = dayByStaff(d, DATE);
     const t = dayMailText(d.org, d.staff[0]!, DATE, day.source, byStaff.get('s1')!, false);
     expect(mailTo('', t)).toBeNull();
@@ -144,7 +144,7 @@ describe('日の予定（PRD D92）', () => {
   });
 
   it('鍵のメモのある訪問が無ければ「鍵の情報は…」を書かない', () => {
-    const d = data({ aiPlans: { [DATE]: plan(DATE, { s1: ['v2', 'v3'] }) } });
+    const d = data({ routesByDate: { [DATE]: plan(DATE, { s1: ['v2', 'v3'] }) } });
     const { day, byStaff } = dayByStaff(d, DATE);
     const t = dayMailText(d.org, d.staff[0]!, DATE, day.source, byStaff.get('s1')!, false);
     expect(t.full).not.toContain('鍵');
@@ -172,7 +172,7 @@ describe('日の予定（PRD D92）', () => {
         windowKind: 'fixed',
       }),
     );
-    const d = data({ clients, visits, aiPlans: { [DATE]: plan(DATE, { s1: visits.map((v) => v.id) }) } });
+    const d = data({ clients, visits, routesByDate: { [DATE]: plan(DATE, { s1: visits.map((v) => v.id) }) } });
     const { day, byStaff } = dayByStaff(d, DATE);
     expect(byStaff.get('s1')?.length).toBe(n);
     const t = dayMailText(d.org, d.staff[0]!, DATE, day.source, byStaff.get('s1')!, false);
@@ -186,7 +186,7 @@ describe('日の予定（PRD D92）', () => {
 describe('日の予定の経路のリンク（PRD D97。ADR-0018）', () => {
   const urls = (text: string) => [...text.matchAll(/https:\S+/g)].map((m) => new URL(m[0]));
   it('全行程（自宅→訪問…→自宅、経由地付き）と区間ごと。移動手段は travelmode に。鍵・名前は URL に入れない', () => {
-    const d = data({ aiPlans: { [DATE]: plan(DATE, { s1: ['v2', 'v1'] }) } });
+    const d = data({ routesByDate: { [DATE]: plan(DATE, { s1: ['v2', 'v1'] }) } });
     const s1 = { ...d.staff[0]!, travelMode: 'BICYCLE' as const };
     const { day, byStaff } = dayByStaff(d, DATE);
     const t = dayMailText(d.org, s1, DATE, day.source, byStaff.get('s1')!, true);
@@ -212,7 +212,7 @@ describe('日の予定の経路のリンク（PRD D97。ADR-0018）', () => {
     }
   });
   it('長いときは区間ごとの道順を残し、決まりごと・全行程・住所を先に外す（PRD D346）。本文をコピー（fullBody）にはすべて入る', () => {
-    const d = data({ aiPlans: { [DATE]: plan(DATE, { s1: ['v2', 'v1'] }) } });
+    const d = data({ routesByDate: { [DATE]: plan(DATE, { s1: ['v2', 'v1'] }) } });
     const { day, byStaff } = dayByStaff(d, DATE);
     const t = dayMailText(d.org, d.staff[0]!, DATE, day.source, byStaff.get('s1')!, false);
     // 区間を残す段：要点1＋全行程＋区間 → 要点1＋区間 → 要点2＋区間 → 要点2＋区間（リンクだけ・帰りなし）
@@ -252,7 +252,7 @@ describe('日の予定の経路のリンク（PRD D97。ADR-0018）', () => {
         }),
         client('c2', 38.266, 140.876, { displayName: '泉' }),
       ],
-      aiPlans: { [DATE]: plan(DATE, { s1: ['v2', 'v1'] }) },
+      routesByDate: { [DATE]: plan(DATE, { s1: ['v2', 'v1'] }) },
       visits: [
         visit('v1', 'c1', '13:00', '13:00', { windowKind: 'fixed' }),
         visit('v2', 'c2', '09:00', '09:00', { windowKind: 'fixed' }),
@@ -271,7 +271,7 @@ describe('日の予定の経路のリンク（PRD D97。ADR-0018）', () => {
     const d = data({
       clients: [...data().clients, client('c4', 38.268, 140.878, { displayName: '若林' })],
       visits: [...data().visits, visit('v4', 'c4', '15:00', '15:00', { windowKind: 'fixed' })],
-      aiPlans: { [DATE]: plan(DATE, { s1: ['v2', 'v3', 'v1', 'v4'] }) },
+      routesByDate: { [DATE]: plan(DATE, { s1: ['v2', 'v3', 'v1', 'v4'] }) },
     });
     const { day, byStaff } = dayByStaff(d, DATE);
     const t = dayMailText(d.org, d.staff[0]!, DATE, day.source, byStaff.get('s1')!, false);
@@ -281,7 +281,7 @@ describe('日の予定の経路のリンク（PRD D97。ADR-0018）', () => {
     expect(trips.map((u) => u.searchParams.get('waypoints')?.split('|').length)).toEqual([3, undefined]);
   });
   it('場所が未登録の〈利用者さん〉は全行程に入っていないと書く（呼び方は org.terms）', () => {
-    const d = data({ aiPlans: { [DATE]: plan(DATE, { s1: ['v2', 'v3', 'v1'] }) } });
+    const d = data({ routesByDate: { [DATE]: plan(DATE, { s1: ['v2', 'v3', 'v1'] }) } });
     const clients = d.clients.map((c) =>
       c.id === 'c3' ? { ...c, place: { address: '', lat: null, lng: null, postalCode: '' } } : c,
     );
@@ -293,7 +293,7 @@ describe('日の予定の経路のリンク（PRD D97。ADR-0018）', () => {
     expect(t.full).not.toContain('道順（泉様から）');
   });
   it('公共交通は全行程を出さず区間ごとだけ。段階は 区間を残す3段 → 要点1 → 要点2', () => {
-    const d = data({ aiPlans: { [DATE]: plan(DATE, { s1: ['v2', 'v1'] }) } });
+    const d = data({ routesByDate: { [DATE]: plan(DATE, { s1: ['v2', 'v1'] }) } });
     const s1 = { ...d.staff[0]!, travelMode: 'TRANSIT' as const };
     const { day, byStaff } = dayByStaff(d, DATE);
     const t = dayMailText(d.org, s1, DATE, day.source, byStaff.get('s1')!, false);
@@ -312,7 +312,7 @@ describe('日の予定の経路のリンク（PRD D97。ADR-0018）', () => {
   it('全行程を外した短い段には、全行程についての一言（自宅が未登録など）を書かない（PRD D346）', () => {
     const d = data({
       staff: [staff('s1', 0, 0, { name: '山田 花', home: { address: '', lat: null, lng: null } })],
-      aiPlans: { [DATE]: plan(DATE, { s1: ['v2', 'v1'] }) },
+      routesByDate: { [DATE]: plan(DATE, { s1: ['v2', 'v1'] }) },
     });
     const { day, byStaff } = dayByStaff(d, DATE);
     const t = dayMailText(
@@ -330,7 +330,7 @@ describe('日の予定の経路のリンク（PRD D97。ADR-0018）', () => {
     }
   });
   it('自転車は「経路が出ないときは徒歩に」と添える', () => {
-    const d = data({ aiPlans: { [DATE]: plan(DATE, { s1: ['v2', 'v1'] }) } });
+    const d = data({ routesByDate: { [DATE]: plan(DATE, { s1: ['v2', 'v1'] }) } });
     const s1 = { ...d.staff[0]!, travelMode: 'BICYCLE' as const };
     const { day, byStaff } = dayByStaff(d, DATE);
     const t = dayMailText(d.org, s1, DATE, day.source, byStaff.get('s1')!, false);
@@ -338,7 +338,7 @@ describe('日の予定の経路のリンク（PRD D97。ADR-0018）', () => {
     expect(t.short[1]).toContain('徒歩に切り替えて');
   });
   it('自宅・移動手段を渡さなければリンクなし（要点は2段のまま）', () => {
-    const d = data({ aiPlans: { [DATE]: plan(DATE, { s1: ['v2', 'v1'] }) } });
+    const d = data({ routesByDate: { [DATE]: plan(DATE, { s1: ['v2', 'v1'] }) } });
     const { day, byStaff } = dayByStaff(d, DATE);
     const t = dayMailText(d.org, { name: '山田 花' }, DATE, day.source, byStaff.get('s1')!, false);
     expect(t.full).not.toContain('https:');
@@ -356,8 +356,8 @@ describe('週の予定（PRD D93）', () => {
         visit('w1', 'c1', '10:00', '10:00', { date: next, windowKind: 'fixed' }),
         visit('w2', 'c2', '10:00', '10:00', { date: addDays(DATE, 2), windowKind: 'fixed' }),
       ],
-      manualPlans: { [DATE]: { s1: ['v2', 'v1'], s2: ['v3'] } },
-      aiPlans: { [next]: plan(next, { s1: ['w1'] }) },
+      toldRoutes: { [DATE]: { s1: ['v2', 'v1'], s2: ['v3'] } },
+      routesByDate: { [next]: plan(next, { s1: ['w1'] }) },
       absences: [{ id: 'a', staffId: 's1', date: addDays(DATE, 3), from: null, to: null, note: REQUESTED_OFF_NOTE }],
     });
     const days = weekByStaff(d, dates).get('s1')!;

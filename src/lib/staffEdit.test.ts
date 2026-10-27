@@ -1,6 +1,6 @@
 // 〈スタッフ〉の画面の節の編集と保存（PRD D299・D308〜D310。ADR-0014・ADR-0050）
 import { describe, expect, it } from 'vitest';
-import { client, makeData, staff } from '../matching/fixtures';
+import { client, makeData, staff } from '../matching/fixtures.testkit';
 import {
   blankStaff,
   checkStaffFields,

@@ -10,7 +10,7 @@ import { vacancyOf } from '../vacancy';
 /** 条件を変えてから計算し直すまで（ms） */
 export const DEBOUNCE_MS = 300;
 
-/** 条件を変えると 300ms 間引いて計算し直す（データ・今の案は読むだけ） */
+/** 条件を変えると 300ms 間引いて計算し直す（データは読むだけ） */
 export function useVacancyResult(data: DemoData, query: VacancyQuery | null, range: VacancyRange | null) {
   const [result, setResult] = useState<VacancyResult | null>(null);
   const [busy, setBusy] = useState(true);

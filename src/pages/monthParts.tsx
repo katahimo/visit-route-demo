@@ -1,5 +1,5 @@
 // 月の画面の見出しの欄の部品（PRD D53〜D55・D61・D69・D177・D189・D256・D278）：見せ方の切り替え・表示の選択の段・
-// マスの見方の説明・「休みを入れる」の帯・凡例・月まとめ作成の進み具合
+// マスの見方の説明・「休みを入れる」の帯・凡例・範囲の AI で組む（担当を組む）の進み具合
 import { CalendarOff, LayoutGrid, List, Lock, PencilLine, Square } from 'lucide-react';
 import { type RefObject, useId } from 'react';
 import { ClientPicker } from '../components/ClientPicker';
@@ -238,7 +238,7 @@ export function MonthOffBar({
   );
 }
 
-/** 月まとめ作成の進み具合（PRD D256）と止める */
+/** 範囲の AI で組む（担当を組む）の進み具合（PRD D256）と止める */
 export function MonthBatchProgress({
   batch,
   current,

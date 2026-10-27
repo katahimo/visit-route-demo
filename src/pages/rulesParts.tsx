@@ -60,9 +60,8 @@ export function RulesIntro({ basisName }: { basisName: string | undefined }) {
         の「<strong>{basisName ?? '—'}</strong>
         」の重みです。基準は下のプリセットの節で替えられます。同じ種類の条件は同じ重みになります。
       </p>
-      <p className="sub" data-testid="rules-trial-note">
-        重みを変えても今の担当は変わりません。日の予定の「AI
-        で組む」で、この重みの提案（点の差つき）を出して反映できます。
+      <p className="sub" data-testid="rules-apply-note">
+        重みを変えても今の担当は変わりません。「担当を組む」で、この重みの提案（点の差つき）を出して反映できます。
       </p>
     </>
   );
