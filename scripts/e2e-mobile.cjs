@@ -44,7 +44,7 @@ async function header(page) {
   await open(page, '/staff', '[data-testid="screen-name"]');
   const name2 = await page.getByTestId('screen-name').innerText();
   check(
-    name === '人・利用者さん一覧' && name2 === '人・スタッフ一覧',
+    name === '基本情報・利用者さん一覧' && name2 === '基本情報・スタッフ一覧',
     '上の帯：〈利用者さん〉一覧と〈スタッフ〉一覧を見分ける',
     {
       name,
@@ -103,7 +103,7 @@ async function drawerOpenClose(page) {
   check(
     (await page.evaluate(() => document.getElementById('root').inert)) &&
       (await d.locator('h2.nav-group-title').count()) === 0,
-    '引き出し：後ろの画面は inert・グループの見出しは無い（最上位6項目と子の項目。PRD D349）',
+    '引き出し：後ろの画面は inert・グループの見出しは無い（最上位5項目と子の項目。PRD D349）',
   );
   check(
     (await btn.getAttribute('aria-expanded')) === 'true' &&
@@ -112,17 +112,17 @@ async function drawerOpenClose(page) {
   );
   const titles = await d.locator('.nav-group-title').allInnerTexts();
   check(titles.length === 0, '引き出し：見出しの無い1つの並び', titles);
-  // 最上位は6項目（ホーム・予定を組む・予定・空き状況・人・設定。ADR-0063）。開いている親の子の項目も含めて、全部の項目を縦に並べる
+  // 最上位は5項目（ホーム・予定を組む・予定・空き状況・設定。ADR-0067）。開いている親の子の項目も含めて、全部の項目を縦に並べる
   const top = await d.locator(TOP_LINKS).evaluateAll((els) => els.map((el) => el.dataset.key));
   const links = d.locator('.nav-link');
   const n = await links.count();
   const boxes = [];
   for (let i = 0; i < n; i++) boxes.push(await links.nth(i).boundingBox());
   check(
-    JSON.stringify(top) === JSON.stringify(['home', 'arrange', 'schedule', 'vacancy', 'people', 'settings']) &&
+    JSON.stringify(top) === JSON.stringify(['home', 'arrange', 'schedule', 'vacancy', 'settings']) &&
       n > top.length &&
       boxes.every((b, i) => i === 0 || b.y > boxes[i - 1].y),
-    '引き出し：最上位6項目のメニューと開いた子の項目を縦に並べる',
+    '引き出し：最上位5項目のメニューと開いた子の項目を縦に並べる',
     { top, n },
   );
   await settle(page, 400); // 出てくる動きが終わるまで
@@ -182,11 +182,11 @@ async function drawerOpenClose(page) {
   // 画面を選ぶ
   await btn.click();
   await d.waitFor();
-  await d.locator(TOP_LINKS).filter({ hasText: '人' }).click();
+  await d.locator('[data-key="arrange:basics"]').click();
   await d.waitFor({ state: 'detached' });
-  await page.waitForURL(/#\/clients/);
+  await page.waitForURL(/#\/basics/);
   check(
-    (await isFocused(btn)) && /・利用者さん一覧$/.test(await page.getByTestId('screen-name').innerText()),
+    (await isFocused(btn)) && /基本情報・予定と相性$/.test(await page.getByTestId('screen-name').innerText()),
     '画面を選ぶと移って閉じ、フォーカスが「メニュー」へ',
   );
   // 今の画面を選んでも閉じるだけ（URL のクエリ＝画面の状態を消さない）。予定を開いていると印はモードの子（別の画面へ移る入口）に
@@ -886,9 +886,9 @@ async function wide(page) {
   check(nav.width === 232 && nav.height === 1000, '広い画面：左のメニューは今のまま（幅232px・縦いっぱい）', nav);
   check(
     (await page.locator('.side-nav .nav-group-title').count()) === 0 &&
-      (await page.locator(`.side-nav :is(${TOP_LINKS})`).count()) === 6 &&
+      (await page.locator(`.side-nav :is(${TOP_LINKS})`).count()) === 5 &&
       (await page.locator('.app-header').boundingBox()).height === 72,
-    '広い画面：最上位6項目のメニュー・上の帯の高さ 72px',
+    '広い画面：最上位5項目のメニュー・上の帯の高さ 72px',
   );
   const pad = await page.evaluate(() => getComputedStyle(document.querySelector('.app-main')).paddingBottom);
   check(pad === '48px', '広い画面：本文の下の余白は今のまま', pad);
