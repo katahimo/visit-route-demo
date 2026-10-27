@@ -2,6 +2,7 @@
 // 特性のチップ AND・人数・URL の ?sf=）、行の絞り込みに足す相性のチップ、吹き出しに出す件数。データは書き換えない
 import type { Client, Staff } from '../contracts/documents';
 import type { Compat, Item, TraitValue } from '../contracts/rules';
+import { yearsSince } from '../matching';
 import type { ClientFilterState } from './clientFilter';
 import { normalizeKana } from './search';
 
@@ -238,12 +239,16 @@ export function staffClientGroups<C extends Pick<Client, 'id'>>(
   return out;
 }
 
-/** 特性の値の文字（あり／なし・選択肢を「・」でつなぐ・数値。空なら「—」） */
-export function traitText(v: TraitValue | undefined): string {
+/**
+ * 特性の値の文字（あり／なし・選択肢を「・」でつなぐ・数値。開始年は「8年（2018年から）」＝today の年までの年数。
+ * ADR-0070）。空なら「—」
+ */
+export function traitText(item: Pick<Item, 'kind'>, v: TraitValue | undefined, today: string): string {
   if (v === undefined || v === null || v === '') return '—';
   if (v === true) return 'あり';
   if (v === false) return 'なし';
   if (Array.isArray(v)) return v.length === 0 ? '—' : v.join('・');
+  if (item.kind === 'startYear' && typeof v === 'number') return `${yearsSince(v, today)}年（${v}年から）`;
   return String(v);
 }
 

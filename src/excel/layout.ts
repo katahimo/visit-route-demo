@@ -212,7 +212,30 @@ export const TRAIT_PREFIX = '特性：';
 export const REQ_PREFIX = '必要条件：';
 export const PREF_PREFIX = '希望：';
 
-/** 特性・必要条件・希望の列（own＝自分の特性の項目、other＝相手の項目） */
-export const traitHeader = (it: Item) => `${TRAIT_PREFIX}${it.name}`;
+/** 開始年の項目の特性の列の後ろ書き（セルは開始年。条件の列は年数なので付けない。ADR-0070） */
+export const START_YEAR_SUFFIX = '（開始年）';
+
+/** 特性の列1つ：見出しと項目。option は選択肢から複数の選択肢ごとの列の選択肢（ほかは null） */
+export type TraitCol = { header: string; item: Item; option: string | null };
+
+/**
+ * 1つの項目の特性の列（ADR-0070）。選択肢から複数は選択肢ごとの列（「特性：資格：看護師」。○＝持つ・×＝持たない）、
+ * 開始年は「特性：経験年数（開始年）」、ほかは「特性：性別」の1列
+ */
+export function traitCols(it: Item): TraitCol[] {
+  const head = `${TRAIT_PREFIX}${it.name}`;
+  switch (it.kind) {
+    case 'multi':
+      return it.options.map((o) => ({ header: `${head}：${o}`, item: it, option: o }));
+    case 'startYear':
+      return [{ header: `${head}${START_YEAR_SUFFIX}`, item: it, option: null }];
+    case 'flag':
+    case 'choice':
+    case 'number':
+      return [{ header: head, item: it, option: null }];
+  }
+}
+
+/** 必要条件・希望の列（other＝相手の項目） */
 export const reqHeader = (it: Item) => `${REQ_PREFIX}${it.name}`;
 export const prefHeader = (it: Item) => `${PREF_PREFIX}${it.name}`;

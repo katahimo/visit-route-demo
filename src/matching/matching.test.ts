@@ -1,25 +1,43 @@
 import { describe, expect, it } from 'vitest';
 import type { Pattern } from '../contracts/documents';
 import type { Problem } from '../contracts/problem';
+import { type Condition, type Item, isStartYear } from '../contracts/rules';
 import { client, DATE, ITEMS, makeData, randomData, rule, staff, visit } from './fixtures';
-import { compile, conditionText, matches, routeCost, scheduleRoute } from './index';
+import { compile, conditionText, matches, routeCost, scheduleRoute, yearsSince } from './index';
 
 const [gender, license, years, pet] = ITEMS;
 
 describe('matches・conditionText', () => {
   it('条件の型ごとに判定する（未入力は not だけ満たす）', () => {
-    expect(matches({ itemId: 'gender', op: 'is', value: '女性' }, gender, '女性')).toBe(true);
-    expect(matches({ itemId: 'gender', op: 'is', value: '女性' }, gender, null)).toBe(false);
-    expect(matches({ itemId: 'gender', op: 'not', value: '女性' }, gender, null)).toBe(true);
-    expect(matches({ itemId: 'gender', op: 'in', value: ['女性', '男性'] }, gender, '男性')).toBe(true);
-    expect(matches({ itemId: 'license', op: 'hasAny', value: ['看護師'] }, license, ['看護師', '保育士'])).toBe(true);
-    expect(matches({ itemId: 'license', op: 'hasAll', value: ['看護師', '介護福祉士'] }, license, ['看護師'])).toBe(
-      false,
+    expect(matches({ itemId: 'gender', op: 'is', value: '女性' }, gender, '女性', DATE)).toBe(true);
+    expect(matches({ itemId: 'gender', op: 'is', value: '女性' }, gender, null, DATE)).toBe(false);
+    expect(matches({ itemId: 'gender', op: 'not', value: '女性' }, gender, null, DATE)).toBe(true);
+    expect(matches({ itemId: 'gender', op: 'in', value: ['女性', '男性'] }, gender, '男性', DATE)).toBe(true);
+    expect(matches({ itemId: 'license', op: 'hasAny', value: ['看護師'] }, license, ['看護師', '保育士'], DATE)).toBe(
+      true,
     );
-    expect(matches({ itemId: 'years', op: 'gte', value: 3 }, years, 3)).toBe(true);
-    expect(matches({ itemId: 'years', op: 'lte', value: 3 }, years, 4)).toBe(false);
-    expect(matches({ itemId: 'pet', op: 'is', value: false }, pet, false)).toBe(true);
-    expect(matches({ itemId: 'x', op: 'is', value: 1 }, undefined, 1)).toBe(false);
+    expect(
+      matches({ itemId: 'license', op: 'hasAll', value: ['看護師', '介護福祉士'] }, license, ['看護師'], DATE),
+    ).toBe(false);
+    expect(matches({ itemId: 'years', op: 'gte', value: 3 }, years, 3, DATE)).toBe(true);
+    expect(matches({ itemId: 'years', op: 'lte', value: 3 }, years, 4, DATE)).toBe(false);
+    expect(matches({ itemId: 'pet', op: 'is', value: false }, pet, false, DATE)).toBe(true);
+    expect(matches({ itemId: 'x', op: 'is', value: 1 }, undefined, 1, DATE)).toBe(false);
+  });
+  it('開始年の項目は、その日の年までの年数で比べる（年が変わると増える。ADR-0070）', () => {
+    const since: Item = { id: 'since', name: '経験年数', target: 'staff', kind: 'startYear', options: [] };
+    const gte3: Condition = { itemId: 'since', op: 'gte', value: 3 };
+    expect(matches(gte3, since, 2023, '2026-12-31')).toBe(true);
+    expect(matches(gte3, since, 2024, '2026-12-31')).toBe(false);
+    expect(matches(gte3, since, 2024, '2027-01-01')).toBe(true);
+    expect(matches({ itemId: 'since', op: 'lte', value: 0 }, since, 2030, '2026-10-27')).toBe(true);
+    expect(matches({ itemId: 'since', op: 'is', value: 2 }, since, 2024, '2026-10-27')).toBe(true);
+    expect(matches(gte3, since, null, '2026-10-27')).toBe(false);
+    expect(yearsSince(2018, '2026-10-27')).toBe(8);
+    expect(yearsSince(2030, '2026-10-27')).toBe(0);
+    expect([1900, 2018, 2100].map(isStartYear)).toEqual([true, true, true]);
+    expect([1899, 2101, 2018.5, 8].map(isStartYear)).toEqual([false, false, false, false]);
+    expect(conditionText(gte3, since)).toBe('経験年数 3年以上');
   });
   it('表示文', () => {
     expect(conditionText({ itemId: 'license', op: 'hasAny', value: ['看護師'] }, license)).toBe('資格に看護師を含む');

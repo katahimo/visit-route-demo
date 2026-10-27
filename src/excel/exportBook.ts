@@ -21,6 +21,7 @@ import {
   writeWorkload,
 } from './exportSheets';
 import { addTable } from './exportTable';
+import { traitCols } from './layout';
 import { personSheetNames } from './text';
 
 export { workloadRows } from './exportSheets';
@@ -31,7 +32,8 @@ export const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsh
 /** DemoData → Excel のブック（.xlsx の Blob） */
 /**
  * 書き出せないデータ（読み込み直せないもの）を見つける。あれば場所付きの文、なければ null。
- * 選択肢の名前の「、」・改行・「（なし）」（区切り・空の印と区別できない）と、同じ2つの呼び方（項目の対象を区別できない）
+ * 選択肢の名前の「、」・改行（区切りと区別できない）、同じ2つの呼び方（項目の対象を区別できない）、
+ * 全角半角・空白だけが違う名前・特性の列の見出し（見出しで区別できない）
  */
 export function exportProblem(data: DemoData): string | null {
   const t = data.org.terms;
@@ -46,11 +48,29 @@ export function exportProblem(data: DemoData): string | null {
     [`${t.staff}の項目`, data.items.filter((i) => i.target === 'staff').map((i) => i.name)],
     [`${t.client}の項目`, data.items.filter((i) => i.target === 'client').map((i) => i.name)],
     ['種類', data.visitTypes.map((v) => v.name)],
+    // 選択肢ごとの列（ADR-0070）の見出しが、選択肢どうし・ほかの項目の列と重ならないこと
+    [
+      `${t.staff}の特性の列`,
+      data.items
+        .filter((i) => i.target === 'staff')
+        .flatMap(traitCols)
+        .map((c) => c.header),
+    ],
+    [
+      `${t.client}の特性の列`,
+      data.items
+        .filter((i) => i.target === 'client')
+        .flatMap(traitCols)
+        .map((c) => c.header),
+    ],
   ];
+  const traitGroup = new Set([`${t.staff}の特性の列`, `${t.client}の特性の列`]);
   for (const [what, names] of groups) {
     const seen = new Map<string, string>();
     for (const n of names) {
       const before = seen.get(nameKey(n));
+      if (before !== undefined && traitGroup.has(what))
+        return `${what}「${before}」と「${n}」の見出しが Excel で同じになります（全角半角・空白の違いも同じとみなします）。項目の画面で項目か選択肢の名前を変えてから書き出してください`;
       if (before !== undefined)
         return `${what}の「${before}」と「${n}」は、全角半角・空白だけが違うので Excel では区別できません。どちらかの名前を変えてから書き出してください`;
       seen.set(nameKey(n), n);

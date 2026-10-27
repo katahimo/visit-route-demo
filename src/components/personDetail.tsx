@@ -92,12 +92,13 @@ export function StaffTravelRow({ staff: s }: { staff: Staff }) {
 
 /** 〈スタッフ〉の特性（〈スタッフ〉の項目すべて。値が空なら「—」） */
 export function StaffTraitRows({ staff: s, data }: { staff: Staff; data: DemoData }) {
+  const today = jstDate(Date.now());
   return (
     <>
       {data.items
         .filter((it) => it.target === 'staff')
         .map((it) => (
-          <DlRow key={it.id} term={it.name} value={traitText(s.traits[it.id])} />
+          <DlRow key={it.id} term={it.name} value={traitText(it, s.traits[it.id], today)} />
         ))}
     </>
   );

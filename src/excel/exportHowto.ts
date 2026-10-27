@@ -9,20 +9,13 @@ import {
   STAFF_EMAIL_COL,
   STAFF_ICON_COL,
   STAFF_LAST_DAY_COL,
+  START_YEAR_SUFFIX,
   VISIT_PIN_COL,
   VISIT_SAME_DAY_COL,
   VISIT_START_COL,
   WORKLOAD_SHEET,
 } from './layout';
-import {
-  ALL_PREFIX,
-  DAY_OFF,
-  EMPTY_MULTI,
-  EVERY_WEEKS_LABELS,
-  FIXED_SHEETS,
-  itemKindLabels,
-  MONTHLY_LABEL,
-} from './text';
+import { ALL_PREFIX, DAY_OFF, EVERY_WEEKS_LABELS, FIXED_SHEETS, itemKindLabels, MONTHLY_LABEL, NO, YES } from './text';
 
 /** 使い方のシートの行 */
 export function howtoLines(data: DemoData, names: { staff: string; client: string }): string[] {
@@ -42,7 +35,7 @@ export function howtoLines(data: DemoData, names: { staff: string; client: strin
     '',
     'シート',
     `・${FIXED_SHEETS.org}：事業所名・業種・呼び方など。「項目」と「値」の2列です。「${ORG_KEYS.fare}」は稼働の見込みの交通費の単価（0 なら交通費を出しません）、「${ORG_KEYS.spanLimit}」は拘束（最初の訪問の開始〜最後の訪問の終わり）がこれを超える日に注意を出す時間（0.5刻み。0 なら出しません）です。`,
-    `・${FIXED_SHEETS.items}：${t.staff}・${t.client}の特性の項目。種類は「${ITEM_KINDS.map((k) => itemKindLabels[k]).join('」「')}」。選択肢は「、」か改行で区切ります（選択肢の名前に「、」と改行、「${EMPTY_MULTI}」は使えません）。`,
+    `・${FIXED_SHEETS.items}：${t.staff}・${t.client}の特性の項目。種類は「${ITEM_KINDS.map((k) => itemKindLabels[k]).join('」「')}」。選択肢は「、」か改行で区切ります（選択肢の名前に「、」と改行は使えません）。`,
     `・${FIXED_SHEETS.rules}：AI で担当を組むときの条件の名前と種類。重み・必須は読み込むと${FIXED_SHEETS.presets}のシートの「点数の基準」に ○ を付けた行にそろえます（重みは1組）。`,
     `・${FIXED_SHEETS.presets}：条件のプリセット（1〜6行）。「重み：〈条件の種類〉」の列に重み（0〜5、0.5刻み。空は0）、「必須」の列に必須にする条件の種類を「、」区切りで書きます。「点数の基準」の列は、ふだんの考え方（AI で組むとき・要対応の検査に使い、画面の点数（100点満点）も付ける）のプリセットに ○ を1つだけ付けます（無印なら先頭のプリセット）。このシートが無いブックを読み込むと、いまのプリセットのままです。`,
     `・${names.staff}：${t.staff}の一覧。勤務する曜日は「月火水木金」のように書きます。「${STAFF_LAST_DAY_COL}」は退職・担当替えの最後の勤務日（空ならなし。翌日からは勤務なし）です。「${STAFF_EMAIL_COL}」は任意で、予定をメールアプリで開くときの宛先です。「${STAFF_ICON_COL}」は任意の1〜2文字（絵文字も可）で、画面の印の中に出します（空なら苗字の最初の1文字）。`,
@@ -59,14 +52,16 @@ export function howtoLines(data: DemoData, names: { staff: string; client: strin
     '特性の書き方（「特性：項目名」の列。空は未確認）',
     '・あり/なし：「あり」「なし」',
     '・選択肢から1つ：選択肢そのもの（例：女性）',
-    `・選択肢から複数：「、」か改行で区切る（例：看護師、保育士）。「${EMPTY_MULTI}」と書くと、確認済みで1つもない`,
+    `・選択肢から複数：選択肢ごとの列（例：「特性：資格：看護師」）に「${YES}」（持つ）か「${NO}」（持たない）。1人の行の列が全部空なら未確認、どれかに印があれば、空の列は持たないとして読みます`,
     '・数値：数（例：5）',
+    `・開始年：「特性：項目名${START_YEAR_SUFFIX}」の列に始めた年を西暦で（例：2018）。条件はその日までの年数（その日の年 − 開始年）で比べるので、年が変わっても書き直しは要りません`,
     '',
     '条件の書き方（「必要条件：項目名」「希望：項目名」の列。相手の特性に対する条件です。空は問わない）',
     '・あり/なし：「あり」「なし」「なし（未確認も可）」「あり（未確認も可）」',
     '・選択肢から1つ：「女性」（その1つ）、「高齢、子ども」（どれか）、「男性以外」',
     `・選択肢から複数：「看護師、保育士」（どれかを含む）、「${ALL_PREFIX}看護師、保育士」（すべて含む）`,
     '・数値：「3以上」「5以下」「3〜5」「3」（等しい）「3以外」',
+    '・開始年：年数で書きます（数値と同じ形。例：「3以上」＝3年以上。「3年以上」とも書けます）',
     '・同じ項目に条件を2つ以上つけるときは、セルの中で改行して1行に1つずつ書きます。',
     '・選択肢の区切りは「、」だけです（「・」「,」は選択肢の名前の一部として読みます）。1人の必要条件・希望は、それぞれ20件までです。',
     '・セル全体が1つの選択肢の名前と同じなら、その選択肢として読みます（「…以外」で終わる名前の選択肢でも）。',
