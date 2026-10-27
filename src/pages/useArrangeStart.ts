@@ -3,8 +3,10 @@ import { useState } from 'react';
 import { useConfirm } from '../components/ConfirmDialog';
 import { confirmDropProposal } from '../components/scheduleParts';
 import { useToast } from '../components/Toast';
+import { markArrangeStart } from '../components/useArrangeBasis';
 import type { BatchMode } from '../lib/month';
 import { type BatchSource, monthBatch } from '../lib/monthBatch';
+import { useDemoData } from '../store';
 
 /** 組む範囲と日の決まり（画面で選んだもの）。条件はいつもデータの条件（点数の基準。ADR-0065） */
 export type ArrangeStartPlan = {
@@ -20,6 +22,7 @@ export type ArrangeStartPlan = {
 
 export function useArrangeStart(plan: ArrangeStartPlan) {
   const toast = useToast();
+  const { data } = useDemoData();
   const confirmDialog = useConfirm();
   const [error, setError] = useState<string | null>(null);
 
@@ -47,6 +50,8 @@ export function useArrangeStart(plan: ArrangeStartPlan) {
       rangeStart: scope === 'month' ? null : at,
     });
     if (!ok) toast('ほかの担当を組んでいます。終わってから押してください');
+    // 提案の前提（基本情報）を控える。反映でこの鍵を覚える（ADR-0067）
+    else markArrangeStart(data);
   };
   return { error, setError, start };
 }

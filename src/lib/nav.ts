@@ -335,11 +335,13 @@ export function menuSections(
       label: '担当を組む',
       icon: 'arrange',
       match: badges.hasStandard ? ['/arrange', '/compare', '/standard', '/rules'] : ['/arrange', '/compare'],
-      badge: badges.basisChanged
-        ? { text: '変更', label: '基本情報が最後に組んだあとに変わった（組み直す）' }
-        : badges.planUnassignedDays
-          ? { text: `${badges.planUnassignedDays}日`, label: `担当なしの訪問がある日 ${badges.planUnassignedDays}日` }
-          : undefined,
+      // 標準が無い間は組み直しを知らせない（担当を組むの画面の知らせと同じ。PRD D363）
+      badge:
+        badges.hasStandard && badges.basisChanged
+          ? { text: '変更', label: '基本情報が最後に組んだあとに変わった（組み直す）' }
+          : badges.planUnassignedDays
+            ? { text: `${badges.planUnassignedDays}日`, label: `担当なしの訪問がある日 ${badges.planUnassignedDays}日` }
+            : undefined,
     },
   ];
   const items: MenuItem[] = [

@@ -79,8 +79,9 @@ function BasicsCellView({ row, wd, props }: { row: BasicsRow; wd: number; props:
           {time}
         </button>
       ) : (
-        <span className="basics-time" title="曜日ごとの時刻は名前を押した先の繰り返しで直します">
+        <span className="basics-time">
           {time}
+          <span className="sub basics-time-note">（名前の画面の繰り返しで直す）</span>
         </span>
       )}
       <span className="basics-staff">

@@ -236,7 +236,7 @@ function ProposalCard({
   );
 }
 
-/** 3. 標準にするの前半：表で直す（下書き）。段の見出しは StandardPage の RegisterStepCard */
+/** 3. 標準にするの前半：表で直す（下書き）。段の見出しは StandardPage */
 export function DraftStep({
   clientTerm,
   work,
@@ -336,7 +336,7 @@ export function DraftStep({
   );
 }
 
-/** 3. 標準にするの後半（下書きがあれば登録の操作、登録した直後なら完了の表示、どちらも無ければ 2 への案内） */
+/** 3. 標準にするの後半（下書きがあれば登録の操作、登録した直後なら完了の表示、どちらも無ければ上の「表で直す」への案内） */
 export function RegisterStep({
   draft,
   registered,

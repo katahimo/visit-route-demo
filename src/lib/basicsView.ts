@@ -2,9 +2,10 @@
 // 相性・勤務時間の外）・行の相性の一覧・マスで時刻を直したときの繰り返し
 import type { DemoData } from '../contracts/data';
 import type { Pattern, Staff } from '../contracts/documents';
+import type { PatternChange, PatternInput } from '../contracts/patterns';
 import type { CompatLevel } from '../contracts/rules';
 import { hhmmToMinutes } from '../domain/time';
-import { timesOn } from '../patterns';
+import { splitPattern, timesOn } from '../patterns';
 import { compatLevelOf } from './compatLevel';
 import { standardRows } from './standardView';
 
@@ -36,7 +37,7 @@ export type BasicsRow = {
 
 /**
  * 担当がその曜日・時間の約束に行けるか（基本の勤務日・勤務時間で見る。標準の週の表なので日ごとの上書きは見ない）。
- * 開始（遅）に所要を足した終わりが勤務の終わりを超えれば勤務時間の外
+ * 約束の幅の中に勤務に収まる開始が1つも無ければ勤務時間の外（domain/scheduleModel の fitInSlots と同じ決まり）
  */
 export function shiftIssue(
   staff: Pick<Staff, 'active' | 'workDays' | 'shiftStart' | 'shiftEnd' | 'lastDay'>,
@@ -48,10 +49,14 @@ export function shiftIssue(
   if (!staff.active || (staff.lastDay !== null && staff.lastDay !== undefined && staff.lastDay < today))
     return 'inactive';
   if (!staff.workDays.includes(wd)) return 'off';
-  const end = hhmmToMinutes(times.latestStart) + durationMinutes;
-  if (times.earliestStart < staff.shiftStart || end > hhmmToMinutes(staff.shiftEnd)) return 'outside';
+  const at = Math.max(hhmmToMinutes(times.earliestStart), hhmmToMinutes(staff.shiftStart));
+  if (at > hhmmToMinutes(times.latestStart) || at + durationMinutes > hhmmToMinutes(staff.shiftEnd)) return 'outside';
   return null;
 }
+
+/** 表のマスのうち、担当が勤務時間の外（休止・勤務日でないも）のマスの数 */
+export const issueCount = (rows: readonly BasicsRow[]): number =>
+  rows.reduce((n, r) => n + Object.values(r.cells).filter((c) => c.issue).length, 0);
 
 /** 基本情報の表の行（並びは標準の表と同じ。compatOn を切れば相性は 0・一覧は空） */
 export function basicsRows(
@@ -108,4 +113,22 @@ export function setPatternTime(p: Pattern, wd: number, earliestStart: string, la
     ? rest
     : [...rest, { weekday: wd, earliestStart, latestStart }].sort((a, b) => a.weekday - b.weekday);
   return { ...p, dayTimes };
+}
+
+/**
+ * マスで時刻を直したときの繰り返しと訪問（〈利用者さん〉の画面と同じく今日から分ける。今日より前の回は変えず、
+ * 今日からの担当を組んだ回は繰り返しのとおりに戻す。patterns の splitPattern）。newId は分けたときの新しい繰り返しの id
+ */
+export function changePatternTime(
+  data: PatternInput,
+  patternId: string,
+  wd: number,
+  times: { earliestStart: string; latestStart: string },
+  today: string,
+  newId: string,
+): PatternChange | null {
+  const p = data.patterns.find((x) => x.id === patternId);
+  if (!p) return null;
+  const { id: _, from: __, ...next } = setPatternTime(p, wd, times.earliestStart, times.latestStart);
+  return splitPattern(data, patternId, next, today, today, newId);
 }

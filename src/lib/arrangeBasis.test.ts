@@ -35,6 +35,30 @@ describe('basisKey', () => {
     expect(basisKey({ ...data, patterns: split })).toBe(base);
   });
 
+  it('担当だけ替えて「いつから」で分けた繰り返し（開始日より後）でも鍵が変わらない', () => {
+    const p = data.patterns.find((x) => x.from < '2026-11-09' && x.to === null)!;
+    const other = data.staff.find((s) => s.id !== p.usualStaffId)!.id;
+    const split = data.patterns.flatMap((x) =>
+      x.id === p.id
+        ? [
+            { ...x, to: '2026-11-08' },
+            { ...x, id: `${x.id}-b`, from: '2026-11-09', usualStaffId: other },
+          ]
+        : [x],
+    );
+    expect(basisKey({ ...data, patterns: split })).toBe(basisKey(data));
+    // 間が空けば別の期間（鍵が変わる）
+    const gap = data.patterns.flatMap((x) =>
+      x.id === p.id
+        ? [
+            { ...x, to: '2026-11-07' },
+            { ...x, id: `${x.id}-b`, from: '2026-11-09' },
+          ]
+        : [x],
+    );
+    expect(basisKey({ ...data, patterns: gap })).not.toBe(basisKey(data));
+  });
+
   it('相性の未入力（0）は書いてあっても無くても同じ', () => {
     const c = data.clients[0]!.id;
     const s = data.staff.find((x) => (data.compat[c]?.[x.id] ?? 0) === 0)!.id;

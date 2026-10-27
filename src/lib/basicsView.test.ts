@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type { Pattern } from '../contracts/documents';
 import { createDemoData } from '../seed';
-import { basicsRows, basicsTimeError, canEditTime, setPatternTime, shiftIssue } from './basicsView';
+import {
+  basicsRows,
+  basicsTimeError,
+  canEditTime,
+  changePatternTime,
+  issueCount,
+  setPatternTime,
+  shiftIssue,
+} from './basicsView';
 import { standardRows } from './standardView';
 
 const today = '2026-10-26';
@@ -17,8 +25,12 @@ describe('shiftIssue', () => {
     expect(shiftIssue({ ...staff, active: false }, 1, at10, 60, today)).toBe('inactive');
     expect(shiftIssue({ ...staff, lastDay: '2026-10-01' }, 1, at10, 60, today)).toBe('inactive');
     expect(shiftIssue(staff, 5, at10, 60, today)).toBe('off');
-    expect(shiftIssue(staff, 1, { earliestStart: '16:00', latestStart: '16:30' }, 60, today)).toBe('outside');
-    expect(shiftIssue(staff, 1, { earliestStart: '08:30', latestStart: '10:00' }, 30, today)).toBe('outside');
+    expect(shiftIssue(staff, 1, { earliestStart: '16:30', latestStart: '17:00' }, 60, today)).toBe('outside');
+    expect(shiftIssue(staff, 1, { earliestStart: '07:00', latestStart: '08:30' }, 30, today)).toBe('outside');
+  });
+  it('約束の幅の中に勤務に収まる開始があれば勤務時間の外にしない（fitInSlots と同じ）', () => {
+    expect(shiftIssue(staff, 1, { earliestStart: '08:30', latestStart: '10:00' }, 30, today)).toBeNull();
+    expect(shiftIssue(staff, 1, { earliestStart: '16:00', latestStart: '16:30' }, 60, today)).toBeNull();
   });
 });
 
@@ -69,5 +81,29 @@ describe('basicsTimeError', () => {
     expect(basicsTimeError('10:00', '10:30')).toBeNull();
     expect(basicsTimeError('10:3', '10:30')).not.toBeNull();
     expect(basicsTimeError('11:00', '10:30')).toBe('開始（遅）は開始（早）以降にしてください');
+  });
+});
+
+describe('issueCount', () => {
+  it('勤務時間の外のマスを数える', () => {
+    const rows = basicsRows(data, today, true);
+    const n = rows.reduce((a, r) => a + Object.values(r.cells).filter((c) => c.issue !== null).length, 0);
+    expect(issueCount(rows)).toBe(n);
+  });
+});
+
+describe('changePatternTime（今日から分ける）', () => {
+  it('今日より前に始まった繰り返しは昨日で終わらせ、今日から新しい時刻の繰り返し', () => {
+    const p = data.patterns.find((x) => x.from < today && x.weekdays.length === 1)!;
+    const wd = p.weekdays[0]!;
+    const c = changePatternTime(data, p.id, wd, { earliestStart: '06:00', latestStart: '06:00' }, today, 'pt-new')!;
+    const old = c.patterns.find((x) => x.id === p.id)!;
+    const next = c.patterns.find((x) => x.id === 'pt-new')!;
+    expect(old.earliestStart).toBe(p.earliestStart);
+    expect(old.to).toBe('2026-10-25');
+    expect([next.from, next.earliestStart]).toEqual([today, '06:00']);
+  });
+  it('無い繰り返しは null', () => {
+    expect(changePatternTime(data, 'nope', 1, at10, today, 'x')).toBeNull();
   });
 });

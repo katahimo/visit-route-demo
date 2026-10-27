@@ -81,8 +81,17 @@ describe('menuSections（PRD D326・D349・D364。ADR-0054・0063・0067）', ()
     expect(item('today', g).badge?.text).toBe('未確定');
     expect(item('arrange:assign').badge).toBeUndefined();
     // 基本情報が変わった印は担当なしの日の数より先（ADR-0067）
-    const changed = menuSections(terms, TODAY, {}, {}, { planUnassignedDays: 3, basisChanged: true });
+    const changed = menuSections(
+      terms,
+      TODAY,
+      {},
+      {},
+      { planUnassignedDays: 3, basisChanged: true, hasStandard: true },
+    );
     expect(item('arrange:assign', changed).badge?.text).toBe('変更');
+    // 標準が無い間は知らせない（PRD D363）
+    const noStd = menuSections(terms, TODAY, {}, {}, { planUnassignedDays: 3, basisChanged: true });
+    expect(item('arrange:assign', noStd).badge?.text).toBe('3日');
   });
   it('今の画面の印は画面で決める（予定の子・予定を組むの子）', () => {
     expect(isActiveNav(item('today'), '/plan')).toBe(true);

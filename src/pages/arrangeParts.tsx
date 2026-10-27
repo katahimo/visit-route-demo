@@ -44,6 +44,7 @@ export function ArrangeBasisNotice({
             {rangeLabel}を組み直す（伝えていない {days}日）
           </WithIcon>
         </button>
+        {days === 0 && <span className="sub">範囲に組める日がありません（今日より前・確定した日は組みません）</span>}
         <Link to="/basics" className="btn btn-text" data-testid="arrange-basis-link">
           基本情報を見る
         </Link>

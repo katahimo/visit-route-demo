@@ -19,7 +19,7 @@ import { StaffMark } from './StaffMark';
 import { useToast } from './Toast';
 import { WithIcon } from './ui';
 import { UndoButtons } from './undo';
-import { saveArrangeBasis } from './useArrangeBasis';
+import { saveAppliedBasis } from './useArrangeBasis';
 import { useSelectionBar } from './useSelectionBar';
 import { useValueStore } from './valueStore';
 import './scheduleParts.css';
@@ -202,8 +202,8 @@ export function RangeProposalBand() {
   const apply = () => {
     const r = monthBatch.apply();
     if (!r) return;
-    // 組んだときの基本情報を覚える（あとで変われば担当を組むで組み直しを知らせる。ADR-0067）
-    if (r.applied.length > 0) saveArrangeBasis(data);
+    // 組み始めたときの基本情報を覚える（あとで変われば担当を組むで組み直しを知らせる。ADR-0067）
+    if (r.applied.length > 0) saveAppliedBasis(data);
     toast(
       r.applied.length === 0
         ? '提案を出したあとに訪問が変わったので、反映しませんでした。もう一度 AI で組んでください'
