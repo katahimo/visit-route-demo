@@ -13,7 +13,7 @@ import { mailTo, mdw, sourceWord, weekByStaff, weekMailText } from '../lib/mail'
 import { MailReserveBox } from './mailReserve';
 
 /**
- * 日のメールと確定（PRD D346・D363）：state は伝えた状態、onConfirm は確定する
+ * 日のメールと確定（PRD D346・D368）：state は伝えた状態、onConfirm は確定する
  * （mail＝全員分のメールを作った・reserve＝Google で予約した（note は知らせの文）・manual＝欄のボタン）
  */
 export type DayMailConfirm = {
