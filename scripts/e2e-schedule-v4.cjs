@@ -90,6 +90,8 @@ async function menu(page) {
   );
   await tabs.locator('[data-tab="clients"]').click();
   await page.waitForURL(/#\/clients$/);
+  // URL が変わってからメニューの印が描き直るまで待つ（基本情報 → 利用者さん一覧に印が移る）
+  await until(async () => JSON.stringify(await current(page)) === '["arrange:clients"]', 5000, 100).catch(() => {});
   check(
     JSON.stringify(await current(page)) === JSON.stringify(['arrange:clients']),
     '〈利用者さん〉一覧はメニューの子「利用者さん一覧」が今の画面（ADR-0067 追記）',
