@@ -1,0 +1,59 @@
+// 名簿の欄（ADR-0068。〈利用者さん〉一覧・〈スタッフ〉一覧）の状態と処理：読み込み方の選び、
+// Excel・CSV への書き出しと、Excel のブックか CSV の読み込み。ExcelJS は重いので、押したときだけ読み込む
+import { useState } from 'react';
+import type { RosterKind, RosterMode, RosterSource } from '../contracts/data';
+import { jstDate } from '../domain/time';
+import { formError, isStaleBuild } from '../lib/common';
+import { EXCEL_STALE_TEXT, rosterFileName } from '../lib/dataScreen';
+import { saveBlob } from '../lib/download';
+import { useDemoData } from '../store';
+import { useToast } from './Toast';
+import { useFeature } from './useFeature';
+import { useRosterImport } from './useRosterImport';
+
+export function useRosterCard(kind: RosterKind) {
+  const { data } = useDemoData();
+  const toast = useToast();
+  const offboardOn = useFeature('offboard');
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  /** 名簿の読み込み方（PRD D104）：追加・更新（既定）か総入れ替え */
+  const [rosterMode, setRosterMode] = useState<RosterMode>('merge');
+  const loadRoster = useRosterImport({ rosterMode, offboardOn, setError });
+  const term = kind === 'staff' ? data.org.terms.staff : data.org.terms.client;
+
+  /** 名簿を Excel のブックか CSV（BOM 付きの UTF-8）で書き出す。名簿だけの書き出しは「最後に書き出した日」に数えない */
+  const download = async (format: RosterSource['format']) => {
+    setError(null);
+    setBusy(true);
+    try {
+      const { exportRosterCsv, exportRosterWorkbook } = await import('../excel');
+      const blob = format === 'csv' ? exportRosterCsv(data, kind) : await exportRosterWorkbook(data, kind);
+      saveBlob(blob, rosterFileName(kind, format, jstDate(Date.now())));
+      toast(`${term}の名簿を ${format === 'csv' ? 'CSV' : 'Excel'} に書き出しました`);
+    } catch (e) {
+      setError(isStaleBuild(e) ? EXCEL_STALE_TEXT : `書き出せませんでした（${formError(e)}）`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** 先に読んで検査し、通ったら件数を見せて確かめる（取り消しならデータは変えない） */
+  const load = async (file: File) => {
+    setError(null);
+    setBusy(true);
+    try {
+      await loadRoster(file, kind);
+    } catch (e) {
+      setError(
+        isStaleBuild(e) ? EXCEL_STALE_TEXT : `読み込めませんでした：${formError(e)}（いまのデータはそのままです）`,
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return { kind, term, rosterMode, setRosterMode, busy, error, download, load };
+}
+
+export type RosterCardModel = ReturnType<typeof useRosterCard>;

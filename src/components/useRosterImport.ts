@@ -1,20 +1,21 @@
-// データの画面の名簿の読み込み（PRD D103〜D107・D209。ADR-0020）：読んで検査し、件数（追加・更新・変更なし・終了／休止）を
+// 名簿の読み込み（PRD D103〜D107・D209。ADR-0020・ADR-0068。〈利用者さん〉一覧・〈スタッフ〉一覧の名簿の欄から）：
+// Excel のブックか CSV（文字コードは見分ける）を読んで検査し、件数（追加・更新・変更なし・終了／休止）を
 // 見せて確かめてから、store の update で入れる。AI案・記録・確定した割当・訪問はそのまま。
 // 入ったかは次の描画で data を見て決める（入らなければ成功と言わず、残した控えを前の世代に戻す）
 import { type Dispatch, type SetStateAction, useEffect, useRef } from 'react';
-import { useConfirm } from '../components/ConfirmDialog';
-import { useToast } from '../components/Toast';
 import type { DemoData, RosterKind, RosterMode } from '../contracts/data';
 import { rosterConfirmBody, rosterDoneText, rosterHasChanges, rosterHowText } from '../lib/dataScreen';
-import { type LastDayPerson, lastDayChanged } from '../lib/personLinks';
 import { canKeepPrevious, type PreviousKeep, useDemoData } from '../store';
+import { useConfirm } from './ConfirmDialog';
+import { useToast } from './Toast';
 
-export function useDataRoster(x: {
+/** offboardOn は退職・担当替えの機能（ADR-0028 の offboard）が入か（切っていれば最終勤務日の欄を指さない） */
+export function useRosterImport(x: {
   rosterMode: RosterMode;
+  offboardOn: boolean;
   setError: Dispatch<SetStateAction<string | null>>;
-  setLastDay: Dispatch<SetStateAction<LastDayPerson[] | null>>;
 }) {
-  const { rosterMode, setError, setLastDay } = x;
+  const { rosterMode, offboardOn, setError } = x;
   const { data, update, keepPrevious } = useDemoData();
   const toast = useToast();
   const confirmDialog = useConfirm();
@@ -26,7 +27,6 @@ export function useDataRoster(x: {
     base: DemoData;
     next: DemoData;
     done: string;
-    lastDay: LastDayPerson[];
     keep: PreviousKeep;
   } | null>(null);
   useEffect(() => {
@@ -35,7 +35,6 @@ export function useDataRoster(x: {
     if (data === p.next) {
       pending.current = null;
       toast(p.done);
-      if (p.lastDay.length > 0) setLastDay(p.lastDay);
     } else if (data !== p.base) {
       pending.current = null;
       // 入らなかったので、残した控えは前の世代に戻す
@@ -44,7 +43,7 @@ export function useDataRoster(x: {
         '読み込みのあいだにデータが変わったので入れませんでした（いまのデータはそのままです）。もう一度読み込んでください',
       );
     }
-  }, [data, toast, setError, setLastDay]);
+  }, [data, toast, setError]);
 
   return async (file: File, kind: RosterKind) => {
     const base = data;
@@ -74,6 +73,7 @@ export function useDataRoster(x: {
         term,
         how,
         summary: rosterSummary(r, kind, terms),
+        source: r.source,
         keep: canKeepPrevious(),
       }),
       confirmLabel: '名簿を読み込む',
@@ -84,13 +84,12 @@ export function useDataRoster(x: {
     if (latest.current !== base) return changed();
     // 名簿の読み込みも人をまとめて書き換えるので、いまのデータを1世代だけ控える（確認で OK になってから。PRD D227）
     const keep = keepPrevious(`${term}の名簿の${how}`);
-    // 最終勤務日が入った人は ID も要る（知らせのリンク。PRD D209）ので、読み込む前と後を比べて引く
-    const lastDay = kind === 'staff' ? lastDayChanged(base.staff, r.data.staff) : [];
+    // 最終勤務日が入った人がいれば、一覧の「最終勤務日のある人」の欄で振り直せると知らせる（PRD D209）
+    const hasLastDay = offboardOn && r.lastDaySet.length > 0;
     pending.current = {
       base,
       next: r.data,
-      done: rosterDoneText({ term, staffTerm: terms.staff, hasLastDay: lastDay.length > 0, keep }),
-      lastDay,
+      done: rosterDoneText({ term, staffTerm: terms.staff, hasLastDay, keep }),
       keep,
     };
     update((d) => (d === base ? r.data : d), '名簿の読み込み');

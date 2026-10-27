@@ -131,6 +131,12 @@ export type RosterKind = 'client' | 'staff';
  */
 export type RosterMode = 'merge' | 'replace';
 /**
+ * 名簿のファイルの形（ADR-0068）：Excel のブック（.xlsx）か CSV。CSV は見分けた文字コードも持つ（確認の文に出す）
+ */
+export type RosterSource =
+  | { format: 'xlsx' }
+  | { format: 'csv'; encoding: 'UTF-8' | 'UTF-16LE' | 'UTF-16BE' | 'Shift_JIS' | 'EUC-JP' };
+/**
  * 名簿の読み込みの結果（PRD D106）。data は名簿を当てた新しいデータ（store の migrate を通したもの。画面が store の update で入れる）。
  * 件数は migrate のあとの結果を ID で引き、今の人と比べて数える（repair で元に戻る違いは変更とみなさない）
  */
@@ -152,4 +158,6 @@ export type RosterImportResult = {
   lastDaySet: string[];
   /** 読み込む前の、終了・休止にできる人の数（〈スタッフ〉は利用中、〈利用者さん〉は終了でない人）。取り違えの注意に使う */
   activeBefore: number;
+  /** 読んだファイルの形（.xlsx か CSV と文字コード。ADR-0068） */
+  source: RosterSource;
 };

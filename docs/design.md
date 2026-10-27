@@ -323,10 +323,10 @@ flowchart LR
   - [ ] 要約・案内文の文（テスト）。同じ入力で同じ結果、データを書き換えない
   - [ ] 8人・約17件/日・4週・07〜20時で、正確が2秒、目安が500ms以内
 
-### excel（Excel との変換。ADR-0006・ADR-0020）
-- 責務：`DemoData` ⇔ Excel のブック（§5「Excel のブックの形」）と、〈利用者さん〉・〈スタッフ〉の名簿の変換。書き出しは見出し・列幅・プルダウン付き。読み込みは名前を ID に直し、シート・行・列付きの日本語のエラーを返す。データは書き換えない
+### excel（Excel との変換。ADR-0006・ADR-0020・ADR-0068）
+- 責務：`DemoData` ⇔ Excel のブック（§5「Excel のブックの形」）と、〈利用者さん〉・〈スタッフ〉の名簿（Excel・CSV）の変換。書き出しは見出し・列幅・プルダウン付き。読み込みは名前を ID に直し、シート・行・列付きの日本語のエラーを返す。データは書き換えない
 - 持つデータ（持ち主）：なし
-- 提供するAPI：`exportWorkbook(data)`・`importWorkbook(buf, base)`（`base` からは版・基準日など Excel に無いものだけ。案は空。最後に `migrate`。画面が件数を見せて `replace`）、`exportRosterWorkbook(data, kind)`（1シート。シート名 `personSheetNames`）・`importRoster(buf, base, kind, mode)`・`rosterSummary`・`rosterWarning`（総入れ替えで今の人の半分を超えて外すときの注意。無ければ null）。どれも非同期
+- 提供するAPI：`exportWorkbook(data)`・`importWorkbook(buf, base)`（`base` からは版・基準日など Excel に無いものだけ。案は空。最後に `migrate`。画面が件数を見せて `replace`）、`exportRosterWorkbook(data, kind)`（1シート。シート名 `personSheetNames`）・`exportRosterCsv(data, kind)`（同じ列の CSV。BOM 付きの UTF-8。同期）・`importRoster(buf, base, kind, mode)`（.xlsx か CSV を中身で見分け、CSV は文字コードを見分けて名簿のシート1枚のブックに写してから同じ読み方。結果の `source` に形と文字コード）・`rosterSummary`・`rosterWarning`（総入れ替えで今の人の半分を超えて外すときの注意。無ければ null）。どれも非同期
 - 名簿の読み込み：
   - 全体のブックもそのシートだけ読む。必須の列は名前（表示名）だけ。無い列は今の値（新しい人は既定値）
   - 同じ人は ID（今に無ければその ID で足す。使えない・ブック内で重なる・ほかの ID は止める）、空なら名前（`nameKey`。全角半角・空白を同一視）。2行が同じ人・当てたあとの名前の重なりは止める
@@ -334,12 +334,13 @@ flowchart LR
   - 段階は「段階」の列が正、空なら利用中・仮押さえ、それも無ければ今の段階。新しい人で全部空なら利用中
   - 総入れ替え：ブックに無い〈利用者さん〉は `withStage(c, 'ended')`、〈スタッフ〉は休止。既に終了・休止の人は数えない。人の行が無いブックは止める
   - 件数は repair 後の人を今の人と比べる。案・記録・確定した割当・訪問・パターン・相性・稼働時間・欠勤・休みはそのまま。画面は確認中にデータが変われば入れず、`lastDaySet` があれば振り直しを促す
-- 依存するもの：ExcelJS（動的 import）、contracts、store（`migrate`）、matching、lib/clientStage
-- 配置：`src/excel/`（名簿は `importRoster.ts`、読み取りの部品は `importBook.ts`）
+- 依存するもの：ExcelJS（動的 import）、contracts、store（`migrate`）、matching、lib/clientStage・lib/csv（文字コードの見分け・CSV の読み書き）
+- 配置：`src/excel/`（名簿は `importRoster.ts`、名簿の CSV は `rosterCsv.ts`、読み取りの部品は `importBook.ts`）
 - 完了の条件：
   - [ ] 書き出し → 読み込みで案を除いて同じ（ID・並びも。テスト）。ID の空の行は追加、消した行は消える
   - [ ] §5「止めるもの」はシート名・行番号付きで止め、データはそのまま。古いブックは既定で読める（テスト）
   - [ ] 名簿：往復で変更なし、追加・更新・総入れ替え・止める場合が上のとおり、ほかのデータが残る（テスト）
+  - [ ] 名簿の CSV：往復で変更なし、UTF-8（BOM の有無）・UTF-16・Shift_JIS・EUC-JP・タブ区切りを読む（テスト）
   - [ ] 外部への送信はしない
 
 ### features（機能の入り切り。ADR-0028）
@@ -419,7 +420,7 @@ flowchart LR
 | patterns | 関数 | `occursOn / expandPattern / visitsOn / visitsIn / findVisit / putVisits / splitPattern / removePattern` | 繰り返しの回の計算 |
 | lib/dayPlan | 関数 | `dayProblemOf / routesOf / dayRoutes / pinsOf / unassignedOf / writeRoutes / settleDay / visitIssues / tellDay / toldChanges / toldStateOf / contactsBetween` | 日の割当（訪問の担当）・訪問ごとの検査・確定（伝えた内容） |
 | vacancy | 関数 | `vacancyOf / verdictOf / inquirySummary / dayLoad / vacancyNotice` | 空き状況・試算・混み具合・案内文 |
-| excel | 関数 | `exportWorkbook / importWorkbook / exportRosterWorkbook / importRoster / rosterSummary / rosterWarning` | ブック・名簿 |
+| excel | 関数 | `exportWorkbook / importWorkbook / exportRosterWorkbook / exportRosterCsv / importRoster / rosterSummary / rosterWarning` | ブック・名簿（Excel・CSV） |
 | features | 関数 | `isOn / featureOfLocation / applyTemplate / matchTemplate / templateDiff / turnOffImpact / calcFeaturesOf` | 機能の入り切り |
 
 ### データの1件ずつ（`src/contracts/documents.ts`。ADR-0002・ADR-0011〜ADR-0017・ADR-0028・ADR-0050）
@@ -819,7 +820,7 @@ Worker 内の例外は `error` で返し、内部の文言は出さない（「A
 | メール・道順 | `mailto:` と Maps URLs のリンクだけ | キー・サーバーが要らず、外へ送らない | 0017・0018 |
 | メニュー・パレット | 5項目（ホーム・予定を組む・予定・空き状況・設定）。予定・予定を組む・設定は畳める子の項目を持ち（予定の子はリンク、予定を組むの子は基本情報・〈利用者さん〉一覧・〈スタッフ〉一覧・組み方の標準・担当を組む（作業の順。前の「人」は基本情報のタブ。条件の重みは寄り道。標準があれば組み方の標準を出さない）、設定の子はタブ。開け閉めは端末に覚える）。パレットは画面を1つずつ引ける（案を比べるは担当を組むから） | 仕事の順で探せ、前提を決める画面が組む流れの中にあり、行き先は今ある URL だけ | 0019・0027・0034・0045・0047・0054・0063・0065・0066・0067 |
 | 見出し・ボタン | 見出しは `PageHeader` の1つの型（題名・1行の説明・右に主ボタン1つ・予定の3画面はすぐ下のナビの行に［月｜週｜日］。PRD D347）、ボタンは塗り＝主／枠＝副／文字＝ついでの3段 | どの画面でも主の操作が1つに見え、日の予定の本体が初期表示に入る | 0036 |
-| 名簿 | 1シートを ID か名前で突き合わせ、総入れ替えは終了・休止 | 案・記録を消さずに人を直せる | 0020 |
+| 名簿 | 1シートを ID か名前で突き合わせ、総入れ替えは終了・休止。入出力は各一覧の名簿の欄で、Excel と CSV（文字コードは自動で見分ける） | 案・記録を消さずに人を直せ、人を直す画面で Excel の無い端末でも使える | 0020・0068 |
 | 絞り込み・詳細・人の画面 | 共通の `ClientFilter`、吹き出し、人は全画面（タブ・予定のカレンダー・節ごとの「直す → 保存」） | 画面ごとの作りがそろい、見るだけのときに書き換えず、その人の予定を見ながら直せる | 0021・0022・0052 |
 | スマホ・ホーム・確認 | 下のタブ（ホーム・予定・欠勤・探す（パレット）・メニュー（引き出し））、ホームの「今日やること」、`useConfirm` | よく使う画面と欠勤が1手、次の一手が分かる、扱いが1か所 | 0024〜0026・0045 |
 | スマホの予定・キーボード | スマホは日ごとのリストと下から出る欄（見る・取り消す・担当替えだけ）、週・月は「まとめて見る」。広い画面は帯を矢印キーで動かし、繰り返しの回は小さな帯で範囲 | 最初の画面に訪問が見え、マウスなしでも全体の元に戻すの1手で動かせる | 0055 |

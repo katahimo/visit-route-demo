@@ -6,7 +6,7 @@ import type { Client, Staff, Terms } from '../contracts/documents';
 import { STAGE_LABELS, withStage } from '../lib/clientStage';
 import { nameKey } from '../lib/common';
 import { isImportError, migrate } from '../store/persist';
-import { loadWorkbook } from './reader';
+import { loadRosterBook } from './rosterCsv';
 import {
   openRoster,
   type Read,
@@ -122,7 +122,7 @@ function allowedChanges(
 }
 
 /**
- * 名簿のブック → 今のデータに当てた結果（PRD D103〜D107）。読めなければ、場所付きの日本語の ImportError（何も変えない）。
+ * 名簿のブック（.xlsx）か CSV（ADR-0068。文字コードは見分ける）→ 今のデータに当てた結果（PRD D103〜D107）。読めなければ、場所付きの日本語の ImportError（何も変えない）。
  * - シートは呼び方のシート名（personSheetNames）。全体のブックでも、その人のシートだけを読む
  * - 同じ人：ID が入っていれば ID で、空なら名前（全角半角・空白を同一視）で今のデータと突き合わせる。一致しなければ新しい人
  * - ブックに無い列は、更新する人では今の値のまま、新しい人では既定値（画面で足すときと同じ）
@@ -134,8 +134,9 @@ export async function importRoster(
   kind: RosterKind,
   mode: RosterMode,
 ): Promise<RosterImportResult | ImportError> {
-  const book = await loadWorkbook(buf);
-  if ('code' in book) return book;
+  const loaded = await loadRosterBook(buf, base, kind);
+  if ('code' in loaded) return loaded;
+  const { book, source } = loaded;
   const opened = openRoster(book, base, kind);
   if ('code' in opened) return opened;
   const { ctx, rows } = opened;
@@ -165,7 +166,18 @@ export async function importRoster(
     kind === 'staff'
       ? base.staff.filter((s) => s.active).length
       : base.clients.filter((c) => c.stage !== 'ended').length;
-  return { data: r, added, updated, unchanged, retired, allowedRemoved, allowedEmptied, lastDaySet, activeBefore };
+  return {
+    data: r,
+    added,
+    updated,
+    unchanged,
+    retired,
+    allowedRemoved,
+    allowedEmptied,
+    lastDaySet,
+    activeBefore,
+    source,
+  };
 }
 
 /** 名前を3人まで「・」でつなぐ（多ければ「ほか」） */

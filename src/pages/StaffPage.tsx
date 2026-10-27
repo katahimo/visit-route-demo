@@ -1,6 +1,7 @@
 import { Plus, UserRound } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { RosterButton, RosterCard } from '../components/RosterCard';
 import { BasicsNav } from '../components/SettingsTabs';
 import { useToast } from '../components/Toast';
 import { PageHeader, WithIcon } from '../components/ui';
@@ -17,7 +18,8 @@ import './settings.css';
 /**
  * 〈スタッフ〉一覧（PoC本体 StaffPage.tsx を写し、招待・メールを外して特性と条件を足した）。
  * 行を押すとその人の画面（`#/staff/:id`。StaffPersonPage）へ、「追加」は新しい人の画面（`#/staff/new`）へ（PRD D308）。
- * 最終勤務日のある人の担当の振り直しの欄（ADR-0015）はここからも開ける
+ * 最終勤務日のある人の担当の振り直しの欄（ADR-0015）はここからも開ける（名簿の読み込みで最終勤務日が入った人もここに出る。PRD D209）。
+ * 「Excel・CSV」で名簿の欄（書き出し・読み込み。ADR-0068）を開く
  */
 
 export default function StaffPage() {
@@ -25,6 +27,10 @@ export default function StaffPage() {
   const terms = data.org.terms;
   // 機能の入り切り（ADR-0028）：退職・担当替えを切れば振り直しの欄を出さない（最終勤務日の値は事実なので一覧の「最終」の印は残す）
   const offboardOn = useFeature('offboard');
+  // 名簿の欄（Excel・CSV。ADR-0068）。Excel の入出力を切っていれば出さない（ADR-0028 の excel）
+  const excelOn = useFeature('excel');
+  const [rosterOpen, setRosterOpen] = useState(false);
+  const rosterId = useId();
   /** 担当の振り直しの欄を開いている〈スタッフ〉（PRD D71。null：閉じている） */
   const [offboardFor, setOffboardFor] = useState<string | null>(null);
   const today = jstDate(Date.now());
@@ -79,11 +85,18 @@ export default function StaffPage() {
         title={`${terms.staff}一覧`}
         lead={`${terms.staff}の勤務・特性・条件を決めます`}
         actions={
-          <Link to="/staff/new" className="btn btn-primary" data-testid="staff-add">
-            <WithIcon icon={Plus}>{terms.staff}を追加</WithIcon>
-          </Link>
+          <>
+            {excelOn && (
+              <RosterButton open={rosterOpen} onToggle={() => setRosterOpen((o) => !o)} controls={rosterId} />
+            )}
+            <Link to="/staff/new" className="btn btn-primary" data-testid="staff-add">
+              <WithIcon icon={Plus}>{terms.staff}を追加</WithIcon>
+            </Link>
+          </>
         }
       />
+
+      {excelOn && rosterOpen && <RosterCard kind="staff" id={rosterId} onClose={() => setRosterOpen(false)} />}
 
       {offboardOn && leaving.length > 0 && <StaffLeavingCard leaving={leaving} terms={terms} onOpen={setOffboardFor} />}
 

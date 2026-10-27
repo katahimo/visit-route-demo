@@ -1,7 +1,7 @@
 // 名前から詳細を開く場所を足した所（PRD D205〜D209。ADR-0022）を本物のブラウザで確かめる：
 // 日の画面の「入らなかった訪問」の〈利用者さん〉の i（カードの外・ボタンの入れ子にしない）／「受けられる人」の候補の名前（「この人に入れる」とは別）／
 // 欠勤の人に残る訪問の〈利用者さん〉の名前／拘束が上限を超える帯の名前（2人以上なら名前ごとの稼働の見込みのリンク、1人なら今までのボタン）／
-// 〈利用者さん〉の休みの帯の名前／担当の振り直しの欄の〈利用者さん〉の名前／データの画面の名簿の読み込みのあとの最終勤務日の知らせ（名前とその人の画面へのリンク・閉じる）。
+// 〈利用者さん〉の休みの帯の名前／担当の振り直しの欄の〈利用者さん〉の名前／〈スタッフ〉一覧の名簿の欄（Excel・CSV。読み込みで最終勤務日が入った人は「最終勤務日のある〈スタッフ〉」の欄に出る。ADR-0068）。
 // それぞれ、名前を押すと吹き出しが出て、リンクでその人の画面へ移る。印刷で i と稼働の見込みのリンクを出さない・390px で横にはみ出さない。
 // 入らない訪問・欠勤・休み・上限を超える拘束・最終勤務日のデータは、別のタブで localStorage を書き換えて作る（e2e-view の names() と同じ）。
 //
@@ -49,7 +49,7 @@ async function openPlan(page) {
 async function mutate(page, fn, arg) {
   const other = await page.context().newPage();
   await other.goto(`${BASE}#/data`);
-  await other.getByTestId('excel-kind').waitFor({ timeout: 30000 });
+  await other.getByTestId('excel-card').waitFor({ timeout: 30000 });
   // 読んで node の中で書き換え、書き戻す
   const d = await other.evaluate((k) => JSON.parse(localStorage.getItem(k)), STORAGE_KEY);
   const out = fn(d, arg);
@@ -392,11 +392,12 @@ async function overOne(page) {
   );
 }
 
-// ---- データの画面：名簿の読み込みのあとの最終勤務日の知らせ → その人の画面 → 担当の振り直しの欄の名前 ----
-async function roster(page) {
-  await page.goto(`${BASE}#/data`);
+// ---- 〈スタッフ〉一覧の名簿の欄（ADR-0068）：Excel・CSV で書き出し → 最終勤務日を外して読み込むと入り、
+// 「最終勤務日のある〈スタッフ〉」の欄に出る → 担当の振り直しの欄の名前 ----
+async function roster(page, dlg) {
+  await page.goto(`${BASE}#/staff`);
   await page.reload();
-  await page.getByTestId('excel-kind').waitFor({ timeout: 30000 });
+  await page.getByTestId('roster-toggle').waitFor({ timeout: 30000 });
   // いちばん多くの繰り返しの担当の人に最終勤務日を入れて書き出し、外してから読み込む（読み込みで最終勤務日が入る）
   const sid = await mutate(
     page,
@@ -412,148 +413,84 @@ async function roster(page) {
     },
     LAST_DAY,
   );
-  await page.getByTestId('excel-kind').locator('button').nth(2).click();
-  await settle(page);
-  const [download] = await Promise.all([
-    page.waitForEvent('download', { timeout: 30000 }),
-    page.getByRole('button', { name: 'Excel に書き出す' }).click(),
-  ]);
-  const book = fs.readFileSync(await download.path());
-  await mutate(
-    page,
-    (d, id) => {
-      d.staff.find((s) => s.id === id).lastDay = null;
-    },
-    sid,
-  );
-  check((await stored(page)).staff.find((s) => s.id === sid).lastDay === null, '読み込む前は最終勤務日が無い');
-  await page.getByTestId('excel-file-input').setInputFiles({
-    name: 'staff.xlsx',
-    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    buffer: book,
-  });
-  const notice = page.getByTestId('lastday-notice');
-  await notice.waitFor({ timeout: 20000 });
-  // 保存は少し遅れて書く
-  const data = await waitStored(page, (d) => d.staff.find((x) => x.id === sid)?.lastDay === LAST_DAY);
-  const s = data.staff.find((x) => x.id === sid);
-  const link = notice.getByTestId('lastday-link');
-  const got = {
-    lastDay: s.lastDay,
-    n: await link.count(),
-    name: await link.textContent(),
-    href: await link.getAttribute('href'),
-    text: await notice.textContent(),
-  };
+  const toggle = page.getByTestId('roster-toggle');
+  await toggle.click();
+  const card = page.getByTestId('roster-card');
+  await card.waitFor({ timeout: 5000 });
   check(
-    got.lastDay === LAST_DAY &&
-      got.n === 1 &&
-      got.name === s.name &&
-      got.href.endsWith(`#/staff/${encodeURIComponent(sid)}`) &&
-      got.text.includes(`最終勤務日 ${LAST_DAY}`),
-    '知らせ：最終勤務日の入った人の名前とその人の画面へのリンク',
-    got,
+    (await toggle.getAttribute('aria-expanded')) === 'true' &&
+      (await toggle.getAttribute('aria-controls')) === (await card.getAttribute('id')),
+    '名簿の欄：見出しの「Excel・CSV」で開く（aria-expanded・aria-controls）',
   );
-  const toast = await page
-    .locator('.toast')
-    .filter({ hasText: '名簿を読み込みました' })
-    .waitFor({ timeout: 3000 })
-    .then(() => true)
-    .catch(() => false);
-  check(toast, '知らせ：読み込んだことはトーストでも知らせる');
-  await page.screenshot({ path: path.join(OUT_DIR, 'data-notice.png') });
-  // 390px
+  const leaving = page.getByTestId('leaving-card');
+  for (const format of ['xlsx', 'csv']) {
+    const [download] = await Promise.all([
+      page.waitForEvent('download', { timeout: 30000 }),
+      page.getByTestId(`roster-export-${format}`).click(),
+    ]);
+    check(
+      download.suggestedFilename().startsWith('visit-route-demo-staff-') &&
+        download.suggestedFilename().endsWith(`.${format}`),
+      `名簿の欄：${format} で書き出す（ファイル名）`,
+      download.suggestedFilename(),
+    );
+    const file = fs.readFileSync(await download.path());
+    await mutate(
+      page,
+      (d, id) => {
+        d.staff.find((s) => s.id === id).lastDay = null;
+      },
+      sid,
+    );
+    await settle(page, 300);
+    check(
+      (await stored(page)).staff.find((s) => s.id === sid).lastDay === null &&
+        !(await leaving.textContent().catch(() => '')).includes(LAST_DAY.slice(5)),
+      `${format}：読み込む前は最終勤務日が無い`,
+    );
+    const asked = dlg.messages.length;
+    await page.getByTestId('roster-file-input').setInputFiles({
+      name: `staff.${format}`,
+      mimeType: format === 'csv' ? 'text/csv' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      buffer: file,
+    });
+    await page.locator('.toast').filter({ hasText: '名簿を読み込みました' }).waitFor({ timeout: 20000 });
+    const data = await waitStored(page, (d) => d.staff.find((x) => x.id === sid)?.lastDay === LAST_DAY);
+    const s = data.staff.find((x) => x.id === sid);
+    const msg = dlg.messages.slice(asked).join('\n');
+    check(
+      s.lastDay === LAST_DAY &&
+        msg.includes(format === 'csv' ? 'CSV（文字コード UTF-8）として読みました' : 'Excel のブックとして読みました'),
+      `${format}：読み込むと最終勤務日が入る（確認の本文にファイルの形）`,
+      { lastDay: s.lastDay, msg: msg.slice(0, 200) },
+    );
+    await leaving.waitFor({ timeout: 5000 });
+    check((await leaving.textContent()).includes(s.name), `${format}：「最終勤務日のある〈スタッフ〉」の欄に出る`);
+  }
+  await page.screenshot({ path: path.join(OUT_DIR, 'staff-roster.png') });
+  // 390px：横にはみ出さない
   await page.setViewportSize({ width: 390, height: 844 });
-  await notice.scrollIntoViewIfNeeded();
-  await fitsNarrow(page, 'データの画面の知らせ', '[data-testid="lastday-notice"]');
-  await page.screenshot({ path: path.join(OUT_DIR, 'data-notice-390.png') });
+  await card.scrollIntoViewIfNeeded();
+  await fitsNarrow(page, '〈スタッフ〉一覧の名簿の欄', '[data-testid="roster-card"]');
+  await page.screenshot({ path: path.join(OUT_DIR, 'staff-roster-390.png') });
   await page.setViewportSize({ width: 1280, height: 900 });
-  // 印刷：閉じるボタンは出さない
-  await page.emulateMedia({ media: 'print' });
+  // 閉じる → 欄が消え、もう一度開ける
+  await page.getByTestId('roster-close').click();
+  await settle(page);
   check(
-    !(await page.getByTestId('lastday-close').isVisible()) && (await link.isVisible()),
-    '印刷：知らせの閉じるボタンを出さない',
+    (await card.count()) === 0 && (await toggle.getAttribute('aria-expanded')) === 'false',
+    '名簿の欄：閉じると消える',
   );
-  await page.emulateMedia({ media: 'screen' });
-  // 閉じる → 知らせが消えフォーカスは Excel の欄。保存しない（読み直すと出ない）
-  await page.getByTestId('lastday-close').click();
-  await settle(page);
-  const focusTo = await page.evaluate(() => {
-    const el = document.activeElement;
-    const name = el?.getAttribute('aria-labelledby');
-    return {
-      testId: el?.getAttribute('data-testid'),
-      role: el?.tagName,
-      name: name ? document.getElementById(name)?.textContent : null,
-      outline: el ? getComputedStyle(el).outlineStyle : '',
-    };
-  });
+  // 〈利用者さん〉一覧にも同じ欄
+  await page.goto(`${BASE}#/clients`);
+  await page.getByTestId('roster-toggle').click();
+  await card.waitFor({ timeout: 5000 });
   check(
-    (await notice.count()) === 0 &&
-      focusTo.testId === 'excel-card' &&
-      focusTo.role === 'SECTION' &&
-      focusTo.name === 'Excel' &&
-      focusTo.outline !== 'none',
-    '知らせ：閉じると消え、フォーカスは Excel の欄（名前は見出し・枠が見える）',
-    focusTo,
+    (await card.locator('.file-pick-caption').innerText()).endsWith('の名簿（Excel・CSV）'),
+    '〈利用者さん〉一覧にも名簿の欄',
   );
-  // Excel の種類を切り替えると消える
-  await mutate(
-    page,
-    (d, id) => {
-      d.staff.find((x) => x.id === id).lastDay = null;
-    },
-    sid,
-  );
-  await page.getByTestId('excel-file-input').setInputFiles({
-    name: 'staff.xlsx',
-    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    buffer: book,
-  });
-  await notice.waitFor({ timeout: 20000 });
-  await page.getByTestId('excel-kind').locator('button').nth(0).click();
-  await settle(page);
-  check((await notice.count()) === 0, '知らせ：Excel の種類を切り替えると消える');
-  await page.getByTestId('excel-kind').locator('button').nth(2).click();
-  await settle(page);
-  // もう一度読み込んで（同じ日なので変更なし）知らせが出ないこと → 外してから読み込み直して、リンクでその人の画面
-  await mutate(
-    page,
-    (d, id) => {
-      d.staff.find((x) => x.id === id).lastDay = null;
-    },
-    sid,
-  );
-  await page.getByTestId('excel-file-input').setInputFiles({
-    name: 'staff.xlsx',
-    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    buffer: book,
-  });
-  await notice.waitFor({ timeout: 20000 });
-  await page.reload();
-  await page.getByTestId('excel-kind').waitFor({ timeout: 30000 });
-  check((await notice.count()) === 0, '知らせ：読み直すと出ない（保存しない）');
-  await mutate(
-    page,
-    (d, id) => {
-      d.staff.find((x) => x.id === id).lastDay = null;
-    },
-    sid,
-  );
-  await page.getByTestId('excel-kind').locator('button').nth(2).click();
-  await page.getByTestId('excel-file-input').setInputFiles({
-    name: 'staff.xlsx',
-    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    buffer: book,
-  });
-  await notice.waitFor({ timeout: 20000 });
-  await notice.getByTestId('lastday-link').click();
+  await page.goto(`${BASE}#/staff/${encodeURIComponent(sid)}`);
   await settle(page, 600);
-  check(
-    urlOf(page).includes(`#/staff/${encodeURIComponent(sid)}`) && (await view(page).getAttribute('data-id')) === sid,
-    '知らせ：リンクでその人の画面',
-    urlOf(page),
-  );
 
   // D208：担当の振り直しの欄の〈利用者さん〉の名前（その人の画面の予定のタブの「担当の振り直しを開く」から）
   await page.getByTestId('leaving-open').first().click();
@@ -588,51 +525,6 @@ async function roster(page) {
   );
 }
 
-// ---- 「初期状態に戻す」で最終勤務日の知らせが消える ----
-async function rosterReset(page) {
-  await page.goto(`${BASE}#/data`);
-  await page.reload();
-  await page.getByTestId('excel-kind').waitFor({ timeout: 30000 });
-  const sid = await mutate(
-    page,
-    (d, day) => {
-      d.staff[0].lastDay = day;
-      return d.staff[0].id;
-    },
-    LAST_DAY,
-  );
-  await page.getByTestId('excel-kind').locator('button').nth(2).click();
-  await settle(page);
-  const [download] = await Promise.all([
-    page.waitForEvent('download', { timeout: 30000 }),
-    page.getByRole('button', { name: 'Excel に書き出す' }).click(),
-  ]);
-  const book = fs.readFileSync(await download.path());
-  await mutate(
-    page,
-    (d, id) => {
-      d.staff.find((s) => s.id === id).lastDay = null;
-    },
-    sid,
-  );
-  await page.getByTestId('excel-file-input').setInputFiles({
-    name: 'staff.xlsx',
-    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    buffer: book,
-  });
-  const notice = page.getByTestId('lastday-notice');
-  await notice.waitFor({ timeout: 20000 });
-  check((await notice.count()) === 1, '初期状態に戻す：前に知らせが出ている');
-  await page.getByRole('button', { name: 'デモの初期状態に戻す' }).click();
-  await page
-    .locator('.toast')
-    .filter({ hasText: '初期状態に戻しました' })
-    .waitFor({ timeout: 5000 })
-    .catch(() => {});
-  await settle(page);
-  check((await notice.count()) === 0, '知らせ：「初期状態に戻す」で消える');
-}
-
 const errors = [];
 const steps = pagePerStep({
   open: async (browser) => {
@@ -647,7 +539,8 @@ const steps = pagePerStep({
     page.on('pageerror', (e) => errors.push(String(e)));
     return { ctx, page, dlg: await answerConfirms(page) };
   },
-  steps: [day, overOne, roster, rosterReset],
+  steps: [day, overOne, roster],
+  call: (fn, s) => fn(s.page, s.dlg),
   label: (name) => `${name}：途中で止まった`,
   after: (name, { dlg }) => check(dlg.native.length === 0, `${name}：ブラウザのダイアログを出さない`, dlg.native),
   end: () => check(errors.length === 0, 'ページのエラーが無い', errors),
