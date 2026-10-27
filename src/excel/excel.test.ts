@@ -474,7 +474,9 @@ describe('レビューの指摘（ブック）', () => {
       ...d,
       items: [...d.items, { id: 'x', name: '資格：看護師', target: 'staff', kind: 'flag', options: [] }],
     };
-    await expect(exportWorkbook(bad)).rejects.toThrow('「特性：資格：看護師」');
+    await expect(exportWorkbook(bad)).rejects.toThrow(
+      '「特性：資格：看護師」と「特性：資格：看護師」の見出しが Excel で同じ',
+    );
   });
 
   it('見出しは全角半角・コロンの揺れを許す。項目の列が無ければ止める', async () => {

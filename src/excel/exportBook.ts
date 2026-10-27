@@ -64,10 +64,13 @@ export function exportProblem(data: DemoData): string | null {
         .map((c) => c.header),
     ],
   ];
+  const traitGroup = new Set([`${t.staff}の特性の列`, `${t.client}の特性の列`]);
   for (const [what, names] of groups) {
     const seen = new Map<string, string>();
     for (const n of names) {
       const before = seen.get(nameKey(n));
+      if (before !== undefined && traitGroup.has(what))
+        return `${what}「${before}」と「${n}」の見出しが Excel で同じになります（全角半角・空白の違いも同じとみなします）。項目の画面で項目か選択肢の名前を変えてから書き出してください`;
       if (before !== undefined)
         return `${what}の「${before}」と「${n}」は、全角半角・空白だけが違うので Excel では区別できません。どちらかの名前を変えてから書き出してください`;
       seen.set(nameKey(n), n);

@@ -5,6 +5,7 @@ import type { Terms } from '../contracts/documents';
 import {
   type Condition,
   type Item,
+  isStartYear,
   RULE_TYPES,
   type RuleType,
   START_YEAR_MAX,
@@ -366,7 +367,7 @@ export function parseTrait(item: Item, cell: string | number | boolean): Parsed<
     }
     case 'startYear': {
       const n = typeof cell === 'number' ? cell : parseNumberText(s.replace(/年$/, ''));
-      return n !== null && Number.isInteger(n) && n >= START_YEAR_MIN && n <= START_YEAR_MAX
+      return n !== null && isStartYear(n)
         ? ok(n)
         : ng(`始めた年を西暦で書いてください（例：2018。${START_YEAR_MIN}〜${START_YEAR_MAX}）`);
     }

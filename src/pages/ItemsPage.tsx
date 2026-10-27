@@ -122,13 +122,14 @@ function ItemTable({
   );
 }
 
-/** 項目の1行：名前・種類・選択肢（人数）・使っている条件・消す。直すと確かめてからすぐ保存 */
 /** 選択肢を持たない形の説明（開始年は ADR-0070） */
 const NO_OPTION_NOTES: Partial<Record<ItemKind, string>> = {
   flag: 'あり／なし',
   number: '数値を入れる',
   startYear: '始めた年（西暦）を入れる。条件はその日までの年数で比べる',
 };
+
+/** 項目の1行：名前・種類・選択肢（人数）・使っている条件・消す。直すと確かめてからすぐ保存 */
 
 function ItemRow({ item: it, items }: { item: Item; items: Item[] }) {
   const { data, update } = useDemoData();

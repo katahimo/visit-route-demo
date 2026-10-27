@@ -17,6 +17,7 @@ import {
   type Condition,
   type Item,
   type ItemTarget,
+  isStartYear,
   type Op,
   START_YEAR_MAX,
   START_YEAR_MIN,
@@ -117,7 +118,7 @@ function StartYearInput({
   onChange: (v: TraitValue) => void;
 }) {
   const errorId = useId();
-  // 年として読めない途中の文字だけを覚える（読めれば値に入れて、表示は値から）
+  // 年として読めない文字だけを覚える（読めれば値に入れて、表示は値から）
   const [draft, setDraft] = useState<string | null>(null);
   const text = draft ?? (typeof value === 'number' ? String(value) : '');
   const valid = draft === null;
@@ -136,9 +137,10 @@ function StartYearInput({
           onChange={(e) => {
             const t = e.target.value;
             const y = Number(t);
-            const ok = t === '' || (Number.isInteger(y) && y >= START_YEAR_MIN && y <= START_YEAR_MAX);
-            setDraft(ok ? null : t);
-            if (ok) onChange(t === '' ? null : y);
+            const ok = t !== '' && isStartYear(y);
+            // 読めない文字は未入力にする（数値の欄と同じ。前の年を黙って残さない）
+            setDraft(ok || t === '' ? null : t);
+            onChange(ok ? y : null);
           }}
         />
         <span className="sub" style={{ whiteSpace: 'nowrap' }}>

@@ -488,7 +488,7 @@ RosterImportResult = { data /* migrate 済み */, added /* 行の順。「名前
 ```ts
 Item = { id ≤50, name 1〜30, target: 'staff' | 'client', kind: 'flag' | 'choice' | 'multi' | 'number' | 'startYear', options /* 1〜30字・30個 */ }
 TraitValue = boolean | string | string[] | number | null   // traits: itemId → 値（null＝未入力）。startYear は西暦の整数
-START_YEAR_MIN = 1900; START_YEAR_MAX = 2100
+START_YEAR_MIN = 1900; START_YEAR_MAX = 2100; isStartYear(n)   // 西暦の整数でその範囲か
 Condition = { itemId, op: 'is' | 'not' | 'in' | 'hasAny' | 'hasAll' | 'gte' | 'lte', value }
   // not は未入力も満たす。未入力はほかの op を満たさない
   // startYear の項目の value は年数で、その日の年 − 開始年（0 未満は 0）と比べる（matches の date。年単位）

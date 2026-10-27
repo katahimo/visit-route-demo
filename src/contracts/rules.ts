@@ -38,6 +38,8 @@ export type Item = z.infer<typeof itemSchema>;
 /** 開始年として受ける年（西暦の整数。画面と Excel で止める） */
 export const START_YEAR_MIN = 1900;
 export const START_YEAR_MAX = 2100;
+/** 開始年として受ける年か（西暦の整数で START_YEAR_MIN〜START_YEAR_MAX） */
+export const isStartYear = (n: number): boolean => Number.isInteger(n) && n >= START_YEAR_MIN && n <= START_YEAR_MAX;
 
 /** 値。flag=boolean、choice=string、multi=string[]、number=number、startYear=number（西暦）、未入力=null */
 export const traitValueSchema = z.union([z.boolean(), z.string(), z.array(z.string()), z.number(), z.null()]);

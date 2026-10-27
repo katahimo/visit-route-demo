@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Pattern } from '../contracts/documents';
 import type { Problem } from '../contracts/problem';
-import type { Condition, Item } from '../contracts/rules';
+import { type Condition, type Item, isStartYear } from '../contracts/rules';
 import { client, DATE, ITEMS, makeData, randomData, rule, staff, visit } from './fixtures';
 import { compile, conditionText, matches, routeCost, scheduleRoute, yearsSince } from './index';
 
@@ -35,6 +35,8 @@ describe('matches・conditionText', () => {
     expect(matches(gte3, since, null, '2026-10-27')).toBe(false);
     expect(yearsSince(2018, '2026-10-27')).toBe(8);
     expect(yearsSince(2030, '2026-10-27')).toBe(0);
+    expect([1900, 2018, 2100].map(isStartYear)).toEqual([true, true, true]);
+    expect([1899, 2101, 2018.5, 8].map(isStartYear)).toEqual([false, false, false, false]);
     expect(conditionText(gte3, since)).toBe('経験年数 3年以上');
   });
   it('表示文', () => {

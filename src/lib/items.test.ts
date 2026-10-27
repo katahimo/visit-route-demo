@@ -169,4 +169,16 @@ describe('選択肢の名前を変える・消す', () => {
     expect(d.staff[0]!.traits[one.id]).toBeNull();
     expect(d.clients[0]!.requirements).toEqual([]);
   });
+
+  it('選択肢から複数の最後の選択肢を消すと、値は未確認（null。ADR-0070）', () => {
+    const base = fixture();
+    const only: Item = { id: 'only', name: '得意', target: 'staff', kind: 'multi', options: ['家事'] };
+    const d0: DemoData = {
+      ...base,
+      items: [only],
+      staff: base.staff.map((s, i) => ({ ...s, traits: i === 0 ? { only: ['家事'] } : { only: [] } })),
+    };
+    const d = removeOption(d0, only, '家事');
+    expect(d.staff.map((s) => s.traits.only)).toEqual(d.staff.map(() => null));
+  });
 });
