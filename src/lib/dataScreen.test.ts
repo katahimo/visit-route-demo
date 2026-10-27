@@ -4,6 +4,7 @@ import {
   excelFileName,
   keepNote,
   keptSuffix,
+  otherOrgOf,
   rosterConfirmBody,
   rosterDoneText,
   rosterHasChanges,
@@ -12,6 +13,8 @@ import {
   tidyConfirmBody,
   tidyHasAny,
   tidyPreviewText,
+  withoutOrgState,
+  workbookConfirmBody,
   workbookCountsText,
 } from './dataScreen';
 import { tidyMonthLabel } from './tidy';
@@ -119,5 +122,44 @@ describe('古い訪問の片づけの文', () => {
     const body = tidyConfirmBody(some);
     expect(body).toMatch(/^4日分の、担当を組んだ・変えた訪問 3件と確定した内容 2日分を消します/);
     expect(body).toContain('消したものは戻せません');
+  });
+});
+
+describe('別の事業所の Excel（ADR-0006）', () => {
+  const org = (name: string) => ({ org: { ...createDemoData('2026-10-01').org, name } });
+
+  it('otherOrgOf：事業所名が同じなら null（前後の空白は問わない）、違えば両方の名前', () => {
+    expect(otherOrgOf(org('みどり訪問'), org(' みどり訪問 '))).toBeNull();
+    expect(otherOrgOf(org('みどり訪問'), org('あおば訪問'))).toEqual({ current: 'みどり訪問', read: 'あおば訪問' });
+  });
+
+  it('withoutOrgState：伝えた内容・振り直し・組み方の標準の記録を外し、ほかは変えない', () => {
+    const d = createDemoData('2026-10-01');
+    const withState = {
+      ...d,
+      standard: { at: 1, presetId: d.presets[0]!.id, from: '2026-10-05', weeks: 1 },
+    };
+    const r = withoutOrgState(withState);
+    expect(r.snapshots).toEqual({});
+    expect(r.reassigns).toEqual({});
+    expect(r.standard).toBeUndefined();
+    expect(r.visits).toBe(d.visits);
+    expect(r.staff).toBe(d.staff);
+  });
+
+  it('workbookConfirmBody：同じ事業所なら記録を残すと書き、別の事業所なら名前と消すことを書く', () => {
+    const same = workbookConfirmBody({ fileName: 'a.xlsx', counts: '3人', otherOrg: null, keep: '控え' });
+    expect(same).toContain('担当は Excel の内容');
+    expect(same).toContain('そのまま残します');
+    expect(same).not.toContain('別の事業所');
+    const other = workbookConfirmBody({
+      fileName: 'a.xlsx',
+      counts: '3人',
+      otherOrg: { current: 'みどり', read: 'あおば' },
+      keep: '控え',
+    });
+    expect(other).toContain('「あおば」は、いまの「みどり」と違います');
+    expect(other).toContain('消します');
+    expect(other.endsWith('控え')).toBe(true);
   });
 });

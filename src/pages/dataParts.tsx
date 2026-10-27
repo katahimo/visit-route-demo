@@ -110,6 +110,8 @@ export function TermsCard() {
 
 /** 控え（JSON）の書き出し・読み込み（PRD D2・D3・D227） */
 export function BackupCard(x: {
+  /** Excel の入出力が入か（ADR-0028 の excel。切っていれば Excel との使い分けの行を出さない） */
+  excelOn: boolean;
   lastExport: LastExport | null;
   error: string | null;
   onDownload: () => void;
@@ -123,8 +125,13 @@ export function BackupCard(x: {
       </SectionTitle>
       <Hint>
         <ul className="hint-list">
-          <li>訪問の担当や確定（伝えた内容）も含めて、データ一式を1つのファイル（JSON）にします。</li>
-          <li>別の端末や人へ渡すときや、控えに使います。</li>
+          <li>
+            訪問の担当・確定（伝えた内容）・振り直し・組み方の標準の記録も含めて、データ一式を1つのファイル（JSON）にします。
+          </li>
+          <li>別の端末や人へ渡すとき、控えに使います。中身を直すためのファイルではありません。</li>
+          {x.excelOn && (
+            <li>人が見て直すなら、下の「Excel」を使います（一覧で直せる代わりに、確定などの記録は入りません）。</li>
+          )}
           <li>
             「ファイルを選ぶ」で書き出したファイルを選ぶと、いまのデータと置き換えます。置き換える前に確かめます。
           </li>

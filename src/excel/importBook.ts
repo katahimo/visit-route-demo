@@ -219,9 +219,11 @@ export async function importWorkbook(buf: ArrayBuffer, base: DemoData): Promise<
     visitTypes,
     patterns,
     clientLeaves,
-    // 伝えた内容・振り直しの情報は Excel のシートに無い。今のものを残す（変わった所は「未連絡の変更」になる。ADR-0053）
+    // 伝えた内容・振り直しの情報・組み方の標準の記録は Excel のシートに無い。今のものを残す
+    // （変わった所は「未連絡の変更」になる。ADR-0053・ADR-0062。別の事業所のブックなら画面が消す：lib/dataScreen の withoutOrgState）
     snapshots: base.snapshots,
     reassigns: base.reassigns,
+    ...(base.standard ? { standard: base.standard } : {}),
     presets: preset.presets,
     scorePresetId: preset.scorePresetId,
   };

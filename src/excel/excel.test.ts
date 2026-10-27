@@ -39,6 +39,13 @@ describe('書き出し → 読み込み', () => {
     expect(r.baseDate).toBe(d.baseDate);
   });
 
+  it('組み方の標準の記録もブックに書かず、base から引き継ぐ（ADR-0062。無ければ無いまま）', async () => {
+    const d = base();
+    const std: DemoData = { ...d, standard: { at: 1, presetId: d.scorePresetId, from: d.baseDate, weeks: 1 } };
+    expect(ok(await importWorkbook(await toBuffer(std), d)).standard).toBeUndefined();
+    expect(ok(await importWorkbook(await toBuffer(d), std)).standard).toEqual(std.standard);
+  });
+
   it('いろいろな条件・特性・呼び方を変えたデータも戻る', async () => {
     const d = base();
     const changed: DemoData = {

@@ -49,6 +49,7 @@ export default function DataPage() {
       <TermsCard />
 
       <BackupCard
+        excelOn={excelOn}
         lastExport={lastExport.last}
         error={backup.error}
         onDownload={backup.download}
