@@ -8,7 +8,7 @@
   - エラー方針・冪等性の記載
   - ひな形のまま残っているプレースホルダー
   - 未決事項の件数
-  - 肥大化（ファイル・節の大きさ、更新日の行への変更履歴の書き込み）と、分けた詳細ファイルへのリンク切れ
+  - 肥大化（ファイル・節の大きさ、更新日の行への変更履歴の書き込み、AGENTS.md の大きさ）と、分けた詳細ファイルへのリンク切れ
 
 使い方:
   python3 check_design.py docs/design.md [--json]
@@ -47,6 +47,8 @@ TECH_WORDS = [
 # AI が1回で読み切れる目安（バイト）。超えたら詳細を docs/design/ に分ける
 MAX_FILE_BYTES = 120_000
 MAX_SECTION_BYTES = 30_000
+# AGENTS.md は毎回の作業の前に全部読むので小さく保つ。手順の詳細は docs/ に分けてリンクする
+MAX_AGENTS_BYTES = 15_000
 MAX_HEADER_LINE = 200  # 「更新日」などの行。長いのは変更履歴の書き込み（履歴は git に任せる）
 LINK = re.compile(r"\]\(([^)#\s]+\.md)(?:#[^)]*)?\)")
 
@@ -200,6 +202,12 @@ def check(path: Path) -> dict:
             continue
         if not (path.parent / target).is_file():
             add("ERROR", "リンク", f"リンク先がありません: {target}", "ファイルを作るかリンクを直す")
+    # 設計書（docs/design.md）の2つ上にある AGENTS.md
+    agents = path.resolve().parent.parent / "AGENTS.md"
+    if agents.is_file():
+        n = len(agents.read_bytes())
+        if n > MAX_AGENTS_BYTES:
+            add("WARN", "AGENTS.md", f"{n // 1000}KB あります（目安 {MAX_AGENTS_BYTES // 1000}KB。毎回の作業の前に全部読む）", "テストの確認項目・手順の詳細は docs/<名前>.md に分け、AGENTS.md にはルール・コマンド・リンクだけ残す")
 
     # 8. 未決事項
     open_items = 0

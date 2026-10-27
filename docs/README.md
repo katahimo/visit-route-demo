@@ -12,17 +12,19 @@ AI・人が「何を知りたいときに、どのファイルを読むか」を
 | 作業のルール・コマンド・ディレクトリ構成 | [../AGENTS.md](../AGENTS.md) |
 | 何を作るか・やらないこと・D番号の要件 | [prd.md](prd.md) §3 の索引 → テーマ別の `prd/*.md` を1つだけ |
 | 全体図・コンポーネントの責務・データの持ち主 | [design.md](design.md) §3・§4 |
-| 型・データの版・エラー・費用の物差し（契約） | [design.md](design.md) §5 と `src/contracts/` |
+| 型・データの版・エラー・費用の物差し（契約） | [design.md](design.md) §5（一覧・費用・エラー）→ 各型の詳細は [design/contracts.md](design/contracts.md)。正は `src/contracts/` |
 | 画面の仕様（ルート・部品・文言・data-testid） | [design/pages.md](design/pages.md) のルート一覧 → 画面別の `design/pages-*.md` |
 | なぜその案にしたか・捨てた案 | [adr/](adr/)（下の一覧） |
 | まだ決まっていないこと | [design.md](design.md) §8・[prd.md](prd.md) §8 |
 | 焼きなまし法と OR-Tools の比較の実測 | [optimization-benchmark.md](optimization-benchmark.md) |
+| e2e の走らせ方・書き方・環境変数・各スクリプトで確かめること | [e2e.md](e2e.md) |
 
 ## 画面別の設計（design/）
 
 | ファイル | 中身 |
 |---|---|
-| [pages.md](design/pages.md) | 共通事項（〈スタッフ〉の印を含む）・ルート一覧・メニュー（5項目と畳める子の項目）・下のタブ・設定のタブ・基本情報のタブ・Ctrl+Z・コマンドパレット・確認ダイアログ・機能の入り切り（画面側） |
+| [pages.md](design/pages.md) | 共通事項（〈スタッフ〉の印を含む）・ルート一覧・確認ダイアログ・機能の入り切り（画面側） |
+| [pages-nav.md](design/pages-nav.md) | メニュー（5項目と畳める子の項目）・下のタブ・引き出し・設定のタブ・基本情報のタブ・予定を組むの段・Ctrl+Z・コマンドパレット |
 | [pages-common.md](design/pages-common.md) | 右の欄・予定の共通の部品（モードの切り替え・操作の行・AI で組む ▾ の範囲・提案の帯・複数選択・全体の元に戻す）・訪問の札の共通の部品（札の3段と入れ物・見た目の印・選ぶ・1行1訪問の行・表のマスの札と「+N」・ドラッグの落とし先の判定）・スマホの日ごとのリスト・帯をキーで動かす・訪問の詳細の欄（VisitPanel・visitOps）・名前の詳細の吹き出し・用語・ツアー・作り直しの帯・リンク・メール・道順 |
 | [pages-bars.md](design/pages-bars.md) | 3段の時間帯のバー・ひと目で分かる表示（月・週・日・空き状況・稼働で共通） |
 | [pages-home.md](design/pages-home.md) | ホーム（今日やること） |
@@ -40,6 +42,7 @@ AI・人が「何を知りたいときに、どのファイルを読むか」を
 | [pages-standard.md](design/pages-standard.md) | 組み方の標準（1段ずつ進む段・標準の週の期間・考え方ごとの案の比較（表と日で見る時間軸・地図）・登録・`lib/standard`。予定を組むの2〜3段目） |
 | [pages-data.md](design/pages-data.md) | データ（控え・直前の状態・Excel・初期化・片づけ・データを守る知らせ）・管理者設定 |
 | [mail-schedule.md](design/mail-schedule.md) | メールの予約送信（事業所の Google Apps Script とのやりとりの契約・送る時刻・この端末の覚え・GAS のシート） |
+| [contracts.md](design/contracts.md) | 契約の詳細（design.md §5 から分けた節）：データの形・版・条件・Problem・振り直し・繰り返し・空き状況・住所の検索・メール・道順・Excel のブックの形 |
 
 ## ADR 一覧
 
