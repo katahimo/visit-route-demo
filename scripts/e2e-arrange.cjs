@@ -12,7 +12,7 @@
 // 終了コード：全部通れば 0、通らないものがあれば 1。ページのエラー（pageerror）も失敗に数える
 const path = require('node:path');
 const { answerConfirms } = require('./lib/confirmDialog.cjs');
-const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, hashOf, runSteps, settle } = require('./lib/env.cjs');
+const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, hashOf, runSteps, settle, until } = require('./lib/env.cjs');
 const { markStandard } = require('./lib/standard.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
 
@@ -249,11 +249,18 @@ async function discard(page) {
 }
 
 /** 保存した繰り返しの時刻（先頭の繰り返しの共通の時刻・曜日ごとの時刻を JSON で） */
-const patternTimes = (page, id) =>
+/** その繰り返しの〈利用者さん〉の繰り返し（時刻を直すと今日から分けるので、〈利用者さん〉ごとまとめて見る） */
+const clientPatterns = (page, id) =>
   page.evaluate(
     ({ k, id }) => {
-      const p = JSON.parse(localStorage.getItem(k)).patterns.find((x) => x.id === id);
-      return JSON.stringify([p.earliestStart, p.latestStart, p.dayTimes ?? null]);
+      const all = JSON.parse(localStorage.getItem(k)).patterns;
+      const c = all.find((x) => x.id === id).clientId;
+      return JSON.stringify(
+        all
+          .filter((x) => x.clientId === c)
+          .map((x) => [x.weekdays, x.earliestStart, x.latestStart, x.dayTimes ?? [], x.from, x.to])
+          .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))),
+      );
     },
     { k: STORAGE_KEY, id },
   );
@@ -278,13 +285,13 @@ async function basics(page) {
   );
   check((await page.getByTestId('basics-staff-link').count()) > 0, 'マスに標準の担当（〈スタッフ〉の画面へのリンク）');
   check((await page.getByTestId('basics-compat').count()) === rows, '行ごとに相性の列');
-  // 時刻を押すと直す欄が開き、決めると繰り返しの時刻が変わる（1回の update。元に戻せる）
+  // 時刻を押すと直す欄が開き、決めると今日から分けて繰り返しの時刻が変わる（確認は答える。1回の update。元に戻せる）
   const cell = page
     .getByTestId('basics-cell')
     .filter({ has: page.getByTestId('basics-time') })
     .first();
   const pid = await cell.getAttribute('data-pattern');
-  const before = await patternTimes(page, pid);
+  const before = await clientPatterns(page, pid);
   const time = cell.getByTestId('basics-time');
   const beforeText = (await time.innerText()).trim();
   await time.click();
@@ -294,15 +301,8 @@ async function basics(page) {
   await page.getByTestId('basics-editor-early').fill('05:00');
   await page.getByTestId('basics-editor-ok').click();
   await editor.waitFor({ state: 'detached', timeout: 10000 });
-  await page.waitForFunction(
-    ({ k, id, b }) => {
-      const p = JSON.parse(localStorage.getItem(k)).patterns.find((x) => x.id === id);
-      return JSON.stringify([p.earliestStart, p.latestStart, p.dayTimes ?? null]) !== b;
-    },
-    { k: STORAGE_KEY, id: pid, b: before },
-    { timeout: 10000 },
-  );
-  check((await patternTimes(page, pid)) !== before, '時刻を決めると繰り返しの時刻が変わる', before);
+  await until(async () => (await clientPatterns(page, pid)) !== before, 10000, 100).catch(() => {});
+  check((await clientPatterns(page, pid)) !== before, '時刻を決めると繰り返しの時刻が変わる（今日から分ける）', before);
   check(
     (await cell.getByTestId('basics-time').innerText()).trim().startsWith('05:00') ||
       (await cell.getByTestId('basics-time').innerText()).trim().startsWith('5:00'),
@@ -311,15 +311,8 @@ async function basics(page) {
   );
   await page.locator('h1').click(); // 入力欄の外にフォーカスを置いて Ctrl+Z（全体の元に戻す）
   await page.keyboard.press('Control+z');
-  await page.waitForFunction(
-    ({ k, id, b }) => {
-      const p = JSON.parse(localStorage.getItem(k)).patterns.find((x) => x.id === id);
-      return JSON.stringify([p.earliestStart, p.latestStart, p.dayTimes ?? null]) === b;
-    },
-    { k: STORAGE_KEY, id: pid, b: before },
-    { timeout: 10000 },
-  );
-  check((await patternTimes(page, pid)) === before, 'Ctrl+Z で時刻が戻る（1手）');
+  await until(async () => (await clientPatterns(page, pid)) === before, 10000, 100).catch(() => {});
+  check((await clientPatterns(page, pid)) === before, 'Ctrl+Z で時刻が戻る（1手）');
   // 名前から〈利用者さん〉の画面へ
   await page.getByTestId('basics-client-link').first().click();
   await page.waitForURL(/#\/clients\/[^/]+$/, { timeout: 10000 });
