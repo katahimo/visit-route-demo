@@ -1,11 +1,11 @@
 # 〈利用者さん〉の一覧と、〈利用者さん〉・〈スタッフ〉の画面・住所の入力・絞り込み（共通部品）
 
-> この画面のファイル：`src/pages/ClientsPage.tsx`（一覧の表 `clientsTable.tsx`・状態 `useClientsList.ts`）・`ClientPage.tsx`（見出しとタブ `clientPageHeader.tsx`・タブ `clientBasicTab.tsx`・`clientBasicSections.tsx`・`clientStaffingTab.tsx`・`clientScheduleTab.tsx`・節の編集 `useClientEdit.ts`・保存 `useClientSave.ts`・カレンダーの URL `useClientCal.ts`）・`PatternsSection.tsx`（一覧 `patternsList.tsx`・入力欄 `patternsForm.tsx`・状態 `usePatternsFlow.ts`）・`ClientLeavesSection.tsx`（`clientLeaveParts.tsx`・`useClientLeaves.ts`）・`PlaceAllPanel.tsx`（`usePlaceAllRun.ts`）、`src/components/personPage.tsx`（`personPage.css`）・`PersonCalendar.tsx`（`personCalendar.css`。区画 `personCalendarParts.tsx`・状態と処理 `usePersonCalendar.ts`・ドラッグの影 `usePcalGhost.ts`・空き時間に入れる知らせ `useInsertNotice.ts`）・`personView.tsx`（`personView.css`）・`placeLookup.tsx`（`placeLookup.css`・`useAddressLookup.ts`）・`ClientFilter.tsx`（`clientFilter.css`・`useClientFilterModel.ts`）・`ClientPicker.tsx`（`clientPicker.css`・`ClientPickerParts.tsx`・`useClientPicker.ts`・`usePickerLookups.ts`・`clientPickerKeys.ts`・`clientPickerTypes.ts`）・`VisitRules.tsx`・`PickChips.tsx`、`src/lib/personPage.ts`・`viewMode.ts`・`visitLists.ts`（`staffVisitsIn`）・`visitOps.ts`（`endPatternOp`）・`clientFilter.ts`・`area.ts`・`search.ts`・`leaves.ts`・`patternText.ts`・`tentative.ts`・`clientStage.ts`・`addressLookup.ts`・`geocode.ts`・`postalCode.ts`・`placeAll.ts`・`clientEdit.ts`・`newClient.ts`・`patternForm.ts`・`patternConfirm.ts`。関連 ADR：0012・0013・0014・0015・0016（追記を含む）・0017・0021・0026・0051・0052・0056。関連 PRD：D36〜D40・D47・D60〜D62・D64〜D66・D68・D86〜D92・D108〜D112・D285・D118〜D121・D220・D308〜D313・D339〜D341。
+> この画面のファイル：`src/pages/ClientsPage.tsx`（一覧の表 `clientsTable.tsx`・状態 `useClientsList.ts`。名簿の欄 `src/components/RosterCard.tsx`・`useRosterCard.ts`・`useRosterImport.ts`）・`ClientPage.tsx`（見出しとタブ `clientPageHeader.tsx`・タブ `clientBasicTab.tsx`・`clientBasicSections.tsx`・`clientStaffingTab.tsx`・`clientScheduleTab.tsx`・節の編集 `useClientEdit.ts`・保存 `useClientSave.ts`・カレンダーの URL `useClientCal.ts`）・`PatternsSection.tsx`（一覧 `patternsList.tsx`・入力欄 `patternsForm.tsx`・状態 `usePatternsFlow.ts`）・`ClientLeavesSection.tsx`（`clientLeaveParts.tsx`・`useClientLeaves.ts`）・`PlaceAllPanel.tsx`（`usePlaceAllRun.ts`）、`src/components/personPage.tsx`（`personPage.css`）・`PersonCalendar.tsx`（`personCalendar.css`。区画 `personCalendarParts.tsx`・状態と処理 `usePersonCalendar.ts`・ドラッグの影 `usePcalGhost.ts`・空き時間に入れる知らせ `useInsertNotice.ts`）・`personView.tsx`（`personView.css`）・`placeLookup.tsx`（`placeLookup.css`・`useAddressLookup.ts`）・`ClientFilter.tsx`（`clientFilter.css`・`useClientFilterModel.ts`）・`ClientPicker.tsx`（`clientPicker.css`・`ClientPickerParts.tsx`・`useClientPicker.ts`・`usePickerLookups.ts`・`clientPickerKeys.ts`・`clientPickerTypes.ts`）・`VisitRules.tsx`・`PickChips.tsx`、`src/lib/personPage.ts`・`viewMode.ts`・`visitLists.ts`（`staffVisitsIn`）・`visitOps.ts`（`endPatternOp`）・`clientFilter.ts`・`area.ts`・`search.ts`・`leaves.ts`・`patternText.ts`・`tentative.ts`・`clientStage.ts`・`addressLookup.ts`・`geocode.ts`・`postalCode.ts`・`placeAll.ts`・`clientEdit.ts`・`newClient.ts`・`patternForm.ts`・`patternConfirm.ts`。関連 ADR：0012・0013・0014・0015・0016（追記を含む）・0017・0021・0026・0051・0052・0056。関連 PRD：D36〜D40・D47・D60〜D62・D64〜D66・D68・D86〜D92・D108〜D112・D285・D118〜D121・D220・D308〜D313・D339〜D341。
 > 〈スタッフ〉の画面の中身は [pages-staff.md](pages-staff.md)（画面の殻・タブ・節・予定のカレンダーはこのファイルと共通）。訪問の詳細の欄は [pages-common.md](pages-common.md)。
 
 ### 〈利用者さん〉一覧（`#/clients`）
 
-- 見出し「〈利用者さん〉一覧」。題名の下に人のタブ（`PeopleTabs`。[pages.md](pages.md)。PRD D326）。見出しの右に主ボタン「〈利用者さん〉を追加」（`client-add`。`#/clients/new` へのリンク）
+- 見出し「〈利用者さん〉一覧」。題名の下に基本情報のタブ（`BasicsNav`。上に予定を組むの段（1 基本情報が今の段）。[pages.md](pages.md)・[pages-basics.md](pages-basics.md)。PRD D326・D362。ADR-0067）。見出しの右に主ボタン「〈利用者さん〉を追加」（`client-add`。`#/clients/new` へのリンク）
 - 一覧の上に `ClientFilter`（`clients-filter`。画面の状態。URL に残さない。既定 `EMPTY_FILTER`）。期間は選んでいる日（`useDay`）を含む週（月〜日）で、`weekDay` を7日分作って `filterFacts` に渡す。終了の人は「終了の人も出す」のときだけ出す
 - 狭い画面（600px 以下。PRD D220）：絞り込みの欄の中身（`ClientFilter` と段階の説明）を「絞り込み（N）」のボタン（`narrow-filter-toggle`。`aria-expanded`・`aria-controls`）の下に畳み、横に「N人を表示」（`narrow-filter-count`）。N は `activeFilterCount`（下）。はじめは畳み、開いたかは画面の中だけ。広い画面ではボタンを出さずいつも開いたまま
 - 一覧の上に「位置の無い〈利用者さん〉」のカード（下の「まとめて地図に置く」）。置けなかった人の「編集」はその人の画面の住所の節（`#/clients/:id?tab=basic&edit=place`。開いたら URL の `edit` を消し、節の無いタブ（予定）で開いたら節のタブへ移す）
@@ -14,11 +14,22 @@
 - 狭い画面（PRD D220）：一覧の表（`narrow-clients`）は1人を1枚のカードに（[pages.md](pages.md) の「狭い画面の表」）。1行目に名前（よみ・住所）と状態（段階・仮）、続けて「位置」・「特性」・「〈スタッフ〉に求めること」・「いつもの担当」（限の印も）、開くは右下
 - `?id=`（古いリンク・ブックマーク）：その人がいればその人の画面へ `replace` で移る。いなければ URL から消すだけ
 
+- 見出しの右、「〈利用者さん〉を追加」の左に「Excel・CSV」（`roster-toggle`。下の「名簿の欄」）
+
+#### 名簿の欄（〈利用者さん〉一覧・〈スタッフ〉一覧。PRD D103〜D107・D365。ADR-0020・ADR-0068）
+
+- 部品 `components/RosterCard`（見出しのボタン `RosterButton`・欄 `RosterCard`）、状態と処理 `components/useRosterCard`、読み込みの確かめ `components/useRosterImport`。`excel` を切っていればボタンも欄も出さない
+- 見出しの「Excel・CSV」（`aria-expanded`・`aria-controls`）で一覧の上に欄（`section.roster-card`・`roster-card`）を開け閉めする。開いたかは画面の中だけ。欄の右上に「閉じる」（`roster-close`）
+- 「Excel に書き出す」（`roster-export-xlsx`。`exportRosterWorkbook`）・「CSV に書き出す」（`roster-export-csv`。`exportRosterCsv`。BOM 付きの UTF-8）。ファイル名は `rosterFileName`（`visit-route-demo-clients-YYYY-MM-DD.csv` など英字だけ）。名簿の書き出しは「最後に書き出した日」に数えない
+- 読み込み方 `roster-mode`：追加・更新（ファイルに無い人はそのまま）／総入れ替え（ファイルに無い人を〈スタッフ〉は休止、〈利用者さん〉は段階「終了」にする。消しはしない）
+- 読み込み `FilePick`（`roster-file`・caption「読み込む〈呼び方〉の名簿（Excel・CSV）」・.xlsx・.csv・.tsv・.txt）。.xlsx か CSV かは中身で、CSV の文字コードは `lib/csv` の `decodeText` で見分ける。確認の本文に読んだ形（`rosterConfirmBody`。控えの文は「データの画面の「直前の状態に戻す」」）。確認の後にデータが変わっていないかを見直す（入らなければ控えを前の世代に戻す）
+- 〈スタッフ〉の名簿で最終勤務日が入れば、トーストで「最終勤務日のある〈スタッフ〉」の欄を指す（`offboard` を切っていれば指さない。PRD D209）
+
 ### 〈利用者さん〉・〈スタッフ〉の画面の殻（PRD D308。ADR-0052）
 
 #### ルートと状態
 
-- `#/clients/:id`（`pages/ClientPage`）・`#/staff/:staffId`（`pages/StaffPersonPage`）。`new` は新しい人。メニューの印・上の帯の名前は一覧と同じ（`lib/nav` の `activeNavPath` が `/clients/:id` を `/clients` に当てる。`tabClick` は一覧の項目を押すと一覧へ移る）。初回の案内ツアーはこの URL で開いたときは出さない（`lib/tour` の `shouldAutoOpenTour`）
+- `#/clients/:id`（`pages/ClientPage`）・`#/staff/:staffId`（`pages/StaffPersonPage`）。`new` は新しい人。メニューの印（予定を組むの子「基本情報」）・上の帯の名前（「基本情報・利用者さん一覧」）は一覧と同じ（`lib/nav` の `activeNavPath` が `/clients/:id` を `/clients` に当てる。`tabClick` は一覧の項目を押すと一覧へ移る）。初回の案内ツアーはこの URL で開いたときは出さない（`lib/tour` の `shouldAutoOpenTour`）
 - 外側の部品が「URL の人」と「開いている人」を分けて持つ。URL の人が替わったら（パレット・吹き出し・hash の書き換え）、変更があれば確かめ（確認は画面の移動で待っている確認を取り消す処理のあとに出す）、断れば元の人の URL（クエリも）へ `replace` で戻す。中身は開いている人の ID を key にして作り直す。App の `Guarded` の ErrorBoundary の key は `/clients/:id` にそろえる（人が替わっても画面を作り直さない）
 - いない人の URL は一覧へ `replace`（`state.missing`）し、一覧で「その〈利用者さん〉は見つかりません（消されたか、URL が違います）」と知らせる
 - 外枠 `person-view`（`data-kind`＝client／staff・`data-id`。新しい人は空）。`.person-view` の dl の並び（`personView.css`）を使う

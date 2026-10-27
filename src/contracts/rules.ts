@@ -14,8 +14,12 @@ export const DROP_POINTS = 10000;
  */
 export const KEEP_DROP_POINTS = DROP_POINTS * 10;
 
-/** あり/なし・選択肢から1つ・選択肢から複数・数値 */
-export const ITEM_KINDS = ['flag', 'choice', 'multi', 'number'] as const;
+/**
+ * あり/なし・選択肢から1つ・選択肢から複数・数値・開始年（ADR-0070）。
+ * 開始年は始めた年（西暦）を持ち、条件はその日までの年数（その日の年 − 開始年。0 未満は 0）で比べる（例：経験年数）。
+ * 持つ値が変わらないので、年が変わっても入れ直さずに年数が増える
+ */
+export const ITEM_KINDS = ['flag', 'choice', 'multi', 'number', 'startYear'] as const;
 export type ItemKind = (typeof ITEM_KINDS)[number];
 /** その項目の値を持つのはスタッフか訪問先か */
 export const ITEM_TARGETS = ['staff', 'client'] as const;
@@ -31,7 +35,13 @@ export const itemSchema = z.object({
 });
 export type Item = z.infer<typeof itemSchema>;
 
-/** 値。flag=boolean、choice=string、multi=string[]、number=number、未入力=null */
+/** 開始年として受ける年（西暦の整数。画面と Excel で止める） */
+export const START_YEAR_MIN = 1900;
+export const START_YEAR_MAX = 2100;
+/** 開始年として受ける年か（西暦の整数で START_YEAR_MIN〜START_YEAR_MAX） */
+export const isStartYear = (n: number): boolean => Number.isInteger(n) && n >= START_YEAR_MIN && n <= START_YEAR_MAX;
+
+/** 値。flag=boolean、choice=string、multi=string[]、number=number、startYear=number（西暦）、未入力=null */
 export const traitValueSchema = z.union([z.boolean(), z.string(), z.array(z.string()), z.number(), z.null()]);
 export type TraitValue = z.infer<typeof traitValueSchema>;
 /** itemId → 値 */
@@ -43,6 +53,7 @@ export type Traits = z.infer<typeof traitsSchema>;
  * is：flag/choice/number が value と等しい。not：等しくない（未入力は満たす）
  * in：choice が value（配列）のどれか。hasAny/hasAll：multi が value（配列）のどれか/すべてを含む
  * gte/lte：number が value 以上/以下。未入力（null）は is/in/hasAny/hasAll/gte/lte を満たさない
+ * startYear の項目の is/not/gte/lte は、開始年でなく、その日までの年数を value（年数）と比べる（ADR-0070）
  */
 export const OPS = ['is', 'not', 'in', 'hasAny', 'hasAll', 'gte', 'lte'] as const;
 export type Op = (typeof OPS)[number];

@@ -1,6 +1,6 @@
 name: e2e（本物のブラウザ）
 
-# PR・手動・夜間に、速い検査（lint・型・ユニットテスト・コードの検査）と e2e（scripts/e2e-*.cjs を @playwright/test で。ADR-0029）を並列に走らせる。
+# PR・手動・夜間に、速い検査（lint・型・ユニットテスト・コードの検査・PRD の検査）と e2e（scripts/e2e-*.cjs を @playwright/test で。ADR-0029）を並列に走らせる。
 # e2e は shard で4つのジョブに分け、速さを見る perf は別のジョブで1本ずつ。
 # ブラウザと依存は Playwright の公式イメージに入っているので、毎回のインストール（約3分）をしない。
 # 公開（deploy.yml）はまだこれを待たない
@@ -40,6 +40,8 @@ jobs:
       - run: npm run typecheck
       # 設計の決まり（層の依存・循環 import・長い関数・使われない export）の違反を基準より増やさない（AGENTS.md）
       - run: npm run check:code
+      # PRD の索引・D番号・廃止の行がテーマ別ファイルとそろっているか（AGENTS.md「規約」）
+      - run: npm run check:prd
       - run: npm test
 
   e2e:

@@ -26,7 +26,8 @@ export const INITIAL_ITEMS: Item[] = [
     // 理学療法士・作業療法士・言語聴覚士は訪問の種類「リハビリ」の担当に必要（ADR-0012）
     options: ['介護福祉士', '看護師', '保育士', '初任者研修', '理学療法士', '作業療法士', '言語聴覚士'],
   },
-  { id: ITEM_ID.experience, name: '経験年数', target: 'staff', kind: 'number', options: [] },
+  // 始めた年を持ち、条件は年数で比べる（ADR-0070）
+  { id: ITEM_ID.experience, name: '経験年数', target: 'staff', kind: 'startYear', options: [] },
   {
     id: ITEM_ID.specialty,
     name: '得意',
@@ -81,7 +82,7 @@ export const STAFF_SEEDS: StaffSeed[] = [
     traits: {
       gender: '女性',
       qualification: ['介護福祉士', '看護師', '保育士'],
-      experience: 12,
+      experience: 2014,
       specialty: ['高齢', '話し相手'],
       smoker: false,
       petOk: true,
@@ -100,8 +101,8 @@ export const STAFF_SEEDS: StaffSeed[] = [
     traits: {
       gender: '男性',
       qualification: ['初任者研修'],
-      experience: 2,
-      specialty: ['家事', '障害'],
+      experience: 2024,
+      specialty: ['障害', '家事'],
       smoker: true,
       petOk: true,
     },
@@ -119,7 +120,7 @@ export const STAFF_SEEDS: StaffSeed[] = [
     traits: {
       gender: '女性',
       qualification: ['保育士', '初任者研修'],
-      experience: 5,
+      experience: 2021,
       specialty: ['子ども', '家事', '料理'],
       smoker: false,
       petOk: true,
@@ -139,7 +140,7 @@ export const STAFF_SEEDS: StaffSeed[] = [
       gender: '男性',
       // 理学療法士はリハビリの担当（ADR-0012）
       qualification: ['介護福祉士', '理学療法士'],
-      experience: 8,
+      experience: 2018,
       specialty: ['高齢', '障害'],
       smoker: false,
       petOk: false,
@@ -158,7 +159,7 @@ export const STAFF_SEEDS: StaffSeed[] = [
     traits: {
       gender: '男性',
       qualification: ['保育士', '初任者研修'],
-      experience: 1,
+      experience: 2025,
       specialty: ['家事'],
       smoker: true,
       petOk: true,
@@ -176,8 +177,8 @@ export const STAFF_SEEDS: StaffSeed[] = [
     shift: std,
     traits: {
       gender: '女性',
-      qualification: ['保育士', '看護師'],
-      experience: 6,
+      qualification: ['看護師', '保育士'],
+      experience: 2020,
       specialty: ['子ども', '障害'],
       smoker: false,
       petOk: true,
@@ -197,8 +198,8 @@ export const STAFF_SEEDS: StaffSeed[] = [
       gender: '女性',
       // 理学療法士はリハビリの担当（ADR-0012）
       qualification: ['介護福祉士', '初任者研修', '理学療法士'],
-      experience: 15,
-      specialty: ['高齢', '話し相手', '家事', '料理'],
+      experience: 2011,
+      specialty: ['高齢', '家事', '料理', '話し相手'],
       smoker: false,
       petOk: false,
     },
@@ -216,7 +217,7 @@ export const STAFF_SEEDS: StaffSeed[] = [
     traits: {
       gender: '男性',
       qualification: ['保育士', '初任者研修'],
-      experience: 3,
+      experience: 2023,
       specialty: ['障害', '話し相手'],
       smoker: true,
       petOk: true,

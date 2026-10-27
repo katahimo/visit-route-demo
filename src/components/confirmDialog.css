@@ -104,3 +104,13 @@
     display: none !important;
   }
 }
+
+/* 確認の中の入力欄（名前など。ADR-0065） */
+.confirm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.confirm-field input {
+  width: 100%;
+}

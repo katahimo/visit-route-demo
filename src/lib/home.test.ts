@@ -70,7 +70,7 @@ describe('homeTasks（版2）', () => {
       data: { absences: [], staff: [] },
     });
     expect(r.tasks.map((t) => t.kind)).toEqual(['standard', 'today']);
-    expect(r.tasks[0]).toMatchObject({ tone: 'todo', to: `/arrange?date=${TODAY}` });
+    expect(r.tasks[0]).toMatchObject({ tone: 'todo', to: '/standard' });
     expect(r.ready).toBe(false);
   });
   it('何も無い：今日の訪問は無い知らせだけで、準備はできている', () => {

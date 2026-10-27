@@ -27,6 +27,7 @@ import {
 import { useDemoData } from '../store';
 import '../components/features.css';
 import { SettingsTabs } from '../components/SettingsTabs';
+import { MailScheduleSettingsCard } from './mailScheduleSettings';
 
 /**
  * 管理者設定（`#/settings`。PRD D210〜D212。ADR-0028）：機能の入り切り。だれでも開ける（ログイン・鍵なし）。
@@ -167,6 +168,9 @@ export default function SettingsPage() {
       {FEATURE_GROUPS.map((g) => (
         <FeatureGroupCard key={g} group={g} features={features} terms={terms} onToggle={toggle} />
       ))}
+
+      {/* メールの予約送信（PRD D366。ADR-0069）：メールの機能が入のときだけ */}
+      {isOn(features, 'mail') && <MailScheduleSettingsCard />}
     </div>
   );
 }

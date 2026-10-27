@@ -82,9 +82,11 @@ describe('候補', () => {
       '月の予定',
       '週の予定',
       '日の予定',
-      '担当を組む',
+      '条件の重み',
       '組み方の標準',
+      '担当を組む',
       '空き状況',
+      '予定と相性',
       '利用者さん一覧',
       'スタッフ一覧',
       '相性',
@@ -92,13 +94,14 @@ describe('候補', () => {
       '勤務の見込み',
       '訪問の種類',
       '特性の項目',
-      '条件の重み',
       '管理者設定',
       'データ',
     ]);
-    expect(s.find((x) => x.to === '/clients')!.hint).toBe('人');
+    expect(s.find((x) => x.to === '/clients')!.hint).toBe('基本情報');
     expect(s.find((x) => x.to === '/data')!.hint).toBe('設定');
     expect(s.find((x) => x.to === '/plan')!.hint).toBe('予定');
+    // 条件の重みは予定を組むの1段目（ADR-0065）
+    expect(s.find((x) => x.to === '/rules')!.hint).toBe('予定を組む');
   });
   it('名前を変えた画面は前の名前でも引ける（月間・週間・日の画面・稼働時間・稼働の見込み。PRD D230）', () => {
     const scr = paletteScreens(screenSections(terms, {}), terms);
@@ -117,7 +120,8 @@ describe('候補', () => {
     const scr = paletteScreens(screenSections(terms, {}), terms);
     const hit = (q: string) => filterPalette(scr, q).flat.map((i) => i.to);
     expect(hit('よてい')).toEqual(expect.arrayContaining(['/month', '/week', '/plan']));
-    expect(hit('せってい')).toEqual(['/types', '/items', '/rules', '/settings', '/data']);
+    expect(hit('せってい')).toEqual(['/types', '/items', '/settings', '/data']);
+    expect(hit('じょうけんのおもみ')).toEqual(['/rules']);
     expect(hit('きんむのみこみ')).toEqual(['/workload']);
     // 案を比べるは担当を組むの「案を比べる」から開く（パレットには出さない。PRD D331・ADR-0063）
     expect(hit('あんをくらべる')).toEqual([]);

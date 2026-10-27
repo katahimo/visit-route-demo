@@ -3,7 +3,7 @@ import { useId, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDay } from '../components/day';
 import { EmptyNext } from '../components/EmptyNext';
-import { PeopleTabs } from '../components/SettingsTabs';
+import { BasicsNav } from '../components/SettingsTabs';
 import { useToast } from '../components/Toast';
 import { PageHeader } from '../components/ui';
 import { useFeature } from '../components/useFeature';
@@ -101,7 +101,7 @@ export default function WorkloadPage() {
   return (
     <div className="stack">
       <PageHeader
-        nav={<PeopleTabs />}
+        nav={<BasicsNav />}
         icon={Timer}
         title="勤務の見込み"
         lead={`予定から見込んだ、${terms.staff}ごとの出勤〜退勤（拘束）・移動・空き時間（待ち）の時間${fareFeature ? 'と交通費' : ''}です。実績ではありません`}

@@ -21,7 +21,7 @@ export function useLastExport() {
 }
 
 /** 控え（JSON）の書き出し・読み込み */
-export function useDataBackup(x: { markExported: (kind: ExportKind) => void; clearLastDay: () => void }) {
+export function useDataBackup(x: { markExported: (kind: ExportKind) => void }) {
   const { data, replace, keepPrevious } = useDemoData();
   const toast = useToast();
   const confirmDialog = useConfirm();
@@ -56,8 +56,6 @@ export function useDataBackup(x: { markExported: (kind: ExportKind) => void; cle
       });
       if (!ok) return;
       const keep = keepPrevious('控えの読み込み');
-      // データを置き換えたら、前の名簿の知らせは消す（PRD D209）
-      x.clearLastDay();
       replace(r);
       toast(`読み込みました${keptSuffix(keep)}`);
     } catch (e) {
@@ -68,8 +66,8 @@ export function useDataBackup(x: { markExported: (kind: ExportKind) => void; cle
   return { error, download, load };
 }
 
-/** 初期状態に戻す・直前の状態に戻す（どちらも確認つき。戻したら前の名簿の知らせは消す） */
-export function useDataRestore(x: { clearLastDay: () => void }) {
+/** 初期状態に戻す・直前の状態に戻す（どちらも確認つき） */
+export function useDataRestore() {
   const { reset, keepPrevious, restorePrevious, previous } = useDemoData();
   const toast = useToast();
   const confirmDialog = useConfirm();
@@ -84,7 +82,6 @@ export function useDataRestore(x: { clearLastDay: () => void }) {
     if (!ok) return;
     // 確認で OK になってから控えを残す（確認中に閉じても控えは残らない。PRD D227）
     const keep = keepPrevious('初期状態に戻す');
-    x.clearLastDay();
     reset();
     toast(`初期状態に戻しました${keptSuffix(keep)}`);
   };
@@ -104,7 +101,6 @@ export function useDataRestore(x: { clearLastDay: () => void }) {
       toast(err);
       return;
     }
-    x.clearLastDay();
     toast('直前の状態に戻しました');
   };
 

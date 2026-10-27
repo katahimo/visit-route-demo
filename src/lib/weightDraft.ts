@@ -1,11 +1,8 @@
-// 条件の重みの画面（#/rules）の下書き（PRD D286。ADR-0048）：表の重みのスライダー・必須の切り替えは、動かしても保存せず
-// 画面の中の下書き（型ごとの重み・必須）に置き、「変更を確定」で点数の基準のプリセットにまとめて書く。
-// ここは下書きの差分・確定の中身・影響する日を数える純粋関数。データを書き換えるのは画面の update(fn) だけ
-import type { DemoData } from '../contracts/data';
-import { HARDABLE, type Rule, type RuleType } from '../contracts/rules';
-import { scoreRulesOf } from '../seed/presets';
+// 条件の重みの画面（#/rules）の下書き（PRD D286。ADR-0048・ADR-0065）：表の重みのスライダー・必須の切り替えは、動かしても保存せず
+// 画面の中の下書き（型ごとの重み・必須）に置き、「新しい考え方として保存」で新しいプリセットにする（lib/presets の saveDraftAsPreset）。
+// ここは下書きの差分・保存の確認の文を作る純粋関数。データを書き換えるのは画面の update(fn) だけ
+import { HARDABLE, type Preset, type Rule, type RuleType } from '../contracts/rules';
 import { weightLocked } from './common';
-import { setBasisWeight } from './presets';
 
 /** 型ごとの重み・必須（必須にできない型は hard を false にそろえる） */
 export type WeightValue = { weight: number; hard: boolean };
@@ -129,27 +126,21 @@ export const changeText = (c: Pick<WeightChange, 'type' | 'before' | 'after'>): 
   `${weightText(c.type, c.before)}→${weightText(c.type, c.after)}`;
 
 /**
- * 確定：下書きの型ごとに点数の基準のプリセットを直す（条件の重みも基準にそろう。ADR-0035 の setBasisWeight）。
- * 書くのは触った欄だけで、ほかの欄は d の保存済みの値のまま（別のタブで変わった必須などを上書きしない）
+ * 保存するプリセットの重み（ADR-0065）：基準のプリセットの保存済みの重みに、下書きの触った欄を重ねたもの（深く写す。
+ * 触っていない欄は保存済みの値のまま＝別のタブで変わった必須などを上書きしない）
  */
-export function applyDraft(d: DemoData, draft: WeightDraft): DemoData {
-  const saved = savedWeights(scoreRulesOf(d));
-  let out = d;
-  for (const [t, part] of Object.entries(draft) as [RuleType, Partial<WeightValue>][]) {
-    const base = saved[t];
-    if (!base) continue;
-    const v = over(t, base, part);
-    if (!same(v, base)) out = setBasisWeight(out, t, v);
-  }
-  return out;
+export function draftWeights(base: Preset['weights'], draft: WeightDraft): Preset['weights'] {
+  return Object.fromEntries(
+    (Object.entries(base) as [RuleType, WeightValue][]).map(([t, v]) => [t, over(t, v, draft[t])]),
+  ) as Preset['weights'];
 }
 
-/** 確認の見出し（PRD D286） */
-export const confirmTitle = (n: number): string => `重みの変更（${n}件）を確定しますか？`;
+/** 保存の確認の見出し（PRD D286。ADR-0065） */
+export const confirmTitle = (n: number): string => `新しい考え方として保存しますか？（${n}件）`;
 
 /**
- * 確認の本文（PRD D286）：変わる条件と重み（前→後）、確定するとどうなるか（基準のプリセットの重みになり、AI で組む・点数・
- * 検査に使う。今の担当は変えない。ADR-0053）
+ * 保存の確認の本文（PRD D286。ADR-0065）：変わる条件と重み（前→後）、元のプリセットは残り新しい考え方を点数の基準にすること、
+ * 今の担当は変えないこと（ADR-0053）
  */
 export function confirmBody(changes: readonly WeightChange[], basis: string): string {
   const lines = changes.map((c) => `・${c.labels.join('・')}：${changeText(c)}`);
@@ -157,13 +148,13 @@ export function confirmBody(changes: readonly WeightChange[], basis: string): st
     '変わる条件：',
     ...lines,
     '',
-    `「${basis}」の重みが変わります。AI で組む・点数・要対応の検査に、この重みを使います。`,
+    `「${basis}」はそのまま残ります。新しい考え方を点数の基準にし、AI で組む・点数・要対応の検査に使います。`,
     '今の担当は変わりません。組み直したいときは、「担当を組む」の画面の「AI で組む」で提案を出して反映します。',
   ].join('\n');
 }
 
-/** 確定のあとの知らせ */
-export const confirmedText = (n: number, basis: string): string => `「${basis}」の重みを確定しました（${n}件）`;
+/** 保存のあとの知らせ */
+export const savedText = (name: string): string => `「${name}」を保存して、ふだんの考え方にしました`;
 
 /** 画面を離れるときの確認（〈スタッフ〉・〈利用者さん〉の画面の「変更を捨てる」と同じ形。components/personPage の discardChanges） */
 export function leaveDialog(n: number) {

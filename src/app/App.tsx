@@ -16,6 +16,7 @@ import { featureLabel, featureOfLocation, isFeatureOffState, isOn } from '../lib
 import { navTitleParts, tabClick } from '../lib/nav';
 import ArrangePage from '../pages/ArrangePage';
 import AvailabilityPage from '../pages/AvailabilityPage';
+import BasicsPage from '../pages/BasicsPage';
 import ClientPage from '../pages/ClientPage';
 import ClientsPage from '../pages/ClientsPage';
 import DataPage from '../pages/DataPage';
@@ -105,6 +106,7 @@ export default function App() {
                 <Route path="/rules" element={<RulesPage />} />
                 <Route path="/items" element={<ItemsPage />} />
                 <Route path="/types" element={<TypesPage />} />
+                <Route path="/basics" element={<BasicsPage />} />
                 <Route path="/compat" element={<CompatPage />} />
                 <Route path="/staff" element={<StaffPage />} />
                 {/* 〈スタッフ〉・〈利用者さん〉の画面（全画面。PRD D308。ADR-0052）。new は新しい人 */}

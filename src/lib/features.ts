@@ -165,7 +165,8 @@ export const FEATURES: readonly FeatureDef[] = [
     description: 'AI の条件の重み・特性の項目・プリセットを変えられます',
     group: 'AI の条件',
     paths: ['/rules', '/items'],
-    hides: '設定の「条件の重み」「特性の項目」のタブと画面、点数の理由（切ると基準のプリセットだけで組む）',
+    hides:
+      '組み方の標準から開く「条件の重み」の画面と設定の「特性の項目」のタブ、点数の理由（切ると基準のプリセットだけで組む）',
   },
   {
     id: 'mail',
@@ -194,10 +195,10 @@ export const FEATURES: readonly FeatureDef[] = [
   {
     id: 'excel',
     label: 'Excel の入出力',
-    description: 'データを Excel のブックで書き出し・読み込みします',
+    description: 'データを Excel のブックで、名簿を Excel・CSV で書き出し・読み込みします',
     group: 'データ',
     paths: [],
-    hides: 'データの画面の Excel の欄。控え（JSON）は残る',
+    hides: 'データの画面の Excel の欄・一覧の名簿の欄（Excel・CSV）。控え（JSON）は残る',
   },
 ];
 

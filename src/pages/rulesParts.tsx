@@ -1,5 +1,5 @@
 // 条件の重みの画面（PRD D173〜D175・D220・D271・D286）の区画の部品：点のしくみの説明・条件の表（狭い画面ではカード）・
-// 条件の名前・足す条件の種類・詳細設定（乱数の種）・確定していない重みの変更の帯
+// 条件の名前・足す条件の種類・詳細設定（乱数の種）・確定していない重みの変更の帯（新しい考え方として保存。ADR-0065）
 import {
   Dices,
   Heart,
@@ -15,11 +15,12 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { WeightSlider } from '../components/parts';
 import { Term } from '../components/Term';
 import { Hint, IconButton, WithIcon } from '../components/ui';
 import type { Terms } from '../contracts/documents';
-import { HARDABLE, type Rule, type RuleType } from '../contracts/rules';
+import { HARDABLE, MAX_PRESETS, type Rule, type RuleType } from '../contracts/rules';
 import { ruleTypeHelp, ruleTypeLabel, weightLocked } from '../lib/common';
 import { narrowRole } from '../lib/narrowRoles';
 import { parseSeed, RULE_NAME_MAX, ruleNameOf, ruleRowClass, setSeed } from '../lib/ruleEdit';
@@ -39,7 +40,7 @@ export const RULE_ICONS: Record<RuleType, LucideIcon> = {
   wait: Hourglass,
 };
 
-/** 点のしくみの説明と、直している基準のプリセット・重みを変えたときの断り */
+/** 点のしくみの説明と、直している基準のプリセット・次の段の案内（予定を組むの3段。ADR-0065） */
 export function RulesIntro({ basisName }: { basisName: string | undefined }) {
   return (
     <>
@@ -58,10 +59,11 @@ export function RulesIntro({ basisName }: { basisName: string | undefined }) {
         直しているのは
         <Term k="scoreBase" testId="term-score-base" />
         の「<strong>{basisName ?? '—'}</strong>
-        」の重みです。基準は下のプリセットの節で替えられます。同じ種類の条件は同じ重みになります。
+        」の重みです。基準は上のプリセットの節で替えられます。同じ種類の条件は同じ重みになります。
       </p>
-      <p className="sub" data-testid="rules-apply-note">
-        重みを変えても今の担当は変わりません。「担当を組む」で、この重みの提案（点の差つき）を出して反映できます。
+      <p className="sub" data-testid="rules-next-note">
+        重みを変えても今の担当は変わりません。標準の週を見直すなら「<Link to="/standard">組み方の標準</Link>
+        」で案を作り直し、標準で埋まらない所は「<Link to="/arrange">担当を組む</Link>」で提案を出して反映します
       </p>
     </>
   );
@@ -258,7 +260,7 @@ export function RulesAdd({
   /** 選べる型（相性を切っているときは相性を除く） */
   types: readonly RuleType[];
   terms: Terms;
-  /** 主ボタンにするか（重みの下書きがある間は「変更を確定」が主） */
+  /** 主ボタンにするか（重みの下書きがある間は「新しい考え方として保存」が主） */
   primary: boolean;
   onAdd: (type: RuleType) => void;
 }) {
@@ -276,7 +278,7 @@ export function RulesAdd({
             ))}
           </select>
         </label>
-        {/* 主ボタンは画面に1つ：重みの下書きがある間は「変更を確定」を主にし、こちらは枠にする（AGENTS.md） */}
+        {/* 主ボタンは画面に1つ：重みの下書きがある間は「新しい考え方として保存」を主にし、こちらは枠にする（AGENTS.md） */}
         <button
           type="button"
           className={primary ? 'btn btn-primary' : 'btn'}
@@ -337,13 +339,19 @@ export function RulesAdvanced() {
   );
 }
 
-/** 重みの下書きがある間だけ：画面の下に貼り付く確定の帯（下のタブの上。巻いても押せる。印刷では出さない） */
+/**
+ * 重みの下書きがある間だけ：画面の下に貼り付く保存の帯（下のタブの上。巻いても押せる。印刷では出さない）。
+ * プリセットは書き換えず、新しい考え方として保存する（ADR-0065）。6つあるときは押せず、消すよう出す
+ */
 export function RulesDraftBar({
   count,
+  full,
   onDiscard,
   onConfirm,
 }: {
   count: number;
+  /** プリセットが6つある（保存できない） */
+  full: boolean;
   onDiscard: () => void;
   onConfirm: () => Promise<void>;
 }) {
@@ -351,7 +359,12 @@ export function RulesDraftBar({
     <section className="rules-draft-bar" aria-label="確定していない重みの変更" data-testid="rules-draft-bar">
       <p className="rules-draft-text">
         <span className="chip chip-warn">変更あり</span>
-        <span>重みの変更は、確定するまで保存しません</span>
+        <span>プリセットは書き換えません。保存すると新しい考え方として足し、ふだんの考え方（点数の基準）にします</span>
+        {full && (
+          <span className="error" data-testid="rules-draft-full">
+            プリセットは{MAX_PRESETS}つまでです。使わない考え方を上の節で消してから保存してください
+          </span>
+        )}
       </p>
       <span className="rules-draft-actions">
         <button type="button" className="btn btn-text" onClick={onDiscard} data-testid="rules-draft-discard">
@@ -360,10 +373,13 @@ export function RulesDraftBar({
         <button
           type="button"
           className="btn btn-primary"
-          onClick={() => void onConfirm()}
+          aria-disabled={full ? true : undefined}
+          onClick={() => {
+            if (!full) void onConfirm();
+          }}
           data-testid="rules-draft-confirm"
         >
-          変更を確定（{count}件）
+          新しい考え方として保存（{count}件）
         </button>
       </span>
     </section>

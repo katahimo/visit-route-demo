@@ -53,7 +53,7 @@ def linked_details(section_text: str, base: Path, only: list[str] | None = None)
         f = (base / target).resolve()
         if not f.is_file() or base.resolve() not in f.parents:
             continue
-        if f.name in ("prd.md",) or "adr" in f.parts or "handoff" in f.parts:
+        if f.name in ("prd.md",) or "prd" in f.parts or "adr" in f.parts or "handoff" in f.parts:
             continue  # 要件・判断の記録・指示書は詳細として取り込まない
         out.append(f"\n### 詳細：{target}\n\n" + strip_comments(f.read_text(encoding="utf-8")).strip())
     return "\n".join(out)

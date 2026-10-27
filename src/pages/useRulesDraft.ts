@@ -1,20 +1,20 @@
-// 条件の重みの画面の重みの下書き（PRD D286。ADR-0048）：表の重み・必須は動かしても保存せず、画面の中の下書きに置く。
-// 「変更を確定（N件）」で確認（変わる重みと影響する日）のあとまとめて書き、「取り消す」で捨てる。下書きのまま画面を離れるときは確かめる。
-// 下書きの計算は lib/weightDraft
+// 条件の重みの画面の重みの下書き（PRD D286。ADR-0048・ADR-0065）：表の重み・必須は動かしても保存せず、画面の中の下書きに置く。
+// 「新しい考え方として保存（N件）」で確認（名前と変わる重み）のあと新しいプリセットとして足して点数の基準にし、「取り消す」で捨てる。
+// 下書きのまま画面を離れるときは確かめる。下書きの計算は lib/weightDraft、保存は lib/presets の saveDraftAsPreset
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useConfirm } from '../components/ConfirmDialog';
 import { useToast } from '../components/Toast';
 import { useLeaveGuard } from '../components/useLeaveGuard';
-import type { RuleType } from '../contracts/rules';
+import { MAX_PRESETS, type RuleType } from '../contracts/rules';
+import { addPresetError, draftPresetName, PRESET_NAME_MAX, saveDraftAsPreset } from '../lib/presets';
 import {
-  applyDraft,
   confirmBody,
-  confirmedText,
   confirmTitle,
   draftChanges,
   editDraft,
   leaveDialog,
   pruneDraft,
+  savedText,
   savedWeights,
   type WeightDraft,
   withDraft,
@@ -45,7 +45,12 @@ export function useRulesDraft() {
   const { data, update } = useDemoData();
   const confirmDialog = useConfirm();
   const toast = useToast();
-  /** 点数の基準のプリセット（この画面で重みを直す相手。ADR-0035） */
+  /** 最新のデータ（確認を待つ間に別のタブで変わったかを見る） */
+  const dataRef = useRef(data);
+  dataRef.current = data;
+  /** プリセットが6つあれば保存できない（使わない考え方を消してから。ADR-0065） */
+  const full = data.presets.length >= MAX_PRESETS;
+  /** 点数の基準のプリセット（この画面で表の重みの元にする考え方。ADR-0035・ADR-0065） */
   const basis = scorePresetOf(data.presets, data.scorePresetId);
   /** 保存済みの条件：名前・種類は条件のまま、重み・必須は基準のプリセットのもの */
   const savedRules = useMemo(() => scoreRulesOf(data), [data]);
@@ -77,39 +82,59 @@ export function useRulesDraft() {
   const setWeight = (type: RuleType, patch: Partial<{ weight: number; hard: boolean }>) =>
     setRawDraft({ basisId, values: editDraft(draft, saved, type, patch) });
   const focusHead = useFocusHead();
-  /** 下書きを捨てる（初期の3つに戻したときも。戻した重みと比べる下書きは意味が変わるので） */
+  /** 下書きを捨てる */
   const reset = () => setRawDraft({ basisId, values: {} });
   const discard = () => {
     reset();
     focusHead();
     toast('重みの変更を取り消しました');
   };
-  const confirmDraft = async () => {
+  /** 新しい考え方として保存する（ADR-0065）：名前を付けて新しいプリセットとして足し、点数の基準にする（元のプリセットは残る） */
+  const saveDraft = async () => {
     const list = changes;
     const values = draft;
-    if (list.length === 0) return;
-    const name = basis?.name ?? '点数の基準';
+    if (list.length === 0 || full || !basis) return;
+    let name = draftPresetName(basis.name, data.presets);
     const ok = await confirmDialog({
       title: confirmTitle(list.length),
-      body: confirmBody(list, name),
-      confirmLabel: '確定する',
+      body: confirmBody(list, basis.name),
+      confirmLabel: '保存する',
       cancelLabel: '編集を続ける',
+      field: {
+        label: '新しい考え方の名前',
+        initial: name,
+        maxLength: PRESET_NAME_MAX,
+        testId: 'rules-draft-name',
+        error: (v) => addPresetError(dataRef.current, v),
+        onValue: (v) => {
+          name = v;
+        },
+      },
     });
     if (!ok) return;
-    // 確認の間に別のタブで点数の基準が替わったら書かない（下書きは前の基準の重み。替わった基準では捨てられる）
+    // 確認の間に別のタブで点数の基準が替わった・6つに達したら書かない（下書きは前の基準の重み。替わった基準では捨てられる）
     if (basisRef.current !== basisId) {
-      toast('点数の基準が替わったので、重みの変更は確定しませんでした');
+      toast('点数の基準が替わったので、保存しませんでした');
+      return;
+    }
+    if (dataRef.current.presets.length >= MAX_PRESETS) {
+      toast(`プリセットが${MAX_PRESETS}つになったので、保存しませんでした。使わない考え方を消してから保存してください`);
+      return;
+    }
+    const error = addPresetError(dataRef.current, name);
+    if (error) {
+      toast(`保存しませんでした：${error}`);
       return;
     }
     update(
-      (d) => (scorePresetOf(d.presets, d.scorePresetId)?.id === basisId ? applyDraft(d, values) : d),
-      '条件の重みを確定',
+      (d) => (scorePresetOf(d.presets, d.scorePresetId)?.id === basisId ? saveDraftAsPreset(d, values, name) : d),
+      '新しい考え方として保存',
     );
     reset();
     focusHead();
-    toast(confirmedText(list.length, name));
+    toast(savedText(name.trim()));
   };
   // 下書きのまま画面を離れる（リンク・パレット・再読込・タブを閉じる）ときは確かめる
   useLeaveGuard(changes.length > 0, leaveDialog(changes.length));
-  return { basis, savedRules, shownRules, changes, changeOf, setWeight, reset, discard, confirmDraft };
+  return { basis, full, savedRules, shownRules, changes, changeOf, setWeight, discard, saveDraft };
 }

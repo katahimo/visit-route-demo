@@ -5,21 +5,21 @@
 // データを書くのは store の update だけ（複数選択は lib/multiEdit、提案は lib/monthBatch の apply）
 import { CalendarArrowUp, CircleCheck, Clock, Sparkles, UserRoundCog, UserRoundX, X, XCircle } from 'lucide-react';
 import type { ReactNode, Ref, RefObject } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { jstDate } from '../domain/time';
 import { dateText } from '../lib/dateText';
-import { batchHref, monthBatch, proposalCounts, proposalDayFresh } from '../lib/monthBatch';
+import { monthBatch, proposalCounts, proposalDayFresh } from '../lib/monthBatch';
 import { selectionText } from '../lib/multiEdit';
 import { absenceHref } from '../lib/nav';
 import { useDemoData } from '../store';
 import type { useConfirm } from './ConfirmDialog';
-import { ChoiceBand } from './choiceBand';
 import { MenuButton, type MenuItem } from './MenuButton';
 import { ProposalChanges } from './proposalChanges';
 import { StaffMark } from './StaffMark';
 import { useToast } from './Toast';
 import { WithIcon } from './ui';
 import { UndoButtons } from './undo';
+import { saveAppliedBasis } from './useArrangeBasis';
 import { useSelectionBar } from './useSelectionBar';
 import { useValueStore } from './valueStore';
 import './scheduleParts.css';
@@ -196,52 +196,14 @@ export function RangeProposalBand() {
   const run = useValueStore(monthBatch.run);
   const toast = useToast();
   const navigate = useNavigate();
-  const { pathname } = useLocation();
   if (!proposal) return null;
-  // 考え方ごとの案は担当を組むの画面でくらべる。予定（日・週・月）では予定と重ねず、1行の知らせだけ
-  if (proposal.choices)
-    return pathname === '/arrange' ? (
-      <ChoiceBand key={proposal.id} proposal={proposal} />
-    ) : (
-      <section
-        className="plan-band schedule-band proposal-band row"
-        aria-label="AI の案"
-        data-testid="proposal-band"
-        data-kind="choices-note"
-        style={{ flexWrap: 'wrap', gap: 8 }}
-      >
-        <WithIcon icon={Sparkles} size={16}>
-          <span className="band-text">
-            <strong>
-              {proposal.label}の案（{proposal.choices.length}つ）
-            </strong>
-            を担当を組むでくらべています
-          </span>
-        </WithIcon>
-        <Link
-          className="btn btn-primary btn-small"
-          to={batchHref({ ym: proposal.ym, source: proposal.source, rangeStart: proposal.rangeStart })}
-          data-testid="choice-open"
-        >
-          担当を組むで見る
-        </Link>
-        <button
-          type="button"
-          className="btn btn-small"
-          onClick={() => monthBatch.discard()}
-          data-testid="proposal-discard"
-        >
-          <WithIcon icon={X} size={14}>
-            捨てる
-          </WithIcon>
-        </button>
-      </section>
-    );
   const counts = proposalCounts(proposal);
   const staleDays = proposal.days.filter((d) => !proposalDayFresh(data, d)).length;
   const apply = () => {
     const r = monthBatch.apply();
     if (!r) return;
+    // 組み始めたときの基本情報を覚える（あとで変われば担当を組むで組み直しを知らせる。ADR-0067）
+    if (r.applied.length > 0) saveAppliedBasis(data);
     toast(
       r.applied.length === 0
         ? '提案を出したあとに訪問が変わったので、反映しませんでした。もう一度 AI で組んでください'

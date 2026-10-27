@@ -1,13 +1,16 @@
 // 担当を組む（#/arrange。ADR-0063）：AI で担当を組むのはこの画面と組み方の標準だけ。予定（月・週・日）は手で直す。
 // 範囲（月・週・日）を選び、選んだ範囲の担当なし・要対応を見て、「AI で組む」で範囲の提案を出す（lib/monthBatch。画面の外で計算し、
 // ほかの画面へ移っても続く。ADR-0042）。提案は範囲の提案の帯で見て［反映する］［捨てる］（反映は全体の「元に戻す」で1手戻る）。
-// 考え方（プリセット）を選んで組める（データの条件は書き換えない）。日を選んで「案を比べる」（#/compare）へ移れる
-import { Sparkles } from 'lucide-react';
+// いつも点数の基準（標準の考え方）で組む。組み方の標準が無い間は組まず、組み方の標準へ案内する（ADR-0065）。
+// 日を選んで「案を比べる」（#/compare）へ移れる。
+// 基本情報（予定・相性・勤務時間）が最後に組んだあとに変われば、上に知らせと［組み直す］（ADR-0067）
+import { CalendarCheck, Sparkles } from 'lucide-react';
 import { useId, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { ArrangeTabs } from '../components/ArrangeTabs';
+import { Link, useSearchParams } from 'react-router-dom';
+import { ArrangeSteps } from '../components/ArrangeSteps';
 import { RangeProposalBand } from '../components/scheduleParts';
-import { PageHeader } from '../components/ui';
+import { PageHeader, WithIcon } from '../components/ui';
+import { useBasisChanged } from '../components/useArrangeBasis';
 import { useCompileInput } from '../components/useDayModel';
 import { useDayStatuses } from '../components/useDayStatuses';
 import { useFeature } from '../components/useFeature';
@@ -16,13 +19,14 @@ import { jstDate } from '../domain/time';
 import { rangeCounts, scopeOf } from '../lib/arrange';
 import { mdText, monthLabel } from '../lib/dateText';
 import { type BatchMode, batchTargets } from '../lib/month';
-import { type BatchSource, type BatchVariant, monthBatch, weekLabel } from '../lib/monthBatch';
+import { type BatchSource, monthBatch, weekLabel } from '../lib/monthBatch';
 import { hasStandard } from '../lib/standard';
+import { setStandardStep } from '../lib/standardDraft';
 import { weekDates, weekStart } from '../lib/week';
 import { addMonths, monthDates, ymOf } from '../lib/ym';
-import { applyPreset, scorePresetOf } from '../seed';
+import { scorePresetOf } from '../seed';
 import { useDemoData } from '../store';
-import { ArrangeCompareSection, ArrangeRangeSection, ArrangeRunSection } from './arrangeParts';
+import { ArrangeBasisNotice, ArrangeCompareSection, ArrangeRangeSection, ArrangeRunSection } from './arrangeParts';
 import { useArrangeStart } from './useArrangeStart';
 import './arrange.css';
 
@@ -30,7 +34,6 @@ export default function ArrangePage() {
   const { data } = useDemoData();
   const compileInput = useCompileInput(data);
   const [params, setParams] = useSearchParams();
-  const rulesOn = useFeature('rules');
   const compareOn = useFeature('compare');
   const ids = useId();
   const today = jstDate(Date.now());
@@ -52,25 +55,13 @@ export default function ArrangePage() {
   const allTargets = targetsOf('all');
   const targets = mode === 'care' ? careTargets : allTargets;
 
-  /** 考え方（プリセット）。'' は点数の基準の重み（今の条件） */
-  const basePreset = scorePresetOf(data.presets, data.scorePresetId);
-  const [presetId, setPresetId] = useState('');
-  const preset = rulesOn ? (data.presets.find((p) => p.id === presetId) ?? null) : null;
-
-  /**
-   * 考え方ごとの案（PRD D357）：範囲が日で、組み方の標準がまだ無いときは、すべての考え方（プリセット。最大6つ）でその日を組んで並べる。
-   * 気に入った案を標準にすると、これからはその考え方で組む。標準が無い間は週・月を組まない（先に日で標準を決める）
-   */
+  /** 考え方：いつも点数の基準（替えるのは組み方の標準の案をくらべる（と寄り道の条件の重み）。ADR-0065・ADR-0066） */
+  const basisName = scorePresetOf(data.presets, data.scorePresetId)?.name ?? '今の重み';
+  /** 組み方の標準がまだ無い（範囲にかかわらず AI で組まない。PRD D356） */
   const needStandard = !hasStandard(data);
-  const variants: BatchVariant[] | null =
-    scope === 'day' && needStandard && data.presets.length > 0
-      ? data.presets.map((p) => ({ presetId: p.id, name: p.name, rules: applyPreset(data.rules, p) }))
-      : null;
 
-  /** 組む日（考え方ごとの案は伝えていない日を組み直す） */
-  const runTargets = variants ? allTargets : targets;
-  /** 組む回数（考え方ごとの案は案の数） */
-  const runs = variants ? (runTargets.length > 0 ? variants.length : 0) : runTargets.length;
+  /** 基本情報が最後に組んだあとに変わった（ADR-0067） */
+  const basisChanged = useBasisChanged(data);
 
   const run = useValueStore(monthBatch.run);
   const done = useValueStore(monthBatch.done);
@@ -91,36 +82,47 @@ export default function ArrangePage() {
     [today, ym],
   );
 
-  const { error, setError, start } = useArrangeStart({
-    rules: data.rules,
-    scope,
-    ym,
-    at,
-    today,
-    rangeLabel,
-    mode,
-    targets,
-    runTargets,
-    variants,
-    preset,
-  });
+  const { error, setError, start } = useArrangeStart({ scope, ym, at, today, rangeLabel, mode, targets });
   const shownError = error ?? done?.error ?? null;
 
   /** 案を比べる日（範囲の中の今日以降の最初の訪問のある日。選び直せる） */
   const firstDay = allTargets[0] ?? dates.find((d) => d >= today) ?? dates[0]!;
-  /** 標準が無いときに日の案へ移る日（過去の範囲なら今日） */
-  const guideDay = firstDay >= today ? firstDay : today;
   const [compareDay, setCompareDay] = useState<string | null>(null);
   const compareDate = compareDay && dates.includes(compareDay) ? compareDay : firstDay;
 
   return (
     <div className="stack arrange-page">
+      {/* 段の表示：標準が無い間は4段、あれば 基本情報 → 担当を組む の2段。標準があれば［標準の組み方を変える］で標準の手順へ（ADR-0067） */}
       <PageHeader
-        nav={<ArrangeTabs />}
+        nav={<ArrangeSteps current="arrange" />}
         icon={Sparkles}
         title="担当を組む"
         lead="範囲を選んで AI で担当を組み、提案を見て反映します。予定（月・週・日）では手で直します"
+        actions={
+          needStandard ? undefined : (
+            <Link
+              to="/standard"
+              className="btn"
+              onClick={() => setStandardStep('proposals')}
+              data-testid="arrange-change-standard"
+            >
+              <WithIcon icon={CalendarCheck}>標準の組み方を変える</WithIcon>
+            </Link>
+          )
+        }
       />
+
+      {basisChanged && !needStandard && (
+        <ArrangeBasisNotice
+          rangeLabel={rangeLabel}
+          days={allTargets.length}
+          running={run !== null}
+          onRedo={() => {
+            setMode('all');
+            void start({ mode: 'all', targets: allTargets });
+          }}
+        />
+      )}
 
       <ArrangeRangeSection
         headingId={`${ids}-range`}
@@ -136,28 +138,16 @@ export default function ArrangePage() {
       <ArrangeRunSection
         view={{
           headingId: `${ids}-run`,
-          scope,
           needStandard,
-          guideDay,
-          variants,
           mode,
           careDays: careTargets.length,
           allDays: allTargets.length,
-          showPreset: rulesOn && data.presets.length > 0,
-          presets: data.presets,
-          basePreset,
-          presetId,
-          runDays: runTargets.length,
-          runs,
+          basisName,
+          runDays: targets.length,
           run,
           error: shownError,
         }}
-        actions={{
-          onPickDay: (day) => pick('day', day),
-          onMode: setMode,
-          onPreset: setPresetId,
-          onStart: () => void start(),
-        }}
+        actions={{ onMode: setMode, onStart: () => void start() }}
       />
 
       {/* 組んだ提案（日・週・月の予定にも同じ帯が出る。PRD D328） */}

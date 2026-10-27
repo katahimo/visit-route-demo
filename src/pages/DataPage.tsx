@@ -18,12 +18,11 @@ import { useDataTidy } from './useDataTidy';
 export default function DataPage() {
   const { data, saveError, previous } = useDemoData();
   const excelOn = useFeature('excel');
-  const offboardOn = useFeature('offboard');
   const openTour = useTour();
   const lastExport = useLastExport();
   const excel = useDataExcel({ markExported: lastExport.mark });
-  const backup = useDataBackup({ markExported: lastExport.mark, clearLastDay: excel.clearLastDay });
-  const restore = useDataRestore({ clearLastDay: excel.clearLastDay });
+  const backup = useDataBackup({ markExported: lastExport.mark });
+  const restore = useDataRestore();
   const tidy = useDataTidy();
 
   return (
@@ -57,7 +56,7 @@ export default function DataPage() {
       />
 
       {/* Excel の入出力を切っていれば欄ごと出さない（控え（JSON）は残す。ADR-0028 の excel） */}
-      {excelOn && <ExcelCard excel={excel} t={data.org.terms} offboardOn={offboardOn} />}
+      {excelOn && <ExcelCard excel={excel} t={data.org.terms} />}
 
       <TidyCard tidy={tidy} />
 

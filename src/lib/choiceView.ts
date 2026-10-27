@@ -1,4 +1,4 @@
-// 考え方ごとの案を「今日の予定」と同じ時間軸で見せるための純粋関数（PRD D357。ADR-0064）。
+// 案を「今日の予定」と同じ時間軸で見せるための純粋関数（組み方の標準の日で見る。PRD D350。ADR-0065）。
 // 時刻は予定の画面と同じ lenient の計算（lib/dayPlan の stopsOf）、自宅までは lib/routeView の homeTravel
 import type { Staff } from '../contracts/documents';
 import type { Problem, StopTiming } from '../contracts/problem';

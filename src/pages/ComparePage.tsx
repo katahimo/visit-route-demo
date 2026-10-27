@@ -45,7 +45,7 @@ export default function ComparePage() {
   /** 日の予定の「比較の画面で見る」（A＝欠勤前、B＝今の担当。ADR-0011） */
   const asked = (useLocation().state ?? null) as { a?: string; b?: string } | null;
   /**
-   * 担当を組むで出した提案のうちこの日の分（考え方ごとの案はそれぞれ、範囲の提案はその日）。比べる案に足す（ADR-0064。
+   * 担当を組むで出した提案のうちこの日の分。比べる案に足す（ADR-0065。
    * 保存しない。担当を組むで反映する・捨てると消える）。この画面で消したものは隠す
    */
   const batch = useValueStore(monthBatch.proposal);

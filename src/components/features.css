@@ -186,3 +186,12 @@
     display: none !important;
   }
 }
+
+/* メールの予約送信の手順（PRD D366。ADR-0069） */
+.mail-schedule-steps {
+  margin: 0;
+  padding-left: 1.4em;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}

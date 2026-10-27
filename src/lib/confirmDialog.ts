@@ -4,6 +4,20 @@
 /** 確定のボタンの色：danger＝消す・捨てる（赤）、primary＝それ以外（濃い朱） */
 export type ConfirmTone = 'danger' | 'primary';
 
+/**
+ * 確認の中の1行の入力欄（例：条件の重みの「新しい考え方として保存」の名前。ADR-0065）。error が文を返す間は確定を押せない。
+ * 確定したときの値は onValue で渡す
+ */
+export type ConfirmField = {
+  label: string;
+  initial: string;
+  maxLength?: number;
+  testId?: string;
+  /** 確定できない理由（できるなら null） */
+  error: (value: string) => string | null;
+  onValue: (value: string) => void;
+};
+
 /** 確認の頼み方（`const ok = await confirmDialog({...})`） */
 export type ConfirmOptions = {
   /** 見出し（問いを1文で。例「変更を捨てて、欄を閉じますか？」） */
@@ -16,6 +30,8 @@ export type ConfirmOptions = {
   cancelLabel?: string;
   /** 既定 primary */
   tone?: ConfirmTone;
+  /** 本文の上に出す入力欄（無ければ出さない） */
+  field?: ConfirmField;
 };
 
 /** 並びに入れた確認（既定を埋めたもの） */
@@ -26,6 +42,7 @@ export type ConfirmRequest = {
   confirmLabel: string;
   cancelLabel: string;
   tone: ConfirmTone;
+  field?: ConfirmField;
 };
 
 /** 取り消しのボタンの既定の文言（Esc・背景を押したときも同じ答え） */
@@ -41,6 +58,7 @@ export function toRequest(id: number, o: ConfirmOptions): ConfirmRequest {
     confirmLabel: o.confirmLabel.trim(),
     cancelLabel: cancel ? cancel : CANCEL_LABEL,
     tone: o.tone ?? 'primary',
+    ...(o.field && { field: o.field }),
   };
 }
 

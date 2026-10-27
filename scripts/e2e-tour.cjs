@@ -11,8 +11,8 @@
 // 初期状態に戻しても見たことは残る・「見た」の印（scripts/lib/tourSeen.cjs）があれば自動で出ない・月の印刷の画面では出ない・
 // 390px で収まる・印刷で出さない）、
 // データの画面のファイル選択（すべて同じ部品・日本語のボタン「ファイルを選ぶ」と未選択の文・ブラウザ標準の input は見えない・
-// input はボタンと同じ大きさ・種類を切り替えると文を消す・入力欄の名前（何を読み込むか＋ファイルを選ぶ）・Tab で届きフォーカスの枠・Space で選ぶ画面・控え（JSON）を選ぶと確認と
-// ファイル名・取り消してもデータはそのまま・確定で読み込む・Excel の壊れたファイルは誤りの文・名簿の見出し）、
+// input はボタンと同じ大きさ・入力欄の名前（何を読み込むか＋ファイルを選ぶ）・Tab で届きフォーカスの枠・Space で選ぶ画面・控え（JSON）を選ぶと確認と
+// ファイル名・取り消してもデータはそのまま・確定で読み込む・Excel の壊れたファイルは誤りの文・名簿は一覧へのリンク）、
 // 月の画面の日ごとの一覧（390px ははじめ一覧で横にはみ出さず土曜も見える・今日の行が画面に入る・「今日へ」・切り替えは操作の欄より上・行の読み上げ・押すとその日の訪問の下から出る欄（日の予定へは移らない）→ 欄の「この日の日の予定を開く」でその日の日の画面・
 // カレンダーへ切り替えると URL の ?layout=calendar・読み直しても同じ・戻すと ?layout=list（押したら必ず書く）・1400px ははじめカレンダー・
 // ?layout=list で一覧・「休みを入れる」の行は押すと希望休を付け外し・印刷の画面は今のまま）、
@@ -313,8 +313,8 @@ async function tourStart(b) {
   await settle(page, 400);
   const tabs = await page.getByTestId('settings-tabs').locator('a').allInnerTexts();
   check(
-    tabs.length === 5 && (await tour(page).count()) === 0,
-    '読み直しても「すべて」のまま（設定のタブ5つ）・ツアーは出ない',
+    tabs.length === 4 && (await tour(page).count()) === 0,
+    '読み直しても「すべて」のまま（設定のタブ4つ。条件の重みは予定を組む）・ツアーは出ない',
     tabs,
   );
   await ctx.close();
@@ -359,8 +359,8 @@ async function tourStart(b) {
   await h.page.getByTestId('tour-skip').click();
   await open(h.page, '/settings', '[data-testid="settings-tabs"]');
   check(
-    (await h.page.getByTestId('settings-tabs').locator('a').count()) === 5,
-    'features の無い保存データは今までどおりすべて入（設定のタブ5つ）',
+    (await h.page.getByTestId('settings-tabs').locator('a').count()) === 4,
+    'features の無い保存データは今までどおりすべて入（設定のタブ4つ）',
   );
   await h.ctx.close();
 }
@@ -634,19 +634,11 @@ async function filePick(b) {
     (await page.getByTestId('excel-file-name').innerText()) === '選んだファイル：こわれた.xlsx',
     'Excel：選んだファイル名と誤りの文',
   );
-  // 名簿にすると見出しが変わる
-  await page
-    .getByTestId('excel-kind')
-    .getByRole('button', { name: /利用者さんの名簿/ })
-    .click();
+  // 名簿は各一覧の「Excel・CSV」へ案内する（ADR-0068）
   check(
-    (await page.locator('[data-testid="excel-file"] .file-pick-caption').innerText()) ===
-      '読み込む利用者さんの名簿（Excel）',
-    'Excel：名簿の見出し（呼び方）',
-  );
-  check(
-    (await page.getByTestId('excel-file-name').innerText()) === 'ファイルを選んでいません',
-    'Excel：種類を切り替えると選んだファイルの文を消す',
+    (await page.locator('[data-testid="excel-file"] .file-pick-caption').innerText()) === '読み込む Excel（全体）' &&
+      (await page.getByTestId('excel-roster-note').getByRole('link').count()) === 2,
+    'Excel：全体だけを読み、名簿は一覧へのリンク',
   );
   await page.screenshot({ path: path.join(OUT_DIR, 'data-file-pick.png'), fullPage: true });
   // 390px：横にはみ出さない

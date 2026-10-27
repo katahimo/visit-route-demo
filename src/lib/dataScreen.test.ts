@@ -7,6 +7,7 @@ import {
   otherOrgOf,
   rosterConfirmBody,
   rosterDoneText,
+  rosterFileName,
   rosterHasChanges,
   rosterHowText,
   termsCheck,
@@ -49,7 +50,7 @@ describe('termsCheck（呼び方の入力）', () => {
   });
 });
 
-describe('workbookCountsText・excelFileName', () => {
+describe('workbookCountsText・excelFileName・rosterFileName', () => {
   it('読み込んだデータの呼び方で件数を並べる', () => {
     const d = createDemoData('2026-10-12');
     const t = d.org.terms;
@@ -58,9 +59,9 @@ describe('workbookCountsText・excelFileName', () => {
     );
   });
   it('ファイル名は英字だけ', () => {
-    expect(excelFileName('all', '2026-10-12')).toBe('visit-route-demo-2026-10-12.xlsx');
-    expect(excelFileName('staff', '2026-10-12')).toBe('visit-route-demo-staff-2026-10-12.xlsx');
-    expect(excelFileName('client', '2026-10-12')).toBe('visit-route-demo-clients-2026-10-12.xlsx');
+    expect(excelFileName('2026-10-12')).toBe('visit-route-demo-2026-10-12.xlsx');
+    expect(rosterFileName('staff', 'xlsx', '2026-10-12')).toBe('visit-route-demo-staff-2026-10-12.xlsx');
+    expect(rosterFileName('client', 'csv', '2026-10-12')).toBe('visit-route-demo-clients-2026-10-12.csv');
   });
 });
 
@@ -81,16 +82,31 @@ describe('名簿の読み込みの文', () => {
       term: 'スタッフ',
       how: '追加・更新',
       summary: '追加 1人',
+      source: { format: 'xlsx' } as const,
       keep: { kept: true, why: null },
     };
     const without = rosterConfirmBody({ ...base, warning: null });
     expect(without.split('\n')).toEqual([
-      '「a.xlsx」のスタッフの名簿を読み込みます（追加・更新）。',
+      '「a.xlsx」のスタッフの名簿を読み込みます（追加・更新）。Excel のブックとして読みました。',
       '追加 1人',
       '訪問の担当・確定（伝えた内容）・訪問はそのままです。',
-      keepNote(base.keep),
+      'いまのデータは控えとして1つだけ残し、データの画面の「直前の状態に戻す」で戻せます。',
     ]);
     expect(rosterConfirmBody({ ...base, warning: '注意' })).toBe(`注意\n\n${without}`);
+  });
+  it('読んだファイルの形：CSV なら見分けた文字コード', () => {
+    const body = rosterConfirmBody({
+      warning: null,
+      fileName: 'a.csv',
+      term: '利用者',
+      how: '追加・更新',
+      summary: '追加 1人',
+      source: { format: 'csv', encoding: 'Shift_JIS' },
+      keep: { kept: true, why: null },
+    });
+    expect(body.split('\n')[0]).toBe(
+      '「a.csv」の利用者の名簿を読み込みます（追加・更新）。CSV（文字コード Shift_JIS）として読みました。',
+    );
   });
   it('読み込んだあとの知らせ：最終勤務日の入った人がいれば添え、控えを残せなければ理由', () => {
     const keep = { kept: true, why: null };
@@ -98,7 +114,7 @@ describe('名簿の読み込みの文', () => {
       '利用者の名簿を読み込みました',
     );
     expect(rosterDoneText({ term: 'スタッフ', staffTerm: 'スタッフ', hasLastDay: true, keep })).toBe(
-      'スタッフの名簿を読み込みました。最終勤務日の入ったスタッフがいます。Excel の欄に名前を出しました',
+      'スタッフの名簿を読み込みました。最終勤務日の入ったスタッフがいます。「最終勤務日のあるスタッフ」の欄から担当を振り直してください',
     );
     expect(
       rosterDoneText({ term: '利用者', staffTerm: 'スタッフ', hasLastDay: false, keep: { kept: false, why: '理由' } }),

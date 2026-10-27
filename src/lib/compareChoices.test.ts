@@ -2,11 +2,10 @@
 import { describe, expect, it } from 'vitest';
 import type { ReassignInfo } from '../contracts/data';
 import type { Client, Visit } from '../contracts/documents';
-import type { Preset, Rule } from '../contracts/rules';
+import type { Rule } from '../contracts/rules';
 import { compile } from '../matching';
 import { client, DATE, makeData, rule, staff, visit } from '../matching/fixtures.testkit';
 import { visitsOn } from '../patterns';
-import { applyPreset } from '../seed';
 import {
   arrangeChoices,
   BEFORE_CHOICE,
@@ -45,22 +44,6 @@ function data() {
   });
 }
 
-const preset: Preset = {
-  id: 'p1',
-  name: '待ちを重く',
-  note: '',
-  weights: {
-    clientRequirement: { weight: 0, hard: true },
-    clientPreference: { weight: 0, hard: false },
-    staffRequirement: { weight: 0, hard: true },
-    staffPreference: { weight: 0, hard: false },
-    compatibility: { weight: 0, hard: false },
-    continuity: { weight: 0, hard: false },
-    balance: { weight: 5, hard: false },
-    wait: { weight: 4, hard: false },
-  },
-};
-
 function proposalDay(date: string, routes: Record<string, string[]> = { s2: ['v3'] }, d = data()): ProposalDay {
   return {
     date,
@@ -98,58 +81,21 @@ describe('arrangeChoices', () => {
   const rules = data().rules;
 
   it('batch が null なら空', () => {
-    expect(arrangeChoices(null, DATE, [preset], rules, new Set())).toEqual([]);
+    expect(arrangeChoices(null, DATE, rules, new Set())).toEqual([]);
   });
 
-  it('考え方ごとの案：その日の分だけ、プリセットの重みを当てて並べる', () => {
-    const b = batch({
-      choices: [
-        { presetId: 'p1', name: '待ちを重く', days: [proposalDay(DATE)] },
-        { presetId: 'p2', name: 'ほかの日だけ', days: [proposalDay('2026-10-13')] },
-      ],
-    });
-    const out = arrangeChoices(b, DATE, [preset], rules, new Set());
-    expect(out).toHaveLength(1);
-    const c = out[0]!;
-    expect(c).toMatchObject({
-      id: 'arrange-7-p1',
-      title: '「待ちを重く」の案（担当を組む）',
-      kind: 'proposal',
-      routes: { s2: ['v3'] },
-      unassigned: [],
-    });
-    expect(c.rules).toEqual(applyPreset(rules, preset));
-    expect(c.rules.find((r) => r.type === 'wait')?.weight).toBe(4);
-    expect(c.day).toBe(b.choices![0]!.days[0]);
-    expect(c.visits).toBe(b.choices![0]!.days[0]!.visits);
-    expect(isArrangeChoice(c)).toBe(true);
-  });
-
-  it('プリセットが見つからなければ条件はそのまま', () => {
-    const b = batch({ choices: [{ presetId: 'zzz', name: '消えた考え方', days: [proposalDay(DATE)] }] });
-    expect(arrangeChoices(b, DATE, [preset], rules, new Set())[0]?.rules).toBe(rules);
-  });
-
-  it('範囲の提案：その日があれば1件（条件はそのまま）。ほかの日だけなら空', () => {
+  it('範囲の提案：その日があれば1件（条件はそのまま。日も持つ）。ほかの日だけなら空', () => {
     const b = batch({ days: [proposalDay(DATE), proposalDay('2026-10-13')] });
-    const out = arrangeChoices(b, DATE, [preset], rules, new Set());
+    const out = arrangeChoices(b, DATE, rules, new Set());
     expect(out).toHaveLength(1);
     expect(out[0]).toMatchObject({ id: 'arrange-7-range', title: '10月の提案（担当を組む）', kind: 'proposal' });
     expect(out[0]?.rules).toBe(rules);
-    expect(arrangeChoices(b, '2026-10-20', [preset], rules, new Set())).toEqual([]);
+    expect(arrangeChoices(b, '2026-10-20', rules, new Set())).toEqual([]);
   });
 
   it('hidden の ID は外す', () => {
     const b = batch({ days: [proposalDay(DATE)] });
-    expect(arrangeChoices(b, DATE, [], rules, new Set(['arrange-7-range']))).toEqual([]);
-    const withChoices = batch({
-      choices: [
-        { presetId: 'p1', name: 'A', days: [proposalDay(DATE)] },
-        { presetId: 'p2', name: 'B', days: [proposalDay(DATE)] },
-      ],
-    });
-    const out = arrangeChoices(withChoices, DATE, [preset], rules, new Set(['arrange-7-p1']));
-    expect(out.map((c) => c.id)).toEqual(['arrange-7-p2']);
+    expect(arrangeChoices(b, DATE, rules, new Set(['arrange-7-range']))).toEqual([]);
   });
 
   it('isArrangeChoice：頭が arrange- の ID だけ', () => {

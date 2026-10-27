@@ -455,10 +455,6 @@ p.plan-band.error {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.preset-save input {
-  width: 100%;
-}
-
 
 .chip-off {
   background: #ece5df;

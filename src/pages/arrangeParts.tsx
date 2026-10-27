@@ -1,15 +1,57 @@
 // 担当を組む画面（ArrangePage）の区画：範囲・AI で組む（組む日・考え方・進み具合）・案を比べる
-import { CalendarDays, GitCompareArrows, Sparkles, Square } from 'lucide-react';
+import { CalendarCheck, CalendarDays, GitCompareArrows, RefreshCw, Sparkles, Square } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { FieldError } from '../components/FieldError';
 import { WithIcon } from '../components/ui';
 import { UndoButtons } from '../components/undo';
-import type { Preset } from '../contracts/rules';
 import { etaText } from '../lib/arrange';
 import { dateText, mdText, ymText } from '../lib/dateText';
 import { isDate } from '../lib/isDate';
 import type { BatchMode } from '../lib/month';
-import { type BatchRun, type BatchSource, type BatchVariant, monthBatch } from '../lib/monthBatch';
+import { type BatchRun, type BatchSource, monthBatch } from '../lib/monthBatch';
+import { setStandardStep } from '../lib/standardDraft';
+
+/**
+ * 基本情報が最後に組んだあとに変わった知らせ（ADR-0067。PRD D363）：［組み直す］で範囲の伝えていない日をすべて AI で組む
+ * （提案の帯で確かめて反映。主ボタンは「AI で組む」のまま、ここは枠のボタン）
+ */
+export function ArrangeBasisNotice({
+  rangeLabel,
+  days,
+  running,
+  onRedo,
+}: {
+  rangeLabel: string;
+  days: number;
+  running: boolean;
+  onRedo: () => void;
+}) {
+  return (
+    <section className="card stack arrange-basis" aria-label="基本情報の変更" data-testid="arrange-basis-changed">
+      <p className="warn">
+        <strong>基本情報が、最後に組んだあとに変わりました</strong>
+        （予定・相性・勤務時間（シフト）など）。組み直すと今の基本情報で担当を組みます
+      </p>
+      <div className="row">
+        <button
+          type="button"
+          className="btn"
+          onClick={onRedo}
+          disabled={running || days === 0}
+          data-testid="arrange-basis-redo"
+        >
+          <WithIcon icon={RefreshCw}>
+            {rangeLabel}を組み直す（伝えていない {days}日）
+          </WithIcon>
+        </button>
+        {days === 0 && <span className="sub">範囲に組める日がありません（今日より前・確定した日は組みません）</span>}
+        <Link to="/basics" className="btn btn-text" data-testid="arrange-basis-link">
+          基本情報を見る
+        </Link>
+      </div>
+    </section>
+  );
+}
 
 /** 範囲の呼び名 */
 const SCOPE_LABEL: Record<BatchSource, string> = { month: '月', week: '週', day: '日' };
@@ -139,36 +181,6 @@ function ArrangeModeFields({
   );
 }
 
-/** 考え方（プリセット）を選ぶ欄 */
-function ArrangePresetField({
-  presets,
-  basePreset,
-  presetId,
-  onPreset,
-}: {
-  presets: readonly Preset[];
-  basePreset: Preset | null;
-  presetId: string;
-  onPreset: (id: string) => void;
-}) {
-  return (
-    <label className="stack arrange-preset" style={{ gap: 4 }}>
-      <span>考え方（プリセット）</span>
-      <select value={presetId} onChange={(e) => onPreset(e.target.value)} data-testid="arrange-preset">
-        <option value="">点数の基準（{basePreset?.name ?? '今の重み'}）</option>
-        {presets
-          .filter((p) => p.id !== basePreset?.id)
-          .map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-      </select>
-      <span className="sub">選んだ考え方の重みで組みます。点数の基準と条件の重みは変わりません</span>
-    </label>
-  );
-}
-
 /** 組んでいる間の進み具合の帯（止めるボタンつき） */
 function ArrangeProgress({ run }: { run: BatchRun }) {
   const progressValue = run.index + (run.total > 0 ? Math.min(1, run.iteration / run.total) : 0);
@@ -183,9 +195,7 @@ function ArrangeProgress({ run }: { run: BatchRun }) {
       />
       <div className="row" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
         <span className="sub" aria-live="polite">
-          {run.variants
-            ? `${run.label}の案：${run.variants[run.index] ?? ''}（${Math.min(run.index + 1, run.targets.length)}/${run.targets.length}つ目）`
-            : `${run.label}：${making ? `${mdText(making)}・` : ''}${Math.min(run.index + 1, run.targets.length)}/${run.targets.length}日（組めた日 ${run.made}日）`}
+          {`${run.label}：${making ? `${mdText(making)}・` : ''}${Math.min(run.index + 1, run.targets.length)}/${run.targets.length}日（組めた日 ${run.made}日）`}
         </span>
         <button type="button" className="btn btn-small" onClick={() => monthBatch.stop()} data-testid="arrange-stop">
           <WithIcon icon={Square} size={14}>
@@ -200,25 +210,15 @@ function ArrangeProgress({ run }: { run: BatchRun }) {
 /** 「AI で組む」の区画の入力 */
 export type ArrangeRunProps = {
   headingId: string;
-  scope: BatchSource;
-  /** 組み方の標準がまだ無い */
+  /** 組み方の標準がまだ無い（範囲にかかわらず AI で組まず、組み方の標準へ案内する。ADR-0065） */
   needStandard: boolean;
-  /** 標準が無いときに日の案へ移る日 */
-  guideDay: string;
-  /** 考え方ごとの案（範囲が日で標準が無いときだけ） */
-  variants: BatchVariant[] | null;
   mode: BatchMode;
   careDays: number;
   allDays: number;
-  /** 考え方（プリセット）の欄：出すとき true */
-  showPreset: boolean;
-  presets: readonly Preset[];
-  basePreset: Preset | null;
-  presetId: string;
+  /** 点数の基準のプリセットの名前（いつもこの考え方で組む） */
+  basisName: string;
   /** 組む日の数 */
   runDays: number;
-  /** 組む回数 */
-  runs: number;
   /** 組んでいる最中の状態（無ければ null） */
   run: BatchRun | null;
   error: string | null;
@@ -226,59 +226,52 @@ export type ArrangeRunProps = {
 
 /** 「AI で組む」の区画の操作 */
 export type ArrangeRunActions = {
-  onPickDay: (day: string) => void;
   onMode: (m: BatchMode) => void;
-  onPreset: (id: string) => void;
   onStart: () => void;
 };
 
-/** AI で組む（標準が無い週・月は案内、それ以外は組む日・考え方・開始・進み具合） */
+/** 組み方の標準が無いときの案内（文と［組み方の標準を決める］だけ） */
+function NeedStandard() {
+  return (
+    <>
+      <p data-testid="arrange-need-standard">
+        組み方の標準がまだありません。先に「組み方の標準」で、考え方ごとの案をくらべて標準の週を決めてください。標準を決めると、この画面では標準で埋まらない所を
+        AI で埋めます
+      </p>
+      <div className="row">
+        <Link
+          className="btn btn-primary"
+          to="/standard"
+          onClick={() => setStandardStep('proposals')}
+          data-testid="arrange-to-standard"
+        >
+          <WithIcon icon={CalendarCheck}>組み方の標準を決める</WithIcon>
+        </Link>
+      </div>
+    </>
+  );
+}
+
+/** AI で組む（標準が無ければ組み方の標準へ案内、それ以外は組む日・考え方・開始・進み具合） */
 export function ArrangeRunSection({ view, actions }: { view: ArrangeRunProps; actions: ArrangeRunActions }) {
-  const { headingId, scope, needStandard, guideDay, variants, mode, run, runs, runDays } = view;
+  const { headingId, needStandard, mode, run, runDays } = view;
   return (
     <section className="card stack" aria-labelledby={headingId} data-testid="arrange-run">
       <h2 id={headingId} className="arrange-title">
         AI で組む
       </h2>
-      {needStandard && scope !== 'day' ? (
-        <>
-          <p data-testid="arrange-need-standard">
-            組み方の標準がまだありません。週・月をまとめて組む前に、1日を考え方（プリセット）ごとに組んでくらべ、気に入った案を標準にしてください。標準を決めると、週・月もその考え方で組めます
-          </p>
-          <div className="row">
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => actions.onPickDay(guideDay)}
-              data-testid="arrange-to-day"
-            >
-              <WithIcon icon={CalendarDays}>{mdText(guideDay)}を考え方ごとの案で組む</WithIcon>
-            </button>
-          </div>
-        </>
+      {needStandard ? (
+        <NeedStandard />
       ) : (
         <>
-          {variants && (
-            <p className="arrange-choices-note" data-testid="arrange-choices-note">
-              組み方の標準がまだ無いので、{variants.map((v) => `「${v.name}」`).join('')}の{variants.length}
-              つの考え方でこの日を組んで並べます。気に入った案を「この案を標準にする」で選ぶと、これからはその考え方で組みます
-            </p>
-          )}
-          {!variants && (
-            <ArrangeModeFields mode={mode} careDays={view.careDays} allDays={view.allDays} onMode={actions.onMode} />
-          )}
-          {!variants && view.showPreset && (
-            <ArrangePresetField
-              presets={view.presets}
-              basePreset={view.basePreset}
-              presetId={view.presetId}
-              onPreset={actions.onPreset}
-            />
-          )}
+          <ArrangeModeFields mode={mode} careDays={view.careDays} allDays={view.allDays} onMode={actions.onMode} />
+          <p data-testid="arrange-basis">
+            考え方：<strong>{view.basisName}</strong>
+            <span className="sub">（点数の基準。替えるのは［標準の組み方を変える］）</span>
+          </p>
           <p data-testid="arrange-count">
             組む日：<strong>{runDays}日</strong>
-            {variants && runs > 0 && `（${runs}つの案）`}
-            {runs > 0 && <span className="sub">（見込み {etaText(runs)}）</span>}
+            {runDays > 0 && <span className="sub">（見込み {etaText(runDays)}）</span>}
           </p>
           <div className="row">
             <button
@@ -288,9 +281,7 @@ export function ArrangeRunSection({ view, actions }: { view: ArrangeRunProps; ac
               onClick={actions.onStart}
               data-testid="arrange-start"
             >
-              <WithIcon icon={Sparkles}>
-                {run ? '組んでいます…' : variants ? `${runs || variants.length}つの案を組む` : 'AI で組む'}
-              </WithIcon>
+              <WithIcon icon={Sparkles}>{run ? '組んでいます…' : 'AI で組む'}</WithIcon>
             </button>
             {/* 反映した提案は全体の「元に戻す」で1手戻せる（PRD D329） */}
             <UndoButtons />
@@ -299,7 +290,7 @@ export function ArrangeRunSection({ view, actions }: { view: ArrangeRunProps; ac
       )}
       {run && <ArrangeProgress run={run} />}
       <FieldError>{view.error}</FieldError>
-      {!(needStandard && scope !== 'day') && (
+      {!needStandard && (
         <p className="sub">
           ピンの訪問（手で替えた訪問・組み方の標準の担当）はそのままで、ほかの訪問の担当と時刻を組みます。今日より前の日・確定した日は組みません。
           1日ずつ組み、終わったら提案を出します。見て「反映する」と担当が変わります（「元に戻す」で戻せます）。ほかの画面へ移っても組み続けます。

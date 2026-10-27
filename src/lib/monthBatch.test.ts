@@ -19,6 +19,7 @@ import {
   proposalDayFresh,
   weekLabel,
 } from './monthBatch';
+import { batchDayProblem } from './monthBatchDay';
 
 const TODAY = '2026-10-21';
 
@@ -136,7 +137,7 @@ describe('monthBatch（担当を AI で組む。PRD D256・D257。ADR-0042・ADR
     expect(b.running()).toBe(false);
   });
 
-  it('考え方ごとの案（variants）：最初の日を考え方ごとに組み、案ごとに選んで反映する。andThen は同じ update で当てる（PRD D357）', async () => {
+  it('データの条件（点数の基準にそろえた重み）で問題を作り、見ていた提案と違う番号なら反映しない（ADR-0065）', async () => {
     const seen: Problem[] = [];
     const s = fakeSolve();
     const b = createMonthBatch((p) => {
@@ -146,59 +147,15 @@ describe('monthBatch（担当を AI で組む。PRD D256・D257。ADR-0042・ADR
     const start = unassigned();
     const h = hostOf(start);
     b.connect(h.host);
-    const variants = start.presets.slice(0, 3).map((p, k) => ({
-      presetId: p.id,
-      name: p.name,
-      rules: start.rules.map((r) => ({ ...r, weight: k })),
-    }));
-    expect(b.start({ ...job, source: 'day', rangeStart: TODAY, variants })).toBe(true);
-    expect(b.run.get()).toMatchObject({ targets: [TODAY, TODAY, TODAY], variants: variants.map((v) => v.name) });
-    expect(batchBandText(b.run.get()!)).toContain(variants[0]!.name);
-    await finishAll(s.calls);
-    expect(seen.length).toBe(3);
-    const prop = b.proposal.get()!;
-    expect(prop.days).toEqual([]);
-    expect(prop.choices?.map((c) => [c.presetId, c.days.map((x) => x.date)])).toEqual(
-      variants.map((v) => [v.presetId, [TODAY]]),
-    );
-    expect(batchDoneText(b.done.get()!)).toContain('案を3つ');
-    // 見ていた提案と違う番号なら反映しない（確認を待つ間に提案が替わったとき）
-    expect(b.apply({ id: prop.id + 1, choice: 1 })).toBeNull();
-    expect(h.writes()).toBe(0);
-    let marked = false;
-    const r = b.apply({
-      id: prop.id,
-      choice: 1,
-      andThen: (d) => {
-        marked = true;
-        return d;
-      },
-    });
-    expect(r).toEqual({ applied: [TODAY], skipped: [] });
-    expect(marked).toBe(true);
-    expect(h.writes()).toBe(1);
-    expect(staffed(h.data(), TODAY)).toBeGreaterThan(0);
-    expect(b.proposal.get()).toBeNull();
-  });
-
-  it('考え方（rules）を渡すと、その条件で問題を作る（データの条件は変えない。担当を組むの画面のプリセット）', async () => {
-    const seen: Problem[] = [];
-    const s = fakeSolve();
-    const b = createMonthBatch((p) => {
-      seen.push(p);
-      return s.fn(p);
-    });
-    const start = unassigned();
-    const h = hostOf(start);
-    b.connect(h.host);
-    const rules = start.rules.map((r) => ({ ...r, weight: 0, hard: false }));
-    expect(b.start({ ...job, rules })).toBe(true);
+    expect(b.start(job)).toBe(true);
     await finishAll(s.calls);
     expect(seen.length).toBe(days.length);
-    const base = dayProblemOf(start, days[0]!)!;
-    expect(JSON.stringify(seen[0])).not.toBe(JSON.stringify(base));
-    expect(h.data().rules).toBe(start.rules);
-    expect(b.proposal.get()?.days.length).toBe(days.length);
+    expect(seen[0]).toEqual(batchDayProblem(start, days[0]!)!.problem);
+    const prop = b.proposal.get()!;
+    expect(b.apply({ id: prop.id + 1 })).toBeNull();
+    expect(h.writes()).toBe(0);
+    expect(b.apply({ id: prop.id })?.applied.length).toBeGreaterThan(0);
+    expect(h.writes()).toBe(1);
   });
 
   it('止める：組んでいる日は最良で残し、残りの日はやめる', async () => {

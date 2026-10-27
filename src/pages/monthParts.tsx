@@ -11,7 +11,7 @@ import type { Client, Staff, VisitType } from '../contracts/documents';
 import { BAR_ROWS, barEdgeNote, barRangeText, barRowsText, edgeLabel } from '../lib/barRows';
 import { mdText } from '../lib/dateText';
 import type { DayStatus } from '../lib/month';
-import { type BatchRun, batchBandText } from '../lib/monthBatch';
+import type { BatchRun } from '../lib/monthBatch';
 import { DAY_STATE_TEXT, type MonthLayout } from '../lib/monthList';
 import { batchProgressValue, type MonthFocus } from '../lib/monthView';
 import { REQUESTED_OFF_NOTE } from '../lib/requestedOff';
@@ -258,9 +258,7 @@ export function MonthBatchProgress({
       />
       <div className="row" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
         <span className="sub" aria-live="polite">
-          {batch.variants
-            ? batchBandText(batch)
-            : `${current ? '' : `${batch.label}：`}${current ? `${mdText(current)}：` : ''}${batch.index + 1}/${batch.targets.length}日（組めた日 ${batch.made}日）`}
+          {`${current ? '' : `${batch.label}：`}${current ? `${mdText(current)}：` : ''}${batch.index + 1}/${batch.targets.length}日（組めた日 ${batch.made}日）`}
         </span>
         <button type="button" className="btn btn-small" onClick={onStop}>
           <WithIcon icon={Square} size={14}>

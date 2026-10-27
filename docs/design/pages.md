@@ -27,6 +27,7 @@
 | `#/week` | `pages/WeekPage.tsx` | 週の予定（時間軸・〈スタッフ〉×曜日・〈利用者さん〉×曜日・ドラッグ）。`?d=`・`?view=`・`?by=`・`?staff=`・`?client=`・`?cf=` | [pages-week.md](pages-week.md) |
 | `#/compare` | `pages/ComparePage.tsx` | 提案を比べる（今の担当とその場で作った提案。保存しない）。`?date=` | [pages-rules.md](pages-rules.md) |
 | `#/vacancy` | `pages/VacancyPage.tsx` | 空き状況と問い合わせの試算・仮押さえ・案内文 | [pages-vacancy.md](pages-vacancy.md) |
+| `#/basics` | `pages/BasicsPage.tsx` | 基本情報の予定と相性の表（行＝繰り返し・列＝曜日。マスで時刻を直す。予定を組むの 1 の段。PRD D362。ADR-0067） | [pages-basics.md](pages-basics.md) |
 | `#/clients` | `pages/ClientsPage.tsx` | 〈利用者さん〉一覧。行・「開く」で人の画面へ。`?id=` は人の画面へ移る | [pages-clients.md](pages-clients.md) |
 | `#/clients/:id` | `pages/ClientPage.tsx` | 〈利用者さん〉の画面（全画面）：タブ［予定｜基本情報｜担当・相性｜休み］（`?tab=`）・予定のカレンダー（`?cal=`・`?d=`）・節の「直す → 保存」（`?edit=` で節を開いて消す）。`new` は新しい人 | [pages-clients.md](pages-clients.md) |
 | `#/compat` | `pages/CompatPage.tsx` | 相性の表（訪問先×〈スタッフ〉）。`?sf=`・`?cf=` | [pages-compat.md](pages-compat.md) |
@@ -44,12 +45,13 @@
 | `#/settings` | `pages/SettingsPage.tsx` | 管理者設定（機能の入り切り。だれでも開ける） | [pages-data.md](pages-data.md) |
 | `*`（`#/` を含む） | （`Navigate`） | `/home` へ（replace） | — |
 
-ルートの URL は変えない（古いリンクを壊さない）。メニューは「予定」（`#/month`・`#/week`・`#/plan`）と「予定を組む」（`#/arrange`・`#/standard`・`#/compare`）と「設定」（`#/types`・`#/items`・`#/rules`・`#/settings`・`#/data`。見出しの下の設定のタブで切り替える）にまとめ、相性 `#/compat` はメニューの「人」に置き（PRD D283。ADR-0047）、`#/workload` は勤務時間（シフト）・月の予定の中から開く（PRD D273・D275）。
+ルートの URL は変えない（古いリンクを壊さない）。メニューは「予定」（`#/month`・`#/week`・`#/plan`）と「予定を組む」（`#/basics`・`#/standard`・`#/arrange`・`#/compare`・寄り道の `#/rules`。見出しの下の予定を組むの段で移る。ADR-0066・ADR-0067）と「設定」（`#/types`・`#/items`・`#/settings`・`#/data`。見出しの下の設定のタブで切り替える）にまとめ、〈利用者さん〉・〈スタッフ〉・相性 `#/compat`・勤務時間（シフト）は予定を組むの子「基本情報」のタブに置き（PRD D283・D362。ADR-0047・ADR-0067）、`#/workload` は勤務時間（シフト）・月の予定の中から開く（PRD D273・D275）。
 
 ### 画面別ファイルの索引
 
 | ファイル | 中身 |
 |---|---|
+| [pages-nav.md](pages-nav.md) | メニュー・`lib/nav.ts`（基本情報のタブ・予定を組むの段）・上の帯と下のタブ・引き出し・予定の切り替え・設定のタブ・コマンドパレット |
 | [pages-common.md](pages-common.md) | 画面共通の部品：右の欄 `SidePanel` と確定のボタンの帯・浮いている部品とトースト・名前から開く詳細（`PersonPopover`）・用語の説明（`Term`）・空の画面（`EmptyNext`）・初回の案内ツアー・行き先のリンク（`lib/links`）・メールと道順のリンク・画面横断の e2e |
 | [pages-home.md](pages-home.md) | ホーム（今日やること）・月の予定の進み具合の帯（`ProgressBand`）・`useDayStatuses` |
 | [pages-plan.md](pages-plan.md) | 日の予定：並び・状態の印と確定（伝えた）・1行のまとめ・手で直す・右の欄（詳しく）・時間軸／順番／一覧・担当ごとの1日・地図・入らなかった訪問・担当を変える ▾・訪問の欄・取り消し・点数の理由・日の予定のメール・道順のリンク |
@@ -58,6 +60,7 @@
 | [pages-week.md](pages-week.md) | 週：表示の切り替え・時間軸・ドラッグ・〈スタッフ〉×曜日・〈利用者さん〉×曜日（マスに積む札・「+N」）・時間軸の〈利用者さん〉の初期値・週の予定のメール |
 | [pages-bars.md](pages-bars.md) | 時間帯のバー（3段・30分）と一目で分かる表示：`barRows`・`staffBar`・`loadBar`・`barMarks.css`・`glance`・`dayLine`・`workBars` |
 | [pages-vacancy.md](pages-vacancy.md) | 空き状況：4つの段階・表・試算・仮押さえ・案内文・紹介元へのメール |
+| [pages-basics.md](pages-basics.md) | 基本情報の予定と相性の表（`#/basics`。行＝繰り返し・列＝曜日・マスで時刻を直す・相性の列・予定を組むの 1 の段） |
 | [pages-clients.md](pages-clients.md) | 〈利用者さん〉：一覧と絞り込み（`ClientFilter`・`area`）・人の画面（〈スタッフ〉と共通の殻・タブ・節・予定のカレンダー `PersonCalendar`）・繰り返し・休み・決まりごと・担当できる人・段階と仮押さえ・住所の入力（`AddressField`）・まとめて地図に置く・`ClientPicker`・訪問の欄 |
 | [pages-staff.md](pages-staff.md) | 〈スタッフ〉：一覧・人の画面（予定・基本情報・勤務時間・相性）・最終勤務日と担当の振り直し・自宅・勤務時間（シフト）・勤務の見込み・スマホ画面（見本） |
 | [pages-compat.md](pages-compat.md) | 相性の画面：表・絞り込み（`StaffFilter`・相性のチップ）・吹き出し |
@@ -140,118 +143,9 @@
 - タッチの端末（`pointer: coarse`）では、押せる所を見た目と並びを変えずに `::before` で広げる：アイコンだけのボタン（`.icon-btn` 32px・`.icon-btn-sm` 26px・項目の選択肢のチップの中の 24px）は 44px、名前の i（`.person-info`）と〈利用者さん〉の選択の ×（`.client-picker-remove`）は 32px。隣に押せる要素が並ぶ側は間の半分だけ（アイコンのボタンは 2px、i は 1px）広げ、隣の押せる所に掛けない。担当ごとの1日の行の i は上下の行に掛けず右へ（32×24px）、チップの中の i は名前に掛からないよう縦に（25×29px）。選択肢のチップの「名前を変える」と「消す」は、タッチの端末でだけ間を 16px 広げて 44×44px ずつにする（消すの押し間違いを防ぐ）。390px で広げた所がほかの押せる要素に掛からない（上の帯・下のタブなど前に重なる部品は除く）
 - 860px 以下では入力欄の文字を 16px 以上にする（iPhone で押したときに画面が拡大されない）。クラスで小さくしている欄（`ClientPicker`・`ClientFilter` の〈スタッフ〉の選択）はそれぞれの CSS で 16px
 
-### メニューとナビゲーション（ADR-0024・ADR-0027・ADR-0045・ADR-0054・ADR-0055・ADR-0063。PRD D132・D133・D135・D179〜D183・D239・D273・D275・D326・D336・D348・D349）
+### メニュー・ナビゲーション・コマンドパレット
 
-- メニューは ホーム・予定を組む・予定・空き状況・人・設定 の6項目（見出しなし。PRD D326・D349・D355）。予定・予定を組む・人・設定は子の項目を持つ親で、親の行の右の ▾（`button.nav-toggle`・data-testid `nav-toggle`・`aria-expanded`・`aria-controls`＝`nav-sub-<key>`・名前「◯の項目を畳む／開く」）で畳める。子は親の下の字下げした小さな行（`.nav-sub`・`.nav-child`）。予定の子はリンク（今日の予定・◯月の予定・欠勤・キャンセル）、予定を組むの子は担当を組む・組み方の標準、人の子は人のタブ、設定の子は設定のタブ
-- 畳み：既定は `NAV_OPEN_DEFAULT`＝予定・予定を組む・人を開き、設定を畳む。開け閉めは localStorage の `visit-route-demo:nav-open`（`store/navOpen` の `navOpenMemory`。`{ 親の key: boolean }` の JSON。この端末に残す。読めなければ既定）に覚える。今の画面の親が畳んであれば、画面を移ったときに開く（開いたまま自分で畳んだ開け閉めは、移るまで変えない）
-- 今の画面の印（`aria-current="page"`・`.active`）：親が開いていれば子に付け（今日の予定は日の予定、◯月の予定は月・週の予定、担当を組むは担当を組む・案を比べる）、畳んでいれば親に付ける。開いていても子のどれにも当たらなければ親に付ける。親の行は子が今の画面のとき太字だけ（`.has-current`）
-- 件数の印（`span.nav-badge`・data-testid `nav-badge`・見える文字と `.sr-only` の読み上げ）：担当を組む に「N日」（組む月の担当なしの訪問がある日の数。0なら出さない）、今日の予定 に「未確定」（今日に訪問があってまだ伝えていない）。数えるのは `lib/scheduleMode` の `menuBadges`
-- 広い画面の左のメニュー（`.side-nav`）は詰める：項目（`.nav-link`）は `min-height: 34px`（上下 5px・行の高さ 1.4）、グループの間 10px、メニューの上下 14px・16px。1440×900 で最後の項目（設定。既定は畳む）まで巻かずに見える。タッチできる端末（`any-pointer: coarse`。主の入力がマウスでもタッチ・ペンがあれば当たる）では `.nav-link` を `min-height: 44px`、［月｜週｜日］のタブ（見た目 36px）は `::before` で上下 4px 広げて 44px（PRD D237・D239）
-- 高さ 860px 以下の広い画面（1366×768 など）ではさらに詰める：項目 30px（上下 3px・行の高さ 1.3・0.92rem）・グループの間 4px・見出しの下の余白 0・ロゴ 32px。子の項目（`.nav-child`）は 26px に詰める。1366×768 で既定の開け閉め（予定・予定を組む・人を開き、設定を畳む）のまま最後の項目（設定）まで巻かずに収まる（`scripts/e2e-nav.cjs` の 1366×768 の段）。それでも入らないときは、`.side-nav` の背景（下の端の影 `scroll` と、中身の終わりで影を隠す `local` の重ね）で下に続きがあると示す（PRD D270）
-- 上の帯の日付の選択（`DateSwitcher`）は `lib/nav` の `showsDateSwitch(pathname)` の画面（`DATE_PAGES`：案を比べる・勤務の見込み・勤務時間（シフト））だけに出す。日・週・月の予定は画面の中のナビの行（`ScheduleNav`。PRD D347。ADR-0060）で送るので出さない。選んでいる日付は覚えたままで、外枠 `.app-shell` の `data-date` で読める（PRD D267）
-
-#### `lib/nav.ts`（純粋関数。テストあり）
-
-- `menuSections(terms, today, features, last, badges)`：メニューの並びの1か所（PRD D273〜D275・D326・D349・D355。ADR-0054・ADR-0063）。見出しの無い1つのグループに6項目（ホーム・予定を組む・予定・空き状況・人・設定）。項目は `MenuItem`＝`{ key, to, label, short?, match?, icon, children?, badge? }`（`key` は下のタブで引く名前、`match` はその項目が受け持つ画面のパス（今の画面の印。無ければ `to`）、アイコンは名前 `NavIcon`、`short` は下のタブの短い名前、`children` は畳める子の項目、`badge` は件数の印 `{ text, label }`）。`last`（`LastViews`＝`{ schedule?, settings?, people? }`）は最後に開いた予定の表示・設定のタブ・人のタブ。`badges`（`MenuBadges`＝`{ planUnassignedDays?, todayUntold? }`）は `menuBadges` の値。切った機能の項目・子は出さない
-
-| 項目（`key`・`to`。下のタブは `short`） | 子の項目 |
-|---|---|
-| ホーム（`home`・`/home`。short「ホーム」） | なし |
-| 予定（`schedule`・`scheduleHref(last.schedule)`＝最後に開いた `/month`・`/week`・`/plan`、無ければ `/plan`。short「予定」。`match`＝`SCHEDULE_PATHS`：月・週・日） | 下の3つ |
-| 予定を組む（`arrange`・`/arrange`。short「組む」。`match`＝`ARRANGE_PATHS`：担当を組む・組み方の標準・比較） | 担当を組む（`arrange:assign`・`/arrange?ym=<planYm(today)>`・`match` 担当を組む・比較・件数の印「N日」）・組み方の標準（`arrange:standard`・`/standard`） |
-| 空き状況（`vacancy`・`/vacancy`。short「空き状況」） | なし |
-| 人（`people`・`peopleHref(features, last.people)`＝最後に開いた人のタブ（勤務の見込みは `/availability`）、無ければ `/clients`。`match`＝`PEOPLE_PATHS`：`/clients`・`/staff`・`/compat`・`/availability`・`/workload`（`/clients/:id`・`/staff/:id` は `activeNavPath` で一覧に当てる）。アイコンは `Users`） | 人のタブ（`peopleTabs`。key `people:<to>`。勤務時間（シフト）の `match` に `/workload` も） |
-| 設定（`settings`・`settingsHref(features, last.settings)`＝最後に開いた設定のタブ、無ければ先頭の訪問の種類。`match`＝切っていない設定のタブ） | 設定のタブ（`settingsTabs`。key `settings:<to>`） |
-
-予定の子（PRD D349）：
-
-| 子（`key`） | `to` | `match` | 件数の印 |
-|---|---|---|---|
-| 今日の予定（`today`） | `/plan?date=今日` | 日の予定 | 「未確定」（`todayUntold`。title「今日はまだ伝えていない」） |
-| ◯月の予定（`month-view`。`planLabel(today)`） | `/month?ym=<planYm(today)>`（月の後半は来月、前半は今月） | 月・週の予定 | なし |
-| 欠勤・キャンセル（`absence`。short「欠勤」） | `absenceHref(today)`＝`/plan?date=今日&do=absence`（日の予定で欄を開く。操作の項目） | — | なし |
-
-- `screenSections(terms, features)`：画面の一覧（上の帯の名前・パレットの画面。タブでまとめた画面も1つずつ）。（なし）ホーム／予定（`SCHEDULE_GROUP`）月の予定・週の予定・日の予定／（なし）空き状況／人 〈利用者さん〉一覧・〈スタッフ〉一覧・相性・勤務時間（シフト）・勤務の見込み／設定 訪問の種類・特性の項目・条件の重み・管理者設定・データ。案を比べるは出さない（担当を組むの「案を比べる」から開く。上の帯の名前は `navTitleParts` の `EXTRA_TITLES` の「提案を比べる」。PRD D331）。切った機能の画面は出さない
-- `PEOPLE_TABS`・`peopleTabs(terms, features)`：人のタブの並び（〈利用者さん〉 `/clients`・〈スタッフ〉 `/staff`・相性 `/compat`・勤務時間（シフト） `/availability`（`match` に `/workload` も））。名前は呼び方だけ（「一覧」は付けない）。切った機能のタブは出さない。`isPeoplePath(pathname)`・`PEOPLE_PATHS`。画面の部品は `components/SettingsTabs.tsx` の `PeopleTabs`（設定のタブ `SettingsTabs` と同じ `TabNav`。`nav.view-switch.settings-tabs.people-tabs`・`aria-label="人の切り替え"`・data-testid `people-tabs`・項目の `data-tab`＝`clients` など。今のタブは `aria-current="page"`）を〈利用者さん〉一覧・〈スタッフ〉一覧・相性・勤務時間（シフト）・勤務の見込みの `PageHeader` の `nav` に置く（〈利用者さん〉・〈スタッフ〉の画面には置かない）
-- `SETTINGS_TABS`・`settingsTabs(features)`：設定のタブの並び（訪問の種類 `/types`・特性の項目 `/items`・条件の重み `/rules`・管理者設定 `/settings`・データ `/data`）。切った機能のタブは出さない。`isSettingsPath(pathname)`
-- `SCHEDULE_VIEWS`（`/month`・`/week`・`/plan`）・`isScheduleView(pathname)`（古い `#/schedule` も）・`SCHEDULE_DEFAULT`（`/plan`）・`scheduleHref(last)`（比較は覚えない）
-- `isNavAction(to)`：`?do=` を持つ＝操作の項目（欠勤・キャンセル）。日付・月だけのクエリ（今日の予定・◯月の予定・担当を組む）は画面の項目
-- `ARRANGE_PATHS`・`ARRANGE_TABS`：予定を組むの画面（担当を組む・組み方の標準・比較）とタブ（担当を組む・組み方の標準。部品は `components/SettingsTabs` の `ArrangeTabs`。比較の画面では担当を組むに印）
-- `activeNavPath(pathname)`：`#/schedule` は `/plan`
-- `isActiveNav(item, pathname)`：操作の項目はいつも false。そのほかは `match`（無ければ `to`）に今の画面が入るか
-- `tabLabel(item)`：下のタブの名前（`short`、無ければ `label`）。`tabClick(item, pathname)`：今開いている画面そのもの（`to` が今の画面）なら `stay`（何もしない）、ほかは `go`（比較から「予定」は覚えた表示へ、欠勤は日の予定の上でも欄を開く）
-- `navTitleParts(groups, pathname)`：groups は `screenSections`。上の帯の名前のグループの見出しと項目名（帯では「人・利用者さん一覧」「設定・条件の重み」と並べる。`.m-screen-group`・`.m-screen-item` の inline-block で、入りきらなければ項目名を次の行へ）。見出しの無いグループと予定のグループは項目名だけ（「日の予定」。「予定・日の予定」と重ねない）。一覧に無い画面は null
-- `NAV_OPEN_DEFAULT`：畳める親の `key` と既定で開くか（`{ schedule: true, arrange: true, people: true, settings: false }`）。`MenuBadges`・`LastViews`・`MenuItem` の型もここ
-- `bottomTabs(groups)`：`BOTTOM_TABS`＝`['home', 'schedule', 'absence']` の順にメニュー（親と子の項目を平らにして）から `key` で引く（欠勤は予定の子 `absence` から引く。メニューに無い項目は出さない。名前は `tabLabel`＝ホーム・予定・欠勤）。「探す」「メニュー」は画面のボタン。下のタブは今のまま（PRD D349）
-- 画面の見出し（`PageHeader` の h1）は画面の一覧の項目名と同じ（PRD D179・D230）：ホーム（見出しの下の文は「今日やること：…」）・月の予定・週の予定・日の予定・勤務時間（シフト）・勤務の見込み（`fare` の入り切りで変えない）ほか。本文・行き先の文の画面名もこれにそろえる（人の稼働時間・Excel のシート名・［月｜週｜日］は変えない）。「今日」は画面の呼び名に使わない（PRD D273）
-
-#### `AdminShell`（`src/app/App.tsx`）
-
-- ファイル：殻は `App.tsx`、上の帯 `AppHeader`・下のタブ `BottomTabs`・日付の切り替え `DateSwitcher` は `shellBars.tsx`、`NavGroups`・`Brand`・`NAV_ICONS` は `shellNav.tsx`、メニューの並び `useShellNav`・パレットと引き出しの開け閉め `useShellOverlays`・帯の高さ `useHeaderHeight` は `useAdminShell.ts`
-
-- `groups = menuSections(terms, today, features, last, badges)`（`badges = menuBadges(data, today)`）・`screens = screenSections(terms, features)`、アイコンは `NAV_ICONS`。`last` はモジュールの `lastViews`（描くたびに今の画面が予定の表示・設定のタブ・人のタブなら覚える `rememberView`。開いている間だけ・保存しない。印刷・〈スタッフ〉のスマホ画面から戻っても残る）
-- `NavGroups({ groups, pathname, onPick? })`：左のメニューと引き出しで共通。全部 `Link`（`aria-current` は `isActiveNav` で自分で付ける。data-testid `nav-link`・`data-key`）。中の nav の名前は「画面の一覧」。子を持つ項目は `div.nav-parent[data-parent]`（`.is-open`）の中に、親の行 `.nav-parent-row`（親の `Link`＋`.nav-toggle`）と `.nav-sub#nav-sub-<key>`（畳めば `hidden`。開いていれば子の `Link`＝`.nav-link.nav-child`）。`.nav-toggle` の名前は「◯の項目」で、開け閉めは `aria-expanded` だけ。開け閉めの覚え（`store/navOpen` の `NAV_OPEN_KEY`＝`visit-route-demo:nav-open`。`navOpenMemory` の1つの覚えを `useSyncExternalStore` で読み、左のメニューと引き出しで同じ）と、今の画面の親へ移ったときにその親を開いて見せる（`auto`。覚えない。同じ親の中で画面を移っても開き直さない。押して畳めば外す）はここ。子の項目もタッチできる端末では押せる所 44px。印は親が開いていて子が今の画面なら子、そうでなければ親。`badge` は `span.nav-badge`
-- 上の帯 `.app-header`：狭い画面だけ ロゴと今の画面の名前（`.m-head-title`・data-testid `screen-name`。`navTitleParts(screens, …)`。一覧に無い画面は事業所の名前）。広い画面では `display: none`
-- 上の帯に「探す・移動」（`cmdk-open`。`aria-haspopup="dialog"`・`aria-expanded`・`aria-keyshortcuts`）。860px 以下では上の帯に出さず、下のタブの「探す」で開く（PRD D336。上の帯はロゴ・今の画面の名前・日付の切り替えの1段。名前は内容の幅だけ取り、日付の切り替えが入らなければ2段目へ）
-- 上の帯の右端に全画面の切り替え（`components/FullscreenButton`・`fullscreen`。`IconButton`・`aria-pressed`。Fullscreen API。`fullscreenchange` で表示を合わせる。`document.fullscreenEnabled` が偽なら出さない。印刷では出さない。PRD D358）
-- 帯の高さ：狭い画面では2段に折り返すことがあるので `ResizeObserver` で測って `--header-h` に出す（広い画面では消して styles.css の 72px のまま）
-- 本文の後ろに下のタブ（`nav.bottom-tabs`・`aria-label="よく使う画面"`・data-testid `bottom-tab`・`data-tab`＝`key`・今の画面は `aria-current="page"`（`isActiveNav`））：`BOTTOM_TABS`（ホーム・予定・欠勤）、「探す」ボタン（`button.bottom-tab`・data-testid `bottom-search`・`data-tab="search"`・`aria-haspopup="dialog"`・`aria-expanded`。コマンドパレットを開く）、最後に「メニュー」ボタン（`button.bottom-tab.m-menu-btn`・data-testid `menu-btn`・`aria-haspopup="dialog"`・`aria-expanded`・`aria-controls` は開いているときだけ）。空き状況はメニューとパレットの画面から（PRD D336）
-- 画面を移ったら引き出しとコマンドパレットを閉じる（パレットは開いたときの URL の hash の画面のパスを覚え、移った先の画面で開き直していれば閉じない。`keepPaletteOn`）。`matchMedia('(max-width: 860px)')` が外れたら（広い画面へ戻ったら）引き出しを閉じ、フォーカスは左のメニューの今の項目へ
-- 全体の「元に戻す・やり直す」のキー（PRD D329。ADR-0054）：殻に `components/undo` の `HistoryKeys` を1つ。window の keydown で `lib/history` の `historyKey`（Ctrl+Z＝戻す、Ctrl+Shift+Z・Ctrl+Y＝やり直す。mac は ⌘）なら、入力欄・テキストエリア・選ぶ欄・書ける要素の中（`isTextTarget`）と `[aria-modal="true"]` が開いている間は何もしない（その欄の文字の取り消しに任せる）。ほかは `preventDefault` して store の `undo()`・`redo()` を呼び、トースト「元に戻しました（手の名前）」に「やり直す」（`toast-redo`）／「やり直しました（…）」に「元に戻す」（`toast-undo`）。戻せる手が無ければ「戻せる操作がありません」
-- window の keydown で `isPaletteShortcut` なら `preventDefault` し、`[aria-modal="true"]` が無ければコマンドパレットを開く（右の欄・確認・ツアーの上では開かない）
-- main の `Guarded` は `Suspense`（`fallback` は `PageLoading`：`.empty.page-loading`・`output`・data-testid `page-loading`・「画面を読み込んでいます…」）の中。`Outlet` の後ろに `PreloadWhenShown`（画面が出て手が空いたら分けたチャンクを先に読む。PRD D248・ADR-0039。`src/app/lazyPages.tsx`）
-- 今の画面の項目（引き出し）は閉じるだけ、今の画面の下のタブは何もしない（どちらも `tabClick` が `stay` なら `preventDefault`）。URL のクエリ＝画面の状態を消さない
-
-#### 引き出し（`src/app/NavDrawer.tsx`）
-
-- 左から出す。body の直下（`createPortal`）、`role="dialog"`・`aria-modal`・名前「メニュー」。開いているあいだ `#root` を `inert`
-- 開いたら今の画面の項目（`aria-current`）へフォーカス。Esc・外（背景）・× で閉じる。項目を押すと閉じる
-- Tab は中で回す（`components/ui.tsx` の `FOCUSABLE`。`SidePanel` と同じやり方）。閉じたら `returnFocus`（「メニュー」ボタン）へ
-- 裏のスクロールは `components/useBodyScrollLock`（`lib/scrollLock` の `createScrollLock`。数を数え、html と body の overflow を最後の解除で戻す。テストあり）。`SidePanel` と共通。右の欄と重なっても最後の1つが閉じるまで戻さない
-- z-index 1100（`SidePanel` と同じ。地図・下のタブより前、トーストより後ろ）
-
-#### スマホの CSS（`styles.css`）
-
-- `--bottom-tabs-h`：広い画面 0px、860px 以下で `58px + env(safe-area-inset-bottom)`、印刷で 0px
-- 860px 以下：左のメニューは `display: none`、上の帯は折り返し可・日付の切り替えは右寄せ、本文の下の余白に `--bottom-tabs-h` を足す、下のタブは `position: fixed`・高さ `--bottom-tabs-h`・タブの数で等分（ふつう5列：ホーム・予定・欠勤・探す・メニュー。下の余白は safe-area。「メニュー」の `button` は地と枠を消してほかのタブと同じ見た目）
-- 浮いている部品は `--bottom-tabs-h` の上に出す：
-  - 地図（`.map-dock`）の bottom に足す。地図のボタン `.map-dock-fab` は `right: max(12px, env(safe-area-inset-right))`・`bottom: calc(12px + var(--bottom-tabs-h))`。`body:has(.map-dock-fab) .app-main` は下の余白をボタンの分（56px）足す
-  - 欠勤の振り直しの帯（`plan.css` の `.reassign-dock`）は `max(12px + タブ, --map-dock-top + 8px)`
-  - トーストは `max(96px, タブ + 12px, 帯・地図の上)`
-- `index.html` の viewport に `viewport-fit=cover`。860px 以下の上の帯・本文・下のタブ・引き出し・地図、〈スタッフ〉のスマホ画面（`.staff-shell`）の上と左右を safe-area で避ける
-- 印刷：下のタブ・引き出しは出さない。`print and (max-width: 860px)` では上の帯も出さない
-
-#### 予定の切り替え（`components/ViewSwitch.tsx`）・設定のタブ（`components/SettingsTabs.tsx`）
-
-- 月・週・日の見出しのすぐ下のナビの行（`ScheduleNav`。PRD D347）に［月｜週｜日］（リンクのナビ。今の画面を `aria-current`。PRD D237。[pages-common.md](pages-common.md) の「画面の見出しとボタンの3段」）。押すと選んでいる日付（`useDay`）で移る：月は `?ym=` にその日の月、週は `?d=` にその日、日はその日
-- 月・週で日付を変えたら（月のマスを押して日の予定へ移る・帯・日の見出しを押す、週・月を送る）選んでいる日付も合わせる（月を送ったときはその月の1日、ただし今月なら今日）
-- 各画面の `lead`：月「一月の担当を見て、担当なしや要対応を手で直し、確定します」、週「この週の担当を見て、日時をドラッグでずらし、〈スタッフ〉に伝えたら確定します」、日「その日の担当を見て直し、〈スタッフ〉に伝えたら確定します」
-- 予定の日・週・月は「拡大率」として同じ部品を並べる（PRD D327〜D332。ADR-0054。詳細は [pages-common.md](pages-common.md) の「予定の共通の部品」）：見出し（題名・1行の説明）→ ナビの行（今日・‹ 期間 ▾ ›・［月｜週｜日］・状態・主ボタン。PRD D347）→（月だけ）進み具合の帯／（週）1行の状態 → 操作の行 `ScheduleToolbar` → 本体 → 複数選択の帯（日・週・月・人の予定表。札の3段（大＝時間軸の帯・中＝リストの行・小＝表のマスの札）と入れ物（時間軸・表・リスト）、印・選ぶ・キー・ドラッグの落とし先の判定は共通の部品。日・週・月は同じ札をどの入れ物で何日分見せるか。PRD D339〜D343。ADR-0056・ADR-0057。[pages-common.md](pages-common.md) の「訪問の札の共通の部品」）
-- 設定のタブ（PRD D275・D283）：訪問の種類・特性の項目・条件の重み・管理者設定・データの見出しの題名の下（`PageHeader` の `nav`）に、`settingsTabs(features)` のタブ（`nav.view-switch.settings-tabs`・`aria-label="設定の切り替え"`・data-testid `settings-tabs`・各タブ `data-tab`。今の画面を `aria-current`。見た目は［月｜週｜日］と同じ）。狭い画面では横に巻き（`overflow-x: auto`・折り返さない）、画面を開いたら今のタブを真ん中へ巻く（ページは縦に巻かない）
-
-### コマンドパレット（ADR-0027。PRD D180〜D183）
-
-#### `lib/commandPalette.ts`（純粋関数。テストあり）
-
-- `PaletteItem`：`id`・`kind`（`action|screen|client|staff|visit`）・`label`・`hint`・`to`・`date?`・`visitId?`・`op?`（`'visit-add'`）・`keys`（`lib/search` の `normalizeKana` でそろえた名前・よみ・別名）。`paletteItem` で作る
-- `paletteActions(today, { features })`：欠勤・キャンセルを登録・日の予定（今日）を開く・今月／来月の担当を組む（`/arrange?ym=`）・要対応を見る（月の予定の `?do=attention`）・確定していない日を見る（`unconfirmed`）・訪問を追加（`op: 'visit-add'`）・問い合わせに答える。切った機能の操作は出さない
-- `paletteScreens(sections, terms)`：sections は `screenSections`（タブでまとめた画面も1つずつ。案を比べるは無い。PRD D273・D275・D331）。操作でない項目。補足はグループの見出し（グループの見出しも語に入るので「設定」「予定」で各画面を引ける）。読み・言い換え `SCREEN_WORDS`、〈利用者さん〉一覧・〈スタッフ〉一覧には呼び方のよみ `TERM_READINGS`（既定の呼び方の漢字だけ）
-- `palettePeople(clients, staff, terms)`：`/clients/:id`・`/staff/:id`（人の画面）。段階・休止中を補足に
-- `filterPalette(items, query, limit=8)`：語に分けて AND、種類の順・先頭一致を前に、人は種類ごと limit まで（`rest`）。空なら操作と画面だけ
-- 訪問（PRD D304・D337。ADR-0051・ADR-0055）：`visitIndex(visits)`（`byClient`・`byStaff`（担当の〈スタッフ〉ごと）・`all`。どれも日付・開始の順）・`paletteDate(term, today)`（「10/28」「10月28日」「2026-10-28」「今日」「明日」「あさって」。年の無い日付は去年・今年・来年のうち今日に近い方）・`paletteVisits(query, people, index, today, describe, limit=6, attention?)`（語を日付・「担当なし」（担当なし・担当無し・たんとうなし・未割当）・「要対応」（要対応・ようたいおう）・名前に分ける。名前の語がすべて〈利用者さん〉の名前・よみに含まれる人（20人まで）の回と、すべて〈スタッフ〉の名前・よみに含まれる人（20人まで）が担当の回。名前の語が無く「担当なし」「要対応」があれば全部の回から。日付があればその日の回（取り消しも）、無ければ今日以降の近い回（取り消しを除く）。「担当なし」は担当の無い回、「要対応」は `attention`（無ければ担当なし）で当たる回で、日付が無ければ今日から `PALETTE_ATTENTION_DAYS`（31）日先まで。どの語も無ければ出さない。かなの日付の語（「あす」など）しか無ければ名前として読む。名前の表示は〈利用者さん〉の名前）。種類の見出しは「訪問」で、`filterPalette` の結果の後ろに足す
-- `paletteTerms`・`moveActive`（端で回る）・`isPaletteShortcut(e, isMac)`（mac は ⌘K、ほかは Ctrl+K。Shift・Alt・変換中は違う）・`isMacPlatform`・`paletteKindLabel`・`hashPathname(hash)`・`keepPaletteOn(openFor, pathname)`
-
-#### `components/CommandPalette.tsx`（`commandPalette.css`。区画の部品 `CommandPaletteParts.tsx`・閉じ込めとフォーカス `usePaletteModal.ts`・選んだあとの動き `usePalettePick.ts`・「要対応」の検査 `usePaletteCare.ts`）
-
-- body の直下の `role="dialog"`・`aria-modal`（名前「探す・移動」）。開いたら body のほかの子を `inertLock`、`useBodyScrollLock`、入力欄へフォーカス
-- window の捕捉の段で Esc・Ctrl+K（閉じる）・Tab（`trapTarget` で中で回す）を受け、右の欄・引き出しへ渡さない。入力欄の中の Ctrl+K も閉じる（文字はそのまま、閉じたら入力欄へ）
-- 閉じたら開く前の要素へフォーカス（つながっていなければ上の帯の `cmdk-open`）。吹き出しの中から開いて閉じても body に落とさない
-- 入力欄は `role="combobox"`（`aria-expanded`・`aria-controls`・`aria-autocomplete="list"`・`aria-activedescendant`）、候補は `role="listbox"` の中の `role="group"`（種類の見出し）と `role="option"`（`aria-selected`。押してもフォーカスは入力欄）。↑↓・Enter。件数は打ってから `aria-live`
-- 選んでいる候補は見える位置へ（先頭なら scrollTop=0、種類の先頭なら見出しごと）
-- 候補の語は `useMemo`（開いたとき・データが変わったとき）でそろえ、打つたびは `filterPalette` だけ（300人×60人で1文字 100ms 以内）
-- 訪問の索引は打ってから作り（開いただけでは作らない）、開いている間は使い回す。訪問の補足は担当（訪問の担当）・「担当なし」・取り消し。「要対応」の `attention` は日の予定と同じ訪問ごとの検査（`dayProblemOf` → `routesOf` → `visitIssues`）を候補の日だけ計算し、日ごとに覚える（データが変わったら捨てる）
-- 選ぶと閉じて、訪問（`visitId`）・「訪問を追加」（`op`）は画面を移らずに訪問の詳細の欄（`useOpenVisit`）を開く。ほかは `date` があれば `setDate`、今の画面なら移らない、ほかは `navigate(to)`
-- z-index 1150（引き出し 1100 とトースト 1200 の間）。印刷で出さない。860px 以下は上に寄せ、下の案内（↑↓ Enter Esc）を隠す
+[pages-nav.md](pages-nav.md)：メニュー（5項目と畳める子の項目）・`lib/nav.ts`（基本情報のタブ・予定を組むの段）・上の帯と下のタブ（`AdminShell`）・引き出し・スマホの CSS・予定の切り替え・設定のタブ・コマンドパレット。
 
 ### 確認ダイアログ（ADR-0026。PRD D146〜D150）
 
@@ -285,7 +179,7 @@
 
 - `components/useFeature.ts` の `useFeature(id): boolean`（`org.features` を読むだけ。依存も見る）。欄・ボタンを出すかは部品の中で `useFeature` を見て決める
 - URL の直書きをやめ機能の表から引く：`menuSections`（下のタブもここから）・`screenSections`（上の帯の名前・パレットの画面）・`settingsTabs`（設定のタブ）、`app/App.tsx` のルート（切った機能の URL（`?do=` も）は `#/home` へ移し（replace。`state.featureOff`）、知らせ（トースト）と `#/settings` へのリンク。管理者設定と土台の画面は開ける）、`lib/commandPalette.ts` の操作、`lib/home.ts` のカード、`lib/tour.ts` の枚、`lib/links.ts`、画面の中の欄・ボタン（`useFeature`）。切った機能の URL を開いたときの知らせは `components/FeatureOffNotice`
-- `rules` を切ると、担当を組むの考え方（プリセット）の選ぶ欄を出さず、点数の基準の重みで組む（`data.rules` はいつも基準にそろっている）
+- `rules` が切なら、条件の重みの画面は開けず（組み方の標準の 2 の寄り道のリンクにも出さない）、担当を組む・組み方の標準は点数の基準のプリセットの重み（`planRulesOf(data, false)`）で作る。組み方の標準の案はプリセットごとのまま
 - 切っても事実の表示（月の「休みの人に N」・すでに振り直した案の差の欄・帯・連絡の一覧）は残し、隠すのは入力・操作の入口だけ
 - 切ったまま保存しても、データ（段階・担当できる人・メールアドレス・毎月のパターンの `repeat` と `monthWeeks`）は残す（毎月のパターンは読むだけと注記）。`clientStage` が切なら段階は「利用中／終了」の2つで選ばせる
 - 管理者設定の画面は [pages-data.md](pages-data.md)
@@ -361,7 +255,7 @@
 - [ ] 色は役割の変数から引き、文字は 4.5・枠とフォーカスの輪は 3 以上の比。フォーカスの輪は `--focus` の 3px。動きを減らす設定で動きが止まり、タッチの端末でアイコンのボタンの押せる所が 44px（`lib/motion` のテスト）
 - [ ] （ADR-0024・0045・0055）390×844 で左のメニューが出ず、上の帯に今の画面の名前（〈利用者さん〉一覧と〈スタッフ〉一覧を見分けられる）・日付の切り替えが出て横に巻かない。下のタブ（ホーム・予定・欠勤・探す・メニュー）の「探す」でパレットが開き、「メニュー」で左から見出し付きの引き出しが開き、画面を選ぶ・外を押す・Esc で閉じてフォーカスが「メニュー」に戻る。開いているあいだ裏は巻かず、Tab は中で回る。下のタブで移れ、今の画面（月・週・日・比較は「予定」）が `aria-current`。地図・欠勤の振り直しの帯・トーストがタブに重ならない。印刷に出ない。1400px の見た目（左のメニュー・上の帯 72px）は変わらない（`lib/nav` のテスト・`scripts/e2e-mobile.cjs`）
 - [ ] （ADR-0026）画面のどの確認もブラウザの確認でなく、画面の中央にアプリの見た目のダイアログで出る（見出しの問い・本文・動詞のボタン、消す・捨てるは赤）。最初のフォーカスは取り消し、Tab は中で回り、Esc・背景・取り消すでは何も変わらず、確定で進み、閉じたら押したボタンへ戻る。右の欄の上の Esc は確認だけを閉じる。390px で収まり、印刷では出ない（`scripts/e2e-dialog.cjs`）
-- [ ] （ADR-0027・0045・0063）メニューが ホーム・予定を組む・予定・空き状況・人・設定 の6項目で、予定・予定を組む・人・設定は子の項目（予定は 今日の予定・◯月の予定・欠勤・キャンセル、予定を組むは 担当を組む・組み方の標準、人は人のタブ、設定は設定のタブ）を持ち ▾ で畳める（既定は設定を畳む。開け閉めを覚え、今の画面の親へ移ると開く）。印は開いていれば子、畳んでいれば親。件数の印（担当を組む の「N日」・今日の予定 の「未確定」）が出る。1366×768 で巻かずに収まる。親を押すと最後に開いた表示・タブを開く。「〈利用者さん〉一覧」「〈スタッフ〉一覧」と見分けられ、画面の見出しが上の帯・パレットの名前と同じ。Ctrl+K（上の帯の「探す・移動」、狭い画面は下のタブの「探す」）で開き、打って↑↓・Enter で画面・操作・人の画面へ移り、Esc でフォーカスが戻る（`scripts/e2e-nav.cjs`）
+- [ ] （ADR-0027・0045・0063・0065〜0067）メニューが ホーム・予定を組む・予定・空き状況・設定 の5項目（「人」は無い）で、予定・予定を組む・設定は子の項目（予定は 今日の予定・◯月の予定・欠勤・キャンセル、予定を組むは 基本情報・組み方の標準・担当を組む（標準があれば基本情報と担当を組むだけ）、設定は設定のタブ）を持ち ▾ で畳める（既定は設定を畳む。開け閉めを覚え、今の画面の親へ移ると開く）。印は開いていれば子、畳んでいれば親。件数の印（担当を組む の「変更」か「N日」・今日の予定 の「未確定」）が出る。1366×768 で巻かずに収まる。親を押すと最後に開いた表示・タブを開く。「〈利用者さん〉一覧」「〈スタッフ〉一覧」と見分けられ、画面の見出しが上の帯・パレットの名前と同じ。Ctrl+K（上の帯の「探す・移動」、狭い画面は下のタブの「探す」）で開き、打って↑↓・Enter で画面・操作・人の画面（〈利用者さん〉・〈スタッフ〉）へ移り、Esc でフォーカスが戻る（`scripts/e2e-nav.cjs`）
 - [ ] （ADR-0022）月・週・日の名前から詳細の吹き出しが開き、Esc・外を押す・もう一度押す・Tab で閉じてボタンへ戻る。同時に1つ、見出しが消えたら閉じる。リンクでその人の画面が開く。印刷では i を出さない（`lib/personPopover` のテスト・`scripts/e2e-details.cjs`・`scripts/e2e-details2.cjs`）
 - [ ] （PRD D220〜D222）390×844 で条件の重み・特性の項目・〈スタッフ〉一覧・〈利用者さん〉一覧・比較が横に巻かず、行がカードになる。条件の重みのスライダーと必須が画面の中。〈利用者さん〉一覧の絞り込みが「絞り込み（N）」に畳まれる。比較の主ボタンがタブに隠れない。週は今日の列が見え、空き状況の表は 9:00 から（`lib/scrollEdge`・`lib/weekView`・`lib/clientFilter` のテスト・`scripts/e2e-mobile.cjs`）
 - [ ] 右の欄の確定のボタンの帯：短い欄は帯が内容のすぐ下・区切りなし、長い欄は欄の下に貼り付き、内容が隠れている間だけ区切り。390px の並び・タブに隠れない・キーボード（`lib/panelFit` のテスト・`scripts/e2e-panel-foot.cjs`）

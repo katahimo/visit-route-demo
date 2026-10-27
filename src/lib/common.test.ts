@@ -11,12 +11,11 @@ describe('own（自分のキーだけを引く）', () => {
   });
 });
 
-describe('optionNameError（Excel の区切り・空の印と区別できない選択肢の名前）', () => {
-  it('「、」・改行・「（なし）」は使えない。「・」「,」はよい', () => {
+describe('optionNameError（Excel の区切りと区別できない選択肢の名前）', () => {
+  it('「、」・改行は使えない。「・」「,」「（なし）」はよい', () => {
     expect(optionNameError('洗濯、掃除')).not.toBeNull();
     expect(optionNameError('洗濯\n掃除')).not.toBeNull();
-    expect(optionNameError('（なし）')).not.toBeNull();
-    expect(optionNameError('(なし)')).not.toBeNull();
+    expect(optionNameError('（なし）')).toBeNull();
     expect(optionNameError('洗濯・掃除')).toBeNull();
     expect(optionNameError('A,B')).toBeNull();
     expect(optionNameError('なし')).toBeNull();

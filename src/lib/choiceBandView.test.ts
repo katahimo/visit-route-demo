@@ -1,7 +1,16 @@
-// 考え方ごとの案の帯の表示の純粋関数（PRD D357。ADR-0064）
+// 案を日で見る（ChoiceDayView）の表示の純粋関数（PRD D350。ADR-0065）
 import { describe, expect, it } from 'vitest';
-import { adoptBody, changeNote, diffSign, pointText } from './choiceBandView';
-import type { ProposalChange } from './monthBatch';
+import { normalize } from '../evaluate';
+import { visitsOn } from '../patterns';
+import { reassignDiff } from '../reassign';
+import { createDemoData } from '../seed';
+import { solve } from '../solver';
+import { changeNote, choiceDiff, choicePoints, choiceStaffIds, choiceTab, diffSign, pointText } from './choiceBandView';
+import { busyStaff } from './choiceView';
+import { dayProblemOf, pointsOf, routesOf } from './dayPlan';
+import { type ProposalChange, proposalDayChanges } from './monthBatch';
+
+const TODAY = '2026-10-21';
 
 const change = (over: Partial<ProposalChange>): ProposalChange => ({
   visitId: 'v1',
@@ -14,7 +23,7 @@ const change = (over: Partial<ProposalChange>): ProposalChange => ({
   ...over,
 });
 
-describe('choiceBandView', () => {
+describe('choiceBandView（文）', () => {
   it('pointText：採点できなければ —', () => {
     expect(pointText(null)).toBe('—');
     expect(pointText(82)).toBe('82点');
@@ -31,13 +40,56 @@ describe('choiceBandView', () => {
     expect(changeNote(change({ kind: 'time', minutes: 30 }), name)).toBe('時刻が変わる（今：09:00）');
     expect(changeNote(undefined, name)).toBeUndefined();
   });
+});
 
-  it('adoptBody：違う所があるかで2行目が変わる', () => {
-    const pv = (diff: number) => ({ weekday: 5, since: '2026-10-26', diff: Array(diff).fill({}) }) as never;
-    const a = adoptBody({ name: '移動を短く' }, pv(2), '2026-10-23');
-    expect(a.weekdayLabel).toBe('金');
-    expect(a.body).toContain('今と違う所 2か所');
-    expect(a.body).toContain('「移動を短く」の考え方で組みます');
-    expect(adoptBody({ name: 'x' }, pv(0), '2026-10-23').body).toContain('今のままです（この案と同じ）');
+describe('choiceBandView（点・列・差）', () => {
+  const d = createDemoData(TODAY);
+  const problem = dayProblemOf(d, TODAY)!;
+  const current = routesOf(problem, visitsOn(d, TODAY));
+  const solved = solve(problem, { seed: 1, iterations: 2000 }).routes;
+  const choices = [
+    { presetId: 'a', name: 'A', routes: solved },
+    { presetId: 'b', name: 'B', routes: current },
+  ];
+
+  it('choicePoints：今と案ごとの点（点数の基準の物差し・100点満点）', () => {
+    const scale = normalize(problem);
+    expect(choicePoints(problem, current, choices)).toEqual({
+      current: pointsOf(problem, scale, current),
+      choices: [pointsOf(problem, scale, solved), pointsOf(problem, scale, current)],
+    });
+  });
+
+  it('choiceStaffIds：今かどれかの案で訪問のある人', () => {
+    const ids = choiceStaffIds(problem, {}, choices);
+    expect([...ids].sort()).toEqual(
+      [...new Set([...busyStaff(problem, solved), ...busyStaff(problem, current)])].sort(),
+    );
+  });
+
+  it('choiceDiff：今 → 案の差と変わる訪問（提案の帯と同じ並び）。同じなら変わる訪問は無い', () => {
+    const r = choiceDiff(problem, current, solved);
+    const diff = reassignDiff({ problem, routes: current }, { problem, routes: solved });
+    expect(r.diff).toEqual(diff);
+    expect(r.changes).toEqual(proposalDayChanges({ problem, routes: solved, diff }));
+    expect(choiceDiff(problem, current, current).changes).toEqual([]);
+  });
+
+  it('choiceTab：今（current）・選んだ案・無ければいちばん点の高い案・最初の案', () => {
+    expect(choiceTab('current', choices, 1)).toBe(-1);
+    expect(choiceTab('b', choices, 0)).toBe(1);
+    expect(choiceTab(null, choices, 1)).toBe(1);
+    expect(choiceTab('gone', choices, -1)).toBe(0);
+    expect(choiceTab(null, [], -1)).toBe(-1);
+  });
+
+  it('今の割当が無い（標準の登録前）：今の点は無く、差も無く、current のタブは既定の案（ADR-0065）', () => {
+    expect(choicePoints(problem, null, choices).current).toBeNull();
+    expect([...choiceStaffIds(problem, null, choices)].sort()).toEqual(
+      [...choiceStaffIds(problem, {}, choices)].sort(),
+    );
+    expect(choiceDiff(problem, null, solved)).toEqual({ diff: null, changes: [] });
+    expect(choiceTab('current', choices, 1, false)).toBe(1);
+    expect(choiceTab('current', choices, 1, true)).toBe(-1);
   });
 });

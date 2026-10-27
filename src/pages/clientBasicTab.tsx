@@ -13,6 +13,7 @@ import { Hint, WithIcon } from '../components/ui';
 import { VISIT_RULE_FIELDS } from '../components/VisitRules';
 import type { Client } from '../contracts/documents';
 import type { Item } from '../contracts/rules';
+import { jstDate } from '../domain/time';
 import { colorOf } from '../lib/colors';
 import { hasLocation } from '../lib/common';
 import { traitText } from '../lib/compatView';
@@ -124,6 +125,7 @@ export function ClientBasicTab({
   const f = form && { form, setForm, bad, terms };
   const basicFields = f && <ClientBasicFields {...f} />;
   const stageFields = f && <ClientStageFields {...f} stageOn={stageOn} />;
+  const today = jstDate(Date.now());
   return (
     <div className="person-sections">
       {newEdit ? (
@@ -177,7 +179,7 @@ export function ClientBasicTab({
             view={
               <dl>
                 {clientItems.map((it) => (
-                  <DlRow key={it.id} term={it.name} value={traitText(c.traits[it.id])} />
+                  <DlRow key={it.id} term={it.name} value={traitText(it, c.traits[it.id], today)} />
                 ))}
               </dl>
             }

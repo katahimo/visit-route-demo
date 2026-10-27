@@ -50,3 +50,19 @@
 .mail-notice {
   margin: 0;
 }
+/* Google で予約して送る（PRD D367。ADR-0069） */
+.mail-reserve {
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+.mail-reserve p {
+  margin: 0;
+}
+.mail-reserve-act {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}

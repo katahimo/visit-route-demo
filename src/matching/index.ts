@@ -11,7 +11,7 @@ export {
   PIN_RULE_ID,
   VISIT_TYPE_RULE_ID,
 } from './compile';
-export { conditionText, matches } from './conditions';
+export { conditionText, matches, yearsSince } from './conditions';
 export { balanceOff, balancePoints, dropPointsOf, overCap, totalPoints } from './cost';
 export { bestInsertion } from './insertion';
 export { naiveSeqs } from './naive';
