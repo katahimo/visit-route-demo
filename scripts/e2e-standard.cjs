@@ -1,5 +1,6 @@
-// 組み方の標準（PRD D350〜D354・D359。ADR-0063・ADR-0065・ADR-0066）：#/standard を開くと予定を組むの段（案をくらべる・表で直す・
-// 標準にする・担当を組む の4段。1段ずつ出し、［戻る］［次へ］で動く。1 に条件の重みへの寄り道）・案をくらべる（カード・王冠・点・偏り・今の標準と違うマス）・表で見る（違うマスに「変更」）・
+// 組み方の標準（PRD D350〜D354・D359・D361〜D364。ADR-0063・ADR-0065〜ADR-0067）：#/standard を開くと予定を組むの段（基本情報・案をくらべる・
+// 標準にする・担当を組む の4段。組み方の標準は 2 案をくらべる・3 標準にする（表で直す（下書き）と登録）を1段ずつ出し、［戻る］［次へ］で動く。
+// 2 に条件の重みへの寄り道、2 の［戻る］は基本情報へ）・案をくらべる（カード・王冠・点・偏り・今の標準と違うマス）・表で見る（違うマスに「変更」）・
 // 日で見る（日付と案のタブ・点・王冠・担当ごとの時間軸・地図・変わる訪問の印。読み取り専用）・この案から作る・ほかの画面へ移っても下書きと案が残る・
 // マスを直す（範囲外の時刻は受け付けない・Esc で閉じてフォーカスはマス）・違う所の数・390px で横にはみ出さない・
 // 標準にする（入れ替えるが既定・確認・完了の表示と週の予定へのリンク・点数の基準が案のプリセット）・登録後は今の標準と同じ。
@@ -17,7 +18,7 @@ async function goStep(page, key) {
   await page.waitForFunction((k) => document.querySelector('[data-testid="standard-steps"]')?.dataset.step === k, key);
   await settle(page, 300);
 }
-/** 今の段の見出しにフォーカスがあるか（段が替わると見出しへ移る。ADR-0066） */
+/** 今の段の見出しにフォーカスがあるか（段が替わると見出しへ移る。ADR-0066・ADR-0067） */
 const headFocused = (page) =>
   page.evaluate(() => document.activeElement === document.querySelector('[data-testid="standard-steps"] > li h2'));
 /** 今の段（standard-steps の data-step） */
@@ -67,14 +68,14 @@ const steps = sharedPage({
         );
         const order = await nav.locator('li').evaluateAll((els) => els.map((el) => el.getAttribute('data-step')));
         check(
-          order.join(',') === 'proposals,draft,register,arrange',
-          '予定を組むの段は 案をくらべる・表で直す・標準にする・担当を組む の順（ADR-0066）',
+          order.join(',') === 'basics,proposals,register,arrange',
+          '予定を組むの段は 基本情報・案をくらべる・標準にする・担当を組む の順（ADR-0067）',
           order,
         );
         const cur = nav.locator('span.arrange-step[aria-current="step"]');
         check(
           (await cur.count()) === 1 && (await cur.innerText()).includes('案をくらべる'),
-          '下書きが無い・登録していないので今の段は「案をくらべる」',
+          '下書きが無い・登録していないので今の段は「案をくらべる」（2）',
           (await cur.count()) ? await cur.innerText() : '',
         );
         check(
@@ -86,30 +87,51 @@ const steps = sharedPage({
         check(
           (await page.getByTestId('standard-steps').locator(':scope > li').count()) === 1 &&
             (await page.locator('[data-testid="standard-steps"] [data-step="proposals"]').count()) === 1,
-          '段は1つだけ出す（表で直す・標準にするは出さない）',
+          '段は1つだけ出す（標準にするは出さない）',
         );
         check(
-          (await page.getByTestId('standard-back').count()) === 0 &&
-            (await page.getByTestId('standard-next').innerText()).includes('次へ：表で直す'),
-          '1 では［戻る］が無く、［次へ：表で直す］がある',
+          (await page.locator('[data-testid="standard-steps"] h2').innerText()).trim() === '2. 案をくらべる',
+          '段の見出しは「2. 案をくらべる」',
+        );
+        const back = page.getByTestId('standard-back');
+        check(
+          (await back.innerText()).trim() === '戻る：基本情報' && (await back.getAttribute('href')) === '#/basics',
+          '2 の［戻る］は基本情報へのリンク（文字「戻る：基本情報」）',
+        );
+        check(
+          (await page.getByTestId('standard-next').innerText()).includes('次へ：標準にする'),
+          '2 に［次へ：標準にする］がある',
         );
         check(
           (await page.locator('[data-testid="standard-rules-link"] a').count()) === 1,
-          '1 に条件の重みへのリンク（rules が入のとき）',
+          '2 に条件の重みへのリンク（rules が入のとき）',
         );
-        // 下書きも登録も無いときの 3 は案内だけ
+        // 下書きも登録も無いときの 3 は、下書きの欄（今の標準から作る）と登録の案内だけ
         await goStep(page, 'register');
         check(
-          (await page.getByTestId('standard-register-empty').count()) === 1 &&
+          (await page.locator('[data-testid="standard-steps"] h2').innerText()).trim() === '3. 標準にする',
+          '段の見出しは「3. 標準にする」',
+        );
+        const parts = await page
+          .locator('[data-testid="standard-steps"] [data-step="register"] > section[data-step-part]')
+          .evaluateAll((els) => els.map((el) => `${el.dataset.stepPart}:${el.querySelector('h3')?.textContent}`));
+        check(
+          parts.join('|') === 'draft:表で直す（下書き）|register:標準にする',
+          '3 は下書きの表（表で直す（下書き））と登録（標準にする）が並ぶ',
+          parts,
+        );
+        check(
+          (await page.getByTestId('standard-from-current').count()) === 1 &&
+            (await page.getByTestId('standard-register-empty').count()) === 1 &&
             (await page.getByTestId('standard-register').count()) === 0,
-          '下書きも登録も無い「標準にする」の段には案内だけ（標準にするボタンは出さない）',
+          '下書きも登録も無い「標準にする」の段には［今の標準から作る］と案内だけ（標準にするボタンは出さない）',
         );
         check(
           (await page.locator('.standard-page .btn-primary').count()) === 0,
-          '下書きも登録も無い 3 では［次へ：担当を組む］を塗らない',
+          '下書きも登録も無い 3 では主ボタンを出さない（［次へ：担当を組む］も塗らない）',
         );
         check(await headFocused(page), '段を移ると、その段の見出しにフォーカス');
-        check((await page.getByTestId('standard-back').innerText()).includes('戻る'), '3 に［戻る］');
+        check((await page.getByTestId('standard-back').innerText()).trim() === '戻る', '3 に［戻る］（2 へ）');
         await goStep(page, 'proposals');
         check(
           (await page.getByTestId('standard-now').innerText()).includes('まだ標準を登録していません'),
@@ -121,7 +143,7 @@ const steps = sharedPage({
         check((await page.getByTestId('standard-table').count()) === 0, 'はじめは下書きが無い');
         check(
           (await page.getByTestId('standard-from-current').count()) === 0,
-          '［今の標準から作る］は「2. 表で直す」の段にある（1 には出さない）',
+          '［今の標準から作る］は「3. 標準にする」の段にある（2 には出さない）',
         );
         check(
           (await page.locator('.btn-primary').count()) === 1 &&
@@ -159,8 +181,8 @@ const steps = sharedPage({
         const d = await stored(page);
         check(!d?.standard, '案を作っても標準・予定は書かない', d?.standard);
         await page.screenshot({ path: path.join(OUT_DIR, 'standard-cards.png'), fullPage: true });
-        // 案ができても下書きが無いうちは1のまま（次へも主ボタンにしない）
-        check((await stepNow(page)) === 'proposals', '案を作っても段は 1 のまま');
+        // 案ができても下書きが無いうちは 2 のまま（次へも主ボタンにしない）
+        check((await stepNow(page)) === 'proposals', '案を作っても段は 2（案をくらべる）のまま');
       },
     ],
     [
@@ -266,18 +288,22 @@ const steps = sharedPage({
         await card.getByTestId('standard-use').click();
         await page.getByTestId('standard-table').waitFor();
         await settle(page, 300);
-        check((await stepNow(page)) === 'draft', '［この案から作る］で「表で直す」の段へ移る');
-        check(await headFocused(page), '［この案から作る］のあと、「表で直す」の見出しにフォーカス');
+        check((await stepNow(page)) === 'register', '［この案から作る］で「標準にする」の段へ移る');
+        check(await headFocused(page), '［この案から作る］のあと、「3. 標準にする」の見出しにフォーカス');
         check(
           (await page.getByTestId('standard-card').count()) === 0 &&
             (await page.getByTestId('standard-run').count()) === 0,
-          '「表で直す」の段には案のカードを出さない',
+          '「標準にする」の段には案のカードを出さない',
         );
         check(
-          (await page.getByTestId('standard-back').innerText()).includes('戻る') &&
-            (await page.getByTestId('standard-next').innerText()).includes('次へ：標準にする'),
-          '2 に［戻る］と［次へ：標準にする］',
+          (await page.getByTestId('standard-back').innerText()).trim() === '戻る' &&
+            (await page.getByTestId('standard-next').innerText()).includes('次へ：担当を組む'),
+          '3 に［戻る］と［次へ：担当を組む］',
         );
+        const partOrder = await page
+          .locator('[data-testid="standard-steps"] [data-step="register"] > section[data-step-part]')
+          .evaluateAll((els) => els.map((el) => el.dataset.stepPart));
+        check(partOrder.join(',') === 'draft,register', '下書きがあれば 下書きの表 → 登録 の順', partOrder);
         check(
           (await page.getByTestId('standard-draft-from').innerText()).includes(picked.name),
           '下書きは選んだ案から作った',
@@ -285,19 +311,23 @@ const steps = sharedPage({
         );
         check((await diffCount(page)) === n, '違う所の数は案のカードと同じ', { card: n, got: await diffCount(page) });
         check((await changedCells(page, 'standard-table')) === n, '下書きの違うマスの数');
-        check((await page.locator('.btn-primary').count()) === 1, '主ボタンは画面に1つ（次へ：標準にする）');
-        // 下書きがあるときの［この案から作る］は確認してから置き換える（1 の段へ戻って押す）
+        check(
+          (await page.locator('.btn-primary').count()) === 1 &&
+            (await page.getByTestId('standard-register').getAttribute('class')).includes('btn-primary'),
+          '主ボタンは画面に1つ（この表を標準にする）',
+        );
+        // 下書きがあるときの［この案から作る］は確認してから置き換える（2 の段へ戻って押す）
         await page.getByTestId('standard-back').click();
         await page.getByTestId('standard-card').first().waitFor();
-        check((await stepNow(page)) === 'proposals', '［戻る］で 1 に戻る');
+        check((await stepNow(page)) === 'proposals', '［戻る］で 2 に戻る');
         await settle(page, 200);
-        check(await headFocused(page), '［戻る］のあと、「案をくらべる」の見出しにフォーカス');
+        check(await headFocused(page), '［戻る］のあと、「2. 案をくらべる」の見出しにフォーカス');
         await page.getByTestId('standard-card').first().getByTestId('standard-use').click();
         await page.getByTestId('confirm-dialog').waitFor();
         check((await page.getByTestId('confirm-title').innerText()).includes('置き換えますか'), '置き換える前に確認');
         await page.getByTestId('confirm-cancel').click();
         await page.getByTestId('confirm-dialog').waitFor({ state: 'detached' });
-        await nextStep(page, 'draft');
+        await nextStep(page, 'register');
         check(
           (await page.getByTestId('standard-draft-from').innerText()).includes(picked.name),
           '取り消すと下書きはそのまま',
@@ -314,16 +344,16 @@ const steps = sharedPage({
         await page.goto(`${BASE}#/standard`);
         await page.getByTestId('standard-steps').waitFor();
         await settle(page, 300);
-        check((await stepNow(page)) === 'draft', 'ほかの画面へ移って戻っても段は「表で直す」のまま（読み直すと戻る）');
+        check((await stepNow(page)) === 'register', 'ほかの画面へ移って戻っても段は「標準にする」のまま（下書きがあれば開くのは標準にする。読み直すと戻る）');
         check((await page.getByTestId('standard-table').count()) === 1, 'ほかの画面へ移って戻っても下書きが残る');
         check((await diffCount(page)) === before, '下書きの違う所の数も同じ');
         await goStep(page, 'proposals');
         check(
           (await page.getByTestId('standard-use').count()) === (await page.getByTestId('standard-card').count()) &&
             (await page.getByTestId('standard-card').count()) >= 3,
-          '案も残る（1 の段で見る）',
+          '案も残る（2 の段で見る）',
         );
-        await goStep(page, 'draft');
+        await goStep(page, 'register');
       },
     ],
     [
@@ -405,8 +435,9 @@ const steps = sharedPage({
       'register',
       async (page) => {
         check(
-          (await page.getByTestId('standard-register').count()) === 0,
-          '標準にするは「3. 標準にする」の段にある（2 には出さない）',
+          (await page.locator('[data-step="register"] [data-step-part="register"] [data-testid="standard-register"]').count()) === 1 &&
+            (await page.locator('[data-step="register"] [data-step-part="draft"] [data-testid="standard-table"]').count()) === 1,
+          '「3. 標準にする」の段に下書きの表と［この表を標準にする］が並ぶ',
         );
         if ((await diffCount(page)) === 0) {
           // 違う所が無ければ1マス替える
@@ -417,7 +448,6 @@ const steps = sharedPage({
           await page.getByTestId('standard-editor-ok').click();
           await settle(page, 200);
         }
-        await nextStep(page, 'register');
         check((await page.getByTestId('standard-since').count()) === 1, '3 に「いつから」の欄');
         check(
           (await page.getByTestId('standard-next').innerText()).includes('次へ：担当を組む') &&
@@ -461,6 +491,10 @@ const steps = sharedPage({
         check(/#\/week\?d=\d{4}-\d{2}-\d{2}$/.test(href ?? ''), '［週の予定で見る］は週の予定へ', href);
         check((await page.getByTestId('standard-table').count()) === 0, '登録したら下書きを捨てる');
         check((await stepNow(page)) === 'register', '登録したあとも「標準にする」の段で完了を見せる');
+        const afterParts = await page
+          .locator('[data-testid="standard-steps"] [data-step="register"] > section[data-step-part]')
+          .evaluateAll((els) => els.map((el) => el.dataset.stepPart));
+        check(afterParts.join(',') === 'register,draft', '登録した直後は登録の部分（完了の表示）が先', afterParts);
         check((await page.getByTestId('toast-undo').count()) === 1, 'トーストに［元に戻す］');
         check(
           (await page.getByTestId('standard-now').innerText()).startsWith('標準：'),
@@ -477,12 +511,10 @@ const steps = sharedPage({
           (await page.getByTestId('standard-register-empty').count()) === 0,
           '登録した直後は「下書きがありません」を出さない（完了の表示）',
         );
-        await goStep(page, 'draft');
         await page.getByTestId('standard-from-current').click();
         await page.getByTestId('standard-table').waitFor();
         await settle(page, 300);
         check((await diffCount(page)) === 0, '登録したあと今の標準から作ると違う所0');
-        await nextStep(page, 'register');
         check(await page.getByTestId('standard-register').isDisabled(), '違う所0なら標準にするを押せない');
         check((await page.getByTestId('standard-same').count()) === 1, '「今の標準と同じです」');
       },
@@ -538,26 +570,74 @@ const steps = sharedPage({
     [
       'arrange-after-register',
       async (page) => {
-        // 登録したあとの担当を組むには予定を組むの段を出さず、［標準の組み方を変える］で 1 へ戻れる（ADR-0066）
+        // 登録したあとの担当を組むも予定を組むの段（基本情報・担当を組む の2つ）を出し、［標準の組み方を変える］で組み方の標準へ戻れる（ADR-0067）
         await goStep(page, 'register');
+        // 下書きを1つ持って出る（案を作り直すと下書きが無くなることがあるので、無ければ今の標準から作る）
+        if ((await page.getByTestId('standard-table').count()) === 0) {
+          await page.getByTestId('standard-from-current').click();
+          await page.getByTestId('standard-table').waitFor();
+        }
         await page.getByTestId('standard-next').click();
         await page.waitForURL(/#\/arrange/, { timeout: 10000 });
         await page.getByTestId('arrange-change-standard').waitFor({ timeout: 30000 });
-        check((await page.getByTestId('arrange-steps').count()) === 0, '登録したあとの担当を組むに段は出さない');
+        const arrangeSteps = await page
+          .locator('[data-testid="arrange-steps"] li')
+          .evaluateAll((els) => els.map((el) => el.dataset.step));
+        check(
+          arrangeSteps.join(',') === 'basics,arrange',
+          '登録したあとの担当を組むの段は 基本情報・担当を組む の2つ',
+          arrangeSteps,
+        );
         check(
           (await page.getByTestId('arrange-change-standard').getAttribute('href')) === '#/standard',
           '担当を組むに［標準の組み方を変える］（#/standard へ）',
         );
+        // ［標準の組み方を変える］は下書きの有る無しにかかわらず 2（案をくらべる）から開く
         await page.getByTestId('arrange-change-standard').click();
         await page.waitForURL(/#\/standard/, { timeout: 10000 });
         await page.getByTestId('standard-steps').waitFor({ timeout: 30000 });
         check(
           (await stepNow(page)) === 'proposals',
-          '［標準の組み方を変える］で組み方の標準の 1（案をくらべる）が開く',
+          '［標準の組み方を変える］で組み方の標準の 2（案をくらべる）が開く（下書きが残っていても）',
+          await stepNow(page),
         );
         check(
           (await page.getByTestId('arrange-steps').locator('li').count()) === 4,
           '組み方の標準は標準があっても予定を組むの 4 段を出す',
+        );
+      },
+    ],
+    [
+      'basics-after-register',
+      async (page) => {
+        // 基本情報の段：標準を登録したあとに基本情報（#/basics の表の時刻）を直すと、担当を組むに組み直しの知らせ（ADR-0067）
+        await page.goto(`${BASE}#/basics`);
+        await page.getByTestId('basics-table').waitFor({ timeout: 30000 });
+        check(
+          (await page.locator('h1').innerText()).trim() === '予定と相性' &&
+            (await page.getByTestId('basics-row').count()) > 0,
+          '基本情報（#/basics）に予定と相性の表',
+        );
+        check(
+          (await page.evaluate(() => localStorage.getItem('vrdemo:arrange:basis'))) !== null,
+          '標準を登録すると基本情報の鍵を vrdemo:arrange:basis に覚える',
+        );
+        await page.goto(`${BASE}#/arrange`);
+        await page.getByTestId('arrange-change-standard').waitFor({ timeout: 30000 });
+        check((await page.getByTestId('arrange-basis-changed').count()) === 0, '登録した直後は組み直しの知らせを出さない');
+        await page.goto(`${BASE}#/basics`);
+        await page.getByTestId('basics-table').waitFor({ timeout: 30000 });
+        await page.getByTestId('basics-time').first().click();
+        await page.getByTestId('basics-editor-early').fill('05:00');
+        await page.getByTestId('basics-editor-ok').click();
+        await page.getByTestId('basics-editor').waitFor({ state: 'detached', timeout: 10000 });
+        // 基本情報の次へは担当を組むへ（標準がある）
+        await page.getByTestId('basics-next').click();
+        await page.waitForURL(/#\/arrange/, { timeout: 10000 });
+        await page.getByTestId('arrange-basis-changed').waitFor({ timeout: 30000 });
+        check(
+          (await page.getByTestId('arrange-basis-redo').count()) === 1,
+          '基本情報を直すと担当を組むに「変わりました」の知らせと［組み直す］',
         );
       },
     ],
