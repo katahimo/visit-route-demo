@@ -227,16 +227,21 @@ export function useConfirmDay(x: { date: string; d: PlanData; update: Update; bu
     toast('確定しました（伝えた内容を残しました）');
     return true;
   };
-  /** 全員分のメールを作ったので確定する（PRD D346。確認は出さず、知らせの「元に戻す」で戻せる） */
-  const confirmByMail = () => {
-    if ((!hasPlan || !problem) && toldState !== 'changed') return;
-    if (x.busy()) return;
-    write('確定（メールを作った）');
+  /**
+   * 全員分のメールを作った・Google で予約したので確定する（PRD D346・D368。確認は出さず、知らせの「元に戻す」で戻せる。
+   * 予約は戻さない）。note は予約したときの知らせの文
+   */
+  const confirmByMail = (by: 'mail' | 'reserve' = 'mail', note?: string): boolean => {
+    if ((!hasPlan || !problem) && toldState !== 'changed') return false;
+    if (x.busy()) return false;
+    write(by === 'reserve' ? '確定（メールを予約した）' : '確定（メールを作った）');
     const care = hasPlan ? issues.size : 0;
-    toast(
-      `全員分のメールを作ったので、この日を確定（伝えた）にしました${care > 0 ? `（要対応の訪問 ${care}件あり）` : ''}`,
-      { action: undoAction },
-    );
+    const head =
+      by === 'reserve'
+        ? `${note ?? 'メールを予約しました'}。この日を確定（伝えた）にしました`
+        : '全員分のメールを作ったので、この日を確定（伝えた）にしました';
+    toast(`${head}${care > 0 ? `（要対応の訪問 ${care}件あり）` : ''}`, { action: undoAction });
+    return true;
   };
   return { toldOpen, setToldOpen, adopt, confirmByMail };
 }

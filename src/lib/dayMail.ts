@@ -6,8 +6,15 @@ import { dayByStaff, dayMailText, mailTo } from './mail';
 import type { BuiltMail } from './mailto';
 import type { PrintDay } from './monthPrint';
 
-/** 担当ごとの1行（components/mailParts の MailRow と同じ形） */
-export type DayMailRow = { key: string; name: string; email: string; summary: string; mail: BuiltMail | null };
+/** 担当ごとの1行（components/mailParts の MailRow に、予約送信で預ける件名・全文（text。ADR-0069）を足した形） */
+export type DayMailRow = {
+  key: string;
+  name: string;
+  email: string;
+  summary: string;
+  mail: BuiltMail | null;
+  text: { subject: string; full: string };
+};
 
 /**
  * 日の予定のメールの行：有効な〈スタッフ〉のうち、その日に訪問がある・欠勤／希望休・伝えた内容に担当があった人（名前の順）。
@@ -39,23 +46,21 @@ export function dayMailRows(
             : v,
         );
     const off = offOf.get(s.id);
+    const text = dayMailText(
+      data.org,
+      opts.mapsOn ? s : { name: s.name },
+      date,
+      mailSource,
+      visits,
+      opts.notesOn && opts.includeKeys,
+    );
     return {
       key: s.id,
       name: s.name,
       email: s.email,
       summary: [off, `訪問 ${visits.length}件`].filter(Boolean).join('・'),
-      mail: mailTo(
-        s.email,
-        dayMailText(
-          data.org,
-          opts.mapsOn ? s : { name: s.name },
-          date,
-          mailSource,
-          visits,
-          opts.notesOn && opts.includeKeys,
-        ),
-        opts.limit,
-      ),
+      mail: mailTo(s.email, text, opts.limit),
+      text: { subject: text.subject, full: text.full },
     };
   });
   return { day, rows, mailSource };

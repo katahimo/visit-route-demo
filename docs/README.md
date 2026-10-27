@@ -39,6 +39,7 @@ AI・人が「何を知りたいときに、どのファイルを読むか」を
 | [pages-arrange.md](design/pages-arrange.md) | 担当を組む（範囲・AI で組む・提案の帯・基本情報が変わったときの組み直しの知らせ。予定を組むの最後の段） |
 | [pages-standard.md](design/pages-standard.md) | 組み方の標準（1段ずつ進む段・標準の週の期間・考え方ごとの案の比較（表と日で見る時間軸・地図）・登録・`lib/standard`。予定を組むの2〜3段目） |
 | [pages-data.md](design/pages-data.md) | データ（控え・直前の状態・Excel・初期化・片づけ・データを守る知らせ）・管理者設定 |
+| [mail-schedule.md](design/mail-schedule.md) | メールの予約送信（事業所の Google Apps Script とのやりとりの契約・送る時刻・この端末の覚え・GAS のシート） |
 
 ## ADR 一覧
 
@@ -107,6 +108,7 @@ AI・人が「何を知りたいときに、どのファイルを読むか」を
 | [0066](adr/0066-arrange-steps-one-at-a-time-rules-behind-standard.md) | 予定を組むを1段ずつ進む4段（案をくらべる → 表で直す → 標準にする → 担当を組む）にし、条件の重みを組み方の標準の寄り道に（0067 で段を置き換え） |
 | [0067](adr/0067-arrange-basics-first-people-under-arrange.md) | 予定を組むの1段目を「基本情報」にし、メニュー「人」の項目を予定を組むへ移す（段は 基本情報 → 案をくらべる → 標準にする → 担当を組む。前提が変われば組み直しを知らせる） |
 | [0068](adr/0068-roster-io-on-lists-with-csv.md) | 名簿の書き出し・読み込みを〈利用者さん〉一覧・〈スタッフ〉一覧へ移し、CSV（文字コードの自動判別）を足す |
+| [0069](adr/0069-scheduled-mail-via-org-gas.md) | 日の予定のメールを、事業所の Google Apps Script に確定のときにまとめて預け、前日の決めた時刻に送る（mailto は残す） |
 
 ## 文書の保ち方
 

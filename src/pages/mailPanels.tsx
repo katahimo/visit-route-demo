@@ -10,11 +10,16 @@ import { byName } from '../lib/common';
 import { type DayMailRow, dayMailProgress, dayMailRows, sendableKeys } from '../lib/dayMail';
 import { isOn } from '../lib/features';
 import { mailTo, mdw, sourceWord, weekByStaff, weekMailText } from '../lib/mail';
+import { MailReserveBox } from './mailReserve';
 
-/** 日のメールと確定（PRD D346）：state は伝えた状態、onConfirm は確定する（mail＝全員分のメールを作った・manual＝欄のボタン） */
+/**
+ * 日のメールと確定（PRD D346・D368）：state は伝えた状態、onConfirm は確定する
+ * （mail＝全員分のメールを作った・reserve＝Google で予約した（note は知らせの文）・manual＝欄のボタン）
+ */
 export type DayMailConfirm = {
   state: 'none' | 'told' | 'changed';
-  onConfirm: (by: 'mail' | 'manual') => void;
+  /** 確定したら true（確定済み・計算の途中などで確定しなければ false） */
+  onConfirm: (by: 'mail' | 'reserve' | 'manual', note?: string) => boolean;
 };
 
 /**
@@ -138,6 +143,15 @@ export function DayMailPanel({
               {noEmail > 0 &&
                 ` メールアドレスの無い${terms.staff}（${noEmail}人）は、${terms.staff}の画面で入れられます。`}
             </MailNotice>
+            {rows.length > 0 && (
+              <MailReserveBox
+                date={date}
+                rows={rows}
+                senderName={data.org.name}
+                staffWord={terms.staff}
+                confirm={confirm}
+              />
+            )}
             {confirm && rows.length > 0 && (
               <p className="sub" data-testid="day-mail-progress">
                 {progressText}
