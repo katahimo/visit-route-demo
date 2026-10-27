@@ -1,7 +1,8 @@
 // 書き出しの表の共通部分（表の型・列幅・書式・プルダウン）。exportBook・exportSheets・exportPersonTables が使う
 import type ExcelJS from 'exceljs';
 import type { Item } from '../contracts/rules';
-import { FLAG_COND_TEXTS, YES } from './text';
+import type { TraitCol } from './layout';
+import { FLAG_COND_TEXTS, NO, YES } from './text';
 
 /** 見出しの背景（淡いオレンジ） */
 const HEADER_FILL = 'FFFDE3CF';
@@ -99,10 +100,11 @@ export function addTable(wb: ExcelJS.Workbook, spec: TableSpec): ExcelJS.Workshe
 export const yes = (b: boolean) => (b ? YES : '');
 export const nullable = (n: number | null) => (n === null ? null : n);
 
-/** 項目の列（特性 or 条件）のプルダウン */
-export function traitList(it: Item, col: number): ListRule | null {
-  if (it.kind === 'flag') return { col, values: ['あり', 'なし'] };
-  if (it.kind === 'choice') return { col, values: it.options };
+/** 特性の列のプルダウン（選択肢から複数は選択肢ごとの列の ○・×。ADR-0070） */
+export function traitList(c: TraitCol, col: number): ListRule | null {
+  if (c.option !== null) return { col, values: [YES, NO] };
+  if (c.item.kind === 'flag') return { col, values: ['あり', 'なし'] };
+  if (c.item.kind === 'choice') return { col, values: c.item.options };
   return null;
 }
 export function condList(it: Item, col: number): ListRule | null {

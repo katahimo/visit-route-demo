@@ -13,9 +13,21 @@ import {
   User,
 } from 'lucide-react';
 import { useId, useState } from 'react';
-import type { Condition, Item, ItemTarget, Op, Traits, TraitValue } from '../contracts/rules';
+import {
+  type Condition,
+  type Item,
+  type ItemTarget,
+  type Op,
+  START_YEAR_MAX,
+  START_YEAR_MIN,
+  type Traits,
+  type TraitValue,
+} from '../contracts/rules';
+import { jstDate } from '../domain/time';
 import { ITEM_KIND_LABELS } from '../lib/common';
+import { traitText } from '../lib/compatView';
 import { condText } from '../lib/condText';
+import { yearsSince } from '../matching';
 import { useDemoData } from '../store/react';
 import { FieldError, invalidAttrs } from './FieldError';
 import { Check } from './parts';
@@ -89,7 +101,55 @@ export function TraitInput({
           aria-label={item.name}
         />
       );
+    case 'startYear':
+      return <StartYearInput item={item} value={value} onChange={onChange} />;
   }
+}
+
+/** 開始年の入力（西暦。今日までの年数を横に出す。ADR-0070） */
+function StartYearInput({
+  item,
+  value,
+  onChange,
+}: {
+  item: Item;
+  value: TraitValue | undefined;
+  onChange: (v: TraitValue) => void;
+}) {
+  const errorId = useId();
+  // 年として読めない途中の文字だけを覚える（読めれば値に入れて、表示は値から）
+  const [draft, setDraft] = useState<string | null>(null);
+  const text = draft ?? (typeof value === 'number' ? String(value) : '');
+  const valid = draft === null;
+  return (
+    <div>
+      <div className="row num-range">
+        <input
+          type="number"
+          inputMode="numeric"
+          min={START_YEAR_MIN}
+          max={START_YEAR_MAX}
+          value={text}
+          placeholder="例 2018"
+          aria-label={`${item.name}（開始年）`}
+          {...invalidAttrs(!valid, errorId)}
+          onChange={(e) => {
+            const t = e.target.value;
+            const y = Number(t);
+            const ok = t === '' || (Number.isInteger(y) && y >= START_YEAR_MIN && y <= START_YEAR_MAX);
+            setDraft(ok ? null : t);
+            if (ok) onChange(t === '' ? null : y);
+          }}
+        />
+        <span className="sub" style={{ whiteSpace: 'nowrap' }}>
+          年から{valid && typeof value === 'number' && `（${yearsSince(value, jstDate(Date.now()))}年）`}
+        </span>
+      </div>
+      <FieldError id={errorId} live={false}>
+        {!valid && `西暦（${START_YEAR_MIN}〜${START_YEAR_MAX}）で入れてください`}
+      </FieldError>
+    </div>
+  );
 }
 
 function OptionChecks({
@@ -181,7 +241,7 @@ const listOf = (v: TraitValue): string[] => (Array.isArray(v) ? v : typeof v ===
 
 /**
  * 1つの項目にかかる条件を、チェック表で扱える形に読む。読めなければ null（「そのほかの条件」で表示だけ）
- * flag：is 1つ／choice：is・in 1つ／multi：hasAny・hasAll 1つ／number：gte・lte 1つずつ
+ * flag：is 1つ／choice：is・in 1つ／multi：hasAny・hasAll 1つ／number・startYear（年数）：gte・lte 1つずつ
  */
 function readable(item: Item, conds: Condition[]): boolean {
   if (conds.length === 0) return true;
@@ -202,6 +262,7 @@ function readable(item: Item, conds: Condition[]): boolean {
         conds.length === 1 && (c.op === 'hasAny' || c.op === 'hasAll') && Array.isArray(c.value) && knownList(c.value)
       );
     case 'number':
+    case 'startYear':
       return (
         conds.every(
           (x) => (x.op === 'gte' || x.op === 'lte') && typeof x.value === 'number' && Number.isFinite(x.value),
@@ -377,7 +438,10 @@ function ItemCondition({
         </div>
       );
     }
-    case 'number': {
+    case 'number':
+    case 'startYear': {
+      // 開始年の項目の条件は年数（ADR-0070）
+      const unit = item.kind === 'startYear' ? '年' : '';
       const bound = (op: 'gte' | 'lte') => {
         const c = conds.find((x) => x.op === op);
         return typeof c?.value === 'number' ? c.value : '';
@@ -404,7 +468,7 @@ function ItemCondition({
             {...invalidAttrs(reversed, rangeErrorId)}
             onChange={(e) => set('gte', e.target.value)}
           />
-          <span className="sub">以上</span>
+          <span className="sub">{unit}以上</span>
           <input
             type="number"
             value={bound('lte')}
@@ -413,7 +477,7 @@ function ItemCondition({
             {...invalidAttrs(reversed, rangeErrorId)}
             onChange={(e) => set('lte', e.target.value)}
           />
-          <span className="sub">以下</span>
+          <span className="sub">{unit}以下</span>
           <FieldError as="span" id={rangeErrorId} live={false}>
             {reversed && '下限が上限より大きいので、誰も満たしません'}
           </FieldError>
@@ -453,19 +517,14 @@ export function CondChips({
 }
 
 /** 特性の短い表示 */
-export function TraitChips({ traits, items }: { traits: Traits; items: { id: string; name: string }[] }) {
+export function TraitChips({ traits, items }: { traits: Traits; items: Pick<Item, 'id' | 'name' | 'kind'>[] }) {
   // 未確認の項目（まだ聞き取っていない）。相手の条件を満たさない扱いなので、埋め漏れに気づけるよう印を出す
   const unknown = items.filter((it) => traits[it.id] === undefined || traits[it.id] === null);
+  const today = jstDate(Date.now());
   const chips = items.flatMap((it) => {
     const v = traits[it.id];
     if (v === undefined || v === null || (Array.isArray(v) && v.length === 0)) return [];
-    const text =
-      v === true
-        ? `${it.name}：あり`
-        : v === false
-          ? `${it.name}：なし`
-          : `${it.name}：${Array.isArray(v) ? v.join('・') : v}`;
-    return [{ text, icon: itemIcon(it.name) }];
+    return [{ text: `${it.name}：${traitText(it, v, today)}`, icon: itemIcon(it.name) }];
   });
   if (chips.length === 0 && unknown.length === 0) return <span className="sub">—</span>;
   return (

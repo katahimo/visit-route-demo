@@ -65,12 +65,15 @@ function planOf(data: DemoData, date: string, problem: Problem, realVisits: numb
   return baseOf(data, date, problem).routes;
 }
 
-/** 担当に必要な条件（種類の必要条件と query.requirements）をすべて満たすか。項目の無い・相手側でない条件は無視する（compile と同じ） */
-function meetsAll(conds: Condition[], items: Map<string, Item>, traits: Traits): boolean {
+/**
+ * 担当に必要な条件（種類の必要条件と query.requirements）を日付 date にすべて満たすか。項目の無い・相手側でない条件は
+ * 無視する（compile と同じ）
+ */
+function meetsAll(conds: Condition[], items: Map<string, Item>, traits: Traits, date: string): boolean {
   return conds.every((c) => {
     const item = items.get(c.itemId);
     if (!item || item.target !== 'staff') return true;
-    return matches(c, item, traits[c.itemId]);
+    return matches(c, item, traits[c.itemId], date);
   });
 }
 
@@ -99,7 +102,9 @@ export const vacancyOf: VacancyOf = (data, query, range) => {
   // いない種類は種類なし
   const vType = query.typeId === null ? undefined : data.visitTypes.find((t) => t.id === query.typeId);
   const conds = [...(vType?.requirements ?? []), ...query.requirements];
-  const eligible = new Set(data.staff.filter((s) => meetsAll(conds, items, s.traits)).map((s) => s.id));
+  // 条件を満たす人（開始年の項目の年数は日付で変わるので日ごと。ADR-0070）
+  const eligibleOn = (date: string) =>
+    new Set(data.staff.filter((s) => meetsAll(conds, items, s.traits, date)).map((s) => s.id));
   const inquiryClient: Client | null =
     query.place === null
       ? null
@@ -160,6 +165,7 @@ export const vacancyOf: VacancyOf = (data, query, range) => {
     const vi = problem.visits.findIndex((v) => v.id === INQUIRY_VISIT_ID);
     const realVisits = problem.visits.length - (vi >= 0 ? 1 : 0);
     const routes = planOf(dayData, date, problem, realVisits);
+    const eligible = eligibleOn(date);
     const perTime = exact
       ? exactOn(problem, routes, vi, times, eligible)
       : estimateOn(problem, routes, times, duration, query.marginMinutes, eligible);
@@ -343,7 +349,7 @@ export const dayLoad: DayLoadFn = (data, date, filter) => {
   const traitsOf = new Map(data.staff.map((s) => [s.id, s.traits]));
   const people = problem.staff.flatMap((st, s) => {
     if (st.slots.length === 0) return [];
-    if (!meetsAll(conds, items, traitsOf.get(st.id) ?? {})) return [];
+    if (!meetsAll(conds, items, traitsOf.get(st.id) ?? {}, date)) return [];
     const t = scheduleRoute(problem, s, knownOf(problem, colOf(routes, st.id)), 'lenient');
     const busy = (t?.stops ?? []).map((x) => ({ start: x.start - x.travelIn, end: x.end }));
     return [{ slots: st.slots, busy }];

@@ -9,15 +9,17 @@ import { MAX_FILE_BYTES, MAX_ROWS } from './importBook';
 import { exportWorkbook, importWorkbook } from './index';
 import {
   condsToCell,
+  multiFromMarks,
   parseConds,
   parseDateText,
+  parseMark,
   parseSlots,
   parseTimeText,
   parseTrait,
   personSheetNames,
   plainNumber,
   serialToTime,
-  traitToCell,
+  traitToCells,
 } from './text';
 
 describe('書き出し → 読み込み', () => {
@@ -52,7 +54,7 @@ describe('書き出し → 読み込み', () => {
               travelMode: 'BICYCLE',
               active: false,
               home: { ...s.home, lat: null, lng: null },
-              traits: { ...s.traits, qualification: [], experience: 2.5 },
+              traits: { ...s.traits, qualification: [], experience: 2019 },
               requirements: [
                 { itemId: 'pet', op: 'not', value: true },
                 { itemId: 'target', op: 'not', value: '子ども' },
@@ -320,6 +322,7 @@ describe('条件のセルの書き方', () => {
     options: ['看護師', '保育士', '介護福祉士'],
   };
   const num: Item = { id: 'e', name: '経験', target: 'staff', kind: 'number', options: [] };
+  const since: Item = { id: 'y', name: '経験年数', target: 'staff', kind: 'startYear', options: [] };
   const c = (itemId: string, op: Condition['op'], value: Condition['value']): Condition => ({ itemId, op, value });
 
   const cases: [Item, Condition[], string][] = [
@@ -340,6 +343,8 @@ describe('条件のセルの書き方', () => {
     [num, [c('e', 'not', 3)], '3以外'],
     [num, [c('e', 'gte', 1.5)], '1.5以上'],
     [num, [c('e', 'lte', 5), c('e', 'gte', 3)], '5以下\n3以上'],
+    [since, [c('y', 'gte', 3)], '3以上'],
+    [since, [c('y', 'gte', 3), c('y', 'lte', 10)], '3〜10'],
     [flag, [], ''],
   ];
   it.each(cases)('%#：書き出して読むと同じ条件に戻る', (item, conds, text) => {
@@ -354,7 +359,6 @@ describe('条件のセルの書き方', () => {
     expect(parseConds(multi, '看護師・保育士').ok).toBe(false);
     const dot: Item = { ...multi, options: ['洗濯・掃除', 'A,B'] };
     expect(parseConds(dot, '洗濯・掃除、A,B')).toEqual({ ok: true, value: [c('q', 'hasAny', ['洗濯・掃除', 'A,B'])] });
-    expect(parseTrait(multi, '看護師\n保育士')).toEqual({ ok: true, value: ['看護師', '保育士'] });
     expect(parseConds(num, '３～５')).toEqual({ ok: true, value: [c('e', 'gte', 3), c('e', 'lte', 5)] });
     expect(parseConds(flag, 'なし(未確認も可)')).toEqual({ ok: true, value: [c('pet', 'not', true)] });
     expect(parseConds(multi, 'すべて:看護師、保育士')).toEqual({
@@ -371,11 +375,33 @@ describe('条件のセルの書き方', () => {
     const mu: Item = { ...multi, options: ['すべて：x', 'x', 'なし'] };
     expect(parseConds(mu, 'すべて：x')).toEqual({ ok: true, value: [c('q', 'hasAny', ['すべて：x'])] });
     expect(parseConds(mu, 'すべて：すべて：x')).toEqual({ ok: true, value: [c('q', 'hasAll', ['すべて：x'])] });
-    // 選択肢から複数の特性：[] は「（なし）」、「なし」は選択肢の「なし」
-    expect(traitToCell(mu, [])).toBe('（なし）');
-    expect(parseTrait(mu, '（なし）')).toEqual({ ok: true, value: [] });
-    expect(parseTrait(mu, '(なし)')).toEqual({ ok: true, value: [] });
-    expect(parseTrait(mu, 'なし')).toEqual({ ok: true, value: ['なし'] });
+  });
+
+  it('選択肢から複数の特性は選択肢ごとの ○・×（全部空＝未確認、[]＝全部 ×。ADR-0070）', () => {
+    expect(traitToCells(multi, ['保育士'])).toEqual(['×', '○', '×']);
+    expect(traitToCells(multi, [])).toEqual(['×', '×', '×']);
+    expect(traitToCells(multi, null)).toEqual(['', '', '']);
+    expect(parseMark('○')).toEqual({ ok: true, value: true });
+    expect(parseMark('〇')).toEqual({ ok: true, value: true });
+    expect(parseMark(true)).toEqual({ ok: true, value: true });
+    expect(parseMark('×')).toEqual({ ok: true, value: false });
+    expect(parseMark('')).toEqual({ ok: true, value: null });
+    expect(parseMark('看護師').ok).toBe(false);
+    expect(multiFromMarks(multi, [null, null, null])).toBeUndefined();
+    expect(multiFromMarks(multi, [false, false, false])).toEqual([]);
+    // 印のある行の空の列は持たない
+    expect(multiFromMarks(multi, [true, null, true])).toEqual(['看護師', '介護福祉士']);
+  });
+
+  it('開始年の特性は西暦の整数（「2018年」も読む）。条件は年数で「3年以上」も読む（ADR-0070）', () => {
+    expect(traitToCells(since, 2018)).toEqual([2018]);
+    expect(parseTrait(since, 2018)).toEqual({ ok: true, value: 2018 });
+    expect(parseTrait(since, '２０１８年')).toEqual({ ok: true, value: 2018 });
+    expect(parseTrait(since, '')).toEqual({ ok: true, value: undefined });
+    expect(parseTrait(since, 8).ok).toBe(false);
+    expect(parseTrait(since, 2018.5).ok).toBe(false);
+    expect(parseConds(since, '3年以上')).toEqual({ ok: true, value: [c('y', 'gte', 3)] });
+    expect(parseConds(since, '3年〜5年')).toEqual({ ok: true, value: [c('y', 'gte', 3), c('y', 'lte', 5)] });
   });
 
   it('数は指数表記にしない（読み戻せる形）', () => {
@@ -419,7 +445,7 @@ describe('値の読み取り', () => {
 });
 
 describe('レビューの指摘（ブック）', () => {
-  it('選択肢に「、」があると書き出さない（場所を示す）。「・」「,」の選択肢と（なし）は往復する', async () => {
+  it('選択肢に「、」があると書き出さない（場所を示す）。「・」「,」の選択肢と、確認済みで1つもない（[]）は往復する', async () => {
     const d = base();
     const bad: DemoData = {
       ...d,
@@ -434,10 +460,21 @@ describe('レビューの指摘（ブック）', () => {
           ? { ...s, traits: { ...s.traits, specialty: ['洗濯・掃除', 'A,B'] } }
           : i === 1
             ? { ...s, traits: { ...s.traits, specialty: [] } }
-            : s,
+            : i === 2
+              ? { ...s, traits: Object.fromEntries(Object.entries(s.traits).filter(([k]) => k !== 'specialty')) }
+              : s,
       ),
     };
     expect(ok(await importWorkbook(await toBuffer(good), good))).toEqual(withoutPlans(good));
+  });
+
+  it('特性の列の見出しが重なると書き出さない（選択肢ごとの列とほかの項目。ADR-0070）', async () => {
+    const d = base();
+    const bad: DemoData = {
+      ...d,
+      items: [...d.items, { id: 'x', name: '資格：看護師', target: 'staff', kind: 'flag', options: [] }],
+    };
+    await expect(exportWorkbook(bad)).rejects.toThrow('「特性：資格：看護師」');
   });
 
   it('見出しは全角半角・コロンの揺れを許す。項目の列が無ければ止める', async () => {
@@ -465,7 +502,7 @@ describe('レビューの指摘（ブック）', () => {
         s.getRow(1).getCell(s.columnCount + 1).value = '特性：身長';
       }),
     );
-    expect(msg2).toContain('見出し『特性：身長』の項目が');
+    expect(msg2).toContain('見出し『特性：身長』に合う項目・選択肢が');
   });
 
   it('数式のエラー・結果の無い数式は場所付きのエラー', async () => {

@@ -2,8 +2,16 @@
 // ExcelJS に依存しない純粋な関数だけを置く
 import type { Industry, TravelMode } from '../contracts/codes';
 import type { Terms } from '../contracts/documents';
-import { type Condition, type Item, RULE_TYPES, type RuleType, type TraitValue } from '../contracts/rules';
-import { EMPTY_OPTION_MARK, ITEM_KIND_LABELS, ruleTypeLabel, TRAVEL_MODE_LABELS, WEEKDAY_LABELS } from '../lib/common';
+import {
+  type Condition,
+  type Item,
+  RULE_TYPES,
+  type RuleType,
+  START_YEAR_MAX,
+  START_YEAR_MIN,
+  type TraitValue,
+} from '../contracts/rules';
+import { ITEM_KIND_LABELS, ruleTypeLabel, TRAVEL_MODE_LABELS, WEEKDAY_LABELS } from '../lib/common';
 
 /** 業種の表示名（Excel の「事業所」シートだけで使う） */
 export const INDUSTRY_LABELS: Record<Industry, string> = {
@@ -16,6 +24,11 @@ export const INDUSTRY_LABELS: Record<Industry, string> = {
 export const WINDOW_LABELS = { fixed: 'ちょうど', window: '幅' } as const;
 /** 「はい」の印 */
 export const YES = '○';
+/** 「いいえ」の印（選択肢から複数の特性の選択肢ごとの列で「持たない」。ADR-0070） */
+export const NO = '×';
+/** 「はい」「いいえ」と読む文字（全角半角をそろえたあと） */
+export const YES_TEXTS: readonly string[] = ['○', '◯', '〇', 'o', 'O', 'TRUE', 'true', 'はい'];
+export const NO_TEXTS: readonly string[] = ['×', 'x', 'X', 'FALSE', 'false', 'いいえ', '-'];
 /** 休みの日の時間帯 */
 export const DAY_OFF = '休み';
 /** あり/なしの条件の4つの書き方 */
@@ -25,9 +38,6 @@ export const ALL_PREFIX = 'すべて：';
 
 /** 全角の数字・記号を半角に（数・時刻・日付・決まった語を読むときだけ使う。名前には使わない） */
 export const nfkc = (s: string) => s.normalize('NFKC').trim();
-
-/** 選択肢から複数の特性で「確認済みで1つもない」（選択肢には使えない） */
-export const EMPTY_MULTI = EMPTY_OPTION_MARK;
 
 /** 「、」か改行で区切った値（空は除く。「・」「,」は区切らない＝選択肢の名前に使える） */
 export const splitList = (s: string): string[] =>
@@ -270,19 +280,24 @@ export const travelModeLabels: Record<TravelMode, string> = TRAVEL_MODE_LABELS;
 
 // ---- 特性 ----
 
-/** 特性の値 → セル（空＝未確認）。数値は数のまま */
-export function traitToCell(item: Item, v: TraitValue | undefined): string | number {
-  if (v === undefined || v === null) return '';
+/**
+ * 特性の値 → その項目の列（layout の traitCols の順）のセル。空＝未確認。数値・開始年は数のまま。
+ * 選択肢から複数は選択肢ごとに ○（持つ）・×（持たない）、未確認なら全部空（ADR-0070）
+ */
+export function traitToCells(item: Item, v: TraitValue | undefined): (string | number)[] {
+  if (v === undefined || v === null) return item.kind === 'multi' ? item.options.map(() => '') : [''];
   switch (item.kind) {
     case 'flag':
-      return v === true ? 'あり' : v === false ? 'なし' : String(v);
-    case 'multi':
-      if (Array.isArray(v)) return v.length === 0 ? EMPTY_MULTI : v.join('、');
-      return String(v);
+      return [v === true ? 'あり' : v === false ? 'なし' : String(v)];
+    case 'multi': {
+      const have = Array.isArray(v) ? v : [String(v)];
+      return item.options.map((o) => (have.includes(o) ? YES : NO));
+    }
     case 'number':
-      return typeof v === 'number' ? v : String(v);
+    case 'startYear':
+      return [typeof v === 'number' ? v : String(v)];
     case 'choice':
-      return Array.isArray(v) ? v.join('、') : String(v);
+      return [Array.isArray(v) ? v.join('、') : String(v)];
   }
 }
 
@@ -308,7 +323,26 @@ function matchOptions(item: Item, tokens: string[]): Parsed<string[]> {
   return ok(out);
 }
 
-/** セルの文字 → 特性の値。空は undefined（未確認） */
+/** 選択肢ごとの列の印（ADR-0070）：○＝持つ（true）、×＝持たない（false）、空＝null */
+export function parseMark(cell: string | number | boolean): Parsed<boolean | null> {
+  if (cell === '') return ok(null);
+  if (typeof cell === 'boolean') return ok(cell);
+  const t = nfkc(String(cell));
+  if (YES_TEXTS.includes(t)) return ok(true);
+  if (NO_TEXTS.includes(t)) return ok(false);
+  return ng(`「${YES}」（持つ）「${NO}」（持たない）か空で書いてください`);
+}
+
+/**
+ * 選択肢ごとの列の印（item.options の順）→ 選択肢から複数の値（ADR-0070）。
+ * 全部空なら undefined（未確認）。どれかに印があれば ○ の選択肢（空の列は持たない）
+ */
+export function multiFromMarks(item: Item, marks: readonly (boolean | null)[]): string[] | undefined {
+  if (marks.every((m) => m === null)) return undefined;
+  return item.options.filter((_, i) => marks[i] === true);
+}
+
+/** セルの文字 → 1列で書く特性の値。空は undefined（未確認）。選択肢から複数は選択肢ごとの列（parseMark）で読む */
 export function parseTrait(item: Item, cell: string | number | boolean): Parsed<TraitValue | undefined> {
   if (cell === '') return ok(undefined);
   const s = String(cell).trim();
@@ -324,16 +358,17 @@ export function parseTrait(item: Item, cell: string | number | boolean): Parsed<
         ? ng(`「${s}」は「${item.name}」の選択肢にありません（選択肢：${item.options.join('、') || 'なし'}）`)
         : ok(o);
     }
-    case 'multi': {
-      // セル全体が1つの選択肢と同じなら、その1つ（区切りの記号を含む名前でも読む）
-      const whole = matchOption(item.options, s);
-      if (whole !== null) return ok([whole]);
-      if (nfkc(s) === nfkc(EMPTY_MULTI)) return ok([]);
-      return matchOptions(item, splitList(s));
-    }
+    case 'multi':
+      return ng('選択肢ごとの列に「○」「×」で書いてください');
     case 'number': {
       const n = typeof cell === 'number' ? cell : parseNumberText(s);
       return n === null ? ng('数で書いてください') : ok(n);
+    }
+    case 'startYear': {
+      const n = typeof cell === 'number' ? cell : parseNumberText(s.replace(/年$/, ''));
+      return n !== null && Number.isInteger(n) && n >= START_YEAR_MIN && n <= START_YEAR_MAX
+        ? ok(n)
+        : ng(`始めた年を西暦で書いてください（例：2018。${START_YEAR_MIN}〜${START_YEAR_MAX}）`);
     }
   }
 }
@@ -373,6 +408,7 @@ function condLine(item: Item, c: Condition): string | null {
       if (c.op === 'hasAll') return `${ALL_PREFIX}${listOf(c.value).join('、')}`;
       return null;
     case 'number':
+    case 'startYear':
       if (typeof c.value !== 'number') return null;
       if (c.op === 'gte') return `${numText(c.value)}以上`;
       if (c.op === 'lte') return `${numText(c.value)}以下`;
@@ -389,7 +425,7 @@ function condLine(item: Item, c: Condition): string | null {
 export function condsToCell(item: Item, conds: Condition[]): string {
   const [a, b] = conds;
   if (
-    item.kind === 'number' &&
+    (item.kind === 'number' || item.kind === 'startYear') &&
     conds.length === 2 &&
     a?.op === 'gte' &&
     b?.op === 'lte' &&
@@ -407,7 +443,9 @@ export function condsToCell(item: Item, conds: Condition[]): string {
 const NUM = String.raw`-?\d+(?:\.\d+)?`;
 
 function parseCondLine(item: Item, line: string): Parsed<Condition[]> {
-  const n = nfkc(line).replace(/\s/g, '');
+  const flat = nfkc(line).replace(/\s/g, '');
+  // 開始年の項目の条件は年数。「3年以上」の「年」も読む（ADR-0070）
+  const n = item.kind === 'startYear' ? flat.replace(/年/g, '') : flat;
   const id = item.id;
   switch (item.kind) {
     case 'flag': {
@@ -444,7 +482,8 @@ function parseCondLine(item: Item, line: string): Parsed<Condition[]> {
       if (r.value.length === 0) return ng('選択肢を書いてください');
       return ok([{ itemId: id, op: m ? 'hasAll' : 'hasAny', value: r.value }]);
     }
-    case 'number': {
+    case 'number':
+    case 'startYear': {
       let m = new RegExp(`^(${NUM})以上$`).exec(n);
       if (m) return ok([{ itemId: id, op: 'gte', value: Number(m[1]) }]);
       m = new RegExp(`^(${NUM})以下$`).exec(n);
