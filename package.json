@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "biome check . && node scripts/check-conflict-markers.cjs",
     "check:code": "python3 .claude/skills/solo-architecture-design/scripts/check_code.py .",
+    "check:prd": "python3 .claude/skills/solo-architecture-design/scripts/check_prd.py docs/prd.md",
     "e2e": "playwright test --project=e2e",
     "e2e:perf": "playwright test --project=perf",
     "e2e:all": "npm run e2e && npm run e2e:perf"
