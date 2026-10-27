@@ -176,6 +176,10 @@ export async function postMailSchedule(
   }
 }
 
+/** 失敗の知らせ：種類ごとの文に、GAS が返した理由（どの宛先が違うかなど）があれば添える */
+export const mailScheduleFailText = (r: { reason: MailScheduleFail; message?: string }): string =>
+  r.message ? `${mailScheduleMessage(r.reason)}（${r.message}）` : mailScheduleMessage(r.reason);
+
 /** 失敗の文（画面の知らせ） */
 export function mailScheduleMessage(reason: MailScheduleFail): string {
   switch (reason) {

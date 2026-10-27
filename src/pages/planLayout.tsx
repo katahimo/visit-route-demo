@@ -290,7 +290,11 @@ export function PlanPanels({ p }: { p: PlanCtx }) {
           onClose={() => v.setPanel(null)}
           confirm={{
             state: d.toldState,
-            onConfirm: (by, note) => (by === 'manual' ? void confirm.adopt() : confirm.confirmByMail(by, note)),
+            onConfirm: (by, note) => {
+              if (by !== 'manual') return confirm.confirmByMail(by, note);
+              void confirm.adopt();
+              return true;
+            },
           }}
         />
       )}

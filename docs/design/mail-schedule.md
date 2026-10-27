@@ -13,4 +13,4 @@ postMailSchedule(url, req, { fetch?, timeoutMs? }) /* 失敗：GAS の error・t
 
 - 呼ぶ：`fetch(url, { method: 'POST', body: JSON 文字, redirect: 'follow' })`。ヘッダーを付けない（OPTIONS を出さない）。応答は zod で読み、知らない項目は捨てる
 - この端末の覚え：`store/mailSchedule`（キー `visit-route-demo:mail-schedule`。設定と、日付ごとの預けた記録を新しい60日分。設定を空にすると記録も消す）。画面は `components/useMailSchedule`
-- GAS：シート「予約」（1通1行。キー・送る時刻・宛先・件名・本文・状態（予約／送信済み／取消／置き換え／失敗）・更新日時・メモ・差出人）、シート「設定」（合言葉・トリガー）。`queue` は同じキーの「予約」を「置き換え」にして足す。`sendDue`（5分ごと）は時刻を過ぎた「予約」を MailApp で送る（残りの上限・5分まで）。合言葉が無ければ notSetUp、版・形が違えば badRequest。手順は `gas/README.md`
+- GAS：シート「予約」（1通1行。キー・送る時刻・宛先・件名・本文・状態（予約／送信済み／取消／置き換え／失敗／期限切れ）・更新日時・メモ・差出人・試した回数）、シート「設定」（合言葉・トリガー）。`queue` は同じキーの「予約」を「置き換え」にして足す。`sendDue`（5分ごと）は時刻を過ぎた「予約」を MailApp で送る（残りの上限・5分まで。訪問の日を過ぎた分は「期限切れ」、送れなければ3回まで次の回で送り直す）。合言葉が無ければ notSetUp、版・形が違えば badRequest。手順は `gas/README.md`

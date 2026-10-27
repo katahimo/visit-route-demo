@@ -18,10 +18,11 @@ var SHEET_QUEUE = '予約';
 var SHEET_CONFIG = '設定';
 var PROP_TOKEN = 'TOKEN';
 
-var HEADERS = ['キー', '送る時刻', '宛先', '件名', '本文', '状態', '更新日時', 'メモ', '差出人'];
+var HEADERS = ['キー', '送る時刻', '宛先', '件名', '本文', '状態', '更新日時', 'メモ', '差出人', '試した回数'];
 // 列の番号（1始まり）
-var COL = { KEY: 1, SEND_AT: 2, TO: 3, SUBJECT: 4, BODY: 5, STATUS: 6, UPDATED: 7, MEMO: 8, SENDER: 9 };
-var ST = { QUEUED: '予約', SENT: '送信済み', CANCELED: '取消', REPLACED: '置き換え', FAILED: '失敗' };
+var COL = { KEY: 1, SEND_AT: 2, TO: 3, SUBJECT: 4, BODY: 5, STATUS: 6, UPDATED: 7, MEMO: 8, SENDER: 9, TRIES: 10 };
+var ST = { QUEUED: '予約', SENT: '送信済み', CANCELED: '取消', REPLACED: '置き換え', FAILED: '失敗', EXPIRED: '期限切れ' };
+var MAX_TRIES = 3; // 一時的なエラーで送り直す回数の上限（超えたら「失敗」）
 
 var TZ = 'Asia/Tokyo';
 
@@ -203,7 +204,7 @@ function handleQueue(body) {
 
   // 新しい行を足す
   var rows = body.mails.map(function (m) {
-    return [body.key, sendAt, escapeCell(m.to), escapeCell(m.subject), escapeCell(m.body), ST.QUEUED, now, '', escapeCell(body.senderName)];
+    return [body.key, sendAt, escapeCell(m.to), escapeCell(m.subject), escapeCell(m.body), ST.QUEUED, now, '', escapeCell(body.senderName), 0];
   });
   var start = sheet.getLastRow() + 1;
   var shortage = start + rows.length - 1 - sheet.getMaxRows();
@@ -279,11 +280,17 @@ function sendDue() {
   if (!sheet || sheet.getLastRow() < 2) return result;
 
   var now = new Date();
+  var today = Utilities.formatDate(now, TZ, 'yyyy-MM-dd');
   var values = sheet.getRange(2, 1, sheet.getLastRow() - 1, HEADERS.length).getValues();
   var due = [];
   for (var i = 0; i < values.length; i++) {
     var v = values[i];
     if (v[COL.STATUS - 1] !== ST.QUEUED) continue;
+    // 訪問の日を過ぎた予定は送らない（上限で残った分が「明日の予定」として後から届かないように）
+    if (isExpired(normalizeKey(v[COL.KEY - 1]), today)) {
+      expireRow(sheet, i + 2);
+      continue;
+    }
     var at = v[COL.SEND_AT - 1];
     if (!(at instanceof Date) || isNaN(at.getTime())) continue; // 時刻が読めない行は触らない
     if (at.getTime() <= now.getTime()) due.push({ row: i + 2, at: at.getTime(), v: v });
@@ -331,12 +338,38 @@ function sendOne(sheet, item) {
     try {
       MailApp.sendEmail(opts);
     } catch (err) {
-      if (MailApp.getRemainingDailyQuota() <= 0) return 'quota'; // 上限に達した。行は「予約」のまま次の日へ
-      setStatus(sheet, item.row, ST.FAILED, String(err && err.message ? err.message : err));
+      if (MailApp.getRemainingDailyQuota() <= 0) return 'quota'; // 上限に達した。行は「予約」のまま次の回へ
+      var tries = (Number(cur[COL.TRIES - 1]) || 0) + 1;
+      var why = String(err && err.message ? err.message : err);
+      sheet.getRange(item.row, COL.TRIES).setValue(tries);
+      // 一時的なエラーもあるので、MAX_TRIES 回までは「予約」のまま次の回で送り直す
+      setStatus(sheet, item.row, retryStatus(tries), why);
       return 'failed';
     }
     setStatus(sheet, item.row, ST.SENT, '');
     return 'sent';
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** 訪問の日（key）が今日より前か（文字の YYYY-MM-DD で比べる） */
+function isExpired(key, today) {
+  return isKey(key) && key < today;
+}
+
+/** 送り直すか：試した回数が上限に届くまでは「予約」、届いたら「失敗」 */
+function retryStatus(tries) {
+  return tries < MAX_TRIES ? ST.QUEUED : ST.FAILED;
+}
+
+/** 行を「期限切れ」にする（まだ「予約」のときだけ） */
+function expireRow(sheet, row) {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(LOCK_WAIT_MS)) return;
+  try {
+    if (sheet.getRange(row, COL.STATUS).getValue() !== ST.QUEUED) return;
+    setStatus(sheet, row, ST.EXPIRED, '訪問の日を過ぎたので送らない');
   } finally {
     lock.releaseLock();
   }
@@ -376,6 +409,7 @@ function rowFormats() {
   f[COL.UPDATED - 1] = 'yyyy-mm-dd hh:mm:ss';
   f[COL.MEMO - 1] = '@';
   f[COL.SENDER - 1] = '@';
+  f[COL.TRIES - 1] = '0';
   return f;
 }
 

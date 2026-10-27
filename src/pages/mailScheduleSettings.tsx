@@ -12,7 +12,7 @@ import {
   GAS_TEMPLATE_URL,
   GAS_TRIGGER_MINUTES,
   type MailScheduleSettings,
-  mailScheduleMessage,
+  mailScheduleFailText,
   normalizeSettings,
   settingsErrors,
 } from '../lib/mailSchedule';
@@ -50,7 +50,7 @@ export function MailScheduleSettingsCard() {
     toast(
       r.ok
         ? `つながりました。${r.res.quota !== undefined ? `今日あと ${r.res.quota}件 送れます。` : ''}「保存」を押すと使えます`
-        : `つながりませんでした。${mailScheduleMessage(r.reason)}`,
+        : `つながりませんでした。${mailScheduleFailText(r)}`,
     );
   };
   const clear = async () => {

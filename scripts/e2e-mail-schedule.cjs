@@ -12,9 +12,10 @@ const { sharedPage } = require('./lib/steps.cjs');
 const GAS_URL = 'https://script.google.com/macros/s/AKfyFAKE_e2e/exec';
 const TOKEN = 'e2e-token';
 
-/** GAS の偽物：届いた頼みを残し、合言葉が合えば成功を返す */
+/** GAS の偽物：届いた頼みを残し、合言葉が合えば成功を返す（本物は 302 で googleusercontent へ移してから返すが、Playwright の偽の 302 は CORS の移り先を通さないので、すぐ返す） */
 async function fakeGas(page) {
   const seen = [];
+  const cors = { 'access-control-allow-origin': '*' };
   await page.route(/script\.google\.com/, async (route) => {
     const req = route.request();
     let body = null;
@@ -30,14 +31,9 @@ async function fakeGas(page) {
         : body.action === 'queue'
           ? { ok: true, v: 1, queued: body.mails.length, quota: 90 }
           : body.action === 'cancel'
-            ? { ok: true, v: 1, canceled: 2 }
+            ? { ok: true, v: 1, canceled: seen.filter((s) => s.body?.action === 'cancel').length === 1 ? 2 : 0 }
             : { ok: true, v: 1, quota: 99 };
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      headers: { 'access-control-allow-origin': '*' },
-      body: JSON.stringify(res),
-    });
+    await route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: JSON.stringify(res) });
   });
   return seen;
 }
@@ -132,6 +128,17 @@ const steps = sharedPage({
         check((await page.getByTestId('mail-reserved').count()) === 1, '「予約済み」の行');
         check((await send.innerText()).includes('予約し直す'), '預けた日は「予約し直す」');
         await page.screenshot({ path: path.join(OUT_DIR, 'mail-reserved.png') });
+        // 送る時刻（当日なのですぐ）を過ぎた予約を預け直すときは、全員にもう一度届くことを確かめる
+        await send.click();
+        const again = page.getByRole('alertdialog');
+        await again.waitFor();
+        check(
+          (await again.innerText()).includes('もう一度'),
+          '送る時刻を過ぎた予約し直しは「もう一度、全員に送りますか？」',
+        );
+        await again.getByTestId('confirm-cancel').click();
+        await settle(page, 200);
+        check(seen.filter((s) => s.body?.action === 'queue').length === 1, '確認でやめれば預け直さない');
         await page.getByTestId('mail-reserve-cancel').click();
         const dlg = page.getByRole('alertdialog');
         await dlg.waitFor();

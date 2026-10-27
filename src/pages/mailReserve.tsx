@@ -9,7 +9,7 @@ import { WithIcon } from '../components/ui';
 import { useMailSchedule } from '../components/useMailSchedule';
 import { jstDate } from '../domain/time';
 import type { DayMailRow } from '../lib/dayMail';
-import { GAS_TRIGGER_MINUTES, mailScheduleMessage, scheduledMails, sendAtFor, sendAtText } from '../lib/mailSchedule';
+import { GAS_TRIGGER_MINUTES, mailScheduleFailText, scheduledMails, sendAtFor, sendAtText } from '../lib/mailSchedule';
 import type { DayMailConfirm } from './mailPanels';
 
 export function MailReserveBox({
@@ -41,15 +41,27 @@ export function MailReserveBox({
   const reserved = ms.reservations[date];
   const willConfirm = !!confirm && confirm.state !== 'told';
   const reserve = async () => {
-    if (!at || mails.length === 0) return;
-    const r = await ms.reserve({ date, sendAt: at.iso, senderName, mails });
+    // 押したときの時刻で決め直す（欄を開いたまま時刻・日付が進んでいても、過ぎた日を預けない・すぐ送るかを正しく出す）
+    const pressedAt = Date.now();
+    const when = sendAtFor(date, ms.settings.sendTime, pressedAt);
+    if (!when || mails.length === 0) return;
+    // 送る時刻を過ぎた予約を預け直すと、もう送った人にももう一度届く（GAS は送信済みの行を置き換えない）
+    if (reserved && Date.parse(reserved.sendAt) <= pressedAt) {
+      const again = await confirmDialog({
+        title: 'もう一度、全員に送りますか？',
+        body: `この日のメールは ${mdwTime(reserved.sendAt)}に送った（または送っている途中の）見込みです。予約すると、${mails.length}人全員にもう一度届きます。変わった人だけに知らせるときは「メールを作る」を使ってください。`,
+        confirmLabel: 'もう一度送る',
+      });
+      if (!again) return;
+    }
+    const r = await ms.reserve({ date, sendAt: when.iso, senderName, mails });
     if (!r.ok) {
-      toast(`予約できませんでした。${mailScheduleMessage(r.reason)}`);
+      toast(`予約できませんでした。${mailScheduleFailText(r)}`);
       return;
     }
-    const msg = `${sendAtText(at)}に ${mails.length}人分のメールを送るよう予約しました`;
-    if (willConfirm) confirm.onConfirm('reserve', msg);
-    else toast(msg);
+    const msg = `${sendAtText(when)}に ${mails.length}人分のメールを送るよう予約しました`;
+    // 確定できなかった（計算の途中など）ときも、予約できたことは知らせる
+    if (!(willConfirm && confirm.onConfirm('reserve', msg))) toast(msg);
   };
   const cancel = async () => {
     const ok = await confirmDialog({
@@ -59,7 +71,13 @@ export function MailReserveBox({
     });
     if (!ok) return;
     const r = await ms.cancel(date);
-    toast(r.ok ? '予約を取り消しました' : `取り消せませんでした。${mailScheduleMessage(r.reason)}`);
+    toast(
+      !r.ok
+        ? `取り消せませんでした。${mailScheduleFailText(r)}`
+        : r.res.canceled === 0
+          ? '取り消せる予約はありませんでした（もう送ったか、別のシートに預けた予約です。シート「予約」で確かめてください）'
+          : '予約を取り消しました',
+    );
   };
   const why =
     at === null

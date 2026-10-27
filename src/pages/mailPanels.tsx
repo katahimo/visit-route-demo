@@ -18,7 +18,8 @@ import { MailReserveBox } from './mailReserve';
  */
 export type DayMailConfirm = {
   state: 'none' | 'told' | 'changed';
-  onConfirm: (by: 'mail' | 'reserve' | 'manual', note?: string) => void;
+  /** 確定したら true（確定済み・計算の途中などで確定しなければ false） */
+  onConfirm: (by: 'mail' | 'reserve' | 'manual', note?: string) => boolean;
 };
 
 /**
