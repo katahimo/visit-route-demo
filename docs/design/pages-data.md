@@ -1,6 +1,6 @@
 # データの画面と管理者設定
 
-> この画面のファイル：`src/pages/DataPage.tsx`（画面は組み立てだけ。状態と処理は同じディレクトリの `useDataBackup`（`useLastExport`・`useDataBackup`・`useDataRestore`）・`useDataExcel`・`useDataRoster`・`useDataTidy`・`useDataTerms`、見た目は `dataParts.tsx`（保存の誤り・直前の状態に戻す・呼び方・控え（JSON）・古い訪問を片づける・使い方の案内・初期状態に戻す）・`dataExcel.tsx`（Excel の欄・名簿の読み込み方・最終勤務日の知らせ）、文と判定は `src/lib/dataScreen.ts`）・`SettingsPage.tsx`（`settings.css`）、`src/components/FilePick.tsx`（`filePick.css`）・`Tour.tsx`、`src/lib/filePick.ts`・`personLinks.ts`・`features.ts`・`backupReminder.ts`・`tidy.ts`・`dirtyForms.ts`、`src/components/DataNotices.tsx`（`dataNotices.css`）・`dirtyForms.ts`（`useDirtyMark`）。関連 ADR：0006・0020・0025 追記・0028・0032・0043。関連 PRD：D191〜D193・D209・D210〜D216・D227・D260。
+> この画面のファイル：`src/pages/DataPage.tsx`（画面は組み立てだけ。状態と処理は同じディレクトリの `useDataBackup`（`useLastExport`・`useDataBackup`・`useDataRestore`）・`useDataExcel`・`useDataTidy`・`useDataTerms`、見た目は `dataParts.tsx`（保存の誤り・直前の状態に戻す・呼び方・控え（JSON）・古い訪問を片づける・使い方の案内・初期状態に戻す）・`dataExcel.tsx`（Excel の欄。全体のブック）、文と判定は `src/lib/dataScreen.ts`）・`SettingsPage.tsx`（`settings.css`）、`src/components/FilePick.tsx`（`filePick.css`）・`Tour.tsx`、`src/lib/filePick.ts`・`features.ts`・`backupReminder.ts`・`tidy.ts`・`dirtyForms.ts`、`src/components/DataNotices.tsx`（`dataNotices.css`）・`dirtyForms.ts`（`useDirtyMark`）。関連 ADR：0006・0020・0025 追記・0028・0032・0043・0068。関連 PRD：D191〜D193・D210〜D216・D227・D260。
 > Excel の変換は design.md の「excel」、機能の表と判定は design.md の「features」。
 
 ### データ（`#/data`）
@@ -16,7 +16,7 @@
 #### 直前の状態に戻す（PRD D227。ADR-0032）
 
 - 1世代の控えがあるときだけ、注意書きの下に欄（`data-prev-card`・aria-label「直前の状態に戻す」）。文（`data-prev-text`）「10/19 14:03 の『初期状態に戻す』の前の状態に戻せます」（`lib/backupReminder` の `previousText`。日本時間）
-- 控えを残す操作（操作の名前）：初期状態に戻す（「初期状態に戻す」）・控えの読み込み（「控えの読み込み」）・Excel 全体の読み込み（「Excel 全体の読み込み」）・名簿の読み込み（「〈呼び方〉の名簿の追加・更新／総入れ替え」）。確認の本文の最後に見込み（`canKeepPrevious()`）で「いまのデータは控えとして1つだけ残し、この画面の「直前の状態に戻す」で戻せます。」、残せない見込み（保存が使えない・最後の保存が容量超過）なら「控えを残せません：容量不足。」。確認で OK になってから `keepPrevious(reason)` で残す（取り消す・確認中に閉じると控えは変わらない）。見込みに反して残せなければ、操作は止めずに完了のトーストに理由を添える（「初期状態に戻しました（控えを残せません：容量不足）」）。名簿が入らなかったら `cancel()` で前の世代に戻す
+- 控えを残す操作（操作の名前）：初期状態に戻す（「初期状態に戻す」）・控えの読み込み（「控えの読み込み」）・Excel 全体の読み込み（「Excel 全体の読み込み」）・名簿の読み込み（「〈呼び方〉の名簿の追加・更新／総入れ替え」）。確認の本文の最後に見込み（`canKeepPrevious()`）で「いまのデータは控えとして1つだけ残し、この画面の「直前の状態に戻す」で戻せます。」（名簿は一覧から読むので「データの画面の」）、残せない見込み（保存が使えない・最後の保存が容量超過）なら「控えを残せません：容量不足。」。確認で OK になってから `keepPrevious(reason)` で残す（取り消す・確認中に閉じると控えは変わらない）。見込みに反して残せなければ、操作は止めずに完了のトーストに理由を添える（「初期状態に戻しました（控えを残せません：容量不足）」）。名簿が入らなかったら `cancel()` で前の世代に戻す
 - 「直前の状態に戻す」（`data-prev-restore`）：独自の確認（危険の色。本文「〈文〉。いまのデータは控えと入れ替わり、もう一度「直前の状態に戻す」で戻せます。」）。確定で `restorePrevious()`（いまのデータを「直前の状態に戻す」として控え、控えのデータにする）とトースト「直前の状態に戻しました」。控えが無くなっていた・読めない・いまのデータを控えに残せない（「いまのデータを控えに残せないため戻せません：容量不足」。戻さず、控えは元のまま）ときはトーストで理由
 - 別のタブで控えが変わったら（storage イベント）欄を読み直す
 - 保存の容量が足りず控えを捨てたら（`previousDrops`）欄を消し、トースト「容量が足りないため、直前の状態の控えを消しました」（`DataWatch`）
@@ -31,22 +31,12 @@
 - `Term` `backup`。「ファイルに書き出す」（データ一式（訪問の担当・伝えた内容も）を1つの JSON に）。版1の控えのファイルは「データの形が変わったので初期データで始めます」で読み込まない（ADR-0053）
 - 読み込みは `FilePick`（`backup-file`・caption「読み込む控え（JSON）」）。選ぶと、置き換える前に確認する
 
-#### Excel（ADR-0006・ADR-0020）
+#### Excel（ADR-0006・ADR-0068）
 
-- 欄 `section.data-excel`（data-testid `excel-card`・`aria-labelledby` は見出し・`:focus` で枠）。`excel` を切っていれば欄ごと出さない（控えは残す）
-- 対象 `excel-kind`（`fieldset.segmented`・aria-label「Excel の対象」）：全体／〈利用者さん〉の名簿／〈スタッフ〉の名簿
-  - 全体：〈スタッフ〉・〈利用者さん〉・項目・条件・相性・稼働時間・訪問のシートごとの一覧。読み込むといまのデータがその内容に置き換わる（AI案・記録・確定した割当・手直しの記憶は消える。確認の本文にも書く）。書き方はブックの「使い方」のシート
-  - 名簿：その一覧（シート1枚）だけ。列は全体のブックと同じで、全体のブックも名簿として読める。ID か名前で同じ人を探して直し、いない人は足す（AI案・記録・確定した割当・訪問は消えない）。読み込み方 `roster-mode`：追加・更新（ブックに無い人はそのまま）／総入れ替え（ブックに無い人を〈スタッフ〉は休止、〈利用者さん〉は段階「終了」にする。消しはしない）
-- 「Excel に書き出す」と読み込み `FilePick`（`excel-file`。`key={excelKind}` で種類を切り替えたら選んだファイルの文を消す。caption は全体なら「読み込む Excel（全体）」、名簿なら「読み込む〈呼び方〉の名簿（Excel）」）
-- 名簿の読み込みは確認の後にデータが変わっていないかを見直す（`pendingRoster`）
-
-#### 最終勤務日の知らせ（PRD D209）
-
-- 〈スタッフ〉の名簿を読み込んだら、読み込む前と後の名簿を `lib/personLinks` の `lastDayChanged(before, after)`（excel の `lastDaySet` と同じ決まり。ID も返す）で比べ、入ったら（`pendingRoster` の後で）トーストに加えて Excel の欄に知らせの帯（`section.data-notice`・aria-label「最終勤務日の知らせ」・data-testid `lastday-notice`）
-- 文「最終勤務日の入った〈スタッフ〉がいます。〈スタッフ〉の画面（名前から開く）で担当の振り直しを確かめてください」。名前は `#/staff/:id` へのリンク（`lastday-link`。その人の画面）と「（最終勤務日 M/D）」
-- 閉じる（`lastday-close`・aria-label「最終勤務日の知らせを閉じる」）でフォーカスは Excel の欄（枠が見える）
-- 画面の state で保存しない。次の読み込みの始め・Excel の種類の切り替え・控えや Excel 全体の読み込み・初期状態に戻すでも消す。読み直すと出ない
-- `offboard` を切っていれば出さない。印刷では閉じるボタンを出さない
+- 欄 `section.data-excel`（data-testid `excel-card`・`aria-labelledby` は見出し）。`excel` を切っていれば欄ごと出さない（控えは残す）
+- 全体のブックだけ：〈スタッフ〉・〈利用者さん〉・項目・条件・相性・稼働時間・訪問のシートごとの一覧。読み込むといまのデータがその内容に置き換わる（AI案・記録・確定した割当・手直しの記憶は消える。確認の本文にも書く）。書き方はブックの「使い方」のシート
+- 名簿（〈利用者さん〉・〈スタッフ〉の一覧だけ。Excel・CSV）は各一覧の名簿の欄（[pages-clients.md](pages-clients.md)「名簿の欄」）。欄の中に一覧へのリンク（`excel-roster-note`）
+- 「Excel に書き出す」と読み込み `FilePick`（`excel-file`・caption「読み込む Excel（全体）」）
 
 #### 使い方の案内・初期状態に戻す
 
@@ -87,8 +77,7 @@
 
 ### 完了の条件
 
-- [ ] 控えと Excel が同じファイル選択の部品・日本語の「ファイルを選ぶ」と未選択の文・input は見えない形・名前・Tab と枠・Space・確認・同じファイルをもう一度・Excel の誤り・名簿の見出し（`lib/filePick` のテスト・`scripts/e2e-tour.cjs`）
-- [ ] 名簿の読み込みのあとの最終勤務日の知らせ（名前とその人の画面へのリンク・閉じるとフォーカスは Excel の欄・種類の切り替え・初期状態に戻す・読み直すと出ない）（`lib/personLinks` のテスト・`scripts/e2e-details2.cjs`）
+- [ ] 控えと Excel が同じファイル選択の部品・日本語の「ファイルを選ぶ」と未選択の文・input は見えない形・名前・Tab と枠・Space・確認・同じファイルをもう一度・Excel の誤り・名簿は一覧へのリンク（`lib/filePick` のテスト・`scripts/e2e-tour.cjs`）
 - [ ] 「案内をもう一度見る」でツアーが出る・初期状態に戻しても見た印は残る（`scripts/e2e-tour.cjs`）
 - [ ] 初期状態に戻したあと「直前の状態に戻す」で戻る・書き出すと最後に書き出した日が今日になる・片づけで古い訪問と確定した内容が消え新しいものは残る・壊れたデータの知らせと書き出し（`store` と `lib/backupReminder`・`lib/tidy` のテスト・`scripts/e2e-tour.cjs`）
 - [ ] 管理者設定：ひな形の4通りごとにメニュー・下のタブ・パレット・ホーム・画面の中の入口・ルートの移し先、相性を切るときの確認（`scripts/e2e-features.cjs`）

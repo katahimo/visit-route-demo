@@ -63,7 +63,7 @@ AI・人が「何を知りたいときに、どのファイルを読むか」を
 | [0017](adr/0017-mail-via-mailto.md) | メールは mailto: でメールアプリを開くだけ |
 | [0018](adr/0018-google-maps-route-links.md) | 道順は Google マップの公開リンクを作るだけ |
 | [0019](adr/0019-nav-grouped-by-person.md) | 相性・稼働時間などを人ごとにまとめる（並びは ADR-0027 以降） |
-| [0020](adr/0020-roster-excel-import-export.md) | Excel の名簿（シート1枚）で、予定を消さずに人を足す・直す |
+| [0020](adr/0020-roster-excel-import-export.md) | Excel の名簿（シート1枚）で、予定を消さずに人を足す・直す（0068 で置き場所を各一覧へ・CSV を足す） |
 | [0021](adr/0021-client-filter-area.md) | 〈利用者さん〉の絞り込みを共通の欄にし、地区は住所から取り出す |
 | [0022](adr/0022-compat-page-details-and-filters.md) | 相性の画面の詳細の吹き出しと絞り込み、予定の名前からも詳細を開く |
 | [0024](adr/0024-mobile-nav-and-week-client-default.md) | スマホのメニュー（上の帯・引き出し・下のタブ）と週の〈利用者さん〉の初期値 |
@@ -106,6 +106,7 @@ AI・人が「何を知りたいときに、どのファイルを読むか」を
 | [0065](adr/0065-standard-flow-one-path-rules-under-arrange.md) | 予定を組むを 条件の重み → 組み方の標準 → 担当を組む の3段にし、標準を決める道を組み方の標準の1本に（段の出し方は 0066 で置き換え） |
 | [0066](adr/0066-arrange-steps-one-at-a-time-rules-behind-standard.md) | 予定を組むを1段ずつ進む4段（案をくらべる → 表で直す → 標準にする → 担当を組む）にし、条件の重みを組み方の標準の寄り道に（0067 で段を置き換え） |
 | [0067](adr/0067-arrange-basics-first-people-under-arrange.md) | 予定を組むの1段目を「基本情報」にし、メニュー「人」の項目を予定を組むへ移す（段は 基本情報 → 案をくらべる → 標準にする → 担当を組む。前提が変われば組み直しを知らせる） |
+| [0068](adr/0068-roster-io-on-lists-with-csv.md) | 名簿の書き出し・読み込みを〈利用者さん〉一覧・〈スタッフ〉一覧へ移し、CSV（文字コードの自動判別）を足す |
 
 ## 文書の保ち方
 
