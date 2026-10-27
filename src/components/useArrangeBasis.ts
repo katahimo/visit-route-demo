@@ -1,5 +1,5 @@
 // 基本情報が最後に AI で組んだあとに変わったか（ADR-0067。PRD D363）。鍵は lib/arrangeBasis、覚える先は store/arrangeBasis
-import { useMemo } from 'react';
+import { useMemo, useSyncExternalStore } from 'react';
 import type { DemoData } from '../contracts/data';
 import { type BasisData, basisKey } from '../lib/arrangeBasis';
 import { arrangeBasisMemory } from '../store';
@@ -9,7 +9,7 @@ export const saveArrangeBasis = (data: BasisData): void => arrangeBasisMemory.sa
 
 /**
  * 基本情報が最後に組んだあとに変わったか（まだ組んでいなければ false）。鍵はデータが変わったときだけ作り直す
- * （覚えた鍵は描くたびに読む。反映・登録でデータが変わるので、覚え直した直後にも描き直る）
+ * （覚えた鍵は覚え直したときに読み直す。反映で訪問が変わらなくても知らせが消える）
  */
 export function useBasisChanged(data: DemoData): boolean {
   const { patterns, clients, clientLeaves, compat, staff, availability } = data;
@@ -17,6 +17,6 @@ export function useBasisChanged(data: DemoData): boolean {
     () => basisKey({ patterns, clients, clientLeaves, compat, staff, availability }),
     [patterns, clients, clientLeaves, compat, staff, availability],
   );
-  const saved = arrangeBasisMemory.get();
+  const saved = useSyncExternalStore(arrangeBasisMemory.subscribe, arrangeBasisMemory.get);
   return saved !== null && saved !== key;
 }

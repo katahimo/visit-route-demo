@@ -266,14 +266,23 @@ async function basics(page) {
   check((await page.locator('h1').innerText()).trim() === '予定と相性', '基本情報の見出しは「予定と相性」');
   const stepsOn = await page
     .locator('[data-testid="arrange-steps"] li')
-    .evaluateAll((els) => els.map((el) => `${el.getAttribute('data-step')}${el.classList.contains('is-current') ? '*' : ''}`));
+    .evaluateAll((els) =>
+      els.map((el) => `${el.getAttribute('data-step')}${el.classList.contains('is-current') ? '*' : ''}`),
+    );
   check(stepsOn.join(',') === 'basics*,arrange', '標準があれば段は 基本情報（今）・担当を組む の2つ', stepsOn);
   const rows = await page.getByTestId('basics-row').count();
-  check(rows > 0 && (await page.getByTestId('basics-client-link').count()) === rows, '表の行ごとに〈利用者さん〉の名前のリンク', rows);
+  check(
+    rows > 0 && (await page.getByTestId('basics-client-link').count()) === rows,
+    '表の行ごとに〈利用者さん〉の名前のリンク',
+    rows,
+  );
   check((await page.getByTestId('basics-staff-link').count()) > 0, 'マスに標準の担当（〈スタッフ〉の画面へのリンク）');
   check((await page.getByTestId('basics-compat').count()) === rows, '行ごとに相性の列');
   // 時刻を押すと直す欄が開き、決めると繰り返しの時刻が変わる（1回の update。元に戻せる）
-  const cell = page.getByTestId('basics-cell').filter({ has: page.getByTestId('basics-time') }).first();
+  const cell = page
+    .getByTestId('basics-cell')
+    .filter({ has: page.getByTestId('basics-time') })
+    .first();
   const pid = await cell.getAttribute('data-pattern');
   const before = await patternTimes(page, pid);
   const time = cell.getByTestId('basics-time');
@@ -295,7 +304,8 @@ async function basics(page) {
   );
   check((await patternTimes(page, pid)) !== before, '時刻を決めると繰り返しの時刻が変わる', before);
   check(
-    (await cell.getByTestId('basics-time').innerText()).trim().startsWith('05:00') || (await cell.getByTestId('basics-time').innerText()).trim().startsWith('5:00'),
+    (await cell.getByTestId('basics-time').innerText()).trim().startsWith('05:00') ||
+      (await cell.getByTestId('basics-time').innerText()).trim().startsWith('5:00'),
     '表のマスの時刻も変わる',
     { beforeText, now: await cell.getByTestId('basics-time').innerText() },
   );
@@ -325,11 +335,15 @@ async function basics(page) {
   await page.waitForURL(/#\/arrange/, { timeout: 10000 });
   check(hashOf(page).startsWith('#/arrange'), '［次へ］で担当を組むへ', hashOf(page));
   // 標準が無ければ［次へ：案をくらべる］（組み方の標準の 2 へ）
-  await editData(page, (key) => {
-    const d = JSON.parse(localStorage.getItem(key));
-    delete d.standard;
-    localStorage.setItem(key, JSON.stringify(d));
-  }, STORAGE_KEY);
+  await editData(
+    page,
+    (key) => {
+      const d = JSON.parse(localStorage.getItem(key));
+      delete d.standard;
+      localStorage.setItem(key, JSON.stringify(d));
+    },
+    STORAGE_KEY,
+  );
   await open(page, '/basics', '[data-testid="basics-next"]');
   check(
     (await page.getByTestId('basics-next').innerText()).includes('次へ：案をくらべる') &&
@@ -364,7 +378,10 @@ async function basisRedo(page) {
   await page.getByTestId('basics-editor').waitFor({ state: 'detached', timeout: 10000 });
   // 担当を組むに知らせと［組み直す］、メニューの担当を組むに「変更」の印
   await open(page, `/arrange?date=${TODAY}`, '[data-testid="arrange-basis-changed"]');
-  check((await page.getByTestId('arrange-basis-changed').count()) === 1, '基本情報を直すと担当を組むに「変わりました」の知らせ');
+  check(
+    (await page.getByTestId('arrange-basis-changed').count()) === 1,
+    '基本情報を直すと担当を組むに「変わりました」の知らせ',
+  );
   const badge = await page
     .locator('.side-nav [data-key="arrange:assign"] .nav-badge')
     .innerText()
@@ -379,9 +396,14 @@ async function basisRedo(page) {
   await rangeBand(page).getByTestId('proposal-apply').click();
   await rangeBand(page).waitFor({ state: 'detached', timeout: 10000 });
   await page.locator('.toast').filter({ hasText: '提案を反映しました' }).first().waitFor({ timeout: 10000 });
-  // 覚え直すので、読み直すと知らせが消える（反映で訪問が変わらないときは、描き直されるまで残ることがある。報告済みの気づき）
+  // 覚え直すと、読み直さなくても知らせと印が消える（反映で訪問が変わらなくても）
+  await page
+    .getByTestId('arrange-basis-changed')
+    .waitFor({ state: 'detached', timeout: 5000 })
+    .catch(() => {});
+  check((await page.getByTestId('arrange-basis-changed').count()) === 0, '組み直して反映するとその場で知らせが消える');
   await open(page, `/arrange?date=${TODAY}`);
-  check((await page.getByTestId('arrange-basis-changed').count()) === 0, '組み直して反映すると（読み直すと）知らせが消える');
+  check((await page.getByTestId('arrange-basis-changed').count()) === 0, '読み直しても知らせは出ない');
 }
 
 // ---- 案を比べるへ移る・戻る ----

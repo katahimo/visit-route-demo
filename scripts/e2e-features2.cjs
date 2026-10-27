@@ -65,7 +65,11 @@ async function insideEntries(page, dlg, ctx) {
     const stepKeys = await page
       .locator('[data-testid="arrange-steps"] li')
       .evaluateAll((els) => els.map((e) => e.dataset.step));
-    check(same(stepKeys, ['basics', 'arrange']), `${label}：標準があれば担当を組むの段は 基本情報・担当を組む の2つ`, stepKeys);
+    check(
+      same(stepKeys, ['basics', 'arrange']),
+      `${label}：標準があれば担当を組むの段は 基本情報・担当を組む の2つ`,
+      stepKeys,
+    );
     check((await count('arrange-change-standard')) === 1, `${label}：担当を組むに［標準の組み方を変える］`);
     // 予定を組むの子は基本情報・担当を組む（標準を登録したあと）
     const kids = await page

@@ -140,7 +140,11 @@ async function menu(page) {
     kids[k] = await side
       .locator(`[data-parent="${k}"] > .nav-sub > .nav-link.nav-child`)
       .evaluateAll((els) => els.map((e) => e.dataset.key));
-  check(JSON.stringify(kids) === JSON.stringify(KIDS), 'メニュー：予定・予定を組む（基本情報・組み方の標準・担当を組む）・設定の子の項目の並び', kids);
+  check(
+    JSON.stringify(kids) === JSON.stringify(KIDS),
+    'メニュー：予定・予定を組む（基本情報・組み方の標準・担当を組む）・設定の子の項目の並び',
+    kids,
+  );
   const all = await side.getByTestId('nav-link').evaluateAll(labelsOf);
   check(new Set(all).size === all.length, 'メニュー：同じ名前の項目が無い（子の項目も含めて）', all);
   const current = () => side.locator('[aria-current="page"]').evaluateAll((els) => els.map((e) => e.dataset.key));

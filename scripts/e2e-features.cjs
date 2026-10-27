@@ -56,9 +56,7 @@ async function allOn(page) {
   check(m.labels.at(-1) === '設定', 'すべて入：メニューの最後は「設定」', m.labels);
   check(same(m.labels, MENU), 'すべて入：メニューの最上位は5項目（「人」は無い）', m.labels);
   check(
-    same(m.schedule, scheduleKidsFor(FEATURE_IDS)) &&
-      same(m.arrange, ARRANGE_KIDS) &&
-      same(m.settings, SETTINGS_TABS),
+    same(m.schedule, scheduleKidsFor(FEATURE_IDS)) && same(m.arrange, ARRANGE_KIDS) && same(m.settings, SETTINGS_TABS),
     'すべて入：予定・予定を組む（基本情報・組み方の標準・担当を組む）・設定の子の項目',
     m,
   );
@@ -196,16 +194,18 @@ async function checkTemplate(page, t) {
   const m = await menu(page);
   check(same(m.labels, menuFor(on)), `${label}：メニューの最上位の項目（空き状況の入り切りだけで変わる）`, m.labels);
   check(
-    same(m.schedule, scheduleKidsFor(on)) &&
-      same(m.arrange, arrangeKidsFor(t)) &&
-      same(m.settings, settingsTabsFor(t)),
+    same(m.schedule, scheduleKidsFor(on)) && same(m.arrange, arrangeKidsFor(t)) && same(m.settings, settingsTabsFor(t)),
     `${label}：メニューの子の項目（予定は欠勤・キャンセルの入り切り、予定を組むは基本情報・組み方の標準・担当を組む、設定は設定のタブと同じ）`,
     m,
   );
   const tabs = await page.getByTestId('bottom-tab').allInnerTexts();
   check(same(tabs, tabsFor(on)), `${label}：下のタブ`, tabs);
   const bt = await basicsTabs(page);
-  check(same(bt, PEOPLE_KIDS), `${label}：基本情報のタブ（予定と相性・利用者さん・スタッフ・相性・勤務時間（シフト））`, bt);
+  check(
+    same(bt, PEOPLE_KIDS),
+    `${label}：基本情報のタブ（予定と相性・利用者さん・スタッフ・相性・勤務時間（シフト））`,
+    bt,
+  );
   await open(page, '/home', '[data-testid="home-tasks"]');
   const pal = await paletteItems(page);
   check(same(pal.screens, screensFor(t)), `${label}：パレットの画面`, pal.screens);

@@ -10,6 +10,7 @@ type KeyStore = Pick<Storage, 'getItem' | 'setItem'>;
 /** 覚える先を差し替えられる形（テスト用）。getStorage が null や例外なら、開いている間だけ覚える */
 export function createArrangeBasisMemory(getStorage: () => KeyStore | null) {
   let here: string | null = null;
+  const listeners = new Set<() => void>();
   const store = (): KeyStore | null => {
     try {
       return getStorage();
@@ -30,11 +31,19 @@ export function createArrangeBasisMemory(getStorage: () => KeyStore | null) {
     /** 組んだときの鍵を覚える */
     save(key: string): void {
       here = key;
+      for (const fn of listeners) fn();
       try {
         store()?.setItem(ARRANGE_BASIS_KEY, key);
       } catch {
         // 保存できなくても、開いている間は覚える
       }
+    },
+    /** 覚え直したら知らせる（画面が読み直すため。戻り値は取り消し） */
+    subscribe(fn: () => void): () => void {
+      listeners.add(fn);
+      return () => {
+        listeners.delete(fn);
+      };
     },
   };
 }

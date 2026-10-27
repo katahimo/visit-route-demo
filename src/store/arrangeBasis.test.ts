@@ -28,6 +28,16 @@ describe('createArrangeBasisMemory', () => {
     expect(createArrangeBasisMemory(() => ls).get()).toBe('abc');
   });
 
+  it('覚え直すと知らせる（取り消せば知らせない）', () => {
+    const mem = createArrangeBasisMemory(() => fake().ls);
+    let n = 0;
+    const off = mem.subscribe(() => n++);
+    mem.save('a');
+    off();
+    mem.save('b');
+    expect(n).toBe(1);
+  });
+
   it('localStorage が使えなくても開いている間は覚える', () => {
     const mem = createArrangeBasisMemory(() => {
       throw new Error('no storage');

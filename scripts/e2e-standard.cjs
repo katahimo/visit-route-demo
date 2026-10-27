@@ -344,7 +344,10 @@ const steps = sharedPage({
         await page.goto(`${BASE}#/standard`);
         await page.getByTestId('standard-steps').waitFor();
         await settle(page, 300);
-        check((await stepNow(page)) === 'register', 'ほかの画面へ移って戻っても段は「標準にする」のまま（下書きがあれば開くのは標準にする。読み直すと戻る）');
+        check(
+          (await stepNow(page)) === 'register',
+          'ほかの画面へ移って戻っても段は「標準にする」のまま（下書きがあれば開くのは標準にする。読み直すと戻る）',
+        );
         check((await page.getByTestId('standard-table').count()) === 1, 'ほかの画面へ移って戻っても下書きが残る');
         check((await diffCount(page)) === before, '下書きの違う所の数も同じ');
         await goStep(page, 'proposals');
@@ -435,8 +438,12 @@ const steps = sharedPage({
       'register',
       async (page) => {
         check(
-          (await page.locator('[data-step="register"] [data-step-part="register"] [data-testid="standard-register"]').count()) === 1 &&
-            (await page.locator('[data-step="register"] [data-step-part="draft"] [data-testid="standard-table"]').count()) === 1,
+          (await page
+            .locator('[data-step="register"] [data-step-part="register"] [data-testid="standard-register"]')
+            .count()) === 1 &&
+            (await page
+              .locator('[data-step="register"] [data-step-part="draft"] [data-testid="standard-table"]')
+              .count()) === 1,
           '「3. 標準にする」の段に下書きの表と［この表を標準にする］が並ぶ',
         );
         if ((await diffCount(page)) === 0) {
@@ -624,7 +631,10 @@ const steps = sharedPage({
         );
         await page.goto(`${BASE}#/arrange`);
         await page.getByTestId('arrange-change-standard').waitFor({ timeout: 30000 });
-        check((await page.getByTestId('arrange-basis-changed').count()) === 0, '登録した直後は組み直しの知らせを出さない');
+        check(
+          (await page.getByTestId('arrange-basis-changed').count()) === 0,
+          '登録した直後は組み直しの知らせを出さない',
+        );
         await page.goto(`${BASE}#/basics`);
         await page.getByTestId('basics-table').waitFor({ timeout: 30000 });
         await page.getByTestId('basics-time').first().click();
