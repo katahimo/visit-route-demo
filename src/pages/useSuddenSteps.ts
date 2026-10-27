@@ -41,11 +41,11 @@ export type SuddenPanelProps = {
   visitInfo: (visitId: string) => { client: string; window: string; owner: string | null };
   /** 計算中（自動作成・案B など） */
   running: boolean;
-  /** 今の案がある */
+  /** その日に訪問があり、問題を作れる */
   hasPlan: boolean;
   /** 伝えた状態（none＝まだ伝えていない・told＝伝えた・changed＝伝えたあとに変わった） */
   confirmState: 'none' | 'told' | 'changed';
-  /** 4段目の振り直しの結果（まとめ・案A と案B を選ぶ欄）。今の案に振り直しが出るまでは null */
+  /** 4段目の振り直しの結果（まとめ・案A と案B を選ぶ欄）。今の担当に振り直しが出るまでは null */
   result: ReactNode;
   /** 登録して振り直す（anneal：続けて案B も作る）。振り直せたら true */
   onReassign: (absence: Absence, anneal: boolean) => Promise<boolean>;
@@ -58,7 +58,7 @@ export type SuddenPanelProps = {
   /** 元の案に戻す（確認ダイアログで取り消したら false）。振り直していなければ undefined */
   onRevert?: () => Promise<boolean>;
   /**
-   * 5段目の連絡の一覧（前の確定した割当 → 新しい割当の差と、取り消した訪問から。PRD D244）。差を出せなければ null
+   * 5段目の連絡の一覧（元の担当 → 今の担当の差と、取り消した訪問から。PRD D244）。差を出せなければ null
    */
   contacts: ContactRow[] | null;
   /** 欠勤の人に残る訪問の数（振り直していない。5段目の上に注意を出す。連絡文には入らない） */

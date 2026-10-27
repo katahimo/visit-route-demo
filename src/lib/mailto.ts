@@ -42,7 +42,7 @@ export function normalizeEmail(raw: string): string | null {
 const encodeAddress = (a: string) => encodeURIComponent(a).replace(/%40/g, '@');
 
 /** 本文の改行を CRLF にそろえてエンコードする（改行は %0D%0A） */
-export const encodeBody = (body: string) => encodeURIComponent(body.replace(/\r\n|\r|\n/g, '\r\n'));
+const encodeBody = (body: string) => encodeURIComponent(body.replace(/\r\n|\r|\n/g, '\r\n'));
 
 export type MailParts = {
   /** To（ふつうは1人） */

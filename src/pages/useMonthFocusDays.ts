@@ -31,7 +31,7 @@ export function useMonthFocusDays(x: {
     () => monthClientIds(days, visitsByDate, data.clientLeaves),
     [days, visitsByDate, data.clientLeaves],
   );
-  /** 〈スタッフ〉が担当する〈利用者さん〉：この月の数える案（今の案、無ければ確定した割当）の担当と、いつもの担当 */
+  /** 〈スタッフ〉が担当する〈利用者さん〉：この月の訪問の今の担当と、いつもの担当 */
   const staffClients = useMemo(
     () =>
       staffClientMap(

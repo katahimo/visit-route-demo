@@ -18,7 +18,7 @@ import {
 } from '../lib/nav';
 import { NAV_ICONS } from './shellNav';
 
-/** 上の帯（月まとめ作成の進み具合・スマホの今の画面の名前・探す・日付の切り替え・全画面） */
+/** 上の帯（範囲の AI で組む（担当を組む）の進み具合・スマホの今の画面の名前・探す・日付の切り替え・全画面） */
 export function AppHeader({
   headerRef,
   screenName,
@@ -37,7 +37,7 @@ export function AppHeader({
 }) {
   return (
     <header ref={headerRef} className="app-header">
-      {/* 月まとめ作成の進み具合と［止める］（PRD D256。ほかの画面へ移っても続く。月の予定では画面の中に出す） */}
+      {/* 範囲の AI で組む（担当を組む）の進み具合と［止める］（PRD D256。ほかの画面へ移っても続く。月の予定では画面の中に出す） */}
       <BatchBand />
       {/* スマホだけ：ロゴと今の画面の名前（PRD D132。広い画面では出さない。「メニュー」は下のタブ。PRD D336） */}
       <div className="m-head-title">

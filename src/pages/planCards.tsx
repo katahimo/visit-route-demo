@@ -302,7 +302,7 @@ export function card(p: PlanCtx, id: string) {
 }
 
 /**
- * 時間軸の帯（PRD D58）：時刻は今の案の lenient（explain の timing。無ければ訪問の開始（早）と所要）、色は種類。
+ * 時間軸の帯（PRD D58）：時刻は今の担当の lenient（explain の timing。無ければ訪問の開始（早）と所要）、色は種類。
  * 印は小さなアイコンと title、押すと帯の下に印の説明と理由
  */
 export function bandOf(p: PlanCtx, id: string, sid: string): TimelineBand {

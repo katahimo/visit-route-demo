@@ -107,3 +107,48 @@ export function tidyPreviewText(ym: string, p: TidyPreview): string {
 export function tidyConfirmBody(p: TidyPreview): string {
   return `${p.days}日分の、担当を組んだ・変えた訪問 ${p.visits}件と確定した内容 ${p.snapshots}日分を消します（${sizeText(p.chars)}空きます）。繰り返しの回は繰り返しのとおりに戻り（担当・取り消しは消えます）、単発の訪問は消えます。人・繰り返し・条件は消えません。消したものは戻せません（容量を空けるため、直前の状態の控えも残しません）。`;
 }
+
+/**
+ * Excel の全体のブックの事業所名が、いまのデータと違うか（別の事業所のブックの見込み。ADR-0006）。
+ * 違えば両方の名前、同じなら null。事業所に ID は無いので名前で見る（前後の空白は問わない）
+ */
+export function otherOrgOf(
+  current: Pick<DemoData, 'org'>,
+  read: Pick<DemoData, 'org'>,
+): { current: string; read: string } | null {
+  const a = current.org.name.trim();
+  const b = read.org.name.trim();
+  return a === b ? null : { current: a, read: b };
+}
+
+/**
+ * 読み込んだデータから、いまの事業所の運用の記録（伝えた内容・振り直し・組み方の標準の記録）を外す。
+ * Excel にはこれらのシートが無く、読み込みは今のものを残すため、別の事業所のブックではここで消す
+ */
+export function withoutOrgState(d: DemoData): DemoData {
+  const { standard: _standard, ...rest } = d;
+  return { ...rest, snapshots: {}, reassigns: {} };
+}
+
+/** Excel の全体のブックで置き換える確認の本文（PRD D227。ADR-0006） */
+export function workbookConfirmBody(x: {
+  fileName: string;
+  counts: string;
+  otherOrg: { current: string; read: string } | null;
+  keep: string;
+}): string {
+  const lines = [
+    `「${x.fileName}」の内容（${x.counts}）で、いまのデータを置き換えます。訪問の担当は Excel の内容になります。`,
+  ];
+  if (x.otherOrg) {
+    lines.push(
+      `このファイルの事業所名「${x.otherOrg.read}」は、いまの「${x.otherOrg.current}」と違います。別の事業所のデータとして読み込み、いまの確定（伝えた内容）・振り直し・組み方の標準の記録は消します。`,
+    );
+  } else {
+    lines.push(
+      '確定（伝えた内容）・振り直し・組み方の標準の記録はそのまま残します（Excel と違う所は「未連絡の変更」になります）。',
+    );
+  }
+  lines.push(x.keep);
+  return lines.join('\n');
+}

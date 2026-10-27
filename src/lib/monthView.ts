@@ -1,5 +1,5 @@
 // 月の画面（pages/MonthPage.tsx）のための純粋関数：表示の選択（?staff= ?client=）・日ごとの集計・日ごとの一覧の行・
-// その日の回の並び・月まとめ作成の進み具合の文など。データは書き換えない（PRD D53〜D61・D69・D189・D256）
+// その日の回の並び・範囲の AI で組む（担当を組む）の進み具合の文など。データは書き換えない（PRD D53〜D61・D69・D189・D256）
 import type { ClientLeave, Visit } from '../contracts/documents';
 import type { Features } from '../contracts/features';
 import { isOnLeave } from '../domain/leaves';
@@ -95,7 +95,7 @@ export function monthClientIds(
   return out;
 }
 
-/** この月の数える案（今の案、無ければ確定した割当）の〈スタッフ〉と〈利用者さん〉の組（lib/search の staffClientMap へ） */
+/** この月の担当の並び（訪問の今の担当）の〈スタッフ〉と〈利用者さん〉の組（lib/search の staffClientMap へ） */
 export function monthStaffClientPairs(
   days: readonly string[],
   dayPlans: ReadonlyMap<string, Pick<DayPlan, 'routes'>>,
@@ -225,7 +225,7 @@ export function monthListEntries(x: {
   return out;
 }
 
-/** 月まとめ作成の進み具合の値（作っている日の番号＋その日の計算の進み） */
+/** 範囲の AI で組む（担当を組む）の進み具合の値（作っている日の番号＋その日の計算の進み） */
 export function batchProgressValue(batch: Pick<BatchRun, 'index' | 'iteration' | 'total'>): number {
   return batch.index + (batch.total > 0 ? Math.min(1, batch.iteration / batch.total) : 0);
 }

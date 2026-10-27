@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { graphemeCount, staffSchema } from '../contracts/documents';
-import { staff } from '../matching/fixtures';
+import { staff } from '../matching/fixtures.testkit';
 import { STAFF_COLORS } from './common';
 import { staffColorMap, staffIconError, staffMarkText, surnameInitial } from './staffMark';
 

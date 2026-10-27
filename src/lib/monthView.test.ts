@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ClientLeave } from '../contracts/documents';
-import { visit } from '../matching/fixtures';
+import { visit } from '../matching/fixtures.testkit';
 import type { ClientDay, DayStatus, StaffDay } from './month';
 import type { BatchRun } from './monthBatch';
 import {

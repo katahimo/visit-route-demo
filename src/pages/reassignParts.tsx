@@ -17,7 +17,7 @@ export type ReassignOption = {
   diff: ReassignDiff | null;
   /** 点数（点数の基準の物差し） */
   hundred: number | null;
-  /** 今の案と同じか */
+  /** 今の担当と同じか */
   current: boolean;
 };
 

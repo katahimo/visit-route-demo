@@ -4,7 +4,7 @@ import type { ReassignInfo } from '../contracts/data';
 import type { Client, Visit } from '../contracts/documents';
 import type { Rule } from '../contracts/rules';
 import { compile } from '../matching';
-import { client, DATE, makeData, rule, staff, visit } from '../matching/fixtures';
+import { client, DATE, makeData, rule, staff, visit } from '../matching/fixtures.testkit';
 import { visitsOn } from '../patterns';
 import {
   arrangeChoices,

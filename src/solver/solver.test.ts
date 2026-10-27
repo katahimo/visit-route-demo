@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Problem } from '../contracts/problem';
 import { score } from '../evaluate';
 import { compile, scheduleRoute } from '../matching';
-import { client, DATE, makeData, randomData, rule, staff, visit } from '../matching/fixtures';
+import { client, DATE, makeData, randomData, rule, staff, visit } from '../matching/fixtures.testkit';
 import { createSolver, defaultIterations, solve } from './index';
 
 const RULES = [

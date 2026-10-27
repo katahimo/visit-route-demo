@@ -1,7 +1,7 @@
 // 月の予定の印刷（PRD D70。ADR-0014）
 import { describe, expect, it } from 'vitest';
 import type { DemoData } from '../contracts/data';
-import { client, DATE, makeData, staff, visit } from '../matching/fixtures';
+import { client, DATE, makeData, staff, visit } from '../matching/fixtures.testkit';
 import { monthPrint, printDay, staffLabels } from './monthPrint';
 import { REQUESTED_OFF_NOTE } from './requestedOff';
 

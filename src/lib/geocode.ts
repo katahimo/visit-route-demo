@@ -10,8 +10,8 @@
 
 import { normalizePostalCode } from './postalCode';
 
-export const ZIPCLOUD_URL = 'https://zipcloud.ibsnet.co.jp/api/search';
-export const GSI_ADDRESS_URL = 'https://msearch.gsi.go.jp/address-search/AddressSearch';
+const ZIPCLOUD_URL = 'https://zipcloud.ibsnet.co.jp/api/search';
+const GSI_ADDRESS_URL = 'https://msearch.gsi.go.jp/address-search/AddressSearch';
 /** 1回の呼び出しの時間切れ（ミリ秒） */
 export const GEOCODE_TIMEOUT_MS = 8000;
 /** 候補として出す数の上限 */

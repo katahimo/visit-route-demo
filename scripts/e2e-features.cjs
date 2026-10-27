@@ -48,7 +48,7 @@ const {
   writeFeaturesInOtherTab,
 } = require('./lib/features.cjs');
 
-// ---- すべて入（初期データ）：管理者のグループと管理者設定の画面 ----
+// ---- すべて入（初期データ）：メニューと管理者設定の画面 ----
 async function allOn(page) {
   await page.evaluate((key) => localStorage.removeItem(key), STORAGE_KEY);
   await open(page, '/home', '[data-testid="home-tasks"]');
@@ -252,7 +252,7 @@ async function checkTemplate(page, t) {
   check(same(s, [t]), `${label}：管理者設定の「いまの設定」`, s);
   const stabs = (await page.getByTestId('settings-tabs').locator('a').allInnerTexts()).map((x) => x.trim());
   check(same(stabs, settingsTabsFor(t)), `${label}：設定のタブ`, stabs);
-  // スイッチの並びはグループ順（メニューのグループにそろえる。ADR-0034）なので、行の data-feature で ID に引き反映する
+  // スイッチの並びは機能のグループ順（lib/features の FEATURE_GROUPS）なので、行の data-feature で ID に引き反映する
   const byId = Object.fromEntries(
     await page
       .getByTestId('feature-row')

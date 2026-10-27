@@ -1,6 +1,6 @@
 // 名簿のブック（〈利用者さん〉か〈スタッフ〉のシート1枚）→ 今のデータに足す・直す（PRD D103〜D107。ADR-0020）。
 // データは書き換えない（ADR-0006）：名簿を当てた新しい DemoData と件数を返し、画面が確かめてから store の update で入れる。
-// AI案・記録・確定した割当・訪問・パターン・相性などは base のまま（その人を指すものも残す）。最後は store の migrate（repair）を通す
+// 訪問（担当）・伝えた内容・パターン・相性などは base のまま（その人を指すものも残す）。最後は store の migrate（repair）を通す
 import type { DemoData, ImportError, RosterImportResult, RosterKind, RosterMode } from '../contracts/data';
 import type { Client, Staff, Terms } from '../contracts/documents';
 import { STAGE_LABELS, withStage } from '../lib/clientStage';

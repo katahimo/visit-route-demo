@@ -1,7 +1,7 @@
 // 急な欠勤・当日キャンセルを目立つ入口から登録して振り直すこと（PRD D167〜D172。ADR-0025・ADR-0011・ADR-0015）を本物のブラウザで確かめる：
 // ホームの「欠勤・キャンセルを登録」で今日の日の予定の「欠勤・キャンセル」の欄が1段目で開き `?do=`・`?date=` が URL から消える、
 // 段階の表示（aria-current="step"）と段階ごとのフォーカス（段階の見出し）、〈スタッフ〉が休む → 人と時間帯 → 影響（入らなくなる訪問 N件）→
-// 主ボタンは「登録して振り直す（おすすめ）」の1つ・ほかのやり方は文字のボタン（PRD D264）→ 案A で振り直す → 4段目のまとめ・担当が移る訪問の一覧（PRD D265）と案A・案B（案B を作って今の案にする）→ この割当で確定（独自の確認ダイアログ）→
+// 主ボタンは「登録して振り直す（おすすめ）」の1つ・ほかのやり方は文字のボタン（PRD D264）→ 案A で振り直す → 4段目のまとめ・担当が移る訪問の一覧（PRD D265）と案A・案B（案B を作って反映する）→ この割当で確定（独自の確認ダイアログ）→
 // 5段目の連絡（人ごとの文・［文をコピー］・メール・［連絡した］の数。PRD D243〜D246）→ 終わる → 確定済み、
 // 当日キャンセル（訪問を選ぶ・当日キャンセルが既定・影響の文・取り消すと cancelKind='sameDay'・4段目・5段目で担当に「中止」）、
 // 列の見出しの「欠勤を直す」で同じ欄が2段目で開き、欠勤を取り消せる、戻る、Esc で閉じて入口のボタンへフォーカス、
@@ -62,7 +62,7 @@ const contactRowsOf = (page) =>
         mail: el.querySelector('[data-testid="sudden-contact-mail"]')?.getAttribute('href') ?? null,
       })),
     );
-/** 今の案が出て計算が終わるまで待つ */
+/** 今の担当が出て計算が終わるまで待つ */
 async function waitPlan(page) {
   await page.getByTestId('confirm-state').waitFor({ state: 'attached', timeout: 60000 });
   await page.getByTestId('plan-progress').waitFor({ state: 'detached', timeout: 60000 });
@@ -242,13 +242,13 @@ async function fromHome(page) {
   await box.getByTestId('anneal-table').waitFor({ timeout: 90000 });
   await page.getByTestId('plan-progress').waitFor({ state: 'detached', timeout: 90000 });
   await settle(page, 400);
-  const chooseB = box.getByRole('button', { name: /^案B.*を今の案にする$/ });
+  const chooseB = box.getByRole('button', { name: /^案B.*を反映する$/ });
   if ((await chooseB.count()) > 0 && !(await chooseB.isDisabled())) {
     await chooseB.click();
     const d2 = await waitStored(page, (d) => d.reassigns?.[TODAY]?.method === 'anneal');
-    check(d2.reassigns[TODAY]?.method === 'anneal', '4段目で案B を今の案にできる');
+    check(d2.reassigns[TODAY]?.method === 'anneal', '4段目で案B を反映できる');
   } else {
-    // 案B が案A と同じ（案A のまま）ときは表に選ぶボタンが出ないか、案A が今の案
+    // 案B が案A と同じ（案A のまま）ときは表に選ぶボタンが出ないか、案A が反映済み
     check((await box.textContent()).includes('案A'), '案B を作った（案A のままの知らせ）');
   }
   await page.screenshot({ path: path.join(OUT_DIR, 'step4-staff.png') });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { score } from '../evaluate';
-import { client, DATE, makeData, staff, visit } from './fixtures';
+import { client, DATE, makeData, staff, visit } from './fixtures.testkit';
 import { bestInsertion, compile } from './index';
 
 /**

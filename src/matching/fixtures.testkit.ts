@@ -1,4 +1,4 @@
-// テスト用の小さな手作りデータと、乱数で作る大きめのデータ（matching・solver・evaluate のテストで使う）
+// テスト用の小さな手作りデータと、乱数で作る大きめのデータ（matching・solver・evaluate・lib などのテストで使う。本番のコードからは使わない）
 import { DATA_VERSION, type DemoData } from '../contracts/data';
 import type { Client, Staff, Visit } from '../contracts/documents';
 import type { Item, Rule } from '../contracts/rules';
@@ -152,7 +152,7 @@ export function randomData(nStaff: number, nVisits: number, seed: number, rules:
   return makeData({ staff: st, clients: cl, visits: vs, rules });
 }
 
-/** 問題の中身の比べ方（テスト用。計算に効くところだけを文字にする。版1の lib/runs の problemKey の代わり） */
+/** 問題の中身の比べ方（計算に効くところだけを文字にする） */
 export function problemKey(p: import('../contracts/problem').Problem): string {
   return JSON.stringify([
     p.date,

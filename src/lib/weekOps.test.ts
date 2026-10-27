@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { DemoData } from '../contracts/data';
 import type { Pattern } from '../contracts/documents';
-import { client, DATE, makeData, staff, visit } from '../matching/fixtures';
+import { client, DATE, makeData, staff, visit } from '../matching/fixtures.testkit';
 import { expandPattern, findVisit, putVisits, visitsIn } from '../patterns';
 import { canMoveVisit, weekDay } from './week';
-import { insertAllIntoPlans, insertIntoPlan, moveFollowing, moveOnce } from './weekOps';
+import { insertAllIntoPlans, insertIntoPlan, moveFollowing } from './weekOps';
 
 // DATE（2026-10-12）は月曜
 
@@ -47,42 +47,11 @@ const put = (d: DemoData, id: string, over: Partial<ReturnType<typeof find>>): D
   visits: putVisits(d.visits, [{ ...find(d, id), ...over }]),
 });
 
-describe('moveOnce（この回だけ）', () => {
-  it('その訪問の日付・開始（幅を保つ）だけ変え、edited にする。担当はそのまま、組んだ開始は外す', () => {
-    const base = withPatterns([pattern('p1', [1], { windowKind: 'window', latestStart: '09:30' })]);
-    const d = put(base, '2026-10-19_p1', { staffId: 's1', start: '09:10' });
-    const next = moveOnce(d, '2026-10-19_p1', '2026-10-21', 10 * 60 + 15, DATE);
-    const v = find(next, '2026-10-19_p1');
-    expect(v.date).toBe('2026-10-21');
-    expect(v.earliestStart).toBe('10:15');
-    expect(v.latestStart).toBe('10:45');
-    expect(v.pattern).toEqual({ id: 'p1', date: '2026-10-19', edited: true });
-    expect([v.staffId, v.start]).toEqual(['s1', null]);
-    // ほかの回とパターンは変わらない
-    expect(all(next).filter((x) => x.id !== v.id)).toEqual(all(d).filter((x) => x.id !== v.id));
-    expect(next.patterns).toEqual(d.patterns);
-  });
-
-  it('今日より前の訪問・今日より前の日へは動かさない（そのまま）', () => {
-    const d = withPatterns([pattern('p1', [1])]);
-    const today = '2026-10-14';
-    expect(moveOnce(d, '2026-10-12_p1', '2026-10-20', 600, today)).toBe(d);
-    expect(moveOnce(d, '2026-10-19_p1', '2026-10-13', 600, today)).toBe(d);
-    expect(moveOnce(d, '2026-10-19_p1', today, 600, today)).not.toBe(d);
-  });
-
-  it('canMoveVisit：今日以降の訪問だけ・今日以降の日へだけ動かせる', () => {
+describe('canMoveVisit', () => {
+  it('今日以降の訪問だけ・今日以降の日へだけ動かせる', () => {
     expect(canMoveVisit('2026-10-13', '2026-10-14')).toBe(false);
     expect(canMoveVisit('2026-10-14', '2026-10-14')).toBe(true);
     expect(canMoveVisit('2026-10-20', '2026-10-14')).toBe(true);
-  });
-
-  it('単発の訪問は pattern が null のまま。無い訪問はそのまま', () => {
-    const d = makeData({ visits: [visit('v1', 'c1', '09:00', '09:00')] });
-    const next = moveOnce(d, 'v1', DATE, 11 * 60, DATE);
-    expect(next.visits[0]!.pattern).toBeNull();
-    expect(next.visits[0]!.earliestStart).toBe('11:00');
-    expect(moveOnce(d, 'nope', DATE, 600, DATE)).toBe(d);
   });
 });
 

@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DemoData } from '../contracts/data';
 import type { Pattern } from '../contracts/documents';
-import { client, makeData, staff } from '../matching/fixtures';
+import { client, makeData, staff } from '../matching/fixtures.testkit';
 import { initialPresets } from '../seed';
 import { dayProblemOf } from './dayPlan';
 import { standardDayRoutes } from './standard';

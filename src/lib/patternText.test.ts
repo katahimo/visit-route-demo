@@ -1,7 +1,7 @@
 // 定期パターンの表示の文（ADR-0012・ADR-0013）
 import { describe, expect, it } from 'vitest';
 import type { Pattern } from '../contracts/documents';
-import { monthWeeksLabel, patternWhenText, repeatText, usualStartsLabel } from './patternText';
+import { patternWhenText, repeatText, usualStartsLabel } from './patternText';
 
 const p = (over: Partial<Pattern> = {}) => ({
   weekdays: [1, 4],
@@ -22,7 +22,7 @@ describe('patternWhenText', () => {
   });
   it('毎月の第N曜日（ADR-0013）', () => {
     expect(patternWhenText(p({ repeat: 'monthly', monthWeeks: [4, 3], weekdays: [4] }))).toBe('毎月 第3・第4 木 10:00');
-    expect(monthWeeksLabel([5, 1, 1])).toBe('第1・第5');
+    expect(repeatText(p({ repeat: 'monthly', monthWeeks: [5, 1, 1] }))).toBe('毎月 第1・第5');
     expect(repeatText(p({ repeat: 'monthly', monthWeeks: [2], everyWeeks: 2 }))).toBe('毎月 第2');
     expect(repeatText(p())).toBe('');
   });

@@ -123,7 +123,7 @@ describe('候補', () => {
     expect(hit('せってい')).toEqual(['/types', '/items', '/settings', '/data']);
     expect(hit('じょうけんのおもみ')).toEqual(['/rules']);
     expect(hit('きんむのみこみ')).toEqual(['/workload']);
-    // 案を比べるは日の予定の「AI で組む ▾」から開く（パレットには出さない。PRD D331）
+    // 案を比べるは担当を組むの「案を比べる」から開く（パレットには出さない。PRD D331・ADR-0063）
     expect(hit('あんをくらべる')).toEqual([]);
     expect(paletteActions(TODAY).find((x) => x.id === 'action:today')!.label).toBe('日の予定（今日）を開く');
   });

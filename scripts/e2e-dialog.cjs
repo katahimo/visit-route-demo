@@ -1,5 +1,5 @@
 // 独自の確認ダイアログ（PRD D146〜D150。ADR-0026）を本物のブラウザで確かめる：
-// 代表の数か所（条件を消す・項目を消す・データを初期状態に戻す・日の画面の「この割当で確定」・〈スタッフ〉の変更を捨てる・
+// 代表の数か所（条件を消す・項目を消す・データを初期状態に戻す・日の画面の「確定（伝えた）」・〈スタッフ〉の変更を捨てる・
 // 条件の重みの「新しい考え方として保存」（名前の欄つき。ADR-0065））で、
 // 画面の中央に独自のダイアログが出て、ブラウザのネイティブのダイアログは出ない（page.on('dialog') が呼ばれたら失敗）。
 // role=alertdialog・aria-modal・見出しと本文の aria-labelledby/describedby、最初のフォーカスは取り消し、Tab・Shift+Tab は中で回る、
@@ -420,16 +420,16 @@ async function adopt(page) {
   const state = () => page.getByTestId('confirm-state').textContent();
   const s0 = (await state()) ?? '';
   await page.getByTestId('adopt').click();
-  const a = await shape(page, 'この割当で確定');
-  check(a.title === 'この担当と時刻を伝えたので、確定しますか？', 'この割当で確定：見出し', a.title);
+  const a = await shape(page, '確定（伝えた）');
+  check(a.title === 'この担当と時刻を伝えたので、確定しますか？', '確定（伝えた）：見出し', a.title);
   await page.keyboard.press('Escape');
   await settle(page);
-  check((await state()) === s0 && !/確定済み/.test(s0), 'この割当で確定：Esc では確定しない', s0);
+  check((await state()) === s0 && !/確定済み/.test(s0), '確定（伝えた）：Esc では確定しない', s0);
   await page.getByTestId('adopt').click();
   await dialog(page).waitFor();
   await page.getByTestId('confirm-ok').click();
   await settle(page, 500);
-  check(/確定済み/.test((await state()) ?? ''), 'この割当で確定：確定で「確定済み」', await state());
+  check(/確定済み/.test((await state()) ?? ''), '確定（伝えた）：確定で「確定済み」', await state());
 }
 
 // ---- 〈スタッフ〉の変更を捨てる（その人の画面の節。PRD D308）：Esc は確認だけを閉じる、捨てて取り消す ----

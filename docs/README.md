@@ -25,12 +25,12 @@ AI・人が「何を知りたいときに、どのファイルを読むか」を
 |---|---|
 | [pages.md](design/pages.md) | 共通事項（〈スタッフ〉の印を含む）・ルート一覧・確認ダイアログ・機能の入り切り（画面側） |
 | [pages-nav.md](design/pages-nav.md) | メニュー（5項目と畳める子の項目）・下のタブ・引き出し・設定のタブ・基本情報のタブ・予定を組むの段・Ctrl+Z・コマンドパレット |
-| [pages-common.md](design/pages-common.md) | 右の欄・予定の共通の部品（モードの切り替え・操作の行・AI で組む ▾ の範囲・提案の帯・複数選択・全体の元に戻す）・訪問の札の共通の部品（札の3段と入れ物・見た目の印・選ぶ・1行1訪問の行・表のマスの札と「+N」・ドラッグの落とし先の判定）・スマホの日ごとのリスト・帯をキーで動かす・訪問の詳細の欄（VisitPanel・visitOps）・名前の詳細の吹き出し・用語・ツアー・作り直しの帯・リンク・メール・道順 |
+| [pages-common.md](design/pages-common.md) | 右の欄・予定の共通の部品（操作の行・範囲の提案の帯・複数選択・全体の元に戻す）・訪問の札の共通の部品（札の3段と入れ物・見た目の印・選ぶ・1行1訪問の行・表のマスの札と「+N」・ドラッグの落とし先の判定）・スマホの日ごとのリスト・帯をキーで動かす・訪問の詳細の欄（VisitPanel・visitOps）・名前の詳細の吹き出し・用語・ツアー・リンク・メール・道順 |
 | [pages-bars.md](design/pages-bars.md) | 3段の時間帯のバー・ひと目で分かる表示（月・週・日・空き状況・稼働で共通） |
 | [pages-home.md](design/pages-home.md) | ホーム（今日やること） |
-| [pages-plan.md](design/pages-plan.md) | 日の予定（予定と AI案・手直し・確定） |
+| [pages-plan.md](design/pages-plan.md) | 日の予定（担当の手直し・確定（伝えた）） |
 | [pages-plan-absence.md](design/pages-plan-absence.md) | 欠勤・キャンセル・振り直し（案A・案B）・連絡の一覧 |
-| [pages-month.md](design/pages-month.md) | 月の予定（マスを押すと右の欄のその日の行・マスのキー・別の日へ・スマホの下から出る欄）・まとめて作る・まとめて確定・希望休・印刷 |
+| [pages-month.md](design/pages-month.md) | 月の予定（マスを押すと右の欄のその日の行・マスのキー・別の日へ・スマホの下から出る欄）・担当を組んでいる間・まとめて確定・希望休・印刷 |
 | [pages-week.md](design/pages-week.md) | 週の予定（時間軸・〈スタッフ〉×曜日・〈利用者さん〉×曜日の表のマスの札と「+N」） |
 | [pages-vacancy.md](design/pages-vacancy.md) | 空き状況・問い合わせの試算・案内文 |
 | [pages-basics.md](design/pages-basics.md) | 基本情報の予定と相性の表（行＝繰り返し・列＝曜日・マスで時刻を直す・相性の列。予定を組むの1段目） |
@@ -51,7 +51,7 @@ AI・人が「何を知りたいときに、どのファイルを読むか」を
 | [0001](adr/0001-browser-only-github-pages.md) | ブラウザ完結の静的サイト・GitHub Pages |
 | [0002](adr/0002-flexible-matching-rules.md) | 相性・特性・希望を「項目＋条件の型＋重み0〜5＋必須」で表す |
 | [0003](adr/0003-js-annealing-solver.md) | 最適化は Web Worker 上の焼きなまし |
-| [0004](adr/0004-ai-plan-as-base-with-pins.md) | AI の提案を土台に手直しし、手で動かした訪問を固定として残す |
+| [0004](adr/0004-ai-plan-as-base-with-pins.md) | AI の提案を土台に手直しし、手で動かした訪問をピンとして残す |
 | [0005](adr/0005-compare-ai-runs-by-parameters.md) | 条件を変えた AI の提案どうしで比べる（手作業との比較はしない） |
 | [0006](adr/0006-excel-template-import-export.md) | Excel の書き出し・読み込み |
 | [0007](adr/0007-score-out-of-100.md) | 点数を100点満点で見せる |

@@ -1,32 +1,14 @@
-// 週の予定（D50）のデータを書く操作：この回だけ・これ以降で動かす、空き時間に入れる。
+// 週の予定（D50）のデータを書く操作：これ以降で動かす、空き時間に入れる（この回だけ動かすのは訪問の詳細の欄。lib/visitOps の applyVisitEdit）。
 // 純粋関数（データは書き換えず、新しい DemoData を返す。画面は update(fn) に渡す）。表の形の計算は lib/week
 import type { DemoData } from '../contracts/data';
-import type { Pattern, Visit } from '../contracts/documents';
+import type { Pattern } from '../contracts/documents';
 import type { PatternChange } from '../contracts/patterns';
 import type { Routes } from '../contracts/reassign';
 import { addDays, minutesToHhmm, weekday } from '../domain/time';
-import { findVisit, nthOfMonth, patternVisitId, putVisits, splitPattern, timesOn, visitsOn } from '../patterns';
+import { findVisit, nthOfMonth, patternVisitId, splitPattern, timesOn, visitsOn } from '../patterns';
 import { fitsOf, placeVisit } from '../reassign';
 import { dayProblemOf, pinsOf, routesOf, writeRoutes } from './dayPlan';
 import { canMoveVisit, shiftedTimes } from './week';
-
-/**
- * 「この回だけ」：訪問の日付と開始（早・遅。幅は保つ）を変え、繰り返しの回なら pattern.edited を true にする（保存した回にする）。
- * 担当はそのまま（その日に働かなければ要対応になる）、組んだ開始は外す（呼ぶ側が settleDay で書き直す）。
- * 訪問が無い・訪問の日か新しい日が今日より前ならそのまま
- */
-export function moveOnce(d: DemoData, visitId: string, date: string, start: number, today: string): DemoData {
-  const v = findVisit(d, visitId);
-  if (!v || !canMoveVisit(v.date, today) || !canMoveVisit(date, today)) return d;
-  const next: Visit = {
-    ...v,
-    date,
-    ...shiftedTimes(v, start),
-    start: null,
-    pattern: v.pattern ? { ...v.pattern, edited: true } : null,
-  };
-  return { ...d, visits: putVisits(d.visits, [next]) };
-}
 
 /**
  * 「これ以降」で動かす曜日の新しいパターンに、時刻のほかに変えるもの（訪問の詳細の欄。PRD D301）。

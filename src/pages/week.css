@@ -39,14 +39,6 @@
 .week-tools {
   align-items: center;
 }
-label.week-who {
-  flex-direction: row;
-  align-items: center;
-  gap: 6px;
-}
-.week-who select {
-  width: auto;
-}
 .week-legend {
   gap: 12px;
   flex-wrap: wrap;
@@ -62,10 +54,6 @@ label.week-who {
   height: 10px;
   border: 2px dashed var(--sub);
   border-radius: 4px;
-}
-.week-legend-dash.is-noplan {
-  border: 1.5px dashed var(--warn-line);
-  background: #fffaf0;
 }
 .week-legend-dash.is-unassigned {
   border-color: var(--danger);
@@ -162,11 +150,6 @@ label.week-who {
 .week-band.is-unassigned {
   border: 2px dashed var(--danger);
   background-color: #fff !important;
-  background-image: none;
-}
-.week-band.is-noplan {
-  border: 1.5px dashed var(--warn-line);
-  background-color: #fffaf0 !important;
   background-image: none;
 }
 .week-band-time {
@@ -278,9 +261,6 @@ label.week-who {
 .week-table td.is-off {
   background: #f3efeb;
 }
-.week-table td.is-noplan {
-  background: var(--soft);
-}
 .week-diff {
   font-weight: 700;
   white-space: nowrap;
@@ -300,7 +280,6 @@ label.week-who {
 .week-citem.is-unfit {
   border: 3px solid var(--danger);
 }
-.week-band-unfit,
 .week-legend-unfit {
   display: inline-block;
   margin-right: 3px;
@@ -316,14 +295,6 @@ label.week-who {
   flex-direction: column;
   gap: 1px;
   padding: 1px 3px;
-}
-.week-drop-fit {
-  align-self: flex-start;
-  padding: 0 4px;
-  border-radius: 4px;
-  background: #fff;
-  font-weight: 700;
-  white-space: nowrap;
 }
 .week-allowed {
   margin: 0;

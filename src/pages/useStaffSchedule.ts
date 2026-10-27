@@ -42,7 +42,7 @@ export function useStaffSchedule({
     const ds = calDates(calView, anchor);
     return calView === 'month' ? ds.filter((d) => ymOf(d) === ymOf(anchor)) : ds;
   }, [calView, anchor]);
-  /** その期間の勤務の見込み（今の案、無ければ確定した割当。予定のタブのときだけ数える） */
+  /** その期間の勤務の見込み（訪問の今の担当。予定のタブのときだけ数える） */
   const work = useMemo(() => {
     if (tab !== 'schedule' || !saved) return null;
     const days = range.map((d) => workDayOf(data, d));

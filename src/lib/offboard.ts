@@ -25,8 +25,6 @@ export type OffboardVisit = {
   clientId: string;
   /** 伝えた日（確定した日）の訪問 */
   confirmed: boolean;
-  /** 担当している（いつも true） */
-  plan: boolean;
 };
 
 /** 代わりの候補 */
@@ -133,7 +131,6 @@ export function offboardScope(
       visitId: v.id,
       clientId: v.clientId,
       confirmed: !!own(data.snapshots, v.date),
-      plan: true,
     });
   };
   for (const v of visitsIn(data, { from, to: sampleTo })) take(v);

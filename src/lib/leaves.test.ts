@@ -4,7 +4,7 @@ import type { DemoData } from '../contracts/data';
 import type { ClientLeave, Visit } from '../contracts/documents';
 import { addDays } from '../domain/time';
 import { compile } from '../matching';
-import { client, DATE, makeData, problemKey, staff, visit } from '../matching/fixtures';
+import { client, DATE, makeData, problemKey, staff, visit } from '../matching/fixtures.testkit';
 import { leaveConfirmedDates, leavesOf, leaveVisits, removeLeave, saveLeave } from './leaves';
 import { activeVisitsOn, batchTargets, clientDay, dayMarks, dayPlanOf, dayStatus } from './month';
 import { weekDay } from './week';

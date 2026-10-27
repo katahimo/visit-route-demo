@@ -33,7 +33,7 @@ const pop = (page) => page.getByTestId('person-pop');
 const view = (page) => page.getByTestId('person-view');
 const nameOf = async (loc) => ((await loc.getAttribute('aria-label')) ?? '').replace(/の詳細$/, '');
 
-/** 今の案が出て計算が終わるまで待つ */
+/** 今の担当が出て計算が終わるまで待つ */
 async function waitPlan(page) {
   await page.getByTestId('confirm-state').waitFor({ state: 'attached', timeout: 60000 });
   await page.getByTestId('plan-progress').waitFor({ state: 'detached', timeout: 60000 });

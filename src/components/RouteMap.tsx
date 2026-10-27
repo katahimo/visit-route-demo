@@ -7,7 +7,7 @@ import { lazyComponent } from './lazyComponent';
 
 /**
  * 地図（国土地理院の淡色地図。APIキー不要）。
- * 線は順番どおりに結ぶ。dashed は点線（比較の A）、実線は今の案・比較の B。
+ * 線は順番どおりに結ぶ。dashed は点線（比較の A）、実線は今の担当・比較の B。
  * 本体（Leaflet）は別のチャンク（LeafletMap）で、地図を出すときに読む（PRD D248。ADR-0039）
  */
 export type RouteMapProps = {

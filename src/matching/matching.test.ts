@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Pattern } from '../contracts/documents';
 import type { Problem } from '../contracts/problem';
 import { type Condition, type Item, isStartYear } from '../contracts/rules';
-import { client, DATE, ITEMS, makeData, randomData, rule, staff, visit } from './fixtures';
+import { client, DATE, ITEMS, makeData, randomData, rule, staff, visit } from './fixtures.testkit';
 import { compile, conditionText, matches, routeCost, scheduleRoute, yearsSince } from './index';
 
 const [gender, license, years, pet] = ITEMS;

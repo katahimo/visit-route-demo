@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { popoverPlace } from '../components/DetailPopover';
 import type { Item } from '../contracts/rules';
-import { client, staff } from '../matching/fixtures';
+import { client, staff } from '../matching/fixtures.testkit';
 import {
   type ClientFilterState,
   decodeFilter,

@@ -451,7 +451,7 @@ export function ChoicesCard({
         比べる担当（{count}件）
       </SectionTitle>
       {count === 0 ? (
-        // 空の画面（PRD D176）：なぜ空かと次の一手（日の画面で作る・月のまとめて作る）
+        // 空の画面（PRD D176）：なぜ空かと次の一手（日の画面で訪問を足す）
         <EmptyNext guide={compareEmptyGuide({ date })} icon={History} onOpenDay={onOpenDay} testId="compare-empty" />
       ) : (
         <ChoicesTable {...table} />

@@ -36,7 +36,7 @@ export function useCompareScores({
       ),
     [choices, scoreProblem],
   );
-  /** 案ごとの点を下げているいちばん大きい理由（PRD D173。日の画面の今の案の帯と同じ決まり） */
+  /** 案ごとの点を下げているいちばん大きい理由（PRD D173。日の画面の今の担当の帯と同じ決まり） */
   const reasons = useMemo(() => {
     const out = new Map<string, ScoreReason | null>();
     if (!scoreProblem || !scale) return out;

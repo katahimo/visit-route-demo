@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import type { StopTiming } from '../contracts/problem';
 import { compile } from '../matching';
-import { client, DATE, makeData, staff, visit } from '../matching/fixtures';
+import { client, DATE, makeData, staff, visit } from '../matching/fixtures.testkit';
 import { DAY_END, DAY_START, spansOf } from './spans';
 import { backgroundOf, boxOf, hourMarks, legsOf, shadowOf, subtractSpans, timeRange, toY } from './timeline';
 

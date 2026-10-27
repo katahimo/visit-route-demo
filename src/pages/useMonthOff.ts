@@ -1,5 +1,5 @@
 // 月の画面の「休みを入れる」（希望休のまとめ入力。PRD D69）：〈スタッフ〉を選んでいるときだけ。日のマスを押すと希望休を付け外し、
-// 結果の知らせ（読み上げ）を残す。案・確定した割当は変えない（振り直しは日の画面で利用者が押す。ADR-0011）
+// 結果の知らせ（読み上げ）を残す。担当は変えない（振り直しは日の画面で利用者が押す。ADR-0011）
 import { type RefObject, useCallback, useEffect, useRef, useState } from 'react';
 import type { DemoData } from '../contracts/data';
 import type { Staff } from '../contracts/documents';
@@ -44,7 +44,7 @@ export function useMonthOff(x: {
   /** 「休みを入れる」で選んでいる〈スタッフ〉（休みを入れるモードでなければ null） */
   const offStaffId = x.requestedOn && offMode && focus.kind === 'staff' ? focus.id : null;
   /**
-   * 希望休を付け外しする（PRD D69）。案・確定した割当は変えない（振り直しは日の画面で利用者が押す。ADR-0011）。
+   * 希望休を付け外しする（PRD D69）。担当は変えない（振り直しは日の画面で利用者が押す。ADR-0011）。
    * その日のその人に訪問があれば、欄に注意を残す
    */
   const toggleOff = useCallback(

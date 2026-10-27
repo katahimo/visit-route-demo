@@ -4,7 +4,6 @@ import {
   BACKUP_REMIND_TEXT,
   confirmedDayCount,
   exportAgoText,
-  jstStamp,
   previousText,
   shouldRemindBackup,
 } from './backupReminder';
@@ -72,7 +71,6 @@ describe('控えの知らせ（PRD D227）', () => {
 describe('直前の状態の文（PRD D227）', () => {
   it('日本時間の「10/19 14:03 の『初期状態に戻す』の前の状態に戻せます」', () => {
     const at = Date.parse('2026-10-19T14:03:00+09:00');
-    expect(jstStamp(at)).toBe('10/19 14:03');
     expect(previousText({ at, reason: '初期状態に戻す' })).toBe('10/19 14:03 の『初期状態に戻す』の前の状態に戻せます');
   });
   it('初期データの過去の伝えた日（基準日より前）は数えない', () => {

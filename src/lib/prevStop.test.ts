@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { client, DATE, makeData, staff, visit } from '../matching/fixtures';
+import { client, DATE, makeData, staff, visit } from '../matching/fixtures.testkit';
 import { HOME_LABEL } from './mapsLink';
 import { prevStopOf } from './prevStop';
 

@@ -1,17 +1,1 @@
-{
-  "test-only-export src/lib/backupReminder.ts:jstStamp": 0,
-  "test-only-export src/lib/contacts.ts:promisedText": 0,
-  "test-only-export src/lib/geocode.ts:GSI_ADDRESS_URL": 0,
-  "test-only-export src/lib/geocode.ts:ZIPCLOUD_URL": 0,
-  "test-only-export src/lib/mailto.ts:encodeBody": 0,
-  "test-only-export src/lib/nav.ts:navTitle": 0,
-  "test-only-export src/lib/patternText.ts:monthWeeksLabel": 0,
-  "test-only-export src/lib/weekOps.ts:moveOnce": 0,
-  "test-only-export src/lib/weightDraft.ts:weightText": 0,
-  "test-only-export src/matching/fixtures.ts:problemKey": 0,
-  "test-only-export src/matching/fixtures.ts:randomData": 0,
-  "test-only-export src/matching/fixtures.ts:rule": 0,
-  "test-only-export src/seed/generate.ts:visitsOf": 0,
-  "test-only-export src/seed/plans.ts:withSeedPlans": 0,
-  "unused-export src/components/Feature.tsx:Feature": 0
-}
+{}

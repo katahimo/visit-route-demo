@@ -23,7 +23,7 @@
 - 純粋な部分は `lib/confirmDialog.ts`：頼み方（見出し・本文・確定の文言・取り消しの文言・色 `danger|primary`）、待っている確認の並び（先頭の1つだけを出し、2回押しても1回だけ答える）、Tab を回す行き先
 - 部品は `components/ConfirmDialog.tsx`（`ConfirmProvider`・`useConfirm()`）：body の直下に出す `role="alertdialog"`・`aria-modal`。最初のフォーカスは取り消し、Tab は中で回す、Esc・背景を押すは取り消し、閉じたら元の要素へ戻す。裏は `useBodyScrollLock` と inert。キーは window の捕捉の段で受け、右の欄・引き出しの Esc に渡さない
 - 色は、危険（赤）が消す・捨てる・すべて置き換える・初期状態に戻す・取り消す、オレンジが確定・コピー・動かすなど戻せる操作・データを消さない操作。ボタンには動詞を書く
-- 同期を前提にしていた箇所は、確認の後に「計算中でないか」「データが変わっていないか」を見直す。変更を捨てる確認は `lib/viewMode` の `discardDialog`
+- 同期を前提にしていた箇所は、確認の後に「計算中でないか」「データが変わっていないか」を見直す。変更を捨てる確認は `components/personPage` の `discardChanges`
 - ErrorBoundary は `ConfirmDialog` を自分の状態で直に出す（Provider に頼らない）。`beforeunload` はブラウザの確認のまま
 - 確認が出ているあいだに画面のパスが変わったら（「戻る」など）、`ConfirmProvider` は待っている確認をすべて false で答えて閉じる（クエリだけの変化では閉じない。外れた画面の続きが動いてデータを書くのを防ぐ）
 - ダブルクリックで確認がすぐ取り消されないよう、背景のクリックは開いてから300ms と連続のクリックを無視する

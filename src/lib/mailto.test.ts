@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import {
   buildBccMails,
   buildMail,
-  encodeBody,
   MAILTO_LIMIT,
   mailLimitFor,
   mailtoHref,
@@ -53,7 +52,7 @@ describe('mailtoHref', () => {
     expect(decodeURIComponent(u.searchParams.get('body') ?? '')).toBe('1行目\r\n2行目');
   });
   it('CRLF・CR もそろえる。& や ? や # は本文を壊さない', () => {
-    expect(encodeBody('a\r\nb\rc\nd')).toBe('a%0D%0Ab%0D%0Ac%0D%0Ad');
+    expect(mailtoHref({ to: [], subject: '', body: 'a\r\nb\rc\nd' })).toBe('mailto:?body=a%0D%0Ab%0D%0Ac%0D%0Ad');
     const href = mailtoHref({ to: [], subject: 'A&B?', body: '#1 & 2 = 3%' });
     const u = new URL(href);
     expect(u.searchParams.get('subject')).toBe('A&B?');

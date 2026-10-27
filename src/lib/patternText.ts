@@ -21,7 +21,7 @@ export function startText(x: Pick<Pattern, 'windowKind' | 'earliestStart' | 'lat
 }
 
 /** 毎月の第N週の文（[3, 4] → 「第3・第4」。ADR-0013） */
-export function monthWeeksLabel(weeks: readonly number[]): string {
+function monthWeeksLabel(weeks: readonly number[]): string {
   return [...new Set(weeks)]
     .sort((a, b) => a - b)
     .map((n) => `第${n}`)

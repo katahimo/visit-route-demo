@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Pattern } from '../contracts/documents';
-import { client, DATE, makeData, staff } from '../matching/fixtures';
+import { client, DATE, makeData, staff } from '../matching/fixtures.testkit';
 import {
   CLIENT_SECTION_TAB,
   CLIENT_SECTIONS,

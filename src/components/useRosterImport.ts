@@ -1,6 +1,6 @@
 // 名簿の読み込み（PRD D103〜D107・D209。ADR-0020・ADR-0068。〈利用者さん〉一覧・〈スタッフ〉一覧の名簿の欄から）：
 // Excel のブックか CSV（文字コードは見分ける）を読んで検査し、件数（追加・更新・変更なし・終了／休止）を
-// 見せて確かめてから、store の update で入れる。AI案・記録・確定した割当・訪問はそのまま。
+// 見せて確かめてから、store の update で入れる。訪問（担当）・伝えた内容はそのまま。
 // 入ったかは次の描画で data を見て決める（入らなければ成功と言わず、残した控えを前の世代に戻す）
 import { type Dispatch, type SetStateAction, useEffect, useRef } from 'react';
 import type { DemoData, RosterKind, RosterMode } from '../contracts/data';

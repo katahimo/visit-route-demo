@@ -82,7 +82,7 @@ POINTS_PER_WEIGHT = 10; DROP_POINTS = 10000; KEEP_DROP_POINTS = DROP_POINTS * 10
 
 | 初期のプリセット | 必要条件 | 訪問先の希望 | スタッフの希望 | 相性 | いつもの担当 | 負担の均等 | 待ち |
 |---|---|---|---|---|---|---|---|
-| `standard` 標準（初期の条件と同じ） | 必須 | 3 | 2 | 3 | 2 | 3 | 3 |
+| `balance` バランス（初期の条件と同じ） | 必須 | 3 | 2 | 3 | 2 | 3 | 3 |
 | `travel` 移動を短く | 必須 | 1 | 1 | 1 | 0.5 | 1 | 3 |
 | `people` 人の組み合わせ重視 | 必須 | 5 | 4 | 5 | 4 | 3 | 2 |
 
@@ -143,7 +143,7 @@ ContactList = { staffChanged, timeChanged, staff: { staffId, added, removed, shi
 - 実装は `TargetsOf` などの関数の型で注釈する。例外を投げない（問題・元の案に無いものは無視）
 - `problem` は欠勤を差し引いたデータをいまの条件で compile したもの
 - 画面側（`lib/absences`）：元の案は `baseOf`（その日の訪問の担当＝`dayRoutes`）。`applyReassign` で振り直した担当を `writeRoutes` で訪問に書き（振り直した訪問と動かしていない訪問はピン）、`reassigns[date]` に振り直す前の担当（`baseRoutes`・`basePins`）を残す（ADR-0053）。続けて振り直すときは `base*` は最初のもの、`absenceIds` は累積。`revertReassign` は振り直す前の担当・ピンへ戻して `reassigns[date]` を消す
-- 案B の流れ：`prepareAnneal` → `runSolve(prep.problem, { seed: data.seed, iterations: defaultIterations(prep.problem), initial: prep.initial })` → `settleAnneal` → `addAnnealRun`（同じ結果なら足さない）→ 差の表（`annealRunOf`）→ `chooseReassign`。作れないとき（欠勤が取り消された・案A が無い・計算中）はボタンを押せなくして理由
+- 案B の流れ（`pages/useReassignFlow`）：`prepareAnneal` → `runSolve(prep.problem, { seed: data.seed, iterations: defaultIterations(prep.problem), initial: prep.initial })` → `settleAnneal`（案A のままなら理由を知らせる）→ 作った案B は画面の状態（保存しない）で案A と並べ → 選ぶと `chooseReassign` で訪問に書く。作れないとき（欠勤が取り消された・案A が無い・計算中）はボタンを押せなくして理由
 - 欠勤は1人1日1件・30分単位（境は 12:00。欄で丸め、Excel では止める）。振り直しで件数の上限は超えない
 - 連絡文は `lib/contacts`（`staffMessage`・`clientMessages`・`allContactsText`・欠勤・キャンセルの欄の5段目の `contactRows`。コピー・メール・印刷だけ。ひな形と載せる範囲は ADR-0038・PRD D245・D246）
 
@@ -181,7 +181,7 @@ vacancyNotice(result, input)
 ```
 
 - 例外を投げない：いない種類は種類なし、範囲が空なら `times` が空。正確の問題は欠勤・上書き・条件をいまのまま使い、点数とは関係しない
-- 仮押さえ（空き状況の画面。空き時間に入れるのは `lib/weekOps` の `insertAllIntoPlans`）：選んだ曜日のうち ○ のある曜日を月→日の順に週の回数まで（足りるときだけ）。足した訪問は案のある日に空き時間へ入れて固定。取り消し（`store/tentative` の `cancelTentative`。伝えた日は `lib/tentative` の `confirmedDatesOf`）はその〈利用者さん〉の訪問をすべて消し、同じ update で repair
+- 仮押さえ（空き状況の画面。空き時間に入れるのは `lib/weekOps` の `insertAllIntoPlans`）：選んだ曜日のうち ○ のある曜日を月→日の順に週の回数まで（足りるときだけ）。足した訪問は日ごとに空き時間へ入れてピン（`insertIntoPlan`）。取り消し（`store/tentative` の `cancelTentative`。伝えた日は `lib/tentative` の `confirmedDatesOf`）はその〈利用者さん〉の訪問をすべて消し、同じ update で repair
 
 ## 機能の入り切り（`src/contracts/features.ts`。PRD D210〜D216。ADR-0028）
 
@@ -190,33 +190,33 @@ vacancyNotice(result, input)
 - 切ってもデータの形・検査・repair は変えない。`clientStage` が切なら段階は「利用中／終了」で選ばせ、ほかの段階の人はそのまま
 - エラーは無い（検査で落ちない）
 
-## 担当を限る・希望休・印刷・最終勤務日・勤務の見込み（`src/lib/`。PRD D68〜D74。ADR-0014・ADR-0015）
+## 担当を限る・希望休・印刷・最終勤務日・勤務の見込み（`src/lib/`。PRD D68〜D74。ADR-0014・ADR-0015・ADR-0053）
 
 ```ts
 // lib/requestedOff
-isRequestedOff; offDayState; toggleRequestedOff; requestedOffDates
+REQUESTED_OFF_NOTE; isRequestedOff; offDayState; toggleRequestedOff; requestedOffDates
 // lib/monthPrint
-printDay(data, date)  // source：確定した割当（取り消し・休み・休止の〈利用者さん〉を除く訪問に担当1件以上）、無ければ今の案。pending＝未定の件数
-monthPrint; staffLabels  // 名字。利用中の人で重なればフルネーム
+printDay(data, date, staffId, inMonth?)  // 担当はその日の訪問の担当（dayRoutes を lenient で並べた時刻）。source：伝えた日なら 'confirmed'、ほか 'plan'（訪問が無ければ null）。pending＝担当なしの件数
+monthPrint(data, ym, staffId); staffLabels  // 名字。利用中の人で重なればフルネーム
 // lib/workload（予定からの見込み）
-WorkStat = { staffId, count, start, end, span, visit, travel, wait, home, meters, fareYen, over }
+WorkStat = { staffId, count, start, end, span, visit, travel, wait, home, meters, fareYen, over, parts }
   // span＝最後の終わり − 最初の開始＝visit＋travel＋wait。home（自宅との行き帰り）は span に入れず meters・fareYen に
-workRoutesOf(data, date, problem) /* { source: 'confirmed'|'plan', routes } | null */; workStats(problem, routes, { fareYenPerKm, spanLimitHours }, sortByStart?)
+WorkDay = { date, source: 'confirmed' | 'plan' | null, stats }  // source：伝えた日か
+workDayOf(data, date, problem?) /* 担当はその日の訪問の担当（dayRoutes） */; workStats(problem, routes, { fareYenPerKm, spanLimitHours }, sortByStart?)
 workMonth(data, ym, problemOf?); workTotals(days); workloadTsv(days, staff, opts); spanLimitMinutes; isOverSpan; fareOf
 // lib/offboard（OFFBOARD_SAMPLE_DAYS = 28）
 offboardScope(data, staffId, today, withCandidates = true)
-  // { staffId, lastDay, from（翌日。今日より前なら今日）, visits: { date, visitId, clientId, confirmed, plan }[],
-  //   clients: { clientId, roles: ('usual'|'pattern'|'allowed')[], patternIds, sample, candidates: { staffId, fits, load }[] }[] }
+  // { staffId, lastDay, from（翌日。今日より前なら今日）, visits: { date, visitId, clientId, confirmed /* 伝えた日 */, plan }[],
+  //   clients: { clientId, roles: ('pattern'|'allowed')[], patternIds, sample, candidates: { staffId, fits, load }[] }[] }
 applyOffboardWith(data, staffId, choices /* clientId → staffId | null */, from, today, newId) /* { data, renamed } */
 applyOffboard(...); unlimitedBy(data, staffId, choices); defaultChoice
 ```
 
-- 担当を限るは問題にいる（利用中の）人だけで数える。希望休を入れても案・確定した割当は変えない
-- 最終勤務日の後の人は問題に残る（時間帯が空）。その人の列は必須の違反・「休みの人に N」・`problemKey` が変わり「条件が変わった」。その人だけに限った〈利用者さん〉は入らなくなる（黙って限らないにしない）
-- `offboardScope` の候補：見本の期間（`from` から28日。未展開の回も入れる）の訪問ごとに、担当を限るを外した問題とその日の案（`baseOf`。その人の列は除く）に `fitsOf` で入る人を数える。並びは入る回の多い順 → 受け持ちの少ない順 → 名前。候補は `from` に勤める利用中の人（本人を除く）
-- `applyOffboard`：`from` から受け持ちを移す。実際のいつもの担当がその人のパターンは、`from` より前から続くなら `splitPattern` で分け（前はその人・後ろは代わり）、`from` 以降に始まるならその場で、前に終わるならその人と書く。〈利用者さん〉のいつもの担当は代わり、担当できる人は代わりを足す（null ならその人を外す）。前の日のいつもの担当・案・確定した割当は変えない
-- 分けたパターンの回（元の日が `from` 以降。`edited` も）は中身のまま ID を `元の日_新しいパターンID` に付け替え、確定した割当・今の案（routes・unassigned・generated・pins・reassign）・記録も置き換える。前から後へずらした回・ID が重なる回は残す（`renamed`）
-- 勤務の見込み：画面・Excel は確定した割当を先に、月のマスと日の予定は今の案を先に。確定した割当は開始（早）の順、時刻は lenient。拘束は分に丸めてから上限と比べる
+- 担当を限るは問題にいる（利用中の）人だけで数える。希望休を入れても訪問の担当・伝えた内容は変えない（希望休の日に担当のある訪問は訪問ごとの検査で要対応）
+- 最終勤務日の後の人は問題に残る（時間帯が空）。その人が担当の訪問は訪問ごとの検査で要対応（担当が休み）になる。その人だけに限った〈利用者さん〉は入らなくなる（黙って限らないにしない）
+- `offboardScope` の範囲：最終勤務日の後にその人が担当している訪問（見本の期間の回と、それより後の保存した回）と、その人を繰り返しの担当（`pattern`）・担当できる人（`allowed`）にしている〈利用者さん〉。候補は見本の期間（`from` から28日）のその〈利用者さん〉の訪問ごとに、担当を限るを外した問題とその日の担当の並び（`dayRoutes`。その人の列は除く）に `fitsOf` で入る人を数える。並びは入る回の多い順 → 受け持ちの少ない順 → 名前。候補は `from` に勤める利用中の人（本人を除く）
+- `applyOffboardWith`：`from` から受け持ちを移す。繰り返しの担当がその人のものは、`from` より前から続くなら `splitPattern` で分け（前はその人・後ろは代わり）、`from` 以降に始まるならその場で代わりに、前に終わるならそのまま。分けた繰り返しの回は計算し直す（この回だけ変えた回は新しい繰り返しの回として ID を付け直し、その数が `renamed`）。`from` 以降の保存した回で担当がその人のものは代わりに替える（ピン・組んだ開始は外す。だれにもしないなら担当なし）。担当できる人は代わりを足す（null ならその人を外す）。`from` より前の訪問・伝えた内容は変えない
+- 勤務の見込み：担当はその日の訪問の担当（`dayRoutes`）。伝えた日かを `source` で出す。時刻は lenient。拘束は分に丸めてから上限と比べる
 
 ## 郵便番号と住所の検索（`src/lib/geocode.ts`・`placeAll.ts`・`postalCode.ts`・`addressLookup.ts`。PRD D86〜D90・D118〜D121。ADR-0016）
 
@@ -257,8 +257,8 @@ mailTo(email, text, limit?) /* 宛先が '' なら null */
 - URL：`mailto:宛先?bcc=…&subject=…&body=…`、`encodeURIComponent`（宛先の @ はそのまま）、改行は CRLF、空の件名・本文は付けない。担当の決め方は `printDay` と同じ
 - 件名：「10/18（日）の訪問予定」「10/19〜10/25 の予定」「10/18（日）の予定の変更」「空き枠のご案内（事業所名）」
 - 本文：宛名「（名前）さん」→ 中身 → 事業所名。〈利用者さん〉は「（表示名）様」
-  - 日：「…の訪問予定です（確定した割当｜今の案（まだ確定していません）。N件）。」、各訪問「1. 9:00〜10:00 （表示名）様」＋住所・入り方・駐車場・注意＋鍵（`includeKeys` のときだけ。入れないときは「鍵の情報はメールに入れていません」）。要点1は住所まで、要点2は時刻と名前だけ（省いたものを「※…は省きました。」）
-  - 週：「■10/19（月）」の下に時刻と名前。今の案の日は「（案。まだ確定していません）」、訪問の無い日は「希望休｜欠勤｜休み｜予定はまだ決まっていません｜訪問なし」。要点は「10/19（月） 9:00・13:00（2件）」
+  - 日：「…の訪問予定です（確定した担当｜今の担当（まだ確定していません）。N件）。」、各訪問「1. 9:00〜10:00 （表示名）様」＋住所・入り方・駐車場・注意＋鍵（`includeKeys` のときだけ。入れないときは「鍵の情報はメールに入れていません」）。要点1は住所まで、要点2は時刻と名前だけ（省いたものを「※…は省きました。」）
+  - 週：「■10/19（月）」の下に時刻と名前。伝えていない日（訪問あり）があれば冒頭に1回だけ「※変わることがあります。確定した予定は前日のメールでお知らせします。」（日ごとには書かない）、訪問の無い日は「希望休｜欠勤｜休み｜予定はまだ決まっていません（担当なしの訪問がある）｜訪問なし」。要点は「10/19（月） 9:00・13:00（2件）」
   - 連絡は `staffMessage`＋事業所名、案内は `vacancyNotice` の文
 - 長さ：full が `limit` 以内なら full、超えれば short を順に、それでも超えれば本文なし、それでも超えれば `tooLong`（ボタンは aria-disabled）。short・none では「本文をコピー」（fullBody）。案内は `buildBccMails` で分けて「宛先をコピー」も
 - 宛先：日・週・連絡は To にその〈スタッフ〉、案内は BCC に紹介元。無ければ aria-disabled＋「メールアドレスが未登録です」（`NO_EMAIL`）

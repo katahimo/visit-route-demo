@@ -4,9 +4,6 @@
   font-weight: 700;
   padding: 4px 0;
 }
-.vacancy-place-title {
-  font-weight: 700;
-}
 /* 段階（PRD D184〜D186）：1 いつ・何を → 2 場所（任意。畳む）→ 3 受けられる曜日・時間帯 → 4 次の一手 */
 .vacancy-step-no {
   display: inline-grid;

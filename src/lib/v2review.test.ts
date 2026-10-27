@@ -5,7 +5,7 @@ import type { DemoData } from '../contracts/data';
 import { addDays } from '../domain/time';
 import { findVisit, putVisits, removePattern, splitPattern, visitsOn } from '../patterns';
 import { createDemoData } from '../seed';
-import { withSeedPlans } from '../seed/plans';
+import { withSeedPlans } from '../seed/plans.testkit';
 import { revertReassign } from './absences';
 import { changeCount, dayProblemOf, dayRoutes, tellDay, toldChanges, writeRoutes } from './dayPlan';
 import { dayStatus } from './month';

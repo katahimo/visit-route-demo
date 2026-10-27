@@ -8,7 +8,7 @@ import { achievements, hundredBreakdown, normalize, ruleLowerBounds, score } fro
 import { scoreReason } from '../lib/scoreReason';
 import { fitsOf } from '../reassign';
 import { vacancyOf } from '../vacancy';
-import { client, DATE, makeData, problemKey, rule, staff, visit } from './fixtures';
+import { client, DATE, makeData, problemKey, rule, staff, visit } from './fixtures.testkit';
 import { ALLOWED_STAFF_RULE_ID, compile } from './index';
 
 /** 2人（s1・s2）と〈利用者さん〉2人。c1 は s1 と相性×・s2 と相性◎、c2 は s1 だけに限る */
@@ -119,7 +119,7 @@ describe('切ったときの採点・振り直し・空き状況は、そのデ�
   });
 
   it('担当を限る・相性を切った空き状況は、そのデータが空のときと同じ', () => {
-    const d = { ...base(), manualPlans: { [DATE]: { s1: ['v2'], s2: ['v1'] } } };
+    const d = base();
     const q: VacancyQuery = {
       typeId: null,
       durationMinutes: 60,

@@ -96,7 +96,7 @@ export type ReassignLeft = {
   reason: Exclude<ReassignTarget['reason'], 'notAllowed'>;
 };
 /**
- * plan は「欠勤を差し引く前の問題」と「今の案の列」。今の案に targetsOf を当てたもののうち、欠勤のせいの訪問
+ * plan は「欠勤を差し引く前の問題」と「今の担当の列」。今の担当に targetsOf を当てたもののうち、欠勤のせいの訪問
  * （absence・unreachable）だけ（targetsOf の順）。欠勤と関係ない元からの違反（notAllowed）は含めない
  */
 export type LeftOf = (problem: Problem, plan: ReassignPlan, absentStaffIds: string[]) => ReassignLeft[];
@@ -172,7 +172,7 @@ export type ContactVisit = {
   clientId: string;
   /** 元の案の担当（null＝元は入っていない） */
   fromStaffId: string | null;
-  /** 今の案の担当（null＝入らない） */
+  /** 今の担当（null＝入らない） */
   toStaffId: string | null;
   fromStart: number | null;
   toStart: number | null;

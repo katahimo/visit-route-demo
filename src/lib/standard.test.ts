@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DemoData } from '../contracts/data';
 import type { Pattern, Visit } from '../contracts/documents';
-import { client, makeData, staff } from '../matching/fixtures';
+import { client, makeData, staff } from '../matching/fixtures.testkit';
 import { findVisit, visitOf, visitsOn } from '../patterns';
 import { initialPresets } from '../seed';
 import { aiPinsOf, dayProblemOf, routesOf, standardPinsOf, writeRoutes } from './dayPlan';

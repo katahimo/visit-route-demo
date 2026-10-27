@@ -3,7 +3,7 @@ import type { DemoData } from '../contracts/data';
 import { MAX_VISIT_TYPES, type Pattern, type VisitType } from '../contracts/documents';
 import { compile } from '../matching';
 import { createDemoData } from '../seed';
-import { withSeedPlans } from '../seed/plans';
+import { withSeedPlans } from '../seed/plans.testkit';
 import { importJson, isImportError, migrate } from './index';
 import { repair } from './repair';
 

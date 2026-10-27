@@ -5,7 +5,7 @@ import type { Absence } from '../contracts/documents';
 import type { Problem } from '../contracts/problem';
 import { addDays } from '../domain/time';
 import { compile, naiveSeqs, scheduleRoute } from '../matching';
-import { client, DATE, makeData, randomData, rule, staff, visit } from '../matching/fixtures';
+import { client, DATE, makeData, randomData, rule, staff, visit } from '../matching/fixtures.testkit';
 import { createDemoData } from '../seed';
 import { candidatesFor, fitsOf, leftOf, placeVisit, type Routes, reassign, reassignDiff, targetsOf } from './index';
 

@@ -4,7 +4,7 @@ import { insertIntoPlan } from '../lib/weekOps';
 import { useDemoData } from '../store';
 import { useToast } from './Toast';
 
-/** ドラッグで日時を動かし、担当を選ばずに保存した回の知らせ（新しい日に今の案があるとき） */
+/** ドラッグで日時を動かし、担当を選ばずに保存した回の知らせ（動かした回に担当が無いとき） */
 export type InsertNotice = { date: string; visitId: string; label: string; error: string | null };
 
 /**
@@ -27,7 +27,7 @@ export function useInsertNotice({
   const show = (r: { date: string; visitId: string; label: string }) =>
     setNotice({ date: r.date, visitId: r.visitId, label: r.label, error: null });
   const clear = () => setNotice(null);
-  /** 新しい日の今の案に空き時間で入れる（入る人がいなければ知らせに理由を出す） */
+  /** 新しい日の担当の並びの空き時間に入れる（入る人がいなければ知らせに理由を出す） */
   const insert = () => {
     if (!notice) return;
     const r = insertIntoPlan(data, notice.date, notice.visitId);

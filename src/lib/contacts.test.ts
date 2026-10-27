@@ -1,7 +1,7 @@
 // 連絡の一覧と連絡文（PRD D35・D244〜D246。ADR-0011・ADR-0038）
 import { describe, expect, it } from 'vitest';
 import type { ContactList } from '../contracts/reassign';
-import { visit } from '../matching/fixtures';
+import { visit } from '../matching/fixtures.testkit';
 import {
   allContactsText,
   type ContactWords,
@@ -11,7 +11,6 @@ import {
   dateWordOf,
   dayContactWords,
   familyName,
-  promisedText,
   staffMessage,
   withoutVisit,
 } from './contacts';
@@ -135,6 +134,9 @@ describe('連絡文（〈利用者さん〉あて：敬語）', () => {
       w,
     );
     expect(moved[0]!.text).toContain('担当が佐藤に代わり、開始は14:30ごろになります。');
+    // 約束に幅が無ければ時刻だけ（「〜の間」を付けない）
+    const exact = clientMessages(list, { ...w, promised: (id) => (id === 'v2' ? { from: 540, to: 540 } : null) });
+    expect(exact[1]!.text).toContain('・9:00の訪問は、開始が15:20ごろに変わります（担当は変わりません）。');
   });
   it('事業所名が無ければ名乗りを省く', () => {
     expect(clientMessages(list, { ...w, orgName: '' })[0]!.text.split('\n')[1]).toBe('いつもお世話になっております。');
@@ -226,8 +228,6 @@ describe('連絡の一覧（5段目の行）', () => {
 describe('ほか', () => {
   it('すべての連絡文はスタッフ → 訪問先の順、間に空行。日付・時刻の書き方', () => {
     expect(allContactsText(list, w).split('\n\n')).toHaveLength(5);
-    expect(promisedText({ from: 540, to: 540 })).toBe('9:00');
-    expect(promisedText({ from: 540, to: 570 })).toBe('9:00〜9:30の間');
     expect(dateWordOf('2026-10-14')).toBe('10月14日（水）');
     expect(familyName('山田 花')).toBe('山田');
     expect(familyName('山田　花')).toBe('山田');

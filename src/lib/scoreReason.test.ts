@@ -3,7 +3,7 @@ import type { HundredPart, PlanScore, RuleAchievement } from '../contracts/probl
 import type { Rule } from '../contracts/rules';
 import { achievements, hundredBreakdown, normalize, ruleLowerBounds, score } from '../evaluate';
 import { compile } from '../matching';
-import { client, DATE, makeData, staff, visit } from '../matching/fixtures';
+import { client, DATE, makeData, staff, visit } from '../matching/fixtures.testkit';
 import {
   NEXT_STEP_TEXT,
   REASON_MIN_POINTS,

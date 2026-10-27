@@ -125,8 +125,8 @@ describe('Excel のプリセットのシート', () => {
   });
 });
 
-describe('Excel の条件のシート＝この日だけ試す重み（ADR-0035）', () => {
-  it('重みを変えた新しい考え方を基準にしたデータは、書き出し → 読み込みで条件の重みが基準のまま（「どのプリセットとも違う」案内が出ない）', async () => {
+describe('Excel の条件のシートの重み（版2は基準の重みにそろう。ADR-0035・ADR-0053）', () => {
+  it('重みを変えた新しい考え方を基準にしたデータは、書き出し → 読み込みで条件の重みが基準のまま', async () => {
     const d = saveDraftAsPreset(base(), { wait: { weight: 1 } }, '待ち軽め');
     expect(scorePresetOf(d.presets, d.scorePresetId)?.name).toBe('待ち軽め');
     const r = await importWorkbook(await toBuffer(d), base());
@@ -134,7 +134,7 @@ describe('Excel の条件のシート＝この日だけ試す重み（ADR-0035�
     expect(r.rules).toEqual(d.rules);
     expect(presetOf(r.rules, r.presets)?.id).toBe(scorePresetOf(r.presets, r.scorePresetId)?.id);
   });
-  it('条件のシートの重みが基準と違っても、読み込むと基準の重みにそろう（版2は試す重みを持たない。ADR-0053）', async () => {
+  it('条件のシートの重みが基準と違っても、読み込むと基準の重みにそろう（版2は条件の重みを基準と別に持たない。ADR-0053）', async () => {
     const d0 = base();
     const d = { ...d0, rules: d0.rules.map((r) => (r.type === 'wait' ? { ...r, weight: 4.5 } : r)) };
     const r = await importWorkbook(await toBuffer(d), d0);

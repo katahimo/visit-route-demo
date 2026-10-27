@@ -17,7 +17,7 @@
 
 - 画面が出たら、残りを先に読む（`PreloadWhenShown`。`requestIdleCallback` で1つずつ。日・月・空き状況・地図・比較・相性の順。まとめて読むとその間の操作を待たせる）。分けた画面を URL で直接開いたときは、起動の処理と並べてその画面のチャンク（地図を出す画面は地図も）をすぐ読み始める
 - `Suspense` は `AdminShell` の本文に1つ。React Router の移動は transition なので表示済みの画面は前のまま待ち、読み込みの表示を挟まない。直接開いたときだけ「画面を読み込んでいます…」。地図は指定の高さの枠に出して跳ねない
-- 読み終わったチャンクは `lib/lazyComponent` で `lazy` を通さず直に描く（`lazy` は読み終わっていても最初の描画で一度止まり、画面移動が遅れた）
+- 読み終わったチャンクは `components/lazyComponent` で `lazy` を通さず直に描く（`lazy` は読み終わっていても最初の描画で一度止まり、画面移動が遅れた）
 - 読めないとき（新しい版の公開で古いチャンクが消えた・通信切れ）：ErrorBoundary が動的 import の失敗（`lib/chunkLoad`）を見分け、「画面を読み込めませんでした」と［再読み込み］［もう一度表示する］を出す。初期状態に戻すボタンは出さない（データは壊れていない）。自動では読み直さない（入力中の欄を失う）。［もう一度表示する］は lazy を作り直し、ブラウザが同じ URL を読み直さないので失敗の URL に `?retry=N` を付ける（URL が分からない Safari は元の import を呼び直す）。地図の本体だけ読めないときは `RouteMap` の中の小さな境界が同じ高さの枠でエラーを出す
 - 進み具合は外の入れ物から、バーと回数の部品だけが読む。画面は計算の始まり・終わりだけ描き直す
 
@@ -28,4 +28,4 @@
 - 見直す条件：週・〈利用者さん〉など本体に残る画面が重くなったとき（全画面 `lazy`）
 
 ## 影響
-- `src/app/lazyPages.tsx`・`lib/lazyComponent`・`lib/chunkLoad`・`lib/valueStore`・`components/RouteMap`。docs/design.md §4・docs/design/pages.md「読み込みの分け方」
+- `src/app/lazyPages.tsx`・`components/lazyComponent`・`lib/chunkLoad`・`lib/valueStore`・`components/RouteMap`。docs/design.md §4・docs/design/pages.md「読み込みの分け方」

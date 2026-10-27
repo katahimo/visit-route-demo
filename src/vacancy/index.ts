@@ -1,5 +1,5 @@
 // 空き状況と問い合わせの試算（ADR-0012。段階3＝PRD D45〜D48）。design.md §4 vacancy・§5「空き状況と問い合わせの試算」。
-// どれも純粋関数で決定的（乱数・Date.now を使わない）。DemoData・今の案は読むだけで書き換えない。例外を投げない
+// どれも純粋関数で決定的（乱数・Date.now を使わない）。DemoData は読むだけで書き換えない。例外を投げない
 import type { DemoData } from '../contracts/data';
 import type { Client, Visit } from '../contracts/documents';
 import type { Problem } from '../contracts/problem';

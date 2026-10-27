@@ -115,7 +115,7 @@ export function draftChanges(rules: readonly Rule[], draft: WeightDraft): Weight
 }
 
 /** 重み・必須の短い文（「3」「0（使わない）」「必須」。重みを使わない必須は「必須」だけ、バランスの必須は「3・必須」） */
-export function weightText(type: RuleType, v: WeightValue): string {
+function weightText(type: RuleType, v: WeightValue): string {
   if (weightLocked({ type, hard: v.hard })) return '必須';
   const w = v.weight === 0 ? '0（使わない）' : String(v.weight);
   return v.hard ? `${w}・必須` : w;

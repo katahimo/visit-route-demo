@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DemoData } from '../contracts/data';
 import { CLIENT_STAGES, clientSchema, stageOfLegacy } from '../contracts/documents';
-import { client, visit } from '../matching/fixtures';
+import { client, visit } from '../matching/fixtures.testkit';
 import { createDemoData } from '../seed';
 import { importJson } from '../store';
 import { repair } from '../store/repair';

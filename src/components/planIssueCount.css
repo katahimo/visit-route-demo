@@ -1,4 +1,4 @@
-/* 「今の案」の1行の「入らない」「必須の違反」の数のボタンと一覧（PlanIssueCount。PRD D345） */
+/* 今の担当の1行の「入らない」「必須の違反」の数のボタンと一覧（PlanIssueCount。PRD D345） */
 /* 数のボタン：行の色（注意・違反）を引き継ぎ、押せる印に下線 */
 .plan-oneline .link-btn.plan-issue-btn {
   color: inherit;

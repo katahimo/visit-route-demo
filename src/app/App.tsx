@@ -78,7 +78,7 @@ export default function App() {
         <DataWatch />
         {/* 全体の「元に戻す・やり直す」のキー（Ctrl+Z・Ctrl+Shift+Z。PRD D329。ADR-0054） */}
         <HistoryKeys />
-        {/* 月まとめ作成の計算を画面の外で続ける（PRD D256・D257。ADR-0042）：store につなぎ、終わったら知らせる */}
+        {/* 範囲の AI で組む（担当を組む）の計算を画面の外で続ける（PRD D256・D257。ADR-0042）：store につなぎ、終わったら知らせる */}
         <MonthBatchHost />
         {/* 訪問の詳細の欄（PRD D301〜D304。ADR-0051）：どの画面・コマンドパレットからでも開ける。欄は画面全体で1つ */}
         <VisitPanelProvider>
@@ -90,7 +90,7 @@ export default function App() {
               {/* 月の予定の印刷（PRD D70）：左のメニューの外（印刷にナビを出さない） */}
               <Route path="/month/print" element={<Guarded element={<MonthPrintPage />} />} />
               <Route element={<AdminShell />}>
-                {/* 予定と AI案は1画面（#/plan。ADR-0009）。古いリンクの #/schedule はそこへ */}
+                {/* 日の予定は #/plan。古いリンクの #/schedule はそこへ */}
                 <Route path="/schedule" element={<Navigate to="/plan" replace />} />
                 {/* ホーム（見出しの下に「今日やること」。PRD D141・D230。ADR-0025・0034）：起動したとき（#/・知らない URL）の画面 */}
                 <Route path="/home" element={<HomePage />} />

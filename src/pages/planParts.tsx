@@ -53,31 +53,23 @@ export function ScoreReasonText({ reason, testId }: { reason: ScoreReason; testI
 }
 
 /**
- * 点を下げているいちばんの理由の次の一手（PRD D229）。理由の下に1行：「次の一手：［「移動を短く」で組む］」など。
- * onShortTravel が無い（「移動を短く」のプリセットが無い・今の案がそれ・計算中）、相性を切っている（compatOn=false）ときは出さない
+ * 点を下げているいちばんの理由の次の一手（PRD D229）。理由の下に1行：「次の一手：［受けられる人を見る］」など。
+ * 「移動を短く」で組む（shortTravel）は出さない（日の予定では AI で組まない。ADR-0063）。相性を切っている（compatOn=false）ときは相性も出さない
  */
 export function ScoreNextStep({
   reason,
   date,
-  onShortTravel,
   compatOn,
 }: {
   reason: ScoreReason;
   /** 日の画面の日付（受けられる人の欄へ巻くリンク） */
   date: string;
-  onShortTravel?: () => void;
   compatOn: boolean;
 }) {
   const next = reason.nextStep;
   if (!next) return null;
   let action: ReactNode = null;
-  if (next.kind === 'shortTravel' && onShortTravel) {
-    action = (
-      <button type="button" className="link-btn" onClick={onShortTravel} data-testid="reason-next-action">
-        {next.text}
-      </button>
-    );
-  } else if (next.kind === 'candidates') {
+  if (next.kind === 'candidates') {
     action = (
       <Link to={unassignedHref(date)} data-testid="reason-next-action">
         {next.text}

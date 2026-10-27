@@ -46,7 +46,7 @@ export function shouldRemindBackup(x: {
 }
 
 /** 時刻（ms）を日本時間の「10/19 14:03」に */
-export function jstStamp(at: number): string {
+function jstStamp(at: number): string {
   const j = new Date(at + 9 * 3600 * 1000).toISOString();
   return `${mdText(j)} ${j.slice(11, 16)}`;
 }

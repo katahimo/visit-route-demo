@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { score } from '../evaluate';
 import { solve } from '../solver';
-import { client, DATE, makeData, rule, staff, visit } from './fixtures';
+import { client, DATE, makeData, rule, staff, visit } from './fixtures.testkit';
 import { bestInsertion, compile, PIN_LABEL } from './index';
 
 /** 2人・4件（v1 9:00、v2 11:00、v3 13:00、v4 15:00、幅1時間） */

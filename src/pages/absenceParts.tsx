@@ -177,7 +177,7 @@ export function AbsenceTargets({
   );
 }
 
-/** 振り直しの差の欄（今の案に reassign があるとき）：まとめ・元の案・入らない訪問と欠勤の人に残る訪問の理由・元の案に戻す・比較の画面で見る */
+/** 振り直しの差の欄（その日に reassign があるとき）：まとめ・元の案・入らない訪問と欠勤の人に残る訪問の理由・元の案に戻す・比較の画面で見る */
 export function ReassignBar({
   id,
   info,
@@ -198,7 +198,7 @@ export function ReassignBar({
   id: string;
   info: ReassignInfo;
   diff: ReassignDiff | null;
-  /** 欠勤の人に残る、欠勤と重なる訪問（leftOf。今の案で） */
+  /** 欠勤の人に残る、欠勤と重なる訪問（leftOf。今の担当で） */
   left: ReassignLeft[];
   visitLabel: (id: string) => string;
   /** 欠勤の人に残る訪問の見た目（〈利用者さん〉の名前から詳細を開く。PRD D206）。無ければ visitLabel の文字 */
@@ -319,7 +319,7 @@ export function ReassignBar({
 }
 
 /**
- * 「欠勤・キャンセル」の欄の4段目：今の案の振り直しのまとめと、誰のどの訪問が誰へ移るか（PRD D265）。
+ * 「欠勤・キャンセル」の欄の4段目：今の担当の振り直しのまとめと、誰のどの訪問が誰へ移るか（PRD D265）。
  * children は案A・案B を選ぶ欄（差の欄と同じ部品・同じ操作）
  */
 export function ReassignResultBox({

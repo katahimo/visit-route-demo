@@ -22,7 +22,7 @@ import { WorkloadDays, WorkloadGrid, WorkloadTotals } from './workloadTables';
 import './workload.css';
 
 /**
- * 稼働の見込み（PRD D72。ADR-0015。#/workload?ym=2026-11）：予定（確定した割当、無ければ今の案）から、
+ * 稼働の見込み（PRD D72。ADR-0015。#/workload?ym=2026-11）：予定（訪問の今の担当）から、
  * 〈スタッフ〉×日ごとの拘束・訪問・移動・待ちの時間と、移動の距離・交通費を見込む。実績ではない（記録・勤怠はやらない）。
  * 月の合計の表、〈スタッフ〉×日の表（拘束の長さの横棒）、選んだ人の日ごとの時間軸の横棒。交通費の単価と拘束の上限は事業所の設定
  */
@@ -123,7 +123,7 @@ export default function WorkloadPage() {
 
       {rows.length === 0 ? (
         <div className="card" data-testid="work-empty">
-          {/* 空の画面（PRD D176）：なぜ空かと次の一手（月の画面のまとめて作る・日の画面） */}
+          {/* 空の画面（PRD D176）：なぜ空かと次の一手（日の画面で訪問を足す） */}
           {emptyGuide ? (
             <EmptyNext guide={emptyGuide} icon={Timer} onOpenDay={openDay} />
           ) : (

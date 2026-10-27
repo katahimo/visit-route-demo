@@ -1,22 +1,20 @@
-// 写した元：katahimo-dev/visit-route-poc @ a46e7db scripts/seedDemo.ts（visitsOf・overridesOf・manualRoutesOf）
+// 写した元：katahimo-dev/visit-route-poc @ a46e7db scripts/seedDemo.ts（visitsOf・overridesOf・manualRoutesOf。visitsOf は generate.testkit.ts）
 // Firebase に依存しない生成ロジック。同じ日付なら毎回同じ結果（乱数・現在時刻を使わない）。
 import type { Availability, Client, Staff, Visit } from '../contracts/documents';
 import type { Compat, Condition, Traits } from '../contracts/rules';
 import { availabilityOf, type Slot, withinSlots } from '../domain/availability';
-import { addDays, hhmmToMinutes, minutesToHhmm, weekday } from '../domain/time';
+import { addDays, hhmmToMinutes, weekday } from '../domain/time';
 import { matches } from '../matching/conditions';
-import { CLIENT_SEEDS, INITIAL_ITEMS } from './people';
+import { INITIAL_ITEMS } from './people';
 
-const isWeekend = (date: string) => weekday(date) === 0 || weekday(date) === 6;
-const shiftBy = (hhmm: string, min: number) => minutesToHhmm(hhmmToMinutes(hhmm) + min);
 /** 日ごとの変化の番号の 0 日目 */
 const DAY_ZERO = '2026-01-01';
 /** 日ごとの変化の番号。日付だけで決まる */
-const dayNumber = (date: string) => Math.round((Date.parse(date) - Date.parse(DAY_ZERO)) / 86400000);
+export const dayNumber = (date: string) => Math.round((Date.parse(date) - Date.parse(DAY_ZERO)) / 86400000);
 
 /**
  * CLIENT_SEEDS の i 番目の利用者さんが平日に休む曜日（0=日〜6=土）。
- * visitsOf の「(i + 日の番号) % 7 が 0 の日は休み」を曜日に直したもの（土日になる人は平日に休みが無い）
+ * generate.testkit.ts の visitsOf の「(i + 日の番号) % 7 が 0 の日は休み」を曜日に直したもの（土日になる人は平日に休みが無い）
  */
 export function restWeekdayOf(i: number): number {
   return weekday(addDays(DAY_ZERO, (7 - (i % 7)) % 7));
@@ -31,41 +29,6 @@ const itemById = new Map(INITIAL_ITEMS.map((it) => [it.id, it]));
 /** 日付 date に条件を満たすか（seed の項目は INITIAL_ITEMS） */
 const satisfies = (c: Condition, traits: Traits, date: string) =>
   matches(c, itemById.get(c.itemId), traits[c.itemId], date);
-
-/**
- * その日の訪問（同じ日なら毎回同じ）。平日は訪問先から日ごとに3か所前後が休み、土日は印のある訪問先。
- * 時間に幅のある訪問は日ごとに 0〜60分ずらす（いまのデモデータは全員が時刻ちょうどなので、ずらさない）。
- * 初期の訪問は定期パターンから展開する（ADR-0012。seed/patterns.ts）。これはパターンにする前の規則で、
- * 展開した訪問と同じになることをテストで確かめるために残す
- */
-export function visitsOf(date: string, clientIds: Set<string>): Visit[] {
-  const n = dayNumber(date);
-  return CLIENT_SEEDS.map((c, i) => ({ c, i }))
-    .filter(({ c }) => clientIds.has(c.id))
-    .filter(({ c, i }) => (isWeekend(date) ? c.weekend : (i + n) % 7 !== 0))
-    .map(({ c }) => {
-      const [kind, e, l, mins] = c.slot;
-      const d = kind === 'window' ? (n % 3) * 30 : 0;
-      return {
-        id: `${date}_${c.id}`,
-        date,
-        clientId: c.id,
-        windowKind: kind,
-        earliestStart: shiftBy(e, d),
-        latestStart: shiftBy(l, d),
-        durationMinutes: mins,
-        staffId: null,
-        start: null,
-        pinned: false,
-        cancelled: false,
-        note: '',
-        typeId: null,
-        pattern: null,
-        cancelKind: null,
-      };
-    })
-    .sort((a, b) => a.earliestStart.localeCompare(b.earliestStart));
-}
 
 /**
  * 日ごとの稼働時間帯の上書き（同じ日なら毎回同じ）。

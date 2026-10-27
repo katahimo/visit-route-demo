@@ -5,7 +5,16 @@ import { useConfirm } from '../components/ConfirmDialog';
 import { useToast } from '../components/Toast';
 import { jstDate } from '../domain/time';
 import { formError, isStaleBuild } from '../lib/common';
-import { EXCEL_STALE_TEXT, excelFileName, keepNote, keptSuffix, workbookCountsText } from '../lib/dataScreen';
+import {
+  EXCEL_STALE_TEXT,
+  excelFileName,
+  keepNote,
+  keptSuffix,
+  otherOrgOf,
+  withoutOrgState,
+  workbookConfirmBody,
+  workbookCountsText,
+} from '../lib/dataScreen';
 import { saveBlob } from '../lib/download';
 import { canKeepPrevious, type ExportKind, isImportError, useDemoData } from '../store';
 
@@ -43,16 +52,25 @@ export function useDataExcel(x: { markExported: (kind: ExportKind) => void }) {
         setError(`読み込めませんでした（いまのデータはそのままです）\n${r.message}`);
         return;
       }
+      // 事業所名が違えば別の事業所のブックとして知らせ、いまの事業所の運用の記録は持ち込まない
+      const otherOrg = otherOrgOf(data, r);
       const ok = await confirmDialog({
-        title: `「${file.name}」でデータを置き換えますか？`,
-        body: `「${file.name}」の内容（${workbookCountsText(r)}）で、いまのデータをすべて置き換えます。訪問の担当と確定（伝えた内容）も消えます。\n${keepNote(canKeepPrevious())}`,
+        title: otherOrg
+          ? `別の事業所の「${file.name}」でデータを置き換えますか？`
+          : `「${file.name}」でデータを置き換えますか？`,
+        body: workbookConfirmBody({
+          fileName: file.name,
+          counts: workbookCountsText(r),
+          otherOrg,
+          keep: keepNote(canKeepPrevious()),
+        }),
         confirmLabel: 'すべて置き換える',
         tone: 'danger',
       });
       if (!ok) return;
       // 置き換える前に、いまのデータを1世代だけ控える（確認で OK になってから。PRD D227）
       const keep = keepPrevious('Excel 全体の読み込み');
-      replace(r);
+      replace(otherOrg ? withoutOrgState(r) : r);
       toast(`Excel を読み込みました${keptSuffix(keep)}`);
     } catch (e) {
       setError(

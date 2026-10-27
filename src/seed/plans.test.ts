@@ -4,7 +4,8 @@ import { addDays } from '../domain/time';
 import { dayStatus } from '../lib/month';
 import { visitsOn } from '../patterns';
 import { createDemoData, seedPatternStart } from './index';
-import { createInitialData, SEED_PLAN_DAYS, withSeedPlans } from './plans';
+import { createInitialData } from './plans';
+import { SEED_PLAN_DAYS, withSeedPlans } from './plans.testkit';
 
 const TODAY = '2026-10-21';
 const data = createInitialData(TODAY);

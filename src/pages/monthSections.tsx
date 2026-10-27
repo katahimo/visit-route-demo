@@ -71,7 +71,7 @@ export function MonthTopBars({
           testId: 'month-title',
         }}
       />
-      {/* 進み具合の帯（PRD D151〜D155）。「まとめて作る」の入口はここの1か所（D154。見出しのボタン・今月の準備の①〜③をまとめた） */}
+      {/* 進み具合の帯（PRD D151〜D155）。担当なしの次の一手は担当を組むの画面へ（ADR-0063） */}
       <ProgressBand ym={ym} model={band} primary onOp={onBandOp} />
       {/* 操作の行（日・週・月で同じ並び。PRD D327）。月送り・今月のほかのときどき使う操作は「その他 ▾」（PRD D278） */}
       <ScheduleToolbar zoom="month" absence={absence} moreItems={moreItems}>
@@ -84,7 +84,7 @@ export function MonthTopBars({
   );
 }
 
-/** 見出しの欄：月全体の要約・表示の選択の段・説明・「休みを入れる」の帯・凡例・月まとめ作成の進み具合・止まった理由 */
+/** 見出しの欄：月全体の要約・表示の選択の段・説明・「休みを入れる」の帯・凡例・範囲の AI で組む（担当を組む）の進み具合・止まった理由 */
 export function MonthHeadCard({
   data,
   nav,

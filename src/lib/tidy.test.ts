@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DemoData } from '../contracts/data';
-import { visit } from '../matching/fixtures';
+import { visit } from '../matching/fixtures.testkit';
 import { createDemoData } from '../seed';
 import { sizeText, tidyMonthLabel, tidyMonthOptions, tidyOld, tidyPreview } from './tidy';
 import { addMonths } from './ym';

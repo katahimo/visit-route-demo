@@ -43,7 +43,7 @@ export function clock(minutes: number | null): string {
 }
 
 /** 約束の開始の書き方（「9:00」・幅があれば「9:00〜9:30の間」。D245） */
-export function promisedText(p: { from: number; to: number }): string {
+function promisedText(p: { from: number; to: number }): string {
   return p.to > p.from ? `${clock(p.from)}〜${clock(p.to)}の間` : clock(p.from);
 }
 
@@ -60,7 +60,7 @@ const timeMoved = (c: ContactVisit) =>
 export type CancelledContact = {
   visitId: string;
   clientId: string;
-  /** 取り消す前の担当（確定した割当、無ければ今の案。null＝担当なし＝連絡しない） */
+  /** 取り消す前の担当（訪問の今の担当。null＝担当なし＝連絡しない） */
   staffId: string | null;
   /** 取り消す前の開始（0時からの分） */
   start: number | null;
@@ -186,7 +186,7 @@ export type ContactRow = {
 };
 
 /**
- * 差（前の確定した割当 → 新しい割当。contactsOf）と取り消した訪問から、連絡の一覧を作る。
+ * 差（元の担当 → 今の担当。contactsOf）と取り消した訪問から、連絡の一覧を作る。
  * 並びは スタッフ（差の一覧の順、続けて中止だけの人）→ 〈利用者さん〉。取り消した訪問は差から除き「中止」として担当にだけ伝える
  * （キャンセルした〈利用者さん〉には連絡しない）。担当の無い取り消しは誰にも伝えない。
  * 今の時刻は見ない（過ぎた時刻の行も除かない。いまの時刻は扱わない：PRD D27）

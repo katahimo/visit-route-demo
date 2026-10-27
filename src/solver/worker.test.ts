@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { WorkerRequest, WorkerResponse } from '../contracts/problem';
 import { compile } from '../matching';
-import { DATE, randomData, rule } from '../matching/fixtures';
+import { DATE, randomData, rule } from '../matching/fixtures.testkit';
 
 // Worker の外で worker.ts を動かす（self を差し替える）
 const posted: WorkerResponse[] = [];

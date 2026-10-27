@@ -242,7 +242,7 @@ export function useSuddenFlow(x: SuddenArgs): {
   };
 }
 
-/** 4段目：今の案の振り直しのまとめと、案A・案B を選ぶ欄（差の欄と同じ部品・同じ操作） */
+/** 4段目：今の担当の振り直しのまとめと、案A・案B を選ぶ欄（差の欄と同じ部品・同じ操作） */
 function suddenResult(x: SuddenArgs) {
   const { flow } = x;
   if (!x.plan.hasPlan || !flow.info) return null;

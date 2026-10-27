@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import type { VisitType } from '../contracts/documents';
 import { compile, VISIT_TYPE_RULE_ID } from '../matching';
-import { client, DATE, makeData, rule, staff, visit } from '../matching/fixtures';
+import { client, DATE, makeData, rule, staff, visit } from '../matching/fixtures.testkit';
 import { achievements } from './index';
 
 /** s1（看護師・経験5年）、s2（経験1年）。c1 は看護師が必要、c2 は希望 経験3年以上、相性 c3×s1=◎・c2×s2=△・c1×s2=○ */
