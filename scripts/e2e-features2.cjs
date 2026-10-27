@@ -20,6 +20,7 @@ const {
   TEMPLATE_ON,
   TEMPLATE_LABEL,
   asFeatures,
+  arrangeKidsFor,
   open,
   storedFeatures,
   applyTemplate,
@@ -60,17 +61,21 @@ async function insideEntries(page, dlg, ctx) {
       `${label}：担当を組むは「考え方：〈点数の基準〉」だけ（選ぶ欄は無い）`,
     );
     check((await count('arrange-compare-open')) === (on('compare') ? 1 : 0), `${label}：担当を組むの「案を比べる」`);
-    // 予定を組むの段：4段は機能の入り切りで変わらない（今の段は担当を組む。ADR-0066）
-    const asteps = await page
-      .getByTestId('arrange-steps')
-      .locator('li')
-      .evaluateAll((els) => els.map((el) => el.dataset.step));
-    const astepNow = await page.getByTestId('arrange-steps').locator('[aria-current="step"]').count();
+    // 標準を登録したあとも予定を組むの段は出し（基本情報・担当を組むの2段）、［標準の組み方を変える］も出す（機能の入り切りで変わらない。ADR-0067）
+    const stepKeys = await page
+      .locator('[data-testid="arrange-steps"] li')
+      .evaluateAll((els) => els.map((e) => e.dataset.step));
     check(
-      same(asteps, ['proposals', 'draft', 'register', 'arrange']) && astepNow === 1,
-      `${label}：予定を組むの段（4段。今は担当を組む）`,
-      asteps,
+      same(stepKeys, ['basics', 'arrange']),
+      `${label}：標準があれば担当を組むの段は 基本情報・担当を組む の2つ`,
+      stepKeys,
     );
+    check((await count('arrange-change-standard')) === 1, `${label}：担当を組むに［標準の組み方を変える］`);
+    // 予定を組むの子は基本情報・担当を組む（標準を登録したあと）
+    const kids = await page
+      .locator('.side-nav [data-parent="arrange"] > .nav-sub > .nav-link.nav-child')
+      .evaluateAll((els) => els.map((e) => e.dataset.key));
+    check(same(kids, arrangeKidsFor(t, true)), `${label}：標準があれば予定を組むの子は基本情報・担当を組むだけ`, kids);
     // 組み方の標準の 1 の条件の重みへの寄り道は rules が入のときだけ（ADR-0066）
     await open(page, '/standard', '[data-testid="standard-steps"]');
     check(

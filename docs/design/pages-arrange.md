@@ -1,11 +1,11 @@
 # 担当を組むの画面
 
-> この画面のファイル：`src/pages/ArrangePage.tsx`（`arrange.css`。区画の部品 `arrangeParts.tsx`・始める処理 `useArrangeStart.ts`）、`src/lib/arrange.ts`（範囲の読み取り・見込み・担当なしと要対応の数え方）、`src/lib/monthBatch.ts`（計算の入れ物）・`monthBatchDay.ts`（1日分の計算の純粋関数）、`src/components/batchBand.tsx`（上の帯の進み具合・`MonthBatchHost`）・`scheduleParts.tsx`（`RangeProposalBand`・`confirmDropProposal`）・`ArrangeSteps.tsx`、`src/lib/month.ts`（`batchTargets`）。関連 ADR：0042・0053・0063・0065・0066。関連 PRD：D256・D257・D328・D355・D356・D359・D360。
-> 予定（月・週・日）では AI で組まない（手で直す）。AI で組むのはこの画面と組み方の標準（[pages-standard.md](pages-standard.md)）。予定を組むの4段（案をくらべる → 表で直す → 標準にする → 担当を組む。ADR-0066）の最後の段で、標準で埋まらない所を点数の基準で埋める。
+> この画面のファイル：`src/pages/ArrangePage.tsx`（`arrange.css`。区画の部品 `arrangeParts.tsx`・始める処理 `useArrangeStart.ts`）、`src/lib/arrange.ts`（範囲の読み取り・見込み・担当なしと要対応の数え方）、`src/lib/monthBatch.ts`（計算の入れ物）・`monthBatchDay.ts`（1日分の計算の純粋関数）、`src/components/batchBand.tsx`（上の帯の進み具合・`MonthBatchHost`）・`scheduleParts.tsx`（`RangeProposalBand`・`confirmDropProposal`）・`ArrangeSteps.tsx`、`src/lib/month.ts`（`batchTargets`）。関連 ADR：0042・0053・0063・0065〜0067。関連 PRD：D256・D257・D328・D355・D356・D359〜D363。
+> 予定（月・週・日）では AI で組まない（手で直す）。AI で組むのはこの画面と組み方の標準（[pages-standard.md](pages-standard.md)）。予定を組むの段（標準が無い間は 基本情報 → 案をくらべる → 標準にする → 担当を組む の4段、標準があれば 基本情報 → 担当を組む の2段。ADR-0067）の最後の段で、標準で埋まらない所を点数の基準で埋める。前提の基本情報が変わったときは組み直しを知らせる（下の「組み直しの知らせ」）。
 
 ### 担当を組む（`#/arrange`）
 
-範囲（月・週・日）を選び、その範囲の担当を AI で組んで提案を出し、見て反映する画面。メニューの「予定を組む」の子「担当を組む」（2つ目）。見出しの下に予定を組むの段（`ArrangeSteps`。4 担当を組むが今の段。1〜3 を押すと組み方の標準のその段へ。比較の画面 `#/compare` でも 4 に印。ADR-0066）。
+範囲（月・週・日）を選び、その範囲の担当を AI で組んで提案を出し、見て反映する画面。メニューの「予定を組む」の子「担当を組む」（3つ目。標準があれば2つ目）。見出しの下の予定を組むの段（`ArrangeSteps current="arrange"`。担当を組むが今の段。比較の画面 `#/compare` でも担当を組むに印。ADR-0067）は**いつも出す**：標準が無い間は4段（1 基本情報・2 案をくらべる・3 標準にする・4 担当を組む。2・3 を押すと組み方の標準のその段へ）、標準があれば2段（1 基本情報・2 担当を組む）。標準があれば見出しの右に［標準の組み方を変える］（`arrange-change-standard`。枠のボタン。`/standard` の 2 案をくらべるの段を開く。ADR-0066 追記）。
 
 #### URL とクエリ
 
@@ -20,22 +20,29 @@
 
 #### 並び
 
-1. 見出し（`PageHeader`。nav は `ArrangeSteps`（4 が今の段））：題名「担当を組む」・`lead`「範囲を選んで AI で担当を組み、提案を見て反映します。予定（月・週・日）では手で直します」
-2. 範囲のカード（`arrange-range`）：
+1. 見出し（`PageHeader`。nav は `ArrangeSteps`（標準が無ければ4段の 4、あれば2段の 2 が今の段。いつも出す）、標準があれば actions に［標準の組み方を変える］）：題名「担当を組む」・`lead`「範囲を選んで AI で担当を組み、提案を見て反映します。予定（月・週・日）では手で直します」
+2. 組み直しの知らせ（`arrange-basis-changed`。基本情報が最後に組んだあとに変わり、標準があるときだけ。下の「組み直しの知らせ」）
+3. 範囲のカード（`arrange-range`）：
    - ［月｜週｜日］（`fieldset.segmented`・`arrange-scope`・`aria-pressed`・ボタンの `data-scope`）
    - 月なら月を選ぶ欄（`arrange-month`。今月から6か月と見ている月）、週・日なら日付の欄（`arrange-date`）。横に範囲の呼び名（`arrange-range-label`：「2026年11月」「11/2〜11/8の週」「11/3（火）」）
    - 「今日以降：担当なしの訪問 N件（M日）・要対応 N件」（`arrange-counts`。`arrange-unassigned`・`arrange-care` の `data-count`）。数え方は月の予定と同じ `useDayStatuses` の日の状態（範囲の今日以降の日だけ）
-3. AI で組むのカード（`arrange-run`）：
+4. AI で組むのカード（`arrange-run`）：
    - 組む日（ラジオ）：「要対応のある日だけ（N日）」（`arrange-mode-care`。既定。手で決めた担当を変えうる組み直しを既定にしない）／「伝えていない日をすべて組み直す（N日）」（`arrange-mode-all`）。日は `batchTargets(data, dates, today, mode, statusOf)`（今日以降・伝えていない・計算に入れる訪問がある日。care はそのうち要対応のある日）
-   - 考え方：「考え方：〈点数の基準のプリセット名〉（点数の基準。替えるのは「組み方の標準」の「案をくらべる」）」（`arrange-basis`。選ぶ欄は置かない。いつも点数の基準で組む。ADR-0065・ADR-0066）
+   - 考え方：「考え方：〈点数の基準のプリセット名〉（点数の基準。替えるのは［標準の組み方を変える］）」（`arrange-basis`。選ぶ欄は置かない。いつも点数の基準で組む。ADR-0065・ADR-0066）
    - 「組む日：N日（見込み 約a〜b秒／分）」（`arrange-count`。1日 約3〜5秒）
    - 主ボタン「AI で組む」（`arrange-start`。組んでいる間・組む日が0日なら `aria-disabled`。組んでいる間の文は「組んでいます…」）と「元に戻す」「やり直す」（`UndoButtons`。反映した提案を1手戻す）
    - 組んでいる間の進み具合（`arrange-progress`。「〈名前〉：M/D・3/22日（組めた日 N日）」とバー）と［止める］（`arrange-stop`）
    - 計算できずに止まった理由（`FieldError`。`monthBatch.done.error`）
    - 注記：ピンの訪問（手で替えた訪問・組み方の標準の担当）はそのまま・今日より前の日と確定した日は組まない・1日ずつ組み終わったら提案・見て「反映する」と担当が変わる・ほかの画面へ移っても組み続ける
-   - 組み方の標準が無いとき（`hasStandard(data)` が偽。範囲にかかわらず。PRD D356。ADR-0065）：上の欄（組む日・考え方・見込み・主ボタン）を出さず、文（`arrange-need-standard`）「組み方の標準がまだありません。先に「組み方の標準」で、考え方ごとの案をくらべて標準の週を決めてください。標準を決めると、この画面では標準で埋まらない所を AI で埋めます」と主ボタン［組み方の標準を決める］（`arrange-to-standard`。`/standard` の 1 の段）
-4. 範囲の提案の帯（`RangeProposalBand`。[pages-common.md](pages-common.md) の「予定の共通の部品」）：［反映する］［捨てる］。同じ帯は日・週・月の予定にも出る
-5. 案を比べるのカード（`arrange-compare`。提案を比べる `compare` を切れば出さない）：日付の欄（`arrange-compare-date`。範囲の中。既定は範囲の今日以降の最初の訪問のある日）・［〈日〉の案を比べる］（`arrange-compare-open`。`/compare?date=`）・［日の予定を見る］（`arrange-day-open`。`/plan?date=`）
+   - 組み方の標準が無いとき（`hasStandard(data)` が偽。範囲にかかわらず。PRD D356。ADR-0065）：上の欄（組む日・考え方・見込み・主ボタン）を出さず、文（`arrange-need-standard`）「組み方の標準がまだありません。先に「組み方の標準」で、考え方ごとの案をくらべて標準の週を決めてください。標準を決めると、この画面では標準で埋まらない所を AI で埋めます」と主ボタン［組み方の標準を決める］（`arrange-to-standard`。`/standard` の 2 案をくらべるの段）
+5. 範囲の提案の帯（`RangeProposalBand`。[pages-common.md](pages-common.md) の「予定の共通の部品」）：［反映する］［捨てる］。同じ帯は日・週・月の予定にも出る
+6. 案を比べるのカード（`arrange-compare`。提案を比べる `compare` を切れば出さない）：日付の欄（`arrange-compare-date`。範囲の中。既定は範囲の今日以降の最初の訪問のある日）・［〈日〉の案を比べる］（`arrange-compare-open`。`/compare?date=`）・［日の予定を見る］（`arrange-day-open`。`/plan?date=`）
+
+#### 組み直しの知らせ（PRD D363。ADR-0067。`lib/arrangeBasis`・`store/arrangeBasis`・`components/useArrangeBasis`）
+
+- 基本情報の鍵（`basisKey(data)`。繰り返しの曜日・時刻・所要・繰り返し方・期間（〈利用者さん〉×曜日に開いて見るので、標準の登録で繰り返しが曜日ごとに分かれても同じ）、〈利用者さん〉の段階・休み、相性、〈スタッフ〉の休止・勤務日・勤務時間・最終勤務日、勤務時間の上書き。組んだ結果（訪問の担当・繰り返しのいつもの担当・標準の開始）は入れない。FNV-1a の短い文字列）を、AI の提案を反映したとき（`scheduleParts` の反映）と標準を登録したとき（`useStandardRegister`）に覚える（`saveArrangeBasis`）。覚える先は `arrangeBasisMemory`（localStorage の `vrdemo:arrange:basis`。DemoData の保存とは別のキー・この端末だけ）
+- `useBasisChanged(data)`：覚えた鍵があり、今の鍵と違えば真。まだ一度も覚えていなければ偽（知らせない）。メニューの「変更」の印（`MenuBadges.basisChanged`。[pages.md](pages.md)）と下の知らせで使う
+- 知らせ（`ArrangeBasisNotice`・`section.arrange-basis`・`arrange-basis-changed`。担当を組むの見出しの下・標準があるときだけ。標準が無い間は出さない）：「基本情報が、最後に組んだあとに変わりました（予定・相性・勤務時間（シフト）など）。組み直すと今の基本情報で担当を組みます」・［〈範囲の呼び名〉を組み直す（伝えていない N日）］（`arrange-basis-redo`。範囲の伝えていない日をすべて AI で組む＝組む日を「すべて」にして `start`。提案の帯で確かめて反映する。組んでいる間・0日なら押せない）・「基本情報を見る」（`arrange-basis-link`。`/basics`）。反映すると鍵を覚え直すので知らせは消える
 
 #### 組み始める（`start`）
 
@@ -63,6 +70,7 @@
 - [ ] 範囲の既定は月（今月か来月）。［月｜週｜日］で URL の `?ym=`・`?d=`（月曜）・`?date=` に書き、URL から開ける。範囲の担当なし・要対応の件数が出る（`scripts/e2e-arrange.cjs`）
 - [ ] 「AI で組む」で範囲の提案の帯が出て、反映するまで訪問は変わらない。［反映する］で担当が入り、「元に戻す」で1手戻る。［捨てる］で何も変えない（`scripts/e2e-arrange.cjs`）
 - [ ] 考え方の選ぶ欄は無く、「考え方：〈点数の基準〉」が出る（`scripts/e2e-arrange.cjs`）
+- [ ] 段の表示がいつも出る（標準が無い間は4段・あれば 基本情報 → 担当を組む の2段）。標準があれば［標準の組み方を変える］で組み方の標準の 2 案をくらべるの段へ移る。基本情報が変わると知らせと［組み直す］が出て、組み直すと知らせが消える（`scripts/e2e-arrange.cjs`・`scripts/e2e-standard.cjs`）
 - [ ] 「案を比べる」で比較の画面（その日）へ移り、比較の画面から担当を組むへ戻れる（`scripts/e2e-arrange.cjs`）
 - [ ] 組み始めるとほかの画面へ移っても続き、上の帯に進み具合と［止める］。止めるとそこまでの日の提案。知らせから担当を組むへ（`scripts/e2e-progress.cjs`・`scripts/e2e-week.cjs`）
 - [ ] 組み方の標準が無いと、範囲にかかわらず AI で組む欄を出さず［組み方の標準を決める］で `#/standard` へ移る。標準を登録すると月・週・日とも「AI で組む」が出る（`scripts/e2e-arrange.cjs`）

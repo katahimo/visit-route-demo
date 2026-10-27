@@ -1,4 +1,4 @@
-// 管理者設定の「メールの予約送信」（PRD D361・D364。ADR-0067）：事業所の Google のスプレッドシート（GAS 付き）のひな型をコピーする
+// 管理者設定の「メールの予約送信」（PRD D366・D369。ADR-0069）：事業所の Google のスプレッドシート（GAS 付き）のひな型をコピーする
 // リンクと手順、GAS の URL・合言葉・送る時刻の欄、「接続を試す」。設定はこの端末だけに残す（データの書き出し・読み込みに入らない）
 import { CalendarClock, ExternalLink, PlugZap, Save, Trash2 } from 'lucide-react';
 import { type FormEvent, useEffect, useId, useState } from 'react';

@@ -228,7 +228,7 @@ export function useConfirmDay(x: { date: string; d: PlanData; update: Update; bu
     return true;
   };
   /**
-   * 全員分のメールを作った・Google で予約したので確定する（PRD D346・D363。確認は出さず、知らせの「元に戻す」で戻せる。
+   * 全員分のメールを作った・Google で予約したので確定する（PRD D346・D368。確認は出さず、知らせの「元に戻す」で戻せる。
    * 予約は戻さない）。note は予約したときの知らせの文
    */
   const confirmByMail = (by: 'mail' | 'reserve' = 'mail', note?: string) => {

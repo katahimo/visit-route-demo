@@ -1,4 +1,4 @@
-// 日の予定のメールの欄の「Google で予約して送る」（PRD D362・D363。ADR-0067）：その日の担当ごとのメール（全文）を
+// 日の予定のメールの欄の「Google で予約して送る」（PRD D367・D368。ADR-0069）：その日の担当ごとのメール（全文）を
 // 事業所の Google Apps Script に預け、前日の決めた時刻に送らせる。預けたら、その日を確定（伝えた）にする。
 // 設定が無ければ管理者設定への案内だけ出す（mailto のメールを作るはそのまま使える）
 import { CalendarClock, CalendarX } from 'lucide-react';

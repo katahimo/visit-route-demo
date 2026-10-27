@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DemoData } from '../contracts/data';
-import { isLateMonth, nextYm, planLabel, planYm, unassignedDayCount } from './scheduleMode';
+import { isLateMonth, menuBadges, nextYm, planLabel, planYm, unassignedDayCount } from './scheduleMode';
 
 describe('月の後半・組む月', () => {
   it('15日から後半', () => {
@@ -51,5 +51,16 @@ describe('unassignedDayCount', () => {
     } as unknown as DemoData;
     expect(unassignedDayCount(data, '2026-11', '2026-10-24')).toBe(2);
     expect(unassignedDayCount(data, '2026-11', '2026-11-03')).toBe(1);
+  });
+});
+
+describe('menuBadges の組み方の標準（PRD D360）', () => {
+  const empty = { visits: [], patterns: [], clients: [], clientLeaves: [], snapshots: [] } as unknown as Parameters<
+    typeof menuBadges
+  >[0];
+  it('標準があるかを返す（あれば予定を組むの子は担当を組むだけ）', () => {
+    expect(menuBadges(empty, '2026-10-26').hasStandard).toBe(false);
+    const std = { ...empty, standard: { at: 1, presetId: 'p1', from: '2026-11-02', weeks: 1 } } as typeof empty;
+    expect(menuBadges(std, '2026-10-26').hasStandard).toBe(true);
   });
 });

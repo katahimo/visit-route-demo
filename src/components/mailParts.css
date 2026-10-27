@@ -50,7 +50,7 @@
 .mail-notice {
   margin: 0;
 }
-/* Google で予約して送る（PRD D362。ADR-0067） */
+/* Google で予約して送る（PRD D367。ADR-0069） */
 .mail-reserve {
   gap: 6px;
   border: 1px solid var(--line);

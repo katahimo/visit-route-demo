@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /**
- * メールの予約送信（PRD D361〜D364。ADR-0067）：アプリ ⇄ 事業所の Google Apps Script（GAS）の Web アプリのやりとり。
+ * メールの予約送信（PRD D366〜D369。ADR-0069）：アプリ ⇄ 事業所の Google Apps Script（GAS）の Web アプリのやりとり。
  * アプリは GAS の `/exec` へ JSON の文字を POST する（Content-Type・独自のヘッダーを付けない＝確認の問い合わせを出さない）。
  * GAS は預かり（シート「予約」）に書き、時刻トリガーで送る。GAS 側の実装は `gas/Code.gs`（同じ形を手で合わせる）
  */

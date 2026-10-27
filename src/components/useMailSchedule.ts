@@ -1,4 +1,4 @@
-// メールの予約送信（PRD D361〜D364。ADR-0067）の状態と操作：この端末の設定・預けた記録を読み、GAS に預ける・取り消す・つながるか確かめる。
+// メールの予約送信（PRD D366〜D369。ADR-0069）の状態と操作：この端末の設定・預けた記録を読み、GAS に預ける・取り消す・つながるか確かめる。
 // 通信は lib/mailSchedule の postMailSchedule の1か所。押したときだけ呼ぶ
 import { useState, useSyncExternalStore } from 'react';
 import type { ScheduledMail } from '../contracts/mailSchedule';

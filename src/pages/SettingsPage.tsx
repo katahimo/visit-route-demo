@@ -169,7 +169,7 @@ export default function SettingsPage() {
         <FeatureGroupCard key={g} group={g} features={features} terms={terms} onToggle={toggle} />
       ))}
 
-      {/* メールの予約送信（PRD D361。ADR-0067）：メールの機能が入のときだけ */}
+      {/* メールの予約送信（PRD D366。ADR-0069）：メールの機能が入のときだけ */}
       {isOn(features, 'mail') && <MailScheduleSettingsCard />}
     </div>
   );

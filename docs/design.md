@@ -16,7 +16,7 @@ PoC本体（`katahimo-dev/visit-route-poc`）の管理者画面（予定・手�
 ## 2. やらないこと
 
 - ログイン・サーバー保存・事業所の分離・同時編集
-- 外部送信は地図タイルと、ボタンを押したときの郵便番号・住所の検索（ADR-0016）と、日の予定のメールの予約送信（押したときに事業所自身の Google Apps Script へ。ADR-0067）だけ。メールはほかは `mailto:` で端末のアプリを開くだけ（送信サービス・送った記録・HTML メールなし。ADR-0017）。道順は Maps URLs のリンクだけ（経路・時間を取らず、キーの要る API は使わない。ADR-0018）
+- 外部送信は地図タイルと、ボタンを押したときの郵便番号・住所の検索（ADR-0016）と、日の予定のメールの予約送信（押したときに事業所自身の Google Apps Script へ。ADR-0069）だけ。メールはほかは `mailto:` で端末のアプリを開くだけ（送信サービス・送った記録・HTML メールなし。ADR-0017）。道順は Maps URLs のリンクだけ（経路・時間を取らず、キーの要る API は使わない。ADR-0018）
 - Firebase・Cloud Functions・Python 最適化・Google Maps Platform。移動時間は直線距離からの概算（`estimateLeg`）だけ
 - スタッフの記録・位置・ジオフェンス・勤怠・CSV・通知・PWA のオフライン対応、相性の学習
 - 勤務シフトの自動作成、日をまたいだ最適化（月まとめ作成は1日ずつ。ADR-0012）、定期パターンの日付指定・祝日（ADR-0013）
@@ -127,14 +127,14 @@ flowchart LR
   maps["lib/mapsLink（Google マップの道順の URL。ADR-0018）"]
   pages -->|全行程・区間ごと・ここへ道案内の URL を作らせる| maps
   mail -->|日の予定のメールの道順| maps
-  mailSchedule["lib/mailSchedule（予約送信の頼み・送る時刻・GAS を呼ぶ。ADR-0067）"]
+  mailSchedule["lib/mailSchedule（予約送信の頼み・送る時刻・GAS を呼ぶ。ADR-0069）"]
   pages -->|押したときだけ事業所の GAS に預ける・取り消す・確かめる| mailSchedule
   store -->|この端末の接続の設定・預けた記録（DemoData と別のキー）| mailSchedule
   mailSchedule -->|POST（text/plain の JSON）| gas["事業所の Google Apps Script（gas/Code.gs。シートに預け、5分ごとに送る）"]
 ```
 
 - 矢印は「読む・呼ぶ」。データを書き換えるのは store だけ
-- 外部の検索（`lib/geocode`）と予約送信（`lib/mailSchedule` の `postMailSchedule`）を呼ぶのは画面だけ（ADR-0016・ADR-0067）。`lib/mail`・`lib/mailto`・`lib/mapsLink` は URL の文字を作る純粋関数で通信しない
+- 外部の検索（`lib/geocode`）と予約送信（`lib/mailSchedule` の `postMailSchedule`）を呼ぶのは画面だけ（ADR-0016・ADR-0069）。`lib/mail`・`lib/mailto`・`lib/mapsLink` は URL の文字を作る純粋関数で通信しない
 - solver と evaluate は同じ費用表を使い、AI案と手作業案を**同じ物差し**で採点する
 
 ## 4. コンポーネントと責務
@@ -368,7 +368,7 @@ flowchart LR
 - 依存するもの：store・matching・solver（Worker）・evaluate・reassign・patterns・vacancy・features
 - 配置：`src/pages/`・`src/components/`（部品と React のフック `use*`）・画面用の純粋関数は `src/lib/`（React・store を import しない）。殻は `src/app/`
 - 予定（日・週・月）の共通の部品（PRD D327〜D330。ADR-0054）：`components/scheduleParts`（操作の行・複数選択の帯 `SelectionBar`。月は「別の日へ」も。書くのは `lib/multiEdit`）と `components/undo`（元に戻す・Ctrl+Z。殻に1つ）。予定は手で直すだけ（AI で組むは担当を組む。ADR-0063）。本体は3画面に残す
-- 予定を組む（PRD D350〜D356・D359・D360。ADR-0063・ADR-0065・ADR-0066）：1段ずつ進む4段（段の表示 `components/SettingsTabs` の `ArrangeSteps`）。1 案をくらべる → 2 表で直す → 3 標準にする は組み方の標準 `pages/StandardPage`（標準を決める道はここだけ。今の段は `lib/standardDraft` の `standardWork.step`）、4 担当を組む `pages/ArrangePage`。条件の重み `pages/RulesPage` は 1 からの寄り道。考え方（点数の基準）を替えるのは条件の重みと 3 の登録だけ
+- 予定を組む（PRD D350〜D356・D359〜D364。ADR-0063・ADR-0065〜ADR-0067）：1段ずつ進む段（段の表示 `components/SettingsTabs` の `ArrangeSteps`。並びは `lib/nav` の `arrangeSteps`）。1 基本情報は予定と相性の表 `pages/BasicsPage`（計算は `lib/basicsView`）と、基本情報のタブ（`BasicsNav`。〈利用者さん〉・〈スタッフ〉・相性・勤務時間（シフト）。前のメニュー「人」）。標準が無い間は 2 案をくらべる → 3 標準にする（表で直す（下書き）と登録）を組み方の標準 `pages/StandardPage` で（標準を決める道はここだけ。今の段は `lib/standardDraft` の `standardWork.step`）、最後に 担当を組む `pages/ArrangePage`。標準があれば 1 基本情報 → 2 担当を組む で、［標準の組み方を変える］で組み方の標準の手順へ戻る。条件の重み `pages/RulesPage` は案をくらべるからの寄り道。考え方（点数の基準）を替えるのは条件の重みと標準にするの登録だけ。基本情報の鍵（`lib/arrangeBasis`）を提案の反映・標準の登録で `store/arrangeBasis`（`vrdemo:arrange:basis`。DemoData の外）に覚え、変われば担当を組むに組み直しの知らせ（`components/useArrangeBasis`）
 - スマホ・キーボード（PRD D333〜D338。ADR-0055）：600px 以下の日の予定は `components/dayList` の日ごとのリスト（長押し・「選ぶ」で複数選択・スワイプで日を送る）、訪問の詳細の欄は `SidePanel` の `sheet`（下から出る欄）、帯・札をキーで動かすのは `components/visitKeys`（書くのは `lib/visitKeys` → `lib/visitOps`）
 - 訪問の札の共通の部品（PRD D339〜D343。ADR-0056・ADR-0057）：札は3段（大＝時間軸の帯・中＝行 `VisitRow`・小＝表の札 `VisitChip`。`data-size`）、入れ物は時間軸・表（`ChipStack`）・リスト。見た目・選ぶ・キー（入れ物ごとの `KeyLayout`）・落とし先の判定は `lib/visitLook`・`visitSelect`・`visitDrop`・`visitKeys` と `components/visitParts.tsx`（一覧は [design/pages-common.md](design/pages-common.md)）。書くのは `lib/visitOps`・`lib/multiEdit`・訪問の詳細の欄だけ
 - 訪問の詳細の欄（PRD D301〜D305。ADR-0051）：1件の訪問を見る・直す欄は `components/VisitPanel` の1つで、App の殻に置き、どの画面・コマンドパレットからも `useOpenVisit` で開く。欄はデータに `lib/visitOps`（純粋関数）越しにだけ触る（データの形を変えるときはここを差し替える）
@@ -684,7 +684,7 @@ mailTo(email, text, limit?) /* 宛先が '' なら null */
 - 長さ：full が `limit` 以内なら full、超えれば short を順に、それでも超えれば本文なし、それでも超えれば `tooLong`（ボタンは aria-disabled）。short・none では「本文をコピー」（fullBody）。案内は `buildBccMails` で分けて「宛先をコピー」も
 - 宛先：日・週・連絡は To にその〈スタッフ〉、案内は BCC に紹介元。無ければ aria-disabled＋「メールアドレスが未登録です」（`NO_EMAIL`）
 
-### メールの予約送信（`src/contracts/mailSchedule.ts`・`src/lib/mailSchedule.ts`・`gas/Code.gs`。PRD D361〜D364。ADR-0067）
+### メールの予約送信（`src/contracts/mailSchedule.ts`・`src/lib/mailSchedule.ts`・`gas/Code.gs`。PRD D366〜D369。ADR-0069）
 
 - 責務：日の予定のメール（件名・全文）を、押したときに事業所の Google Apps Script へ預ける・取り消す・つながるか確かめる。接続の設定と預けた記録はこの端末だけ（`store/mailSchedule`。DemoData と別のキー）
 - 契約・送り方・GAS のシートの形の詳細：[design/mail-schedule.md](design/mail-schedule.md)
@@ -825,8 +825,8 @@ Worker 内の例外は `error` で返し、内部の文言は出さない（「A
 | 担当を限る・希望休・印刷 | compile が可否で外す、欠勤のメモで見分ける、印刷専用の経路 | どの計算にも効き、型・版を変えない | 0014 |
 | 退職・拘束・段階 | 最終勤務日＋一括振り直し、上限は注意だけ、段階が正 | 1か所で勤務なしになり、影響が狭い | 0015 |
 | 住所から位置 | 押したときだけ外部の検索（郵便番号は fetch、だめなら JSONP） | 同梱は重く、送るのは押したときの値だけ | 0016 |
-| メール・道順 | `mailto:` と Maps URLs のリンク。日の予定のメールは事業所の GAS に預ける予約送信も（ひな型のシートをコピー） | キー・サーバーが要らない。予約送信は自前のサーバーなしで前日に届き、予定は提供側を通らない | 0017・0018・0067 |
-| メニュー・パレット | 6項目（ホーム・予定を組む・予定・空き状況・人・設定）。予定・予定を組む・人・設定は畳める子の項目を持ち（予定の子はリンク、予定を組むの子は組み方の標準・担当を組む（作業の順。条件の重みは寄り道）、人・設定の子はタブ。開け閉めは端末に覚える）。パレットは画面を1つずつ引ける（案を比べるは担当を組むから） | 仕事の順で探せ、量が少なく移り方が1つ、行き先は今ある URL だけ | 0019・0027・0034・0045・0047・0054・0063・0065・0066 |
+| メール・道順 | `mailto:` と Maps URLs のリンク。日の予定のメールは事業所の GAS に預ける予約送信も（ひな型のシートをコピー） | キー・サーバーが要らない。予約送信は自前のサーバーなしで前日に届き、予定は提供側を通らない | 0017・0018・0069 |
+| メニュー・パレット | 5項目（ホーム・予定を組む・予定・空き状況・設定）。予定・予定を組む・設定は畳める子の項目を持ち（予定の子はリンク、予定を組むの子は基本情報・〈利用者さん〉一覧・〈スタッフ〉一覧・組み方の標準・担当を組む（作業の順。前の「人」は基本情報のタブ。条件の重みは寄り道。標準があれば組み方の標準を出さない）、設定の子はタブ。開け閉めは端末に覚える）。パレットは画面を1つずつ引ける（案を比べるは担当を組むから） | 仕事の順で探せ、前提を決める画面が組む流れの中にあり、行き先は今ある URL だけ | 0019・0027・0034・0045・0047・0054・0063・0065・0066・0067 |
 | 見出し・ボタン | 見出しは `PageHeader` の1つの型（題名・1行の説明・右に主ボタン1つ・予定の3画面はすぐ下のナビの行に［月｜週｜日］。PRD D347）、ボタンは塗り＝主／枠＝副／文字＝ついでの3段 | どの画面でも主の操作が1つに見え、日の予定の本体が初期表示に入る | 0036 |
 | 名簿 | 1シートを ID か名前で突き合わせ、総入れ替えは終了・休止 | 案・記録を消さずに人を直せる | 0020 |
 | 絞り込み・詳細・人の画面 | 共通の `ClientFilter`、吹き出し、人は全画面（タブ・予定のカレンダー・節ごとの「直す → 保存」） | 画面ごとの作りがそろい、見るだけのときに書き換えず、その人の予定を見ながら直せる | 0021・0022・0052 |
@@ -840,7 +840,7 @@ Worker 内の例外は `error` で返し、内部の文言は出さない（「A
 | 予定の日・週・月 | 1つのコンポーネントにせず、共通の部品（操作の行・複数選択・元に戻す）を3画面で使う。AI で組むのは担当を組む（提案を出して「反映する」） | 拡大率を変えても手が同じ。本体（時間軸・表・カレンダー）の作り直しの危うさを避ける | 0054 |
 | 元に戻す | store の `update` の1回を1手として50手まで積む（画面の状態だけ）。トースト・操作の行・Ctrl+Z の全部が同じ履歴 | 画面ごとの控えと「戻せない」の理由を無くし、何が戻るかを名前で出せる | 0054 |
 
-| 標準・予定を組む | AI で組むのは予定を組む（1段ずつ進む4段：案をくらべる → 表で直す → 標準にする → 担当を組む。条件の重みは寄り道）と欠勤の振り直しだけ。標準を決める道は組み方の標準だけ | AI の場所と流れが1本で、欠勤・キャンセルと同じく段を順に進む | 0062・0063・0065・0066 |
+| 標準・予定を組む | AI で組むのは予定を組む（1段ずつ進む：基本情報 →（標準が無ければ 案をくらべる → 標準にする）→ 担当を組む。条件の重みは寄り道）と欠勤の振り直しだけ。標準を決める道は組み方の標準だけ。基本情報が最後に組んだあとに変われば担当を組むで組み直しを知らせる | AI の場所と流れが1本で、前提 → 標準 → AI の順が見え、前提が変われば組み直せる | 0062・0063・0065・0066・0067 |
 | 訪問を直す欄 | 1つの欄 `VisitPanel`（日時・担当・取り消し・範囲）を殻に置き、読み書きは `lib/visitOps` 越し。見直しは5段で、1段目は今のデータの形のまま | どこから開いても同じで、データの形を変える段で画面を書き直さない | 0051 |
 
 ## 8. 未決事項

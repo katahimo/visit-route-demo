@@ -518,7 +518,7 @@ export function NotInProblemCard({
   );
 }
 
-/** 画面の見出し（担当を組むに戻るリンク） */
+/** 画面の見出し（担当を組むに戻るリンク。段の表示は担当を組むと同じ。ADR-0067） */
 export function CompareHeader({ date }: { date: string }) {
   return (
     <PageHeader

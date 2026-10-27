@@ -1,5 +1,6 @@
-// 組み方の標準（標準の週。PRD D350〜D354・D359・D360。ADR-0063・ADR-0065・ADR-0066）の画面。3段：案をくらべる（カード・表で見る・
-// 日で見る）→ 表で直す（下書き） → 標準にする を1段ずつ出し、段の下の［戻る］［次へ］で進む（予定を組むの 1〜3。4 は担当を組む）。
+// 組み方の標準（標準の週。PRD D350〜D354・D359〜D362。ADR-0063・ADR-0065〜ADR-0067）の画面。2段：案をくらべる（カード・表で見る・
+// 日で見る）→ 標準にする（表で直す（下書き）と登録）を1段ずつ出し、段の下の［戻る］［次へ］で進む
+// （予定を組むの 2・3。1 は基本情報、4 は担当を組む）。
 // 標準を決める道はこの画面だけ。
 // 案・下書きは画面の外の入れ物（lib/standardDraft）に置き、ほかの画面へ移っても残す。実際の予定（訪問）には登録まで書かない。
 // 登録は store の update の1回（全体の「元に戻す」で戻せる）
@@ -20,7 +21,7 @@ import { standardRows, standardWeekdays, workingStaff as workingStaffOf } from '
 import { useDemoData } from '../store';
 import './settings.css';
 import './standard.css';
-import { DraftStep, ProposalsStep, RegisterStep, StandardStepNav } from './standardSteps';
+import { DraftStep, ProposalsStep, RegisterStep, StandardStepNav, stepNo } from './standardSteps';
 import { useStandardDayView } from './useStandardDayView';
 import { useStandardDraft } from './useStandardDraft';
 import { useStandardProposals } from './useStandardProposals';
@@ -71,15 +72,24 @@ export default function StandardPage() {
   // 元に戻したら（登録の時刻が今のデータと違えば）完了の表示を出さない
   const registered = work.registered && data.standard?.at === work.registered.at ? work.registered : null;
   const step = standardStepOf(work);
-  // 主ボタンは画面に1つ（ADR-0066）：1 は案を作る（下書きがあれば次へ）、2 は下書きがあれば次へ、
-  // 3 は標準にする（登録した直後だけ次へ。下書きも登録も無ければ塗らない）
+  // 主ボタンは画面に1つ（ADR-0066・ADR-0067）：案をくらべるは案を作る（下書きがあれば次へ）、
+  // 標準にするは［この表を標準にする］（登録した直後だけ次へ。下書きも登録も無ければ塗らない）
   const nextPrimary = step === 'register' ? draft === null && registered !== null : draft !== null;
   const stepHead = useStepFocus(step, draft !== null);
+  const registerPart = (
+    <RegisterStep
+      draft={draft !== null}
+      registered={registered}
+      register={register}
+      draftDiffCount={draftDiff.length}
+      names={{ staffName, clientName }}
+    />
+  );
 
   return (
     <div className="stack standard-page">
       <PageHeader
-        nav={<ArrangeSteps current={step} />}
+        nav={<ArrangeSteps current={step} full />}
         icon={CalendarCheck}
         title="組み方の標準"
         lead="誰が・何曜・何時に行くかの標準を表で決めます。登録すると、先の週・月はこの表のとおりに並びます"
@@ -106,28 +116,24 @@ export default function StandardPage() {
           />
         )}
 
-        {step === 'draft' && (
-          <DraftStep
-            clientTerm={data.org.terms.client}
-            work={work}
-            stateKey={key}
-            tableProps={tableProps}
-            draftState={draftState}
-            presetName={presetName}
-            workingStaff={workingStaff}
-            headRef={stepHead}
-          />
-        )}
-
         {step === 'register' && (
-          <RegisterStep
-            draft={draft !== null}
-            registered={registered}
-            register={register}
-            draftDiffCount={draftDiff.length}
-            names={{ staffName, clientName }}
-            headRef={stepHead}
-          />
+          <li className="card stack" data-step="register">
+            <h2 ref={stepHead} tabIndex={-1}>
+              {stepNo('register')}. 標準にする
+            </h2>
+            {/* 登録した直後は完了の表示を先に（下書きは消えている） */}
+            {registered && draft === null && registerPart}
+            <DraftStep
+              clientTerm={data.org.terms.client}
+              work={work}
+              stateKey={key}
+              tableProps={tableProps}
+              draftState={draftState}
+              presetName={presetName}
+              workingStaff={workingStaff}
+            />
+            {!(registered && draft === null) && registerPart}
+          </li>
         )}
       </ol>
       <StandardStepNav step={step} nextPrimary={nextPrimary} />

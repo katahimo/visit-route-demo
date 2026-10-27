@@ -84,7 +84,7 @@
 - 切るときデータがあれば `turnOffImpact` の件数と効き方の確認（相性など）。データの無い機能は確認なし。取り消すと変わらない
 - 切った機能の URL を開くとホームへ移り、閉じられる知らせと管理者設定へのリンク
 - 390px で横にはみ出さない。印刷で知らせ・「適用」を出さない
-- いちばん下に「メールの予約送信（Google）」のカード（`pages/mailScheduleSettings`・data-testid `mail-schedule-settings`。メールの機能が入のときだけ。PRD D361。ADR-0067）：説明、手順の4行（ひな型のコピーのリンク `mail-schedule-template`。`GAS_TEMPLATE_URL` が空なら「まだ用意されていません」の文）、欄 `mail-schedule-url`・`mail-schedule-token`（password）・`mail-schedule-time`（time）、`mail-schedule-test`「接続を試す」・`mail-schedule-save`「保存」・`mail-schedule-clear`「この端末の設定を消す」（確認つき。設定があるときだけ）。誤りは押したあとに欄ごと（`settingsErrors`）。つないでいれば見出しに「つないでいます」
+- いちばん下に「メールの予約送信（Google）」のカード（`pages/mailScheduleSettings`・data-testid `mail-schedule-settings`。メールの機能が入のときだけ。PRD D366。ADR-0069）：説明、手順の4行（ひな型のコピーのリンク `mail-schedule-template`。`GAS_TEMPLATE_URL` が空なら「まだ用意されていません」の文）、欄 `mail-schedule-url`・`mail-schedule-token`（password）・`mail-schedule-time`（time）、`mail-schedule-test`「接続を試す」・`mail-schedule-save`「保存」・`mail-schedule-clear`「この端末の設定を消す」（確認つき。設定があるときだけ）。誤りは押したあとに欄ごと（`settingsErrors`）。つないでいれば見出しに「つないでいます」
 
 ### 完了の条件
 

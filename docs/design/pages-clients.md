@@ -5,7 +5,7 @@
 
 ### 〈利用者さん〉一覧（`#/clients`）
 
-- 見出し「〈利用者さん〉一覧」。題名の下に人のタブ（`PeopleTabs`。[pages.md](pages.md)。PRD D326）。見出しの右に主ボタン「〈利用者さん〉を追加」（`client-add`。`#/clients/new` へのリンク）
+- 見出し「〈利用者さん〉一覧」。題名の下に基本情報のタブ（`BasicsNav`。上に予定を組むの段（1 基本情報が今の段）。[pages.md](pages.md)・[pages-basics.md](pages-basics.md)。PRD D326・D362。ADR-0067）。見出しの右に主ボタン「〈利用者さん〉を追加」（`client-add`。`#/clients/new` へのリンク）
 - 一覧の上に `ClientFilter`（`clients-filter`。画面の状態。URL に残さない。既定 `EMPTY_FILTER`）。期間は選んでいる日（`useDay`）を含む週（月〜日）で、`weekDay` を7日分作って `filterFacts` に渡す。終了の人は「終了の人も出す」のときだけ出す
 - 狭い画面（600px 以下。PRD D220）：絞り込みの欄の中身（`ClientFilter` と段階の説明）を「絞り込み（N）」のボタン（`narrow-filter-toggle`。`aria-expanded`・`aria-controls`）の下に畳み、横に「N人を表示」（`narrow-filter-count`）。N は `activeFilterCount`（下）。はじめは畳み、開いたかは画面の中だけ。広い画面ではボタンを出さずいつも開いたまま
 - 一覧の上に「位置の無い〈利用者さん〉」のカード（下の「まとめて地図に置く」）。置けなかった人の「編集」はその人の画面の住所の節（`#/clients/:id?tab=basic&edit=place`。開いたら URL の `edit` を消し、節の無いタブ（予定）で開いたら節のタブへ移す）
@@ -18,7 +18,7 @@
 
 #### ルートと状態
 
-- `#/clients/:id`（`pages/ClientPage`）・`#/staff/:staffId`（`pages/StaffPersonPage`）。`new` は新しい人。メニューの印・上の帯の名前・作り直しの帯は一覧と同じ（`lib/nav` の `activeNavPath` が `/clients/:id` を `/clients` に当てる。`tabClick` は一覧の項目を押すと一覧へ移る）。初回の案内ツアーはこの URL で開いたときは出さない（`lib/tour` の `shouldAutoOpenTour`）
+- `#/clients/:id`（`pages/ClientPage`）・`#/staff/:staffId`（`pages/StaffPersonPage`）。`new` は新しい人。メニューの印（予定を組むの子「基本情報」）・上の帯の名前（「基本情報・利用者さん一覧」）・作り直しの帯は一覧と同じ（`lib/nav` の `activeNavPath` が `/clients/:id` を `/clients` に当てる。`tabClick` は一覧の項目を押すと一覧へ移る）。初回の案内ツアーはこの URL で開いたときは出さない（`lib/tour` の `shouldAutoOpenTour`）
 - 外側の部品が「URL の人」と「開いている人」を分けて持つ。URL の人が替わったら（パレット・吹き出し・hash の書き換え）、変更があれば確かめ（確認は画面の移動で待っている確認を取り消す処理のあとに出す）、断れば元の人の URL（クエリも）へ `replace` で戻す。中身は開いている人の ID を key にして作り直す。App の `Guarded` の ErrorBoundary の key は `/clients/:id` にそろえる（人が替わっても画面を作り直さない）
 - いない人の URL は一覧へ `replace`（`state.missing`）し、一覧で「その〈利用者さん〉は見つかりません（消されたか、URL が違います）」と知らせる
 - 外枠 `person-view`（`data-kind`＝client／staff・`data-id`。新しい人は空）。`.person-view` の dl の並び（`personView.css`）を使う

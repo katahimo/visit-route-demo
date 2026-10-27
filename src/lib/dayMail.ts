@@ -6,7 +6,7 @@ import { dayByStaff, dayMailText, mailTo } from './mail';
 import type { BuiltMail } from './mailto';
 import type { PrintDay } from './monthPrint';
 
-/** 担当ごとの1行（components/mailParts の MailRow に、予約送信で預ける件名・全文（text。ADR-0067）を足した形） */
+/** 担当ごとの1行（components/mailParts の MailRow に、予約送信で預ける件名・全文（text。ADR-0069）を足した形） */
 export type DayMailRow = {
   key: string;
   name: string;

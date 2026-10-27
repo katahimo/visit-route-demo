@@ -1,6 +1,6 @@
 // 見直しの4段目（ADR-0054。PRD D326〜D332）を本物のブラウザで確かめる：
-// メニューの子の項目（予定・予定を組む・人。PRD D349。ADR-0063。最上位6項目の並びは e2e-nav）と
-// 人のタブ（〈利用者さん〉・〈スタッフ〉・相性・勤務時間（シフト）。最後に開いたタブ・勤務の見込みは勤務時間（シフト）の印）、パレットに案を比べるが出ない、
+// メニューの子の項目（予定・予定を組む。PRD D349・D361。ADR-0067。最上位5項目の並びは e2e-nav）と
+// 基本情報のタブ（予定と相性・〈利用者さん〉・〈スタッフ〉・相性・勤務時間（シフト）。勤務の見込みは勤務時間（シフト）の印）、パレットに案を比べるが出ない、
 // 日・週・月の切り替えで同じ操作の行（欠勤・キャンセルを登録／元に戻す／（月だけ）その他 ▾。「AI で組む ▾」は無い）、
 // 担当を組むの画面で週を組んだ範囲の提案の帯（反映するまで訪問は変わらない・週・日の予定にも出る・「反映する」で1回の update・
 // Ctrl+Z で戻る・Ctrl+Shift+Z でやり直す）、
@@ -43,46 +43,58 @@ async function openView(page, hash) {
   await page.getByTestId('schedule-toolbar').waitFor({ timeout: 60000 });
   await settle(page, 400);
 }
-// ---- メニュー（子の項目）・人のタブ・パレット ----
+// ---- メニュー（子の項目）・基本情報のタブ・パレット ----
 async function menu(page) {
   await page.goto(`${BASE}#/home`);
   await page.locator('h1').waitFor();
   await settle(page, 300);
-  // 最上位6項目の並びと名前・グループの見出しが無いことは e2e-nav の menu が確かめる
+  // 最上位5項目の並びと名前・グループの見出しが無いことは e2e-nav の menu が確かめる
   const kids = {
     schedule: await navKids(page, 'schedule'),
     arrange: await navKids(page, 'arrange'),
-    people: await navKids(page, 'people'),
   };
   check(
     JSON.stringify(kids) ===
       JSON.stringify({
         schedule: ['today', 'month-view', 'absence'],
-        arrange: ['arrange:standard', 'arrange:assign'],
-        people: ['people:/clients', 'people:/staff', 'people:/compat', 'people:/availability'],
-      }),
-    '予定の子は今日の予定・◯月の予定・欠勤・キャンセル、予定を組むの子は組み方の標準・担当を組む（ADR-0066）、人の子は〈利用者さん〉・〈スタッフ〉・相性・勤務時間（シフト）',
+        arrange: ['arrange:basics', 'arrange:clients', 'arrange:staff', 'arrange:standard', 'arrange:assign'],
+      }) && (await page.locator('.side-nav [data-key="people"]').count()) === 0,
+    '予定の子は今日の予定・◯月の予定・欠勤・キャンセル、予定を組むの子は基本情報・組み方の標準・担当を組む（ADR-0067）。メニューに「人」は無い',
     kids,
   );
   await shot(page, 'menu-1400');
-  await page.locator('.side-nav [data-key="people"]').click();
-  await page.waitForURL(/#\/clients$/);
+  await page.locator('.side-nav [data-key="arrange:basics"]').click();
+  await page.waitForURL(/#\/basics$/);
   const tabs = page.getByTestId('people-tabs');
   await tabs.waitFor();
   const tabNames = await tabs.locator('a').evaluateAll((els) => els.map((e) => e.textContent.trim()));
   check(
-    tabNames.length === 4 && tabNames[2] === '相性' && tabNames[3] === '勤務時間（シフト）',
-    '人のタブは4つ',
+    JSON.stringify(tabNames) === JSON.stringify(['予定と相性', '利用者さん', 'スタッフ', '相性', '勤務時間（シフト）']),
+    '基本情報のタブは5つ（先頭が予定と相性）',
     tabNames,
   );
   check(
-    (await tabs.locator('[aria-current="page"]').getAttribute('data-tab')) === 'clients',
-    '「人」の既定は〈利用者さん〉のタブ',
+    (await page.getByTestId('arrange-steps').count()) === 1 &&
+      (await tabs.getAttribute('aria-label')) === '基本情報の切り替え',
+    '基本情報のタブの上に予定を組むの段・タブの aria-label は「基本情報の切り替え」',
   );
   check(
-    JSON.stringify(await current(page)) === JSON.stringify(['people:/clients']) &&
-      (await parentHasCurrent(page, 'people')),
-    '〈利用者さん〉一覧ではメニューの人の子「利用者さん」が今の画面（親の「人」は has-current）',
+    (await tabs.locator('[aria-current="page"]').getAttribute('data-tab')) === 'basics',
+    '「基本情報」の既定は予定と相性のタブ',
+  );
+  check(
+    JSON.stringify(await current(page)) === JSON.stringify(['arrange:basics']) &&
+      (await parentHasCurrent(page, 'arrange')),
+    '予定と相性ではメニューの予定を組むの子「基本情報」が今の画面（親の「予定を組む」は has-current）',
+    await current(page),
+  );
+  await tabs.locator('[data-tab="clients"]').click();
+  await page.waitForURL(/#\/clients$/);
+  // URL が変わってからメニューの印が描き直るまで待つ（基本情報 → 利用者さん一覧に印が移る）
+  await until(async () => JSON.stringify(await current(page)) === '["arrange:clients"]', 5000, 100).catch(() => {});
+  check(
+    JSON.stringify(await current(page)) === JSON.stringify(['arrange:clients']),
+    '〈利用者さん〉一覧はメニューの子「利用者さん一覧」が今の画面（ADR-0067 追記）',
     await current(page),
   );
   check(
@@ -105,17 +117,17 @@ async function menu(page) {
     '勤務の見込みは勤務時間（シフト）のタブに印',
   );
   check(
-    JSON.stringify(await current(page)) === JSON.stringify(['people:/availability']) &&
-      (await parentHasCurrent(page, 'people')),
-    '勤務の見込みではメニューの人の子「勤務時間（シフト）」が今の画面（親の「人」は has-current）',
+    JSON.stringify(await current(page)) === JSON.stringify(['arrange:basics']) &&
+      (await parentHasCurrent(page, 'arrange')),
+    '勤務の見込みでもメニューの子「基本情報」が今の画面（親の「予定を組む」は has-current）',
     await current(page),
   );
   await page.goto(`${BASE}#/compat`);
   await page.getByTestId('people-tabs').waitFor();
   await page.locator('.side-nav [data-key="home"]').click();
   await page.waitForURL(/#\/home/);
-  const peopleHref = await page.locator('.side-nav [data-key="people"]').getAttribute('href');
-  check(/#\/compat$/.test(peopleHref ?? ''), '「人」は最後に開いた人のタブ（相性）を開く', peopleHref);
+  const basicsHref = await page.locator('.side-nav [data-key="arrange:basics"]').getAttribute('href');
+  check(/#\/basics$/.test(basicsHref ?? ''), 'メニューの「基本情報」は予定と相性（#/basics）を開く', basicsHref);
   // パレット：案を比べるは出ない（担当を組むの画面から開く）
   await page.keyboard.press(`${MOD}+k`);
   const input = page.getByRole('combobox');
@@ -442,7 +454,7 @@ async function narrow(page) {
   await page.getByTestId('menu-btn').click();
   const drawer = page.locator('[role="dialog"][aria-modal="true"]');
   await drawer.waitFor();
-  // 引き出しのメニューの最上位6項目は e2e-nav（390px の「引き出しも同じ並び」）が確かめる
+  // 引き出しのメニューの最上位5項目は e2e-nav（390px の「引き出しも同じ並び」）が確かめる
   await shot(page, 'menu-390');
   await page.keyboard.press('Escape');
   for (const hash of ['/plan', '/week', '/month']) {

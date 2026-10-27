@@ -672,13 +672,13 @@ async function keepRange(page) {
   await band.waitFor({ timeout: 120000 });
   await page.locator('.side-nav [data-testid="nav-link"]', { hasText: 'ホーム' }).click();
   await page.waitForURL(/#\/home/);
-  await page.locator('.side-nav [data-testid="nav-link"]', { hasText: '人' }).click();
-  await page.waitForURL(/#\/clients/);
+  await page.locator('.side-nav [data-testid="nav-link"]', { hasText: '基本情報' }).click();
+  await page.waitForURL(/#\/basics/);
   await page.goto(`${BASE}#/month`);
   await page.getByTestId('schedule-toolbar').waitFor({ timeout: 60000 });
   check(
     (await page.locator('[data-testid="proposal-band"]').count()) === 1,
-    '範囲の提案：ホーム・人へ移って月の予定に戻っても残る',
+    '範囲の提案：ホーム・基本情報へ移って月の予定に戻っても残る',
   );
   await page.locator('[data-testid="proposal-band"]').getByTestId('proposal-discard').click();
 }

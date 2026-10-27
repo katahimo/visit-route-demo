@@ -1,4 +1,4 @@
-// メールの予約送信（PRD D361〜D364。ADR-0067）：設定の検査・送る時刻・頼みの形・GAS を呼ぶ
+// メールの予約送信（PRD D366〜D369。ADR-0069）：設定の検査・送る時刻・頼みの形・GAS を呼ぶ
 import { describe, expect, it } from 'vitest';
 import { mailScheduleRequestSchema } from '../contracts/mailSchedule';
 import {

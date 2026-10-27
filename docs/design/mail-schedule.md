@@ -1,4 +1,4 @@
-# メールの予約送信（`src/contracts/mailSchedule.ts`・`src/lib/mailSchedule.ts`・`gas/Code.gs`。PRD D361〜D364。ADR-0067）
+# メールの予約送信（`src/contracts/mailSchedule.ts`・`src/lib/mailSchedule.ts`・`gas/Code.gs`。PRD D366〜D369。ADR-0069）
 
 ```ts
 MAIL_SCHEDULE_VERSION = 1; MAIL_SCHEDULE_MAX_MAILS = 100; MAIL_SCHEDULE_MAX_BODY = 40000

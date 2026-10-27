@@ -1,4 +1,4 @@
-// メールの予約送信（PRD D361〜D364。ADR-0067）の接続の設定（GAS の URL・合言葉・送る時刻）と、日付ごとに預けた記録を覚える。
+// メールの予約送信（PRD D366〜D369。ADR-0069）の接続の設定（GAS の URL・合言葉・送る時刻）と、日付ごとに預けた記録を覚える。
 // この端末に残す。DemoData とは別のキー（データの版・書き出し・読み込み・初期状態に戻すに入れない。合言葉をファイルに出さない）。
 // localStorage を触るのは store の中だけ（AGENTS.md）。使えないブラウザでも、開いている間は覚える
 import { EMPTY_SETTINGS, type MailReservation, type MailScheduleSettings } from '../lib/mailSchedule';

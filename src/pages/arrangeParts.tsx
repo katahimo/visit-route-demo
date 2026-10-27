@@ -1,5 +1,5 @@
 // 担当を組む画面（ArrangePage）の区画：範囲・AI で組む（組む日・考え方・進み具合）・案を比べる
-import { CalendarCheck, CalendarDays, GitCompareArrows, Sparkles, Square } from 'lucide-react';
+import { CalendarCheck, CalendarDays, GitCompareArrows, RefreshCw, Sparkles, Square } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { FieldError } from '../components/FieldError';
 import { WithIcon } from '../components/ui';
@@ -10,6 +10,48 @@ import { isDate } from '../lib/isDate';
 import type { BatchMode } from '../lib/month';
 import { type BatchRun, type BatchSource, monthBatch } from '../lib/monthBatch';
 import { setStandardStep } from '../lib/standardDraft';
+
+/**
+ * 基本情報が最後に組んだあとに変わった知らせ（ADR-0067。PRD D363）：［組み直す］で範囲の伝えていない日をすべて AI で組む
+ * （提案の帯で確かめて反映。主ボタンは「AI で組む」のまま、ここは枠のボタン）
+ */
+export function ArrangeBasisNotice({
+  rangeLabel,
+  days,
+  running,
+  onRedo,
+}: {
+  rangeLabel: string;
+  days: number;
+  running: boolean;
+  onRedo: () => void;
+}) {
+  return (
+    <section className="card stack arrange-basis" aria-label="基本情報の変更" data-testid="arrange-basis-changed">
+      <p className="warn">
+        <strong>基本情報が、最後に組んだあとに変わりました</strong>
+        （予定・相性・勤務時間（シフト）など）。組み直すと今の基本情報で担当を組みます
+      </p>
+      <div className="row">
+        <button
+          type="button"
+          className="btn"
+          onClick={onRedo}
+          disabled={running || days === 0}
+          data-testid="arrange-basis-redo"
+        >
+          <WithIcon icon={RefreshCw}>
+            {rangeLabel}を組み直す（伝えていない {days}日）
+          </WithIcon>
+        </button>
+        {days === 0 && <span className="sub">範囲に組める日がありません（今日より前・確定した日は組みません）</span>}
+        <Link to="/basics" className="btn btn-text" data-testid="arrange-basis-link">
+          基本情報を見る
+        </Link>
+      </div>
+    </section>
+  );
+}
 
 /** 範囲の呼び名 */
 const SCOPE_LABEL: Record<BatchSource, string> = { month: '月', week: '週', day: '日' };
@@ -225,7 +267,7 @@ export function ArrangeRunSection({ view, actions }: { view: ArrangeRunProps; ac
           <ArrangeModeFields mode={mode} careDays={view.careDays} allDays={view.allDays} onMode={actions.onMode} />
           <p data-testid="arrange-basis">
             考え方：<strong>{view.basisName}</strong>
-            <span className="sub">（点数の基準。替えるのは「組み方の標準」の「案をくらべる」）</span>
+            <span className="sub">（点数の基準。替えるのは［標準の組み方を変える］）</span>
           </p>
           <p data-testid="arrange-count">
             組む日：<strong>{runDays}日</strong>

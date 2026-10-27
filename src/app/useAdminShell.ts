@@ -1,12 +1,12 @@
 import { type RefObject, useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { IS_MAC } from '../components/CommandPalette';
+import { useBasisChanged } from '../components/useArrangeBasis';
 import { NARROW_QUERY } from '../components/useMedia';
 import type { DemoData } from '../contracts/data';
 import { jstDate } from '../domain/time';
 import { hashPathname, isPaletteShortcut, keepPaletteOn } from '../lib/commandPalette';
 import {
   activeNavPath,
-  isPeoplePath,
   isScheduleView,
   isSettingsPath,
   type LastViews,
@@ -21,11 +21,10 @@ import { menuBadges } from '../lib/scheduleMode';
  */
 const lastViews: LastViews = {};
 
-/** 今の画面が予定の表示・設定のタブ・人のタブなら覚える（同じ値を何度書いても同じ） */
+/** 今の画面が予定の表示・設定のタブなら覚える（同じ値を何度書いても同じ） */
 function rememberView(pathname: string): LastViews {
   if (isScheduleView(pathname)) lastViews.schedule = activeNavPath(pathname);
   if (isSettingsPath(pathname)) lastViews.settings = pathname;
-  if (isPeoplePath(pathname)) lastViews.people = activeNavPath(pathname);
   return { ...lastViews };
 }
 
@@ -42,20 +41,14 @@ export function useShellNav(data: DemoData, pathname: string) {
   const last = rememberView(pathname);
   const lastSchedule = last.schedule;
   const lastSettings = last.settings;
-  const lastPeople = last.people;
   // 切った機能の項目は出さない（PRD D213）。下のタブもここから引く
   // 件数の印（PRD D349。compile しないので軽い）
-  const badges = useMemo(() => menuBadges(data, today), [data, today]);
+  // 基本情報が最後に組んだあとに変われば担当を組むに「変更」の印（ADR-0067）
+  const basisChanged = useBasisChanged(data);
+  const badges = useMemo(() => ({ ...menuBadges(data, today), basisChanged }), [data, today, basisChanged]);
   const groups = useMemo(
-    () =>
-      menuSections(
-        terms,
-        today,
-        features,
-        { schedule: lastSchedule, settings: lastSettings, people: lastPeople },
-        badges,
-      ),
-    [terms, today, features, lastSchedule, lastSettings, lastPeople, badges],
+    () => menuSections(terms, today, features, { schedule: lastSchedule, settings: lastSettings }, badges),
+    [terms, today, features, lastSchedule, lastSettings, badges],
   );
   // 画面の一覧（メニューから外した画面も1つずつ）：上の帯の名前・パレットの画面（PRD D273・D275）
   const screens = useMemo(() => screenSections(terms, features), [terms, features]);
