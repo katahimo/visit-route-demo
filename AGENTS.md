@@ -1,7 +1,7 @@
 # AGENTS.md
 
 このリポジトリで作業するAIコーディングエージェント向けのルール。
-文書の索引は `docs/README.md`（読む前にここで該当ファイルを選ぶ）。要件の正は `docs/prd.md`、設計の正は `docs/design.md`（画面の詳細は `docs/design/`）、境界の契約の正は `src/contracts/`（TypeScript の型と Worker のメッセージ）、判断の記録は `docs/adr/`。これらと矛盾する実装をしない。
+文書の索引は `docs/README.md`（読む前にここで該当ファイルを選ぶ）。要件の正は `docs/prd.md`（要件の表はテーマ別の `docs/prd/`）、設計の正は `docs/design.md`（画面の詳細は `docs/design/`）、境界の契約の正は `src/contracts/`（TypeScript の型と Worker のメッセージ）、判断の記録は `docs/adr/`。これらと矛盾する実装をしない。
 
 このリポジトリは `katahimo-dev/visit-route-poc`（PoC本体）の**デモ版**。PoC本体の Firebase・Callable・`orgs/{orgId}` の規約は適用しない（ADR-0001）。
 
@@ -45,7 +45,7 @@ e2e/ … @playwright/test の spec（scripts/e2e-*.cjs の段を test.step で�
 scripts/ … e2e のスクリプト（e2e-*.cjs）と共通の部品（lib/）
 gas/ … メールの予約送信の Google Apps Script のひな型（Code.gs）と手順（README.md）。やりとりの正は src/contracts/mailSchedule.ts（ADR-0069）
 code-rules.json・code-rules.baseline.json … コードの検査（npm run check:code）の決まりと、今ある違反の基準
-docs/ … README.md（索引）/ prd.md / design.md / design/（画面の詳細）/ adr/
+docs/ … README.md（索引）/ prd.md・prd/（テーマ別の要件の表） / design.md / design/（画面の詳細）/ adr/
 ```
 
 ## コマンド
