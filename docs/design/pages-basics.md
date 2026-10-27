@@ -1,13 +1,13 @@
 # 基本情報の画面（予定と相性の表）
 
 > この画面のファイル：`src/pages/BasicsPage.tsx`（`settings.css`・`standard.css`。表とマスの欄 `basicsParts.tsx`）、`src/lib/basicsView.ts`（行・マス・勤務時間の外・時刻の入力と書き換え。純粋関数。テストあり）、`src/components/SettingsTabs.tsx` の `BasicsNav`（段の表示とタブ）。関連 ADR：0054・0067。関連 PRD：D326・D361・D362。
-> 基本情報は予定を組むの 1 の段（段の並びとメニューは [pages.md](pages.md)）。タブの先の〈利用者さん〉一覧・〈スタッフ〉一覧・相性・勤務時間（シフト）・勤務の見込みは [pages-clients.md](pages-clients.md)・[pages-staff.md](pages-staff.md)・[pages-compat.md](pages-compat.md)。組み直しの知らせは [pages-arrange.md](pages-arrange.md)。
+> 基本情報は予定を組むの 1 の段（段の並びとメニューは [pages-nav.md](pages-nav.md)）。タブの先の〈利用者さん〉一覧・〈スタッフ〉一覧・相性・勤務時間（シフト）・勤務の見込みは [pages-clients.md](pages-clients.md)・[pages-staff.md](pages-staff.md)・[pages-compat.md](pages-compat.md)。組み直しの知らせは [pages-arrange.md](pages-arrange.md)。
 
 ### 基本情報（`#/basics`）
 
 AI で担当を組む前に、前提（〈利用者さん〉の予定・標準の担当・相性・勤務時間（シフト））を1枚の表で確かめて直す画面（PRD D362）。メニューの「予定を組む」の子の1つ目「基本情報」（`#/basics`・〈利用者さん〉・〈スタッフ〉・相性・勤務時間（シフト）・勤務の見込みの画面で印。ADR-0067）。見出しの `nav` は `BasicsNav`（上に予定を組むの段（`ArrangeSteps`。1 基本情報が今の段。標準があれば 基本情報 → 担当を組む の2段、無ければ4段）、下にタブ）。
 
-- タブ（`basicsTabs`。[pages.md](pages.md)）：予定と相性（この画面）・〈利用者さん〉・〈スタッフ〉・相性・勤務時間（シフト）。切った機能のタブは出さない。URL は前のまま。メニューの「人」を無くして移した（ADR-0054 の人のタブ）
+- タブ（`basicsTabs`。[pages-nav.md](pages-nav.md)）：予定と相性（この画面）・〈利用者さん〉・〈スタッフ〉・相性・勤務時間（シフト）。切った機能のタブは出さない。URL は前のまま。メニューの「人」を無くして移した（ADR-0054 の人のタブ）
 - 題名「予定と相性」・`lead`「〈利用者さん〉の予定（繰り返し）と、標準の担当・相性・勤務時間（シフト）を1枚の表で確かめて直します。決まったら AI で担当を組みます」
 
 #### 並び

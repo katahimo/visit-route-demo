@@ -1,7 +1,7 @@
 # 画面共通の部品
 
 > この部品のファイル：`src/components/ui.tsx`・`FieldError.tsx`・`usePanelFoot.ts`・`floating.ts`・`MapDock.tsx`・`Toast.tsx`・`DetailPopover.tsx`・`PersonPopover.tsx`・`personDetail.tsx`・`Term.tsx`・`EmptyNext.tsx`・`Tour.tsx`・`mailParts.tsx`・`mapsLinks.tsx`、`src/pages/mailPanels.tsx`、`src/components/visitParts.tsx`（`visitParts.css`）、`src/components/ScheduleNav.tsx`・`useScheduleMode.ts`、`src/lib/scheduleMode.ts`・`visitLook.ts`・`visitSelect.ts`・`visitDrop.ts`・`visitKeys.ts`・`multiEdit.ts`・`panelFit.ts`・`personPopover.ts`・`glossary.ts`・`emptyGuide.ts`・`tour.ts`・`links.ts`・`mailto.ts`・`mail.ts`・`mapsLink.ts`。関連 ADR：0017・0018・0022 追記・0025 追記・0031・0036・0037・0045・0056・0057・0061。関連 PRD：D91〜D101・D122〜D126・D173〜D177・D193〜D197・D201〜D209・D226・D236〜D238・D240〜D242・D250〜D252・D276・D277・D339〜D343・D348。
-> 画面全体の決まり・メニュー・確認ダイアログ・機能の入り切りは [pages.md](pages.md)。
+> 画面全体の決まり・確認ダイアログ・機能の入り切りは [pages.md](pages.md)、メニュー・コマンドパレットは [pages-nav.md](pages-nav.md)。
 
 ### 画面の見出しとボタンの3段（ADR-0036。PRD D236〜D238）
 
