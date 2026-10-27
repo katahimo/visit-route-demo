@@ -2,6 +2,7 @@
 import { useMemo, useState } from 'react';
 import type { ConfirmFn } from '../components/ConfirmDialog';
 import type { ToastAction, useToast } from '../components/Toast';
+import { saveArrangeBasis } from '../components/useArrangeBasis';
 import type { DemoData } from '../contracts/data';
 import { newId } from '../lib/common';
 import { mdText } from '../lib/dateText';
@@ -60,9 +61,11 @@ export function useStandardRegister(
     const presetId = draft.from;
     const at = Date.now();
     let changed = false;
+    let registered = null as DemoData | null;
     update((d) => {
       const next = registerStandard(d, table, since, today, { newId: () => newId('pattern'), temp, at, presetId });
       changed = next !== d;
+      registered = next;
       return next;
     }, '組み方の標準を登録');
     // 書き換える所が無かった（別のタブで同じ標準になった・いつからより前に終わる行だけ）ときは完了にしない
@@ -70,6 +73,8 @@ export function useStandardRegister(
       toast('書き換える所がありませんでした');
       return;
     }
+    // 標準で組んだときの基本情報を覚える（登録で分けた繰り返しのあとのデータ。ADR-0067）
+    if (registered) saveArrangeBasis(registered);
     setDraft(null, null);
     standardWork.set((w) => ({ ...w, registered: { since, at } }));
     closeEditing();

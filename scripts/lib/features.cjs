@@ -53,14 +53,14 @@ const TEMPLATE_LABEL = {
 };
 const asFeatures = (on) => Object.fromEntries(FEATURE_IDS.map((id) => [id, on.includes(id)]));
 
-/** メニューの最上位（6項目。予定・予定を組む・人・設定は畳める子の項目を持つ。PRD D349。ADR-0063） */
-const MENU = ['ホーム', '予定を組む', '予定', '空き状況', '人', '設定'];
-/** 予定を組むの子の項目の key（すべて入：組み方の標準・担当を組む。作業の順。条件の重みは子に入れない。ADR-0063・ADR-0066） */
-const ARRANGE_KIDS = ['arrange:standard', 'arrange:assign'];
-/** 組み方の標準を登録したあとの予定を組むの子（担当を組むだけ。標準の組み直しは担当を組むの見出しの［標準の組み方を変える］から） */
-const ARRANGE_KIDS_WITH_STANDARD = ['arrange:assign'];
-/** 人の子の項目（人のタブ。相性はどのひな形でも入） */
-const PEOPLE_KIDS = ['利用者さん', 'スタッフ', '相性', '勤務時間（シフト）'];
+/** メニューの最上位（5項目。予定・予定を組む・設定は畳める子の項目を持つ。「人」は無い。PRD D349・D361。ADR-0067） */
+const MENU = ['ホーム', '予定を組む', '予定', '空き状況', '設定'];
+/** 予定を組むの子の項目の key（すべて入：基本情報・組み方の標準・担当を組む。作業の順。条件の重みは子に入れない。ADR-0067） */
+const ARRANGE_KIDS = ['arrange:basics', 'arrange:clients', 'arrange:staff', 'arrange:standard', 'arrange:assign'];
+/** 組み方の標準を登録したあとの予定を組むの子（基本情報・担当を組む。標準の組み直しは担当を組むの見出しの［標準の組み方を変える］から） */
+const ARRANGE_KIDS_WITH_STANDARD = ['arrange:basics', 'arrange:clients', 'arrange:staff', 'arrange:assign'];
+/** 基本情報のタブ（人のタブ。先頭に「予定と相性」。相性はどのひな形でも入。ADR-0067） */
+const PEOPLE_KIDS = ['予定と相性', '利用者さん', 'スタッフ', '相性', '勤務時間（シフト）'];
 /** すべて入の画面の一覧（パレットの画面。メニューから外した画面も1つずつ。PRD D273・D275） */
 const ALL_SCREENS = [
   'ホーム',
@@ -71,6 +71,7 @@ const ALL_SCREENS = [
   '組み方の標準',
   '担当を組む',
   '空き状況',
+  '予定と相性',
   '利用者さん一覧',
   'スタッフ一覧',
   '相性',
@@ -149,9 +150,13 @@ async function menu(page, root = '.side-nav') {
       .evaluateAll((els) => els.map((el) => el.querySelector(':scope > span:not(.nav-badge)')?.textContent ?? '')),
     schedule: (kids.schedule ?? []).map((k) => k.key),
     arrange: (kids.arrange ?? []).map((k) => k.key),
-    people: (kids.people ?? []).map((k) => k.label),
     settings: (kids.settings ?? []).map((k) => k.label),
   };
+}
+/** 基本情報のタブ（#/basics を開いて読む。タブの名前の並び） */
+async function basicsTabs(page) {
+  await open(page, '/basics', '[data-testid="people-tabs"]');
+  return (await page.getByTestId('people-tabs').locator('a').allInnerTexts()).map((x) => x.trim());
 }
 /** パレットの候補（打つ前＝操作と画面） */
 async function paletteItems(page) {
@@ -230,6 +235,7 @@ module.exports = {
   storedFeatures,
   TOP_LINKS,
   menu,
+  basicsTabs,
   paletteItems,
   paletteSearch,
   applyTemplate,
