@@ -100,10 +100,15 @@ export function renameOption(d: DemoData, item: Item, from: string, to: string):
   );
   return mapItem(next, item.id, (i) => ({ ...i, options: i.options.map((o) => (o === from ? to : o)) }));
 }
-/** 選択肢を消す。入っている値から外し、条件からも外す（値が空になった・消した選択肢そのものだった条件は消す） */
+/**
+ * 選択肢を消す。入っている値から外し、条件からも外す（値が空になった・消した選択肢そのものだった条件は消す）。
+ * 最後の選択肢を消したら値は未確認（null）にする（選択肢の無い項目では「確認済みで1つもない」を Excel の
+ * 選択肢ごとの列で表せないため。ADR-0070）
+ */
 export function removeOption(d: DemoData, item: Item, opt: string): DemoData {
+  const last = item.options.length === 1 && item.options[0] === opt;
   let next = mapTraits(d, item.target, (t) =>
-    item.id in t ? { ...t, [item.id]: replaceOption(t[item.id], opt, null) } : t,
+    item.id in t ? { ...t, [item.id]: last ? null : replaceOption(t[item.id], opt, null) } : t,
   );
   // 残すと誰も満たさない条件になるので消す
   next = mapConds(next, item.target, (cs) =>

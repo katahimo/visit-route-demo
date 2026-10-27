@@ -63,12 +63,15 @@ function isActive(r: Rule): boolean {
   return r.weight > 0 || r.hard;
 }
 
+/** 条件を判定するのに使うもの：項目と、その日（開始年の項目の年数を数える。ADR-0070） */
+type CondLook = { items: Map<string, Item>; date: string };
+
 /** 条件1つの判定から理由を作る（満たせば points 0、満たさなければ ngPoints＝重み×10 か hard なら Infinity） */
 function condReasons(
   ruleId: string,
   ngPoints: number,
   conds: Condition[],
-  items: Map<string, Item>,
+  look: CondLook,
   target: 'staff' | 'client',
   traits: Traits,
   okLabel: (text: string) => string,
@@ -76,11 +79,11 @@ function condReasons(
   out: Reason[],
 ): void {
   for (const c of conds) {
-    const item = items.get(c.itemId);
+    const item = look.items.get(c.itemId);
     // 参照する項目がない（消された・相手側の項目でない）条件は無視する
     if (!item || item.target !== target) continue;
     const text = conditionText(c, item);
-    if (matches(c, item, traits[c.itemId])) {
+    if (matches(c, item, traits[c.itemId], look.date)) {
       out.push({ ruleId, label: okLabel(text), points: 0 });
     } else {
       out.push({ ruleId, label: ngLabel(text), points: ngPoints });
@@ -213,7 +216,7 @@ function pushRuleReasons(
   a: {
     s: Staff;
     client: Client;
-    items: Map<string, Item>;
+    look: CondLook;
     terms: CompileInput['org']['terms'];
     /** 相性（機能を切ったら 0） */
     level: number;
@@ -223,7 +226,7 @@ function pushRuleReasons(
     working: Set<string>;
   },
 ): void {
-  const { s, client, items, terms, level, usualStaffId, working } = a;
+  const { s, client, look, terms, level, usualStaffId, working } = a;
   const w = r.weight * POINTS_PER_WEIGHT;
   const ng = r.hard ? INF : w;
   switch (r.type) {
@@ -232,7 +235,7 @@ function pushRuleReasons(
         r.id,
         ng,
         client.requirements,
-        items,
+        look,
         'staff',
         s.traits,
         (t) => `必要条件：${t} ✓`,
@@ -245,7 +248,7 @@ function pushRuleReasons(
         r.id,
         ng,
         client.preferences,
-        items,
+        look,
         'staff',
         s.traits,
         (t) => `希望○ ${t}`,
@@ -258,7 +261,7 @@ function pushRuleReasons(
         r.id,
         ng,
         s.requirements,
-        items,
+        look,
         'client',
         client.traits,
         (t) => `${terms.staff}の必要条件：${t} ✓`,
@@ -271,7 +274,7 @@ function pushRuleReasons(
         r.id,
         ng,
         s.preferences,
-        items,
+        look,
         'client',
         client.traits,
         (t) => `${terms.staff}の希望○ ${t}`,
@@ -342,6 +345,7 @@ function pairReasons(ctx: PairContext, v: VisitSide, i: number): Reason[] {
   const s = staffDocs[i]!;
   const ps = staff[i]!;
   const out: Reason[] = [];
+  const look: CondLook = { items, date };
   if (!places[S + j]) out.push({ ruleId: 'noPlace', label: `${terms.client}の位置が未登録`, points: INF });
   if (!places[i]) out.push({ ruleId: 'noPlace', label: `${terms.staff}の自宅の位置が未登録`, points: INF });
   if (pv.earliest > pv.latest) out.push({ ruleId: 'time', label: '時間の約束の幅が正しくない', points: INF });
@@ -367,7 +371,7 @@ function pairReasons(ctx: PairContext, v: VisitSide, i: number): Reason[] {
       VISIT_TYPE_RULE_ID,
       INF,
       vType.requirements,
-      items,
+      look,
       'staff',
       s.traits,
       (t) => `種類（${vType.name}）：${t} ✓`,
@@ -384,7 +388,7 @@ function pairReasons(ctx: PairContext, v: VisitSide, i: number): Reason[] {
         : { ruleId: ALLOWED_STAFF_RULE_ID, label: `担当を限る：${limit.names} ✗`, points: INF },
     );
   }
-  for (const r of rules) pushRuleReasons(out, r, { s, client, items, terms, level, usualStaffId, working });
+  for (const r of rules) pushRuleReasons(out, r, { s, client, look, terms, level, usualStaffId, working });
   return out;
 }
 

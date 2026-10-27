@@ -1,10 +1,11 @@
 // 写した元：katahimo-dev/visit-route-poc @ a46e7db scripts/seedDemo.ts（visitsOf・overridesOf・manualRoutesOf）
 // Firebase に依存しない生成ロジック。同じ日付なら毎回同じ結果（乱数・現在時刻を使わない）。
 import type { Availability, Client, Staff, Visit } from '../contracts/documents';
-import type { Compat, Condition, Traits, TraitValue } from '../contracts/rules';
+import type { Compat, Condition, Traits } from '../contracts/rules';
 import { availabilityOf, type Slot, withinSlots } from '../domain/availability';
 import { addDays, hhmmToMinutes, minutesToHhmm, weekday } from '../domain/time';
-import { CLIENT_SEEDS } from './people';
+import { matches } from '../matching/conditions';
+import { CLIENT_SEEDS, INITIAL_ITEMS } from './people';
 
 const isWeekend = (date: string) => weekday(date) === 0 || weekday(date) === 6;
 const shiftBy = (hhmm: string, min: number) => minutesToHhmm(hhmmToMinutes(hhmm) + min);
@@ -26,27 +27,10 @@ const MANUAL_TRAVEL_MIN = 30;
 
 export const UNASSIGNED_KEY = '__none';
 
-/** 条件を満たすか（契約 rules.ts の意味。seed の内部用の最小実装） */
-function satisfies(c: Condition, traits: Traits): boolean {
-  const v: TraitValue | undefined = traits[c.itemId];
-  const want = c.value;
-  if (c.op === 'not') return v === undefined || v === null || JSON.stringify(v) !== JSON.stringify(want);
-  if (v === undefined || v === null) return false;
-  switch (c.op) {
-    case 'is':
-      return JSON.stringify(v) === JSON.stringify(want);
-    case 'in':
-      return Array.isArray(want) && typeof v === 'string' && want.includes(v);
-    case 'hasAny':
-      return Array.isArray(want) && Array.isArray(v) && want.some((w) => v.includes(w));
-    case 'hasAll':
-      return Array.isArray(want) && Array.isArray(v) && want.every((w) => v.includes(w));
-    case 'gte':
-      return typeof v === 'number' && typeof want === 'number' && v >= want;
-    case 'lte':
-      return typeof v === 'number' && typeof want === 'number' && v <= want;
-  }
-}
+const itemById = new Map(INITIAL_ITEMS.map((it) => [it.id, it]));
+/** 日付 date に条件を満たすか（seed の項目は INITIAL_ITEMS） */
+const satisfies = (c: Condition, traits: Traits, date: string) =>
+  matches(c, itemById.get(c.itemId), traits[c.itemId], date);
 
 /**
  * その日の訪問（同じ日なら毎回同じ）。平日は訪問先から日ごとに3か所前後が休み、土日は印のある訪問先。
@@ -107,6 +91,7 @@ function overridesOf(date: string, n: number, staff: Staff[]): Record<string, Sl
  * 必要条件・NG（相性×）・勤務時間は守るが、近さは見ないので遠回りになる
  */
 function manualRoutesOf(
+  date: string,
   n: number,
   visits: Visit[],
   staff: Staff[],
@@ -123,7 +108,7 @@ function manualRoutesOf(
     for (let j = 0; j < working.length; j++) {
       const s = working[(k * 3 + n + j) % working.length] as Staff;
       const slots = slotsOf.get(s.id) ?? [];
-      if (c?.requirements.some((r) => !satisfies(r, s.traits))) continue;
+      if (c?.requirements.some((r) => !satisfies(r, s.traits, date))) continue;
       if ((compat[v.clientId]?.[s.id] ?? 0) === -2) continue;
       const free = freeAt.get(s.id) ?? 0;
       const start = Math.max(
@@ -158,7 +143,7 @@ export function generateDay(date: string, visits: Visit[], staff: Staff[], clien
       availabilityOf(s, date, overrides[s.id] ? { slots: overrides[s.id] as Slot[] } : null).slots,
     ]),
   );
-  const manualRoutes = manualRoutesOf(n, visits, active, clientMap, compat, slotsOf);
+  const manualRoutes = manualRoutesOf(date, n, visits, active, clientMap, compat, slotsOf);
   const owner = new Map(
     Object.entries(manualRoutes).flatMap(([sid, ids]) =>
       sid === UNASSIGNED_KEY ? [] : ids.map((id) => [id, sid] as const),

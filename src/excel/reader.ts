@@ -3,25 +3,38 @@
 import ExcelJS from 'exceljs';
 import type { DemoData, ImportError } from '../contracts/data';
 import { graphemeCount, STAFF_ICON_MAX, STAFF_ICON_MAX_UNITS } from '../contracts/documents';
-import type { Condition, Item, ItemTarget, Traits } from '../contracts/rules';
+import type { Condition, Item, ItemTarget, Traits, TraitValue } from '../contracts/rules';
 import { nameKey, newId } from '../lib/common';
 import { normalizeEmail } from '../lib/mailto';
 import { normalizePostalCode } from '../lib/postalCode';
-import { CLIENT_POSTAL_COL, PREF_PREFIX, prefHeader, REQ_PREFIX, reqHeader, TRAIT_PREFIX, traitHeader } from './layout';
+import {
+  CLIENT_POSTAL_COL,
+  PREF_PREFIX,
+  prefHeader,
+  REQ_PREFIX,
+  reqHeader,
+  TRAIT_PREFIX,
+  type TraitCol,
+  traitCols,
+} from './layout';
 import {
   dateToTime,
   dateToYmd,
   FIXED_SHEETS,
   isTimeOnlyDate,
+  multiFromMarks,
+  NO_TEXTS,
   nfkc,
   parseConds,
   parseDateText,
+  parseMark,
   parseNumberText,
   parseTimeText,
   parseTrait,
   serialToDate,
   serialToTime,
   YES,
+  YES_TEXTS,
 } from './text';
 
 /** まとめて返すエラーの数の上限 */
@@ -232,8 +245,8 @@ export class Row {
     if (v === null || v === false) return false;
     if (v === true) return true;
     const t = nfkc(textOf(v));
-    if (['○', '◯', '〇', 'o', 'O', 'TRUE', 'true', 'はい'].includes(t)) return true;
-    if (['FALSE', 'false', 'いいえ', '×', '-'].includes(t)) return false;
+    if (YES_TEXTS.includes(t)) return true;
+    if (NO_TEXTS.includes(t)) return false;
     this.err(h, `「${YES}」か空で書いてください`);
     return false;
   }
@@ -376,15 +389,16 @@ export function uniqueName(row: Row, h: string, name: string, seen: Map<string, 
   else seen.set(key, row.n);
 }
 
-/** 特性・必要条件・希望の列を項目に結びつける */
+/** 特性・必要条件・希望の列を項目に結びつける（h はシートの見出しの文字） */
 export interface PersonCols {
-  traits: { h: string; item: Item }[];
+  traits: (TraitCol & { h: string })[];
   reqs: { h: string; item: Item }[];
   prefs: { h: string; item: Item }[];
 }
 /**
  * kinds：読む列の種類（種類のシートは必要条件だけ。ADR-0012）。読まない種類の見出しは知らない列として読まない。
- * requireAll：項目の列が無ければ止める（全体のブック）。名簿のブック（PRD D105）は false で、無い列はその値を今のままにする
+ * requireAll：項目の列が無ければ止める（全体のブック）。名簿のブック（PRD D105）は false で、無い列はその値を今のままにする。
+ * 選択肢から複数の選択肢ごとの列（ADR-0070）は、名簿でも1つでもあれば全部そろえる（一部だけでは値が決まらないため）
  */
 export function personCols(
   sheet: Sheet,
@@ -397,35 +411,81 @@ export function personCols(
   const out: PersonCols = { traits: [], reqs: [], prefs: [] };
   const other: ItemTarget = own === 'staff' ? 'client' : 'staff';
   const fixedKeys = new Set(fixed.map(headerKey));
+  const wanted = {
+    traits: kinds.includes('traits') ? items.filter((i) => i.target === own).flatMap(traitCols) : [],
+    reqs: kinds.includes('reqs')
+      ? items.filter((i) => i.target === other).map((item) => ({ header: reqHeader(item), item }))
+      : [],
+    prefs: kinds.includes('prefs')
+      ? items.filter((i) => i.target === other).map((item) => ({ header: prefHeader(item), item }))
+      : [],
+  };
   const prefixes = (
     [
-      ['traits', headerKey(TRAIT_PREFIX), own],
-      ['reqs', headerKey(REQ_PREFIX), other],
-      ['prefs', headerKey(PREF_PREFIX), other],
+      ['traits', headerKey(TRAIT_PREFIX)],
+      ['reqs', headerKey(REQ_PREFIX)],
+      ['prefs', headerKey(PREF_PREFIX)],
     ] as const
   ).filter(([kind]) => kinds.includes(kind));
   for (const { name, key } of sheet.headers) {
     if (fixedKeys.has(key)) continue;
     const hit = prefixes.find(([, p]) => key.startsWith(p));
     if (!hit) continue; // 知らない列は読まない（メモ書きの列など）
-    const [kind, prefix, target] = hit;
-    const itemKey = key.slice(prefix.length);
-    const item = items.find((i) => i.target === target && headerKey(i.name) === itemKey);
-    if (!item) {
-      sheet.errors.add(sheetMsg(sheet.name, `見出し『${name}』の項目が、シート『${FIXED_SHEETS.items}』にありません`));
+    const [kind] = hit;
+    if (kind === 'traits') {
+      const c = wanted.traits.find((x) => headerKey(x.header) === key);
+      if (c) out.traits.push({ ...c, h: name });
+      else
+        sheet.errors.add(
+          sheetMsg(sheet.name, `見出し『${name}』に合う項目・選択肢が、シート『${FIXED_SHEETS.items}』にありません`),
+        );
       continue;
     }
-    out[kind].push({ h: name, item });
+    const c = wanted[kind].find((x) => headerKey(x.header) === key);
+    if (c) out[kind].push({ h: name, item: c.item });
+    else
+      sheet.errors.add(sheetMsg(sheet.name, `見出し『${name}』の項目が、シート『${FIXED_SHEETS.items}』にありません`));
   }
   // 項目のシートにある項目の列が無ければ止める（列を消すと特性・条件が黙って消えるため）
-  for (const [kind, , target] of requireAll ? prefixes : []) {
-    const header = kind === 'traits' ? traitHeader : kind === 'reqs' ? reqHeader : prefHeader;
-    for (const it of items.filter((i) => i.target === target)) {
-      if (!out[kind].some((c) => c.item === it))
-        sheet.errors.add(`シート『${sheet.name}』に列『${header(it)}』がありません`);
+  const missing = (header: string) => sheet.errors.add(`シート『${sheet.name}』に列『${header}』がありません`);
+  for (const c of wanted.traits) {
+    if (out.traits.some((x) => x.header === c.header)) continue;
+    const partial = c.option !== null && out.traits.some((x) => x.item === c.item);
+    if (requireAll || partial) missing(c.header);
+  }
+  for (const kind of ['reqs', 'prefs'] as const) {
+    for (const c of requireAll ? wanted[kind] : []) {
+      if (!out[kind].some((x) => x.item === c.item)) missing(c.header);
     }
   }
   return out;
+}
+
+/** 1つの項目の特性の列から値を読む（空は undefined＝未確認。読めなければ行にエラーを出して undefined） */
+function readTrait(row: Row, item: Item, cols: PersonCols['traits']): TraitValue | undefined {
+  const cellOf = (h: string) => {
+    const v = row.raw(h);
+    return v === null ? '' : typeof v === 'number' || typeof v === 'boolean' ? v : textOf(v);
+  };
+  if (item.kind === 'multi') {
+    let bad = false;
+    const marks = item.options.map((o) => {
+      const c = cols.find((x) => x.option === o);
+      if (!c) return null;
+      const r = parseMark(cellOf(c.h));
+      if (r.ok) return r.value;
+      row.err(c.h, r.error);
+      bad = true;
+      return null;
+    });
+    return bad ? undefined : multiFromMarks(item, marks);
+  }
+  const c = cols[0];
+  if (!c) return undefined;
+  const r = parseTrait(item, cellOf(c.h));
+  if (r.ok) return r.value;
+  row.err(c.h, r.error);
+  return undefined;
 }
 
 export function readPerson(
@@ -433,12 +493,13 @@ export function readPerson(
   cols: PersonCols,
 ): { traits: Traits; requirements: Condition[]; preferences: Condition[] } {
   const traits = new Map<string, Traits[string]>();
-  for (const { h, item } of cols.traits) {
-    const v = row.raw(h);
-    const cell = v === null ? '' : typeof v === 'number' || typeof v === 'boolean' ? v : textOf(v);
-    const r = parseTrait(item, cell);
-    if (!r.ok) row.err(h, r.error);
-    else if (r.value !== undefined) traits.set(item.id, r.value);
+  for (const item of new Set(cols.traits.map((c) => c.item))) {
+    const v = readTrait(
+      row,
+      item,
+      cols.traits.filter((c) => c.item === item),
+    );
+    if (v !== undefined) traits.set(item.id, v);
   }
   const conds = (list: { h: string; item: Item }[], label: string) => {
     const out: Condition[] = [];

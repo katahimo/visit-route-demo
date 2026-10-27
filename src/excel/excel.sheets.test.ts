@@ -945,6 +945,70 @@ describe('名簿のブック（PRD D103〜D107。ADR-0020）', () => {
     expect(r.data.staff).toHaveLength(d.staff.length);
   });
 
+  it('資格は選択肢ごとの列で直せる（○・×・空。全部空は未確認。ADR-0070）', async () => {
+    const d = base();
+    const [a, b] = d.staff;
+    if (!a || !b) throw new Error('スタッフがいない');
+    const qual = d.items.find((i) => i.id === 'qualification');
+    if (!qual) throw new Error('資格の項目がない');
+    const r = rok(
+      await editRoster(d, 'staff', (ws) => {
+        const ra = ws.getRow(rowOf(ws, '名前', a.name));
+        const rb = ws.getRow(rowOf(ws, '名前', b.name));
+        for (const o of qual.options) {
+          ra.getCell(col(ws, `特性：資格：${o}`)).value = null;
+          rb.getCell(col(ws, `特性：資格：${o}`)).value = null;
+        }
+        // 印のある行の空の列は持たない
+        ra.getCell(col(ws, '特性：資格：看護師')).value = '〇';
+      }),
+    );
+    expect(r.data.staff.find((x) => x.id === a.id)?.traits.qualification).toEqual(['看護師']);
+    expect(r.data.staff.find((x) => x.id === b.id)?.traits).not.toHaveProperty('qualification');
+  });
+
+  it('選択肢ごとの列は、全部無ければ今の値のまま、一部だけなら止める（ADR-0070）', async () => {
+    const d = base();
+    const qual = d.items.find((i) => i.id === 'qualification');
+    if (!qual) throw new Error('資格の項目がない');
+    const r = rok(
+      await editRoster(d, 'staff', (ws) => {
+        for (const o of qual.options) ws.spliceColumns(col(ws, `特性：資格：${o}`), 1);
+      }),
+    );
+    expect(r.data.staff.map((s) => s.traits.qualification)).toEqual(d.staff.map((s) => s.traits.qualification));
+    const msg = rfail(
+      await editRoster(d, 'staff', (ws) => {
+        ws.spliceColumns(col(ws, '特性：資格：看護師'), 1);
+      }),
+    );
+    expect(msg).toContain('列『特性：資格：看護師』がありません');
+    const msg2 = rfail(
+      await editRoster(d, 'staff', (ws) => {
+        ws.getRow(2).getCell(col(ws, '特性：資格：保育士')).value = 'たぶん';
+      }),
+    );
+    expect(msg2).toContain('『特性：資格：保育士』：「○」（持つ）「×」（持たない）か空で書いてください');
+  });
+
+  it('経験年数は「（開始年）」の列に西暦で書く（ADR-0070）', async () => {
+    const d = base();
+    const s0 = d.staff[0];
+    if (!s0) throw new Error('スタッフがいない');
+    const r = rok(
+      await editRoster(d, 'staff', (ws) => {
+        ws.getRow(rowOf(ws, '名前', s0.name)).getCell(col(ws, '特性：経験年数（開始年）')).value = 2010;
+      }),
+    );
+    expect(r.data.staff[0]?.traits.experience).toBe(2010);
+    const msg = rfail(
+      await editRoster(d, 'staff', (ws) => {
+        ws.getRow(rowOf(ws, '名前', s0.name)).getCell(col(ws, '特性：経験年数（開始年）')).value = 12;
+      }),
+    );
+    expect(msg).toContain('始めた年を西暦で書いてください');
+  });
+
   it('ブックに無い列は今の値のまま', async () => {
     const d = base();
     const c0 = d.clients[0];
@@ -981,7 +1045,7 @@ describe('名簿のブック（PRD D103〜D107。ADR-0020）', () => {
         ws.getRow(1).getCell(ws.columnCount + 1).value = '特性：知らない項目';
       }),
     );
-    expect(msg2).toContain('見出し『特性：知らない項目』の項目が');
+    expect(msg2).toContain('見出し『特性：知らない項目』に合う項目・選択肢が');
   });
 
   it('ブックの中の同じ名前・同じ ID、当てたあとに他の人と重なる名前は止める', async () => {

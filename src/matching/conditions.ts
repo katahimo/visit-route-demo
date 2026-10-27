@@ -18,10 +18,23 @@ function sameValue(a: TraitValue, b: TraitValue): boolean {
   return a === b;
 }
 
-/** 相手の特性 value が条件を満たすか（項目がなければ false）。未入力（null）は not だけ満たす */
-export function matches(cond: Condition, item: Item | undefined, value: TraitValue | undefined): boolean {
+/** 開始年 startYear から、日付 date（YYYY-MM-DD）の年までの年数（年の引き算。始める前は 0。ADR-0070） */
+export function yearsSince(startYear: number, date: string): number {
+  return Math.max(0, Number(date.slice(0, 4)) - startYear);
+}
+
+/** 条件と比べる値：開始年の項目はその日までの年数、ほかは持つ値のまま */
+function comparable(item: Item, v: TraitValue, date: string): TraitValue {
+  return item.kind === 'startYear' && typeof v === 'number' ? yearsSince(v, date) : v;
+}
+
+/**
+ * 相手の特性 value が、日付 date に条件を満たすか（項目がなければ false）。未入力（null）は not だけ満たす。
+ * date は開始年の項目の年数を数えるのに使う
+ */
+export function matches(cond: Condition, item: Item | undefined, value: TraitValue | undefined, date: string): boolean {
   if (!item) return false;
-  const v = value ?? null;
+  const v = value === undefined || value === null ? null : comparable(item, value, date);
   if (cond.op === 'not') return v === null || !sameValue(v, cond.value);
   if (v === null) return false;
   switch (cond.op) {
@@ -46,17 +59,19 @@ export function matches(cond: Condition, item: Item | undefined, value: TraitVal
   }
 }
 
-function valueText(v: TraitValue): string {
+function plainText(v: TraitValue): string {
   if (v === null) return '未入力';
   if (typeof v === 'boolean') return v ? 'あり' : 'なし';
   if (Array.isArray(v)) return v.join('・');
   return String(v);
 }
 
-/** 条件の表示文（例：「資格に看護師を含む」「経験年数 3以上」「ペット可 あり」） */
+/** 条件の表示文（例：「資格に看護師を含む」「経験年数 3年以上」「ペット可 あり」） */
 export function conditionText(cond: Condition, item: Item | undefined): string {
   if (!item) return '（項目がありません）';
   const name = item.name;
+  // 開始年の項目の条件の値は年数
+  const valueText = (v: TraitValue) => (item.kind === 'startYear' && typeof v === 'number' ? `${v}年` : plainText(v));
   const list = asList(cond.value);
   switch (cond.op) {
     case 'is':

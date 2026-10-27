@@ -209,13 +209,20 @@ describe('吹き出しの中身', () => {
     expect(g.ng.map((c) => c.id)).toEqual(['b']);
   });
   it('特性の値の文字（空は「—」）', () => {
-    expect(traitText(true)).toBe('あり');
-    expect(traitText(false)).toBe('なし');
-    expect(traitText(['看護師', '介護福祉士'])).toBe('看護師・介護福祉士');
-    expect(traitText([])).toBe('—');
-    expect(traitText(null)).toBe('—');
-    expect(traitText(undefined)).toBe('—');
-    expect(traitText(3)).toBe('3');
+    const today = '2026-10-27';
+    expect(traitText({ kind: 'flag' }, true, today)).toBe('あり');
+    expect(traitText({ kind: 'flag' }, false, today)).toBe('なし');
+    expect(traitText({ kind: 'multi' }, ['看護師', '介護福祉士'], today)).toBe('看護師・介護福祉士');
+    expect(traitText({ kind: 'multi' }, [], today)).toBe('—');
+    expect(traitText({ kind: 'flag' }, null, today)).toBe('—');
+    expect(traitText({ kind: 'flag' }, undefined, today)).toBe('—');
+    expect(traitText({ kind: 'number' }, 3, today)).toBe('3');
+  });
+
+  it('開始年は today の年までの年数と開始年（ADR-0070）', () => {
+    expect(traitText({ kind: 'startYear' }, 2018, '2026-10-27')).toBe('8年（2018年から）');
+    expect(traitText({ kind: 'startYear' }, 2018, '2027-01-01')).toBe('9年（2018年から）');
+    expect(traitText({ kind: 'startYear' }, 2030, '2026-10-27')).toBe('0年（2030年から）');
   });
   it('曜日ごとの稼働時間（月〜日。勤務日でなければ null）', () => {
     const w = weeklyHours({ workDays: [0, 3], shiftStart: '09:00', shiftEnd: '17:30' });

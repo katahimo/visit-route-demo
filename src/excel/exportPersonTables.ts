@@ -13,26 +13,27 @@ import {
   STAFF_EMAIL_COL,
   STAFF_ICON_COL,
   STAFF_LAST_DAY_COL,
-  traitHeader,
+  traitCols,
 } from './layout';
-import { condsToCell, hhmmToCell, traitToCell, travelModeLabels, workDaysText, YES } from './text';
+import { condsToCell, hhmmToCell, traitToCells, travelModeLabels, workDaysText, YES } from './text';
 
 /** 特性・必要条件・希望の列（見出し・値・プルダウン）。base は前に並ぶ固定の列の数 */
 function personItemCols(base: number, own: Item[], other: Item[]) {
-  const headers = [...own.map(traitHeader), ...other.map(reqHeader), ...other.map(prefHeader)];
+  const traits = own.flatMap(traitCols);
+  const headers = [...traits.map((c) => c.header), ...other.map(reqHeader), ...other.map(prefHeader)];
   const lists: ListRule[] = [];
-  own.forEach((it, i) => {
-    const l = traitList(it, base + i + 1);
+  traits.forEach((c, i) => {
+    const l = traitList(c, base + i + 1);
     if (l) lists.push(l);
   });
   other.forEach((it, i) => {
-    for (const col of [base + own.length + i + 1, base + own.length + other.length + i + 1]) {
+    for (const col of [base + traits.length + i + 1, base + traits.length + other.length + i + 1]) {
       const l = condList(it, col);
       if (l) lists.push(l);
     }
   });
   const cells = (p: { traits: Traits; requirements: Condition[]; preferences: Condition[] }): CellIn[] => [
-    ...own.map((it) => traitToCell(it, Object.hasOwn(p.traits, it.id) ? p.traits[it.id] : undefined)),
+    ...own.flatMap((it) => traitToCells(it, Object.hasOwn(p.traits, it.id) ? p.traits[it.id] : undefined)),
     ...other.map((it) =>
       condsToCell(
         it,
