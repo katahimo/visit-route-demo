@@ -2669,7 +2669,8 @@ html[data-drawer-toast="side"] body:has(.drawer-wrap) .toast {
     display: contents;
   }
 }
-/* 〈利用者さん〉一覧の畳んだ絞り込み（PRD D220。狭い画面だけ出す） */
+/* 〈利用者さん〉一覧の畳んだ絞り込み（PRD D220。狭い画面だけ出す）・閉じた名簿の欄（ADR-0068） */
+.roster-card[hidden],
 .narrow-filter-body[hidden] {
   display: none;
 }

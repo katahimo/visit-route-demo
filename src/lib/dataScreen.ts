@@ -1,6 +1,6 @@
 // データの画面（PRD D227・D103〜D107・D209。ADR-0006・0020・0032）の文と判定の純粋関数。
-// 確認の本文・知らせの文・呼び方の入力の判定・Excel のファイル名を組み立てる。データの書き換えは画面が store で行う
-import type { DemoData, RosterImportResult, RosterKind, RosterMode } from '../contracts/data';
+// 確認の本文・知らせの文・呼び方の入力の判定・Excel・名簿（Excel・CSV。ADR-0068）のファイル名を組み立てる。データの書き換えは画面が store で行う
+import type { DemoData, RosterImportResult, RosterKind, RosterMode, RosterSource } from '../contracts/data';
 import type { TidyPreview } from './tidy';
 import { sizeText, tidyMonthLabel } from './tidy';
 
@@ -9,11 +9,11 @@ type KeepState = { kept: boolean; why: string | null };
 
 /**
  * 置き換える確認の本文に添える、1世代の控えの文（PRD D227。残せなければ理由）。
- * 控えは確認で OK になってから残すので、渡すのは見込み（canKeepPrevious）
+ * 控えは確認で OK になってから残すので、渡すのは見込み（canKeepPrevious）。place は「直前の状態に戻す」のある画面の呼び方
  */
-export const keepNote = (k: KeepState): string =>
+export const keepNote = (k: KeepState, place = 'この画面'): string =>
   k.kept
-    ? 'いまのデータは控えとして1つだけ残し、この画面の「直前の状態に戻す」で戻せます。'
+    ? `いまのデータは控えとして1つだけ残し、${place}の「直前の状態に戻す」で戻せます。`
     : `${k.why ?? '控えを残せません'}。`;
 
 /** 操作のあとの知らせに添える文：見込みに反して控えを残せなかったら理由（操作は止めない） */
@@ -46,11 +46,16 @@ export function workbookCountsText(
   return `${t.staff} ${r.staff.length}人・${t.client} ${r.clients.length}人・訪問 ${r.visits.length}件・項目 ${r.items.length}件・条件 ${r.rules.length}件`;
 }
 
-/** 書き出す Excel のファイル名。英字だけ（呼び方の文字を入れると、Chromium で保存名が「download」になったため） */
-export function excelFileName(kind: 'all' | RosterKind, date: string): string {
-  if (kind === 'all') return `visit-route-demo-${date}.xlsx`;
-  return `visit-route-demo-${kind === 'staff' ? 'staff' : 'clients'}-${date}.xlsx`;
-}
+/** 書き出す Excel（全体）のファイル名。英字だけ（呼び方の文字を入れると、Chromium で保存名が「download」になったため） */
+export const excelFileName = (date: string): string => `visit-route-demo-${date}.xlsx`;
+
+/** 書き出す名簿のファイル名（Excel か CSV。ADR-0068）。英字だけ（excelFileName と同じ理由） */
+export const rosterFileName = (kind: RosterKind, format: RosterSource['format'], date: string): string =>
+  `visit-route-demo-${kind === 'staff' ? 'staff' : 'clients'}-${date}.${format}`;
+
+/** 読んだ名簿のファイルの形の文（確認の本文に添える。CSV なら見分けた文字コード） */
+const rosterSourceText = (s: RosterSource): string =>
+  s.format === 'xlsx' ? 'Excel のブックとして読みました。' : `CSV（文字コード ${s.encoding}）として読みました。`;
 
 /** 名簿の読み込みで、足す・直す・終了／休止にする人がいるか */
 export const rosterHasChanges = (r: Pick<RosterImportResult, 'added' | 'updated' | 'retired'>): boolean =>
@@ -66,22 +71,24 @@ export function rosterConfirmBody(x: {
   term: string;
   how: string;
   summary: string;
+  source: RosterSource;
   keep: KeepState;
 }): string {
   return [
     ...(x.warning ? [x.warning, ''] : []),
-    `「${x.fileName}」の${x.term}の名簿を読み込みます（${x.how}）。`,
+    `「${x.fileName}」の${x.term}の名簿を読み込みます（${x.how}）。${rosterSourceText(x.source)}`,
     x.summary,
     '訪問の担当・確定（伝えた内容）・訪問はそのままです。',
-    keepNote(x.keep),
+    // 名簿は一覧の画面から読むので、戻す場所はデータの画面
+    keepNote(x.keep, 'データの画面'),
   ].join('\n');
 }
 
-/** 名簿を読み込んだあとの知らせ（最終勤務日の入った人がいれば Excel の欄に名前を出したと添える。PRD D209） */
+/** 名簿を読み込んだあとの知らせ（最終勤務日の入った人がいれば、一覧の「最終勤務日のある人」の欄で振り直せると添える。PRD D209） */
 export function rosterDoneText(x: { term: string; staffTerm: string; hasLastDay: boolean; keep: KeepState }): string {
   return (
     (x.hasLastDay
-      ? `${x.term}の名簿を読み込みました。最終勤務日の入った${x.staffTerm}がいます。Excel の欄に名前を出しました`
+      ? `${x.term}の名簿を読み込みました。最終勤務日の入った${x.staffTerm}がいます。「最終勤務日のある${x.staffTerm}」の欄から担当を振り直してください`
       : `${x.term}の名簿を読み込みました`) + keptSuffix(x.keep)
   );
 }

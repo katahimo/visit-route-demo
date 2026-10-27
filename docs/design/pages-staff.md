@@ -7,7 +7,8 @@
 
 - 見出し「〈スタッフ〉一覧」。題名の下に基本情報のタブ（`BasicsNav`。上に予定を組むの段（1 基本情報が今の段）。[pages.md](pages.md)・[pages-basics.md](pages-basics.md)。PRD D326・D362。ADR-0067）。右に主ボタン「〈スタッフ〉を追加」（`staff-add`。`#/staff/new` へのリンク）。名前の前は〈スタッフ〉の印（`StaffMark` の md。[pages.md](pages.md) の「〈スタッフ〉の印」）
 - 一覧の行（`staff-row`）はどこを押してもその人の画面（`#/staff/:id`。行の中のボタン・リンク・文字の選択は除く。PRD D308）。右端の「〈名前〉を開く」（`Eye`・`staff-open`）とスマホ画面へのリンク。`?id=` はその人の画面へ移る
-- 一覧の上に「最終勤務日のある〈スタッフ〉」のカード（`leaving-card`。振り直しが残っているか。「担当の振り直しを開く」`leaving-open`）
+- 見出しの右に「Excel・CSV」（`roster-toggle`）。押すと名簿の欄（[pages-clients.md](pages-clients.md)「名簿の欄」。`kind="staff"`）
+- 一覧の上に「最終勤務日のある〈スタッフ〉」のカード（`leaving-card`。振り直しが残っているか。「担当の振り直しを開く」`leaving-open`）。名簿の読み込みで最終勤務日が入った人もここに出る（トーストでこの欄を指す。PRD D209）
 - 一覧の状態に「最終 M/D」（`staff-lastday`）
 - 狭い画面（600px 以下。PRD D220）：一覧の表（`narrow-staff`）は1人を1枚のカードに（[pages.md](pages.md) の「狭い画面の表」）。1行目に名前と状態（休止中・最終 M/D）、続けて「勤務」・「特性」・「〈利用者さん〉に求めること」・「自宅の位置」、開く・スマホ画面は右下
 
