@@ -248,8 +248,8 @@ describe('ひな形（ADR-0028 の表）', () => {
 });
 
 describe('menuSections（ひな形ごとの項目。PRD D213・D275）', () => {
-  const labels = (f: Features) => menuSections(TODAY, f).flatMap((g) => g.items.map((i) => i.label));
-  const titles = (f: Features) => menuSections(TODAY, f).map((g) => g.title ?? null);
+  const labels = (f: Features) => menuSections(terms, TODAY, f).flatMap((g) => g.items.map((i) => i.label));
+  const titles = (f: Features) => menuSections(terms, TODAY, f).map((g) => g.title ?? null);
   const screens = (f: Features) => screenSections(terms, f).flatMap((g) => g.items.map((i) => i.label));
   it('すべて：5項目（{} と同じ。欠勤・キャンセルは予定の子、人の項目は予定を組むの基本情報。PRD D326・D349・D364。ADR-0063・ADR-0067）', () => {
     expect(labels(applyTemplate('all'))).toEqual(labels({}));
@@ -257,7 +257,7 @@ describe('menuSections（ひな形ごとの項目。PRD D213・D275）', () => {
   });
   it('欠勤・キャンセルを切ると予定の子から消える', () => {
     const kids = (f: Features) =>
-      menuSections(TODAY, f)
+      menuSections(terms, TODAY, f)
         .flatMap((g) => g.items)
         .find((i) => i.key === 'schedule')
         ?.children?.map((i) => i.key);
@@ -307,13 +307,13 @@ describe('menuSections（ひな形ごとの項目。PRD D213・D275）', () => {
     expect(screens({})).toContain('相性');
   });
   it('下のタブは欠勤・キャンセルを切ると減る（空き状況は下のタブに出さない。PRD D336）', () => {
-    expect(bottomTabs(menuSections(TODAY, {})).map((t) => t.key)).toEqual(['home', 'schedule', 'absence']);
-    expect(bottomTabs(menuSections(TODAY, { vacancy: false })).map((t) => t.key)).toEqual([
+    expect(bottomTabs(menuSections(terms, TODAY, {})).map((t) => t.key)).toEqual(['home', 'schedule', 'absence']);
+    expect(bottomTabs(menuSections(terms, TODAY, { vacancy: false })).map((t) => t.key)).toEqual([
       'home',
       'schedule',
       'absence',
     ]);
-    expect(bottomTabs(menuSections(TODAY, { sudden: false, vacancy: false })).map((t) => t.key)).toEqual([
+    expect(bottomTabs(menuSections(terms, TODAY, { sudden: false, vacancy: false })).map((t) => t.key)).toEqual([
       'home',
       'schedule',
     ]);
@@ -356,7 +356,7 @@ const homeInput = (features: Features = {}) => ({
 
 describe('表の整合（メニュー・パレット・ホーム・ツアー・links の行き先が、土台か表のどれかに属する）', () => {
   it('メニューの項目', () => {
-    for (const g of menuSections(TODAY, {})) for (const i of g.items) expect(belongs(i.to), i.to).toBe(true);
+    for (const g of menuSections(terms, TODAY, {})) for (const i of g.items) expect(belongs(i.to), i.to).toBe(true);
     for (const g of screenSections(terms, {})) for (const i of g.items) expect(belongs(i.to), i.to).toBe(true);
   });
   it('パレットの操作', () => {

@@ -67,3 +67,10 @@
 - 実装：`lib/nav`（段・メニュー・画面の一覧・`BASICS_PATHS`）・`lib/standardDraft`（`StandardStep`）・`lib/basicsView`（新）・`lib/arrangeBasis`（新）・`store/arrangeBasis`（新）・`lib/scheduleMode`（`menuBadges`）・`components/SettingsTabs`（`ArrangeSteps`・`BasicsNav`）・`pages/BasicsPage`（新）・`StandardPage`・`standardSteps`・`ArrangePage`・`arrangeParts`・`useArrangeStart`・`compareParts`・人のタブの画面・`components/scheduleParts`（反映で鍵を覚える）・`useStandardRegister`・`app/App`・e2e
 - 設計書：design.md・design/pages.md・pages-arrange.md・pages-standard.md・prd.md（D361〜D364。D349・D360 を直す）
 - 見直す条件：〈利用者さん〉一覧・〈スタッフ〉一覧をメニューから直接開きたい声が多ければ、予定を組むの子に足す
+
+## 追記（2026-10-27）：〈利用者さん〉一覧・〈スタッフ〉一覧を予定を組むの子にも出す
+- 利用者の声：〈利用者さん〉一覧・〈スタッフ〉一覧は予定を組むの下に直接あるほうが便利。メニューには場所も十分ある
+- 決定（利用者が決めた）：予定を組むの子を 基本情報・〈利用者さん〉一覧・〈スタッフ〉一覧・（組み方の標準）・担当を組む にする。一覧と〈利用者さん〉・〈スタッフ〉の画面では一覧の子に印、基本情報は予定と相性・相性・勤務時間（シフト）・勤務の見込みで印。基本情報のタブは今のまま（一覧もタブに残す）
+- 得るもの：よく開く一覧が1手で開ける（「失うもの」の1つ目が無くなる）
+- 失うもの：予定を組むの子が5つ（標準があれば4つ）になり、メニューが縦に少し長くなる
+- 影響：`lib/nav`（`menuSections` の子・印）・e2e（nav・schedule-v4・features）・design/pages.md・prd.md（D364）

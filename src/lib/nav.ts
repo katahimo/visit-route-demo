@@ -270,7 +270,7 @@ export const scheduleHref = (last?: string | null): string =>
  * 「予定」「予定を組む」「設定」は畳める子の項目を持つ（既定は設定だけ畳む。今の画面の親はいつも開く）。
  * 「予定」の子：今日の予定（今日の日の予定）・◯月の予定（月の後半は来月、前半は今月の月の予定）・欠勤・キャンセル（今日の日の予定で
  * 欠勤・キャンセルの欄を開く）。親を押すと最後に開いた表示（既定は日の予定）。「予定を組む」の子：基本情報（人の項目。
- * 基本情報のタブの画面と〈利用者さん〉・〈スタッフ〉の画面に印）・組み方の標準（標準が無いときだけ）・担当を組む
+ * 基本情報のタブの画面に印）・〈利用者さん〉一覧・〈スタッフ〉一覧（その画面に印。ADR-0067 追記）・組み方の標準（標準が無いときだけ）・担当を組む
  * （作業の順。条件の重みは組み方の標準の寄り道。ADR-0066・ADR-0067）。
  * 「設定」の子は設定のタブ。親を押すと最後に開いたタブ。
  * 案を比べるは担当を組むから開く（メニュー・パレットには出さない）。
@@ -278,6 +278,7 @@ export const scheduleHref = (last?: string | null): string =>
  * features で切った機能の項目は出さない（lib/features の表から引く）
  */
 export function menuSections(
+  terms: Pick<Terms, 'client' | 'staff'>,
   today: string,
   features: Features,
   last: LastViews = {},
@@ -309,8 +310,14 @@ export function menuSections(
     to: '/basics',
     label: '基本情報',
     icon: 'people',
-    match: BASICS_PATHS,
+    // 〈利用者さん〉一覧・〈スタッフ〉一覧はすぐ下の子に印（ADR-0067 追記）
+    match: BASICS_PATHS.filter((p) => p !== '/clients' && p !== '/staff'),
   };
+  // よく開く一覧は基本情報のタブだけでなく子にも出す（〈利用者さん〉・〈スタッフ〉の画面もここに印。ADR-0067 追記）
+  const listChildren: MenuItem[] = [
+    { key: 'arrange:clients', to: '/clients', label: `${terms.client}一覧`, icon: 'clients' },
+    { key: 'arrange:staff', to: '/staff', label: `${terms.staff}一覧`, icon: 'staff' },
+  ];
   const standardChild: MenuItem = {
     key: 'arrange:standard',
     to: '/standard',
@@ -320,6 +327,7 @@ export function menuSections(
   };
   const arrangeChildren: MenuItem[] = [
     basicsChild,
+    ...listChildren,
     ...(badges.hasStandard ? [] : [standardChild]),
     {
       key: 'arrange:assign',

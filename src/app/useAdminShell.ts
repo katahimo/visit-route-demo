@@ -47,8 +47,8 @@ export function useShellNav(data: DemoData, pathname: string) {
   const basisChanged = useBasisChanged(data);
   const badges = useMemo(() => ({ ...menuBadges(data, today), basisChanged }), [data, today, basisChanged]);
   const groups = useMemo(
-    () => menuSections(today, features, { schedule: lastSchedule, settings: lastSettings }, badges),
-    [today, features, lastSchedule, lastSettings, badges],
+    () => menuSections(terms, today, features, { schedule: lastSchedule, settings: lastSettings }, badges),
+    [terms, today, features, lastSchedule, lastSettings, badges],
   );
   // 画面の一覧（メニューから外した画面も1つずつ）：上の帯の名前・パレットの画面（PRD D273・D275）
   const screens = useMemo(() => screenSections(terms, features), [terms, features]);

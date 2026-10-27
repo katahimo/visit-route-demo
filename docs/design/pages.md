@@ -160,7 +160,7 @@
 |---|---|
 | ホーム（`home`・`/home`。short「ホーム」） | なし |
 | 予定（`schedule`・`scheduleHref(last.schedule)`＝最後に開いた `/month`・`/week`・`/plan`、無ければ `/plan`。short「予定」。`match`＝`SCHEDULE_PATHS`：月・週・日） | 下の3つ |
-| 予定を組む（`arrange`・`/arrange`。short「組む」。`match`＝`ARRANGE_PATHS`：`BASICS_PATHS`・条件の重み・組み方の標準・担当を組む・比較） | 基本情報（`arrange:basics`・`/basics`・`match`＝`BASICS_PATHS`。アイコンは `people`）・組み方の標準（`arrange:standard`・`/standard`・`match` 組み方の標準・条件の重み。`badges.hasStandard` なら出さない）・担当を組む（`arrange:assign`・`/arrange?ym=<planYm(today)>`・`match` 担当を組む・比較（標準があれば組み方の標準・条件の重みも）・件数の印「変更」（`badges.basisChanged`。title「基本情報が最後に組んだあとに変わった（組み直す）」）か「N日」） |
+| 予定を組む（`arrange`・`/arrange`。short「組む」。`match`＝`ARRANGE_PATHS`：`BASICS_PATHS`・条件の重み・組み方の標準・担当を組む・比較） | 基本情報（`arrange:basics`・`/basics`・`match`＝`BASICS_PATHS` から一覧を除いたもの。アイコンは `people`）・〈利用者さん〉一覧（`arrange:clients`・`/clients`。〈利用者さん〉の画面も）・〈スタッフ〉一覧（`arrange:staff`・`/staff`。〈スタッフ〉の画面も。ADR-0067 追記）・組み方の標準（`arrange:standard`・`/standard`・`match` 組み方の標準・条件の重み。`badges.hasStandard` なら出さない）・担当を組む（`arrange:assign`・`/arrange?ym=<planYm(today)>`・`match` 担当を組む・比較（標準があれば組み方の標準・条件の重みも）・件数の印「変更」（`badges.basisChanged`。title「基本情報が最後に組んだあとに変わった（組み直す）」）か「N日」） |
 | 空き状況（`vacancy`・`/vacancy`。short「空き状況」） | なし |
 | 設定（`settings`・`settingsHref(features, last.settings)`＝最後に開いた設定のタブ、無ければ先頭の訪問の種類。`match`＝切っていない設定のタブ） | 設定のタブ（`settingsTabs`。key `settings:<to>`） |
 

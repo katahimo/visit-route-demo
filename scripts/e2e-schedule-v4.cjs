@@ -57,7 +57,7 @@ async function menu(page) {
     JSON.stringify(kids) ===
       JSON.stringify({
         schedule: ['today', 'month-view', 'absence'],
-        arrange: ['arrange:basics', 'arrange:standard', 'arrange:assign'],
+        arrange: ['arrange:basics', 'arrange:clients', 'arrange:staff', 'arrange:standard', 'arrange:assign'],
       }) && (await page.locator('.side-nav [data-key="people"]').count()) === 0,
     '予定の子は今日の予定・◯月の予定・欠勤・キャンセル、予定を組むの子は基本情報・組み方の標準・担当を組む（ADR-0067）。メニューに「人」は無い',
     kids,
@@ -91,8 +91,8 @@ async function menu(page) {
   await tabs.locator('[data-tab="clients"]').click();
   await page.waitForURL(/#\/clients$/);
   check(
-    JSON.stringify(await current(page)) === JSON.stringify(['arrange:basics']),
-    '〈利用者さん〉一覧でもメニューの子「基本情報」が今の画面',
+    JSON.stringify(await current(page)) === JSON.stringify(['arrange:clients']),
+    '〈利用者さん〉一覧はメニューの子「利用者さん一覧」が今の画面（ADR-0067 追記）',
     await current(page),
   );
   check(

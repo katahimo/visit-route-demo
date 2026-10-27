@@ -86,7 +86,7 @@ const LABELS = ['ホーム', '予定を組む', '予定', '空き状況', '設�
  */
 const KIDS = {
   schedule: ['today', 'month-view', 'absence'],
-  arrange: ['arrange:basics', 'arrange:standard', 'arrange:assign'],
+  arrange: ['arrange:basics', 'arrange:clients', 'arrange:staff', 'arrange:standard', 'arrange:assign'],
   settings: ['settings:/types', 'settings:/items', 'settings:/settings', 'settings:/data'],
 };
 /** メニューの最上位の項目（子の無い項目と、畳める親の行の項目） */
@@ -310,8 +310,8 @@ async function menu(page) {
   );
   await open(page, '/clients');
   check(
-    JSON.stringify(await current()) === '["arrange:basics"]' && (await parentOn('arrange')),
-    'aria-current：〈利用者さん〉一覧は予定を組むの子「基本情報」（親の「予定を組む」は has-current）',
+    JSON.stringify(await current()) === '["arrange:clients"]' && (await parentOn('arrange')),
+    'aria-current：〈利用者さん〉一覧は予定を組むの子「利用者さん一覧」（親の「予定を組む」は has-current。ADR-0067 追記）',
     await current(),
   );
   check(
@@ -1136,7 +1136,7 @@ async function menuWithStandard(page) {
     .locator('[data-parent="arrange"] > .nav-sub > .nav-link.nav-child')
     .evaluateAll((els) => els.map((e) => e.dataset.key));
   check(
-    JSON.stringify(kids) === '["arrange:basics","arrange:assign"]',
+    JSON.stringify(kids) === '["arrange:basics","arrange:clients","arrange:staff","arrange:assign"]',
     '標準がある：予定を組むの子は基本情報・担当を組むだけ',
     kids,
   );
@@ -1203,7 +1203,8 @@ async function menuWithStandard(page) {
     .locator('[data-parent="arrange"] > .nav-sub > .nav-link.nav-child')
     .evaluateAll((els) => els.map((e) => e.dataset.key));
   check(
-    JSON.stringify(kids0) === '["arrange:basics","arrange:standard","arrange:assign"]',
+    JSON.stringify(kids0) ===
+      '["arrange:basics","arrange:clients","arrange:staff","arrange:standard","arrange:assign"]',
     '標準が無い：予定を組むの子は基本情報・組み方の標準・担当を組む',
     kids0,
   );
