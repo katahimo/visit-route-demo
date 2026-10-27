@@ -43,6 +43,7 @@ src/
 .github/workflows/e2e.yml … PR・手動・夜間の速い検査（lint・型・check:code・vitest）と e2e（4つに分けて並列）・perf（ADR-0029）。Playwright の版を上げるときはイメージの版も上げる
 e2e/ … @playwright/test の spec（scripts/e2e-*.cjs の段を test.step で回す。ADR-0041）
 scripts/ … e2e のスクリプト（e2e-*.cjs）と共通の部品（lib/）
+gas/ … メールの予約送信の Google Apps Script のひな型（Code.gs）と手順（README.md）。やりとりの正は src/contracts/mailSchedule.ts（ADR-0067）
 code-rules.json・code-rules.baseline.json … コードの検査（npm run check:code）の決まりと、今ある違反の基準
 docs/ … README.md（索引）/ prd.md / design.md / design/（画面の詳細）/ adr/
 ```
@@ -60,6 +61,7 @@ docs/ … README.md（索引）/ prd.md / design.md / design/（画面の詳細�
 - e2e の環境変数（どのスクリプトも同じ。読むのは共通の部品 `scripts/lib/env.cjs`）：`BASE` は開くサイト（既定 `http://localhost:4183/`）、`OUT_DIR` はスクリーンショットの置き場所（既定は OS の一時フォルダの `e2e-<名前>`。止まったときは `<名前>-fail-<段階>.png`）、`FAKE_NOW` はページの時計を止める時刻（ISO 8601。既定は次の水曜の日本時間 12:00。テストの「今日」もアプリと同じく日本時間で決めるので、日曜に実行しても今週に動かし先の日が残る。`npm run e2e` では設定ファイルが1回だけ決めて全部の worker にそろえる）、`CHROMIUM` は Chromium の実行ファイル、`PLAYWRIGHT` は Playwright のモジュールの場所（単独で走らせるとき。既定は `require('playwright')`、無ければ `/opt/node22/lib/node_modules/playwright`）、`PERF_MS_COMPAT`・`PERF_MS_NAV`・`PERF_MS_PROGRESS`・`PERF_MS_VACANCY`・`PERF_MS_DETAILS` は速さの上限（ミリ秒。無ければ `PERF_MS`）。以下、各スクリプトで何を確かめるか
 - 訪問の詳細の欄の確認（PRD D301〜D305。ADR-0051。日の予定の時間軸の帯の詳細の「詳細・変更」で開く・中身（日時・担当・繰り返し・主ボタンは保存の1つ）・Tab が中で回る・Esc でフォーカスは帯、日時と担当を同時に変えて保存（担当は今の案で固定・フォーカスは開いた帯・トーストの「元に戻す」）、繰り返しの回の「この回だけ／これ以降／すべて」、当日キャンセルと取り消しをやめる、週の帯・月の〈利用者さん〉の右の欄のリンクの先（その人の予定の月）の回・日の予定の一覧の行の「開く」（鉛筆なし）から同じ欄、「その他 ▾」の「訪問を追加」（新規・最初の欄へフォーカス・担当の候補・閉じると足した訪問か「その他」）、ホームの今日の訪問・いつでもの「訪問を追加」、コマンドパレットの「名前 日付」で画面を移らずに開く・操作「訪問を追加」、390px（日ごとのリストの行から下から出る欄・日時の変更なし・担当替えと取り消しは大きなボタンからできる・はみ出さない・「訪問を追加」は押せない）、印刷で出さない。スクリーンショット plan-band・scope・week・new・narrow）：`scripts/e2e-visit-panel.cjs`
 - ドラッグの確認（本物のマウス操作。6種類。週の帯を落とすと訪問の詳細の欄が落とした日時で開く。週の〈利用者さん〉で見るの初期値（先頭8人のチップ・URL に書かない・9人目の上限の文・「全部外す」「先頭8人に戻す」）も）：`scripts/e2e-drag.cjs`
+- メールの予約送信（管理者設定でつなぐ・接続を試す・予約して確定・予約済み・取り消す・つないでいなければ案内だけ）：`scripts/e2e-mail-schedule.cjs`（GAS は page.route の偽の応答に差し替え、外へは出さない）
 - 住所の入力の確認（〈利用者さん〉・空き状況の場所・〈スタッフ〉の自宅。送るもの・郵便番号の正規化・候補と元に戻す・失敗と時間切れ・連打・閉じる・途中の書き換え・空き状況の計算と仮押さえ・自宅の郵便番号を保存しない）：`scripts/e2e-address.cjs`（外部の検索は page.route の偽の応答に差し替え、外へは出さない。時間切れを待つので1分ほどかかる）
 - 相性の画面の確認（名前・吹き出しの開閉とフォーカス・中を巻く・絞り込みと URL の復元・`?id=`・回帰・300人×60人の速さ）：`scripts/e2e-compat.cjs`（`PERF_MS_COMPAT` でセルを押して描き終わるまでの上限（既定 100ms））
 - 予定の名前から開く詳細の確認（月・週・日の名前とチップ・列の見出しの i：吹き出しの開閉とフォーカス・同時に1つ・同じ人が2か所に出るとき・見出しが消えたら閉じる・戻るで見出しの人が替わったら閉じる・開いている人がデータから消えたら閉じる・リンクでその人の画面（`#/staff/:id`・`#/clients/:id`）・i を押してもチップや見出しの動きが起きない・帯とカードの選択とドラッグ・印刷で i を出さない・開くまでの速さ）：`scripts/e2e-details.cjs`（`PERF_MS_DETAILS` で吹き出しが出るまでの上限（既定 100ms））
@@ -92,7 +94,7 @@ docs/ … README.md（索引）/ prd.md / design.md / design/（画面の詳細�
 - ルーティングは HashRouter（Pages のサブパスで再読込しても 404 にしない）
 - 再現性：solver・matching・evaluate・seed に `Math.random`・`Date.now` を入れない。乱数は seed 付き、止めるのは反復回数
 - 費用は「分」に換算する（design.md §5 の表）。solver と evaluate は同じ `Problem` を使い、合計点を一致させる
-- 外部送信は地図タイルの取得と、利用者がボタンを押したときの郵便番号・住所の検索（`src/lib/geocode.ts` の1か所。ADR-0016）だけ。解析・ログ送信を入れない
+- 外部送信は地図タイルの取得と、利用者がボタンを押したときの郵便番号・住所の検索（`src/lib/geocode.ts` の1か所。ADR-0016）と、日の予定のメールの予約送信（押したときに事業所自身の Google Apps Script へ。`src/lib/mailSchedule.ts` の1か所。ADR-0067）だけ。解析・ログ送信を入れない
 - リンク（Google マップの Maps URLs）・mailto は、押すのが人でアプリは送らないので外部送信に当たらない（ADR-0017・0018）
 - 同梱するデータは架空のものだけ。公開リポジトリに実在の人・住所・パスワード・キーを置かない
 - 画面：主ボタン（濃い朱）は画面に1つ（多くて2つ）。呼び方は `org.terms` から引き、「お客様」「シッター」を直書きしない。表記は常用漢字

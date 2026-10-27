@@ -306,6 +306,8 @@
 
 `mailto:` で端末のメールアプリを開く（送信は人が押す）。道順は公開の Maps URLs を作るだけ（キー・サーバーなし。アプリからは送らない）。データは書き換えない。どのボタンも主ボタンにしない。
 
+日の予定のメールの欄には、管理者設定で事業所の Google Apps Script をつないでいれば枠「Google で予約して送る」（`pages/mailReserve`・data-testid `mail-reserve`）を出す（PRD D362〜D364。ADR-0067）：説明の文（前日の送る時刻・人数・本文は全文・予約すると確定）、預けた日は `mail-reserved`（「予約済み」か「送信の時刻を過ぎました」・時刻・人数）、ボタン `mail-reserve-send`（枠。「N人分を予約して確定」／確定済みは「N人分を予約する」／預けた日は「予約し直す」。過ぎた日・アドレスのある人がいなければ押せず理由）と `mail-reserve-cancel`（文字。確認つき）。つないでいなければ `mail-reserve-off`（管理者設定へのリンク）だけ。失敗は知らせに `mailScheduleMessage`
+
 #### `lib/mailto.ts`（純粋関数）
 
 - `normalizeEmail`：全角・空白・「mailto:」を直す。形が合わなければ null
