@@ -157,10 +157,11 @@ async function tourFirst(b) {
       check(
         (await page.getByTestId('tour-title').innerText()) === '予定を組んで、直して、確定します' &&
           (await page.getByTestId('tour-body').innerText()).includes('［月｜週｜日］') &&
-          (await page.getByTestId('tour-body').innerText()).includes('「予定を組む」') &&
+          // 初めて開くと機能は「基本」（エキスパート機能は切）なので、組むのは担当を組む画面（ADR-0072）
+          (await page.getByTestId('tour-body').innerText()).includes('［この日の担当を組む］') &&
           points.length === 3 &&
           /^組む（AI）：/.test(points[0]) &&
-          points[0].includes('「予定を組む」の「担当を組む」') &&
+          points[0].includes('担当を組む画面') &&
           /^ピン：/.test(points[1]) &&
           /^確定（伝えた）：/.test(points[2]),
         'ツアー：予定の枚は題名「予定を組んで、直して、確定します」・［月｜週｜日］と3段（組む（AI）→ ピン → 確定（伝えた））の説明',
@@ -286,7 +287,7 @@ async function tourStart(b) {
   d = await data();
   const f1 = d?.org?.features ?? {};
   check(
-    Object.values(f1).length === 20 && Object.values(f1).every((v) => v === true),
+    Object.values(f1).length === 21 && Object.values(f1).every((v) => v === true),
     '「すべて」を選んで「次へ」で、すべての機能を入れる',
     f1,
   );

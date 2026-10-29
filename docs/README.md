@@ -114,6 +114,7 @@ AI・人が「何を知りたいときに、どのファイルを読むか」を
 | [0069](adr/0069-scheduled-mail-via-org-gas.md) | 日の予定のメールを、事業所の Google Apps Script に確定のときにまとめて預け、前日の決めた時刻に送る（mailto は残す） |
 | [0070](adr/0070-trait-columns-per-option-and-start-year.md) | Excel・CSV の選択肢から複数の特性を選択肢ごとの列（○・×）にし、経験年数を開始年で持つ（条件はその日までの年数） |
 | [0071](adr/0071-cloudflare-workers-hosting.md) | 公開先を GitHub Pages から Cloudflare Workers（静的アセット）に移す（GitHub Actions＋wrangler。リポジトリを非公開にできる） |
+| [0072](adr/0072-auto-arrange-on-input-expert-features.md) | 希望日時を入れたら入れた分だけ自動で組み（即反映・元に戻す）、組み方の標準・案比べ・条件の重み・予定を組むをエキスパート機能（`expert`）にする。ベビーシッター型は単発のみのひな形 |
 
 ## 文書の保ち方
 

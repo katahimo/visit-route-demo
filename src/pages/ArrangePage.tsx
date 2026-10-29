@@ -1,8 +1,9 @@
 // 担当を組む（#/arrange。ADR-0063）：AI で担当を組むのはこの画面と組み方の標準だけ。予定（月・週・日）は手で直す。
 // 範囲（月・週・日）を選び、選んだ範囲の担当なし・要対応を見て、「AI で組む」で範囲の提案を出す（lib/monthBatch。画面の外で計算し、
 // ほかの画面へ移っても続く。ADR-0042）。提案は範囲の提案の帯で見て［反映する］［捨てる］（反映は全体の「元に戻す」で1手戻る）。
-// いつも点数の基準（標準の考え方）で組む。組み方の標準が無い間は組まず、組み方の標準へ案内する（ADR-0065）。
-// 日を選んで「案を比べる」（#/compare）へ移れる。
+// いつも点数の基準（標準の考え方）で組む。エキスパート機能が入で組み方の標準が無い間は組まず、組み方の標準へ案内する（ADR-0065）。
+// エキスパート機能が切なら、標準が無くても点数の基準のプリセットで組む（標準・案を比べるへの入口は出さない。ADR-0072）。
+// 日を選んで「案を比べる」（#/compare）へ移れる（案を比べるが使えるとき）。
 // 基本情報（予定・相性・勤務時間）が最後に組んだあとに変われば、上に知らせと［組み直す］（ADR-0067）
 import { CalendarCheck, Sparkles } from 'lucide-react';
 import { useId, useMemo, useState } from 'react';
@@ -16,7 +17,7 @@ import { useDayStatuses } from '../components/useDayStatuses';
 import { useFeature } from '../components/useFeature';
 import { useValueStore } from '../components/valueStore';
 import { jstDate } from '../domain/time';
-import { rangeCounts, scopeOf } from '../lib/arrange';
+import { needsStandard, rangeCounts, scopeOf } from '../lib/arrange';
 import { mdText, monthLabel } from '../lib/dateText';
 import { type BatchMode, batchTargets } from '../lib/month';
 import { type BatchSource, monthBatch, weekLabel } from '../lib/monthBatch';
@@ -35,6 +36,7 @@ export default function ArrangePage() {
   const compileInput = useCompileInput(data);
   const [params, setParams] = useSearchParams();
   const compareOn = useFeature('compare');
+  const expert = useFeature('expert');
   const ids = useId();
   const today = jstDate(Date.now());
   const { scope, ym, at } = scopeOf(params, today);
@@ -57,8 +59,8 @@ export default function ArrangePage() {
 
   /** 考え方：いつも点数の基準（替えるのは組み方の標準の案をくらべる（と寄り道の条件の重み）。ADR-0065・ADR-0066） */
   const basisName = scorePresetOf(data.presets, data.scorePresetId)?.name ?? '今の重み';
-  /** 組み方の標準がまだ無い（範囲にかかわらず AI で組まない。PRD D356） */
-  const needStandard = !hasStandard(data);
+  /** 組み方の標準がまだ無い（範囲にかかわらず AI で組まない。PRD D356。門はエキスパート機能が入のときだけ。D377） */
+  const needStandard = needsStandard(expert, hasStandard(data));
 
   /** 基本情報が最後に組んだあとに変わった（ADR-0067） */
   const basisChanged = useBasisChanged(data);
@@ -99,7 +101,7 @@ export default function ArrangePage() {
         title="担当を組む"
         lead="範囲を選んで AI で担当を組み、提案を見て反映します。予定（月・週・日）では手で直します"
         actions={
-          needStandard ? undefined : (
+          needStandard || !expert ? undefined : (
             <Link
               to="/standard"
               className="btn"
@@ -112,7 +114,7 @@ export default function ArrangePage() {
         }
       />
 
-      {basisChanged && !needStandard && (
+      {basisChanged && hasStandard(data) && (
         <ArrangeBasisNotice
           rangeLabel={rangeLabel}
           days={allTargets.length}
@@ -139,6 +141,7 @@ export default function ArrangePage() {
         view={{
           headingId: `${ids}-run`,
           needStandard,
+          expert,
           mode,
           careDays: careTargets.length,
           allDays: allTargets.length,

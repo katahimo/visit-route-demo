@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { etaText, rangeCounts, scopeOf } from './arrange';
+import { etaText, needsStandard, rangeCounts, scopeOf } from './arrange';
 
 describe('etaText（組む日数の見込み時間）', () => {
   it('1分に満たなければ秒で、超えれば分で書く', () => {
@@ -49,5 +49,14 @@ describe('rangeCounts（今日以降の担当なし・要対応）', () => {
     ]);
     const dates = ['2026-11-09', '2026-11-10', '2026-11-11', '2026-11-12'];
     expect(rangeCounts(dates, statuses, '2026-11-10')).toEqual({ unassigned: 2, unassignedDays: 1, care: 4 });
+  });
+});
+
+describe('needsStandard（組み方の標準を先に決めてもらうか。ADR-0072）', () => {
+  it('エキスパート機能が入で標準が無いときだけ。切なら標準が無くても組める', () => {
+    expect(needsStandard(true, false)).toBe(true);
+    expect(needsStandard(true, true)).toBe(false);
+    expect(needsStandard(false, false)).toBe(false);
+    expect(needsStandard(false, true)).toBe(false);
   });
 });

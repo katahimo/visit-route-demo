@@ -185,7 +185,7 @@ vacancyNotice(result, input)
 
 ## 機能の入り切り（`src/contracts/features.ts`。PRD D210〜D216。ADR-0028）
 
-- `FEATURE_IDS`（20）：`patternMonthly`・`clientLeave`・`requestedOff`・`monthPrint`・`compare`・`sudden`・`vacancy`・`vacancyNotice`・`compat`・`allowedStaff`・`clientStage`・`visitNotes`・`offboard`・`workload`・`fare`・`rules`・`mail`・`mapsLink`・`geocode`・`excel`
+- `FEATURE_IDS`（21）：`patternMonthly`・`clientLeave`・`requestedOff`・`monthPrint`・`expert`・`compare`・`sudden`・`vacancy`・`vacancyNotice`・`compat`・`allowedStaff`・`clientStage`・`visitNotes`・`offboard`・`workload`・`fare`・`rules`・`mail`・`mapsLink`・`geocode`・`excel`
 - `Features`＝ID → boolean の部分的な表（無い ID は入）。Excel には入れない
 - 切ってもデータの形・検査・repair は変えない。`clientStage` が切なら段階は「利用中／終了」で選ばせ、ほかの段階の人はそのまま
 - エラーは無い（検査で落ちない）

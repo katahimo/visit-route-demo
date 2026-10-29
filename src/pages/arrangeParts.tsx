@@ -212,6 +212,8 @@ export type ArrangeRunProps = {
   headingId: string;
   /** 組み方の標準がまだ無い（範囲にかかわらず AI で組まず、組み方の標準へ案内する。ADR-0065） */
   needStandard: boolean;
+  /** エキスパート機能が入（［標準の組み方を変える］の案内を出す。ADR-0072） */
+  expert: boolean;
   mode: BatchMode;
   careDays: number;
   allDays: number;
@@ -267,7 +269,7 @@ export function ArrangeRunSection({ view, actions }: { view: ArrangeRunProps; ac
           <ArrangeModeFields mode={mode} careDays={view.careDays} allDays={view.allDays} onMode={actions.onMode} />
           <p data-testid="arrange-basis">
             考え方：<strong>{view.basisName}</strong>
-            <span className="sub">（点数の基準。替えるのは［標準の組み方を変える］）</span>
+            {view.expert && <span className="sub">（点数の基準。替えるのは［標準の組み方を変える］）</span>}
           </p>
           <p data-testid="arrange-count">
             組む日：<strong>{runDays}日</strong>
@@ -292,7 +294,8 @@ export function ArrangeRunSection({ view, actions }: { view: ArrangeRunProps; ac
       <FieldError>{view.error}</FieldError>
       {!needStandard && (
         <p className="sub">
-          ピンの訪問（手で替えた訪問・組み方の標準の担当）はそのままで、ほかの訪問の担当と時刻を組みます。今日より前の日・確定した日は組みません。
+          ピンの訪問（手で替えた訪問・{view.expert ? '組み方の標準の担当' : '繰り返しの担当'}
+          ）はそのままで、ほかの訪問の担当と時刻を組みます。今日より前の日・確定した日は組みません。
           1日ずつ組み、終わったら提案を出します。見て「反映する」と担当が変わります（「元に戻す」で戻せます）。ほかの画面へ移っても組み続けます。
         </p>
       )}

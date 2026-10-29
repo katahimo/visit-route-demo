@@ -2,13 +2,14 @@ import { z } from 'zod';
 
 /**
  * 機能の入り切り（PRD D210〜D216。ADR-0028。design.md §5「機能の入り切り」）。
- * 管理者設定で入・切する機能の ID（20）。表（名前・グループ・依存・URL・ひな形）は lib/features.ts の1か所
+ * 管理者設定で入・切する機能の ID（21）。表（名前・グループ・依存・URL・ひな形）は lib/features.ts の1か所
  */
 export const FEATURE_IDS = [
   'patternMonthly',
   'clientLeave',
   'requestedOff',
   'monthPrint',
+  'expert',
   'compare',
   'sudden',
   'vacancy',

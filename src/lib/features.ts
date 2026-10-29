@@ -32,7 +32,7 @@ export type FeatureDef = {
 };
 
 /**
- * 機能の表（20。ADR-0028 の「機能の一覧」）。土台（ホーム・月の予定・週の予定・日の予定・〈利用者さん〉一覧・〈スタッフ〉一覧・
+ * 機能の表（21。ADR-0028 の「機能の一覧」）。土台（ホーム・月の予定・週の予定・日の予定・〈利用者さん〉一覧・〈スタッフ〉一覧・
  * 勤務時間（シフト）・訪問の種類・データ・管理者設定）は表に入れず、切れない
  */
 export const FEATURES: readonly FeatureDef[] = [
@@ -69,8 +69,19 @@ export const FEATURES: readonly FeatureDef[] = [
     hides: '月の予定の「その他 ▾」の印刷、月の印刷の画面',
   },
   {
+    id: 'expert',
+    label: 'エキスパート機能（組み方の標準・案を比べる・条件の重み）',
+    description:
+      '予定を組む（4段・担当を組む）・組み方の標準・案を比べる・条件の重みの入口を出します。切ると、入れた人・希望日時から組むふだんの道だけになります',
+    group: 'AI の条件',
+    paths: ['/standard'],
+    hides:
+      'メニューの「予定を組む」・組み方の標準・案を比べる・条件の重みの入口（切ると「人」が戻り、担当を組むは基準のプリセットで組む）',
+  },
+  {
     id: 'compare',
     label: '提案を比べる',
+    requires: 'expert',
     description: '同じ日の今の担当と AI の提案を並べて、点数と違いを比べられます（提案は保存しません）',
     group: '予定',
     paths: ['/compare'],
@@ -161,6 +172,7 @@ export const FEATURES: readonly FeatureDef[] = [
   },
   {
     id: 'rules',
+    requires: 'expert',
     label: '条件の重みとプリセット',
     description: 'AI の条件の重み・特性の項目・プリセットを変えられます',
     group: 'AI の条件',
@@ -326,7 +338,7 @@ export const TEMPLATES: readonly TemplateDef[] = [
 /** ひな形の1つ */
 export const templateDef = (id: TemplateId): TemplateDef => TEMPLATES.find((t) => t.id === id)!;
 
-/** ひな形を適用したときの入り切り（全20の ID を明示して書く。業種とは連動しない） */
+/** ひな形を適用したときの入り切り（全21の ID を明示して書く。業種とは連動しない） */
 export function applyTemplate(id: TemplateId): Features {
   const on = new Set(templateDef(id).on);
   return Object.fromEntries(FEATURE_IDS.map((f) => [f, on.has(f)])) as Features;

@@ -7,7 +7,7 @@ import { addDays } from '../domain/time';
 import { visitsIn } from '../patterns';
 import { STAGE_LABELS } from './clientStage';
 import { dateText } from './dateText';
-import { isHrefOn } from './features';
+import { isHrefOn, isOn } from './features';
 import { absenceHref, isNavAction, type MenuItem, type NavSection } from './nav';
 import { normalizeKana } from './search';
 import { addMonths, ymOf } from './ym';
@@ -145,6 +145,8 @@ export function paletteActions(today: string, { features = {} }: { features?: Fe
   const ym = ymOf(today);
   const next = addMonths(ym, 1);
   const monthNo = (m: string) => Number(m.slice(5, 7));
+  // エキスパート機能が切なら「予定を組む」のメニューは無いので、担当を組むの hint は予定（ADR-0072）
+  const arrangeHint = isOn(features, 'expert') ? '予定を組む' : '予定';
   const month = (op: string, m = ym) => `/month?ym=${m}&do=${op}`;
   const all = [
     paletteItem({
@@ -169,7 +171,7 @@ export function paletteActions(today: string, { features = {} }: { features?: Fe
       id: 'action:batch',
       kind: 'action',
       label: `${monthNo(ym)}月の担当を組む`,
-      hint: '予定を組む',
+      hint: arrangeHint,
       to: `/arrange?ym=${ym}`,
       words: ['こんげつ', '今月', 'まとめてつくる', 'くむ', 'たんとう', 'つきをくむ', 'えーあい'],
     }),
@@ -177,7 +179,7 @@ export function paletteActions(today: string, { features = {} }: { features?: Fe
       id: 'action:batch-next',
       kind: 'action',
       label: `${monthNo(next)}月の担当を組む`,
-      hint: '予定を組む',
+      hint: arrangeHint,
       to: `/arrange?ym=${next}`,
       words: ['らいげつ', '来月', 'まとめてつくる', 'くむ', 'たんとう', 'つきをくむ', 'えーあい'],
     }),

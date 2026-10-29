@@ -6,6 +6,7 @@ import {
   absenceHref,
   activeNavPath,
   arrangeSteps,
+  BASICS_PATHS,
   basicsTabs,
   bottomTabs,
   isActiveNav,
@@ -72,7 +73,7 @@ describe('menuSections（PRD D326・D349・D364。ADR-0054・0063・0067）', ()
     const early = menuSections(terms, '2026-10-03', {});
     expect(item('month-view', early).to).toBe('/month?ym=2026-10');
     expect(item('arrange:assign', early).to).toBe('/arrange?ym=2026-10');
-    expect(NAV_OPEN_DEFAULT).toEqual({ schedule: true, arrange: true, settings: false });
+    expect(NAV_OPEN_DEFAULT).toEqual({ schedule: true, arrange: true, people: true, settings: false });
   });
   it('件数の印：組む月の担当なしの日は「担当を組む」、今日をまだ伝えていないは「今日の予定」', () => {
     const g = menuSections(terms, TODAY, {}, {}, { planUnassignedDays: 3, todayUntold: true });
@@ -335,5 +336,47 @@ describe('showsDateSwitch（PRD D267・D347）', () => {
       '/data',
     ])
       expect(showsDateSwitch(p)).toBe(false);
+  });
+});
+
+describe('エキスパート機能が切のメニュー（PRD D377。ADR-0072）', () => {
+  const off = { expert: false };
+  const g = menuSections(terms, TODAY, off, {}, { planUnassignedDays: 3, basisChanged: true, hasStandard: true });
+  it('ホーム・予定・人・空き状況・設定。予定を組むは出さない', () => {
+    expect(g.flatMap((x) => x.items.map((i) => i.label))).toEqual(['ホーム', '予定', '人', '空き状況', '設定']);
+    expect(item('arrange', g)).toBeUndefined();
+  });
+  it('「人」の子は 予定と相性・〈利用者さん〉一覧・〈スタッフ〉一覧。担当を組むの印は付けない', () => {
+    const people = item('people', g);
+    expect(people).toMatchObject({ to: '/basics', icon: 'people', match: BASICS_PATHS });
+    expect(people.children?.map((i) => [i.key, i.label, i.to])).toEqual([
+      ['people:basics', '予定と相性', '/basics'],
+      ['people:clients', '利用者さん一覧', '/clients'],
+      ['people:staff', 'スタッフ一覧', '/staff'],
+    ]);
+    expect(people.badge).toBeUndefined();
+    expect(people.children?.some((c) => c.badge)).toBe(false);
+    for (const p of ['/basics', '/compat', '/availability', '/workload', '/clients', '/staff/s1'])
+      expect(isActiveNav(people, p)).toBe(true);
+  });
+  it('入のメニューには「人」が無い', () => {
+    expect(item('people')).toBeUndefined();
+  });
+  it('画面の一覧：予定を組むのグループは無く担当を組むは予定のグループ、基本情報のグループ名は「人」', () => {
+    const s = screenSections(terms, off);
+    expect(s.some((x) => x.title === '予定を組む')).toBe(false);
+    expect(navTitleParts(s, '/arrange')).toEqual({ group: null, item: '担当を組む' });
+    expect(s.some((x) => x.title === '基本情報')).toBe(false);
+    expect(s.find((x) => x.title === '人')?.items[0]?.to).toBe('/basics');
+    const on = screenSections(terms, {});
+    expect(on.some((x) => x.title === '基本情報')).toBe(true);
+    expect(on.find((x) => x.title === '予定を組む')?.items.map((i) => i.to)).toEqual([
+      '/rules',
+      '/standard',
+      '/arrange',
+    ]);
+  });
+  it('下のタブはホーム・予定・欠勤のまま', () => {
+    expect(bottomTabs(g).map((t) => t.key)).toEqual(['home', 'schedule', 'absence']);
   });
 });
