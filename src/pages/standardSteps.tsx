@@ -104,7 +104,7 @@ export function ProposalsStep({
       )}
       {proposalsStale && (
         <p className="sub warn" data-testid="standard-proposals-stale">
-          案を作ったあとに繰り返しが変わりました。作り直すと今の繰り返しで比べられます
+          案を作ったあとに繰り返しが変わりました（標準の登録・初期状態に戻すなど）。今の標準とくらべられないので、案から作るには作り直してください
         </p>
       )}
       <ul className="standard-cards">
@@ -114,6 +114,7 @@ export function ProposalsStep({
             card={card}
             best={i === best}
             running={running !== null}
+            stale={proposalsStale}
             viewing={viewing === card.preset.id}
             viewId={viewId}
             staffName={staffName}
@@ -149,6 +150,7 @@ function ProposalCard({
   card,
   best,
   running,
+  stale,
   viewing,
   viewId,
   staffName,
@@ -159,6 +161,8 @@ function ProposalCard({
   card: StandardProposals['cards'][number];
   best: boolean;
   running: boolean;
+  /** 案を作ったあとに繰り返しが変わった（今の標準と違う所を数えられず、案から作れない） */
+  stale: boolean;
   viewing: boolean;
   viewId: string;
   staffName: StandardTableBase['staffName'];
@@ -196,8 +200,8 @@ function ProposalCard({
             {s ? `${s.spread}件` : '—'}
           </dd>
           <dt>今の標準と違う</dt>
-          <dd data-testid="standard-card-diff" data-count={diff?.all ?? 0}>
-            {diff ? `${diff.all}マス（担当 ${diff.staff}・時刻だけ ${diff.time}）` : '—'}
+          <dd data-testid="standard-card-diff" data-count={stale ? undefined : (diff?.all ?? 0)}>
+            {diff && !stale ? `${diff.all}マス（担当 ${diff.staff}・時刻だけ ${diff.time}）` : '—'}
           </dd>
         </dl>
       ) : (
@@ -226,6 +230,8 @@ function ProposalCard({
             type="button"
             className="btn btn-small"
             onClick={() => onUse(preset.id, prop.table as StandardTable)}
+            disabled={stale}
+            title={stale ? '案を作り直すと選べます' : undefined}
             data-testid="standard-use"
           >
             この案から作る
@@ -342,9 +348,12 @@ export function RegisterStep({
   registered,
   register: r,
   draftDiffCount,
+  hasStandard,
   names,
 }: {
   draft: boolean;
+  /** 標準を登録している（違う所0のとき、担当を組むへの案内を足す） */
+  hasStandard: boolean;
   registered: { since: string; at: number } | null;
   register: StandardRegisterState;
   draftDiffCount: number;
@@ -426,7 +435,9 @@ export function RegisterStep({
             </button>
             {draftDiffCount === 0 && (
               <span className="sub" data-testid="standard-same">
-                今の標準と同じです
+                今の標準と同じです。マスを押して担当・時刻を直すか、「{stepNo('proposals')}.
+                案をくらべる」で違う案から作ると標準にできます
+                {hasStandard && '。予定に担当を入れるのは［次へ：担当を組む］から'}
               </span>
             )}
             {skippedDiff > 0 && (
