@@ -49,8 +49,10 @@ export function useStandardRegister(
     [data, draft, effectiveDiff.length, since, today],
   );
   const [temp, setTemp] = useState<TemporaryChoice>('drop');
-  // 標準がまだ無ければ、違う所が無くても（今の表のままでも）標準にできる
-  const canRegister = draft !== null && (effectiveDiff.length > 0 || !hasStandard(data));
+  // 標準がまだ無ければ、直しの無い表（今の表のまま）でも標準にできる。いつからより前に終わる行だけ直した表は、
+  // 直しが捨てられて下書きと違う標準になるので押せない
+  const asIs = !hasStandard(data) && draftDiff.length === 0;
+  const canRegister = draft !== null && (effectiveDiff.length > 0 || asIs);
   const register = async () => {
     if (!draft || !canRegister) return;
     const lines = registerLines(effectiveDiff, since, temps.length, temp, draft.from ? presetName(draft.from) : null);
@@ -71,7 +73,7 @@ export function useStandardRegister(
       registered = next;
       return next;
     }, '組み方の標準を登録');
-    // 書き換える所が無かった（別のタブで同じ標準になった・いつからより前に終わる行だけ）ときは完了にしない
+    // 書き換える所が無かった（別のタブで同じ標準を登録した）ときは完了にしない
     if (!changed) {
       toast('書き換える所がありませんでした');
       return;

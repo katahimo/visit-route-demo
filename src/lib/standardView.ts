@@ -56,7 +56,9 @@ export function registerLines(
     changes.length === 0
       ? '今の表のまま標準にします（繰り返しと予定は変えません）。'
       : `今の標準と違う ${changes.length}か所（繰り返し ${patternsChanged}件）を書き換えます。曜日で担当が違う繰り返しは曜日ごとに分けます。`,
-    `${mdText(since)}から先の予定は、この表の担当・時刻で並びます。`,
+    changes.length === 0
+      ? `${mdText(since)}から先も、この表の担当・時刻で並びます（すでに直した予定はそのままです）。`
+      : `${mdText(since)}から先の予定は、この表の担当・時刻で並びます。`,
     tempCount > 0
       ? temp === 'drop'
         ? `すでに入っている予定で新しい標準と違う ${tempCount}件は、消して標準どおりにします。`
