@@ -3,7 +3,7 @@
 - 作成者：松浦（草案：Claude）
 - 状態：**合意済み**（2026-10-11）。以後の追加は利用者の要望により、推奨どおりに決定
 - 更新日：2026-10-27
-- 公開先：`katahimo-dev/visit-route-demo`（ADR-0071 で非公開にできる）
+- 公開先：`katahimo/visit-route-demo`（非公開。ADR-0071）
 - 元：`katahimo-dev/visit-route-poc`（PoC本体。Firebase＋Python最適化）の PRD・設計・デモデータ
 - 参考：`ohru131/ClassClassify`（列ごとの重み 0〜5・一緒に/別に のペア・焼きなまし・ブラウザ完結・Cloudflare Workers）
 
