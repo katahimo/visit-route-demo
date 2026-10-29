@@ -362,9 +362,10 @@ describe('エキスパート機能が切のメニュー（PRD D377。ADR-0072）
   it('入のメニューには「人」が無い', () => {
     expect(item('people')).toBeUndefined();
   });
-  it('画面の一覧：予定を組むは担当を組むだけ、基本情報のグループ名は「人」', () => {
+  it('画面の一覧：予定を組むのグループは無く担当を組むは予定のグループ、基本情報のグループ名は「人」', () => {
     const s = screenSections(terms, off);
-    expect(s.find((x) => x.title === '予定を組む')?.items.map((i) => i.to)).toEqual(['/arrange']);
+    expect(s.some((x) => x.title === '予定を組む')).toBe(false);
+    expect(navTitleParts(s, '/arrange')).toEqual({ group: null, item: '担当を組む' });
     expect(s.some((x) => x.title === '基本情報')).toBe(false);
     expect(s.find((x) => x.title === '人')?.items[0]?.to).toBe('/basics');
     const on = screenSections(terms, {});

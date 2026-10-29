@@ -225,7 +225,8 @@ export function loadWithStatus(): {
     }
     // 退避が容量超過なら1世代の控えを捨ててもう1回（keepBroken）。退避できなくても続ける
     const brokenKept = ls ? keepBroken(ls, text) : false;
-    const d = createInitialData(todayDate, features);
+    // 壊れたデータ（版は読めない）は reset と同じく入り切りを {}（すべて入）で始める（ADR-0028。初めて開いたときだけ startFeatures が基本にする）
+    const d = createInitialData(todayDate, features ?? {});
     // 退避できたら作った初期データを書く（読み直すたびに初期データの計算と退避を繰り返さない）。
     // 退避できなかったときは元の文字を残す（上書きすると壊れたデータが消える。brokenText が本体のキーから返す）
     if (brokenKept) writeNow(d);

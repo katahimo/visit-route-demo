@@ -132,6 +132,9 @@ describe('候補', () => {
     expect(acts.find((x) => x.id === 'action:absence')!.hint).toBe('日の予定（今日）');
     expect(acts.find((x) => x.id === 'action:today')!.hint).toBe('日の予定');
     expect(acts.find((x) => x.id === 'action:batch')!.hint).toBe('予定を組む');
+    // エキスパート機能が切なら「予定を組む」のメニューは無いので hint は予定（ADR-0072）
+    const off = paletteActions(TODAY, { features: { expert: false } });
+    expect(off.find((x) => x.id === 'action:batch')!.hint).toBe('予定');
     expect(filterPalette(acts, '当日の対応').flat.map((i) => i.id)).toEqual(['action:absence']);
   });
   it('人はその人の画面（/clients/:id・/staff/:id）へ。利用中でなければ段階、休止中の〈スタッフ〉はそう添える', () => {

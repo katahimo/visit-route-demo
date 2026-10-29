@@ -71,7 +71,7 @@ export default function BasicsPage() {
         nav={<BasicsNav />}
         icon={CalendarRange}
         title="予定と相性"
-        lead={`${terms.client}の予定（繰り返し）と、標準の担当・相性・勤務時間（シフト）を1枚の表で確かめて直します。決まったら AI で担当を組みます`}
+        lead={`${terms.client}の予定（繰り返し）と、${expert ? '標準の担当' : 'いつもの担当'}・相性・勤務時間（シフト）を1枚の表で確かめて直します。決まったら AI で担当を組みます`}
       />
       <div className="card stack">
         {rows.length === 0 ? (

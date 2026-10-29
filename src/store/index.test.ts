@@ -120,6 +120,8 @@ describe('load・save', () => {
     const d = load();
     expect(d.staff).toHaveLength(8);
     expect(mem.get(BROKEN_KEY)).toBe('{こわれた');
+    // 入り切りは初期化（reset）と同じくすべて入（{}）。初期データの既定（エキスパート機能は切）にしない（ADR-0072）
+    expect(d.org.features).toEqual({});
   });
 
   it('loadWithStatus は壊れた JSON のとき broken＝true（読めたとき・無いときは false）', () => {
