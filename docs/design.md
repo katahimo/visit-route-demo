@@ -8,7 +8,7 @@
 
 ## 1. 背景と目的
 
-PoC本体（`katahimo-dev/visit-route-poc`）の管理者画面（予定・担当の割当・AI の提案）を、サーバーなしでブラウザだけで動く静的サイトに移し、GitHub Pages で公開する。
+PoC本体（`katahimo-dev/visit-route-poc`）の管理者画面（予定・担当の割当・AI の提案）を、サーバーなしでブラウザだけで動く静的サイトに移し、Cloudflare Workers（静的アセット）で公開する。
 データは localStorage に残し、JSON で書き出し・読み込みする。
 最適化は Python（OR-Tools）の代わりに Web Worker 上の焼きなましで解き、ClassClassify のように**項目・条件・重み（0〜5）・必須**で、相性・スタッフの特性・顧客の希望を柔軟に足せるようにする。
 目的は、協力法人に触ってもらって割当の考え方を集めるサイクルを速く回すこと（PRD §1）。
@@ -59,7 +59,7 @@ flowchart TB
     worker["最適化ワーカー［Web Worker, TypeScript］<br/>焼きなましで割当と順番を解く（状態を持たない）"]
     ls[("端末保存［localStorage］<br/>データ一式（版付きJSON・1キー）")]
   end
-  gh["GitHub Pages［静的ホスティング］"]
+  gh["Cloudflare Workers［静的アセット］"]
   ci["GitHub Actions<br/>test → build → deploy／e2e（PR・夜間）"]
   gsi["地理院タイル［外部］"]
   zipcloud["郵便番号検索 zipcloud［外部］"]
@@ -393,13 +393,13 @@ flowchart LR
   - [ ] `npm test`・`npm run typecheck`・`npm run lint`・`npm run e2e`・`npm run e2e:perf`（AGENTS.md のコマンド。ADR-0029）が通る
 
 ### deploy（公開）
-- 責務：main への push で `npm ci → npm run lint（biome・競合の印）→ npm test → npm run build → GitHub Pages へ公開`。e2e は別のワークフローで PR・手動・夜間に `npm run e2e → npm run e2e:perf`（夜間は `FAKE_NOW` を月末の日にも替えて3通り。ADR-0029）。公開は e2e を待たない
+- 責務：main への push で `npm ci → npm run lint（biome・競合の印）→ npm test → npm run build → Cloudflare Workers へ公開（`wrangler deploy`。ADR-0071）`。e2e は別のワークフローで PR・手動・夜間に `npm run e2e → npm run e2e:perf`（夜間は `FAKE_NOW` を月末の日にも替えて3通り。ADR-0029）。公開は e2e を待たない
 - 持つデータ（持ち主）：なし
 - 提供するAPI：なし
-- 依存するもの：GitHub Actions（`actions/upload-pages-artifact`・`actions/deploy-pages`）、e2e は `@playwright/test`（devDependency）と Chromium
-- 配置：`.github/workflows/deploy.yml`、`.github/workflows/e2e.yml`、`vite.config.ts`（`base: './'`・vitest の設定）、`playwright.config.ts`・`e2e/`、`scripts/lib/`（e2e の共通の部品・段の型）、`scripts/check-conflict-markers.cjs`
+- 依存するもの：GitHub Actions（`cloudflare/wrangler-action`。Secrets：`CLOUDFLARE_API_TOKEN`・`CLOUDFLARE_ACCOUNT_ID`）、e2e は `@playwright/test`（devDependency）と Chromium
+- 配置：`.github/workflows/deploy.yml`、`wrangler.jsonc`、`.github/workflows/e2e.yml`、`vite.config.ts`（`base: './'`・vitest の設定）、`playwright.config.ts`・`e2e/`、`scripts/lib/`（e2e の共通の部品・段の型）、`scripts/check-conflict-markers.cjs`
 - 完了の条件：
-  - [ ] push から5分以内に Pages の公開URL に反映される
+  - [ ] push から5分以内に Cloudflare Workers の公開URL に反映される
   - [ ] サブパスで再読込しても 404 にならない（HashRouter）。分けたチャンクもサブパスから読める（`base: './'`。PRD D248）
   - [ ] PR・夜間に e2e のワークフローが走り、報告（HTML）が残る。落ちたら test-results（trace・動画・スクリーンショット・記録）も残る
   - [ ] e2e の報告で段（test.step）ごと・確かめ（expect.soft）ごとに合否が見える。押したあとの待ちは画面の状態で待つ（`settle`。固定の待ちは速さの計測・外の遅れ・時間そのものを見る所だけ。PRD D253・ADR-0041）
@@ -483,7 +483,7 @@ Worker 内の例外は `error` で返し、内部の文言は出さない（「A
 ## 6. デプロイ構成
 | コンテナ | 実行環境 | 台数・複製 | 理由 |
 |---|---|---|---|
-| 画面・最適化ワーカー | GitHub Pages（静的配信） | 1 | 無料・push で即公開・サーバーなし |
+| 画面・最適化ワーカー | Cloudflare Workers（静的アセット配信） | 1 | 無料・push で即公開・サーバーなし・非公開リポジトリで可（ADR-0071） |
 | ビルド | GitHub Actions（ubuntu-latest, Node 22） | push ごと | テストを通ったものだけ公開 |
 
 - 秘密情報の置き場所：なし（キー不要の地理院タイル・郵便番号検索・国土地理院の住所検索のみ。ビルド時の環境変数も使わない）
@@ -496,7 +496,7 @@ Worker 内の例外は `error` で返し、内部の文言は出さない（「A
 
 | 論点 | 選んだ案 | 主な理由（ADR が無いものだけ。あるものは ADR） | ADR |
 |---|---|---|---|
-| 置き場所・コード | 新リポジトリ・GitHub Pages。純粋関数は写す |  | 0001 |
+| 置き場所・コード | 新リポジトリ・Cloudflare Workers。純粋関数は写す |  | 0001・0071 |
 | 保存 | localStorage（1キー JSON） | 数百KB で足り、同期APIで単純 | — |
 | データを守る | 置き換える前に1世代だけ別のキーに控え、書き出した日を覚えて知らせ、古い訪問（保存した回・伝えた内容・振り直しの情報）を月で片づける |  | 0032 |
 | 条件の表し方 | 項目＋条件の型＋重み0〜5＋必須 |  | 0002 |

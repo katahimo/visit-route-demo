@@ -1,11 +1,11 @@
-# PRD：訪問ルートAI デモ版（ブラウザ完結・GitHub Pages）
+# PRD：訪問ルートAI デモ版（ブラウザ完結・Cloudflare Workers）
 
 - 作成者：松浦（草案：Claude）
 - 状態：**合意済み**（2026-10-11）。以後の追加は利用者の要望により、推奨どおりに決定
 - 更新日：2026-10-27
-- 公開先：`katahimo-dev/visit-route-demo`（公開リポジトリ）
+- 公開先：`katahimo-dev/visit-route-demo`（ADR-0071 で非公開にできる）
 - 元：`katahimo-dev/visit-route-poc`（PoC本体。Firebase＋Python最適化）の PRD・設計・デモデータ
-- 参考：`ohru131/ClassClassify`（列ごとの重み 0〜5・一緒に/別に のペア・焼きなまし・ブラウザ完結・GitHub Pages）
+- 参考：`ohru131/ClassClassify`（列ごとの重み 0〜5・一緒に/別に のペア・焼きなまし・ブラウザ完結・Cloudflare Workers）
 
 ---
 
@@ -224,7 +224,7 @@ PoC本体は「性別希望」と「NG」しか持たず、相性は登録のみ
 ## 7. 制約
 
 - 期限：初回デモの公開は**着手から1週間以内**（PoC本体 α版と並行し、その作業を止めない分量）
-- 予算：0円（GitHub Pages・Actions の無料枠）。そのため**公開リポジトリ**
+- 予算：0円（Cloudflare Workers・Actions の無料枠。ADR-0071。非公開リポジトリでも公開できる）
 - 使う技術：React + Vite + TypeScript、Leaflet（国土地理院の地図）、Web Worker。PoC本体の `packages/shared` の純粋関数と seed 生成を**写す**
 - 端末：管理者役は PC のブラウザ（Chrome・Edge・Safari の最新）。スマホは見る・取り消す・担当を替えるまで（ADR-0051 の決定5・ADR-0055）
 - セキュリティ：架空データのみを同梱し、実データ・パスワード・キーを置かない。入れたデータは端末の外に送らない（外部送信は地図タイルと、ボタンを押したときの郵便番号・住所の検索と、メールの予約送信（事業所の Google。ADR-0069）だけ。ADR-0016）。メール（`mailto:`）と道順のリンクはアプリから何も送らない（ADR-0017・0018）。ただし日の予定のメールの予約送信を押したときは、宛先・件名・本文を事業所自身の Google Apps Script へ送る（ADR-0069）
