@@ -113,6 +113,7 @@ AI・人が「何を知りたいときに、どのファイルを読むか」を
 | [0068](adr/0068-roster-io-on-lists-with-csv.md) | 名簿の書き出し・読み込みを〈利用者さん〉一覧・〈スタッフ〉一覧へ移し、CSV（文字コードの自動判別）を足す |
 | [0069](adr/0069-scheduled-mail-via-org-gas.md) | 日の予定のメールを、事業所の Google Apps Script に確定のときにまとめて預け、前日の決めた時刻に送る（mailto は残す） |
 | [0070](adr/0070-trait-columns-per-option-and-start-year.md) | Excel・CSV の選択肢から複数の特性を選択肢ごとの列（○・×）にし、経験年数を開始年で持つ（条件はその日までの年数） |
+| [0071](adr/0071-cloudflare-workers-hosting.md) | 公開先を GitHub Pages から Cloudflare Workers（静的アセット）に移す（GitHub Actions＋wrangler。リポジトリを非公開にできる） |
 
 ## 文書の保ち方
 

@@ -1,0 +1,9 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "visit-route-demo",
+  "compatibility_date": "2026-10-29",
+  "assets": {
+    "directory": "./dist"
+  },
+  "routes": [{ "pattern": "staff-assign-demo.katahimo.com", "custom_domain": true }]
+}

@@ -39,7 +39,7 @@ src/
   components/  … 画面の部品と React のフック（use*。日のモデル useDayModel・日の状態 useDayStatuses・機能の入り切り useFeature・useMedia・useScrollEdge・地図の選択 useRouteSelection・入れ物を読む valueStore・編集中の印 dirtyForms・別のチャンクの部品 lazyComponent・選んでいる日付 day など）
   pages/       … 画面（components と lib を組み合わせる）
   app/         … 殻（App・ErrorBoundary・ルートと分けた画面 lazyPages）
-.github/workflows/deploy.yml … test → build → GitHub Pages
+.github/workflows/deploy.yml … test → build → Cloudflare Workers（wrangler。ADR-0071）
 .github/workflows/e2e.yml … PR・手動・夜間の速い検査（lint・型・check:code・check:prd・vitest）と e2e（4つに分けて並列）・perf（ADR-0029）。Playwright の版を上げるときはイメージの版も上げる
 e2e/ … @playwright/test の spec（scripts/e2e-*.cjs の段を test.step で回す。ADR-0041）
 scripts/ … e2e のスクリプト（e2e-*.cjs）と共通の部品（lib/）
