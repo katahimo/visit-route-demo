@@ -1,4 +1,4 @@
-// 〈利用者さん〉の画面の予定のタブ（PRD D308〜D310。ADR-0052・0056）：左に繰り返し（PatternsSection）とこれからの休み、
+// 〈利用者さん〉の画面の予定のタブ（PRD D308〜D310。ADR-0052・0056）：左に繰り返し（PatternsSection。機能 patterns が切なら隠す）とこれからの休み、
 // 右に週・月のカレンダー（PersonCalendar）
 import { BedSingle } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -19,6 +19,7 @@ export function ClientScheduleTab({
   resetKey,
   narrow,
   leavesOn,
+  patternsOn,
   pattern,
   onPattern,
   onPatternsDirty,
@@ -33,6 +34,8 @@ export function ClientScheduleTab({
   resetKey: number;
   narrow: boolean;
   leavesOn: boolean;
+  /** 繰り返しの機能（patterns）が入か。切なら繰り返しの欄を隠す（今ある繰り返しの回は予定に残り、カレンダーに出る） */
+  patternsOn: boolean;
   /** 選んでいる（カレンダーで目立たせる）繰り返し */
   pattern: string | null;
   onPattern: (id: string | null) => void;
@@ -46,17 +49,19 @@ export function ClientScheduleTab({
   return (
     <div className="person-schedule" data-testid="person-schedule">
       <div className="person-schedule-side">
-        <div className="card stack">
-          <PatternsSection
-            key={`p${resetKey}`}
-            client={saved}
-            selected={pattern}
-            onSelect={onPattern}
-            onDirty={onPatternsDirty}
-            readOnly={narrow}
-          />
-          {narrow && <span className="sub">繰り返しを足す・直すのは広い画面でできます。</span>}
-        </div>
+        {patternsOn && (
+          <div className="card stack">
+            <PatternsSection
+              key={`p${resetKey}`}
+              client={saved}
+              selected={pattern}
+              onSelect={onPattern}
+              onDirty={onPatternsDirty}
+              readOnly={narrow}
+            />
+            {narrow && <span className="sub">繰り返しを足す・直すのは広い画面でできます。</span>}
+          </div>
+        )}
         {/* 休みは事実なので、休みの機能を切っても読むだけで出す（入れる・直すは休みのタブ） */}
         <div className="card stack" data-testid="schedule-leaves">
           <h2 className="person-subhead">

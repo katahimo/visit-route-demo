@@ -347,17 +347,17 @@ flowchart LR
 ### features（機能の入り切り。ADR-0028）
 - 責務：機能の表（ID・名前・説明・グループ・依存・URL（ルート・`?do=`）・隠れるもの・ひな形）と、入り切りの判定・ひな形・切るときの影響の数え方。純粋関数
 - 持つデータ（持ち主）：なし（入り切りは store の `org.features`）
-- 提供するAPI：`lib/features.ts` の `FEATURES`・`FEATURE_GROUPS`・`isOn`（依存先が切なら切）・`isSwitchOn`・`featureOfLocation(pathname, search)`・`featureOfHref`・`isHrefOn`（土台は null。パスは小文字・末尾の `/` を落とす）・`TEMPLATES`（`basic` 基本／`laborContract` 労務・契約管理／`monthlyField` 月次予定・現場共有／`all` すべて）・`applyTemplate`・`matchTemplate`（違えば `custom`）・`templateDiff`・`turnOffImpact(data, id, today)`・`withFeature`。画面から読むのは `components/useFeature.ts` の `useFeatures()`・`useFeature(id)`（`isOn` で依存も見る。欄・ボタンを出すかを部品の中で決める）
+- 提供するAPI：`lib/features.ts` の `FEATURES`・`FEATURE_GROUPS`・`isOn`（依存先が切なら切）・`isSwitchOn`・`featureOfLocation(pathname, search)`・`featureOfHref`・`isHrefOn`（土台は null。パスは小文字・末尾の `/` を落とす）・`TEMPLATES`（`oneOff` 単発のみ／`basic` 基本／`laborContract` 労務・契約管理／`monthlyField` 月次予定・現場共有／`all` すべて）・`applyTemplate`・`matchTemplate`（違えば `custom`）・`templateDiff`・`turnOffImpact(data, id, today)`・`withFeature`。画面から読むのは `components/useFeature.ts` の `useFeatures()`・`useFeature(id)`（`isOn` で依存も見る。欄・ボタンを出すかを部品の中で決める）
 - 表の `doParams`：`sudden` は `/plan?do=absence`
 - `turnOffImpact`（D215）は計算に効くものだけ：相性は利用中の〈利用者さん〉×休止でない〈スタッフ〉、担当を限るは限った人に休止でない人がいる利用中の〈利用者さん〉、休み・希望休・欠勤は今日以降、空き状況は仮押さえの〈利用者さん〉
 - 出し分け：`menuSections(terms, today, features)`、`app/App.tsx` のルート（切った URL は `#/home` へ移し、知らせと `#/settings` へのリンク）、`lib/commandPalette`・`lib/home`・`lib/tour`・`lib/links`（切なら null）、画面の欄・ボタン（`useFeature`）。`rules` を切っても AI で組むのは点数の基準のプリセットの重み（`data.rules` はいつも基準にそろっている）。事実の表示（休みの人に N・振り直しの差・連絡の一覧）は残し、入力・操作の入口だけ隠す
-- 管理者設定 `pages/SettingsPage.tsx`（`#/settings`。だれでも開ける）：ひな形の4つ（適用するときは `templateDiff` の確認）とグループごとのスイッチ（role="switch"、その場で保存。データがあれば `turnOffImpact` の確認）
+- 管理者設定 `pages/SettingsPage.tsx`（`#/settings`。だれでも開ける）：ひな形の5つ（適用するときは `templateDiff` の確認）とグループごとのスイッチ（role="switch"、その場で保存。データがあれば `turnOffImpact` の確認）
 - 依存するもの：contracts、store（読むだけ）
 - 配置：`src/lib/features.ts`・`src/components/useFeature.ts`・`src/components/FeatureOffNotice.tsx`（切った URL を開いたときの知らせ）・`src/pages/SettingsPage.tsx`
 - 完了の条件：
   - [ ] `org.features` の無いデータで画面・計算が変わらない（テスト）
   - [ ] メニュー・パレット・ホーム・ツアー・links の行き先が土台か表の機能に属する。依存（`vacancy`→`vacancyNotice`、`workload`→`fare`）、ひな形と `matchTemplate`（テスト）
-  - [ ] 切った URL はホームへ移り知らせ。設定と土台は切れない（e2e `scripts/e2e-features.cjs`：ひな形4通り・390px・印刷）
+  - [ ] 切った URL はホームへ移り知らせ。設定と土台は切れない（e2e `scripts/e2e-features.cjs`：ひな形5通り・390px・印刷）
 
 ### pages（画面）
 - 責務：管理者の画面（ホーム・日・月・週の予定・担当を組む・組み方の標準・提案を比べる・空き状況・〈利用者さん〉・〈スタッフ〉・相性・勤務時間（シフト）・勤務の見込み・訪問の種類・特性の項目・条件の重み・管理者設定・データ）。データの書き換えは store の `update(fn)` を通す
@@ -526,7 +526,7 @@ Worker 内の例外は `error` で返し、内部の文言は出さない（「A
 | スマホ・ホーム・確認 | 下のタブ（ホーム・予定・欠勤・探す（パレット）・メニュー（引き出し））、ホームの「今日やること」、`useConfirm` |  | 0024〜0026・0045 |
 | スマホの予定・キーボード | スマホは日ごとのリストと下から出る欄（見る・取り消す・担当替えだけ）、週・月は「まとめて見る」。広い画面は帯を矢印キーで動かし、繰り返しの回は小さな帯で範囲 |  | 0055 |
 | 訪問の札の共通の部品 | 見た目・選ぶ・キー・落とし先の判定を共通の部品に。札は3段・入れ物は時間軸・表・リスト。月のマスは押すと右の欄にその日の行 |  | 0056・0057 |
-| 機能の入り切り | 機能ごと（21）を `org.features`、ひな形は一度書き込む、好み・決まりは計算からも外す。初めて開いたときは「基本」で、案内の1枚目で「すべて」も選べる |  | 0028・0045 |
+| 機能の入り切り | 機能ごと（22）を `org.features`、ひな形は一度書き込む、好み・決まりは計算からも外す。初めて開いたときは「基本」で、案内の1枚目で「すべて」も選べる |  | 0028・0045 |
 | 初期データ・まとめて確定 | 初期データは過去の日を伝えた状態にし、今日からは繰り返しの担当のまま（AI で組まない）。一度も確定していない・要対応に出ない日だけ1度に確定（日の予定と同じ書き方） |  | 0031・0064 |
 | 読み込みの分け方 | 重い画面5つと地図を `React.lazy` で分け、画面が出たら残りを先に読む。進み具合は外の入れ物で子だけ描き直す |  | 0039 |
 | 週の組む・確定・要対応 | 週の主ボタンは確定 → 済み。組むのは予定を組むの担当を組む（範囲を週に・提案）、確定は月のまとめて確定と同じ決まり。要対応は訪問ごとの検査で、訪問の無い人の欠勤は数えない（繰り返しの回はいつも出る） |  | 0046・0053・0054 |

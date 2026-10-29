@@ -287,7 +287,7 @@ async function tourStart(b) {
   d = await data();
   const f1 = d?.org?.features ?? {};
   check(
-    Object.values(f1).length === 21 && Object.values(f1).every((v) => v === true),
+    Object.values(f1).length === 22 && Object.values(f1).every((v) => v === true),
     '「すべて」を選んで「次へ」で、すべての機能を入れる',
     f1,
   );

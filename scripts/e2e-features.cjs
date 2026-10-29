@@ -1,7 +1,7 @@
 // 機能の入り切り その1（PRD D210〜D213・D216。ADR-0028）を本物のブラウザで確かめる：
-// すべて入（初期データ。e2e は初回もすべて入に固定。PRD D276）でメニューの最後に「設定」（タブに管理者設定・データ）、管理者設定の画面（見出し・説明・ひな形の4つ・
-// 「いまの設定」とカスタムの印・21のスイッチの role=switch・aria-checked・名前・説明）。
-// ひな形の4通り（基本・月次予定・現場共有・すべては管理者設定で適用する（独自の確認ダイアログに入る機能・切れる機能、取り消すと変わらない）、
+// すべて入（初期データ。e2e は初回もすべて入に固定。PRD D276）でメニューの最後に「設定」（タブに管理者設定・データ）、管理者設定の画面（見出し・説明・ひな形の5つ・
+// 「いまの設定」とカスタムの印・22のスイッチの role=switch・aria-checked・名前・説明）。
+// ひな形の5通り（基本・月次予定・現場共有・すべては管理者設定で適用する（独自の確認ダイアログに入る機能・切れる機能、取り消すと変わらない）、
 // 労務・契約管理は別のタブで localStorage を書き換えて作る）ごとに、メニューの項目（5項目。空き状況・欠勤・キャンセルの入り切りで変わる。
 // 予定の子は今日の予定・◯月の予定・欠勤・キャンセル、予定を組むの子は基本情報・組み方の標準・担当を組む。ADR-0063・ADR-0067）・設定のタブ・下のタブ・パレットの画面と操作・ホームのいつでもの入口・
 // 切った機能の URL（`?do=` も）を開くとホームへ移り（replace）、ホームの上に閉じられる知らせと管理者設定へのリンク、
@@ -87,7 +87,7 @@ async function allOn(page) {
     '管理者設定：メニューの今の画面の印は設定の子「管理者設定」（親の「設定」は has-current）、設定のタブは「管理者設定」',
   );
   const tmpl = await page.getByTestId('feature-template').evaluateAll((els) => els.map((el) => el.dataset.template));
-  check(same(tmpl, ['basic', 'laborContract', 'monthlyField', 'all']), 'ひな形の4つの並び', tmpl);
+  check(same(tmpl, ['oneOff', 'basic', 'laborContract', 'monthlyField', 'all']), 'ひな形の5つの並び', tmpl);
   const now = await page
     .locator('[data-testid="feature-template"]:has([data-testid="feature-template-now"])')
     .evaluateAll((els) => els.map((el) => el.dataset.template));
@@ -98,7 +98,7 @@ async function allOn(page) {
     .evaluateAll((els) =>
       els.map((el) => ({ checked: el.getAttribute('aria-checked'), disabled: el.getAttribute('aria-disabled') })),
     );
-  check(sw.length === 21 && sw.every((s) => s.checked === 'true' && s.disabled === null), 'スイッチは21・すべて入', sw);
+  check(sw.length === 22 && sw.every((s) => s.checked === 'true' && s.disabled === null), 'スイッチは22・すべて入', sw);
   const vac = page.getByRole('switch', { name: '空き状況', exact: true });
   check((await vac.count()) === 1, 'スイッチの名前（読み上げ）：「空き状況」');
   const desc = await vac.evaluate((el) =>
@@ -275,7 +275,7 @@ async function checkTemplate(page, t) {
   );
 }
 
-// ---- ひな形の4通り ----
+// ---- ひな形の5通り ----
 async function templates(page, dlg, ctx) {
   // すべて入から始める（スイッチの確かめで {vacancy: true} などが残っていても すべて と同じ）
   await open(page, '/settings', '[data-testid="feature-templates"]');
@@ -297,7 +297,7 @@ async function templates(page, dlg, ctx) {
   // 基本（管理者設定で適用する）
   await applyTemplate(page, dlg, 'basic');
   await page.locator('.toast').filter({ hasText: 'ひな形「基本」を適用しました' }).waitFor({ timeout: 5000 });
-  check(same(await storedFeatures(page), asFeatures(TEMPLATE_ON.basic)), '基本：全21の ID を明示して書く');
+  check(same(await storedFeatures(page), asFeatures(TEMPLATE_ON.basic)), '基本：全22の ID を明示して書く');
   await checkTemplate(page, 'basic');
   await page.screenshot({ path: path.join(OUT_DIR, 'settings-basic.png'), fullPage: true });
 

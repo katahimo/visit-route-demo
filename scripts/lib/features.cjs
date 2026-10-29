@@ -6,6 +6,7 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 /** 機能の ID（src/contracts/features.ts の FEATURE_IDS と同じ順） */
 const FEATURE_IDS = [
+  'patterns',
   'patternMonthly',
   'clientLeave',
   'requestedOff',
@@ -29,8 +30,9 @@ const FEATURE_IDS = [
   'excel',
 ];
 /** ひな形で入れる機能（ADR-0028 の表） */
-const BASIC_ON = ['sudden', 'vacancy', 'compat', 'mapsLink', 'geocode'];
+const BASIC_ON = ['patterns', 'sudden', 'vacancy', 'compat', 'mapsLink', 'geocode'];
 const TEMPLATE_ON = {
+  oneOff: BASIC_ON.filter((id) => id !== 'patterns'),
   basic: BASIC_ON,
   laborContract: [...BASIC_ON, 'clientStage', 'offboard', 'workload', 'fare'],
   monthlyField: [
@@ -47,6 +49,7 @@ const TEMPLATE_ON = {
   all: FEATURE_IDS,
 };
 const TEMPLATE_LABEL = {
+  oneOff: '単発のみ',
   basic: '基本',
   laborContract: '労務・契約管理',
   monthlyField: '月次予定・現場共有',
