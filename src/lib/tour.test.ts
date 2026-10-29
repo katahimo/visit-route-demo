@@ -25,6 +25,13 @@ describe('tourSteps（PRD D277）', () => {
     expect(JSON.stringify(s)).not.toContain('Ctrl+K');
     expect(JSON.stringify(s)).not.toContain('条件の重み');
   });
+  it('エキスパート機能が切なら、予定を組むのメニューを案内せず、担当を組む画面から組むと書く（ADR-0072）', () => {
+    const plan = tourSteps(terms, { expert: false })[1]!;
+    expect(plan.body).not.toContain('「予定を組む」');
+    expect(plan.points!.join('')).not.toContain('メニューの「予定を組む」');
+    expect(plan.points!.join('')).toContain('担当を組む');
+    expect(tourSteps(terms, {})[1]!.body).toContain('「予定を組む」');
+  });
   it('呼び方を入れる（直書きしない）', () => {
     const s = tourSteps({ staff: 'ヘルパー', client: 'お客様' });
     expect(s[2]!.body).toContain('ヘルパーの急な欠勤');

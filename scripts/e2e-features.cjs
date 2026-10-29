@@ -30,6 +30,7 @@ const {
   MENU,
   ARRANGE_KIDS,
   arrangeKidsFor,
+  peopleKidsFor,
   PEOPLE_KIDS,
   screensFor,
   SETTINGS_TABS,
@@ -194,7 +195,10 @@ async function checkTemplate(page, t) {
   const m = await menu(page);
   check(same(m.labels, menuFor(on)), `${label}：メニューの最上位の項目（空き状況の入り切りだけで変わる）`, m.labels);
   check(
-    same(m.schedule, scheduleKidsFor(on)) && same(m.arrange, arrangeKidsFor(t)) && same(m.settings, settingsTabsFor(t)),
+    same(m.schedule, scheduleKidsFor(on)) &&
+      same(m.arrange, arrangeKidsFor(t)) &&
+      same(m.people, peopleKidsFor(t)) &&
+      same(m.settings, settingsTabsFor(t)),
     `${label}：メニューの子の項目（予定は欠勤・キャンセルの入り切り、予定を組むは基本情報・組み方の標準・担当を組む、設定は設定のタブと同じ）`,
     m,
   );
@@ -293,7 +297,7 @@ async function templates(page, dlg, ctx) {
   // 基本（管理者設定で適用する）
   await applyTemplate(page, dlg, 'basic');
   await page.locator('.toast').filter({ hasText: 'ひな形「基本」を適用しました' }).waitFor({ timeout: 5000 });
-  check(same(await storedFeatures(page), asFeatures(TEMPLATE_ON.basic)), '基本：全20の ID を明示して書く');
+  check(same(await storedFeatures(page), asFeatures(TEMPLATE_ON.basic)), '基本：全21の ID を明示して書く');
   await checkTemplate(page, 'basic');
   await page.screenshot({ path: path.join(OUT_DIR, 'settings-basic.png'), fullPage: true });
 
@@ -341,6 +345,7 @@ async function mobile(page, dlg) {
     same(drawer.labels, menuFor(TEMPLATE_ON.basic)) &&
       same(drawer.schedule, scheduleKidsFor(TEMPLATE_ON.basic)) &&
       same(drawer.arrange, arrangeKidsFor('basic')) &&
+      same(drawer.people, peopleKidsFor('basic')) &&
       same(drawer.settings, settingsTabsFor('basic')),
     '390px：引き出しもメニューと同じ項目（最上位と子）',
     drawer,

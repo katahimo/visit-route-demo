@@ -212,6 +212,8 @@ export type ArrangeRunProps = {
   headingId: string;
   /** 組み方の標準がまだ無い（範囲にかかわらず AI で組まず、組み方の標準へ案内する。ADR-0065） */
   needStandard: boolean;
+  /** エキスパート機能が入（［標準の組み方を変える］の案内を出す。ADR-0072） */
+  expert: boolean;
   mode: BatchMode;
   careDays: number;
   allDays: number;
@@ -267,7 +269,7 @@ export function ArrangeRunSection({ view, actions }: { view: ArrangeRunProps; ac
           <ArrangeModeFields mode={mode} careDays={view.careDays} allDays={view.allDays} onMode={actions.onMode} />
           <p data-testid="arrange-basis">
             考え方：<strong>{view.basisName}</strong>
-            <span className="sub">（点数の基準。替えるのは［標準の組み方を変える］）</span>
+            {view.expert && <span className="sub">（点数の基準。替えるのは［標準の組み方を変える］）</span>}
           </p>
           <p data-testid="arrange-count">
             組む日：<strong>{runDays}日</strong>

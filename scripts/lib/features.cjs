@@ -10,6 +10,7 @@ const FEATURE_IDS = [
   'clientLeave',
   'requestedOff',
   'monthPrint',
+  'expert',
   'compare',
   'sudden',
   'vacancy',
@@ -55,6 +56,8 @@ const asFeatures = (on) => Object.fromEntries(FEATURE_IDS.map((id) => [id, on.in
 
 /** メニューの最上位（5項目。予定・予定を組む・設定は畳める子の項目を持つ。「人」は無い。PRD D349・D361。ADR-0067） */
 const MENU = ['ホーム', '予定を組む', '予定', '空き状況', '設定'];
+/** エキスパート機能が切のメニュー（「予定を組む」の代わりに「人」。ADR-0072） */
+const MENU_NO_EXPERT = ['ホーム', '予定', '人', '空き状況', '設定'];
 /** 予定を組むの子の項目の key（すべて入：基本情報・組み方の標準・担当を組む。作業の順。条件の重みは子に入れない。ADR-0067） */
 const ARRANGE_KIDS = ['arrange:basics', 'arrange:clients', 'arrange:staff', 'arrange:standard', 'arrange:assign'];
 /** 組み方の標準を登録したあとの予定を組むの子（基本情報・担当を組む。標準の組み直しは担当を組むの見出しの［標準の組み方を変える］から） */
@@ -84,19 +87,25 @@ const ALL_SCREENS = [
 ];
 /** ひな形ごとの、パレットの画面に出ない画面 */
 const HIDDEN = {
-  basic: ['勤務の見込み', '条件の重み', '特性の項目'],
-  laborContract: ['条件の重み', '特性の項目'],
-  monthlyField: ['勤務の見込み', '条件の重み', '特性の項目'],
+  basic: ['勤務の見込み', '条件の重み', '組み方の標準', '特性の項目'],
+  laborContract: ['条件の重み', '組み方の標準', '特性の項目'],
+  monthlyField: ['勤務の見込み', '条件の重み', '組み方の標準', '特性の項目'],
   all: [],
 };
 const screensFor = (t) => ALL_SCREENS.filter((l) => !HIDDEN[t].includes(l));
 /** 予定を組むの子の項目の key（子は機能の入り切りで変わらない。標準を登録したあとは担当を組むだけ。ADR-0066） */
-const arrangeKidsFor = (_t, hasStandard = false) => (hasStandard ? ARRANGE_KIDS_WITH_STANDARD : ARRANGE_KIDS);
+const arrangeKidsFor = (t, hasStandard = false) =>
+  TEMPLATE_ON[t].includes('expert') ? (hasStandard ? ARRANGE_KIDS_WITH_STANDARD : ARRANGE_KIDS) : [];
+/** 「人」の子の項目の key（エキスパート機能が切のとき。予定と相性・〈利用者さん〉一覧・〈スタッフ〉一覧。ADR-0072） */
+const PEOPLE_MENU_KIDS = ['people:basics', 'people:clients', 'people:staff'];
+/** 人の子（入のときは無い） */
+const peopleKidsFor = (t) => (TEMPLATE_ON[t].includes('expert') ? [] : PEOPLE_MENU_KIDS);
 /** 設定のタブ（ひな形ごと。特性の項目は rules を切ると出さない。条件の重み・組み方の標準は予定を組む。ADR-0063・ADR-0066） */
 const SETTINGS_TABS = ['訪問の種類', '特性の項目', '管理者設定', 'データ'];
 const settingsTabsFor = (t) => SETTINGS_TABS.filter((l) => !HIDDEN[t].includes(l));
 /** メニューの最上位は空き状況を切ると減る */
-const menuFor = (on) => MENU.filter((l) => l !== '空き状況' || on.includes('vacancy'));
+const menuFor = (on) =>
+  (on.includes('expert') ? MENU : MENU_NO_EXPERT).filter((l) => l !== '空き状況' || on.includes('vacancy'));
 /** 予定の子の項目の key（今日の予定・◯月の予定・欠勤・キャンセル。欠勤・キャンセルは sudden を切ると出さない） */
 const scheduleKidsFor = (on) =>
   ['today', 'month-view', 'absence'].filter((k) => k !== 'absence' || on.includes('sudden'));
@@ -107,6 +116,7 @@ const tabsFor = (on) => ['ホーム', '予定', '欠勤'].filter((l) => l !== '�
 const ROUTES = [
   { hash: '/compare', feature: 'compare' },
   { hash: '/workload', feature: 'workload' },
+  { hash: '/standard', feature: 'expert' },
   { hash: '/rules', feature: 'rules' },
   { hash: '/items', feature: 'rules' },
   { hash: '/vacancy', feature: 'vacancy' },
@@ -150,6 +160,7 @@ async function menu(page, root = '.side-nav') {
       .evaluateAll((els) => els.map((el) => el.querySelector(':scope > span:not(.nav-badge)')?.textContent ?? '')),
     schedule: (kids.schedule ?? []).map((k) => k.key),
     arrange: (kids.arrange ?? []).map((k) => k.key),
+    people: (kids.people ?? []).map((k) => k.key),
     settings: (kids.settings ?? []).map((k) => k.label),
   };
 }
@@ -221,6 +232,7 @@ module.exports = {
   ARRANGE_KIDS,
   ARRANGE_KIDS_WITH_STANDARD,
   arrangeKidsFor,
+  peopleKidsFor,
   PEOPLE_KIDS,
   ALL_SCREENS,
   HIDDEN,

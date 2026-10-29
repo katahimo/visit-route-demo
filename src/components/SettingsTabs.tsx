@@ -16,7 +16,7 @@ import { type ArrangeStepKey, activeNavPath, arrangeSteps, basicsTabs, settingsT
 import { hasStandard } from '../lib/standard';
 import { setStandardStep } from '../lib/standardDraft';
 import { useDemoData } from '../store';
-import { useFeatures } from './useFeature';
+import { useFeature, useFeatures } from './useFeature';
 
 /** タブのアイコン（メニューの前の項目と同じ。並びは lib/nav の SETTINGS_TABS・BASICS_TABS） */
 const ICONS: Record<string, LucideIcon> = {
@@ -127,7 +127,10 @@ export function SettingsTabs() {
  */
 export function ArrangeSteps({ current, full }: { current: ArrangeStepKey; full?: boolean }) {
   const { data } = useDemoData();
+  const expert = useFeature('expert');
   const steps = arrangeSteps(full ?? !hasStandard(data));
+  // エキスパート機能が切なら段は出さない（基本情報・担当を組むは別々の画面。ADR-0072）
+  if (!expert) return null;
   return (
     <nav aria-label="予定を組むの段" data-testid="arrange-steps">
       <ol className="arrange-steps">

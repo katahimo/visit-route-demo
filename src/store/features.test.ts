@@ -44,8 +44,8 @@ const ok = (x: ReturnType<typeof importJson>): DemoData => {
 };
 
 describe('org.features（PRD D216）', () => {
-  it('初期データはすべて入（{}）', () => {
-    expect(createDemoData('2026-10-12').org.features).toEqual({});
+  it('初期データはエキスパート機能だけ切（ほかは入。ADR-0072）', () => {
+    expect(createDemoData('2026-10-12').org.features).toEqual({ expert: false });
   });
 
   it('org.features の無い古いデータは {} で読める（版はそのまま）', () => {

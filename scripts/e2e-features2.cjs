@@ -65,23 +65,29 @@ async function insideEntries(page, dlg, ctx) {
     const stepKeys = await page
       .locator('[data-testid="arrange-steps"] li')
       .evaluateAll((els) => els.map((e) => e.dataset.step));
+    // エキスパート機能が切（基本・労務・月次）なら段の表示も［標準の組み方を変える］も出さない（ADR-0072）
     check(
-      same(stepKeys, ['basics', 'arrange']),
-      `${label}：標準があれば担当を組むの段は 基本情報・担当を組む の2つ`,
+      same(stepKeys, on('expert') ? ['basics', 'arrange'] : []),
+      `${label}：標準があれば担当を組むの段は 基本情報・担当を組む の2つ（エキスパート機能が切なら出さない）`,
       stepKeys,
     );
-    check((await count('arrange-change-standard')) === 1, `${label}：担当を組むに［標準の組み方を変える］`);
+    check(
+      (await count('arrange-change-standard')) === (on('expert') ? 1 : 0),
+      `${label}：担当を組むの［標準の組み方を変える］（エキスパート機能が入のときだけ）`,
+    );
     // 予定を組むの子は基本情報・担当を組む（標準を登録したあと）
     const kids = await page
       .locator('.side-nav [data-parent="arrange"] > .nav-sub > .nav-link.nav-child')
       .evaluateAll((els) => els.map((e) => e.dataset.key));
     check(same(kids, arrangeKidsFor(t, true)), `${label}：標準があれば予定を組むの子は基本情報・担当を組むだけ`, kids);
-    // 組み方の標準の 1 の条件の重みへの寄り道は rules が入のときだけ（ADR-0066）
-    await open(page, '/standard', '[data-testid="standard-steps"]');
-    check(
-      (await count('standard-rules-link')) === (on('rules') ? 1 : 0),
-      `${label}：組み方の標準の条件の重みへのリンク`,
-    );
+    // 組み方の標準の 1 の条件の重みへの寄り道は rules が入のときだけ（ADR-0066）。組み方の標準はエキスパート機能が入のときだけ開ける（ADR-0072）
+    if (on('expert')) {
+      await open(page, '/standard', '[data-testid="standard-steps"]');
+      check(
+        (await count('standard-rules-link')) === (on('rules') ? 1 : 0),
+        `${label}：組み方の標準の条件の重みへのリンク`,
+      );
+    }
 
     // 〈利用者さん〉：その人の画面の節（PRD D308）
     const client = data.clients.find((c) => c.referrer.name) ?? data.clients[0];

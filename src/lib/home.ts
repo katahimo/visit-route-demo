@@ -148,7 +148,8 @@ export function homeTasks(input: HomeInput): { tasks: HomeTask[]; ready: boolean
       });
     }
   }
-  // 組み方の標準を登録していなければ先頭に（PRD D354・D359。ADR-0065）：組み方の標準の画面で考え方ごとの案をくらべて決める
+  // 組み方の標準を登録していなければ先頭に（PRD D354・D359。ADR-0065）：組み方の標準の画面で考え方ごとの案をくらべて決める。
+  // エキスパート機能が入のときだけ（切なら /standard への行き先ごと下で外れる。PRD D377）
   const standard: HomeTask[] = data.standard
     ? []
     : [

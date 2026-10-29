@@ -9,9 +9,9 @@ import { createDemoData, seedPatternStart } from './index';
 
 /**
  * 起動したときの初期データ：seed の人・決まり・繰り返し（createDemoData）に、過去の日を伝えた状態にしたもの。
- * 今日からの日は繰り返しの担当のまま（AI で組まない。ADR-0064）。features は機能の入り切り（既定はすべて入の {}）
+ * 今日からの日は繰り返しの担当のまま（AI で組まない。ADR-0064）。features は機能の入り切り（既定はエキスパート機能だけ切の { expert: false }。ADR-0072）
  */
-export function createInitialData(today: string, features: Features = {}): DemoData {
+export function createInitialData(today: string, features: Features = { expert: false }): DemoData {
   const d = createDemoData(today);
   return withPastTold({ ...d, org: { ...d.org, features } }, today);
 }

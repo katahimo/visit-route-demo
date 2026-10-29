@@ -37,7 +37,9 @@ export default function BasicsPage() {
   const cellRefs = useRef(new Map<string, HTMLButtonElement>());
   const clientName = (id: string) => data.clients.find((c) => c.id === id)?.displayName ?? id;
   const staffName = (id: string) => data.staff.find((s) => s.id === id)?.name ?? '（いない人）';
-  const next = nextArrangeStep(arrangeSteps(!hasStandard(data)), 'basics');
+  const expert = useFeature('expert');
+  // 段はエキスパート機能が入のときだけ（切なら「次へ」は出さない。ADR-0072）
+  const next = expert ? nextArrangeStep(arrangeSteps(!hasStandard(data)), 'basics') : null;
   const issues = issueCount(rows);
   const confirmDialog = useConfirm();
   const toast = useToast();
@@ -118,7 +120,8 @@ export default function BasicsPage() {
           </>
         )}
         <p className="sub">
-          相性を直すのは「相性」、勤務日・勤務時間を直すのは「勤務時間（シフト）」のタブ。標準の担当は組み方の標準で決めます
+          相性を直すのは「相性」、勤務日・勤務時間を直すのは「勤務時間（シフト）」のタブ。
+          {expert && '標準の担当は組み方の標準で決めます'}
         </p>
       </div>
       {next && (
