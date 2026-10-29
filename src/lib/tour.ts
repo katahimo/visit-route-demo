@@ -70,7 +70,8 @@ export const TOUR_START_CHOICES: readonly TourStartChoice[] = [
   {
     id: 'all',
     label: 'すべて',
-    description: '組み方の標準・条件の重み・提案を比べる（エキスパート機能）・勤務の見込み・Excel なども含めた、すべての機能',
+    description:
+      '組み方の標準・条件の重み・提案を比べる（エキスパート機能）・勤務の見込み・Excel なども含めた、すべての機能',
   },
 ];
 /** 選択肢の見出し */

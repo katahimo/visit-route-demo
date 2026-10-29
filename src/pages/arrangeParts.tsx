@@ -294,7 +294,8 @@ export function ArrangeRunSection({ view, actions }: { view: ArrangeRunProps; ac
       <FieldError>{view.error}</FieldError>
       {!needStandard && (
         <p className="sub">
-          ピンの訪問（手で替えた訪問・{view.expert ? '組み方の標準の担当' : '繰り返しの担当'}）はそのままで、ほかの訪問の担当と時刻を組みます。今日より前の日・確定した日は組みません。
+          ピンの訪問（手で替えた訪問・{view.expert ? '組み方の標準の担当' : '繰り返しの担当'}
+          ）はそのままで、ほかの訪問の担当と時刻を組みます。今日より前の日・確定した日は組みません。
           1日ずつ組み、終わったら提案を出します。見て「反映する」と担当が変わります（「元に戻す」で戻せます）。ほかの画面へ移っても組み続けます。
         </p>
       )}
