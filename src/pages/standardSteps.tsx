@@ -352,7 +352,7 @@ export function RegisterStep({
   names,
 }: {
   draft: boolean;
-  /** 標準を登録している（違う所0のとき、担当を組むへの案内を足す） */
+  /** 標準を登録している（違う所0のとき、無ければ今の表のまま標準にでき、あれば押せず担当を組むへ案内する） */
   hasStandard: boolean;
   registered: { since: string; at: number } | null;
   register: StandardRegisterState;
@@ -360,7 +360,7 @@ export function RegisterStep({
   names: Pick<StandardNames, 'staffName' | 'clientName'>;
 }) {
   const { staffName, clientName } = names;
-  const { minSince, since, setSinceIn, effectiveDiff, skippedDiff, temps, temp, setTemp, register } = r;
+  const { minSince, since, setSinceIn, skippedDiff, temps, temp, setTemp, canRegister, register } = r;
   return (
     <section className="stack" data-step-part="register">
       <h3>標準にする</h3>
@@ -428,16 +428,21 @@ export function RegisterStep({
               type="button"
               className="btn btn-primary"
               onClick={() => void register()}
-              disabled={effectiveDiff.length === 0}
+              disabled={!canRegister}
               data-testid="standard-register"
             >
               この表を標準にする
             </button>
-            {draftDiffCount === 0 && (
+            {draftDiffCount === 0 && !hasStandard && (
+              <span className="sub" data-testid="standard-as-is">
+                今の表のまま標準にできます。直すときはマスを押すか、「{stepNo('proposals')}.
+                案をくらべる」で違う案から作ります
+              </span>
+            )}
+            {draftDiffCount === 0 && hasStandard && (
               <span className="sub" data-testid="standard-same">
                 今の標準と同じです。マスを押して担当・時刻を直すか、「{stepNo('proposals')}.
-                案をくらべる」で違う案から作ると標準にできます
-                {hasStandard && '。予定に担当を入れるのは［次へ：担当を組む］から'}
+                案をくらべる」で違う案から作ると標準にできます。予定に担当を入れるのは［次へ：担当を組む］から
               </span>
             )}
             {skippedDiff > 0 && (

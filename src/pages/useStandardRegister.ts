@@ -10,6 +10,7 @@ import {
   type CellDiff,
   defaultSince,
   earliestSince,
+  hasStandard,
   registerStandard,
   type TemporaryChoice,
   temporaryChanges,
@@ -48,8 +49,10 @@ export function useStandardRegister(
     [data, draft, effectiveDiff.length, since, today],
   );
   const [temp, setTemp] = useState<TemporaryChoice>('drop');
+  // 標準がまだ無ければ、違う所が無くても（今の表のままでも）標準にできる
+  const canRegister = draft !== null && (effectiveDiff.length > 0 || !hasStandard(data));
   const register = async () => {
-    if (!draft || effectiveDiff.length === 0) return;
+    if (!draft || !canRegister) return;
     const lines = registerLines(effectiveDiff, since, temps.length, temp, draft.from ? presetName(draft.from) : null);
     const ok = await confirmDialog({
       title: `この表を ${mdText(since)} から標準にしますか？`,
@@ -80,7 +83,7 @@ export function useStandardRegister(
     closeEditing();
     toast('標準にしました', { action: undoAction });
   };
-  return { minSince, since, setSinceIn, effectiveDiff, skippedDiff, temps, temp, setTemp, register };
+  return { minSince, since, setSinceIn, effectiveDiff, skippedDiff, temps, temp, setTemp, canRegister, register };
 }
 
 /** useStandardRegister の返り値（登録の区画の部品が受け取る） */
