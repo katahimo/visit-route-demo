@@ -97,7 +97,16 @@ async function range(page) {
   await page.waitForFunction(() => /[?&]d=/.test(location.hash));
   const wk = /d=(\d{4}-\d{2}-\d{2})/.exec(hashOf(page))?.[1] ?? '';
   check(wk !== '' && weekdayOf(wk) === 1, '週を選ぶと ?d= に週の月曜', hashOf(page));
-  check(/〜.*の週/.test(await page.getByTestId('arrange-range-label').innerText()), '週の呼び名（M/D〜M/Dの週）');
+  // URL が先に変わり、描き直しはあとから来る（遅い CI で古い呼び名を読まない）
+  const weekLabel = await page
+    .waitForFunction(
+      () => /〜.*の週/.test(document.querySelector('[data-testid="arrange-range-label"]')?.textContent ?? ''),
+      null,
+      { timeout: 10000 },
+    )
+    .then(() => true)
+    .catch(() => false);
+  check(weekLabel, '週の呼び名（M/D〜M/Dの週）', await page.getByTestId('arrange-range-label').innerText());
   await page.locator('[data-testid="arrange-scope"] [data-scope="day"]').click();
   await page.waitForFunction(() => /[?&]date=/.test(location.hash));
   check(/^#\/arrange\?date=\d{4}-\d{2}-\d{2}$/.test(hashOf(page)), '日を選ぶと ?date=', hashOf(page));
