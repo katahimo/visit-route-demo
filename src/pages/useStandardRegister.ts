@@ -10,6 +10,7 @@ import {
   type CellDiff,
   defaultSince,
   earliestSince,
+  hasStandard,
   registerStandard,
   type TemporaryChoice,
   temporaryChanges,
@@ -48,8 +49,12 @@ export function useStandardRegister(
     [data, draft, effectiveDiff.length, since, today],
   );
   const [temp, setTemp] = useState<TemporaryChoice>('drop');
+  // 標準がまだ無ければ、直しの無い表（今の表のまま）でも標準にできる。いつからより前に終わる行だけ直した表は、
+  // 直しが捨てられて下書きと違う標準になるので押せない
+  const asIs = !hasStandard(data) && draftDiff.length === 0;
+  const canRegister = draft !== null && (effectiveDiff.length > 0 || asIs);
   const register = async () => {
-    if (!draft || effectiveDiff.length === 0) return;
+    if (!draft || !canRegister) return;
     const lines = registerLines(effectiveDiff, since, temps.length, temp, draft.from ? presetName(draft.from) : null);
     const ok = await confirmDialog({
       title: `この表を ${mdText(since)} から標準にしますか？`,
@@ -68,7 +73,7 @@ export function useStandardRegister(
       registered = next;
       return next;
     }, '組み方の標準を登録');
-    // 書き換える所が無かった（別のタブで同じ標準になった・いつからより前に終わる行だけ）ときは完了にしない
+    // 書き換える所が無かった（別のタブで同じ標準を登録した）ときは完了にしない
     if (!changed) {
       toast('書き換える所がありませんでした');
       return;
@@ -80,7 +85,7 @@ export function useStandardRegister(
     closeEditing();
     toast('標準にしました', { action: undoAction });
   };
-  return { minSince, since, setSinceIn, effectiveDiff, skippedDiff, temps, temp, setTemp, register };
+  return { minSince, since, setSinceIn, effectiveDiff, skippedDiff, temps, temp, setTemp, canRegister, register };
 }
 
 /** useStandardRegister の返り値（登録の区画の部品が受け取る） */

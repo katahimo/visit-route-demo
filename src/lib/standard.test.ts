@@ -288,9 +288,16 @@ describe('registerStandard', () => {
     expect(out.visits).toContainEqual(told);
     expect(out.standard?.from).toBe('2026-10-13');
   });
-  it('違うマスが無ければ同じデータ', () => {
-    const d = data();
+  it('違うマスが無ければ、標準があれば同じデータ', () => {
+    const d = { ...data(), standard: { at: 0, presetId: 'x', from: MON, weeks: 1 } };
     expect(reg(d, currentTable(d, TODAY))).toBe(d);
+  });
+  it('違うマスが無くても標準がまだ無ければ、今の表をそのまま標準にする（繰り返し・予定は変えない）', () => {
+    const d = data();
+    const out = reg(d, currentTable(d, TODAY));
+    expect(out.patterns).toBe(d.patterns);
+    expect(out.visits).toBe(d.visits);
+    expect(out.standard).toMatchObject({ from: MON, weeks: 1, at: 1 });
   });
   it('案から作った下書きなら点数の基準をそのプリセットにする。渡さなければ今のまま', () => {
     const presets = initialPresets();
@@ -341,7 +348,10 @@ describe('レビューで見つかった場合', () => {
     expect(on('2026-11-02')).toEqual(['s2']);
   });
   it('いつからより前に終わる繰り返しは書き換えない', () => {
-    const d = data({ patterns: [pattern({ to: '2026-10-21' })] });
+    const d = data({
+      patterns: [pattern({ to: '2026-10-21' })],
+      standard: { at: 0, presetId: 'x', from: MON, weeks: 1 },
+    });
     expect(reg(d, tableWith(d, [['p1', 1, 's2', null]]), '2026-10-26')).toBe(d);
   });
   it('標準と同じピンの回はピンのまま残す', () => {

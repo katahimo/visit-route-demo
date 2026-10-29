@@ -385,7 +385,8 @@ export function registerStandard(
 ): DemoData {
   const since = clampSince(data, sinceIn, today);
   const rows = changedRows(data, table, since, today);
-  if (rows.length === 0) return data;
+  // 違うマスが無いとき：標準があれば何もしない。まだ無ければ今の表をそのまま標準にする（繰り返し・予定は変えない）
+  if (rows.length === 0) return hasStandard(data) ? data : withStandardInfo(data, data, since, today, opts);
   let patterns = data.patterns;
   /** 古い繰り返し ID → 曜日 → 新しい繰り返し */
   const moved = new Map<string, Map<number, Pattern>>();
@@ -450,13 +451,24 @@ export function registerStandard(
     });
   }
   const visits = [...data.visits.filter((v) => !touchedIds.has(v.id)), ...put];
+  return withStandardInfo(data, { ...data, patterns, visits }, since, today, opts);
+}
+
+/** 登録の記録（standard）を書き、案から作った下書きなら点数の基準をそのプリセットにする */
+function withStandardInfo(
+  data: DemoData,
+  out: DemoData,
+  since: string,
+  today: string,
+  opts: { at: number; presetId?: string | null },
+): DemoData {
   const presetId =
     opts.presetId && data.presets.some((p) => p.id === opts.presetId)
       ? opts.presetId
       : (data.scorePresetId ?? data.presets[0]?.id ?? '');
   const standard: StandardInfo = { at: opts.at, presetId, from: since, weeks: cycleWeeks(data, today).weeks };
-  const out: DemoData = { ...data, patterns, visits, standard };
-  return opts.presetId ? setScorePreset(out, presetId) : out;
+  const next: DemoData = { ...out, standard };
+  return opts.presetId ? setScorePreset(next, presetId) : next;
 }
 
 /** 考え方のカードの数（PRD D350） */

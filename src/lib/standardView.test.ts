@@ -116,6 +116,10 @@ describe('standardView', () => {
     expect(registerLines(changes, MON, 1, 'drop', null)[2]).toBe(
       'すでに入っている予定で新しい標準と違う 1件は、消して標準どおりにします。',
     );
+    // 標準がまだ無く、今の表のまま標準にするとき
+    const asIs = registerLines([], MON, 0, 'drop', null);
+    expect(asIs[0]).toBe('今の表のまま標準にします（繰り返しと予定は変えません）。');
+    expect(asIs[1]).toBe('10/12から先も、この表の担当・時刻で並びます（すでに直した予定はそのままです）。');
   });
 });
 
