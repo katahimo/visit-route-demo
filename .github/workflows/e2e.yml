@@ -63,7 +63,7 @@ jobs:
       matrix:
         shard: [1, 2, 3, 4]
         # 夜間だけ月末の「今日」でも走らせる（空は次の水曜の日本時間 12:00）
-        fake_now: ${{ github.event_name == 'schedule' && fromJSON('["", "2026-10-28T12:00:00+09:00", "2026-10-31T12:00:00+09:00"]') || fromJSON('[""]') }}
+        fake_now: ${{ github.event_name == 'schedule' && fromJSON('["", "2026-10-28T12:00:00+09:00", "2026-12-30T12:00:00+09:00"]') || fromJSON('[""]') }}
     name: e2e ${{ matrix.shard }}/4 ${{ matrix.fake_now || '次の水曜' }}
     env:
       FAKE_NOW: ${{ matrix.fake_now }}
@@ -104,7 +104,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        fake_now: ${{ github.event_name == 'schedule' && fromJSON('["", "2026-10-28T12:00:00+09:00", "2026-10-31T12:00:00+09:00"]') || fromJSON('[""]') }}
+        fake_now: ${{ github.event_name == 'schedule' && fromJSON('["", "2026-10-28T12:00:00+09:00", "2026-12-30T12:00:00+09:00"]') || fromJSON('[""]') }}
     name: perf ${{ matrix.fake_now || '次の水曜' }}
     env:
       FAKE_NOW: ${{ matrix.fake_now }}

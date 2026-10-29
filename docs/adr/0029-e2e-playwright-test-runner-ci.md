@@ -29,12 +29,12 @@
 - ページの時計は止めて「今日」を固定する。ただし速さを測る確かめは、`setFixedTime` が requestAnimationFrame・`performance.now` も差し替えて本物の描画を待たなくなるので、時計を止めない文脈（`withRealClock`）で測る。速さの上限はスクリプトごとの名前（`PERF_MS_COMPAT` など。無ければ `PERF_MS`）
 - 包みは `playwright.config.ts` と `e2e/legacy.spec.ts`：スクリプト1本を1つの test にし、`fullyParallel`・worker は手元4・CI 3。サイトは `BASE` があればそれ、無ければ webServer が build して `vite preview` で出す。「今日」（`FAKE_NOW`）は設定ファイルで1回だけ決めて全 worker で同じにする。速さを見るスクリプトは `@perf` を付け、project `perf`（worker 1）で別に走らせる（同時に走ると速さが揺れる）
 - コマンドは `npm run e2e`・`npm run e2e:perf`・`npm run e2e:all`
-- CI：`.github/workflows/e2e.yml` を PR・手動・夜間（日本時間 03:00）に走らせる。速い検査（lint・型・`check:code`・vitest）、e2e（`--shard` で4つのジョブ）、perf（1本ずつ）の3種類のジョブを並列に。ブラウザと依存は Playwright の公式イメージ（`@playwright/test` と同じ版）に入っているものを使い、毎回インストールしない。ビルドと `vite preview` はジョブごとに1回だけ。夜間は `FAKE_NOW` を次の水曜と月末の2通りでも走らせる。速さの上限は共有ランナーが遅いので CI で緩める（大きな遅れの検出だけ。細かな速さは手元で見る）。公開（`deploy.yml`）はまだ e2e を待たない
+- CI：`.github/workflows/e2e.yml` を PR・手動・夜間（日本時間 03:00）に走らせる。速い検査（lint・型・`check:code`・vitest）、e2e（`--shard` で4つのジョブ）、perf（1本ずつ）の3種類のジョブを並列に。ブラウザと依存は Playwright の公式イメージ（`@playwright/test` と同じ版）に入っているものを使い、毎回インストールしない。ビルドと `vite preview` はジョブごとに1回だけ。夜間は `FAKE_NOW` を次の水曜と月末近くの水曜（2026-10-28・2026-12-30）でも走らせる（月末そのものの最終日・土日は「今日より後の日」が要る test と両立しないので避ける）。速さの上限は共有ランナーが遅いので CI で緩める（大きな遅れの検出だけ。細かな速さは手元で見る）。公開（`deploy.yml`）はまだ e2e を待たない
 - 開き直しは about:blank を挟む（同じ文書で `?id=` へ移すと、読み直す前にアプリが `?id=` を消して欄が開かないことがあるため）。filechooser の受け口はページを開いた直後に付ける
 - 段（steps）を出して `test.step`・`expect.soft` で報告に出す形は ADR-0041
 
 ## 理由とトレードオフ
-- 得るもの：手元で `npm run e2e` の1つでビルドと配信から並列の実行までが走る。PR と夜間に CI で回り、月末の「今日」も夜間に確かめる。`node scripts/e2e-*.cjs` の単独の実行も今どおり
+- 得るもの：手元で `npm run e2e` の1つでビルドと配信から並列の実行までが走る。PR と夜間に CI で回り、月末近くの「今日」も夜間に確かめる。`node scripts/e2e-*.cjs` の単独の実行も今どおり
 - 失うもの：devDependency が増える（ブラウザは別。CI は公式イメージで、版を上げるときは e2e.yml のイメージも上げる）。手元の Playwright と版をそろえ続ける。CI の時間（PR ごとに数分。ジョブの数だけランナーを使う）。速さの上限が CI では緩い
 - 見直す条件：CI で同じスクリプトがたびたび落ちる（固定の待ちを目印の待ちに替える）。PR の CI が長すぎる（shard を増やす）。e2e が安定したら公開の前に e2e を待たせる。スクリプトを spec に書き直すなら、fixture（文脈・ツアーを見た扱い・確認ダイアログ・時計）にまとめてからスクリプトを消す
 
