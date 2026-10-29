@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Absence, Staff } from '../contracts/documents';
 import { monthLabel } from './dateText';
-import { HOME_NEXT_MONTH_FROM_DAY, homeDays, homeMonths, homeTasks, routedStaffCount } from './home';
+import { HOME_NEXT_MONTH_FROM_DAY, homeDays, homeMonths, homeTasks, routedStaffCount, taskAction } from './home';
 import { type DayStatus, monthProgress } from './month';
 
 /** 日の状態（既定は訪問3件・確定済み・問題なし） */
@@ -193,5 +193,48 @@ describe('routedStaffCount（今日の担当の人数）', () => {
   it('訪問の列が1件以上ある人だけ数える', () => {
     expect(routedStaffCount({})).toBe(0);
     expect(routedStaffCount({ s1: ['v1', 'v2'], s2: [], s3: ['v3'] })).toBe(2);
+  });
+});
+
+describe('担当なしの［組む］カード（エキスパート機能が切のとき。ADR-0072 第2段）', () => {
+  const sts = [st(TODAY, { state: 'none' })];
+  const withAuto = (features: Record<string, boolean>, autoCount: number) =>
+    homeTasks({ ...input(sts), features, autoCount }).tasks;
+
+  it('切なら「担当なし N件」のカードを出す（行き先でなくその場で組む）。やること（todo）で、準備はできている扱いにしない', () => {
+    const r = homeTasks({ ...input(sts), features: { expert: false }, autoCount: 3 });
+    const card = r.tasks.find((t) => t.kind === 'auto');
+    expect(card).toMatchObject({ tone: 'todo', title: '担当なし 3件' });
+    expect(taskAction(card!)).toEqual({ type: 'arrange' });
+    expect(r.ready).toBe(false);
+  });
+
+  it('入なら出さない（今の「担当なしの訪問を組む」のまま）。件数が0でも出さない', () => {
+    expect(withAuto({ expert: true }, 3).some((t) => t.kind === 'auto')).toBe(false);
+    expect(withAuto({}, 3).some((t) => t.kind === 'auto')).toBe(false);
+    expect(withAuto({ expert: false }, 0).some((t) => t.kind === 'auto')).toBe(false);
+  });
+
+  it('切のときは「担当なしの訪問を組む」（担当を組むへ）を出さず［組む］だけ、入のときはそのカードだけ', () => {
+    const list = [
+      st(TODAY, { state: 'none', ...unassigned(1) }),
+      st('2026-10-15', { state: 'none', ...unassigned(1) }),
+    ];
+    const kinds = (features: Record<string, boolean>) =>
+      homeTasks({ ...input(list), features, autoCount: 2 }).tasks.map((t) => t.kind);
+    expect(kinds({ expert: false })).toContain('auto');
+    expect(kinds({ expert: false })).not.toContain('create');
+    expect(kinds({ expert: true })).toContain('create');
+    expect(kinds({ expert: true })).not.toContain('auto');
+  });
+
+  it('行き先のあるカードは link の動き（移る先と日付）', () => {
+    const list = [
+      st(TODAY, { state: 'none', ...unassigned(1) }),
+      st('2026-10-15', { state: 'none', ...unassigned(1) }),
+    ];
+    const r = homeTasks({ ...input(list), features: { expert: false }, autoCount: 2 });
+    const today = r.tasks.find((t) => t.kind === 'today')!;
+    expect(taskAction(today)).toEqual({ type: 'link', to: '/plan', date: TODAY });
   });
 });

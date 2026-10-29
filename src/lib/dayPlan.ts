@@ -168,7 +168,8 @@ export function pointsOf(scoreProblem: Problem | null, scale: ScoreScale | null,
 }
 
 /** 分 → HH:mm（0:00〜23:59 に収める） */
-const clockOf = (minutes: number): string => minutesToHhmm(Math.min(23 * 60 + 59, Math.max(0, Math.round(minutes))));
+export const clockOf = (minutes: number): string =>
+  minutesToHhmm(Math.min(23 * 60 + 59, Math.max(0, Math.round(minutes))));
 
 /**
  * 担当の並びを訪問に書く（AI の提案を反映する・手で担当を替える。ADR-0053）。問題の訪問ごとに、担当＝列の人（無ければ null）、

@@ -1,6 +1,7 @@
 import { CalendarDays, ChevronLeft, ChevronRight, Menu, Route as RouteIcon, Search } from 'lucide-react';
 import type { RefObject } from 'react';
 import { Link } from 'react-router-dom';
+import { AutoArrangeBand } from '../components/autoArrangeHost';
 import { BatchBand } from '../components/batchBand';
 import { IS_MAC } from '../components/CommandPalette';
 import { useDay } from '../components/day';
@@ -39,6 +40,8 @@ export function AppHeader({
     <header ref={headerRef} className="app-header">
       {/* 範囲の AI で組む（担当を組む）の進み具合と［止める］（PRD D256。ほかの画面へ移っても続く。月の予定では画面の中に出す） */}
       <BatchBand />
+      {/* 欄の保存・ホームの［組む］の自動の組みの進み具合（長引いたときだけ。ADR-0072） */}
+      <AutoArrangeBand />
       {/* スマホだけ：ロゴと今の画面の名前（PRD D132。広い画面では出さない。「メニュー」は下のタブ。PRD D336） */}
       <div className="m-head-title">
         <span className="brand-mark" aria-hidden="true">

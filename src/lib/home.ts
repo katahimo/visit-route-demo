@@ -5,7 +5,7 @@ import type { Terms } from '../contracts/documents';
 import type { Features } from '../contracts/features';
 import { addDays } from '../domain/time';
 import { dateText, monthLabel } from './dateText';
-import { isHrefOn } from './features';
+import { isHrefOn, isOn } from './features';
 import { type AttentionKind, attentionList, type DayStatus } from './month';
 import { SUDDEN_DO } from './sudden';
 import { monthDates, ymOf } from './ym';
@@ -33,12 +33,16 @@ export function homeDays(today: string): string[] {
 /** 見る月ごとの入力 */
 export type HomeMonth = { ym: string };
 
-/** カードの種類：組み方の標準・要対応・今日の予定・確定していない日・担当なし（担当を組むへ） */
-export type HomeTaskKind = 'standard' | 'attention' | 'today' | 'confirm' | 'create';
+/**
+ * カードの種類：組み方の標準・要対応・今日の予定・確定していない日・担当なし（担当を組むへ）・自動（エキスパート機能が切のときの、
+ * その場で組む［組む］の担当なし。ADR-0072 第2段）
+ */
+export type HomeTaskKind = 'standard' | 'attention' | 'today' | 'confirm' | 'create' | 'auto';
 
 /**
  * 次の一手のカード。to は移る先（URL。クエリ付き）、date があれば移る前に選んでいる日付をその日にする（日の画面）。
- * tone：warn＝手当てが要る、todo＝やること、info＝知らせだけ（「準備はできています」の判定に数えない）
+ * tone：warn＝手当てが要る、todo＝やること、info＝知らせだけ（「準備はできています」の判定に数えない）。
+ * kind が auto は移らずにその場で組む（to は今の画面のホーム。押したときの動きは taskAction）
  */
 export type HomeTask = {
   kind: HomeTaskKind;
@@ -48,6 +52,25 @@ export type HomeTask = {
   to: string;
   date?: string;
 };
+
+/** カードの押したときの動き（種類の分岐はここの1か所。link＝画面へ移る、arrange＝その場で自動で組む） */
+export function taskAction(t: HomeTask): { type: 'link'; to: string; date?: string } | { type: 'arrange' } {
+  const kind = t.kind;
+  switch (kind) {
+    case 'auto':
+      return { type: 'arrange' };
+    case 'standard':
+    case 'attention':
+    case 'today':
+    case 'confirm':
+    case 'create':
+      return { type: 'link', to: t.to, date: t.date };
+    default: {
+      const _: never = kind;
+      return _;
+    }
+  }
+}
 
 /** 今日の担当の人数（訪問の列が1件以上ある人。homeTasks の todayStaff） */
 export function routedStaffCount(routes: Readonly<Record<string, readonly string[]>>): number {
@@ -64,6 +87,8 @@ export type HomeInput = {
   data: Pick<DemoData, 'absences' | 'staff' | 'standard'>;
   /** 機能の入り切り（切った機能へ向かうカードは出さない。PRD D213。{} ならすべて入） */
   features: Features;
+  /** 担当なしの訪問の数（今日〜翌月末。lib/autoArrange の targetCount。エキスパート機能が切のときの［組む］のカード。無ければ 0） */
+  autoCount?: number;
 };
 
 const ATTENTION_LABEL: Record<AttentionKind, string> = {
@@ -90,11 +115,22 @@ function target(dates: readonly string[], ym: string, op: 'attention' | 'unconfi
  * ready は手当て・やることが1つも無いとき（今日の予定の知らせだけ）
  */
 export function homeTasks(input: HomeInput): { tasks: HomeTask[]; ready: boolean } {
-  const { today, statuses, months, todayStaff, data, features } = input;
+  const { today, statuses, months, todayStaff, data, features, autoCount = 0 } = input;
   const future = statuses.filter((s) => s.date >= today);
   const inMonth = (ym: string) => future.filter((s) => ymOf(s.date) === ym);
   const attention: HomeTask[] = [];
   const work: HomeTask[] = [];
+  const expertOn = isOn(features, 'expert');
+  // エキスパート機能が切のときは、担当を組む画面が無いので、担当なしの訪問をその場で組む（入のときは下の「担当なしの訪問を組む」。ADR-0072）
+  if (!expertOn && autoCount > 0) {
+    work.push({
+      kind: 'auto',
+      tone: 'todo',
+      title: `担当なし ${autoCount}件`,
+      detail: '今日から来月末までの担当なしの訪問を、いまの条件で組みます',
+      to: '/home',
+    });
+  }
   for (const { ym } of months) {
     const days = inMonth(ym);
     const m = monthLabel(ym);
@@ -118,7 +154,7 @@ export function homeTasks(input: HomeInput): { tasks: HomeTask[]; ready: boolean
     }
     const withVisits = days.filter((s) => s.count > 0);
     const unassignedDays = withVisits.filter((s) => s.unassigned > 0 && s.state === 'none');
-    if (unassignedDays.length >= 2) {
+    if (unassignedDays.length >= 2 && expertOn) {
       work.push({
         kind: 'create',
         tone: 'todo',

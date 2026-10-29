@@ -17,9 +17,11 @@ import { useId, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { StaffMarkById } from '../components/StaffMark';
 import { useOpenVisit } from '../components/VisitPanel';
-import { addDays, jstHhmm } from '../domain/time';
+import { useValueStore } from '../components/valueStore';
+import { addDays, jstDate, jstHhmm } from '../domain/time';
+import { autoArrange, requestUnassignedArrange } from '../lib/autoArrangeBatch';
 import { dateText } from '../lib/dateText';
-import type { HomeEntry, HomeEntryKey, HomeTask, HomeTaskKind } from '../lib/home';
+import { type HomeEntry, type HomeEntryKey, type HomeTask, type HomeTaskKind, taskAction } from '../lib/home';
 import { dayVisitRows, unassignedVisits, type VisitRow } from '../lib/visitLists';
 import { useDemoData } from '../store';
 
@@ -29,6 +31,7 @@ const KIND_ICON: Record<HomeTaskKind, LucideIcon> = {
   today: CalendarDays,
   confirm: Lock,
   create: Sparkles,
+  auto: Sparkles,
 };
 
 const ENTRY_ICON: Record<HomeEntryKey, LucideIcon> = {
@@ -41,44 +44,89 @@ const ENTRY_ICON: Record<HomeEntryKey, LucideIcon> = {
 /** 押したボタンへフォーカスを戻す（訪問の詳細の欄を閉じたとき。ボタンが消えていれば戻さない） */
 const backTo = (btn: HTMLElement) => () => (btn.isConnected ? btn : null);
 
-/**
- * 次の一手のカード（全体が1つのリンク）。lead は先頭の「まずこれ」（主ボタンの塗りで幅いっぱい。ホームの主ボタンはこの1つ。
- * PRD D263）。「まずこれ」は見える札で、読み上げでも題名の前に読む
- */
-export function TaskCard({ task: t, lead, onPick }: { task: HomeTask; lead: boolean; onPick: () => void }) {
-  const Icon = KIND_ICON[t.kind];
+/** 先頭の「まずこれ」の札（要対応が先頭のときは要対応の印も残す） */
+function LeadBadges({ tone }: { tone: HomeTask['tone'] }) {
   return (
-    <Link
-      to={t.to}
-      className={`card home-task is-${t.tone}${lead ? ' is-lead' : ''}`}
-      onClick={onPick}
-      data-testid="home-task"
-      data-kind={t.kind}
-      data-tone={t.tone}
-      data-lead={lead || undefined}
-    >
+    <span className="home-lead-badges">
+      <span className="home-lead-badge" data-testid="home-lead">
+        まずこれ
+      </span>
+      {/* 要対応が先頭のときは要対応の印（赤）を残す（塗りの中でも色と文字で分かる） */}
+      {tone === 'warn' && (
+        <span className="home-lead-badge is-warn" data-testid="home-lead-warn">
+          要対応
+        </span>
+      )}
+    </span>
+  );
+}
+
+/**
+ * 次の一手のカード。lead は先頭の「まずこれ」（主ボタンの塗りで幅いっぱい。ホームの主ボタンはこの1つ。PRD D263）。
+ * 「まずこれ」は見える札で、読み上げでも題名の前に読む。押したときの動きは lib/home の taskAction：画面へ移るカード（全体が1つのリンク。
+ * onPick は移る前に選んでいる日付を変える）と、その場で組むカード（［組む］のボタン）
+ */
+export function TaskCard({
+  task: t,
+  lead,
+  onPick,
+}: {
+  task: HomeTask;
+  lead: boolean;
+  onPick: (date?: string) => void;
+}) {
+  const Icon = KIND_ICON[t.kind];
+  const action = taskAction(t);
+  const body = (
+    <>
       <span className="home-task-icon" aria-hidden="true">
         <Icon size={lead ? 24 : 20} strokeWidth={2.2} />
       </span>
       <span className="home-task-text">
-        {lead && (
-          <span className="home-lead-badges">
-            <span className="home-lead-badge" data-testid="home-lead">
-              まずこれ
-            </span>
-            {/* 要対応が先頭のときは要対応の印（赤）を残す（塗りの中でも色と文字で分かる） */}
-            {t.tone === 'warn' && (
-              <span className="home-lead-badge is-warn" data-testid="home-lead-warn">
-                要対応
-              </span>
-            )}
-          </span>
-        )}
+        {lead && <LeadBadges tone={t.tone} />}
         <strong>{t.title}</strong>
         {t.detail && <span className="sub">{t.detail}</span>}
       </span>
+    </>
+  );
+  const cls = `card home-task is-${t.tone}${lead ? ' is-lead' : ''}`;
+  const attrs = {
+    'data-testid': 'home-task',
+    'data-kind': t.kind,
+    'data-tone': t.tone,
+    'data-lead': lead || undefined,
+  };
+  if (action.type === 'arrange')
+    return (
+      <div className={cls} {...attrs}>
+        {body}
+        <ArrangeButton />
+      </div>
+    );
+  return (
+    <Link to={action.to} className={cls} onClick={() => onPick(action.date)} {...attrs}>
+      {body}
       <ChevronRight size={18} className="home-task-go" aria-hidden="true" />
     </Link>
+  );
+}
+
+/** ［組む］：今日〜翌月末の担当なしの訪問を、いまの条件で自動で組む（ホームでエキスパート機能が切のとき）。計算中は押せない */
+function ArrangeButton() {
+  const { data } = useDemoData();
+  const running = useValueStore(autoArrange.run) !== null;
+  return (
+    <button
+      type="button"
+      className="btn btn-small"
+      aria-disabled={running || undefined}
+      onClick={() => {
+        if (!running) requestUnassignedArrange(data, jstDate(Date.now()));
+      }}
+      data-testid="home-auto-arrange"
+    >
+      {running ? '組んでいます…' : '組む'}
+    </button>
   );
 }
 

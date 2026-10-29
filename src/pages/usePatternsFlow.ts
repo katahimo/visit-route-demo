@@ -4,8 +4,10 @@ import { useEffect, useId, useMemo, useState } from 'react';
 import { useConfirm } from '../components/ConfirmDialog';
 import { useToast } from '../components/Toast';
 import { useFeature } from '../components/useFeature';
+import type { DemoData } from '../contracts/data';
 import type { Pattern } from '../contracts/documents';
 import { jstDate } from '../domain/time';
+import { requestAutoArrange } from '../lib/autoArrangeBatch';
 import { byName, newId } from '../lib/common';
 import { mdText } from '../lib/dateText';
 import { patternEndConfirm, patternRemoveConfirm, patternSplitConfirm } from '../lib/patternConfirm';
@@ -22,6 +24,10 @@ import { useDemoData } from '../store';
 
 /** 終わらせる繰り返しと最後の日（opened は開いたときの最後の日。変更があるかの判定） */
 export type PatternEnding = { id: string; last: string; opened: string };
+
+/** 保存の前後で増えた・日時が変わった担当なしの回を自動で組む依頼を出す（繰り返しの担当も書く。ADR-0072）。依頼したら true */
+const arrangeAfter = (before: DemoData, after: DemoData, today: string): boolean =>
+  requestAutoArrange({ before, after, today, writeUsual: true });
 
 /** 開いている欄（足す・直す／終わらせる）と誤りの文。入力中の変更の有無を onDirty で知らせる */
 function usePatternsDraft(onDirty?: (dirty: boolean) => void) {
@@ -88,12 +94,17 @@ export function usePatternsFlow({
         setError(p);
         return;
       }
-      update((d) => ({ ...d, patterns: [...d.patterns, p] }), '繰り返しを足す');
+      const add = (d: DemoData): DemoData => ({ ...d, patterns: [...d.patterns, p] });
+      // 保存後のデータは先に1回だけ作り、store にもそれを入れる（自動の組みが読むデータと参照をそろえる）
+      const after = add(data);
+      update((d) => (d === data ? after : add(d)), '繰り返しを足す');
       open(null);
+      // 保存したあと、増えた担当なしの回を自動で組む（保存の前後のデータで対象を決める。繰り返しの担当も書く。ADR-0072）
+      const auto = arrangeAfter(data, after, today);
       toast(
         p.usualStaffId
           ? `繰り返しを足しました（担当：${staffName(p.usualStaffId)}）`
-          : '繰り返しを足しました（担当なし。「担当を組む」の画面で AI で組めます）',
+          : `繰り返しを足しました（${auto ? '担当を自動で組みます' : '担当なし'}）`,
       );
       return;
     }
@@ -120,12 +131,16 @@ export function usePatternsFlow({
     const c = splitPattern(data, original.id, next, form.since, today, nid);
     const m = patternConfirmedDays(data, original.id, form.since > today ? form.since : today, c);
     if (!(await confirmDialog(patternSplitConfirm(form.since, c.removed.length, m)))) return;
+    const after = { ...data, patterns: c.patterns, visits: c.visits };
     update((d) => {
+      if (d === data) return after;
       const x = splitPattern(d, original.id, next, form.since, today, nid);
       return { ...d, patterns: x.patterns, visits: x.visits };
     }, '繰り返しを直す');
     open(null);
-    toast('繰り返しを直しました');
+    // 直した回の担当なし（日時が変わった・増えた回）を自動で組む
+    const auto = arrangeAfter(data, after, today);
+    toast(auto ? '繰り返しを直しました（担当を自動で組みます）' : '繰り返しを直しました');
   };
 
   const remove = async (p: Pattern) => {
