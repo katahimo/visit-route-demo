@@ -82,6 +82,7 @@ export default function StandardPage() {
       registered={registered}
       register={register}
       draftDiffCount={draftDiff.length}
+      hasStandard={std !== undefined}
       names={{ staffName, clientName }}
     />
   );

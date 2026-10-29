@@ -148,6 +148,16 @@ export function stopProposals(): void {
 }
 
 /**
+ * 案・下書き・段・完了の表示を捨てて、作っている計算も止める。データを丸ごと差し替えたとき（読み込み・初期状態に戻す・
+ * 直前の状態に戻す・別のタブの変更）に呼ぶ：前のデータの繰り返しで作った表は、新しいデータの今の標準とくらべられない
+ * （くらべると違う所が 0 になり、［この表を標準にする］が押せなくなる）
+ */
+export function clearStandardWork(): void {
+  stopProposals();
+  standardWork.set(EMPTY);
+}
+
+/**
  * プリセットごとに案を作る（data.presets の順）。期間（standardPeriod）の日を1日ずつ、そのプリセットの重みで Worker で解き、
  * 日ごとの割当から標準の表（tableFromDays）とカードの数（点は点数の基準の物差し）を作る。始めたときのデータで作る
  */

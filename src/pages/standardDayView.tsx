@@ -65,6 +65,8 @@ export function StandardDayView({
               type="button"
               className="btn btn-small"
               onClick={() => onUse(c.presetId)}
+              disabled={stale}
+              title={stale ? '案を作り直すと選べます' : undefined}
               data-testid="standard-day-use"
             >
               この案から作る

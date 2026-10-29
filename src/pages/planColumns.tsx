@@ -1,6 +1,7 @@
 // 日の予定の担当の列（PRD D58・D63・D231）：列の見出し・class・「担当なしの訪問」の列・時間軸の列・自宅までの区間と、
 // 時間軸／順番の表示（PlanBoard）
 import { CircleOff, Clock, UserRoundX } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { PersonInfo } from '../components/PersonPopover';
 import { RouteTimeline, type TimelineColumn } from '../components/routeTimeline';
 import { LegLine, StaffFocusButton } from '../components/routeView';
@@ -171,6 +172,7 @@ export function noneCol(p: PlanCtx) {
     running,
     reassignMarks,
     placeCandidate,
+    date,
   } = bv(p);
   return (
     <div
@@ -192,6 +194,15 @@ export function noneCol(p: PlanCtx) {
         <span className="chip chip-warn">{unassigned.length}件</span>
       </div>
       {unassigned.length === 0 && <span className="sub">ここへドラッグすると担当なしにできます</span>}
+      {/* 日の予定では AI で組まない（ADR-0063）ので、入れ方を書き、この日の担当を組むへ案内する */}
+      {unassigned.length > 0 && (
+        <span className="sub" data-testid="unassigned-help">
+          カードを担当の列へドラッグすると入れられます。まとめて入れるなら
+          <Link to={`/arrange?date=${date}`} data-testid="unassigned-arrange">
+            この日の担当を組む
+          </Link>
+        </span>
+      )}
       {unassigned.map((id) => {
         const reasons = unplacedReasons(problem, explained, id);
         const client = clientOf(id);

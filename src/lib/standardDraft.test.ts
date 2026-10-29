@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { setStandardStep, standardStepOf, standardWork } from './standardDraft';
+import { clearStandardWork, setDraft, setStandardStep, standardStepOf, standardWork } from './standardDraft';
 
 describe('standardStepOf（組み方の標準の段。ADR-0066・ADR-0067）', () => {
   const initial = standardWork.get();
@@ -20,5 +20,27 @@ describe('standardStepOf（組み方の標準の段。ADR-0066・ADR-0067）', (
     expect(standardWork.get().step).toBe('register');
     setStandardStep('proposals');
     expect(standardStepOf(standardWork.get())).toBe('proposals');
+  });
+});
+
+describe('clearStandardWork（データを丸ごと差し替えたとき）', () => {
+  const initial = standardWork.get();
+  afterEach(() => standardWork.set(() => initial));
+  it('前のデータの下書き・段・完了の表示・案を捨てる（初期状態に戻したあとに古い下書きで違う所0にしない）', () => {
+    setDraft({ table: { p1: { 1: { staffId: 's1', start: '09:00' } } }, from: 'balance' }, 'old-key');
+    standardWork.set((w) => ({
+      ...w,
+      step: 'register',
+      registered: { since: '2026-11-02', at: 1 },
+      proposalsOf: { period: { from: '2026-11-02', to: '2026-11-08', weeks: 1 }, key: 'old-key' },
+    }));
+    clearStandardWork();
+    const w = standardWork.get();
+    expect(w.draft).toBeNull();
+    expect(w.draftKey).toBeNull();
+    expect(w.registered).toBeNull();
+    expect(w.proposals).toEqual([]);
+    expect(w.proposalsOf).toBeNull();
+    expect(standardStepOf(w)).toBe('proposals');
   });
 });
