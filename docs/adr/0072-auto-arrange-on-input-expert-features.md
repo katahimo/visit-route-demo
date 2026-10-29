@@ -71,3 +71,4 @@
 - PRD：D372〜D378（`prd/arrange.md`）・§4 やらないこと・§3 読み方。D349・D355・D364 のメニューは `expert` の入り切りで読む
 - 設計：`design.md` の画面・機能の節と `lib/features`（`expert`）・`lib/nav`（`menuSections`）・新しい `lib/autoArrange`（`monthBatch` の「入れた分だけ」）。データの版は変えない
 - 実装：第1段＝`expert` の追加と入口（メニュー・パレット・ホーム・ひな形）の整理。第2段＝`lib/autoArrange` と保存時の呼び出し、単発のみのひな形、e2e
+  - 第2段の要点：計算 `lib/autoArrange`・解く入れ物（キュー・Worker・1手で書く）`lib/autoArrangeBatch`・知らせと帯 `components/autoArrangeHost`。呼び出しは `pages/usePatternsFlow`（繰り返しの足す・直す。繰り返しの担当も書く）・`components/useVisitPanel`（訪問の欄の保存）・ホームの［組む］（`pages/homeParts`。expert が切のときの「担当なし N件」）。e2e は `scripts/e2e-auto-arrange.cjs`

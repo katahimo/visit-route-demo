@@ -95,6 +95,8 @@ async function insideEntries(page, dlg, ctx) {
     const csec = (name) => page.locator(`[data-testid="person-sec"][data-section="${name}"]`);
     await open(page, `/clients/${cid}`, '[data-testid="person-view"]');
     check((await count('schedule-leaves')) === 1, `${label}：予定のタブの休み（事実なので残す）`);
+    // 繰り返しの欄は機能 patterns を切ると隠す（単発のみ。今ある繰り返しの回は予定に残る。ADR-0072）
+    check((await count('patterns-section')) === (on('patterns') ? 1 : 0), `${label}：予定のタブの繰り返しの欄`);
     check(
       (await page.getByTestId('person-tabs').locator('[data-tab="leaves"]').count()) === (on('clientLeave') ? 1 : 0),
       `${label}：休みのタブ`,

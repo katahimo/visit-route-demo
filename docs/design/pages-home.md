@@ -13,14 +13,16 @@
 - `homeMonths(today)`：今月。今日が15日以降なら来月も
 - `homeDays(today)`：今日から見る月の末日まで
 - `homeEntries(today, terms, features)`（いつでもの入口）
-- `homeTasks({ today, statuses, months, todayStaff, data })`：カード `HomeTask`＝種類・色（`warn`／`todo`／`info`）・題名・内訳・移る先 `to`・日の予定へ移るときの日付 `date`。`ready` は info だけのとき。切った機能のカードは出さない
+- `homeTasks({ today, statuses, months, todayStaff, data, features, autoCount })`：カード `HomeTask`＝種類（`standard`／`attention`／`today`／`confirm`／`create`／`auto`）・色（`warn`／`todo`／`info`）・題名・内訳・移る先 `to`・日の予定へ移るときの日付 `date`。`ready` は info だけのとき。切った機能のカードは出さない
+- `taskAction(task)`：カードを押したときの動き（種類の分岐はここの1か所）。`link`＝画面へ移る、`arrange`＝移らずその場で自動で組む（kind が `auto`）
 
-並びは作業の順（PRD D263。ADR-0044）：組み方の標準（登録していないときだけ）→ 要対応（全部の月）→ 月ごとに「担当を AI で組む → 確定していない日」（今月 → 来月）→ 今日。
+並びは作業の順（PRD D263。ADR-0044）：組み方の標準（登録していないときだけ）→ 要対応（全部の月）→ 担当なし N件（エキスパート機能が切のときだけ）→ 月ごとに「担当を AI で組む → 確定していない日」（今月 → 来月）→ 今日。
 
 | 並び | カード | 移る先 |
 |---|---|---|
 | 0 | はじめに組み方の標準を決める（`hasStandard(data)` が偽でエキスパート機能が入のときだけ（切なら `/standard` が使えず出ない）。todo。内訳「考え方ごとの案をくらべて標準の週を決めます。これからは標準の週で並び、埋まらない所はその考え方で組みます」。PRD D354・D359） | `/standard` |
 | 1 | 要対応（月ごと。`attentionList`＝要対応の訪問のある日・未連絡の変更のある日・拘束超。月の要対応・帯と同じ数。内訳「要対応の訪問がある日 N日・未連絡の変更がある日 N日」） | 1日だけなら `/plan`＋その日、2日以上なら `/month?ym=…&do=attention` |
+| 1の次 | 担当なし N件（kind `auto`。todo。エキスパート機能が切のときだけ。`autoCount`＝今日〜翌月末の担当なしの訪問の数（`lib/autoArrange` の `targetCount`・`unassignedTargets`。`useHomeTasks` が数える）が1以上。内訳「今日から来月末までの担当なしの訪問を、いまの条件で組みます」。入のときはこのカードは出さず、下の「N月の担当なしの訪問を組む」が担当を組むへ移る。ADR-0072） | 移らない（その場で［組む］＝`home-auto-arrange`。押すと `requestUnassignedArrange`。計算中は押せず「組んでいます…」。終わると知らせ「N件の担当を組みました」と［元に戻す］。繰り返しの担当は書かない） |
 | 2 | N月の担当なしの訪問を組む（月ごと。担当なしの訪問がある・伝えていない日が2日以上。内訳「担当なしの訪問がある日 N日」） | `/arrange?ym=…`（予定を組むの担当を組む。ADR-0063） |
 | 3 | 確定していない日（2 と同じ月のすぐ後。訪問があって確定済みでない日。`monthProgress` の `unconfirmed` と同じ日・同じ並び。内訳「まだ伝えていない N日・未連絡の変更あり N日。見直して伝えたら「確定」」） | 1日だけなら `/plan`＋その日、2日以上なら `/month?ym=…&do=unconfirmed` |
 | 4 | 今日の予定（題名に「（まだ伝えていない）」「（確定済み）」「（未連絡の変更あり）」、内訳「訪問 N件・担当 N人・要対応 N件」。要対応があれば warn） | `/plan`（今日） |
@@ -30,7 +32,7 @@
 画面は組み立てだけ。次にすること・いつでもの入口の計算は同じディレクトリの `useHomeTasks.ts`（今日の担当の人数は `lib/home` の `routedStaffCount`）、カード（`TaskCard`・`EntryCard`）・今日の訪問の欄（`HomeVisits`）・「訪問を追加」（`AddVisitItem`）は `homeParts.tsx`。
 
 - 日の状態：`components/useDayModel` の `useCompileInput(data)`（compile が読むデータだけ。今日の問題は compile しない。`useDayModel` も中で使う）と `useDayStatuses`
-- `homeTasks` のカードを並べる。カード全体が `Link`（`date` があれば押したときに `setDate`）
+- `homeTasks` のカードを並べる。画面へ移るカードは全体が `Link`（`date` があれば押したときに `setDate`）。kind `auto` のカードだけ全体はリンクにせず、中の［組む］（`ArrangeButton`。`data-testid="home-auto-arrange"`）で `lib/autoArrangeBatch` の `requestUnassignedArrange` を呼ぶ
 - 先頭の1枚（知らせだけ（`info`）でなければ）は「まずこれ」（PRD D263）：`li.is-lead` で格子の幅いっぱい（`grid-column: 1 / -1`）、カードは `.is-lead`（主ボタンの塗り `--primary`・白い文字・下の影。ホームの主ボタンはこの1つ）、題名の上に札「まずこれ」（`home-lead`。読み上げも題名の前）、`data-lead`。先頭が要対応（`is-warn`）なら左の縁を要対応の赤で太くし、札「要対応」（`home-lead-warn`）も添える。ほかのカードは今のまま
 - 何も無ければ「今日の準備はできています」（`ready`）
 - 「今日の訪問」（`home-visits`。PRD D304）：`lib/visitLists` の `dayVisitRows(data, 今日, 今の時刻, 5)`（取り消し・休みを除き、担当なし → これからの近い順）の行 `home-visit`（時刻・〈利用者さん〉・担当（印）か「担当なし（入らない）」「案なし」。担当なし・案なしは左の縁を赤）。押すと訪問の詳細の欄（閉じるとフォーカスは行）。残りは「あと N件（日の予定で見る）」（`home-visits-rest`）。下に「これからの入らない訪問（要対応）」（`home-unassigned`。`unassignedVisits(data, 明日, 31日後)` の5件、残りは件数だけ）。主ボタンは増やさない。印刷で出さない
