@@ -200,7 +200,7 @@ function ProposalCard({
             {s ? `${s.spread}件` : '—'}
           </dd>
           <dt>今の標準と違う</dt>
-          <dd data-testid="standard-card-diff" data-count={diff?.all ?? 0}>
+          <dd data-testid="standard-card-diff" data-count={stale ? undefined : (diff?.all ?? 0)}>
             {diff && !stale ? `${diff.all}マス（担当 ${diff.staff}・時刻だけ ${diff.time}）` : '—'}
           </dd>
         </dl>
