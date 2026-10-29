@@ -65,7 +65,7 @@ export default function HomePage() {
             const lead = i === 0 && t.tone !== 'info';
             return (
               <li key={`${t.kind}-${t.title}`} className={lead ? 'is-lead' : undefined}>
-                <TaskCard task={t} lead={lead} onPick={() => pickDate(t.date)} />
+                <TaskCard task={t} lead={lead} today={today} onPick={pickDate} />
               </li>
             );
           })}

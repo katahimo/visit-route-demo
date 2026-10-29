@@ -14,7 +14,7 @@ type KeyStore = Pick<Storage, 'getItem'>;
 
 /**
  * 初めて開いたときの入り切り：キーが「all」ならすべて入（{}。今までの初期データと同じ）、ほかは基本のひな形
- * （21の ID を明示して書く。あとから入れた機能は管理者設定で入れる）
+ * （22の ID を明示して書く。あとから入れた機能は管理者設定で入れる）
  */
 export function startFeatures(getStorage: () => KeyStore | null = () => globalThis.localStorage ?? null): Features {
   try {

@@ -1,4 +1,4 @@
-// 機能の入り切り その2（PRD D211・D213〜D215）：ひな形の4通りごとに画面の中の入口（日の画面の欠勤・キャンセル・メール・点数の理由、
+// 機能の入り切り その2（PRD D211・D213〜D215）：ひな形の5通りごとに画面の中の入口（日の画面の欠勤・キャンセル・メール・点数の理由、
 // 担当を組むの「AI で組む」・考え方（プリセット）の数・「案を比べる」・予定を組むの段、〈利用者さん〉の欄の段階の選択・紹介元・担当できる人・休み・決まりごと・住所の検索・絞り込みのチップ、
 // 〈利用者さん〉の画面の紹介元・決まりごと・休みのタブ、〈スタッフ〉の画面のメールアドレス・最終勤務日、月の「休みを入れる」・印刷、空き状況の案内文、
 // データの Excel、稼働の見込みの交通費の単価）。相性を切るときの独自の確認（件数と効き方。取り消すと変わらない）と、
@@ -28,7 +28,7 @@ const {
 } = require('./lib/features.cjs');
 
 async function insideEntries(page, dlg, ctx) {
-  for (const t of ['basic', 'laborContract', 'monthlyField', 'all']) {
+  for (const t of ['oneOff', 'basic', 'laborContract', 'monthlyField', 'all']) {
     const on = (id) => TEMPLATE_ON[t].includes(id);
     const label = TEMPLATE_LABEL[t];
     await open(page, '/home', '[data-testid="home-tasks"]');
@@ -95,6 +95,8 @@ async function insideEntries(page, dlg, ctx) {
     const csec = (name) => page.locator(`[data-testid="person-sec"][data-section="${name}"]`);
     await open(page, `/clients/${cid}`, '[data-testid="person-view"]');
     check((await count('schedule-leaves')) === 1, `${label}：予定のタブの休み（事実なので残す）`);
+    // 繰り返しの欄は機能 patterns を切ると隠す（単発のみ。今ある繰り返しの回は予定に残る。ADR-0072）
+    check((await count('patterns-section')) === (on('patterns') ? 1 : 0), `${label}：予定のタブの繰り返しの欄`);
     check(
       (await page.getByTestId('person-tabs').locator('[data-tab="leaves"]').count()) === (on('clientLeave') ? 1 : 0),
       `${label}：休みのタブ`,

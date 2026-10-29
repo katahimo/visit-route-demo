@@ -26,7 +26,7 @@
   border: 1.5px solid var(--line);
 }
 
-/* ひな形の4つ（狭い画面では縦1列） */
+/* ひな形の5つ（狭い画面では縦1列） */
 .feature-templates {
   list-style: none;
   margin: 0;

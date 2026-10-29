@@ -74,7 +74,7 @@
 
 #### 予定のタブ
 
-- 左：繰り返し（`PatternsSection`。下）と休み（`schedule-leaves`。これからの休みを読むだけ。休みの機能を切っても出す。「休みを入れる・直す」は休みのタブへ）。狭い画面では繰り返しは読むだけで「繰り返しを足す・直すのは広い画面でできます」
+- 左：繰り返し（`PatternsSection`。下。機能 `patterns` が切なら欄ごと隠す。今ある繰り返しの回は予定・カレンダーに残る。ADR-0072）と休み（`schedule-leaves`。これからの休みを読むだけ。休みの機能を切っても出す。「休みを入れる・直す」は休みのタブへ）。狭い画面では繰り返しは読むだけで「繰り返しを足す・直すのは広い画面でできます」
 - 右：`PersonCalendar`（`kind="client"`。`dayNote` はその日に休みなら「休み」）
 
 #### 基本情報のタブ（節）
@@ -105,7 +105,7 @@
 - 見出し「繰り返し」と「繰り返しを足す」（`pattern-add`）。説明は箇条書き（押すとカレンダーで目立たせる・足すと作ってある最後の日まで作る・その先は月の予定）
 - 一覧の行（`pattern-row`・`data-pattern`）：押せる文（`pattern-pick`。`aria-pressed`。種類・`patternWhenText`・所要・`periodText`・いつもの担当・標準の開始「標準の開始：月 10:00・水 11:00」（無ければ出さない。`pattern-usual-starts`））と「直す」（`pattern-edit`）・「終わらせる」（`pattern-end`）
 - 直す・足すの入力（`pattern-form`）：種類（選ぶと所要の初期値）・繰り返し（毎週／隔週／3週ごと／4週ごと／毎月（第N週）。`pattern-repeat`）・曜日（`pattern-weekdays`）・第何週（`pattern-month-weeks`）・時間の決め方・開始（早・遅）・曜日ごとの時刻（`pattern-per-day`・`pattern-daytimes`）・曜日ごとの標準の開始（`pattern-usual-starts-form`。選んだ曜日ごとに時刻を入れる・消す。その曜日の開始（早）〜（遅）の外なら文を出して保存させない）・所要・開始日／いつから変えますか・終了日・いつもの担当・メモ。「保存」（`pattern-save`）・「取り消し」（`pattern-cancel`）・直すときは「この繰り返しを消す」（`pattern-remove`）
-- 足す：繰り返しを足すだけ（回は見るときに計算する）。直す：`splitPattern`（`lib/patternConfirm` の `patternSplitConfirm`：繰り返しのとおりに戻る担当を組んだ回 N件・「未連絡の変更」になる確定した日 M日を確かめる）。消す：`removePattern`（`patternRemoveConfirm`。確定した日を確かめる）
+- 足す：繰り返しを足し（回は見るときに計算する）、保存の直後に増えた担当なしの回を自動で組む（`lib/autoArrangeBatch` の `requestAutoArrange`。繰り返しの担当 `usualStaffId` も書く。トースト「繰り返しを足しました（担当を自動で組みます）」。対象が無ければ「（担当なし）」。知らせ「N件の担当を組みました」と［元に戻す］は `AutoArrangeHost`。ADR-0072）。直す：保存後に日時が変わった・増えた担当なしの回を同じく自動で組む（トースト「繰り返しを直しました（担当を自動で組みます）」）。`splitPattern`（`lib/patternConfirm` の `patternSplitConfirm`：繰り返しのとおりに戻る担当を組んだ回 N件・「未連絡の変更」になる確定した日 M日を確かめる）。消す：`removePattern`（`patternRemoveConfirm`。確定した日を確かめる）
 - 終わらせる（`pattern-end-form`）：最後の日（`pattern-end-last`。初期値は今日。終わっていればその終了日、まだ始まっていなければ開始日で、そのときは「開始日の回も要らないときは「直す」の「この繰り返しを消す」で消します」（`pattern-end-before`））と「保存」（`pattern-end-save`）。`visitOps` の `endPatternOp`（終了日を入れ、最後の日より後で今日以降の、この回だけ変えていない・取り消していない回を消す。確定した日の数）を確かめてから入れる
 - 毎月のパターンは `patternMonthly` を切っても `repeat` と `monthWeeks` を残し、読むだけと注記（`pattern-monthly-off`）
 - 入力の変更（開いたときとの違い。終わらせるは最後の日を変えたとき）を `onDirty` で画面へ知らせる

@@ -103,6 +103,7 @@ function ClientPageBody({
   const stageOn = useFeature('clientStage');
   const allowedOn = useFeature('allowedStaff');
   const leavesOn = useFeature('clientLeave');
+  const patternsOn = useFeature('patterns');
   const notesOn = useFeature('visitNotes');
   const compatOn = useFeature('compat');
   const isNew = id === NEW_PERSON_ID;
@@ -180,6 +181,7 @@ function ClientPageBody({
           resetKey={ed.resetKey}
           narrow={narrow}
           leavesOn={leavesOn}
+          patternsOn={patternsOn}
           pattern={cal.pattern}
           onPattern={cal.setPattern}
           onPatternsDirty={ed.onPatternsDirty}

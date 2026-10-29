@@ -35,8 +35,8 @@ src/
   evaluate/    … 採点・説明・差分
   excel/       … DemoData と Excel のブックの変換（ADR-0006。データは書き換えない）
   patterns/    … 繰り返しの回を見るときに計算する純粋関数（visitsOn・visitsIn・putVisits。ADR-0012・ADR-0053）
-  lib/         … 画面から使う純粋関数（React・store・画面の部品を import しない。日の割当と確定 dayPlan・confirmDay、日のモデルの計算 dayModel・日ごとの状態の覚え dayStatuses、月・週の状態 month・week（週のデータを書く操作は weekOps）、組む月 scheduleMode、AI で組む monthBatch（担当を組む）、組み方の標準 standard、訪問の札の見た目・選ぶ・落とし先の判定・キーの読み方 visitLook・visitSelect・visitDrop・visitKeys、訪問を直す visitOps・選んだ訪問をまとめて直す multiEdit、地図の点・線と選び方の遷移 routeView など）
-  components/  … 画面の部品と React のフック（use*。日のモデル useDayModel・日の状態 useDayStatuses・機能の入り切り useFeature・useMedia・useScrollEdge・地図の選択 useRouteSelection・入れ物を読む valueStore・編集中の印 dirtyForms・別のチャンクの部品 lazyComponent・選んでいる日付 day など）
+  lib/         … 画面から使う純粋関数（React・store・画面の部品を import しない。日の割当と確定 dayPlan・confirmDay、日のモデルの計算 dayModel・日ごとの状態の覚え dayStatuses、月・週の状態 month・week（週のデータを書く操作は weekOps）、組む月 scheduleMode、AI で組む monthBatch（担当を組む）、入れた分の自動の組み autoArrange（計算）・autoArrangeBatch（解く入れ物。ADR-0072）、組み方の標準 standard、訪問の札の見た目・選ぶ・落とし先の判定・キーの読み方 visitLook・visitSelect・visitDrop・visitKeys、訪問を直す visitOps・選んだ訪問をまとめて直す multiEdit、地図の点・線と選び方の遷移 routeView など）
+  components/  … 画面の部品と React のフック（use*。日のモデル useDayModel・日の状態 useDayStatuses・機能の入り切り useFeature・useMedia・useScrollEdge・地図の選択 useRouteSelection・入れ物を読む valueStore・自動の組みの知らせと帯 autoArrangeHost・編集中の印 dirtyForms・別のチャンクの部品 lazyComponent・選んでいる日付 day など）
   pages/       … 画面（components と lib を組み合わせる）
   app/         … 殻（App・ErrorBoundary・ルートと分けた画面 lazyPages）
 .github/workflows/deploy.yml … test → build → Cloudflare Workers（wrangler。ADR-0071）

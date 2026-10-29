@@ -32,15 +32,24 @@ export type FeatureDef = {
 };
 
 /**
- * 機能の表（21。ADR-0028 の「機能の一覧」）。土台（ホーム・月の予定・週の予定・日の予定・〈利用者さん〉一覧・〈スタッフ〉一覧・
+ * 機能の表（22。ADR-0028 の「機能の一覧」）。土台（ホーム・月の予定・週の予定・日の予定・〈利用者さん〉一覧・〈スタッフ〉一覧・
  * 勤務時間（シフト）・訪問の種類・データ・管理者設定）は表に入れず、切れない
  */
 export const FEATURES: readonly FeatureDef[] = [
+  {
+    id: 'patterns',
+    label: '繰り返し（定期パターン）',
+    description: '{client}ごとに、毎週などの繰り返しの訪問（定期パターン）を決められます',
+    group: '予定',
+    paths: [],
+    hides: '{client}の画面の繰り返しの欄（今ある繰り返しの回は予定に残り、計算に効く）',
+  },
   {
     id: 'patternMonthly',
     label: '毎月の第N曜日・曜日ごとの時刻',
     description: '定期パターンで「毎月の第N週」や、曜日ごとに違う時刻を決められます',
     group: '予定',
+    requires: 'patterns',
     paths: [],
     hides: '定期パターンの欄の「毎月の第N週」「曜日ごとの時刻」（毎週〜4週ごと・同じ時刻は残る）',
   },
@@ -230,7 +239,7 @@ export const featureLabel = (id: FeatureId, terms: Pick<Terms, 'client' | 'staff
 /** スイッチの状態（依存を見ない。無い ID は入） */
 export const isSwitchOn = (features: Features, id: FeatureId): boolean => features[id] !== false;
 
-/** その機能が使えるか：自分のスイッチが入で、依存先も使えるとき（vacancyNotice → vacancy・fare → workload）。無い ID は入 */
+/** その機能が使えるか：自分のスイッチが入で、依存先も使えるとき（patternMonthly → patterns・vacancyNotice → vacancy・fare → workload）。無い ID は入 */
 export function isOn(features: Features, id: FeatureId): boolean {
   if (!isSwitchOn(features, id)) return false;
   const req = featureDef(id).requires;
@@ -285,17 +294,27 @@ export function isFeatureOffState(state: unknown): state is FeatureOffState {
 }
 
 /** ひな形の ID（ADR-0028 の「ひな形」。法人名を出さず機能のまとまりの名前） */
-export const TEMPLATE_IDS = ['basic', 'laborContract', 'monthlyField', 'all'] as const;
+export const TEMPLATE_IDS = ['oneOff', 'basic', 'laborContract', 'monthlyField', 'all'] as const;
 export type TemplateId = (typeof TEMPLATE_IDS)[number];
 
 /** ひな形：名前・1行の説明・入れる機能（ほかは切） */
 export type TemplateDef = { id: TemplateId; label: string; description: string; on: readonly FeatureId[] };
 
-/** 基本のひな形で入れる機能（予定・欠勤・キャンセル・空き状況・相性・道順のリンク・住所の検索） */
-const BASIC_ON: readonly FeatureId[] = ['sudden', 'vacancy', 'compat', 'mapsLink', 'geocode'];
+/** 基本のひな形で入れる機能（予定・繰り返し・欠勤・キャンセル・空き状況・相性・道順のリンク・住所の検索） */
+const BASIC_ON: readonly FeatureId[] = ['patterns', 'sudden', 'vacancy', 'compat', 'mapsLink', 'geocode'];
 
-/** ひな形の4つ（ADR-0028 の表どおり） */
+/** 単発のみのひな形で入れる機能：基本から繰り返し（patterns）だけを外したもの（ADR-0072 第2段。PRD D378） */
+const ONE_OFF_ON: readonly FeatureId[] = BASIC_ON.filter((f) => f !== 'patterns');
+
+/** ひな形の5つ（ADR-0028 の表に、ADR-0072 の単発のみを足したもの） */
 export const TEMPLATES: readonly TemplateDef[] = [
+  {
+    id: 'oneOff',
+    label: '単発のみ',
+    description:
+      'ベビーシッター型など、日ごとの単発の予約だけを入れるとき。繰り返しの欄を隠し、予定のカレンダーで足した訪問をその日のぶん自動で組みます',
+    on: ONE_OFF_ON,
+  },
   {
     id: 'basic',
     label: '基本',
@@ -338,7 +357,7 @@ export const TEMPLATES: readonly TemplateDef[] = [
 /** ひな形の1つ */
 export const templateDef = (id: TemplateId): TemplateDef => TEMPLATES.find((t) => t.id === id)!;
 
-/** ひな形を適用したときの入り切り（全21の ID を明示して書く。業種とは連動しない） */
+/** ひな形を適用したときの入り切り（全22の ID を明示して書く。業種とは連動しない） */
 export function applyTemplate(id: TemplateId): Features {
   const on = new Set(templateDef(id).on);
   return Object.fromEntries(FEATURE_IDS.map((f) => [f, on.has(f)])) as Features;
@@ -411,6 +430,10 @@ export function turnOffImpact(
     case 'clientLeave': {
       const n = data.clientLeaves.filter((l) => l.to >= today).length;
       return one(n, `${client}の休み ${n}件は残り、計算に効き続けます`);
+    }
+    case 'patterns': {
+      const n = data.patterns.length;
+      return one(n, `繰り返し ${n}件は残り、予定に出続けます`);
     }
     case 'patternMonthly': {
       const n = data.patterns.filter(usesMonthly).length;
