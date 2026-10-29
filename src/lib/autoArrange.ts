@@ -4,13 +4,14 @@
 // 解く入れ物（Worker・キュー・反映の1手）は lib/autoArrangeBatch
 import type { DemoData } from '../contracts/data';
 import type { Visit } from '../contracts/documents';
-import type { Problem, SolveOptions } from '../contracts/problem';
+import type { Problem, ProblemStay, SolveOptions } from '../contracts/problem';
 import type { Routes } from '../contracts/reassign';
-import { addDays } from '../domain/time';
+import { addDays, hhmmToMinutes } from '../domain/time';
+import { scheduleRoute } from '../matching';
 import { findVisit, putVisits, visitsOn } from '../patterns';
 import { defaultIterations } from '../solver';
 import { own } from './common';
-import { activeDayVisits, clockOf, dayProblemOf, ownerOf, startsOf } from './dayPlan';
+import { activeDayVisits, clockOf, dayProblemOf } from './dayPlan';
 import { type DayInputs, proposalDayFresh } from './monthBatch';
 import { monthDates, ymOf } from './ym';
 
@@ -69,6 +70,19 @@ export function unassignedTargets(data: TargetData, today: string, range: DateRa
   return collect(data, today, range, () => true);
 }
 
+/** targets のうち、今のデータでも組める（担当なし・ピンなし・取り消しでない・伝えていない・今日以降）訪問だけに絞る */
+export function stillTargets(data: TargetData, targets: readonly AutoTarget[], today: string): AutoTarget[] {
+  const out: AutoTarget[] = [];
+  for (const t of targets) {
+    const want = new Set(t.ids);
+    const ids = activeDayVisits(data, t.date)
+      .filter((v) => want.has(v.id) && isFree(data, v, today))
+      .map((v) => v.id);
+    if (ids.length > 0) out.push({ date: t.date, ids });
+  }
+  return out;
+}
+
 /** 対象の訪問の件数（ホームの「担当なし N件」） */
 export const targetCount = (targets: readonly AutoTarget[]): number => targets.reduce((n, t) => n + t.ids.length, 0);
 
@@ -105,7 +119,38 @@ export function autoDayPlan(data: DemoData, date: string, targetIds: readonly st
   if (!problem || problem.staff.length === 0) return null;
   const inProblem = new Set(problem.visits.map((v) => v.id));
   const ids = targets.filter((v) => inProblem.has(v.id)).map((v) => v.id);
-  return ids.length > 0 ? { visits, problem, targetIds: ids } : null;
+  return ids.length > 0 ? { visits, problem: holdFixed(problem, visits, free), targetIds: ids } : null;
+}
+
+/** 担当のある訪問を落とさない・動かさない重さ（Problem.stay の担当が変わった1件・開始がずれた1分の点） */
+const HOLD_MOVE_POINTS = 1000;
+const HOLD_MINUTE_POINTS = 1;
+
+/**
+ * 担当のある訪問（free でない）をそのまま保つ問題にする。pins は担当だけを固めるので、solver が列の中で並べ直したり落としたりして
+ * 開始が動くことがある。そこで、開始が決まっている訪問は開始（早）＝開始（遅）＝今の開始に固め、Problem.stay で落とさない（keep）・
+ * 担当・開始を変えない重い減点を付ける。開始が無い訪問は窓のまま、担当だけ保つ
+ */
+function holdFixed(problem: Problem, visits: readonly Visit[], free: ReadonlySet<string>): Problem {
+  const byId = new Map(visits.map((v) => [v.id, v]));
+  const staffAt = new Map(problem.staff.map((s, i) => [s.id, i]));
+  const stay: ProblemStay = {
+    staff: [],
+    start: [],
+    keep: [],
+    movePoints: HOLD_MOVE_POINTS,
+    minutePoints: HOLD_MINUTE_POINTS,
+  };
+  const list = problem.visits.map((pv) => {
+    const v = byId.get(pv.id);
+    const held = !!v && !free.has(v.id) && v.staffId !== null;
+    const start = held && v.start !== null ? hhmmToMinutes(v.start) : null;
+    stay.staff.push(held ? (staffAt.get(v.staffId as string) ?? null) : null);
+    stay.start.push(start);
+    stay.keep.push(held);
+    return start === null ? pv : { ...pv, earliest: start, latest: start };
+  });
+  return { ...problem, visits: list, stay };
 }
 
 /** 自由な訪問（対象）1件あたりの反復回数と下限（自動の組み） */
@@ -180,17 +225,36 @@ function usualStaffOf(data: DemoData, days: readonly { visits: readonly Visit[];
   return out;
 }
 
-/** その日の解いた担当・開始（対象の訪問だけ。訪問ID → 担当・開始） */
+/**
+ * その日の解いた担当・開始（対象の訪問だけ。訪問ID → 担当・開始）。対象が入った担当ごとに、解いた列を lenient で数え直し、
+ * その担当の既存の訪問（担当のある訪問）がすべて列に残り、開始が保存した開始のままで、遅れ（時間の違反）も無いときだけ、
+ * その担当への対象を書く。満たさなければその担当の対象は担当なしのまま（ほかの担当の訪問の開始・並びを崩さない）
+ */
 function solvedOf(day: AutoDay): Solved {
   const out: Solved = new Map();
-  if (!day.problem) return out;
-  const owner = ownerOf(day.routes);
-  const starts = startsOf(day.problem, day.routes);
-  for (const id of day.targetIds) {
-    const staffId = owner.get(id);
-    const at = starts.get(id);
-    if (staffId && at) out.set(id, { staffId, start: clockOf(at.start) });
-  }
+  const problem = day.problem;
+  if (!problem) return out;
+  const target = new Set(day.targetIds);
+  const index = new Map(problem.visits.map((v, j) => [v.id, j]));
+  problem.staff.forEach((st, si) => {
+    const column = (day.routes[st.id] ?? []).filter((id) => index.has(id));
+    if (!column.some((id) => target.has(id))) return;
+    const timing = scheduleRoute(
+      problem,
+      si,
+      column.map((id) => index.get(id)!),
+      'lenient',
+    );
+    if (!timing || timing.violations.length > 0) return;
+    const at = new Map(timing.stops.map((x) => [x.visitId, x.start]));
+    const held = day.visits.filter((v) => v.staffId === st.id && !target.has(v.id) && index.has(v.id));
+    const same = held.every((v) => {
+      const start = at.get(v.id);
+      return start !== undefined && (v.start === null || Math.round(start) === hhmmToMinutes(v.start));
+    });
+    if (!same) return;
+    for (const id of column) if (target.has(id)) out.set(id, { staffId: st.id, start: clockOf(at.get(id) ?? 0) });
+  });
   return out;
 }
 
@@ -231,6 +295,8 @@ export function applyAutoArrange(data: DemoData, days: readonly AutoDay[], opts:
         }
       : data;
   const put = new Map<string, Visit>();
+  /** 今回担当を書いた対象（書いた担当が計算した回と同じで put に入らなくても、残すループで担当なしに戻さない） */
+  const wrote = new Set<string>();
   let written = 0;
   // 解いた日の対象の担当・開始を書く
   for (const day of sorted) {
@@ -241,6 +307,7 @@ export function applyAutoArrange(data: DemoData, days: readonly AutoDay[], opts:
       const to = here.get(v.id);
       if (!ids.has(v.id) || !to) continue;
       written++;
+      wrote.add(v.id);
       if (v.staffId !== to.staffId || v.start !== to.start)
         put.set(v.id, { ...v, staffId: to.staffId, start: to.start, pinned: false });
     }
@@ -252,7 +319,7 @@ export function applyAutoArrange(data: DemoData, days: readonly AutoDay[], opts:
     if (!from) continue;
     for (let date = from; date <= opts.rangeTo; date = addDays(date, 1)) {
       for (const v of visitsOn(withUsual, date)) {
-        if (v.pattern?.id !== patternId || put.has(v.id)) continue;
+        if (v.pattern?.id !== patternId || put.has(v.id) || wrote.has(v.id)) continue;
         const was = findVisit(data, v.id);
         if (was && (was.staffId !== v.staffId || was.start !== v.start)) put.set(v.id, was);
       }

@@ -3,10 +3,11 @@ import { describe, expect, it } from 'vitest';
 import type { DemoData } from '../contracts/data';
 import type { Pattern } from '../contracts/documents';
 import { addDays } from '../domain/time';
-import { findVisit, visitsOn } from '../patterns';
+import { findVisit, putVisits, visitsOn } from '../patterns';
 import { createDemoData } from '../seed';
 import { solve } from '../solver';
 import { type AutoDay, applyAutoArrange, autoDayPlan, autoSolveOptions } from './autoArrange';
+import { settleDay } from './dayPlan';
 import { dayInputsOf } from './monthBatch';
 
 const TODAY = '2026-10-21';
@@ -184,5 +185,126 @@ describe('繰り返しの担当を書いても、過去・伝えた日の回は�
     expect(staffOf(r.data, `${dates[0]}_pn`)).not.toBeNull();
     // 範囲より後の回だけが新しい担当になる
     expect(staffOf(r.data, `${addDays(RANGE_TO, 1)}_pn`)).toBe(usual);
+  });
+});
+
+describe('ほかの担当の訪問の開始・並びを崩さない（pins は担当だけを固めるため）', () => {
+  const hm = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3));
+  /** 1人だけが働く日：その人の既存の訪問を開始つきの固定の時刻にした、デモのデータ */
+  function oneStaff() {
+    const b = createDemoData(TODAY);
+    const vs = visitsOn(b, TODAY);
+    const count = new Map<string, number>();
+    for (const v of vs) if (v.staffId) count.set(v.staffId, (count.get(v.staffId) ?? 0) + 1);
+    const A = [...count].sort((x, y) => y[1] - x[1])[0]![0];
+    const mine = vs.filter((v) => v.staffId === A);
+    const edited = vs.map((v) =>
+      v.staffId === A
+        ? { ...v, windowKind: 'window' as const, earliestStart: '08:00', latestStart: '16:00' }
+        : { ...v, cancelled: true },
+    );
+    let d = { ...b, staff: b.staff.map((s) => ({ ...s, active: s.id === A })), visits: putVisits(b.visits, edited) };
+    d = settleDay(d, TODAY);
+    const fixed = visitsOn(d, TODAY)
+      .filter((v) => v.staffId === A)
+      .map((v) => ({ ...v, windowKind: 'fixed' as const, earliestStart: v.start!, latestStart: v.start! }));
+    d = { ...d, visits: putVisits(d.visits, fixed) };
+    const cid = b.clients.find((c) => c.active && !mine.some((m) => m.clientId === c.id))!.id;
+    return { d, A, cid, first: visitsOn(d, TODAY).find((v) => v.staffId === A)! };
+  }
+
+  it('対象を入れても既存の訪問の開始は変わらず、同じ人に時間の重なりが出ない', () => {
+    const { d, A, cid, first } = oneStaff();
+    const before = visitsOn(d, TODAY).filter((v) => v.staffId === A);
+    expect(before.length).toBeGreaterThan(1);
+    for (const t0 of ['08:00', '08:30', '09:30', '10:30', '11:00', '12:00', '13:00']) {
+      const target = {
+        ...first,
+        id: 'T',
+        clientId: cid,
+        staffId: null,
+        start: null,
+        pinned: false,
+        pattern: null,
+        earliestStart: t0,
+        latestStart: t0,
+        windowKind: 'fixed' as const,
+        durationMinutes: 60,
+      };
+      const d2 = { ...d, visits: [...d.visits, target] };
+      const plan = autoDayPlan(d2, TODAY, ['T'])!;
+      const res = solve(plan.problem, autoSolveOptions(d2, plan));
+      const day: AutoDay = {
+        date: TODAY,
+        problem: plan.problem,
+        visits: plan.visits,
+        inputs: dayInputsOf(d2, TODAY),
+        routes: res.routes,
+        targetIds: plan.targetIds,
+      };
+      const r = applyAutoArrange(d2, [day], { writeUsual: false, rangeTo: TODAY });
+      const list = visitsOn(r.data, TODAY)
+        .filter((v) => v.staffId === A && v.start)
+        .sort((x, y) => hm(x.start!) - hm(y.start!));
+      // 既存の訪問の開始は変わらない
+      for (const v of before) expect(findVisit(r.data, v.id)!.start, `${t0} ${v.id}`).toBe(v.start);
+      // 同じ人に重なりが出ない
+      for (let j = 1; j < list.length; j++)
+        expect(hm(list[j - 1]!.start!) + list[j - 1]!.durationMinutes, `${t0}`).toBeLessThanOrEqual(
+          hm(list[j]!.start!),
+        );
+    }
+  });
+
+  it('解いた列で既存の訪問が動くときは、その担当への対象を書かない（担当なしのまま）', () => {
+    const { d, A, cid, first } = oneStaff();
+    const target = {
+      ...first,
+      id: 'T',
+      clientId: cid,
+      staffId: null,
+      start: null,
+      pinned: false,
+      pattern: null,
+      earliestStart: first.start!,
+      latestStart: first.start!,
+      windowKind: 'fixed' as const,
+      durationMinutes: 60,
+    };
+    const d2 = { ...d, visits: [...d.visits, target] };
+    const plan = autoDayPlan(d2, TODAY, ['T'])!;
+    // 既存の訪問と同じ時刻に対象を先頭で入れた列（既存の訪問が遅れる）
+    const existing = visitsOn(d2, TODAY)
+      .filter((v) => v.staffId === A)
+      .map((v) => v.id);
+    const day: AutoDay = {
+      date: TODAY,
+      problem: plan.problem,
+      visits: plan.visits,
+      inputs: dayInputsOf(d2, TODAY),
+      routes: { [A]: ['T', ...existing] },
+      targetIds: ['T'],
+    };
+    const r = applyAutoArrange(d2, [day], { writeUsual: false, rangeTo: TODAY });
+    expect(r.written).toBe(0);
+    expect(findVisit(r.data, 'T')!.staffId).toBeNull();
+  });
+});
+
+describe('繰り返しの担当を書くとき、解いた担当・開始が計算した回と同じでも担当なしに戻さない', () => {
+  it('標準の開始（usualStarts）と同じ開始で組めた回も、その担当のまま', () => {
+    const base = withNew(unassigned());
+    const np = base.patterns.find((p) => p.id === 'pn')!;
+    const d = {
+      ...base,
+      patterns: base.patterns.map((p) =>
+        p.id === 'pn' ? { ...np, usualStarts: [0, 1, 2, 3, 4, 5, 6].map((w) => ({ weekday: w, start: '10:00' })) } : p,
+      ),
+    };
+    const dates = [0, 1, 2].map((i) => addDays(TODAY, i));
+    const days = dates.map((x) => dayOf(d, x));
+    const r = applyAutoArrange(d, days, { writeUsual: true, rangeTo: RANGE_TO });
+    expect(r.written).toBe(3);
+    for (const x of dates) expect(staffOf(r.data, `${x}_pn`)).not.toBeNull();
   });
 });

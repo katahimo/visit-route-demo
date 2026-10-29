@@ -18,7 +18,7 @@ import { Link } from 'react-router-dom';
 import { StaffMarkById } from '../components/StaffMark';
 import { useOpenVisit } from '../components/VisitPanel';
 import { useValueStore } from '../components/valueStore';
-import { addDays, jstDate, jstHhmm } from '../domain/time';
+import { addDays, jstHhmm } from '../domain/time';
 import { autoArrange, requestUnassignedArrange } from '../lib/autoArrangeBatch';
 import { dateText } from '../lib/dateText';
 import { type HomeEntry, type HomeEntryKey, type HomeTask, type HomeTaskKind, taskAction } from '../lib/home';
@@ -69,10 +69,12 @@ function LeadBadges({ tone }: { tone: HomeTask['tone'] }) {
 export function TaskCard({
   task: t,
   lead,
+  today,
   onPick,
 }: {
   task: HomeTask;
   lead: boolean;
+  today: string;
   onPick: (date?: string) => void;
 }) {
   const Icon = KIND_ICON[t.kind];
@@ -100,7 +102,7 @@ export function TaskCard({
     return (
       <div className={cls} {...attrs}>
         {body}
-        <ArrangeButton />
+        <ArrangeButton today={today} />
       </div>
     );
   return (
@@ -112,7 +114,7 @@ export function TaskCard({
 }
 
 /** ［組む］：今日〜翌月末の担当なしの訪問を、いまの条件で自動で組む（ホームでエキスパート機能が切のとき）。計算中は押せない */
-function ArrangeButton() {
+function ArrangeButton({ today }: { today: string }) {
   const { data } = useDemoData();
   const running = useValueStore(autoArrange.run) !== null;
   return (
@@ -121,7 +123,7 @@ function ArrangeButton() {
       className="btn btn-small"
       aria-disabled={running || undefined}
       onClick={() => {
-        if (!running) requestUnassignedArrange(data, jstDate(Date.now()));
+        if (!running) requestUnassignedArrange(data, today);
       }}
       data-testid="home-auto-arrange"
     >

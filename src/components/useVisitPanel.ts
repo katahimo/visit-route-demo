@@ -187,7 +187,8 @@ export function useVisitSave(p: {
       return;
     }
     // 保存した訪問が担当なしで増えた・日時が変わったなら、その分を自動で組む（保存の前後のデータで対象を決める。繰り返しの担当は書かない）
-    requestAutoArrange({ before: data, after: r.data, today, writeUsual: false });
+    // 人が「担当なし」とはっきり選んで保存したときは依頼しない（外した担当を黙って付け直さない）
+    if (staff !== null) requestAutoArrange({ before: data, after: r.data, today, writeUsual: false });
     const after = findVisit(r.data, r.visitId);
     const label = after ? `${dateText(after.date)} ${after.earliestStart}` : '';
     const range = info?.pattern && !isNew ? `・${SCOPE_LABELS[scope]}` : '';

@@ -32,6 +32,7 @@ const job = (n: number, x: { writeUsual?: boolean; since?: DemoData | null; afte
   targets: days(n).map((date) => ({ date, ids: [`${date}_pn`] })),
   writeUsual: x.writeUsual ?? false,
   rangeTo: addDays(TODAY, 60),
+  today: TODAY,
   since: x.since ?? null,
   after: x.after ?? null,
 });
@@ -86,7 +87,9 @@ describe('createAutoArrange（自動の組みの入れ物。ADR-0072）', () => 
     const a = createAutoArrange(fakeSolve().fn);
     expect(a.request(job(2))).toBe(false);
     a.connect(hostOf(start()).host);
-    expect(a.request({ targets: [], writeUsual: false, rangeTo: TODAY, since: null, after: null })).toBe(false);
+    expect(a.request({ targets: [], writeUsual: false, rangeTo: TODAY, today: TODAY, since: null, after: null })).toBe(
+      false,
+    );
     expect(a.running()).toBe(false);
   });
 
@@ -132,6 +135,7 @@ describe('createAutoArrange（自動の組みの入れ物。ADR-0072）', () => 
       targets: [{ date: addDays(TODAY, 5), ids: [`${addDays(TODAY, 5)}_pn`] }],
       writeUsual: false,
       rangeTo: TODAY,
+      today: TODAY,
       since: null,
       after: null,
     });
@@ -156,17 +160,51 @@ describe('createAutoArrange（自動の組みの入れ物。ADR-0072）', () => 
     a.connect(h.host);
     a.request(job(2));
     await finish(s.calls, 0);
-    // 1日目を組んでいる間に、その日の欠勤が入る
+    // 1日目を組んでいる間に、その日の〈利用者さん〉の休みが入る（その日の入力が変わる。休みの訪問は組み直しの対象にもならない）
     const d = h.data();
-    h.set({
-      ...d,
-      absences: [...d.absences, { id: 'ab', staffId: 's1', date: TODAY, kind: 'absent', note: '' } as never],
-    });
+    h.set({ ...d, clientLeaves: [{ id: 'l1', clientId: 'c2', from: TODAY, to: TODAY, note: '' }] });
     await finish(s.calls, 1);
     await tick();
     expect(a.done.get()).toMatchObject({ written: 1, appliedDays: 1, skippedDays: 1 });
     expect(staffOf(h.data(), TODAY)).toBeNull();
     expect(staffOf(h.data(), addDays(TODAY, 1))).not.toBeNull();
+  });
+
+  it('計算中にほかの繰り返しが変わって飛ばした日は、条件を見直してあと1回だけ組み直す', async () => {
+    const s = fakeSolve();
+    const a = createAutoArrange(s.fn);
+    const h = hostOf(start());
+    a.connect(h.host);
+    a.request(job(2));
+    await finish(s.calls, 0);
+    // 計算中に、ほかの繰り返しが変わる（patterns の参照が替わる＝どの日も組み始めたときのままでなくなる）
+    h.set({ ...h.data(), patterns: [...h.data().patterns] });
+    await finish(s.calls, 1);
+    await tick();
+    expect(a.done.get()).toMatchObject({ written: 0, skippedDays: 2 });
+    // 組み直し（2日分）
+    await finish(s.calls, 2);
+    await finish(s.calls, 3);
+    await tick();
+    expect(a.done.get()).toMatchObject({ written: 2, skippedDays: 0 });
+    expect(s.calls).toHaveLength(4);
+    for (const x of days(2)) expect(staffOf(h.data(), x)).not.toBeNull();
+    expect(a.running()).toBe(false);
+  });
+
+  it('組んでいる間に元に戻されたら（store が保存の前に戻ったら）書かずに捨てる。知らせも出さない', async () => {
+    const s = fakeSolve();
+    const a = createAutoArrange(s.fn);
+    const after = start();
+    const before = { ...after, patterns: after.patterns.slice(0, -1) };
+    const h = hostOf(before);
+    a.connect(h.host);
+    a.request(job(2, { since: before, after }));
+    await finish(s.calls, 0);
+    expect(h.labels).toEqual([]);
+    expect(s.calls).toHaveLength(1);
+    expect(a.done.get()).toBeNull();
+    expect(a.running()).toBe(false);
   });
 
   it('データを丸ごと差し替えたら（abort）待たせている依頼ごと捨て、書かない', async () => {

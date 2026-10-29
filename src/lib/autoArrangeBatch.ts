@@ -17,6 +17,7 @@ import {
   autoRange,
   autoSolveOptions,
   autoTargets,
+  stillTargets,
   targetCount,
   unassignedTargets,
 } from './autoArrange';
@@ -41,6 +42,10 @@ export type AutoJob = {
    */
   since: DemoData | null;
   after: DemoData | null;
+  /** 今日（飛ばした日の対象を組み直すときの条件に使う） */
+  today: string;
+  /** 飛ばした日を組み直す依頼（組み直しは1回まで。繰り返しの担当は書かない） */
+  retry?: true;
 };
 
 /** 進み具合：いまの依頼の何日目/何日と、待っている依頼の数 */
@@ -91,6 +96,25 @@ export function autoBandText(r: AutoRun): string {
   return `担当を自動で組んでいます ${Math.min(r.index + 1, r.total)}/${r.total}日${wait}`;
 }
 
+/** 計算が読むデータ：保存の直後でまだ描かれていなければ after、描かれていれば store の data */
+function read(h: BatchHost, job: AutoJob): DemoData {
+  const now = h.get();
+  return job.after !== null && now === job.since ? job.after : now;
+}
+/** 元に戻された（組んでいる途中で store が保存の前のデータへ戻った）か。after を読むのは最初の1日（まだ描かれていない間）だけ */
+const undone = (h: BatchHost, job: AutoJob): boolean => job.since !== null && h.get() === job.since;
+
+/** 飛ばした日の組み直しの依頼（今のデータで条件を見直す。1回まで・繰り返しの担当は書かない）。組む対象が無ければ null */
+function retryOf(job: AutoJob, skipped: readonly string[], now: DemoData): AutoJob | null {
+  if (job.retry || skipped.length === 0) return null;
+  const again = stillTargets(
+    now,
+    job.targets.filter((t) => skipped.includes(t.date)),
+    job.today,
+  );
+  return again.length > 0 ? { ...job, targets: again, writeUsual: false, since: null, after: null, retry: true } : null;
+}
+
 /** 入れ物を作る（solve は差し替えられる。テストは Worker なしで解く） */
 export function createAutoArrange(solve: Solve = runSolve): AutoArrange {
   const run = createValueStore<AutoRun | null>(null);
@@ -104,12 +128,6 @@ export function createAutoArrange(solve: Solve = runSolve): AutoArrange {
   /** 直前の依頼が書いたか（次の依頼は書いた結果が描かれてから読む） */
   let wrote = false;
 
-  /** 計算が読むデータ：保存の直後でまだ描かれていなければ after、描かれていれば store の data */
-  const read = (h: BatchHost, job: AutoJob): DemoData => {
-    const now = h.get();
-    return job.after !== null && now === job.since ? job.after : now;
-  };
-
   /** 1日解く（計算した結果を返す。捨てられたら null） */
   const solveDay = async (problem: Problem, options: SolveOptions, live: () => boolean) => {
     const s = solve(problem, options);
@@ -118,7 +136,7 @@ export function createAutoArrange(solve: Solve = runSolve): AutoArrange {
       const result = await s.promise;
       return live() ? result : null;
     } finally {
-      current = null;
+      if (current === s) current = null;
     }
   };
 
@@ -136,6 +154,7 @@ export function createAutoArrange(solve: Solve = runSolve): AutoArrange {
     for (let i = 0; i < job.targets.length && live(); i++) {
       const t = job.targets[i]!;
       run.set({ index: i, total: job.targets.length, waiting: queue.length });
+      if (i > 0 && undone(h, job)) return null;
       const latest = read(h, job);
       const plan = autoDayPlan(latest, t.date, t.ids);
       const base = {
@@ -165,6 +184,8 @@ export function createAutoArrange(solve: Solve = runSolve): AutoArrange {
       }
     }
     if (!live()) return null;
+    // 組んでいる間に元に戻されたら書かずに捨てる（知らせも出さない）
+    if (undone(h, job)) return null;
     const now = h.get();
     const opts = { writeUsual: job.writeUsual, rangeTo: job.rangeTo };
     const r: AutoApplied = applyAutoArrange(now, days, opts);
@@ -173,6 +194,9 @@ export function createAutoArrange(solve: Solve = runSolve): AutoArrange {
       // 書くときの今のデータで、組み始めたときのままの日だけをもう一度確かめて書く（1手）
       h.update((d) => applyAutoArrange(d, days, opts).data, AUTO_ARRANGE_LABEL);
     }
+    // 計算中にほかの変更が入って飛ばした日は、あと1回だけ組み直す
+    const again = retryOf(job, r.skippedDays, now);
+    if (again) queue.push(again);
     return { written: r.written, appliedDays: r.appliedDays.length, skippedDays: r.skippedDays.length, error };
   };
 
@@ -245,12 +269,19 @@ export function requestAutoArrange(a: {
 }): boolean {
   const range = autoRange(a.today);
   const targets = autoTargets(a.before, a.after, a.today, range);
-  return autoArrange.request({ targets, writeUsual: a.writeUsual, rangeTo: range.to, since: a.before, after: a.after });
+  return autoArrange.request({
+    targets,
+    writeUsual: a.writeUsual,
+    rangeTo: range.to,
+    since: a.before,
+    after: a.after,
+    today: a.today,
+  });
 }
 
 /** 今の担当なしの訪問（今日〜翌月末）を自動で組む依頼を出す（ホームの［組む］。繰り返しの担当は書かない）。依頼を出したら true */
 export function requestUnassignedArrange(data: DemoData, today: string): boolean {
   const range = autoRange(today);
   const targets = unassignedTargets(data, today, range);
-  return autoArrange.request({ targets, writeUsual: false, rangeTo: range.to, since: null, after: null });
+  return autoArrange.request({ targets, writeUsual: false, rangeTo: range.to, since: null, after: null, today });
 }
