@@ -9,7 +9,7 @@
 
 設計：[docs/prd.md](docs/prd.md)／[docs/design.md](docs/design.md)／[docs/adr/](docs/adr/)。AI エージェント向けのルールは [AGENTS.md](AGENTS.md)。
 
-公開先：Cloudflare Workers（静的アセット。`visit-route-demo`。ADR-0071）。main に push すると GitHub Actions がテスト→ビルド→公開
+公開先：https://staff-assign-demo.katahimo.com/ （Cloudflare Workers の静的アセット。ADR-0071）。main に push すると GitHub Actions がテスト→ビルド→公開
 
 ## 使い方（デモ）
 

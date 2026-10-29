@@ -24,3 +24,8 @@ ADR-0001 は GitHub Free の Pages に公開リポジトリが要るため、公
 - `wrangler.jsonc`（名前 `visit-route-demo`・`assets.directory: ./dist`）と `deploy.yml`（`cloudflare/wrangler-action@v3` の `deploy`）
 - 画面は HashRouter・`base: './'` のままで、Workers の静的アセットでも再読込・チャンクの読み込みは動く
 - 同梱データは引き続き架空のものだけ（公開 URL は誰でも開ける）
+
+## 公開名（2026-10-29 追記）
+- `katahimo.com` の DNS を Squarespace から Cloudflare（Free）に移した。メールは MX・SPF・DKIM を写して継続（Squarespace の既定の A・www は不要なので写していない）
+- デモの命名規則：各デモは `<名前>-demo.katahimo.com`（`katahimo.com` の1段下。2段にすると無料の証明書で足りない）。入口の `demo.katahimo.com` は、デモが増えてから置く
+- このアプリ：`staff-assign-demo.katahimo.com`（`wrangler.jsonc` の `routes`。Worker 名 `visit-route-demo` は変えない）
