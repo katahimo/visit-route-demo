@@ -4,12 +4,19 @@ name: e2e（本物のブラウザ）
 # e2e は shard で4つのジョブに分け、速さを見る perf は別のジョブで1本ずつ。
 # ブラウザと依存は Playwright の公式イメージに入っているので、毎回のインストール（約3分）をしない。
 # 公開（deploy.yml）はまだこれを待たない
+#
+# 非公開リポジトリの無料枠（Actions 月2000分）に収めるため、
+# ・文書だけの変更（docs/・*.md）では PR で走らせない
+# ・夜間は毎週月曜に1回だけ（約700分/月 → 約100分/月）
 on:
   pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
   workflow_dispatch:
   schedule:
-    # 毎日 03:00（日本時間）
-    - cron: '0 18 * * *'
+    # 毎週月曜 03:00（日本時間）
+    - cron: '0 18 * * 0'
 
 permissions:
   contents: read
