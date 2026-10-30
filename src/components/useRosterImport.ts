@@ -74,6 +74,7 @@ export function useRosterImport(x: {
         how,
         summary: rosterSummary(r, kind, terms),
         source: r.source,
+        ledger: r.ledger,
         keep: canKeepPrevious(),
       }),
       confirmLabel: '名簿を読み込む',
