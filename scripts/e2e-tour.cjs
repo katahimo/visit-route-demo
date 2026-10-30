@@ -120,6 +120,7 @@ async function firstRun(b) {
     '2問：問1（デモで試す／自分のデータで始める）・問2（単発の予約が中心／定期の訪問が中心）の選択肢と例',
     text,
   );
+  check((await page.getByTestId('first-run-cancel').count()) === 0, '初めて開いたときの2問に「やめる」は出ない');
   const primary = await page.getByTestId('first-run').locator('.btn-primary').allInnerTexts();
   check(primary.length === 1 && primary[0].trim() === 'はじめる', '主ボタンは「はじめる」の1つだけ', primary);
   check(
@@ -400,6 +401,21 @@ async function firstRunRestart(b) {
   await page.getByTestId('confirm-ok').click();
   await page.getByTestId('first-run').waitFor({ timeout: 30000 });
   check((await stored2(page)).clients.length === 20, '2問へ戻っても、答えるまではデータを作り直さない');
+  // 抜ける道：やり直しのときだけ従のボタン「やめる」（主ボタンは「はじめる」の1つのまま）。今のデータのまま戻る
+  check(
+    (await page.getByTestId('first-run-cancel').innerText()).trim() === 'やめる' &&
+      (await page.getByTestId('first-run').locator('.btn-primary').count()) === 1,
+    'やり直しの2問：従のボタン「やめる」があり、主ボタンは「はじめる」の1つ',
+  );
+  await page.getByTestId('first-run-cancel').click();
+  await page.getByTestId('restart-first-run-button').waitFor({ timeout: 30000 });
+  check(
+    (await page.getByTestId('first-run').count()) === 0 && (await stored2(page)).clients.length === 20,
+    '「やめる」で、今のデータのまま設定の画面へ戻る',
+  );
+  await page.getByTestId('restart-first-run-button').click();
+  await page.getByTestId('confirm-ok').click();
+  await page.getByTestId('first-run').waitFor({ timeout: 30000 });
   await page.reload();
   await page.locator('.app-main h1').first().waitFor({ timeout: 30000 });
   check(

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { demoDataSchema } from '../contracts/data';
 import { createInitialData } from '../seed/plans';
-import { isOn, matchTemplate } from './features';
+import { applyTemplate, isOn, matchTemplate } from './features';
 import {
   createFirstRunData,
   FIRST_RUN_BOOKING_CHOICES,
@@ -25,7 +25,7 @@ describe('firstRunSetup（PRD D379：呼び名・ひな形・最初の画面）'
   it('単発＝お客様／シッター・「単発のみ」・週の予定', () => {
     const s = firstRunSetup('oneOff');
     expect(s.terms).toEqual({ client: 'お客様', staff: 'シッター' });
-    expect(s.template).toBe('oneOff');
+    expect(s.features).toEqual(applyTemplate('oneOff'));
     expect(matchTemplate(s.features)).toBe('oneOff');
     expect(isOn(s.features, 'patterns')).toBe(false);
     expect(s.firstPath).toBe('/week');
@@ -34,7 +34,7 @@ describe('firstRunSetup（PRD D379：呼び名・ひな形・最初の画面）'
   it('定期＝利用者さん／スタッフ・「基本」・月の予定', () => {
     const s = firstRunSetup('regular');
     expect(s.terms).toEqual({ client: '利用者さん', staff: 'スタッフ' });
-    expect(s.template).toBe('basic');
+    expect(s.features).toEqual(applyTemplate('basic'));
     expect(matchTemplate(s.features)).toBe('basic');
     expect(isOn(s.features, 'patterns')).toBe(true);
     expect(s.firstPath).toBe('/month');

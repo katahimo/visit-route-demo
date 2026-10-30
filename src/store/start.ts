@@ -3,6 +3,8 @@
 // （e2e の共通の部品 scripts/lib/startFeatures.cjs と、全機能を見せたいデモの前準備のため。値は印だけで個人の情報は持たない）。
 // localStorage を触るのは store の中だけ（AGENTS.md）。読めなければ印なし（2問を出す）
 
+import type { FirstRunBooking } from '../lib/firstRun';
+
 /** localStorage のキー（DemoData の STORAGE_KEY とは別。データの版・書き出し・初期状態に戻すに入れない） */
 export const FEATURES_START_KEY = 'vrdemo:features:start';
 /** 「2問を出さず、すべて入で始める」の印 */
@@ -16,5 +18,35 @@ export function startsWithAll(getStorage: () => KeyStore | null = () => globalTh
     return getStorage()?.getItem(FEATURES_START_KEY) === FEATURES_START_ALL;
   } catch {
     return false;
+  }
+}
+
+/** 最後の問2の答え（単発／定期）の印のキー（DemoData とは別。初期状態に戻すが「デモ×その答え」で作り直すための印。個人の情報は持たない） */
+export const LAST_BOOKING_KEY = 'vrdemo:booking:last';
+
+type BookingStore = Pick<Storage, 'getItem' | 'setItem'>;
+const BOOKINGS = ['oneOff', 'regular'] as const;
+
+/** 最後の問2の答えを残す（書けなくても続ける） */
+export function rememberBooking(
+  booking: FirstRunBooking,
+  getStorage: () => BookingStore | null = () => globalThis.localStorage ?? null,
+): void {
+  try {
+    getStorage()?.setItem(LAST_BOOKING_KEY, booking);
+  } catch {
+    // 書けなくても続ける（印が無ければ定期）
+  }
+}
+
+/** 最後の問2の答え。印が無い・読めない・知らない値なら null（呼ぶ側は定期として扱う） */
+export function lastBooking(
+  getStorage: () => KeyStore | null = () => globalThis.localStorage ?? null,
+): FirstRunBooking | null {
+  try {
+    const v = getStorage()?.getItem(LAST_BOOKING_KEY);
+    return BOOKINGS.find((b) => b === v) ?? null;
+  } catch {
+    return null;
   }
 }

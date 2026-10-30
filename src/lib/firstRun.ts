@@ -10,7 +10,7 @@ import { DEFAULT_TERMS } from '../domain/terms';
 import { createBlankData, ONE_OFF_VISIT_TYPES, REGULAR_VISIT_TYPES } from '../seed/blank';
 import { createOneOffDemoData } from '../seed/oneOff';
 import { createInitialData } from '../seed/plans';
-import { applyTemplate, type TemplateId } from './features';
+import { applyTemplate } from './features';
 import { START_GUIDE_PATH } from './startGuide';
 
 /** 問1：デモで試す／自分のデータで始める */
@@ -26,6 +26,8 @@ export type FirstRunChoice<T extends string> = { value: T; label: string; descri
 /** 画面の見出し・問い・主ボタン（主ボタンは1つ） */
 export const FIRST_RUN_TITLE = '最初に2つだけ教えてください';
 export const FIRST_RUN_SUBMIT = 'はじめる';
+/** やり直しのときだけ出す従のボタン（今のデータのまま戻る） */
+export const FIRST_RUN_CANCEL = 'やめる';
 export const FIRST_RUN_NOTE = 'あとから「設定」の「最初の設定をやり直す」で、もう一度選べます。';
 export const FIRST_RUN_Q1 = '1. どちらで始めますか';
 export const FIRST_RUN_Q2 = '2. 予約のかたちは、どちらが中心ですか';
@@ -45,9 +47,7 @@ export type FirstRunSetup = {
   /** 呼び名（単発＝お客様／シッター、定期＝利用者さん／スタッフ。org.terms に書く） */
   terms: Terms;
   industry: Industry;
-  /** 機能のひな形（単発＝単発のみ、定期＝基本。エキスパート機能は切） */
-  template: Extract<TemplateId, 'oneOff' | 'basic'>;
-  /** ひな形を当てた機能の入り切り（22の ID を明示） */
+  /** 機能のひな形（単発＝単発のみ、定期＝基本。エキスパート機能は切）を当てた入り切り（22の ID を明示） */
   features: Features;
   /** 最初に開く予定の画面（単発＝週、定期＝月） */
   firstPath: '/week' | '/month';
@@ -60,7 +60,6 @@ export function firstRunSetup(booking: FirstRunBooking): FirstRunSetup {
       return {
         terms: { ...DEFAULT_TERMS.sitter },
         industry: 'sitter',
-        template: 'oneOff',
         features: applyTemplate('oneOff'),
         firstPath: '/week',
       };
@@ -68,7 +67,6 @@ export function firstRunSetup(booking: FirstRunBooking): FirstRunSetup {
       return {
         terms: { client: DEFAULT_TERMS.nursing.client, staff: DEFAULT_TERMS.nursing.staff },
         industry: 'care',
-        template: 'basic',
         features: applyTemplate('basic'),
         firstPath: '/month',
       };
@@ -80,16 +78,17 @@ export function firstRunSetup(booking: FirstRunBooking): FirstRunSetup {
 }
 
 /**
- * 答えから作るデータ（today は基準日。Date.now は使わない）：
+ * 答えから作るデータ（today は基準日。Date.now は使わない。features を渡すとひな形の代わりにその入り切りで作る）：
  * デモ＝単発は架空の単発の予約（今日から2週間分）、定期は今の初期データ。自分のデータ＝空のデータ（訪問の種類と呼び名だけ）
  */
-export function createFirstRunData(answer: FirstRunAnswer, today: string): DemoData {
+export function createFirstRunData(answer: FirstRunAnswer, today: string, features?: Features): DemoData {
   const s = firstRunSetup(answer.booking);
+  const f = features ?? s.features;
   if (answer.start === 'own') {
     const types = answer.booking === 'oneOff' ? ONE_OFF_VISIT_TYPES : REGULAR_VISIT_TYPES;
-    return createBlankData(today, { industry: s.industry, terms: s.terms, features: s.features }, types);
+    return createBlankData(today, { industry: s.industry, terms: s.terms, features: f }, types);
   }
-  return answer.booking === 'oneOff' ? createOneOffDemoData(today, s.features) : createInitialData(today, s.features);
+  return answer.booking === 'oneOff' ? createOneOffDemoData(today, f) : createInitialData(today, f);
 }
 
 /** 2問に答えたあとに最初に開く画面：デモ＝予定の画面（単発＝週、定期＝月）、自分のデータ＝登録の案内 */

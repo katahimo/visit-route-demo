@@ -67,6 +67,10 @@ export type DemoStore = {
    * 設定の「最初の設定をやり直す」（askFirstRun）のあと。答えるまでデータは書かない
    */
   needsFirstRun: boolean;
+  /** 2問が設定の「最初の設定をやり直す」のあとか（true なら画面は「やめる」を出せる。初めて開いたときは false） */
+  redoingFirstRun: boolean;
+  /** やり直しをやめて、今のデータのまま2問から戻る（やり直しでないときは何もしない） */
+  cancelFirstRun(): void;
   /**
    * 最初の2問の答えでデータを作り直して書く（呼び名・ひな形・データが決まる。履歴は捨てる。元に戻す Ctrl+Z の対象外）。
    * やり直し（すでにデータがあったとき）は、先に1世代の控えに残す（「直前の状態に戻す」で戻せる）
@@ -146,10 +150,13 @@ function useStorageSync(st: StoreState): void {
     setFirstRun,
     replaced,
     skipSave,
+    firstRun,
   } = st;
   useEffect(() => {
     // 例外の画面の控えは、画面が使っている最新のデータを書き出す（別のタブから読み直したデータも）
     rememberCurrent(data);
+    // 最初の2問を出しているあいだのデータは仮の空データ。答えるまで書かない（StrictMode の2回実行でも書かない。PRD D379）
+    if (firstRun === 'first') return;
     if (skipSave.current) {
       skipSave.current = false;
       return;
@@ -162,7 +169,7 @@ function useStorageSync(st: StoreState): void {
         setPreviousDrops((n) => n + 1);
       }
     });
-  }, [data, setPrevious, skipSave, setSaveError, setPreviousDrops]);
+  }, [data, firstRun, setPrevious, skipSave, setSaveError, setPreviousDrops]);
 
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
@@ -291,7 +298,18 @@ function useReplaceActions(st: StoreState) {
     [firstRun, keepPrevious, replaced, swapIn, setSaveError, setFirstRun],
   );
   const askFirstRun = useCallback(() => setFirstRun('redo'), [setFirstRun]);
-  return { replace, reset, keepPrevious, restorePrevious, dismissBroken, startFirstRun, askFirstRun, firstRun };
+  const cancelFirstRun = useCallback(() => setFirstRun((k) => (k === 'redo' ? null : k)), [setFirstRun]);
+  return {
+    replace,
+    reset,
+    keepPrevious,
+    restorePrevious,
+    dismissBroken,
+    startFirstRun,
+    askFirstRun,
+    cancelFirstRun,
+    firstRun,
+  };
 }
 
 export function DemoDataProvider({ children }: { children: ReactNode }): ReactNode {
@@ -299,8 +317,17 @@ export function DemoDataProvider({ children }: { children: ReactNode }): ReactNo
   useStorageSync(st);
   // ---- 全体の「元に戻す」の履歴（PRD D329。ADR-0054）----
   const { update, undo, redo } = useHistoryActions(st);
-  const { replace, reset, keepPrevious, restorePrevious, dismissBroken, startFirstRun, askFirstRun, firstRun } =
-    useReplaceActions(st);
+  const {
+    replace,
+    reset,
+    keepPrevious,
+    restorePrevious,
+    dismissBroken,
+    startFirstRun,
+    askFirstRun,
+    cancelFirstRun,
+    firstRun,
+  } = useReplaceActions(st);
   const { initial, data, saveError, previous, broken, externalReloads, replacedCount, previousDrops } = st;
 
   const value = useMemo(
@@ -320,6 +347,8 @@ export function DemoDataProvider({ children }: { children: ReactNode }): ReactNo
       brokenKept: initial.brokenKept,
       dismissBroken,
       needsFirstRun: firstRun !== null,
+      redoingFirstRun: firstRun === 'redo',
+      cancelFirstRun,
       startFirstRun,
       askFirstRun,
       externalReloads,
@@ -343,6 +372,7 @@ export function DemoDataProvider({ children }: { children: ReactNode }): ReactNo
       firstRun,
       startFirstRun,
       askFirstRun,
+      cancelFirstRun,
       initial.outdated,
       externalReloads,
       replacedCount,

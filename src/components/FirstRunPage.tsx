@@ -2,6 +2,7 @@ import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FIRST_RUN_BOOKING_CHOICES,
+  FIRST_RUN_CANCEL,
   FIRST_RUN_NOTE,
   FIRST_RUN_Q1,
   FIRST_RUN_Q2,
@@ -29,7 +30,7 @@ export function FirstRunGate({ children }: { children: ReactNode }) {
 
 /** 1画面に2問と主ボタン「はじめる」（主ボタンは1つ）。選び直しは矢印（ネイティブのラジオ） */
 function FirstRunPage() {
-  const { startFirstRun } = useDemoData();
+  const { startFirstRun, redoingFirstRun, cancelFirstRun } = useDemoData();
   const navigate = useNavigate();
   // 初めに選んでおく：デモで試す・定期（今までの初期データと同じ。あとから設定でやり直せる）
   const [start, setStart] = useState<FirstRunStart>('demo');
@@ -81,6 +82,12 @@ function FirstRunPage() {
         />
         <p className="first-run-note">{FIRST_RUN_NOTE}</p>
         <div className="first-run-actions">
+          {/* やり直しのときだけ：今のデータのまま戻る（従のボタン。主ボタンは「はじめる」1つ） */}
+          {redoingFirstRun && (
+            <button type="button" className="btn" onClick={cancelFirstRun} data-testid="first-run-cancel">
+              {FIRST_RUN_CANCEL}
+            </button>
+          )}
           <button type="submit" className="btn btn-primary" data-testid="first-run-submit">
             {FIRST_RUN_SUBMIT}
           </button>

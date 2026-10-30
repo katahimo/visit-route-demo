@@ -3,10 +3,10 @@ import { z } from 'zod';
 import { DATA_VERSION, type DemoData, demoDataSchema, type ImportError, STORAGE_KEY } from '../contracts/data';
 import { type Features, featuresSchema } from '../contracts/features';
 import { jstDate } from '../domain/time';
-import { createFirstRunData, type FirstRunAnswer } from '../lib/firstRun';
+import { createFirstRunData, type FirstRunAnswer, firstRunSetup } from '../lib/firstRun';
 import { createInitialData } from '../seed/plans';
 import { repair } from './repair';
-import { startsWithAll } from './start';
+import { lastBooking, rememberBooking, startsWithAll } from './start';
 
 /** 壊れた JSON の退避先 */
 export const BROKEN_KEY = 'vrdemo:data:broken';
@@ -479,8 +479,13 @@ export function readPrevious(): DemoData | ImportError | null {
  * 初期状態に戻す。機能の入り切り（事業所の設定）は features（既定は今のデータの入り切り）のまま残す（PRD D216・D276。データだけを初期に戻す）。
  * 今のデータが無い（読み込みが例外で落ちた例外の画面から戻す）ときはすべて入（{}）：今まで全部入りだった人を「基本」にしない
  */
-export function reset(features: Features = current?.org.features ?? {}): DemoData {
-  return commitNew(createInitialData(today(), features));
+export function reset(features?: Features): DemoData {
+  const booking = startsWithAll() ? null : lastBooking();
+  // 印「all」か、最後の問2の答えの印が無いときは今までどおり（定期の初期データ。入り切りは今のまま、無ければすべて入）
+  if (booking === null) return commitNew(createInitialData(today(), features ?? current?.org.features ?? {}));
+  // 印があれば「デモ×その答え」で作り直す（呼び名・ひな形が答えと合う）。入り切りは今のまま、無ければ答えのひな形
+  const f = features ?? current?.org.features ?? firstRunSetup(booking).features;
+  return commitNew(createFirstRunData({ start: 'demo', booking }, today(), f));
 }
 
 /** 待っている保存を捨て、新しいデータを書いて画面が使うデータにする */
@@ -498,5 +503,6 @@ function commitNew(d: DemoData): DemoData {
  * 呼び名・ひな形・データは答えで決まる（lib/firstRun）。機能の入り切りも答えのひな形で決め直す
  */
 export function startWithAnswer(answer: FirstRunAnswer): DemoData {
+  rememberBooking(answer.booking);
   return commitNew(createFirstRunData(answer, today()));
 }
