@@ -4,6 +4,7 @@ import { ConditionsEditor } from '../components/conditions';
 import { FieldError, invalidAttrs } from '../components/FieldError';
 import { AddressField } from '../components/placeLookup';
 import { Hint, WithIcon } from '../components/ui';
+import '../components/weekdayToggles.css';
 import type { DemoData } from '../contracts/data';
 import type { Place, VisitType } from '../contracts/documents';
 import {

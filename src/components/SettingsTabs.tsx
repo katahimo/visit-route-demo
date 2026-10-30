@@ -13,10 +13,12 @@ import {
 import { useLayoutEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { type ArrangeStepKey, activeNavPath, arrangeSteps, basicsTabs, settingsTabs } from '../lib/nav';
+import { peopleSideOf, peopleTabs, peopleTabsLabel } from '../lib/peopleTabs';
 import { hasStandard } from '../lib/standard';
 import { setStandardStep } from '../lib/standardDraft';
 import { useDemoData } from '../store';
-import { useFeature, useFeatures } from './useFeature';
+import { rememberedPeopleSide } from './peopleSide';
+import { useExceptionsOnly, useFeature, useFeatures } from './useFeature';
 
 /** タブのアイコン（メニューの前の項目と同じ。並びは lib/nav の SETTINGS_TABS・BASICS_TABS） */
 const ICONS: Record<string, LucideIcon> = {
@@ -77,15 +79,42 @@ function TabNav({
 }
 
 /**
+ * 〈利用者さん〉・〈スタッフ〉の画面の上の小さいタブ（エキスパート機能が切のとき。PRD D388。ADR-0073 第4段）：
+ * 〈スタッフ〉＝一覧・勤務（勤務時間（シフト）・勤務の見込み）・相性、〈利用者さん〉＝一覧・相性。
+ * 相性はどちらのタブからも開くので、来た側のタブを出す（lib/peopleTabs・components/peopleSide）。
+ * 予定と相性（#/basics）など、ほかの旧画面には出さない
+ */
+function PeopleTabs() {
+  const { pathname } = useLocation();
+  const { data } = useDemoData();
+  const here = activeNavPath(pathname);
+  const side = peopleSideOf(here, rememberedPeopleSide());
+  if (!side) return null;
+  const tabs = peopleTabs(side, data.org.features);
+  return (
+    <TabNav
+      tabs={tabs}
+      on={(to) => tabs.find((t) => t.to === to)?.match.includes(here) ?? false}
+      label={peopleTabsLabel(side, data.org.terms)}
+      testId="people-tabs"
+      className="settings-tabs people-tabs"
+    />
+  );
+}
+
+/**
  * 基本情報の段の表示とタブ（ADR-0067。ADR-0054 の人のタブを予定を組むの 1 へ移した）：上に予定を組むの段（1 基本情報が今の段）、
  * 下にタブ（予定と相性・〈利用者さん〉・〈スタッフ〉・相性・勤務時間（シフト））。勤務の見込みは勤務時間（シフト）の続き
- * （印は勤務時間（シフト））。URL は前のまま（`#/clients` など）。切った機能のタブは出さない
+ * （印は勤務時間（シフト））。URL は前のまま（`#/clients` など）。切った機能のタブは出さない。
+ * エキスパート機能が切のときは、段も旧タブも出さず〈利用者さん〉・〈スタッフ〉の小さいタブ（PeopleTabs）だけ
  */
 export function BasicsNav() {
   const { pathname } = useLocation();
   const { data } = useDemoData();
+  const only = useExceptionsOnly();
   const tabs = basicsTabs(data.org.terms, data.org.features);
   const here = activeNavPath(pathname);
+  if (only) return <PeopleTabs />;
   return (
     <div className="stack basics-nav">
       <ArrangeSteps current="basics" />

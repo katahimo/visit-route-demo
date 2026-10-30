@@ -7,12 +7,14 @@ import {
   clientPartOf,
   clientTabFor,
   clientTabKeys,
+  compatHintLabel,
   editInFold,
   newClientHint,
   newClientLead,
   newClientShowsStage,
   peopleIntro,
   shiftText,
+  showCompatWeightNote,
   showStageNote,
   splitFolded,
   staffColumns,
@@ -130,5 +132,14 @@ describe('短い文', () => {
     ];
     expect(usualPlanText(ps, 'c1', '2026-10-30')).toBe('水 09:00、月・木 10:00');
     expect(usualPlanText(ps, 'c3', '2026-10-30')).toBe('');
+  });
+});
+
+describe('相性の画面の説明', () => {
+  it('切は点（点数）・条件の重みを言わない。入は今のまま', () => {
+    expect(compatHintLabel(true)).toBe('相性のしくみ');
+    expect(compatHintLabel(false)).toBe('点のしくみ');
+    expect(showCompatWeightNote(true)).toBe(false);
+    expect(showCompatWeightNote(false)).toBe(true);
   });
 });

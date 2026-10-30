@@ -189,6 +189,14 @@ async function basicsTabs(page) {
   await open(page, '/basics', '[data-testid="people-tabs"]');
   return (await page.getByTestId('people-tabs').locator('a').allInnerTexts()).map((x) => x.trim());
 }
+/** 〈利用者さん〉・〈スタッフ〉の小さいタブ（エキスパート機能が切のとき。to の一覧を開いて読む。タブの名前の並び。PRD D389） */
+async function peopleTabs(page, to) {
+  await open(page, to, '[data-testid="people-tabs"]');
+  return (await page.getByTestId('people-tabs').locator('a').allInnerTexts()).map((x) => x.trim());
+}
+/** 小さいタブ（切）：〈利用者さん〉＝一覧・相性、〈スタッフ〉＝一覧・勤務・相性（相性はどのひな形でも入。勤務時間（シフト）は土台） */
+const CLIENT_TABS = ['一覧', '相性'];
+const STAFF_TABS = ['一覧', '勤務', '相性'];
 /** パレットの候補（打つ前＝操作と画面） */
 async function paletteItems(page) {
   await page.getByTestId('cmdk-open').click();
@@ -271,6 +279,9 @@ module.exports = {
   TOP_LINKS,
   menu,
   basicsTabs,
+  peopleTabs,
+  CLIENT_TABS,
+  STAFF_TABS,
   paletteItems,
   paletteSearch,
   applyTemplate,

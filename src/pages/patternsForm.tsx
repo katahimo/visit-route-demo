@@ -3,6 +3,7 @@
 import { CalendarClock, Check, Trash2, X } from 'lucide-react';
 import { enterToSave, FieldError } from '../components/FieldError';
 import { WithIcon } from '../components/ui';
+import '../components/weekdayToggles.css';
 import type { Pattern, Staff, VisitType } from '../contracts/documents';
 import { WEEKDAY_LABELS } from '../lib/common';
 import { type PatternForm, sortedWeekdays } from '../lib/patternForm';

@@ -6,11 +6,13 @@ import { EdgeScroll } from '../components/EdgeScroll';
 import { TentativeMark } from '../components/parts';
 import { StaffMark } from '../components/StaffMark';
 import { Empty, Hint } from '../components/ui';
+import { useExceptionsOnly } from '../components/useFeature';
 import type { Client, Staff } from '../contracts/documents';
 import { COMPAT_LABELS, type Compat } from '../contracts/rules';
 import { colorOf, initialOf } from '../lib/colors';
 import { COMPAT_LEGEND, COMPAT_MEANING, compatLevelClass, compatLevelOf } from '../lib/compatLevel';
 import { nameLines } from '../lib/compatView';
+import { compatHintLabel, showCompatWeightNote } from '../lib/peopleView';
 
 /** 開いている吹き出しの種類（列の見出し・行の名前） */
 export type CompatOpenKind = 'staff' | 'client';
@@ -81,6 +83,8 @@ const CompatRow = memo(function CompatRow({
 
 /** 凡例・点のしくみ・表を並べ直す（写しが古いときだけ） */
 export function CompatLegend({ stale, onResort }: { stale: boolean; onResort: () => void }) {
+  // エキスパート機能が切なら、点・条件の重みを言わない（PRD D384・D388）
+  const only = useExceptionsOnly();
   return (
     <div className="compat-legend">
       {COMPAT_LEGEND.map((l) => (
@@ -89,13 +93,13 @@ export function CompatLegend({ stale, onResort }: { stale: boolean; onResort: ()
           {l.text}
         </span>
       ))}
-      <Hint label="点のしくみ">
+      <Hint label={compatHintLabel(only)}>
         <ul className="hint-list">
           <li>◎○は選ばれやすく、△は選ばれにくくなります。</li>
           <li>
             <span className="red-text">×</span>は「NG」で、担当にしません。
           </li>
-          <li>効き方の強さは、「条件の重み」の画面の「相性」の重みで決まります。</li>
+          {showCompatWeightNote(only) && <li>効き方の強さは、「条件の重み」の画面の「相性」の重みで決まります。</li>}
           <li>相性は人が入れるもので、自動では変わりません。</li>
         </ul>
       </Hint>

@@ -1,7 +1,7 @@
 // 自動の組み（PRD D372〜D378。ADR-0072 第2段）を本物のブラウザで確かめる。初めて開いたときの最初の2問に「デモで試す・定期」で答えて得る「基本」のひな形（エキスパート機能は切）で、
 // 1 予定の日の「訪問を追加」で担当を選ばずに単発の訪問を足す → 知らせ「N件の担当を組みました」と［元に戻す］が出てその訪問に担当が付く（ピンは付けない）
 //   → ［元に戻す］で担当なしに戻る（訪問は残る）、
-// 2 予定の「その他 ▾」：担当なしの訪問があると「担当なしの訪問を組む N件」が出て、押すと組まれて件数が減る（ホームの［組む］の代わり。PRD D383。エキスパート機能が入なら出さない）、
+// 2 予定の「その他 ▾」：担当なしの訪問があると「担当なしの訪問を組む N件」が出て（月・週の操作の行には出さない。PRD D388）、押すと組まれて件数が減る（ホームの［組む］の代わり。PRD D383。エキスパート機能が入なら出さない）、
 // 3 〈利用者さん〉の画面で担当なしの繰り返しを足す → 自動で組まれ、繰り返しの担当（usualStaffId）が書かれて行に出る
 //   （組んだ回は訪問として保存され、保存の直後に別の画面へ移っても組みは続く）、
 // 4 ひな形「単発のみ」を当てると〈利用者さん〉の画面の予定のタブから繰り返しの欄が消える（その入り切りの全体は e2e-features・e2e-features2）。
@@ -106,15 +106,19 @@ async function moreArrange(page) {
   await page.goto(`${BASE}#/month`);
   await page.getByTestId('sched-nav').waitFor({ timeout: 60000 });
   await settle(page, 500);
-  // 月は主ボタンが「担当なしの訪問を組む N件」（PRD D384）。0件ならボタンが消える
-  const item = page.getByTestId('toolbar-arrange');
+  // 月の主ボタンは「予定を入れる」（PRD D388）。「担当なしの訪問を組む N件」は「その他 ▾」の中（0件なら項目が消える）
+  const item = page.getByTestId('more-auto-arrange');
+  const more = page.getByTestId('month-more');
+  check((await page.getByTestId('toolbar-arrange').count()) === 0, '月の操作の行に「担当なしの訪問を組む」は出さない');
+  /** 「その他 ▾」を開いて件数を読む（項目が無ければ 0。開いたままにする） */
   const countOf = async () => {
-    await item.waitFor({ timeout: 30000 });
+    await more.click();
+    await item.waitFor({ timeout: 30000 }).catch(() => {});
     return Number(/(\d+)件/.exec(await item.innerText().catch(() => ''))?.[1] ?? 0);
   };
   const n0 = await countOf();
   // 初期データにも担当なしの繰り返しの回があるので、件数は「足した1件を含む N件」（N は2以上）
-  check(n0 >= 2, '主ボタンに「担当なしの訪問を組む N件」（元に戻した1件を含む）', n0);
+  check(n0 >= 2, '「その他 ▾」に「担当なしの訪問を組む N件」（元に戻した1件を含む）', n0);
   const before = await data(page);
   const target = before.visits.find((y) => y.staffId === null && !y.pinned && y.earliestStart === '10:00');
   check(!!target, '前提：元に戻した担当なしの訪問が残っている', before.visits.length);
@@ -129,8 +133,8 @@ async function moreArrange(page) {
   await page.keyboard.press('Escape').catch(() => {});
   await settle(page, 500);
   const n1 = await until(async () => {
-    const there = (await item.count()) > 0;
-    const n = there ? Number(/(\d+)件/.exec(await item.innerText())?.[1] ?? 0) : 0;
+    const n = await countOf();
+    await page.keyboard.press('Escape').catch(() => {});
     return n < n0 ? { n } : null;
   });
   check(n1 !== null && n1 !== undefined && n1.n < n0, '組んだあとは「担当なし」の件数が減る（0件なら項目が消える）', {

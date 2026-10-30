@@ -68,7 +68,8 @@ export default function BasicsPage() {
   return (
     <div className="stack basics-page">
       <PageHeader
-        nav={<BasicsNav />}
+        // 切は基本情報のタブを出さない（旧画面。〈利用者さん〉・〈スタッフ〉の小さいタブに予定と相性は無い。PRD D388）
+        nav={expert ? <BasicsNav /> : undefined}
         icon={CalendarRange}
         title="予定と相性"
         lead={`${terms.client}の予定（繰り返し）と、${expert ? '標準の担当' : 'いつもの担当'}・相性・勤務時間（シフト）を1枚の表で確かめて直します。決まったら AI で担当を組みます`}
