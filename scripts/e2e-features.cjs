@@ -10,6 +10,7 @@
 // 稼働の見込み・欠勤・キャンセル・月の印刷・提案を比べるを切ると、月の要対応の行・月のボタン・日の画面の拘束の帯・担当を組むの「案を比べる」・
 // 稼働時間の右の欄にそこへ移るリンク・ボタンが無い（日の予定に「AI で組む ▾」は無い。ADR-0063）。
 // レビューの反映：希望休のまとめ入力を切っても月の「担当が休み」の印は出す、欠勤・キャンセルを切ると稼働時間の凡例で登録の場所を出さない。
+// エキスパート機能が切のひな形（単発のみ・基本・労務・契約管理・月次予定・現場共有）は、メニューが4つ（予定・〈利用者さん〉・〈スタッフ〉・設定。子なし）・下のタブは6つ・ホームは無く予定の画面へ移る（ADR-0073。PRD D383。詳しくは e2e-simple-menu）。
 // その2（画面の中の入口・相性を切る・切ったまま保存してもデータが残る）は e2e-features2.cjs（長いので2本に分けた）。
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-features.cjs
@@ -35,6 +36,9 @@ const {
   screensFor,
   SETTINGS_TABS,
   settingsTabsFor,
+  settingsKidsFor,
+  homeHashFor,
+  openHome,
   menuFor,
   scheduleKidsFor,
   tabsFor,
@@ -191,14 +195,15 @@ async function switches(page) {
 async function checkTemplate(page, t) {
   const on = TEMPLATE_ON[t];
   const label = TEMPLATE_LABEL[t];
-  await open(page, '/home', '[data-testid="home-tasks"]');
+  const expert = on.includes('expert');
+  await openHome(page, on);
   const m = await menu(page);
   check(same(m.labels, menuFor(on)), `${label}：メニューの最上位の項目（空き状況の入り切りだけで変わる）`, m.labels);
   check(
     same(m.schedule, scheduleKidsFor(on)) &&
       same(m.arrange, arrangeKidsFor(t)) &&
       same(m.people, peopleKidsFor(t)) &&
-      same(m.settings, settingsTabsFor(t)),
+      same(m.settings, settingsKidsFor(t)),
     `${label}：メニューの子の項目（予定は欠勤・キャンセルの入り切り、予定を組むは基本情報・組み方の標準・担当を組む、設定は設定のタブと同じ）`,
     m,
   );
@@ -210,7 +215,7 @@ async function checkTemplate(page, t) {
     `${label}：基本情報のタブ（予定と相性・利用者さん・スタッフ・相性・勤務時間（シフト））`,
     bt,
   );
-  await open(page, '/home', '[data-testid="home-tasks"]');
+  await openHome(page, on);
   const pal = await paletteItems(page);
   check(same(pal.screens, screensFor(t)), `${label}：パレットの画面`, pal.screens);
   check(
@@ -219,17 +224,27 @@ async function checkTemplate(page, t) {
     `${label}：パレットの操作`,
     pal.actions,
   );
-  const anytime = await page
-    .getByTestId('home-anytime')
-    .locator('a')
-    .evaluateAll((els) => els.map((el) => el.dataset.testid));
-  const wantAnytime = [
-    ...(on.includes('sudden') ? ['home-absence'] : []),
-    ...(on.includes('vacancy') ? ['home-vacancy'] : []),
-    'home-clients',
-    'home-staff',
-  ];
-  check(same(anytime, wantAnytime), `${label}：ホームのいつでもの入口`, anytime);
+  if (expert) {
+    const anytime = await page
+      .getByTestId('home-anytime')
+      .locator('a')
+      .evaluateAll((els) => els.map((el) => el.dataset.testid));
+    const wantAnytime = [
+      ...(on.includes('sudden') ? ['home-absence'] : []),
+      ...(on.includes('vacancy') ? ['home-vacancy'] : []),
+      'home-clients',
+      'home-staff',
+    ];
+    check(same(anytime, wantAnytime), `${label}：ホームのいつでもの入口`, anytime);
+  } else {
+    // エキスパート機能が切ならホームは無く、予定の画面へ移る（PRD D383）
+    check(
+      hashOf(page).startsWith(homeHashFor(on)),
+      `${label}：ホームは無く予定の画面（${homeHashFor(on)}）が開く`,
+      hashOf(page),
+    );
+    check((await page.getByTestId('home-tasks').count()) === 0, `${label}：ホームの「今日やること」は出ない`);
+  }
   const settingsFound = await paletteSearch(page, 'かんりしゃせってい');
   check(settingsFound.includes('管理者設定'), `${label}：パレットで「かんりしゃせってい」→ 管理者設定`, settingsFound);
   for (const r of ROUTES) {
@@ -240,8 +255,15 @@ async function checkTemplate(page, t) {
     const h = hashOf(page);
     const off = !on.includes(r.feature);
     const hasNotice = (await page.getByTestId('feature-off-notice').count()) === 1;
-    if (off) check(h === '#/home' && hasNotice, `${label}：切った ${r.hash} はホームへ移し知らせる`, h);
-    else check(!h.startsWith('#/home') && !hasNotice, `${label}：入っている ${r.hash} は開ける`, h);
+    // 移る先：エキスパート機能が入ならホーム、切なら予定の画面（月・週）
+    const home = homeHashFor(on);
+    if (off)
+      check(
+        h.startsWith(home) && hasNotice,
+        `${label}：切った ${r.hash} は${expert ? 'ホーム' : '予定の画面'}へ移し知らせる`,
+        h,
+      );
+    else check(h.startsWith(`#${r.hash.split('?')[0]}`) && !hasNotice, `${label}：入っている ${r.hash} は開ける`, h);
   }
   // 管理者設定と土台の画面は切れない
   for (const h of ['/settings', '/data', '/types', '/availability']) {
@@ -338,7 +360,8 @@ async function mobile(page, dlg) {
   const w2 = await page.evaluate(() => document.documentElement.scrollWidth);
   check(w2 <= 390, '390px：ホームの知らせが横にはみ出さない', w2);
   const tabs = await page.getByTestId('bottom-tabs').locator('.bottom-tab').allInnerTexts();
-  check(tabs.length === 5, '390px：基本は下のタブ5つ（ホーム・予定・欠勤・探す・メニュー）', tabs);
+  // 基本はエキスパート機能が切：メニューの4つ（予定・〈利用者さん〉・〈スタッフ〉・設定）と探す・メニュー（ADR-0073）
+  check(tabs.length === 6, '390px：基本は下のタブ6つ（予定・利用者さん・スタッフ・設定・探す・メニュー）', tabs);
   await page.getByTestId('menu-btn').click();
   const drawer = await menu(page, '.nav-drawer');
   check(
@@ -346,7 +369,7 @@ async function mobile(page, dlg) {
       same(drawer.schedule, scheduleKidsFor(TEMPLATE_ON.basic)) &&
       same(drawer.arrange, arrangeKidsFor('basic')) &&
       same(drawer.people, peopleKidsFor('basic')) &&
-      same(drawer.settings, settingsTabsFor('basic')),
+      same(drawer.settings, settingsKidsFor('basic')),
     '390px：引き出しもメニューと同じ項目（最上位と子）',
     drawer,
   );

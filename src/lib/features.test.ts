@@ -311,8 +311,8 @@ describe('menuSections（ひな形ごとの項目。PRD D213・D275）', () => {
     expect(labels(applyTemplate('all'))).toEqual(labels({}));
     expect(labels({})).toHaveLength(5);
   });
-  it('エキスパート機能が切のメニューは「予定を組む」の代わりに「人」（ホーム・予定・人・空き状況・設定。ADR-0072）', () => {
-    expect(labels({ expert: false })).toEqual(['ホーム', '予定', '人', '空き状況', '設定']);
+  it('エキスパート機能が切のメニューは 予定・〈利用者さん〉・〈スタッフ〉・設定 の4つ（ホームは無い。PRD D383。ADR-0073）', () => {
+    expect(labels({ expert: false })).toEqual(['予定', '利用者さん', 'スタッフ', '設定']);
     expect(labels({})).toEqual(['ホーム', '予定を組む', '予定', '空き状況', '設定']);
   });
   it('欠勤・キャンセルを切ると予定の子から消える', () => {
@@ -324,11 +324,10 @@ describe('menuSections（ひな形ごとの項目。PRD D213・D275）', () => {
     expect(kids({})).toEqual(['today', 'month-view', 'absence']);
     expect(kids({ sudden: false })).toEqual(['today', 'month-view']);
   });
-  it('基本も5項目（基本情報・設定はタブ）。画面の一覧は勤務の見込み・条件の重み・特性の項目が無い（案を比べるはいつも無い）', () => {
-    // 基本はエキスパート機能が切：「予定を組む」の代わりに「人」。組み方の標準は出ず、担当を組むだけ残る
-    expect(labels(applyTemplate('basic'))).toEqual(['ホーム', '予定', '人', '空き状況', '設定']);
+  it('基本は4項目（エキスパート機能が切）。画面の一覧は勤務の見込み・条件の重み・特性の項目が無い（案を比べるはいつも無い）', () => {
+    // 基本はエキスパート機能が切：メニューは4つ・ホームは無い。組み方の標準は出ず、担当を組むだけ残る（空き状況は予定のグループ）
+    expect(labels(applyTemplate('basic'))).toEqual(['予定', '利用者さん', 'スタッフ', '設定']);
     expect(screens(applyTemplate('basic'))).toEqual([
-      'ホーム',
       '月の予定',
       '週の予定',
       '日の予定',
@@ -471,7 +470,7 @@ describe('切った機能の入口を出さない（PRD D213）', () => {
   });
   it('ツアー：欠勤・キャンセルの枚を出さず、枚数が減る（基本はすべてと同じ3枚）', () => {
     expect(tourSteps(terms, {}).map((s) => s.key)).toEqual(['home', 'plan', 'absence']);
-    expect(tourSteps(terms, applyTemplate('basic')).map((s) => s.key)).toEqual(['home', 'plan', 'absence']);
+    expect(tourSteps(terms, applyTemplate('basic')).map((s) => s.key)).toEqual(['plan', 'absence']);
     expect(tourSteps(terms, { sudden: false }).map((s) => s.key)).toEqual(['home', 'plan']);
   });
   it('links：切った機能なら null、土台はそのまま', () => {

@@ -5,7 +5,7 @@
 // 4 印を押すと連絡の一覧が開き（札は選ばない）、「連絡した」ボタンがある（メールを切っても出る）、
 // 5 「連絡した」で今の担当・時刻が伝えた記録になり「変更あり」が消える（操作の行の［元に戻す］で戻る）、
 // 6 週の予定の印を押すとその日の日の予定へ移り連絡の一覧が開く（URL の ?do=told・?date= は消える）、
-// 7 月の予定：確定の段階（進み具合の帯の「確定」・右の欄の「確定していない日」・まとめて確定）が無い、
+// 7 月の予定：確定の段階（進み具合の帯の「確定」・右の欄の「確定していない日」・まとめて確定）が無く、ホームも無い（#/home は予定へ）、
 // 8 エキスパート機能を入にすると今の確定（伝えた）の操作が出て、自動では伝えない（直しても snapshots は増えない）、
 // 9 決まった日に訪問を足すと自動の組みが担当を付け、足した訪問は「変更あり」（伝えた記録は書き換えない）。月のマスの印からも日の予定の連絡の一覧へ移る。
 //
@@ -212,13 +212,15 @@ async function month(page) {
     '?do=unconfirmed でも確定していない日の欄は出ない（要対応へ）',
   );
   check((await page.getByRole('button', { name: /まとめて確定/ }).count()) === 0, '「まとめて確定」のボタンを出さない');
+  // ホームは無い（切のとき。PRD D383）：#/home は予定へ移り、要対応の帯にも確定の話は出ない
   await page.goto('about:blank');
   await page.goto(`${BASE}#/home`);
-  await page.getByTestId('home-tasks').waitFor({ timeout: 60000 });
-  check(
-    (await page.locator('[data-testid="home-task"][data-kind="confirm"]').count()) === 0,
-    'ホームに「確定していない日」のカードを出さない',
-  );
+  await page.getByTestId('sched-nav').waitFor({ timeout: 60000 });
+  check(/^#\/(month|week)/.test(new URL(page.url()).hash), '#/home は予定の画面へ移る（ホームは無い）', page.url());
+  check((await page.getByTestId('home-tasks').count()) === 0, 'ホームの「今日やること」は出ない');
+  const band = page.getByTestId('attention-band');
+  if ((await band.count()) > 0)
+    check(!/確定|伝えて/.test(await band.innerText()), '要対応の帯に確定の話を出さない', await band.innerText());
 }
 
 /** 8 エキスパート機能が入なら今の確定（伝えた）の操作が出て、自動では伝えない */
@@ -269,7 +271,7 @@ const steps = sharedPage({
     ['2 手で直すと自動で決まる', settle1],
     ['3〜5 変更あり・印・連絡した・元に戻す', changed],
     ['6 週の印から日の予定の連絡の一覧へ', fromWeek],
-    ['7 月・ホームに確定の段階が無い', month],
+    ['7 月に確定の段階が無く、ホームも無い', month],
     ['8 expert 入は今の確定の操作', expertOn],
     ['9 決まった日に足した訪問も自動で組まれる', addToSettled],
   ],

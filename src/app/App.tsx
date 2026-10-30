@@ -14,7 +14,7 @@ import { NARROW_QUERY } from '../components/useMedia';
 import { VisitPanelProvider } from '../components/VisitPanel';
 import { addDays, jstDate } from '../domain/time';
 import { featureLabel, featureOfLocation, isFeatureOffState, isOn } from '../lib/features';
-import { navTitleParts, tabClick } from '../lib/nav';
+import { homePath, isSimpleMenu, navTitleParts, tabClick } from '../lib/nav';
 import ArrangePage from '../pages/ArrangePage';
 import AvailabilityPage from '../pages/AvailabilityPage';
 import BasicsPage from '../pages/BasicsPage';
@@ -67,10 +67,12 @@ export default function App() {
       ? data.baseDate
       : (dates[0] ?? data.baseDate);
   // 切った機能の URL（ブックマーク・古いリンク・`?do=`）はホームへ移し、ホームの上で知らせる（PRD D213。ADR-0028）。
+  // エキスパート機能が切のときはホームが無いので、予定の画面へ移して知らせる（homePath。PRD D383）。
   // 管理者設定と土台の画面は表に無いので移さない（戻れなくならない）
   const { pathname, search } = useLocation();
   const needed = featureOfLocation(pathname, search);
   const blocked = needed !== null && !isOn(data.org.features, needed) ? needed : null;
+  const home = homePath(data.org.features);
 
   return (
     <DayProvider value={{ date, setDate: setPicked, dates }}>
@@ -82,12 +84,12 @@ export default function App() {
         <HistoryKeys />
         {/* 範囲の AI で組む（担当を組む）の計算を画面の外で続ける（PRD D256・D257。ADR-0042）：store につなぎ、終わったら知らせる */}
         <MonthBatchHost />
-        {/* 自動の組み（欄の保存・ホームの［組む］。ADR-0072 第2段）：同じく画面の外で続け、終わったら知らせて［元に戻す］ */}
+        {/* 自動の組み（欄の保存・予定の「その他 ▾」の［担当なしの訪問を組む］。ADR-0072 第2段）：同じく画面の外で続け、終わったら知らせて［元に戻す］ */}
         <AutoArrangeHost />
         {/* 訪問の詳細の欄（PRD D301〜D304。ADR-0051）：どの画面・コマンドパレットからでも開ける。欄は画面全体で1つ */}
         <VisitPanelProvider>
           {blocked ? (
-            <Navigate to="/home" replace state={{ featureOff: blocked }} />
+            <Navigate to={home} replace state={{ featureOff: blocked }} />
           ) : (
             <Routes>
               <Route path="/staff-view/:staffId" element={<Guarded element={<StaffViewPage />} />} />
@@ -96,8 +98,12 @@ export default function App() {
               <Route element={<AdminShell />}>
                 {/* 日の予定は #/plan。古いリンクの #/schedule はそこへ */}
                 <Route path="/schedule" element={<Navigate to="/plan" replace />} />
-                {/* ホーム（見出しの下に「今日やること」。PRD D141・D230。ADR-0025・0034）：起動したとき（#/・知らない URL）の画面 */}
-                <Route path="/home" element={<HomePage />} />
+                {/* ホーム（見出しの下に「今日やること」。PRD D141・D230。ADR-0025・0034）：起動したとき（#/・知らない URL）の画面。
+                    エキスパート機能が切のときはホームを無くして予定の画面へ移す（PRD D383。ADR-0073） */}
+                <Route
+                  path="/home"
+                  element={isSimpleMenu(data.org.features) ? <Navigate to={home} replace /> : <HomePage />}
+                />
                 <Route path="/plan" element={<PlanPage />} />
                 <Route path="/month" element={<MonthPage />} />
                 <Route path="/week" element={<WeekPage />} />
@@ -123,7 +129,7 @@ export default function App() {
                 <Route path="/data" element={<DataPage />} />
                 {/* 管理者設定（PRD D210。ADR-0028）：機能の入り切り。だれでも開ける・切れない */}
                 <Route path="/settings" element={<SettingsPage />} />
-                <Route path="*" element={<Navigate to="/home" replace />} />
+                <Route path="*" element={<Navigate to={home} replace />} />
               </Route>
             </Routes>
           )}
@@ -165,7 +171,8 @@ function AdminShell() {
   const { pathname } = location;
   const navigate = useNavigate();
   /** 切った機能の URL から移ってきたときの、その機能（ホームの上に知らせを出す。PRD D213） */
-  const featureOff = pathname === '/home' && isFeatureOffState(location.state) ? location.state.featureOff : null;
+  const home = homePath(data.org.features);
+  const featureOff = pathname === home && isFeatureOffState(location.state) ? location.state.featureOff : null;
   const { menuOpen, setMenuOpen, paletteOpen, openPalette, closePalette } = useShellOverlays(pathname);
   const menuBtnRef = useRef<HTMLButtonElement>(null);
   const headerRef = useRef<HTMLElement>(null);
@@ -209,7 +216,7 @@ function AdminShell() {
                         name={featureLabel(featureOff, terms)}
                         onClose={() => {
                           // 知らせを閉じる（URL はそのまま。state だけ消す）。フォーカスは画面の見出しへ
-                          navigate('/home', { replace: true, state: null });
+                          navigate(home, { replace: true, state: null });
                           focusHeading();
                         }}
                       />
@@ -224,6 +231,7 @@ function AdminShell() {
           </main>
           <BottomTabs
             groups={groups}
+            simple={isSimpleMenu(data.org.features)}
             pathname={pathname}
             paletteOpen={paletteOpen}
             openPalette={openPalette}

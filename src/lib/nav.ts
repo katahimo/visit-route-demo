@@ -5,6 +5,7 @@ import type { Terms } from '../contracts/documents';
 import type { Features } from '../contracts/features';
 import { isHrefOn, isOn } from './features';
 import { planLabel, planYm } from './scheduleMode';
+import { startGuidePlanPath } from './startGuide';
 import { SUDDEN_DO } from './sudden';
 
 /**
@@ -106,6 +107,18 @@ export const basicsTabs = (
 
 /** 下のタブに並べる項目の key（ホーム・予定・欠勤。4つ目は「探す」（コマンドパレット）、5つ目は「メニュー」のボタン。PRD D336） */
 export const BOTTOM_TABS: readonly string[] = ['home', 'schedule', 'absence'];
+/** エキスパート機能が切のとき、下のタブに並べる項目の key：メニューの4つ（予定・〈利用者さん〉・〈スタッフ〉・設定。PRD D383）。そのあとに「探す」「メニュー」 */
+export const SIMPLE_BOTTOM_TABS: readonly string[] = ['schedule', 'clients', 'staff', 'settings'];
+
+/** メニューを4つにするか（エキスパート機能が切のとき。ホームは無く、予定の上の帯と「その他 ▾」へ畳む。PRD D383。ADR-0073） */
+export const isSimpleMenu = (features: Features): boolean => !isOn(features, 'expert');
+
+/**
+ * 起動したとき（#/・知らない URL）・切った機能の URL から移る先（PRD D213・D383）：エキスパート機能が入ならホーム、
+ * 切ならホームは無いので予定の画面（最初に開く画面と同じ：繰り返しを使うなら月、使わないなら週。lib/startGuide）
+ */
+export const homePath = (features: Features): string =>
+  isSimpleMenu(features) ? startGuidePlanPath(features) : '/home';
 
 /**
  * 操作の項目か（URL に ?do= を持つ。例：「欠勤・キャンセルを登録」＝ `/plan?date=…&do=absence`。PRD D180・D231）。
@@ -159,12 +172,16 @@ export function navTitleParts(
   return extra ? { group: null, item: extra } : null;
 }
 
-/** 下のタブの項目：メニュー（子の項目も）から BOTTOM_TABS の順に引く（メニューに無い項目は出さない。PRD D336） */
+/**
+ * 下のタブの項目：メニュー（子の項目も）から BOTTOM_TABS の順に引く（メニューに無い項目は出さない。PRD D336）。
+ * simple（エキスパート機能が切）はメニューの4つ（SIMPLE_BOTTOM_TABS。PRD D383）
+ */
 export function bottomTabs<T extends NavEntry & { key: string; children?: readonly T[] }>(
   groups: readonly NavSection<T>[],
+  simple = false,
 ): T[] {
   const all = groups.flatMap((g) => g.items.flatMap((i) => [i, ...(i.children ?? [])]));
-  return BOTTOM_TABS.flatMap((key) => all.find((i) => i.key === key) ?? []);
+  return (simple ? SIMPLE_BOTTOM_TABS : BOTTOM_TABS).flatMap((key) => all.find((i) => i.key === key) ?? []);
 }
 
 /** 下のタブの名前：短い名前（ホーム・予定・欠勤）。無ければメニューの名前（PRD D336） */
@@ -227,7 +244,6 @@ export type MenuBadges = {
 export const NAV_OPEN_DEFAULT: Readonly<Record<string, boolean>> = {
   schedule: true,
   arrange: true,
-  people: true,
   settings: false,
 };
 
@@ -259,38 +275,22 @@ export const scheduleHref = (last?: string | null): string =>
   last && SCHEDULE_VIEWS.includes(last) ? last : SCHEDULE_DEFAULT;
 
 /**
- * 基本情報の画面へ入る子の項目（予定と相性・〈利用者さん〉一覧・〈スタッフ〉一覧）。親の key を前に付ける。
+ * 予定を組む（エキスパート機能が入のとき）の、基本情報の画面へ入る子の項目（基本情報・〈利用者さん〉一覧・〈スタッフ〉一覧。key は `arrange:*`）。
  * 〈利用者さん〉・〈スタッフ〉の画面はよく開くので、基本情報のタブだけでなく子にも出して印を付ける（ADR-0067 追記）
  */
-function basicsChildren(terms: Pick<Terms, 'client' | 'staff'>, parent: string): MenuItem[] {
+function basicsChildren(terms: Pick<Terms, 'client' | 'staff'>): MenuItem[] {
   return [
     {
-      key: `${parent}:basics`,
+      key: 'arrange:basics',
       to: '/basics',
-      label: parent === 'arrange' ? '基本情報' : '予定と相性',
+      label: '基本情報',
       icon: 'people',
       // 〈利用者さん〉一覧・〈スタッフ〉一覧はすぐ下の子に印
       match: BASICS_PATHS.filter((p) => p !== '/clients' && p !== '/staff'),
     },
-    { key: `${parent}:clients`, to: '/clients', label: `${terms.client}一覧`, icon: 'clients' },
-    { key: `${parent}:staff`, to: '/staff', label: `${terms.staff}一覧`, icon: 'staff' },
+    { key: 'arrange:clients', to: '/clients', label: `${terms.client}一覧`, icon: 'clients' },
+    { key: 'arrange:staff', to: '/staff', label: `${terms.staff}一覧`, icon: 'staff' },
   ];
-}
-
-/**
- * 「人」（エキスパート機能が切のとき。ADR-0072・PRD D377）：基本情報の画面群の入口。子は 予定と相性・〈利用者さん〉一覧・〈スタッフ〉一覧。
- * 担当を組むの印は付けない（担当を組むはメニューに出さない）
- */
-function peopleMenuItem(terms: Pick<Terms, 'client' | 'staff'>, features: Features): MenuItem {
-  return {
-    key: 'people',
-    to: '/basics',
-    label: '人',
-    short: '人',
-    icon: 'people',
-    match: BASICS_PATHS,
-    children: basicsChildren(terms, 'people').filter((i) => isHrefOn(features, i.to)),
-  };
 }
 
 /**
@@ -312,7 +312,7 @@ function arrangeMenuItem(
     match: ['/standard', '/rules'],
   };
   const children: MenuItem[] = [
-    ...basicsChildren(terms, 'arrange'),
+    ...basicsChildren(terms),
     ...(badges.hasStandard ? [] : [standardChild]),
     {
       key: 'arrange:assign',
@@ -341,9 +341,54 @@ function arrangeMenuItem(
 }
 
 /**
- * メニューの並び（PRD D326・D349・D355・D364・D377。ADR-0054・0063・0067・0072）：見出しの無い5項目。エキスパート機能が入なら
- * ホーム・予定を組む・予定・空き状況・設定、切なら 予定を組むの代わりに「人」を予定の次に置く（ホーム・予定・人・空き状況・設定）。
- * 「人」の子は 予定と相性・〈利用者さん〉一覧・〈スタッフ〉一覧。担当を組む（#/arrange）は切でもホーム・日の予定から開けるがメニューには出さない。
+ * メニューの4つ（エキスパート機能が切のとき。PRD D383。ADR-0073）：予定・〈利用者さん〉・〈スタッフ〉・設定（呼び名は terms）。
+ * 見出し・子の項目・件数の印は無い（ホームは無く、要対応は予定の上の帯、空き状況は予定の「その他 ▾」）。
+ * 今の画面の印：予定は月・週・日・比較・空き状況・担当を組む、〈利用者さん〉は一覧・予定と相性・相性、〈スタッフ〉は一覧・勤務時間（シフト）・勤務の見込み、
+ * 設定は設定のタブ。切った機能の画面は出さない
+ */
+function simpleMenuItems(terms: Pick<Terms, 'client' | 'staff'>, features: Features, last: LastViews): MenuItem[] {
+  const tabs = settingsTabs(features).map((t) => t.to);
+  const items: MenuItem[] = [
+    {
+      key: 'schedule',
+      to: scheduleHref(last.schedule),
+      label: '予定',
+      short: '予定',
+      icon: 'day',
+      match: [...SCHEDULE_PATHS, '/vacancy', '/arrange', '/compare'],
+    },
+    {
+      key: 'clients',
+      to: '/clients',
+      label: terms.client,
+      short: terms.client,
+      icon: 'clients',
+      match: ['/clients', '/basics', '/compat'],
+    },
+    {
+      key: 'staff',
+      to: '/staff',
+      label: terms.staff,
+      short: terms.staff,
+      icon: 'staff',
+      match: ['/staff', '/availability', '/workload'],
+    },
+    {
+      key: 'settings',
+      to: settingsHref(features, last.settings),
+      label: '設定',
+      short: '設定',
+      icon: 'settings',
+      match: tabs,
+    },
+  ];
+  return items.filter((i) => isHrefOn(features, i.to));
+}
+
+/**
+ * メニューの並び（PRD D326・D349・D355・D364・D383。ADR-0054・0063・0067・0072・0073）：エキスパート機能が入なら、見出しの無い5項目
+ * ホーム・予定を組む・予定・空き状況・設定。切なら 予定・〈利用者さん〉・〈スタッフ〉・設定 の4つ（simpleMenuItems）。
+ * 担当を組む（#/arrange）は切でも日の予定などから開けるがメニューには出さない。
  * 「予定」「予定を組む」「設定」は畳める子の項目を持つ（既定は設定だけ畳む。今の画面の親はいつも開く）。
  * 「予定」の子：今日の予定（今日の日の予定）・◯月の予定（月の後半は来月、前半は今月の月の予定）・欠勤・キャンセル（今日の日の予定で
  * 欠勤・キャンセルの欄を開く）。親を押すと最後に開いた表示（既定は日の予定）。「予定を組む」の子：基本情報（人の項目。
@@ -361,7 +406,7 @@ export function menuSections(
   last: LastViews = {},
   badges: MenuBadges = {},
 ): NavSection<MenuItem>[] {
-  const expert = isOn(features, 'expert');
+  if (isSimpleMenu(features)) return [{ items: simpleMenuItems(terms, features, last) }];
   const scheduleChildren: MenuItem[] = [
     {
       key: 'today',
@@ -369,8 +414,7 @@ export function menuSections(
       label: '今日の予定',
       icon: 'day',
       match: ['/plan'],
-      // 「未確定」は確定の段階の印。expert 切は確定の段階が無いので出さない（ADR-0073）
-      badge: badges.todayUntold && expert ? { text: '未確定', label: '今日はまだ伝えていない' } : undefined,
+      badge: badges.todayUntold ? { text: '未確定', label: '今日はまだ伝えていない' } : undefined,
     },
     {
       key: 'month-view',
@@ -383,7 +427,7 @@ export function menuSections(
   ];
   const items: MenuItem[] = [
     { key: 'home', to: '/home', label: 'ホーム', short: 'ホーム', icon: 'home' },
-    ...(expert ? [arrangeMenuItem(terms, today, features, badges)] : []),
+    arrangeMenuItem(terms, today, features, badges),
     {
       key: 'schedule',
       to: scheduleHref(last.schedule),
@@ -393,7 +437,6 @@ export function menuSections(
       match: SCHEDULE_PATHS,
       children: scheduleChildren.filter((i) => isHrefOn(features, i.to)),
     },
-    ...(expert ? [] : [peopleMenuItem(terms, features)]),
     { key: 'vacancy', to: '/vacancy', label: '空き状況', short: '空き状況', icon: 'vacancy' },
     // 設定：訪問の種類・特性の項目・管理者設定（PRD D210。だれでも開ける）・データを1つにまとめる（タブ。PRD D275）
     {
@@ -417,7 +460,8 @@ export function menuSections(
 /**
  * 画面の一覧（PRD D182・D230・D273・D275・D331）：コマンドパレットの「画面」と上の帯の画面の名前はここから引く（案を比べるは出さない）。
  * メニューでタブにまとめた画面（月・週・日の予定・基本情報のタブ・勤務の見込み・設定のタブ）も1つずつ持つ。
- * ホーム／予定（月の予定・週の予定・日の予定）／予定を組む（条件の重み・組み方の標準・担当を組む）／空き状況／
+ * ホーム（切のときは無い。PRD D383）／予定（月の予定・週の予定・日の予定。切のときは担当を組む・空き状況もここ）／
+ * 予定を組む（入のとき：条件の重み・組み方の標準・担当を組む）／空き状況（入のとき）／
  * 基本情報（切のときは「人」。予定と相性・〈利用者さん〉一覧・〈スタッフ〉一覧・相性・勤務時間（シフト）・勤務の見込み。ADR-0067）／
  * 設定（訪問の種類・特性の項目・管理者設定・データ）。
  * 項目名は画面の見出しと同じ。切った機能の画面は出さない
@@ -425,8 +469,10 @@ export function menuSections(
 export function screenSections(terms: Pick<Terms, 'client' | 'staff'>, features: Features): NavSection<MenuItem>[] {
   const expert = isOn(features, 'expert');
   const arrangeScreen: MenuItem = { key: 'arrange', to: '/arrange', label: '担当を組む', icon: 'arrange' };
+  const vacancyScreen: MenuItem = { key: 'vacancy', to: '/vacancy', label: '空き状況', icon: 'vacancy' };
   const all: NavSection<MenuItem>[] = [
-    { items: [{ key: 'home', to: '/home', label: 'ホーム', icon: 'home' }] },
+    // ホームは入のときだけ（切のときは予定の上の帯。PRD D383）
+    { items: expert ? [{ key: 'home', to: '/home', label: 'ホーム', icon: 'home' }] : [] },
     {
       title: SCHEDULE_GROUP,
       items: [
@@ -435,6 +481,8 @@ export function screenSections(terms: Pick<Terms, 'client' | 'staff'>, features:
         { key: 'day', to: '/plan', label: '日の予定', icon: 'day' },
         // エキスパート機能が切なら「予定を組む」のグループは出さず、担当を組むは予定のグループに置く（ADR-0072）
         ...(expert ? [] : [arrangeScreen]),
+        // 切のときの空き状況は予定の「その他 ▾」から開くので、予定のグループに置く（PRD D383）
+        ...(expert ? [] : [vacancyScreen]),
       ],
     },
     {
@@ -447,7 +495,7 @@ export function screenSections(terms: Pick<Terms, 'client' | 'staff'>, features:
           ]
         : [],
     },
-    { items: [{ key: 'vacancy', to: '/vacancy', label: '空き状況', icon: 'vacancy' }] },
+    { items: expert ? [vacancyScreen] : [] },
     {
       // エキスパート機能が切なら「人」（メニューと同じ呼び名。ADR-0072）
       title: expert ? '基本情報' : '人',

@@ -4,6 +4,7 @@
 import type { Terms } from '../contracts/documents';
 import type { FeatureId, Features } from '../contracts/features';
 import { isOn } from './features';
+import { isSimpleMenu } from './nav';
 
 /** 案内の1枚 */
 export type TourStep = {
@@ -22,7 +23,9 @@ export type TourStep = {
  * 案内の3枚（PRD D277。呼び方は terms）：ホーム／予定で担当を組んで確定（3段「提案（AI）→ ピン → 確定（伝えた）」）／欠勤・キャンセル。
  * 最後の枚は、画面で主ボタン「今日の予定を開く」を添える（PRD D226）。条件の重み・探す（Ctrl+K）の枚は入れない
  * （探すは上の帯の「探す」が見えている。条件は設定のタブにある）。
- * features で切った機能の枚（欠勤・キャンセル）は出さない（PRD D213。枚数はそのぶん減る）
+ * features で切った機能の枚（欠勤・キャンセル）は出さない（PRD D213。枚数はそのぶん減る）。
+ * エキスパート機能が切のときはホームが無いのでホームの枚を出さず（PRD D383）、予定の枚は予定の上の要対応の帯と「その他 ▾」の「担当なしの訪問を組む」、
+ * 欠勤の枚は日の予定の「欠勤・キャンセルを登録」を案内する（確定の段階が無いので、3段目は「変更あり」）
  */
 export function tourSteps(terms: Pick<Terms, 'client' | 'staff'>, features: Features = {}): TourStep[] {
   const expert = isOn(features, 'expert');
@@ -38,13 +41,15 @@ export function tourSteps(terms: Pick<Terms, 'client' | 'staff'>, features: Feat
       title: '予定を組んで、直して、確定します',
       body: expert
         ? '担当は「予定を組む」で組みます（組み方の標準を決める・担当なしの訪問を AI で組む）。予定は、画面の上の［月｜週｜日］で表示を切り替え、手で直します。繰り返しの訪問は、繰り返しの担当（標準）で最初から入っています。次の3段で決めます。'
-        : '担当なしの訪問は、ホームの「担当なし」や日の予定の［この日の担当を組む］から AI で組みます。予定は、画面の上の［月｜週｜日］で表示を切り替え、手で直します。繰り返しの訪問は、繰り返しの担当で最初から入っています。次の3段で決めます。',
+        : '担当なし・重なり・休みの人の訪問は、予定の上の赤い帯の「見に行く」から開けます。まとめて組むなら予定の「その他 ▾」の「担当なしの訪問を組む」。予定は、画面の上の［月｜週｜日］で表示を切り替え、手で直します。繰り返しの訪問は、繰り返しの担当で最初から入っています。次の3段で決めます。',
       points: [
         expert
           ? '組む（AI）：メニューの「予定を組む」の「担当を組む」で、月・週・日を選んで「AI で組む」。提案を見て、よければ「反映する」。間違えたら「元に戻す」（Ctrl+Z）。'
-          : '組む（AI）：担当を組む画面で、月・週・日を選んで「AI で組む」。提案を見て、よければ「反映する」。間違えたら「元に戻す」（Ctrl+Z）。',
+          : '組む（AI）：予定の「その他 ▾」の「担当なしの訪問を組む」で、今日から来月末までの担当なしを組みます。間違えたら「元に戻す」（Ctrl+Z）。',
         `ピン：替えたい訪問は、別の${terms.staff}へドラッグします。動かした訪問にはピンが付き、AI で組んでも担当が残ります。予定の画面では手で直すだけです。`,
-        `確定（伝えた）：${terms.staff}に伝えたら「確定（伝えた）」を押します。あとの変更は「未連絡の変更」として連絡の一覧に出ます。`,
+        expert
+          ? `確定（伝えた）：${terms.staff}に伝えたら「確定（伝えた）」を押します。あとの変更は「未連絡の変更」として連絡の一覧に出ます。`
+          : `決まったあと：決まった日に変えた訪問には「変更あり」の印が出ます。印を押すと連絡の一覧が開き、${terms.staff}に伝えられます。`,
       ],
       where: 'メニューの「予定」（スマホは下のタブの「予定」）',
     },
@@ -52,11 +57,13 @@ export function tourSteps(terms: Pick<Terms, 'client' | 'staff'>, features: Feat
       key: 'absence',
       title: '欠勤・キャンセルはここから',
       body: `${terms.staff}の急な欠勤や${terms.client}の当日キャンセルを登録すると、その日の担当を振り直す手順に進みます。日の予定の「欠勤・キャンセルを登録」からも登録できます。`,
-      where: 'メニューの「欠勤・キャンセル」（スマホは下のタブの「欠勤」）',
+      where: expert
+        ? 'メニューの「欠勤・キャンセル」（スマホは下のタブの「欠勤」）'
+        : '日の予定の「欠勤・キャンセルを登録」',
       feature: 'sudden',
     },
   ];
-  return all.filter((s) => !s.feature || isOn(features, s.feature));
+  return all.filter((s) => (!s.feature || isOn(features, s.feature)) && (s.key !== 'home' || !isSimpleMenu(features)));
 }
 
 /** 押したボタン（Esc は skip と同じ） */

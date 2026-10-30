@@ -1,7 +1,7 @@
 // 自動の組み（PRD D372〜D378。ADR-0072 第2段）を本物のブラウザで確かめる。初めて開いたときの最初の2問に「デモで試す・定期」で答えて得る「基本」のひな形（エキスパート機能は切）で、
 // 1 予定の日の「訪問を追加」で担当を選ばずに単発の訪問を足す → 知らせ「N件の担当を組みました」と［元に戻す］が出てその訪問に担当が付く（ピンは付けない）
 //   → ［元に戻す］で担当なしに戻る（訪問は残る）、
-// 2 ホーム：担当なしの訪問があると「担当なし N件」のカード（kind=auto）と［組む］が出て、押すと組まれてカードが消える（エキスパート機能が入なら出さない）、
+// 2 予定の「その他 ▾」：担当なしの訪問があると「担当なしの訪問を組む N件」が出て、押すと組まれて件数が減る（ホームの［組む］の代わり。PRD D383。エキスパート機能が入なら出さない）、
 // 3 〈利用者さん〉の画面で担当なしの繰り返しを足す → 自動で組まれ、繰り返しの担当（usualStaffId）が書かれて行に出る
 //   （組んだ回は訪問として保存され、保存の直後に別の画面へ移っても組みは続く）、
 // 4 ひな形「単発のみ」を当てると〈利用者さん〉の画面の予定のタブから繰り返しの欄が消える（その入り切りの全体は e2e-features・e2e-features2）。
@@ -45,7 +45,7 @@ const toastText = async (page, re) => {
  * 保存データを消して読み直すと2問が出るので、答えてから行き先を開き直す）
  */
 async function fresh(page, hash, ready) {
-  await page.goto(`${BASE}#/home`);
+  await page.goto(`${BASE}#/data`);
   await page.evaluate((k) => localStorage.removeItem(k), STORAGE_KEY);
   await page.goto(`${BASE}#${hash}`);
   await page.reload();
@@ -100,33 +100,48 @@ async function single(page) {
   check(d2.visits.length === n0 + 1, '元に戻しても足した訪問は消えない', d2.visits.length);
 }
 
-/** 2 ホーム：担当なしの訪問のカードと［組む］（1 のあとの状態から続ける） */
-async function home(page) {
+/** 2 予定の「その他 ▾」：担当なしの訪問を組む（ホームの［組む］の代わり。PRD D383。1 のあとの状態から続ける） */
+async function moreArrange(page) {
   await page.goto('about:blank');
-  await page.goto(`${BASE}#/home`);
-  await page.getByTestId('home-tasks').waitFor({ timeout: 60000 });
+  await page.goto(`${BASE}#/month`);
+  await page.getByTestId('sched-nav').waitFor({ timeout: 60000 });
   await settle(page, 500);
-  const card = page.locator('[data-testid="home-task"][data-kind="auto"]');
-  await card.waitFor({ timeout: 30000 });
-  // 初期データにも担当なしの繰り返しの回があるので、件数は「足した1件を含む N件」（N は2以上）
-  const countOf = async () => Number(/担当なし (\d+)件/.exec(await card.innerText().catch(() => ''))?.[1] ?? 0);
+  const item = page.getByTestId('more-auto-arrange');
+  // 「その他 ▾」を開いて、項目の「N件」を読む（閉じる）
+  const countOf = async () => {
+    await page.getByTestId('month-more').click();
+    await item.waitFor({ timeout: 30000 });
+    const n = Number(/(\d+)件/.exec(await item.innerText().catch(() => ''))?.[1] ?? 0);
+    return n;
+  };
   const n0 = await countOf();
-  check(n0 >= 2, 'ホームに「担当なし N件」のカード（元に戻した1件を含む）', n0);
-  check((await card.getByTestId('home-auto-arrange').count()) === 1, 'カードに［組む］がある');
-  check((await card.locator('a').count()) === 0, 'このカードは画面を移るリンクではない（その場で組む）');
+  // 初期データにも担当なしの繰り返しの回があるので、件数は「足した1件を含む N件」（N は2以上）
+  check(n0 >= 2, '「その他 ▾」に「担当なしの訪問を組む N件」（元に戻した1件を含む）', n0);
   const before = await data(page);
   const target = before.visits.find((y) => y.staffId === null && !y.pinned && y.earliestStart === '10:00');
   check(!!target, '前提：元に戻した担当なしの訪問が残っている', before.visits.length);
-  await card.getByTestId('home-auto-arrange').click();
+  await item.click();
   const text = await toastText(page, /件の担当を組みました/);
-  check(/^\d+件の担当を組みました/.test(text), '［組む］を押すと知らせ「N件の担当を組みました」', text);
+  check(/^\d+件の担当を組みました/.test(text), '「担当なしの訪問を組む」を押すと知らせ「N件の担当を組みました」', text);
   const after = await dataWhen(page, (x) => x.visits.find((y) => y.id === target.id)?.staffId);
   const v = after.visits.find((y) => y.id === target.id);
   check(!!v?.staffId && v.pinned === false, '足した訪問に担当が付く（ピンは付けない）', v);
-  check(hashOfPage(page).startsWith('#/home'), 'ホームのまま（画面を移らない）');
-  // 組んだ分だけ減る（組めない日の訪問は担当なしのまま残るので、カードは残ってもよい）
-  const n1 = (await until(async () => ((await countOf()) < n0 ? { n: await countOf() } : null)))?.n;
-  check(n1 !== undefined && n1 < n0, '組んだあとは「担当なし」の件数が減る（0件ならカードが消える）', { n0, n1 });
+  check(hashOfPage(page).startsWith('#/month'), '月の予定のまま（画面を移らない）');
+  // 組んだ分だけ減る（組めない日の訪問は担当なしのまま残るので、項目は残ってもよい。0件なら項目が消える）
+  await page.keyboard.press('Escape').catch(() => {});
+  await settle(page, 500);
+  const n1 = await until(async () => {
+    if ((await page.getByTestId('month-more').count()) === 0) return null;
+    await page.getByTestId('month-more').click();
+    const there = (await item.count()) > 0;
+    const n = there ? Number(/(\d+)件/.exec(await item.innerText())?.[1] ?? 0) : 0;
+    await page.keyboard.press('Escape');
+    return n < n0 ? { n } : null;
+  });
+  check(n1 !== null && n1 !== undefined && n1.n < n0, '組んだあとは「担当なし」の件数が減る（0件なら項目が消える）', {
+    n0,
+    n1,
+  });
 }
 const hashOfPage = (page) => new URL(page.url()).hash;
 
@@ -198,7 +213,7 @@ const steps = sharedPage({
   open,
   steps: [
     ['1 単発の訪問を足すと担当が組まれ、元に戻せる', single],
-    ['2 ホームの「担当なし N件」と［組む］', home],
+    ['2 予定の「その他 ▾」の「担当なしの訪問を組む」', moreArrange],
     ['3 繰り返しを足すと組まれ、繰り返しの担当が書かれる', pattern],
     ['4 ひな形「単発のみ」で繰り返しの欄が消える', oneOff],
   ],

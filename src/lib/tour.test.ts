@@ -16,10 +16,10 @@ describe('tourSteps（PRD D277）', () => {
     expect(JSON.stringify(s)).not.toContain('条件の重み');
   });
   it('エキスパート機能が切なら、予定を組むのメニューを案内せず、担当を組む画面から組むと書く（ADR-0072）', () => {
-    const plan = tourSteps(terms, { expert: false })[1]!;
+    const plan = tourSteps(terms, { expert: false })[0]!;
     expect(plan.body).not.toContain('「予定を組む」');
     expect(plan.points!.join('')).not.toContain('メニューの「予定を組む」');
-    expect(plan.points!.join('')).toContain('担当を組む');
+    expect(plan.points!.join('')).toContain('担当なしの訪問を組む');
     expect(tourSteps(terms, {})[1]!.body).toContain('「予定を組む」');
   });
   it('呼び方を入れる（直書きしない）', () => {
@@ -45,6 +45,16 @@ describe('tourSteps（PRD D277）', () => {
     expect(s[0]!.title).toContain('今日やること');
     expect(s[1]!.where).toBe('メニューの「予定」（スマホは下のタブの「予定」）');
     expect(s[2]!.where).toBe('メニューの「欠勤・キャンセル」（スマホは下のタブの「欠勤」）');
+  });
+  it('エキスパート機能が切ならホームの枚を出さず、帯・「その他 ▾」・日の予定の欠勤を案内する（PRD D383）', () => {
+    const s = tourSteps(terms, { expert: false });
+    expect(s.map((x) => x.key)).toEqual(['plan', 'absence']);
+    expect(s[0]!.body).toContain('赤い帯');
+    expect(s[0]!.body).toContain('「その他 ▾」の「担当なしの訪問を組む」');
+    expect(s[0]!.points![2]).toMatch(/^決まったあと：/);
+    expect(s[1]!.where).toBe('日の予定の「欠勤・キャンセルを登録」');
+    expect(JSON.stringify(s)).not.toContain('ホーム');
+    expect(tourSteps(terms, { expert: false, sudden: false }).map((x) => x.key)).toEqual(['plan']);
   });
   it('欠勤・キャンセルを切ると2枚（PRD D213）', () => {
     expect(tourSteps(terms, { sudden: false }).map((x) => x.key)).toEqual(['home', 'plan']);

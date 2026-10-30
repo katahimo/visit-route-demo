@@ -1,0 +1,43 @@
+/* 予定の上の要対応の帯（エキスパート機能が切のとき。PRD D383）：押せる1行。無ければ出さない */
+.attention-band {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 10px 16px;
+  text-align: left;
+  font: inherit;
+  font-weight: 700;
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 9%, white);
+  border: 1px solid var(--danger);
+  border-radius: 12px;
+  cursor: pointer;
+}
+.attention-band:hover {
+  background: color-mix(in srgb, var(--danger) 16%, white);
+}
+.attention-band .band-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.attention-band .with-icon:has(> .band-text) > svg {
+  flex: none;
+}
+.attention-band-title {
+  margin-right: 4px;
+}
+.attention-band-go {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+@media print {
+  .attention-band {
+    display: none;
+  }
+}

@@ -2,6 +2,7 @@
 // （useMonthNav・useMonthFocus・useMonthDays など）の戻り値から組み立てる。部品は monthParts・monthGrid・monthAside
 
 import { CalendarRange } from 'lucide-react';
+import { AttentionBand } from '../components/attentionBand';
 import { FieldError } from '../components/FieldError';
 import type { MenuItem } from '../components/MenuButton';
 import { type BandModel, ProgressBand } from '../components/progressBand';
@@ -71,6 +72,8 @@ export function MonthTopBars({
           testId: 'month-title',
         }}
       />
+      {/* 要対応の帯（エキスパート機能が切のときだけ。PRD D383） */}
+      <AttentionBand />
       {/* 進み具合の帯（PRD D151〜D155）。担当なしの次の一手は担当を組むの画面へ（ADR-0063） */}
       <ProgressBand ym={ym} model={band} primary onOp={onBandOp} />
       {/* 操作の行（日・週・月で同じ並び。PRD D327）。月送り・今月のほかのときどき使う操作は「その他 ▾」（PRD D278） */}
