@@ -11,27 +11,12 @@ import {
   useState,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { useLocation, useNavigate } from 'react-router-dom';
-import type { DemoData } from '../contracts/data';
+import { useNavigate } from 'react-router-dom';
 import type { Terms } from '../contracts/documents';
 import { jstDate } from '../domain/time';
-import { applyTemplate, matchTemplate } from '../lib/features';
 import { confirmLeave } from '../lib/leaveGuard';
 import { dayHref } from '../lib/links';
-import {
-  shouldAutoOpenTour,
-  TOUR_START_CHOICES,
-  TOUR_START_NOTE,
-  TOUR_START_QUESTION,
-  TOUR_TODAY_LABEL,
-  type TourMove,
-  type TourStartChoice,
-  tourCountText,
-  tourMove,
-  tourNextLabel,
-  tourSteps,
-} from '../lib/tour';
-import { tourMemory, useDemoData } from '../store';
+import { TOUR_TODAY_LABEL, type TourMove, tourCountText, tourMove, tourNextLabel, tourSteps } from '../lib/tour';
 import { useBodyScrollLock } from './useBodyScrollLock';
 import { useFeatures } from './useFeature';
 import { useTourModal } from './useTourModal';
@@ -42,50 +27,13 @@ const Ctx = createContext<() => void>(() => {});
 export const useTour = () => useContext(Ctx);
 
 /**
- * 初回の案内ツアー（PRD D192・D193。ADR-0025）。管理の画面（AdminShell）で1つ。
- * まだ見ていない（とばしていない）ときは起動したときに開く（?id=・?do= のリンクで開いたときは開かない）。
- * 閉じたら（とばす・Esc・はじめる）・最後の枚まで進んだら、見たことを覚える（store/tour）
+ * 案内ツアー（PRD D192・D193。ADR-0025）。管理の画面（AdminShell）で1つ。
+ * 初めて開いたときには出さない（最初の2問に置き換えた。PRD D379。ADR-0073）。データの画面の「案内をもう一度見る」だけで開く
  */
 export function TourProvider({ terms, children }: { terms: Pick<Terms, 'client' | 'staff'>; children: ReactNode }) {
-  const { search, pathname } = useLocation();
-  const { startedFresh, data, reset, update } = useDemoData();
-  // 起動したときの URL で決める（?id=・?do= のリンクで開いたときは出さない。PRD D192）
-  const [open, setOpen] = useState(() => shouldAutoOpenTour(tourMemory.seen(), search, pathname));
-  // 初めて開いた（保存データが無かった）ときに自動で開いたツアーだけ、1枚目で「どこまで使うか」を聞く（PRD D276）。
-  // 「案内をもう一度見る」では聞かない（機能の入り切りは管理者設定で）
-  const [ask, setAsk] = useState(() => open && startedFresh);
-  const openTour = useCallback(() => {
-    setAsk(false);
-    setOpen(true);
-  }, []);
-  const close = useCallback(() => {
-    tourMemory.markSeen();
-    setOpen(false);
-  }, []);
-  /**
-   * 起動したまま手の入っていないデータ（初期データか、ここで作り直したデータ）。別のタブの変更・画面での変更があれば違う物になる。
-   * 「どこまで使うか」は、手が入っていなければ初期データを作り直し（入り切りに合った初期データになる）、入っていれば入り切りだけ書き換える
-   * （作り直して別のタブの変更を消さない。PRD D276）
-   */
-  const pristine = useRef<DemoData | null>(startedFresh ? data : null);
-  const awaitReset = useRef(false);
-  useEffect(() => {
-    if (!awaitReset.current) return;
-    awaitReset.current = false;
-    pristine.current = data;
-  }, [data]);
-  const choose = useCallback(
-    (id: TourStartChoice['id']) => {
-      const features = applyTemplate(id);
-      if (pristine.current !== null && pristine.current === data) {
-        awaitReset.current = true;
-        reset(features);
-      } else {
-        update((d) => ({ ...d, org: { ...d.org, features } }), '機能の入り切り');
-      }
-    },
-    [data, reset, update],
-  );
+  const [open, setOpen] = useState(false);
+  const openTour = useCallback(() => setOpen(true), []);
+  const close = useCallback(() => setOpen(false), []);
   const navigate = useNavigate();
   /** 最後の枚の「今日の予定を開く」：閉じて今日の日の画面へ（PRD D226） */
   const openToday = useCallback(() => {
@@ -98,7 +46,7 @@ export function TourProvider({ terms, children }: { terms: Pick<Terms, 'client' 
   return (
     <Ctx.Provider value={openTour}>
       {children}
-      {open && <TourDialog terms={terms} ask={ask} onChoose={choose} onClose={close} onToday={openToday} />}
+      {open && <TourDialog terms={terms} onClose={close} onToday={openToday} />}
     </Ctx.Provider>
   );
 }
@@ -112,29 +60,14 @@ export function TourProvider({ terms, children }: { terms: Pick<Terms, 'client' 
  */
 function TourDialog({
   terms,
-  ask,
-  onChoose,
   onClose,
   onToday,
 }: {
   terms: Pick<Terms, 'client' | 'staff'>;
-  /** 1枚目で「どこまで使うか」を聞く（初めて開いたときだけ。PRD D276） */
-  ask: boolean;
-  /** 1枚目の選択を当てる（1枚目を離れるとき＝次へ・とばす・Esc） */
-  onChoose: (id: TourStartChoice['id']) => void;
   onClose: () => void;
   onToday: () => void;
 }) {
   const features = useFeatures();
-  const now = matchTemplate(features);
-  /** 1枚目で選んでいるもの（矢印で選び直すたびには当てず、1枚目を離れるときに当てる。PRD D276） */
-  const [choice, setChoice] = useState<TourStartChoice['id'] | null>(now === 'basic' || now === 'all' ? now : null);
-  const applyChoice = () => {
-    if (ask && choice !== null && choice !== matchTemplate(features)) onChoose(choice);
-  };
-  const applyRef = useRef(applyChoice);
-  applyRef.current = applyChoice;
-  const indexRef = useRef(0);
   // 切った機能の枚は出さない（PRD D213）
   const steps = tourSteps(terms, features);
   const [rawIndex, setIndex] = useState(0);
@@ -146,11 +79,7 @@ function TourDialog({
   /** 最後の枚の主ボタン「今日の予定を開く」（最後の枚に入ったらここへフォーカス。PRD D226） */
   const todayRef = useRef<HTMLButtonElement>(null);
   const closeRef = useRef(onClose);
-  closeRef.current = () => {
-    // Esc（とばすと同じ）で閉じるときも、1枚目で選んだものを当てる
-    if (indexRef.current === 0) applyRef.current();
-    onClose();
-  };
+  closeRef.current = onClose;
   const titleId = useId();
   const bodyId = useId();
   useBodyScrollLock();
@@ -166,13 +95,7 @@ function TourDialog({
     if (!(at instanceof Node) || !boxRef.current?.contains(at) || (at as HTMLButtonElement).disabled)
       nextRef.current?.focus();
   }, [index]);
-  // 最後の枚まで進んだら、閉じる前でも見たことにする（読み直しても最初から出さない）
-  useEffect(() => {
-    if (index === steps.length - 1) tourMemory.markSeen();
-  }, [index, steps.length]);
-  indexRef.current = index;
   const go = (move: TourMove) => {
-    if (index === 0) applyChoice();
     const to = tourMove(index, steps.length, move);
     if (to === null) onClose();
     else setIndex(to);
@@ -220,7 +143,6 @@ function TourDialog({
             {step.where}
           </p>
         </div>
-        {ask && index === 0 && <StartChoice current={choice} onPick={setChoice} />}
         <ol className="tour-dots" aria-hidden="true">
           {steps.map((s, i) => (
             <li key={s.key} className={i === index ? 'is-on' : undefined} />
@@ -238,45 +160,6 @@ function TourDialog({
       </div>
     </div>,
     document.body,
-  );
-}
-
-/**
- * 1枚目の「どこまで使いますか」（PRD D276）：基本／すべて の2つ（ネイティブのラジオ。Tab は選んだ方だけ、矢印で選び直す）。
- * 選んでもすぐには当てず、1枚目を離れるとき（次へ・とばす・Esc）に当てる（TourDialog の applyChoice）
- */
-function StartChoice({
-  current,
-  onPick,
-}: {
-  current: TourStartChoice['id'] | null;
-  onPick: (id: TourStartChoice['id']) => void;
-}) {
-  const name = useId();
-  const titleId = useId();
-  return (
-    <fieldset className="tour-choice" aria-labelledby={titleId} data-testid="tour-start">
-      <legend id={titleId} className="tour-choice-title">
-        {TOUR_START_QUESTION}
-      </legend>
-      {TOUR_START_CHOICES.map((c) => (
-        <label key={c.id} className={`tour-choice-item${current === c.id ? ' is-on' : ''}`}>
-          <input
-            type="radio"
-            name={name}
-            value={c.id}
-            checked={current === c.id}
-            onChange={() => onPick(c.id)}
-            data-testid={`tour-start-${c.id}`}
-          />
-          <span>
-            <strong>{c.label}</strong>
-            <span className="tour-choice-desc">{c.description}</span>
-          </span>
-        </label>
-      ))}
-      <p className="tour-choice-note">{TOUR_START_NOTE}</p>
-    </fieldset>
   );
 }
 

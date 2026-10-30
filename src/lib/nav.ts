@@ -138,8 +138,8 @@ export const DATE_PAGES: readonly string[] = ['/compare', '/workload', '/availab
 /** 上の帯に日付の選択を出すか（古い #/schedule は日の予定） */
 export const showsDateSwitch = (pathname: string): boolean => DATE_PAGES.includes(activeNavPath(pathname));
 
-/** 画面の一覧（パレット）に出さない画面の名前（上の帯。案を比べるは担当を組むから開く。ADR-0063） */
-const EXTRA_TITLES: Record<string, string> = { '/compare': '提案を比べる' };
+/** 画面の一覧（パレット）に出さない画面の名前（上の帯。案を比べるは担当を組むから開く。ADR-0063。登録の案内は自分のデータで始めたあとの3段。ADR-0073） */
+const EXTRA_TITLES: Record<string, string> = { '/compare': '提案を比べる', '/start': '登録の案内' };
 
 /**
  * 上の帯に出す今の画面の名前：グループの見出しと項目名（例「人」と「利用者さん一覧」。帯では「人・利用者さん一覧」と並べ、

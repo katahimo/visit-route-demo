@@ -1,4 +1,4 @@
-// 自動の組み（PRD D372〜D378。ADR-0072 第2段）を本物のブラウザで確かめる。初めて開いたときの入り切り「基本」（エキスパート機能は切）で、
+// 自動の組み（PRD D372〜D378。ADR-0072 第2段）を本物のブラウザで確かめる。初めて開いたときの最初の2問に「デモで試す・定期」で答えて得る「基本」のひな形（エキスパート機能は切）で、
 // 1 予定の日の「訪問を追加」で担当を選ばずに単発の訪問を足す → 知らせ「N件の担当を組みました」と［元に戻す］が出てその訪問に担当が付く（ピンは付けない）
 //   → ［元に戻す］で担当なしに戻る（訪問は残る）、
 // 2 ホーム：担当なしの訪問があると「担当なし N件」のカード（kind=auto）と［組む］が出て、押すと組まれてカードが消える（エキスパート機能が入なら出さない）、
@@ -12,6 +12,7 @@
 const { BASE, NOW, TODAY, STORAGE_KEY, check, launch, runSteps, settle, until, watchErrors } = require('./lib/env.cjs');
 const { sharedPage } = require('./lib/steps.cjs');
 const { skipTour } = require('./lib/tourSeen.cjs');
+const { answerIfAsked } = require('./lib/firstRun.cjs');
 const { answerConfirms } = require('./lib/confirmDialog.cjs');
 const { findVisit, visitsIn } = require('./lib/visits.cjs');
 const { applyTemplate } = require('./lib/features.cjs');
@@ -39,21 +40,28 @@ const toastText = async (page, re) => {
   return ok ? await toast(page).first().innerText() : '';
 };
 
-/** 初期データに戻して開く（初めて開いたときの入り切りは「基本」） */
+/**
+ * 初期データに戻して開く（初めて開いたときの最初の2問に「デモで試す・定期」で答える＝今の初期データ＋「基本」のひな形。
+ * 保存データを消して読み直すと2問が出るので、答えてから行き先を開き直す）
+ */
 async function fresh(page, hash, ready) {
   await page.goto(`${BASE}#/home`);
   await page.evaluate((k) => localStorage.removeItem(k), STORAGE_KEY);
   await page.goto(`${BASE}#${hash}`);
   await page.reload();
+  if (await answerIfAsked(page, ready)) {
+    await page.goto('about:blank');
+    await page.goto(`${BASE}#${hash}`);
+  }
   await page.locator(ready).first().waitFor({ timeout: 60000 });
   await settle(page, 400);
 }
 
-/** 準備：初回の入り切りは「基本」のまま（エキスパート機能は切）、ツアーは見た扱い、時計は NOW に止める */
+/** 準備：初回は最初の2問に答える（「基本」のひな形＝エキスパート機能は切）。時計は NOW に止める */
 async function open() {
   const b = await launch();
   const ctx = await b.newContext({ viewport: { width: 1400, height: 1000 } });
-  await skipTour(ctx, { start: 'basic' });
+  await skipTour(ctx, { start: 'ask' });
   const page = await ctx.newPage();
   await page.clock.setFixedTime(NOW);
   watchErrors(page);

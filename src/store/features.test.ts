@@ -14,7 +14,8 @@ import {
   loadWithStatus,
   rememberCurrent,
   reset,
-  startFeatures,
+  startsWithAll,
+  startWithAnswer,
 } from './index';
 
 /** 環境は node なので localStorage の簡単なモック */
@@ -96,29 +97,54 @@ describe('org.features（PRD D216）', () => {
   });
 });
 
-describe('初めて開いたときの入り切り（PRD D276）', () => {
-  it('保存データが無ければ基本のひな形で始め、fresh', () => {
+describe('初めて開いたとき（PRD D276・D379。ADR-0073）', () => {
+  it('保存データも印も無ければ最初の2問へ（firstRun）。答えるまでデータを書かず、読み直してもまた2問', () => {
     const r = loadWithStatus();
-    expect(r.fresh).toBe(true);
-    expect(r.data.org.features).toEqual(applyTemplate('basic'));
-    expect(loadWithStatus().fresh).toBe(false);
+    expect(r.firstRun).toBe(true);
+    expect(mem.has(STORAGE_KEY)).toBe(false);
+    expect(loadWithStatus().firstRun).toBe(true);
   });
-  it('印「all」があれば、すべて入（{}。今までの初期データと同じ）', () => {
+  it('答えるとデータを作って書く：呼び名・ひな形は答えどおり。次に開いたときは2問を出さない', () => {
+    loadWithStatus();
+    const d = startWithAnswer({ start: 'demo', booking: 'oneOff' });
+    expect(d.org.terms).toEqual({ client: 'お客様', staff: 'シッター' });
+    expect(d.org.features).toEqual(applyTemplate('oneOff'));
+    const saved = JSON.parse(mem.get(STORAGE_KEY) ?? '{}') as DemoData;
+    expect(saved.org.terms).toEqual(d.org.terms);
+    const again = loadWithStatus();
+    expect(again.firstRun).toBe(false);
+    expect(again.data.clients).toHaveLength(d.clients.length);
+  });
+  it('自分のデータで始めると、空のデータ（人・訪問なし）が書かれ、読み直しても壊れない', () => {
+    loadWithStatus();
+    startWithAnswer({ start: 'own', booking: 'regular' });
+    const r = loadWithStatus();
+    expect(r.broken).toBe(false);
+    expect(r.data.clients).toEqual([]);
+    expect(r.data.staff).toEqual([]);
+    expect(r.data.visits).toEqual([]);
+    expect(r.data.org.terms).toEqual({ client: '利用者さん', staff: 'スタッフ' });
+  });
+  it('印「all」があれば2問を出さず、すべて入（{}。今までの初期データと同じ）で書いて始める', () => {
     mem.set(FEATURES_START_KEY, FEATURES_START_ALL);
-    expect(loadWithStatus().data.org.features).toEqual({});
-    expect(startFeatures(() => ({ getItem: () => 'basic' }))).toEqual(applyTemplate('basic'));
+    const r = loadWithStatus();
+    expect(r.firstRun).toBe(false);
+    expect(r.data.org.features).toEqual({});
+    expect(r.data.clients).toHaveLength(20);
+    expect(mem.has(STORAGE_KEY)).toBe(true);
+    expect(startsWithAll(() => ({ getItem: () => 'basic' }))).toBe(false);
     expect(
-      startFeatures(() => {
+      startsWithAll(() => {
         throw new Error('使えない');
       }),
-    ).toEqual(applyTemplate('basic'));
+    ).toBe(false);
   });
   it('保存データがある人は今までどおり（features の無い古いデータはすべて入）', () => {
     const d = createDemoData('2026-10-12');
     const { features: _drop, ...oldOrg } = d.org;
     mem.set(STORAGE_KEY, JSON.stringify({ ...d, org: oldOrg }));
     const r = loadWithStatus();
-    expect(r.fresh).toBe(false);
+    expect(r.firstRun).toBe(false);
     expect(r.data.org.features).toEqual({});
   });
 });

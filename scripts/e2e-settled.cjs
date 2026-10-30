@@ -15,6 +15,7 @@
 const { BASE, NOW, TODAY, STORAGE_KEY, check, launch, runSteps, settle, until, watchErrors } = require('./lib/env.cjs');
 const { sharedPage } = require('./lib/steps.cjs');
 const { skipTour } = require('./lib/tourSeen.cjs');
+const { answerIfAsked } = require('./lib/firstRun.cjs');
 const { answerConfirms } = require('./lib/confirmDialog.cjs');
 
 const data = (page) => page.evaluate((k) => JSON.parse(localStorage.getItem(k)), STORAGE_KEY);
@@ -33,15 +34,20 @@ async function fresh(page, hash, ready) {
   await page.evaluate((k) => localStorage.removeItem(k), STORAGE_KEY);
   await page.goto(`${BASE}#${hash}`);
   await page.reload();
+  // 保存データを消すと最初の2問が出る（デモ×定期＝「基本」）。答えたら行き先を開き直す
+  if (await answerIfAsked(page, ready)) {
+    await page.goto('about:blank');
+    await page.goto(`${BASE}#${hash}`);
+  }
   await page.locator(ready).first().waitFor({ timeout: 60000 });
   await settle(page, 400);
 }
 
-/** 準備：初回の入り切りは「基本」のまま、ツアーは見た扱い、時計は NOW に止める */
+/** 準備：初回は最初の2問に答える（「基本」のひな形＝エキスパート機能は切）。時計は NOW に止める */
 async function open() {
   const b = await launch();
   const ctx = await b.newContext({ viewport: { width: 1400, height: 1000 } });
-  await skipTour(ctx, { start: 'basic' });
+  await skipTour(ctx, { start: 'ask' });
   const page = await ctx.newPage();
   await page.clock.setFixedTime(NOW);
   watchErrors(page);

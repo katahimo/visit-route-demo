@@ -16,7 +16,7 @@
 | `?date=…&do=absence`（`SUDDEN_DO`）［`&staff=`］ | その日を選び「欠勤・キャンセル」の欄を開く。`&staff=` の人がその日に働く（`slotsOf` の `baseSlots` がある＝`staffChoices` に出る）ときだけ `open({ kind: 'staff', staffId })`（2段目）、ほかは1段目。`?do=`・`?date=`・`staff` を消す。日付を変えると欄を閉じる effect より後に開くよう、開く日を覚えて日付が変わってから開く |
 | `?date=…&do=unassigned`（`UNASSIGNED_DO`） | 下の「`?do=unassigned`」 |
 
-選んでいる日付は `useDay`（`DayProvider`）。ツアーは `?do=` のリンクでは出ない。
+選んでいる日付は `useDay`（`DayProvider`）。
 
 #### 並び（PRD D63）
 
