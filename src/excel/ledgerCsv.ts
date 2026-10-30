@@ -41,6 +41,20 @@ export interface LedgerTable {
   skipped: string[];
 }
 
+/** 名簿の列名 → 顧客台帳の列名（エラー文の『列名』を、利用者が手元で見ている台帳の列名で出す） */
+const LEDGER_NAME_OF: Record<string, string> = {
+  [CLIENT_COLS.name]: LEDGER.name,
+  [CLIENT_KANA_COL]: LEDGER.kana,
+  [CLIENT_POSTAL_COL]: LEDGER.postal,
+  [CLIENT_COLS.address]: LEDGER.town,
+  [CLIENT_COLS.note]: LEDGER.note,
+  [CLIENT_STAGE_COLS.stage]: LEDGER.status,
+};
+
+/** 読み込みのエラー文の『列名』を台帳の列名に直す（顧客台帳の形で読んだときだけ使う） */
+export const ledgerErrorMessage = (message: string): string =>
+  message.replace(/『([^』]+)』/g, (m, h: string) => (LEDGER_NAME_OF[h] ? `『${LEDGER_NAME_OF[h]}』` : m));
+
 /** 比べるための列名（前後の空白・BOM・全角半角を同一視） */
 const key = (s: string) => s.normalize('NFKC').replace(/^﻿/, '').trim();
 
@@ -84,7 +98,12 @@ export function ledgerToRoster(table: readonly (readonly string[])[]): LedgerTab
     if (!at.has(key(h))) at.set(key(h), i);
   });
   const read = new Set<string>(Object.values(LEDGER));
-  const skipped = header.map(key).filter((h, i) => h !== '' && !(read.has(h) && at.get(h) === i));
+  const body = table.slice(1);
+  const skipped = header
+    .map((raw, i) => ({ h: key(raw), i }))
+    // 列名が空でも値がある列は「（列名なし・N列目）」として挙げる
+    .filter(({ h, i }) => (h === '' ? body.some((r) => (r[i] ?? '').trim() !== '') : !(read.has(h) && at.get(h) === i)))
+    .map(({ h, i }) => (h === '' ? `（列名なし・${i + 1}列目）` : h));
   const out: string[][] = [
     [
       CLIENT_COLS.name,
@@ -95,8 +114,12 @@ export function ledgerToRoster(table: readonly (readonly string[])[]): LedgerTab
       CLIENT_STAGE_COLS.stage,
     ],
   ];
-  for (const r of table.slice(1)) {
-    if (r.every((c) => c.trim() === '')) continue;
+  for (const r of body) {
+    // 空行は空のまま残す（名簿の読み込みが飛ばす。エラーの行番号を元のファイルと合わせる）
+    if (r.every((c) => c.trim() === '')) {
+      out.push(['', '', '', '', '', '']);
+      continue;
+    }
     const v = (h: string) => {
       const i = at.get(h);
       return i === undefined ? '' : (r[i] ?? '').trim();

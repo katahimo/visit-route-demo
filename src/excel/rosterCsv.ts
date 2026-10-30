@@ -24,6 +24,9 @@ export function exportRosterCsv(data: DemoData, kind: RosterKind): Blob {
   return new Blob([CSV_BOM + toCsv([spec.headers, ...spec.rows])], { type: CSV_MIME });
 }
 
+/** 開いた名簿（ブックと、読んだファイルの形・顧客台帳の結果） */
+export type LoadedRoster = { book: ExcelJS.Workbook; source: RosterSource; ledger: LedgerRead | null };
+
 /**
  * 名簿のファイル → ブック（と、顧客台帳の形で読んだときの読まなかった列。ADR-0073）。.xlsx（zip）ならそのまま開き、ほかは CSV として文字コードを見分けて読み、
  * 名簿のシート名（呼び方）のシート1枚に写す（値は文字。日付・時刻・数は rosterRows が文字から読む。書き出しで付けた数式よけの「'」は外す）
@@ -32,7 +35,7 @@ export async function loadRosterBook(
   buf: ArrayBuffer,
   base: DemoData,
   kind: RosterKind,
-): Promise<{ book: ExcelJS.Workbook; source: RosterSource; ledger: LedgerRead | null } | ImportError> {
+): Promise<LoadedRoster | ImportError> {
   const bytes = new Uint8Array(buf);
   if (isZip(bytes)) {
     const book = await loadWorkbook(buf);

@@ -500,17 +500,17 @@ async function roster(page, dlg) {
     ledgerRow({
       利用者名: '台帳 花子',
       利用者カナ: 'ダイチョウ ハナコ',
-      利用者生年月日: '1997/1/6',
-      郵便番号: '9893202',
+      利用者生年月日: '2000/1/1',
+      郵便番号: '1000001',
       都道府県: '架空県',
       市区町村: '架空市',
-      町名以下: '中山台1-2-14',
-      利用者電話番号: '022-000-0000',
+      町名以下: '架空町1-1-1',
+      利用者電話番号: '000-0000-0000',
       顧客番号: '98765',
       利用者状態: '利用中',
       備考: '移動支援',
     }),
-    ledgerRow({ 利用者名: '台帳 太郎', 利用者カナ: 'ダイチョウ タロウ', 郵便番号: '342-0035', 利用者状態: '終了' }),
+    ledgerRow({ 利用者名: '台帳 太郎', 利用者カナ: 'ダイチョウ タロウ', 郵便番号: '100-0002', 利用者状態: '終了' }),
   ]
     .map((r) => r.join('\t'))
     .join('\r\n');
@@ -527,9 +527,9 @@ async function roster(page, dlg) {
   const ledgerMsg = dlg.messages.slice(askedLedger).join('\n');
   check(
     hanako.kana === 'だいちょうはなこ' &&
-      hanako.place.postalCode === '9893202' &&
-      hanako.place.address === '架空県架空市中山台1-2-14' &&
-      hanako.note === '電話 022-000-0000\n移動支援' &&
+      hanako.place.postalCode === '1000001' &&
+      hanako.place.address === '架空県架空市架空町1-1-1' &&
+      hanako.note === '電話 000-0000-0000\n移動支援' &&
       hanako.stage === 'active' &&
       taro?.stage === 'ended' &&
       !JSON.stringify(got).includes('98765'),

@@ -16,15 +16,15 @@ const rowOf = (v: Record<string, string>) => HEAD.map((h) => v[h] ?? '');
 const HANAKO = rowOf({
   利用者名: '山田 花子',
   利用者カナ: 'ヤマダ ハナコ',
-  利用者生年月日: '1997/1/6',
+  利用者生年月日: '2000/1/1',
   性別: '女',
-  郵便番号: '9893202',
+  郵便番号: '1000001',
   都道府県: '架空県',
   市区町村: '架空市',
-  町名以下: '中山台1-2-14',
+  町名以下: '架空町1-1-1',
   建物名: '',
-  利用者電話番号: '022-000-0000',
-  利用者携帯電話番号: '090-0000-0000',
+  利用者電話番号: '000-0000-0000',
+  利用者携帯電話番号: '000-0000-0001',
   顧客番号: '12345',
   利用者状態: '利用中',
   備考: '移動支援',
@@ -32,10 +32,10 @@ const HANAKO = rowOf({
 const TARO = rowOf({
   利用者名: '鈴木 太郎',
   利用者カナ: 'ｽｽﾞｷ　ﾀﾛｳ',
-  郵便番号: '342-0035',
+  郵便番号: '100-0002',
   都道府県: '架空県',
   市区町村: '架空市',
-  町名以下: '新弓ノ町81－３',
+  町名以下: '架空台２－３',
   建物名: 'サンプルハイツ101',
   利用者状態: '終了',
 });
@@ -71,17 +71,17 @@ describe('顧客台帳 → 名簿の列', () => {
     expect(out.rows[1]).toEqual([
       '山田 花子',
       'やまだはなこ',
-      '9893202',
-      '架空県架空市中山台1-2-14',
-      '電話 022-000-0000　携帯 090-0000-0000\n移動支援',
+      '1000001',
+      '架空県架空市架空町1-1-1',
+      '電話 000-0000-0000　携帯 000-0000-0001\n移動支援',
       '利用中',
     ]);
     // 半角カナ・全角空白・建物名つき・状態が利用中でなければ終了・電話も備考も無ければメモは空
     expect(out.rows[2]).toEqual([
       '鈴木 太郎',
       'すずきたろう',
-      '342-0035',
-      '架空県架空市新弓ノ町81－３サンプルハイツ101',
+      '100-0002',
+      '架空県架空市架空台２－３サンプルハイツ101',
       '',
       '終了',
     ]);
@@ -99,7 +99,7 @@ describe('顧客台帳 → 名簿の列', () => {
     expect(out.skipped).toContain('請求先郵便番号');
     expect(out.skipped).not.toContain('郵便番号');
   });
-  it('状態が空・「利用中」以外は終了。空の行は飛ばす', () => {
+  it('状態が空・「利用中」以外は終了。空の行は空のまま残す（行番号を合わせる）', () => {
     const t = ledgerToRoster([
       HEAD,
       rowOf({ 利用者名: 'あ', 利用者状態: '' }),
@@ -109,6 +109,7 @@ describe('顧客台帳 → 名簿の列', () => {
     expect(t.rows.map((r) => [r[0], r[5]])).toEqual([
       ['表示名', '段階'],
       ['あ', '終了'],
+      ['', ''],
       ['い', '終了'],
     ]);
   });
@@ -146,15 +147,15 @@ describe('顧客台帳を名簿として読み込む', () => {
     expect(h).toMatchObject({
       displayName: '山田 花子',
       kana: 'やまだはなこ',
-      place: { postalCode: '9893202', address: '架空県架空市中山台1-2-14' },
-      note: '電話 022-000-0000　携帯 090-0000-0000\n移動支援',
+      place: { postalCode: '1000001', address: '架空県架空市架空町1-1-1' },
+      note: '電話 000-0000-0000　携帯 000-0000-0001\n移動支援',
     });
     expect(h?.stage).toBe('active');
     expect(t?.stage).toBe('ended');
-    expect(t?.place.postalCode).toBe('3420035');
+    expect(t?.place.postalCode).toBe('1000002');
     // 読まない値はデータに残さない
     const json = JSON.stringify(r.data);
-    for (const s of ['1997', '12345']) expect(json).not.toContain(s);
+    for (const s of ['2000/1/1', '12345']) expect(json).not.toContain(s);
   };
 
   for (const [sep, eol] of [
@@ -200,5 +201,25 @@ describe('顧客台帳を名簿として読み込む', () => {
   it('名前が空の行は行付きで止める', async () => {
     const bad = await importRoster(utf8(toCsv([HEAD, rowOf({ 利用者カナ: 'ア' })])), base(), 'client', 'merge');
     expect('code' in bad && bad.message).toContain('2行目');
+  });
+
+  it('空行を挟んでも、エラーの行番号は元のファイルのまま。列名は台帳の列名で出す', async () => {
+    const text = `${toCsv([HEAD, HANAKO]).trimEnd()}\r\n\r\n\r\n${toCsv([rowOf({ 利用者カナ: 'ア', 郵便番号: 'abc' })])}`;
+    const bad = await importRoster(utf8(text), base(), 'client', 'merge');
+    const msg = 'code' in bad ? bad.message : '';
+    expect(msg).toContain('5行目・『利用者名』');
+    expect(msg).toContain('5行目・『郵便番号』');
+    expect(msg).not.toContain('『表示名』');
+  });
+});
+
+describe('列名が空の列', () => {
+  it('値があれば「（列名なし・N列目）」として読まなかった列に出す。値が無ければ出さない', () => {
+    const withValue = ledgerToRoster([
+      [...HEAD, '', ''],
+      [...HANAKO, '何か', ''],
+    ])!;
+    expect(withValue.skipped).toContain(`（列名なし・${HEAD.length + 1}列目）`);
+    expect(withValue.skipped).not.toContain(`（列名なし・${HEAD.length + 2}列目）`);
   });
 });
