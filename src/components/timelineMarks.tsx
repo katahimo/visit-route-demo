@@ -8,15 +8,18 @@ export function TlMark({
   tone,
   title,
   testId,
+  toldDate,
   children,
 }: {
   tone: TlMarkTone;
   title: string;
   testId?: string;
+  /** 押すとその日の連絡の一覧を開く「変更あり」の印の日付（expert 切。components/openTold） */
+  toldDate?: string;
   children: ReactNode;
 }) {
   return (
-    <span className={`tl-mark ${tone}`} title={title} data-testid={testId}>
+    <span className={`tl-mark ${tone}`} title={title} data-testid={testId} data-told-date={toldDate}>
       {children}
     </span>
   );

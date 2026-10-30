@@ -18,6 +18,7 @@ import { cellGuide } from './monthGuide';
 import { DAY_STATE_TEXT } from './monthList';
 import { showRestMark } from './monthRest';
 import { type OffDayState, REQUESTED_OFF_NOTE } from './requestedOff';
+import { changesText, dayStateText } from './settledView';
 import { isAllRest, staffEdgeTexts, staffSlotSummary } from './staffBar';
 
 /** 表示の選択の種類：全体／〈スタッフ〉1人／〈利用者さん〉1人 */
@@ -134,6 +135,8 @@ export type DayCellInput = {
   staffName: (id: string) => string;
   staffTerm: string;
   clientTerm: string;
+  /** 確定（伝えた）の段階を出すか（lib/settledView の showConfirmStep。省略は出す）。切なら「まだ伝えていない」「確定済み」は言わない（ADR-0073） */
+  confirmStep?: boolean;
 };
 
 export type DayCellText = {
@@ -156,15 +159,25 @@ export type DayCellText = {
 };
 
 /** 日付の後ろの、日の状態と要対応の文 */
-function statusParts(s: DayStatus, attn: number, care: boolean, otherIssues: readonly string[], making: boolean) {
+function statusParts(
+  s: DayStatus,
+  attn: number,
+  care: boolean,
+  otherIssues: readonly string[],
+  making: boolean,
+  confirmStep: boolean,
+) {
   const parts: string[] = [];
-  if (s.count > 0) parts.push(`訪問 ${s.count}件`, DAY_STATE_TEXT[s.state]);
-  else parts.push('訪問なし');
+  if (s.count > 0) {
+    parts.push(`訪問 ${s.count}件`);
+    const word = dayStateText(s.state, confirmStep, DAY_STATE_TEXT);
+    if (word) parts.push(word);
+  } else parts.push('訪問なし');
   if (attn > 0) parts.push(`要対応 ${attn}`);
   else if (care) parts.push('要対応');
   if (s.unassigned > 0) parts.push(`担当なし ${s.unassigned}件`);
   for (const x of otherIssues) parts.push(`${x}件`);
-  if (s.changes > 0) parts.push(`未連絡の変更 ${s.changes}件`);
+  if (s.changes > 0) parts.push(changesText(s.changes, confirmStep));
   if (s.overSpan.length > 0) parts.push(`出勤〜退勤（拘束）が上限を超える ${s.overSpan.length}人`);
   if (making) parts.push('組んでいます');
   return parts;
@@ -212,13 +225,14 @@ function clientParts(x: ClientDay, input: DayCellInput): string[] {
 /** 日のマスの読み上げ・吹き出しの文と行（印の順は見た目と同じ） */
 export function dayCellText(x: DayCellInput): DayCellText {
   const { date: d, status: s, marks: mk, focus } = x;
+  const confirmStep = x.confirmStep !== false;
   const past = d < x.today;
   const care = s.needsCare && !past;
   const attention = past ? 0 : x.attention;
   const otherIssues = issueBreakdown(s.issues).filter((t) => !t.startsWith('担当なし'));
   const rest = restMarkOf(mk, x.usualRest);
   const shift = focus === 'staff' && x.staffDay ? staffShiftOf(x.staffDay) : null;
-  const parts = [longDate(d), ...statusParts(s, attention, care, otherIssues, x.making)];
+  const parts = [longDate(d), ...statusParts(s, attention, care, otherIssues, x.making, confirmStep)];
   if (focus === 'all') parts.push(...allParts(x, rest));
   else if (x.staffDay && shift) parts.push(...staffParts(x.staffDay, shift));
   else if (focus === 'client' && x.clientDay) parts.push(...clientParts(x.clientDay, x));
@@ -228,7 +242,7 @@ export function dayCellText(x: DayCellInput): DayCellText {
   const guide = cellGuide({
     focus,
     count: s.count,
-    stateText: s.count > 0 ? DAY_STATE_TEXT[s.state] : null,
+    stateText: s.count > 0 ? dayStateText(s.state, confirmStep, DAY_STATE_TEXT) || null : null,
     care,
     attention,
     types: focus === 'all' && mk.types.length > 0,

@@ -18,9 +18,29 @@ const KIND_CHIP: Record<ContactKind, string> = {
   client: 'chip',
 };
 
+/** 4段目の確定の文（空なら出さない） */
+function ConfirmNote({ text }: { text: string }) {
+  return text ? (
+    <p className="sub" data-testid="sudden-confirm-note">
+      {text}
+    </p>
+  ) : null;
+}
+
 /** 5段目：連絡（宛先ごとの文・コピー・メール・［連絡した］）と確定 */
 export function contactStep({ p, s }: StepCtx, done: Done): StepView {
-  const { terms, contacts, confirmState, leftCount = 0, contactMail, hasPlan, running, onAdopt, onClose } = p;
+  const {
+    terms,
+    contacts,
+    confirmState,
+    confirmStep,
+    leftCount = 0,
+    contactMail,
+    hasPlan,
+    running,
+    onAdopt,
+    onClose,
+  } = p;
   const { sent, copyRow, toggleSent, busy, guarded } = s;
   const rows = contacts ?? [];
   const sentCount = rows.filter((r) => sent.has(sentKey(r))).length;
@@ -33,9 +53,7 @@ export function contactStep({ p, s }: StepCtx, done: Done): StepView {
           : `取り消した訪問の担当への連絡です。キャンセルした${terms.client}あては作りません。`}
         文はコピーするか、メールアプリで開いて送ります。
       </p>
-      <p className="sub" data-testid="sudden-confirm-note">
-        {confirmNote(confirmState)}
-      </p>
+      <ConfirmNote text={confirmNote(confirmState, confirmStep)} />
       {leftCount > 0 && (
         <p className="warn-text" role="note" data-testid="sudden-contacts-left">
           欠勤の人に残る訪問 {leftCount}件（連絡文には入りません。日の予定で確かめてください）
@@ -125,7 +143,7 @@ export function contactStep({ p, s }: StepCtx, done: Done): StepView {
       )}
     </>
   );
-  const canAdopt = hasPlan && confirmState !== 'told';
+  const canAdopt = confirmStep && hasPlan && confirmState !== 'told';
   const footer = (
     <>
       {canAdopt && (

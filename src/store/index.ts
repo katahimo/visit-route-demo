@@ -6,7 +6,7 @@ export { BACKUP_LAST_KEY, BACKUP_REMINDED_KEY, backupMemory, type ExportKind, ty
 export { MAIL_SCHEDULE_KEY, type MailScheduleState, mailScheduleMemory } from './mailSchedule';
 export { navOpenMemory } from './navOpen';
 export * from './persist';
-export { DemoDataProvider, useDemoData } from './react';
+export { DemoDataProvider, type UpdateOptions, useDemoData } from './react';
 export { repair } from './repair';
 export { FEATURES_START_ALL, FEATURES_START_KEY, startsWithAll } from './start';
 export { cancelTentative } from './tentative';

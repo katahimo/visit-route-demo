@@ -113,6 +113,8 @@
 
 #### 右の欄（要対応・確定していない日）
 
+エキスパート機能（`expert`）が切のとき（既定。ADR-0073・PRD D382）は確定の段階を出さない（`lib/settledView` の `showConfirmStep`）：進み具合の帯の「確定 N/N日」と次の一手の「確定していない日を見る」（`bandNext` の `confirmStep`）・右の欄の「確定していない日」とまとめて確定（`?do=unconfirmed` は要対応へ）・マスの鍵と「まだ伝えていない」「確定済み」の色・文（`shownDayState`・`dayStateText`。日の状態は「変更あり」だけ見せる）は出さない。決まったあとの変更は訪問の「変更あり」の印と、マスの鉛筆の印（どちらも押すとその日の日の予定の連絡の一覧。マスのクリックの中で印を見分けて `/plan?date=…&do=told` へ移る）。以下は入のときの定め
+
 - 確定していない日（`progress.unconfirmed`＝今日以降の訪問があって確定済みでない日）：
   - 上に「問題の無い日をまとめて確定（N日）」（`month-confirm-bulk`・`data-count`。PRD D223。主ボタンにしない（月の主ボタンは帯の次の一手））。確定していない日が0日なら出さない
   - 対象は `lib/confirmDay` の `bulkConfirmTargets(unconfirmed, statusOf, attention)`（日の状態は `useDayStatuses` のもの）：まだ伝えていない日で、要対応の訪問が無く（`care` が0）、要対応（第3引数の `attentionList`。未連絡の変更は除く）に出ない日。残すのは問題のある日（`problem`）・未連絡の変更のある日（`changed`。日の予定の連絡の一覧で確かめて確定し直す）

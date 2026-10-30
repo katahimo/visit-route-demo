@@ -632,6 +632,7 @@ async function tourToday(b) {
     st,
   );
   // 初期データに今日の担当がある（PRD D225）ので、そのまま確定の手前まで見える
+  // 案内をもう一度見るは印「all」（すべて入＝エキスパート機能が入）で開くので、確定の段階（まだ伝えていない）が出る
   await page.getByTestId('confirm-state').waitFor({ timeout: 30000 });
   check(
     /まだ伝えていない/.test(await page.getByTestId('confirm-state').innerText()),

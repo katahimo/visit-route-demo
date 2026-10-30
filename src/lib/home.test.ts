@@ -130,6 +130,15 @@ describe('homeTasks（版2）', () => {
     expect(conf!.detail).toBe('まだ伝えていない 2日・未連絡の変更あり 1日。見直して伝えたら「確定」');
   });
 
+  it('expert 切：確定していない日のカードを出さず、今日の予定に「まだ伝えていない」と添えない（変更ありは添える。ADR-0073）', () => {
+    const off = { features: { expert: false } };
+    const none = homeTasks({ ...input([st(TODAY, { state: 'none' }), st('2026-10-16', { state: 'none' })]), ...off });
+    expect(none.tasks.map((t) => t.kind)).not.toContain('confirm');
+    expect(none.tasks.find((t) => t.kind === 'today')!.title).toBe('今日 10/14（水）の予定');
+    const changed = homeTasks({ ...input([st(TODAY, { state: 'changed' })]), ...off });
+    expect(changed.tasks.map((t) => t.kind)).not.toContain('confirm');
+    expect(changed.tasks.find((t) => t.kind === 'today')!.title).toContain('変更あり');
+  });
   it('要対応が1日だけなら日の画面へ', () => {
     const r = homeTasks(input([st(TODAY, { state: 'none', ...unassigned(1) })]));
     expect(r.tasks[0]).toMatchObject({ kind: 'attention', to: '/plan', date: TODAY });

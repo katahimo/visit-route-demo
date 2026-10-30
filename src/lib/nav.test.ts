@@ -80,6 +80,9 @@ describe('menuSections（PRD D326・D349・D364。ADR-0054・0063・0067）', ()
     expect(item('arrange:assign', g).badge).toEqual({ text: '3日', label: '担当なしの訪問がある日 3日' });
     expect(item('today', g).badge?.text).toBe('未確定');
     expect(item('arrange:assign').badge).toBeUndefined();
+    // expert 切は確定の段階が無いので「未確定」の印は出さない（ADR-0073）
+    const off = menuSections(terms, TODAY, { expert: false }, {}, { todayUntold: true });
+    expect(item('today', off).badge).toBeUndefined();
     // 基本情報が変わった印は担当なしの日の数より先（ADR-0067）
     const changed = menuSections(
       terms,

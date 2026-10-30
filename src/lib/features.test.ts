@@ -449,7 +449,8 @@ describe('切った機能の入口を出さない（PRD D213）', () => {
     expect(ids({})).toContain('action:absence');
     expect(ids({ sudden: false })).not.toContain('action:absence');
     expect(ids({ vacancy: false })).not.toContain('action:vacancy');
-    expect(ids(applyTemplate('basic'))).toEqual(ids({}));
+    // expert 切（基本）は確定の段階の「確定していない日を見る」だけ出さない（ADR-0073）
+    expect(ids(applyTemplate('basic'))).toEqual(ids({}).filter((id) => id !== 'action:unconfirmed'));
   });
   it('ホーム：いつでもの入口（欠勤・キャンセル・問い合わせ）', () => {
     expect(homeEntries(TODAY, terms, {}).map((e) => e.key)).toEqual(['absence', 'vacancy', 'clients', 'staff']);
@@ -459,7 +460,11 @@ describe('切った機能の入口を出さない（PRD D213）', () => {
     ]);
     expect(homeEntries(TODAY, { client: 'お客様', staff: 'シッター' }, {})[2]!.title).toBe('お客様を探す');
     // 次の一手のカードは、組み方の標準（エキスパート機能）のほかは土台なので入り切りで変わらない
-    const std = (f: Features) => homeTasks(homeInput(f)).tasks.filter((t) => t.kind !== 'standard');
+    // 確定していない日のカードも expert 切（基本）では出さない（ADR-0073）
+    const std = (f: Features) =>
+      homeTasks(homeInput(f))
+        .tasks.filter((t) => t.kind !== 'standard' && t.kind !== 'confirm')
+        .map((t) => [t.kind, t.to]);
     expect(std(applyTemplate('basic'))).toEqual(std({}));
     expect(homeTasks(homeInput()).tasks.some((t) => t.kind === 'standard')).toBe(true);
     expect(homeTasks(homeInput(applyTemplate('basic'))).tasks.some((t) => t.kind === 'standard')).toBe(false);

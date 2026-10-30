@@ -208,6 +208,8 @@ export function monthListEntries(x: {
   staffName: (id: string) => string;
   offStateOf: (date: string) => OffDayState | undefined;
   attentionByDate: ReadonlyMap<string, number>;
+  /** 確定（伝えた）の段階を出すか（省略は出す。lib/settledView） */
+  confirmStep?: boolean;
 }): MonthListEntry[] {
   const out: MonthListEntry[] = [];
   for (const d of x.days) {
@@ -220,7 +222,14 @@ export function monthListEntries(x: {
     if (x.focus === 'client' && c && c.visits.length > 0) extra.push(clientExtra(c, x.staffName));
     const off = x.offStateOf(d);
     if (off) extra.push(OFF_STATE_TEXT[off]);
-    out.push({ row: monthListRow(s, x.today, extra, { attention: x.attentionByDate.get(d) ?? 0 }), extra, off });
+    out.push({
+      row: monthListRow(s, x.today, extra, {
+        attention: x.attentionByDate.get(d) ?? 0,
+        confirmStep: x.confirmStep,
+      }),
+      extra,
+      off,
+    });
   }
   return out;
 }

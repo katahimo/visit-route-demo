@@ -45,6 +45,8 @@ export type SuddenPanelProps = {
   hasPlan: boolean;
   /** 伝えた状態（none＝まだ伝えていない・told＝伝えた・changed＝伝えたあとに変わった） */
   confirmState: 'none' | 'told' | 'changed';
+  /** 確定（伝えた）の段階を出すか（expert 入。切なら「連絡したので確定」を出さない。ADR-0073） */
+  confirmStep: boolean;
   /** 4段目の振り直しの結果（まとめ・案A と案B を選ぶ欄）。今の担当に振り直しが出るまでは null */
   result: ReactNode;
   /** 登録して振り直す（anneal：続けて案B も作る）。振り直せたら true */

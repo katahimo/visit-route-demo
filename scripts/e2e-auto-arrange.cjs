@@ -71,7 +71,7 @@ async function open() {
 
 /** 1 単発の訪問を足す → 組まれる → 元に戻す */
 async function single(page) {
-  await fresh(page, `/plan?date=${TODAY}`, '[data-testid="confirm-state"]');
+  await fresh(page, `/plan?date=${TODAY}`, '[data-testid="plan-summary"]');
   const d0 = await data(page);
   check(d0.org.features.expert === false, '前提：初めて開くとエキスパート機能は切', d0.org.features);
   const n0 = d0.visits.length;

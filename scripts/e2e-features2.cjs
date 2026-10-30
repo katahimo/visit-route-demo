@@ -42,7 +42,7 @@ async function insideEntries(page, dlg, ctx) {
 
     // 日の画面（今日）
     await open(page, `/plan?date=${TODAY}`, '.date-switch select');
-    await page.getByTestId('confirm-state').waitFor({ timeout: 60000 });
+    await page.getByTestId('plan-summary').waitFor({ timeout: 60000 });
     await settle(page, 500);
     check((await count('sudden-open')) === (on('sudden') ? 1 : 0), `${label}：日の予定の「欠勤・キャンセルを登録」`);
     check(
@@ -193,7 +193,7 @@ async function insideEntries(page, dlg, ctx) {
     if (t === 'basic') {
       await page.setViewportSize({ width: 390, height: 844 });
       await open(page, `/plan?date=${TODAY}`, '.date-switch select');
-      await page.getByTestId('confirm-state').waitFor({ timeout: 60000 });
+      await page.getByTestId('plan-summary').waitFor({ timeout: 60000 });
       const w = await page.evaluate(() => document.documentElement.scrollWidth);
       check(w <= 390, '390px・基本：日の予定が横にはみ出さない', w);
       await page.screenshot({ path: path.join(OUT_DIR, 'inside-basic-mobile.png') });

@@ -53,6 +53,12 @@ describe('候補', () => {
     expect(a.some((x) => x.id === 'action:stale')).toBe(false);
     expect(by('action:vacancy').to).toBe('/vacancy');
   });
+  it('expert 切は「確定していない日を見る」を出さない（確定の段階が無い。ADR-0073）', () => {
+    expect(paletteActions(TODAY, { features: { expert: false } }).some((x) => x.id === 'action:unconfirmed')).toBe(
+      false,
+    );
+    expect(paletteActions(TODAY, { features: { expert: true } }).some((x) => x.id === 'action:unconfirmed')).toBe(true);
+  });
   it('画面の候補は呼び方のよみでも引ける（既定の呼び方）', () => {
     const scr = paletteScreens(screenSections(terms, {}), terms);
     const hit = (q: string) => filterPalette(scr, q).flat.map((i) => i.to);

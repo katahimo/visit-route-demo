@@ -508,7 +508,7 @@ async function deadEnds(page, dlg, ctx) {
 
   // 日の画面：稼働の見込みを切ると拘束の上限の帯ごと出さない（その2。リンク・ボタンも無い）
   await open(page, `/plan?date=${second}`, '.date-switch select');
-  await page.getByTestId('confirm-state').waitFor({ timeout: 60000 });
+  await page.getByTestId('plan-summary').waitFor({ timeout: 60000 });
   await settle(page, 500);
   check(
     (await page.getByTestId('band-over-span').count()) === 0 &&

@@ -1,6 +1,6 @@
 // 自動の組み（ADR-0072 第2段。PRD D372〜D376）の計算：欄の保存・ホームの［組む］で、担当なしの訪問だけを自動で組む。
 // どれも純粋関数（DemoData を書き換えない・乱数と今の時刻を使わない。今日は引数、seed は data.seed）。
-// 組む範囲は今日から翌月末まで。ほかの訪問の担当は（手でも AI でも標準でも）ピンと同じに固定して動かさず、伝えた日は組まない。
+// 組む範囲は今日から翌月末まで。ほかの訪問の担当は（手でも AI でも標準でも）ピンと同じに固定して動かさず、伝えた日は組まない（expert 切は伝えた日も担当なしだけ埋める。skipsToldDays）。
 // 解く入れ物（Worker・キュー・反映の1手）は lib/autoArrangeBatch
 import type { DemoData } from '../contracts/data';
 import type { Visit } from '../contracts/documents';
@@ -13,6 +13,7 @@ import { defaultIterations } from '../solver';
 import { own } from './common';
 import { activeDayVisits, clockOf, dayProblemOf } from './dayPlan';
 import { type DayInputs, proposalDayFresh } from './monthBatch';
+import { showConfirmStep } from './settledView';
 import { monthDates, ymOf } from './ym';
 
 /** 日付の範囲（両端を含む） */
@@ -28,11 +29,18 @@ export function autoRange(today: string): DateRange {
   return { from: today, to: monthDates(next).at(-1) ?? today };
 }
 
-type TargetData = Pick<DemoData, 'visits' | 'patterns' | 'clients' | 'clientLeaves' | 'snapshots'>;
+type TargetData = Pick<DemoData, 'visits' | 'patterns' | 'clients' | 'clientLeaves' | 'snapshots' | 'org'>;
+
+/**
+ * 伝えた日を自動の組みから外すか（その判定はここの1か所。ADR-0073）。expert 入は今の確定の操作があるので外す（伝えた内容を勝手に変えない）。
+ * expert 切は伝えた日（決まった日）も、担当なしの訪問を埋める対象にする（担当のある訪問は動かさない。結果は伝えた内容と違うので「変更あり」）
+ */
+export const skipsToldDays = (data: Pick<DemoData, 'org'>): boolean => showConfirmStep(data.org.features);
 
 /** 組む対象になれる訪問か：担当なし・ピンなし・取り消しでない・今日以降・その日が伝えていない */
-function isFree(data: Pick<DemoData, 'snapshots'>, v: Visit, today: string): boolean {
-  return v.staffId === null && !v.pinned && !v.cancelled && v.date >= today && !own(data.snapshots, v.date);
+export function isFree(data: Pick<DemoData, 'snapshots' | 'org'>, v: Visit, today: string): boolean {
+  const told = skipsToldDays(data) && !!own(data.snapshots, v.date);
+  return v.staffId === null && !v.pinned && !v.cancelled && v.date >= today && !told;
 }
 
 /** range（今日より前は除く）の日ごとに、対象の訪問を集める（pick が真の訪問。対象が無い日は出さない） */
@@ -100,7 +108,7 @@ export type AutoDayPlan = { visits: Visit[]; problem: Problem; targetIds: string
  * 伝えた日・対象が無い日・問題が作れない日（担当がいない・計算できない）は null
  */
 export function autoDayPlan(data: DemoData, date: string, targetIds: readonly string[]): AutoDayPlan | null {
-  if (own(data.snapshots, date)) return null;
+  if (skipsToldDays(data) && own(data.snapshots, date)) return null;
   const visits = visitsOn(data, date);
   const want = new Set(targetIds);
   const targets = visits.filter((v) => want.has(v.id) && isFree(data, v, date));
@@ -272,7 +280,7 @@ export function applyAutoArrange(data: DemoData, days: readonly AutoDay[], opts:
   const solved = new Map<string, Solved>();
   for (const day of sorted) {
     if (!day.problem) continue;
-    if (!proposalDayFresh(data, day)) {
+    if (!proposalDayFresh(data, day, { allowTold: !skipsToldDays(data) })) {
       skippedDays.push(day.date);
       continue;
     }

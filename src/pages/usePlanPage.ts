@@ -4,8 +4,9 @@
 import { useDay } from '../components/day';
 import { useMailLimit } from '../components/mailParts';
 import { useToast } from '../components/Toast';
-import { useFeature } from '../components/useFeature';
+import { useConfirmStep, useFeature } from '../components/useFeature';
 import { useRouteSelection } from '../components/useRouteSelection';
+import { useToldEntry } from '../components/useToldEntry';
 import { dayContactWords } from '../lib/contacts';
 import { contactMailText, mailTo } from '../lib/mail';
 import { usePlanData } from './usePlanData';
@@ -30,6 +31,8 @@ function usePlanFeatures() {
     mailOn: useFeature('mail'),
     rulesOn: useFeature('rules'),
     compatOn: useFeature('compat'),
+    /** 確定（伝えた）の段階（expert 入。切なら自動で決まり、確定のボタンなどは出さない。ADR-0073） */
+    confirmStep: useConfirmStep(),
   };
 }
 
@@ -75,6 +78,13 @@ export function usePlanPage() {
   const edits = usePlanEdits({ date, d, sel, writeWith, running, busy });
   const cancel = useCancelPanel(date, edits.applyCancel);
   const confirm = useConfirmDay({ date, d, update: d.update, busy });
+  // 週・月の「変更あり」の印から（?do=told）：その日の連絡の一覧を開く。日付を変えると閉じる処理（useConfirmDay）のあとに置く
+  useToldEntry({
+    date,
+    setDate,
+    canOpen: d.toldState === 'changed',
+    open: () => confirm.setToldOpen(true),
+  });
   const drag = usePlanDrag({ owner: d.owner, running, moveTo: edits.moveTo, unassign: edits.unassign });
   /** この端末の mailto の長さの目安（ADR-0017） */
   const mailLimit = useMailLimit();
@@ -124,6 +134,7 @@ export function usePlanPage() {
     contactWords: contact.words,
     applyCancel: edits.applyCancel,
     adopt: confirm.adopt,
+    confirmStep: f.confirmStep,
     staffMail: contact.staffMail,
     onCopied: contact.onCopied,
     colHeadOf,

@@ -4,6 +4,7 @@
 import { weekday } from '../domain/time';
 import { WEEKDAY_LABELS } from './common';
 import { type DayStatus, issueBreakdown } from './month';
+import { changesText, dayStateText, shownDayState } from './settledView';
 
 /** 月の見せ方：カレンダー（7列の表）か日ごとの一覧（縦に1日1行） */
 export type MonthLayout = 'calendar' | 'list';
@@ -69,23 +70,24 @@ export function monthListRow(
   s: DayStatus,
   today: string,
   extra: readonly string[] = [],
-  opts: { attention?: number } = {},
+  opts: { attention?: number; confirmStep?: boolean } = {},
 ): MonthListRow {
   const attention = s.date < today ? 0 : (opts.attention ?? 0);
+  const confirmStep = opts.confirmStep !== false;
   const d = s.date;
   const wd = weekday(d);
   const isPast = d < today;
   const care = s.needsCare && !isPast;
   const flags: { text: string; tone: 'red' | 'warn' | 'info' }[] = [];
   for (const t of issueBreakdown(s.issues)) flags.push({ text: t, tone: 'red' });
-  if (s.changes > 0) flags.push({ text: `未連絡の変更 ${s.changes}件`, tone: 'warn' });
+  if (s.changes > 0) flags.push({ text: changesText(s.changes, confirmStep), tone: 'warn' });
   if (s.overSpan.length > 0) flags.push({ text: `拘束超 ${s.overSpan.length}人`, tone: 'warn' });
-  const stateText = s.count > 0 ? DAY_STATE_TEXT[s.state] : '訪問なし';
+  const stateText = s.count > 0 ? dayStateText(s.state, confirmStep, DAY_STATE_TEXT) : '訪問なし';
   const dayText = `${Number(d.slice(8, 10))}日（${WEEKDAY_LABELS[wd]}）`;
   const label = [
     `${Number(d.slice(5, 7))}月${dayText}${d === today ? '・今日' : ''}`,
     ...(s.count > 0 ? [`訪問 ${s.count}件`] : []),
-    stateText,
+    ...(stateText ? [stateText] : []),
     ...(care || attention > 0 ? [attention > 0 ? `要対応 ${attention}` : '要対応'] : []),
     ...flags.map((f) => f.text),
     ...extra,
@@ -97,7 +99,7 @@ export function monthListRow(
     isToday: d === today,
     isPast,
     count: s.count,
-    state: s.count > 0 ? s.state : 'empty',
+    state: s.count > 0 ? shownDayState(s.state, confirmStep) : 'empty',
     stateText,
     care,
     attention,

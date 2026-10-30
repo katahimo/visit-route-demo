@@ -36,6 +36,14 @@
 .vmark.is-plain {
   border: 1px solid var(--line-strong);
 }
+.vmark[data-told-date] {
+  cursor: pointer;
+  font-size: 0.65rem;
+  white-space: nowrap;
+}
+.vmark[data-told-date]:hover {
+  text-decoration: underline;
+}
 .vrow-marks .vmark {
   min-width: 24px;
   height: 24px;

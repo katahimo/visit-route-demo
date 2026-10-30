@@ -7,6 +7,7 @@ import { addDays } from '../domain/time';
 import { dateText, monthLabel } from './dateText';
 import { isHrefOn, isOn } from './features';
 import { type AttentionKind, attentionList, type DayStatus } from './month';
+import { dayStateText, showConfirmStep } from './settledView';
 import { SUDDEN_DO } from './sudden';
 import { monthDates, ymOf } from './ym';
 
@@ -163,8 +164,8 @@ export function homeTasks(input: HomeInput): { tasks: HomeTask[]; ready: boolean
         to: `/arrange?ym=${ym}`,
       });
     }
-    // 確定していない日（訪問があって伝えていない・未連絡の変更のある日）
-    const unconfirmed = withVisits.filter((s) => s.state !== 'told');
+    // 確定していない日（訪問があって伝えていない・未連絡の変更のある日）。expert 切は確定の段階が無いので出さない（ADR-0073。PRD D382）
+    const unconfirmed = showConfirmStep(features) ? withVisits.filter((s) => s.state !== 'told') : [];
     const n = (state: DayStatus['state']) => unconfirmed.filter((s) => s.state === state).length;
     if (unconfirmed.length > 0) {
       const parts = [
@@ -207,23 +208,29 @@ export function homeTasks(input: HomeInput): { tasks: HomeTask[]; ready: boolean
       today,
       future.find((s) => s.date === today),
       todayStaff,
+      showConfirmStep(features),
     ),
   ].filter((t) => isHrefOn(features, t.to));
   return { tasks, ready: tasks.every((t) => t.tone === 'info') };
 }
 
 /** 今日の予定のカード（日の画面へ） */
-function todayTask(today: string, s: DayStatus | undefined, staff: number): HomeTask {
+function todayTask(today: string, s: DayStatus | undefined, staff: number, confirmStep: boolean): HomeTask {
   const base = { kind: 'today' as const, to: '/plan', date: today };
   const when = `今日 ${dateText(today)}`;
   if (!s || s.count === 0)
     return { ...base, tone: 'info', title: `${when}の訪問はありません`, detail: '日の予定で訪問を足せます' };
   const warn = s.care > 0;
-  const state = s.state === 'told' ? '確定済み' : s.state === 'changed' ? '未連絡の変更あり' : 'まだ伝えていない';
+  // expert 切は確定の段階が無いので、状態は「変更あり」のときだけ添える（ADR-0073）
+  const state = dayStateText(s.state, confirmStep, {
+    told: '確定済み',
+    changed: '未連絡の変更あり',
+    none: 'まだ伝えていない',
+  });
   return {
     ...base,
     tone: warn ? 'warn' : 'info',
-    title: `${when}の予定（${state}）`,
+    title: state ? `${when}の予定（${state}）` : `${when}の予定`,
     detail: [`訪問 ${s.count}件`, `担当 ${staff}人`, `要対応 ${s.care}件`].join('・'),
   };
 }

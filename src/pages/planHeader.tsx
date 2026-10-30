@@ -8,6 +8,7 @@ import type { PlanScore } from '../contracts/problem';
 import { r0 } from '../lib/common';
 import type { ToldState } from '../lib/dayPlan';
 import type { ScoreReason } from '../lib/scoreReason';
+import { CHANGED_WORD, headerToldChip } from '../lib/settledView';
 import { HARD_NOTE, NextUnconfirmed, ScoreNextStep, ScoreReasonText } from './planParts';
 
 /** 上のナビの行の右：伝えた状態の印・予定をメールで送る・確定（伝えた） */
@@ -16,6 +17,7 @@ export function PlanConfirmActions({
   toldCount,
   date,
   mailOn,
+  confirmStep,
   running,
   onPickDate,
   onOpenTold,
@@ -27,6 +29,8 @@ export function PlanConfirmActions({
   toldCount: number;
   date: string;
   mailOn: boolean;
+  /** 確定（伝えた）の段階を出すか（expert 入）。切なら確定のボタン・「確定済み」「まだ伝えていない」の印・次の確定していない日へは出さず、「変更あり」だけ（ADR-0073） */
+  confirmStep: boolean;
   running: boolean;
   /** 次の確定していない日へ（PRD D224） */
   onPickDate: (date: string) => void;
@@ -34,9 +38,10 @@ export function PlanConfirmActions({
   onMail: () => void;
   onAdopt: () => void;
 }) {
+  const chip = headerToldChip(toldState, confirmStep);
   return (
     <>
-      {toldState === 'told' ? (
+      {chip === 'told' ? (
         <>
           <span className="chip chip-ok" data-testid="confirm-state">
             <CircleCheck size={12} aria-hidden="true" />
@@ -45,7 +50,7 @@ export function PlanConfirmActions({
           {/* 確定したら次の確定していない日へ（PRD D224） */}
           <NextUnconfirmed date={date} onPick={onPickDate} />
         </>
-      ) : toldState === 'changed' ? (
+      ) : chip === 'changed' ? (
         <button
           type="button"
           className="chip chip-warn chip-btn"
@@ -54,14 +59,14 @@ export function PlanConfirmActions({
           title="伝えたあとに変わった訪問の連絡の一覧を開く"
         >
           <TriangleAlert size={12} aria-hidden="true" />
-          <Term k="confirmDiff">未連絡の変更あり</Term> {toldCount}件
+          {confirmStep ? <Term k="confirmDiff">未連絡の変更あり</Term> : CHANGED_WORD} {toldCount}件
         </button>
-      ) : (
+      ) : chip === 'none' ? (
         <span className="chip chip-warn" data-testid="confirm-state">
           <TriangleAlert size={12} aria-hidden="true" />
           <Term k="unconfirmed">まだ伝えていない</Term>
         </span>
-      )}
+      ) : null}
       {/* 担当ごとの予定をメールアプリで開く（PRD D92・D306。ADR-0017）。毎日送るので見出しの主ボタンの隣に枠のボタンで置く */}
       {mailOn && (
         <button type="button" className="btn" onClick={onMail} data-testid="day-mail">
@@ -70,17 +75,19 @@ export function PlanConfirmActions({
           </WithIcon>
         </button>
       )}
-      {/* 主ボタン（塗り）は「確定」だけ。確定済みの日は枠にして主ボタンを置かない（PRD D238） */}
-      <button
-        type="button"
-        className={toldState === 'told' ? 'btn' : 'btn btn-primary'}
-        disabled={!!running || toldState === 'told'}
-        onClick={onAdopt}
-        data-testid="adopt"
-        title="今の担当と時刻を〈スタッフ〉に伝えたら押します"
-      >
-        <WithIcon icon={CircleCheck}>{toldState === 'changed' ? '確定し直す（伝えた）' : '確定（伝えた）'}</WithIcon>
-      </button>
+      {/* 主ボタン（塗り）は「確定」だけ。確定済みの日は枠にして主ボタンを置かない（PRD D238）。expert 切は出さない（自動で決まる） */}
+      {confirmStep && (
+        <button
+          type="button"
+          className={toldState === 'told' ? 'btn' : 'btn btn-primary'}
+          disabled={!!running || toldState === 'told'}
+          onClick={onAdopt}
+          data-testid="adopt"
+          title="今の担当と時刻を〈スタッフ〉に伝えたら押します"
+        >
+          <WithIcon icon={CircleCheck}>{toldState === 'changed' ? '確定し直す（伝えた）' : '確定（伝えた）'}</WithIcon>
+        </button>
+      )}
     </>
   );
 }
@@ -202,10 +209,13 @@ export function PlanOneLine({
 export function PlanHelp({
   helpRef,
   staffTerm,
+  confirmStep,
   onClose,
 }: {
   helpRef: RefObject<HTMLDivElement | null>;
   staffTerm: string;
+  /** 確定（伝えた）の段階を出すか（expert 入。切なら「変更あり」の説明にする） */
+  confirmStep: boolean;
   onClose: () => void;
 }) {
   return (
@@ -225,10 +235,18 @@ export function PlanHelp({
           Shift か Ctrl
           を押しながら訪問を押すと、複数を選べます。下に出る帯で、まとめて担当を替える・時刻をずらす・取り消すができます。
         </li>
-        <li>
-          「予定をメールで送る」などで{staffTerm}
-          に伝えたら「確定」を押します。確定のあとに変えた訪問は「未連絡の変更」に出ます。
-        </li>
+        {confirmStep ? (
+          <li>
+            「予定をメールで送る」などで{staffTerm}
+            に伝えたら「確定」を押します。確定のあとに変えた訪問は「未連絡の変更」に出ます。
+          </li>
+        ) : (
+          <li>
+            今日から1か月先までの予定は、組んだり直したりすると決まった予定になります。決まったあとに変えた訪問は「変更あり」の印が付きます。印を押すと連絡の一覧が開き、
+            {staffTerm}
+            に連絡したら「連絡した」を押します。
+          </li>
+        )}
         <li>
           名前の下の時間は、その日に働ける時間です。約束の時間に間に合わない訪問や、働ける時間からはみ出す訪問は赤い枠になります。訪問を押すと理由が出ます。
         </li>

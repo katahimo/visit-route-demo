@@ -266,3 +266,23 @@ describe('その日の訪問の見た目 dayLooks', () => {
     expect(m.get('v1')!.kinds).toBe('unfit');
   });
 });
+
+describe('決まった予定の「変更あり」の印（expert 切。ADR-0073）', () => {
+  const visit = { staffId: 's1', pinned: false, cancelled: false, pattern: null, date: '2026-10-21' };
+  it('expert 入（省略）は今の「未」の印で、押せない', () => {
+    const m = visitLook(base({ visit, told: '担当 A→B' })).marks[0]!;
+    expect(m).toMatchObject({ kind: 'told', short: '未' });
+    expect(m.toldDate).toBeUndefined();
+    expect(visitLook(base({ visit, told: '担当 A→B', confirmStep: true })).marks[0]!.short).toBe('未');
+  });
+  it('expert 切は「変更あり」の文で、その日の日付を持つ（押すと連絡の一覧）', () => {
+    const l = visitLook(base({ visit, told: '時刻 9:00→9:30', confirmStep: false }));
+    expect(l.marks[0]).toMatchObject({ kind: 'told', short: '変更あり', toldDate: '2026-10-21', tone: 'warn' });
+    expect(l.text).toContain('変更あり：時刻 9:00→9:30');
+    expect(l.kinds).toBe('told');
+  });
+  it('日付が無い元は押せない印（「変更あり」の文にはしない）', () => {
+    const m = visitLook(base({ told: 'x', confirmStep: false })).marks[0]!;
+    expect(m.short).toBe('未');
+  });
+});

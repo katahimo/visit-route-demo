@@ -184,6 +184,10 @@ describe('confirmNote・absenceSummary', () => {
     expect(confirmNote('told')).toContain('確定済み');
     expect(confirmNote('changed')).toContain('未連絡の変更');
     expect(confirmNote('none')).toContain('まだ確定していません');
+    // expert 切：確定の段階が無いので、変更ありのときだけ案内
+    expect(confirmNote('none', false)).toBe('');
+    expect(confirmNote('told', false)).toBe('');
+    expect(confirmNote('changed', false)).toContain('変更あり');
   });
   it('欠勤の短い文', () => {
     expect(absenceSummary('青木', { from: null, to: null }, [])).toBe('青木さん 欠勤（終日）');

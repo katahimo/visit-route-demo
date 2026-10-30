@@ -8,6 +8,17 @@ function pg(x: Partial<MonthProgress> = {}): MonthProgress {
 }
 const base = { emptyTargets: 0, urgent: 0 };
 
+describe('bandNext（expert 切は確定していない日の段が無い。ADR-0073）', () => {
+  it('確定していない日があっても、見るだけの要対応が無ければ済み', () => {
+    const progress = pg({ unconfirmed: ['2026-10-20'] });
+    expect(bandNext({ ...base, progress }).kind).toBe('unconfirmed');
+    expect(bandNext({ ...base, progress, confirmStep: false }).kind).toBe('done');
+    expect(
+      bandNext({ ...base, progress: pg({ unconfirmed: ['2026-10-20'], attention: 1 }), confirmStep: false }).kind,
+    ).toBe('attention');
+  });
+});
+
 describe('bandNext', () => {
   it('訪問が無い：ボタンなしで「訪問はありません」', () => {
     const r = bandNext({ ...base, progress: pg({ visits: 0, days: 0, planned: 0, confirmed: 0 }) });

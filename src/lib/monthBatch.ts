@@ -144,13 +144,17 @@ export function dayInputsOf(d: DemoData, date: string): DayInputs {
 
 /**
  * その日を反映してよいか（日の予定の提案と同じ判定：組み始めたときの訪問のまま・その日の問題の入力（欠勤・希望休・稼働時間・人・
- * 休み・条件）が同じ・伝えていない）。入力が変われば休みの人に当たるなどするので反映しない。日の予定のその場の提案（画面の外に
+ * 休み・条件）が同じ・伝えていない。allowTold なら伝えた日も可＝expert 切の自動の組み）。入力が変われば休みの人に当たるなどするので反映しない。日の予定のその場の提案（画面の外に
  * 残す。PRD D335）も同じ判定
  */
-export function proposalDayFresh(d: DemoData, day: Pick<ProposalDay, 'date' | 'visits' | 'inputs'>): boolean {
+export function proposalDayFresh(
+  d: DemoData,
+  day: Pick<ProposalDay, 'date' | 'visits' | 'inputs'>,
+  opts: { allowTold?: boolean } = {},
+): boolean {
   const now = visitsOn(d, day.date);
   if (now.length !== day.visits.length || !now.every((v, k) => v === day.visits[k])) return false;
-  if (own(d.snapshots, day.date)) return false;
+  if (!opts.allowTold && own(d.snapshots, day.date)) return false;
   const inp = dayInputsOf(d, day.date);
   return inp.day === day.inputs.day && inp.refs.every((r, k) => r === day.inputs.refs[k]);
 }

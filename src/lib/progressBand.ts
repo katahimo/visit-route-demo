@@ -34,13 +34,15 @@ export type BandInput = {
   emptyTargets: number;
   /** 要対応のうち手当てが要る件数（urgentCount） */
   urgent: number;
+  /** 確定（伝えた）の段階を出すか（lib/settledView の showConfirmStep。省略は出す）。切なら「確定していない日を見る」の段を飛ばす（ADR-0073） */
+  confirmStep?: boolean;
 };
 
 /**
  * 帯の次の一手（PRD D152）。仕事の順（担当を組む → 手当て → 確定）で最初に残っているもの：
  * 1. 担当なしの訪問がある日が2日以上 → 担当を AI で組む
  * 2. 手当てが要る要対応（要対応の訪問）がある → 要対応を見る
- * 3. 確定していない日がある → 確定していない日を見る
+ * 3. 確定していない日がある → 確定していない日を見る（expert 切は飛ばす）
  * 4. 見るだけの要対応（未連絡の変更・拘束が上限を超える）が残る → 要対応を見る
  * 5. 何も残っていない → 済み（ボタンなし）。今日以降に訪問が無ければ「訪問はありません」（ボタンなし）
  */
@@ -49,7 +51,8 @@ export function bandNext(input: BandInput): BandNext {
   if (p.days === 0) return { kind: 'empty', label: '今日以降の訪問はありません', short: '訪問なし' };
   if (emptyTargets >= 2) return { kind: 'batch', label: '担当を AI で組む', short: '組む' };
   if (urgent > 0) return { kind: 'attention', label: '要対応を見る', short: '要対応' };
-  if (p.unconfirmed.length > 0) return { kind: 'unconfirmed', label: '確定していない日を見る', short: '未確定' };
+  if (input.confirmStep !== false && p.unconfirmed.length > 0)
+    return { kind: 'unconfirmed', label: '確定していない日を見る', short: '未確定' };
   if (p.attention > 0) return { kind: 'attention', label: '要対応を見る', short: '要対応' };
   return { kind: 'done', label: '準備は済みました', short: '済み' };
 }

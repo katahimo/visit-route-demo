@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { NavigateFunction } from 'react-router-dom';
 import { useBulkConfirm } from '../components/useBulkConfirm';
+import { useConfirmStep } from '../components/useFeature';
 import type { Problem } from '../contracts/problem';
 import type { BulkConfirm } from '../lib/confirmDay';
 import { scrollBehavior } from '../lib/motion';
@@ -22,6 +23,9 @@ export function useMonthAside(x: {
   bulk: BulkConfirm;
 }) {
   const { ym, navigate } = x;
+  /** 確定（伝えた）の段階を出すか（expert 入）。切なら「確定していない日」の欄は無く、行き先は要対応にする（ADR-0073） */
+  const confirmStep = useConfirmStep();
+  const viewOf = (view: AsideView): AsideView => (view === 'unconfirmed' && !confirmStep ? 'attention' : view);
   /** 選ばないときの右の欄：要対応／確定していない日（進み具合の帯の「確定」から。PRD D153） */
   const [asideView, setAsideView] = useState<AsideView>('attention');
   const asideRef = useRef<HTMLElement>(null);
@@ -38,7 +42,7 @@ export function useMonthAside(x: {
   /** 帯の数字・ボタン：担当を組むは担当を組むの画面へ（その月。ADR-0063）、ほかはこの画面の中で欄を開く */
   const onBandOp = (op: BandOp) => {
     if (op === 'batch') navigate(bandHref(ym, 'batch'));
-    else showAside(op);
+    else showAside(viewOf(op));
   };
 
   // ---- ホーム・週・日の帯から来たときの操作（PRD D143・D153。?do=）----
@@ -49,7 +53,7 @@ export function useMonthAside(x: {
   useEffect(() => {
     if (doParam === null) return;
     if (doParam === 'attention' || doParam === 'unconfirmed') {
-      showAside(doParam, { do: null });
+      showAside(viewOf(doParam), { do: null });
       return;
     }
     if (doParam === 'batch') {

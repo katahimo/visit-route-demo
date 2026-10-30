@@ -5,13 +5,21 @@ import type { Visit } from '../contracts/documents';
 import type { Problem } from '../contracts/problem';
 import type { ContactList } from '../contracts/reassign';
 import { clockTime } from './dateText';
+import { CHANGED_WORD } from './settledView';
 import { type UnfitMark, unfitMarks } from './week';
 
 /** 印の種類（並びはこの順） */
 export type LookMarkKind = 'issue' | 'unfit' | 'told' | 'pin' | 'edited' | 'tentative';
 
 /** 印1つ（short は帯に出す短い文字、title は説明と読み上げ） */
-export type LookMark = { kind: LookMarkKind; short: string; title: string; tone: 'red' | 'warn' | 'pin' | 'plain' };
+export type LookMark = {
+  kind: LookMarkKind;
+  short: string;
+  title: string;
+  tone: 'red' | 'warn' | 'pin' | 'plain';
+  /** 押すとその日の連絡の一覧（未連絡の変更）を開く印の日付（expert 切の「変更あり」。ADR-0073。入の「未」は押せない） */
+  toldDate?: string;
+};
 
 /** 帯の見た目 */
 export type VisitLook = {
@@ -26,7 +34,7 @@ export type VisitLook = {
 
 /** 見た目の元 */
 export type LookFacts = {
-  visit: Pick<Visit, 'staffId' | 'pinned' | 'cancelled' | 'pattern'>;
+  visit: Pick<Visit, 'staffId' | 'pinned' | 'cancelled' | 'pattern'> & Partial<Pick<Visit, 'date'>>;
   /** 〈利用者さん〉の休みのため無し */
   leave: boolean;
   /** 要対応の中身（訪問ごとの検査の言葉。担当なしも） */
@@ -37,6 +45,8 @@ export type LookFacts = {
   unfit: readonly UnfitMark[];
   /** 〈利用者さん〉が仮押さえ */
   tentative: boolean;
+  /** 確定（伝えた）の段階を出すか（lib/settledView の showConfirmStep。省略は出す）。切なら未連絡の変更は「変更あり」の印（押せる） */
+  confirmStep?: boolean;
 };
 
 export const PIN_TITLE = 'ピン（AI で組み直しても担当を変えない）';
@@ -51,7 +61,18 @@ export function visitLook(f: LookFacts): VisitLook {
       marks.push({ kind: 'issue', short: '!', title: `要対応：${f.issues.join('・')}`, tone: 'red' });
     for (const u of f.unfit) marks.push({ kind: 'unfit', short: u.short, title: `${u.short}：${u.why}`, tone: 'red' });
   }
-  if (f.told) marks.push({ kind: 'told', short: '未', title: `未連絡の変更：${f.told}`, tone: 'warn' });
+  if (f.told) {
+    // expert 切：決まったあとの変更。押すと連絡の一覧が開く（日の画面はその場、週・月はその日の日の予定へ）
+    if (f.confirmStep === false && f.visit.date)
+      marks.push({
+        kind: 'told',
+        short: CHANGED_WORD,
+        title: `${CHANGED_WORD}：${f.told}（押すと連絡の一覧）`,
+        tone: 'warn',
+        toldDate: f.visit.date,
+      });
+    else marks.push({ kind: 'told', short: '未', title: `未連絡の変更：${f.told}`, tone: 'warn' });
+  }
   if (!off) {
     if (f.visit.pinned && f.visit.staffId) marks.push({ kind: 'pin', short: 'ピ', title: PIN_TITLE, tone: 'pin' });
     if (f.visit.pattern?.edited) marks.push({ kind: 'edited', short: '変', title: 'この回だけ変更', tone: 'plain' });
@@ -99,12 +120,15 @@ export type DayLookSource = {
  */
 export function dayLooks(
   src: DayLookSource,
-  visits: readonly Pick<Visit, 'id' | 'staffId' | 'pinned' | 'cancelled' | 'pattern' | 'clientId'>[],
+  visits: readonly (Pick<Visit, 'id' | 'staffId' | 'pinned' | 'cancelled' | 'pattern' | 'clientId'> &
+    Partial<Pick<Visit, 'date'>>)[],
   opts: {
     staffName: (id: string) => string;
     leaveOf: (v: { id: string; clientId: string }) => boolean;
     tentativeOf: (clientId: string) => boolean;
     past?: boolean;
+    /** 確定（伝えた）の段階を出すか（省略は出す。lib/settledView） */
+    confirmStep?: boolean;
   },
 ): Map<string, VisitLook> {
   const told = toldTexts(src.told, opts.staffName);
@@ -121,6 +145,7 @@ export function dayLooks(
         told: told.get(v.id) ?? null,
         unfit: quiet ? [] : unfitMarks(src.problem, v.id, v.staffId),
         tentative: opts.tentativeOf(v.clientId),
+        confirmStep: opts.confirmStep,
       }),
     );
   }
