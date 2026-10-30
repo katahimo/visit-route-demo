@@ -11,6 +11,7 @@ import { useIntro } from '../components/useIntro';
 import { KeyMoveBand } from '../components/visitKeys';
 import { addDays } from '../domain/time';
 import { periodEmptyGuide } from '../lib/emptyGuide';
+import { detailItems, isFolded } from '../lib/exceptionView';
 import { timelineBandFilter, timelineNoneText, visitDaysOf } from '../lib/weekScreen';
 import { WeekMailPanel } from './mailPanels';
 import { useWeekClients } from './useWeekClients';
@@ -56,7 +57,6 @@ export default function WeekPage() {
       ? [
           {
             key: 'mail',
-            group: '予定まわり',
             label: '予定をメールで送る',
             icon: Mail,
             onSelect: () => setMailOpen(true),
@@ -118,10 +118,11 @@ export default function WeekPage() {
       {/* 要対応の帯（エキスパート機能が切のときだけ。PRD D383） */}
       <AttentionBand />
       {/* 1行の状態（PRD D332。進み具合の帯は月の予定だけ） */}
-      {!only && <WeekStatusLine prep={prep} />}
-      <WeekDetails prep={prep} model={model} by={by} tab={tab} />
+      {!isFolded(detailItems('week', only), 'status') && <WeekStatusLine prep={prep} />}
       {/* 操作の行（日・週・月で同じ並び。PRD D327）。メールで送るは見出しのボタンなので、エキスパート機能が入のときは「その他 ▾」を出さない（PRD D344・D346）。切のときだけ ScheduleToolbar が空き状況・担当なしの訪問を組むを足す（PRD D383） */}
       <ScheduleToolbar zoom="week" absence={suddenOn ? { date: anchor } : null} moreItems={moreItems} />
+      {/* 切のときの「詳しく」は操作の行のすぐ下（日・月と同じ位置。PRD D384） */}
+      <WeekDetails prep={prep} model={model} by={by} tab={tab} />
       {/* 担当を組むの画面で組んだ範囲の提案（日・週・月で同じ帯。PRD D328） */}
       <RangeProposalBand />
 

@@ -2,6 +2,7 @@
 // 印・経路のリンク・理由）。どれも usePlanPage の戻り値から描く関数
 import { MessageSquareText, PanelRightOpen, Pin, PinOff, ShieldAlert, TriangleAlert } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { DetailsFold } from '../components/DetailsFold';
 import { VisitRouteLinks } from '../components/mapsLinks';
 import { PersonButton } from '../components/PersonPopover';
 import type { TimelineBand } from '../components/routeTimeline';
@@ -18,6 +19,7 @@ import { own } from '../lib/common';
 import { exceptionsOnly } from '../lib/exceptionView';
 import { HOME_LABEL } from '../lib/mapsLink';
 import { typeOf } from '../lib/patternText';
+import { bandTone, cardTone } from '../lib/visitLook';
 import { leftReasonText } from './absenceParts';
 import { ReasonBox } from './planParts';
 import { ReassignMenu } from './planReassignMenu';
@@ -98,6 +100,13 @@ export function routeLinksOf(p: PlanCtx, id: string, sid: string | null) {
       note={toldState === 'changed' ? '今の順番（未連絡の変更あり）' : undefined}
     />
   );
+}
+
+/** 訪問の詳細の「理由」。切（例外だけ見せる。PRD D384）は「詳しく ▾」の中へ畳む */
+function reasonOf(p: PlanCtx, id: string) {
+  const { explained, only } = bv(p);
+  const box = <ReasonBox explain={explained.get(id)} />;
+  return only ? <DetailsFold testId="visit-reason-details">{box}</DetailsFold> : box;
 }
 
 /** visitLabel と同じ見た目で、〈利用者さん〉の名前から詳細を開く（欠勤の人に残る訪問。PRD D206） */
@@ -284,7 +293,7 @@ export function card(p: PlanCtx, id: string) {
   } = bv(p);
   const pin = own(pins, id);
   const hard = hardOf.get(id);
-  const tone = only ? (looks.get(id)?.tone === 'issue' || looks.get(id)?.tone === 'unassigned' ? 'red' : null) : null;
+  const tone = cardTone({ only, look: looks.get(id), hard: !!hard, pinned: !!pin });
   const ownerId = owner.get(id) ?? null;
   const x = { id, set: PLAN_SET };
   return (
@@ -301,7 +310,7 @@ export function card(p: PlanCtx, id: string) {
       onPick={() => sel.togglePick(x)}
       multi={multi.has(id)}
       onMulti={() => multi.toggle(id)}
-      tone={only ? tone : hard ? 'red' : pin ? 'pinned' : null}
+      tone={tone}
       oneLine={only}
       drag={dragProps(id)}
       dragging={dragging === id}
@@ -312,7 +321,7 @@ export function card(p: PlanCtx, id: string) {
           {reassignOf(p, id, ownerId)}
           <VisitRules client={clientOf(id)} />
           {routeLinksOf(p, id, ownerId)}
-          <ReasonBox explain={explained.get(id)} />
+          {reasonOf(p, id)}
         </>
       }
       mark={<TypeMark type={typeOf(data.visitTypes, visitById.get(id)?.typeId)} compact />}
@@ -412,15 +421,7 @@ export function bandOf(p: PlanCtx, id: string, sid: string): TimelineBand {
     name: client?.displayName ?? '（不明）',
     color: type ? colorOf(type.color) : null,
     // 今日より前の日は要対応の赤にしない（印と同じ。月・ホームと同じ決まり）
-    tone: only
-      ? look?.tone === 'issue'
-        ? 'red'
-        : null
-      : look?.tone === 'issue' || (hard && date >= jstDate(Date.now()))
-        ? 'red'
-        : pin
-          ? 'pinned'
-          : null,
+    tone: bandTone({ only, look, hard: !!hard, pinned: !!pin, upcoming: date >= jstDate(Date.now()) }),
     kinds: look?.kinds ?? '',
     picked: sel.isPicked(x),
     dragging: dragging === id,
@@ -445,7 +446,7 @@ export function bandOf(p: PlanCtx, id: string, sid: string): TimelineBand {
         {tagsOf(p, id)}
         <VisitRules client={client} />
         {routeLinksOf(p, id, sid)}
-        <ReasonBox explain={explained.get(id)} />
+        {reasonOf(p, id)}
       </>
     ),
   };

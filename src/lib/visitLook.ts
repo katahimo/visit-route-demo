@@ -165,3 +165,31 @@ export function dayLooks(
   }
   return out;
 }
+
+/** 日の順番のカード・時間軸の帯の色：red＝要対応、pinned＝ピン、null＝ふつう */
+export type PlanTone = 'red' | 'pinned' | null;
+
+/**
+ * 順番のカードの色。切（only＝例外だけ見せる。PRD D384）は札の見た目（look）の tone だけ（担当なし・重なり・休みの人。ピン・必須の違反は色にしない）。
+ * 入は必須の違反（hard）なら red、ピンなら pinned
+ */
+export function cardTone(x: { only: boolean; look: VisitLook | undefined; hard: boolean; pinned: boolean }): PlanTone {
+  if (x.only) return x.look?.tone === 'issue' || x.look?.tone === 'unassigned' ? 'red' : null;
+  return x.hard ? 'red' : x.pinned ? 'pinned' : null;
+}
+
+/**
+ * 時間軸の帯の色。切は要対応（look.tone が issue）だけ red。入は要対応か「今日以降の日の必須の違反」なら red、ピンなら pinned
+ * （今日より前の日は必須の違反を赤にしない。月・ホームと同じ決まり）
+ */
+export function bandTone(x: {
+  only: boolean;
+  look: VisitLook | undefined;
+  hard: boolean;
+  pinned: boolean;
+  /** 今日以降の日か */
+  upcoming: boolean;
+}): PlanTone {
+  if (x.only) return x.look?.tone === 'issue' ? 'red' : null;
+  return x.look?.tone === 'issue' || (x.hard && x.upcoming) ? 'red' : x.pinned ? 'pinned' : null;
+}

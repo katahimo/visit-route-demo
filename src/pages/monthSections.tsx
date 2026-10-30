@@ -14,7 +14,7 @@ import { useExceptionsOnly } from '../components/useFeature';
 import { useIntro } from '../components/useIntro';
 import { KeyMoveBand } from '../components/visitKeys';
 import type { DemoData } from '../contracts/data';
-import { detailItems, isFolded } from '../lib/exceptionView';
+import { detailItems, foldedParts, isFolded } from '../lib/exceptionView';
 import type { BandOp } from '../lib/progressBand';
 import { addMonths, ymOf } from '../lib/ym';
 import {
@@ -120,13 +120,13 @@ export function MonthDetails({
   summary: MonthDays['summary'];
   legendBar: 'load' | 'staff' | null;
 }) {
-  const folded = detailItems('month', useExceptionsOnly());
-  if (folded.length === 0) return null;
+  const parts = foldedParts('month', useExceptionsOnly(), { progress: true, summary: true, legend: true });
+  if (parts.length === 0) return null;
   return (
     <DetailsFold testId="month-details">
-      <ProgressBand ym={ym} model={band} onOp={onBandOp} />
-      <MonthSummaryLine summary={summary} />
-      <MonthLegend bar={legendBar} />
+      {parts.includes('progress') && <ProgressBand ym={ym} model={band} onOp={onBandOp} />}
+      {parts.includes('summary') && <MonthSummaryLine summary={summary} />}
+      {parts.includes('legend') && <MonthLegend bar={legendBar} />}
     </DetailsFold>
   );
 }

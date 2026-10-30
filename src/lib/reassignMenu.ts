@@ -67,8 +67,6 @@ export function notAllowedText(labels: string[]): string {
 
 /** 今の担当の項目の説明（押しても何もしない） */
 export const CURRENT_TEXT = '今の担当です';
-/** 「入らなかった訪問へ」の説明（固定も外れる） */
-export const NONE_TEXT = '担当なしにします（ピンも外れます）';
 
 /** 担当の候補の1人（「担当を変える ▾」と訪問の詳細の欄で同じ判定。ADR-0030・ADR-0051） */
 export type ReassignChoice = {

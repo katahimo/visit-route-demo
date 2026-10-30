@@ -2,8 +2,10 @@
 import { ArrowRightLeft, CircleOff } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { MenuButton, type MenuItem } from '../components/MenuButton';
+import { useExceptionsOnly } from '../components/useFeature';
 import type { Problem } from '../contracts/problem';
-import { CURRENT_TEXT, NONE_TEXT, reassignChoices } from '../lib/reassignMenu';
+import { reassignWords } from '../lib/exceptionView';
+import { CURRENT_TEXT, reassignChoices } from '../lib/reassignMenu';
 
 /**
  * 訪問の詳細の「担当を変える ▾」（PRD D217。ADR-0030）：ドラッグと同じ手直しを、押す・キーボード・タッチで。
@@ -37,6 +39,7 @@ export function ReassignMenu({
   onMove: (staffId: string) => void;
   onNone: () => void;
 }) {
+  const words = reassignWords(useExceptionsOnly());
   /** 候補は一覧を開いているときだけ計算する（「受けられる人」の CandidateBox と同じ。訪問を選ぶ・ドラッグのたびに計算しない） */
   const [open, setOpen] = useState(false);
   // 判定は訪問の詳細の欄と同じ関数（lib/reassignMenu の reassignChoices。ADR-0051）。出す人は列を出している人
@@ -54,7 +57,7 @@ export function ReassignMenu({
             group: '今の担当',
             testId: 'plan-reassign-current',
             label: staffName(ownerId),
-            note: pinned ? 'ピン' : undefined,
+            note: pinned ? words.pinNote : undefined,
             description: CURRENT_TEXT,
             current: true,
             disabled: true,
@@ -92,7 +95,7 @@ export function ReassignMenu({
             group: 'そのほか',
             testId: 'plan-reassign-none',
             label: '担当なしにする',
-            description: NONE_TEXT,
+            description: words.none,
             icon: CircleOff,
             disabled: busy,
             onSelect: onNone,

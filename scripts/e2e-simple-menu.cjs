@@ -406,6 +406,71 @@ async function exceptions(page) {
     }
     if (to === '/week') check(!BANNED.test(await page.getByTestId('week-details').innerText()), '週：詳しくに禁句なし');
   }
+  // 日の「一覧で見る」：ピン・条件に合わないの札と禁句が出ない
+  await open1(page, '/plan');
+  await page.getByTestId('plan-more').click();
+  await page.getByTestId('plan-view-list').click();
+  await settle(page, 600);
+  check((await page.locator('.chip-pin, .chip-red').count()) === 0, '日（一覧）：ピン・条件に合わないの札を出さない');
+  const listBody = await page.locator('main, .content').first().innerText();
+  check(!BANNED.test(listBody), '日（一覧）：禁句が出ない', listBody.match(BANNED)?.[0]);
+  await page.getByTestId('plan-more').click();
+  await page.getByTestId('plan-view-timeline').click();
+  // 訪問の札の詳細の「理由」は「詳しく」の中
+  await page.locator('.tl-band-btn').first().click();
+  await settle(page, 300);
+  check((await page.getByTestId('visit-reason-details').count()) >= 1, '日：札の詳細の理由は「詳しく」の中');
+  check(
+    !(await page
+      .getByTestId('visit-reason-details')
+      .first()
+      .evaluate((e) => e.open)),
+    '日：札の詳細の理由は初め閉じている',
+  );
+  // 月のマス・右の欄：条件に合わない・拘束超・内訳を出さず、帯と数がそろう
+  await open1(page, '/month');
+  const cells = await page.locator('.month-cell').allInnerTexts();
+  check(!cells.some((t) => /条件に合わない|拘束超/.test(t)), '月：マスに「条件に合わない」「拘束超」を出さない');
+  const aside = await page.getByTestId('month-aside').innerText();
+  check(
+    !/条件に合わない|拘束|未連絡/.test(aside),
+    '月：右の欄に条件に合わない・拘束・未連絡を出さない',
+    aside.slice(0, 120),
+  );
+  check(!/要対応 \d+件（/.test(aside), '月：右の欄の要対応の行に内訳（括弧）を出さない');
+  const care = await page
+    .locator('[data-kind="care"]')
+    .evaluateAll((els) => els.reduce((n, e) => n + Number(/要対応 (\d+)件/.exec(e.textContent)?.[1] ?? 0), 0));
+  const bandText = await page.getByTestId('attention-band-text').innerText();
+  const bandTotal = [...bandText.matchAll(/(\d+)件/g)].reduce((n, m) => n + Number(m[1]), 0);
+  check(care > 0 && care <= bandTotal, '月：右の欄の要対応の合計は帯の件数（今日〜翌月末）を超えない', {
+    care,
+    bandTotal,
+  });
+  check((await page.getByTestId('month-attention-details').count()) === 1, '月：右の欄の内訳は「詳しく」の中');
+  // 過去の週：要対応・印を出さず、1行の状態の無い「詳しく」は凡例だけ
+  await page.goto('about:blank');
+  await page.goto(`${BASE}#/week`);
+  await page.locator(NAV_READY).waitFor({ timeout: 60000 });
+  await page.getByRole('button', { name: '前の週' }).click();
+  await settle(page, 800);
+  check((await page.getByTestId('week-status').count()) === 0, '過去の週：1行の状態（今日以降）は無い');
+  const wd = page.getByTestId('week-details');
+  check((await wd.count()) === 1, '過去の週：時間軸の凡例の「詳しく」はある');
+  check((await wd.innerText()).indexOf('資格') < 0, '週：凡例に資格✗・限✗を出さない');
+  check((await page.locator('[data-kind="issue"]').count()) === 0, '過去の週：要対応の印を出さない');
+  // 「詳しく」は操作の行の下（週）
+  check(
+    await page.evaluate(
+      () =>
+        !!(
+          document
+            .querySelector('[data-testid="schedule-toolbar"]')
+            .compareDocumentPosition(document.querySelector('[data-testid="week-details"]')) & 4
+        ),
+    ),
+    '週：「詳しく」は操作の行より下',
+  );
   // 担当なしの訪問を押す前でも、訪問の帯に要対応の印は担当なし（赤い枠）。週の帯：ピンの印は出ない
   await open1(page, '/week');
   check(

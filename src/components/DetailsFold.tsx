@@ -4,7 +4,7 @@ import './detailsFold.css';
 
 /**
  * 「詳しく ▾」（エキスパート機能が切のとき、点数・理由・件数の内訳・凡例・進み具合を畳む入れ物。PRD D384。ADR-0073）。
- * はじめは閉じている（開け閉めは覚えない）。中身が無ければ出さない
+ * はじめは閉じている（開け閉めは覚えない）。中身が無いときは呼ぶ側が出さない（lib/exceptionView の foldedParts で、いま中身がある項目を確かめてから置く）
  */
 export function DetailsFold({ children, testId = 'details-fold' }: { children: ReactNode; testId?: string }) {
   return (

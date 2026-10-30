@@ -52,11 +52,26 @@ const DETAILS: Record<ScheduleZoom, readonly DetailItem[]> = {
 /** 「詳しく」に入れるもの（入のときは空＝今の画面のまま、すべてそのまま出す） */
 export const detailItems = (zoom: ScheduleZoom, only: boolean): readonly DetailItem[] => (only ? DETAILS[zoom] : []);
 
+/**
+ * 「詳しく」に今入れるもの：畳む項目のうち、いま中身があるもの（present で渡す。省略は無し）。空なら「詳しく」を出さない
+ * （例：訪問の無い週は1行の状態が無いので、凡例の無い表の表示では「詳しく」ごと出さない）
+ */
+export function foldedParts(
+  zoom: ScheduleZoom,
+  only: boolean,
+  present: Partial<Record<DetailItem, boolean>>,
+): DetailItem[] {
+  return detailItems(zoom, only).filter((i) => present[i] === true);
+}
+
 /** その部品を「詳しく」へ畳むか */
 export const isFolded = (items: readonly DetailItem[], item: DetailItem): boolean => items.includes(item);
 
 /** 「詳しく」の見出し */
 export const DETAILS_LABEL = '詳しく';
+
+/** 時間軸の凡例の項目のうち、資格✗・限✗（条件に合わない）は切では外す（札に出さないので凡例も要らない） */
+export const showUnfitLegend = (only: boolean): boolean => !only;
 
 /** 日の予定で、時間軸に移動・待ちの分数の区間を出すか（切は出さない：移動の分数は例外ではない） */
 export const showLegs = (only: boolean): boolean => !only;
@@ -121,5 +136,43 @@ export function proposalWords(only: boolean): ProposalWords {
       `${label}の案にしました（${days}日${skipped > 0 ? `・変わった ${skipped}日はそのまま` : ''}）`,
     stale: (days) => `案を出したあとに訪問が変わった日が ${days}日あります（その日は変えません）`,
     staleOne: '案を出したあとに訪問が変わったので、案にしませんでした。もう一度 AI で組んでください',
+  };
+}
+
+/** 欠勤・キャンセルのあとの振り直しの言葉：切は「反映・ピン」を使わず、点数の行は「詳しく」へ回す（PRD D384。proposalWords と同じ言い方） */
+export type ReassignWords = {
+  current: string;
+  applied: string;
+  choose: (title: string) => string;
+  none: string;
+  /** 「今の担当」に添える印（ピンの付いた訪問。切は出さない） */
+  pinNote: string | undefined;
+  resultTitle: string;
+  hint: string;
+  /** 比べる表に点数の行を出すか（切は「詳しく」の中） */
+  scoreInTable: boolean;
+};
+
+export function reassignWords(only: boolean): ReassignWords {
+  if (!only)
+    return {
+      current: '反映中',
+      applied: '反映済み',
+      choose: (title) => `${title}を反映する`,
+      none: '担当なしにします（ピンも外れます）',
+      pinNote: 'ピン',
+      resultTitle: '反映した振り直し：',
+      hint: '振り直した訪問に「代行」、開始が変わった訪問に「+N分」が付きます。担当が変わった訪問にはピンが付きます。担当なしの訪問は「受けられる人」から入れられます。',
+      scoreInTable: true,
+    };
+  return {
+    current: '今の案',
+    applied: '案にした',
+    choose: (title) => `${title}にする`,
+    none: '担当なしにします',
+    pinNote: undefined,
+    resultTitle: '決めた振り直し：',
+    hint: '振り直した訪問に「代行」、開始が変わった訪問に「+N分」が付きます。担当なしの訪問は「受けられる人」から入れられます。',
+    scoreInTable: false,
   };
 }

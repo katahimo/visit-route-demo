@@ -22,7 +22,15 @@ export function useIntro(zoom: ScheduleZoom, expertText: string): ReactNode {
         icon={X}
         label="説明を閉じる"
         className="icon-btn-sm"
-        onClick={() => navOpenMemory.write(introKey(zoom), false)}
+        onClick={() => {
+          navOpenMemory.write(introKey(zoom), false);
+          // 閉じるボタンが消えるのでフォーカスを見出しへ移す（落とさない）
+          const h1 = document.querySelector<HTMLElement>('.page-head h1');
+          if (h1) {
+            h1.tabIndex = -1;
+            h1.focus();
+          }
+        }}
         data-testid="page-intro-close"
       />
     </span>

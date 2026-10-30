@@ -53,11 +53,10 @@ function moreItemsOf(p: PlanCtx, addWhy: string | false, only: boolean): MenuIte
   // 切（例外だけ。PRD D384）はパソコンでも、表示の切り替え・使い方・メールで送るを「その他 ▾」へ（操作の行のボタンは2つまで）
   if (!compact && !only) return [];
   const mail: MenuItem[] =
-    only && p.f.mailOn
+    only && p.f.mailOn && (p.d.hasPlan || p.d.toldState === 'changed')
       ? [
           {
             key: 'mail',
-            group: '予定まわり',
             label: '予定をメールで送る',
             icon: Mail,
             onSelect: () => p.v.setPanel('mail'),

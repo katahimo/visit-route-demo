@@ -13,6 +13,7 @@ import { useExceptionsOnly } from '../components/useFeature';
 import { jstDate } from '../domain/time';
 import { own } from '../lib/common';
 import { dateText } from '../lib/dateText';
+import { foldedParts } from '../lib/exceptionView';
 import { typeOf } from '../lib/patternText';
 import { showContactedButton } from '../lib/settledView';
 import { ReassignBar } from './absenceParts';
@@ -114,11 +115,13 @@ export function PlanDayLines({ p }: { p: PlanCtx }) {
 
 /** 「詳しく」（エキスパート機能が切のとき。畳んでおく。PRD D384）：今の担当の1行（点数・理由・移動）と担当ごとの1日 */
 export function PlanDetails({ p }: { p: PlanCtx }) {
-  if (!p.d.hasPlan || !p.d.cs) return null;
+  const has = p.d.hasPlan && !!p.d.cs;
+  const parts = foldedParts('day', useExceptionsOnly(), { oneLine: has, dayLines: has && !p.v.compact });
+  if (parts.length === 0) return null;
   return (
     <DetailsFold testId="day-details">
-      <PlanOneLineBlock p={p} />
-      <PlanDayLines p={p} />
+      {parts.includes('oneLine') && <PlanOneLineBlock p={p} />}
+      {parts.includes('dayLines') && <PlanDayLines p={p} />}
     </DetailsFold>
   );
 }
@@ -127,6 +130,8 @@ export function PlanDetails({ p }: { p: PlanCtx }) {
 function PlanVisitList({ p }: { p: PlanCtx }) {
   const { d } = p;
   const { problem, owner, staffName, staffById, pins, unassigned, hardOf, data } = d;
+  // 切（例外だけ見せる。PRD D384）：ピン・条件に合わない（必須の違反）の札は出さない
+  const only = useExceptionsOnly();
   return (
     <VisitList
       visits={d.sortedVisits}
@@ -139,8 +144,8 @@ function PlanVisitList({ p }: { p: PlanCtx }) {
       notes={(id) => ({
         outside: !!problem && !problem.visits.some((v) => v.id === id),
         dropped: unassigned.includes(id),
-        pinned: !!own(pins, id),
-        hard: hardOf.get(id),
+        pinned: !only && !!own(pins, id),
+        hard: only ? undefined : hardOf.get(id),
       })}
       clientLabel={d.terms.client}
       typeOfVisit={(v) => typeOf(data.visitTypes, v.typeId)}

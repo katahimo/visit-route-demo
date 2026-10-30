@@ -2,7 +2,7 @@
 // どのボタンを残すかは lib/exceptionView の mainTools。日は「訪問を追加」が主ボタン（スマホは出さず「担当なしの訪問を組む」）、
 // 週・月は「担当なしの訪問を組む」が主ボタン（担当なしが無ければ主ボタンは無し）。もう1つは「欠勤・キャンセルを登録」
 import { Plus, Sparkles } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { type ReactNode, useEffect, useRef } from 'react';
 import { mainTools, type ScheduleZoom } from '../lib/exceptionView';
 import { MenuButton, type MenuItem } from './MenuButton';
 import { WithIcon } from './ui';
@@ -43,8 +43,22 @@ export function SimpleToolbar({
     ...more.items.filter((i) => !(primary === 'arrange' && i.key === 'auto-arrange')),
   ];
   const { arrange } = more;
+  const rowRef = useRef<HTMLDivElement>(null);
+  const hadFocus = useRef(false);
+  // 押した主ボタンが消えたら（組み終えて担当なしが無くなった）、フォーカスを落とさず「その他 ▾」へ
+  useEffect(() => {
+    if (hadFocus.current && primary !== 'arrange') {
+      hadFocus.current = false;
+      rowRef.current?.querySelector<HTMLElement>('.plan-more button')?.focus();
+    }
+  }, [primary]);
   return (
-    <div className={`row schedule-toolbar is-simple ${className}`} data-testid="schedule-toolbar" data-zoom={zoom}>
+    <div
+      ref={rowRef}
+      className={`row schedule-toolbar is-simple ${className}`}
+      data-testid="schedule-toolbar"
+      data-zoom={zoom}
+    >
       {primary === 'add' && add && (
         <button
           type="button"
@@ -65,8 +79,13 @@ export function SimpleToolbar({
         <button
           type="button"
           className="btn btn-primary"
-          disabled={arrange.running}
-          onClick={arrange.run}
+          aria-disabled={arrange.running || undefined}
+          onClick={() => {
+            if (arrange.running) return;
+            // 組み終えるとボタンが消えることがある：そのときフォーカスを「その他 ▾」へ移す（下の effect）
+            hadFocus.current = true;
+            arrange.run();
+          }}
           title="今日から来月末までの担当なしの訪問を、いまの条件で組みます"
           data-testid="toolbar-arrange"
         >

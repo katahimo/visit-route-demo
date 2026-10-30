@@ -7,6 +7,7 @@ import { PageHeader } from '../components/ui';
 import { useExceptionsOnly } from '../components/useFeature';
 import { useIntro } from '../components/useIntro';
 import { KeyMoveBand } from '../components/visitKeys';
+import { detailItems, isFolded } from '../lib/exceptionView';
 import { toldHref } from '../lib/links';
 import './plan.css';
 import './schedule.css';
@@ -40,6 +41,7 @@ export default function PlanPage() {
   const navigate = useNavigate();
   /** エキスパート機能が切のときは例外だけ見せる（PRD D384）：今の担当の1行・担当ごとの1日は「詳しく」へ、要対応の件数の内訳の帯は出さない（上の帯が知らせる） */
   const only = useExceptionsOnly();
+  const folded = detailItems('day', only);
   const lead = useIntro(
     'day',
     f.confirmStep
@@ -62,7 +64,7 @@ export default function PlanPage() {
           </div>
         )}
 
-        {!only && <PlanOneLineBlock p={p} />}
+        {!isFolded(folded, 'oneLine') && <PlanOneLineBlock p={p} />}
         <PlanToolbar p={p} />
         {/* 切は「詳しく」へ畳む（今の担当の1行・担当ごとの1日。PRD D384） */}
         {only && <PlanDetails p={p} />}
@@ -77,7 +79,7 @@ export default function PlanPage() {
           />
         )}
         {/* 担当ごとの1日（PRD D84）。訪問のある日だけ。狭い幅では畳む */}
-        {!only && <PlanDayLines p={p} />}
+        {!isFolded(folded, 'dayLines') && <PlanDayLines p={p} />}
 
         {/* あるときだけの帯（PRD D63）。ドラッグ中には増減しない（移したあとに変わる） */}
         <PlanBands

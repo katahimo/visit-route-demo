@@ -1,12 +1,15 @@
 // 欠勤の振り直しの2回目（PRD D34・D35。ADR-0011）：案B「少し動かしてよい」の欄と、連絡の一覧
 import { ArrowUpToLine, MessageSquareText, Play, Square, UserRoundCheck } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { DetailsFold } from '../components/DetailsFold';
 import { FLOATING_EVENT, useFloatingEdge } from '../components/floating';
 import { WeightSlider } from '../components/parts';
 import { Hint, WithIcon } from '../components/ui';
+import { useExceptionsOnly } from '../components/useFeature';
 import { useValueStore } from '../components/valueStore';
 import type { ReassignDiff } from '../contracts/reassign';
 import { deltaText, r0 } from '../lib/common';
+import { reassignWords } from '../lib/exceptionView';
 import type { ReadableStore } from '../lib/valueStore';
 import { STAY_WEIGHT_DEFAULT } from '../reassign';
 
@@ -61,8 +64,10 @@ function AnnealTable({
   /** 案B を計算中 */
   running: boolean;
 }) {
+  const words = reassignWords(useExceptionsOnly());
+  const score = (o: ReassignOption) => (o.hundred === null ? '—' : `${o.hundred}点`);
   const rows: { label: string; value: (o: ReassignOption) => string }[] = [
-    { label: '点数', value: (o) => (o.hundred === null ? '—' : `${o.hundred}点`) },
+    ...(words.scoreInTable ? [{ label: '点数', value: score }] : []),
     { label: '入らない', value: (o) => (o.diff ? `${o.diff.unplaced.length}件` : '—') },
     {
       label: '担当が変わる訪問',
@@ -74,45 +79,53 @@ function AnnealTable({
     { label: '移動', value: (o) => (o.diff ? deltaText(r0(o.diff.travelDelta), '分') || '±0分' : '—') },
   ];
   return (
-    <table className="anneal-table" data-testid="anneal-table">
-      <thead>
-        <tr>
-          <th scope="col">振り直す前との差</th>
-          {options.map((o) => (
-            <th key={o.key} scope="col">
-              {o.title}
-              {o.current && <span className="chip chip-ok anneal-current">反映中</span>}
-              {o.key === 'anneal' && stopped && <span className="sub">（途中で止めた）</span>}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((r) => (
-          <tr key={r.label}>
-            <th scope="row">{r.label}</th>
+    <>
+      <table className="anneal-table" data-testid="anneal-table">
+        <thead>
+          <tr>
+            <th scope="col">振り直す前との差</th>
             {options.map((o) => (
-              <td key={o.key}>{r.value(o)}</td>
+              <th key={o.key} scope="col">
+                {o.title}
+                {o.current && <span className="chip chip-ok anneal-current">{words.current}</span>}
+                {o.key === 'anneal' && stopped && <span className="sub">（途中で止めた）</span>}
+              </th>
             ))}
           </tr>
-        ))}
-        <tr>
-          <td />
-          {options.map((o) => (
-            <td key={o.key}>
-              <button
-                type="button"
-                className="btn btn-small"
-                disabled={o.current || running}
-                onClick={() => onChoose(o.key)}
-              >
-                {o.current ? '反映済み' : `${o.title}を反映する`}
-              </button>
-            </td>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.label}>
+              <th scope="row">{r.label}</th>
+              {options.map((o) => (
+                <td key={o.key}>{r.value(o)}</td>
+              ))}
+            </tr>
           ))}
-        </tr>
-      </tbody>
-    </table>
+          <tr>
+            <td />
+            {options.map((o) => (
+              <td key={o.key}>
+                <button
+                  type="button"
+                  className="btn btn-small"
+                  disabled={o.current || running}
+                  onClick={() => onChoose(o.key)}
+                >
+                  {o.current ? words.applied : words.choose(o.title)}
+                </button>
+              </td>
+            ))}
+          </tr>
+        </tbody>
+      </table>
+      {/* 切は点数を「詳しく」の中へ（PRD D384） */}
+      {!words.scoreInTable && (
+        <DetailsFold testId="anneal-details">
+          <span className="sub">点数：{options.map((o) => `${o.title} ${score(o)}`).join('・')}</span>
+        </DetailsFold>
+      )}
+    </>
   );
 }
 

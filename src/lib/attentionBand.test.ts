@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { attentionBand, bandDays } from './attentionBand';
+import { attentionBand, bandDays, exceptionStatus, isBandIssue } from './attentionBand';
 import type { IssueKind } from './dayPlan';
 import type { DayStatus } from './month';
 
@@ -71,5 +71,33 @@ describe('attentionBand（要対応の帯。PRD D383）', () => {
       TODAY,
     );
     expect(b?.first).toEqual({ date: '2026-10-22', visitId: 'y' });
+  });
+});
+
+describe('isBandIssue・exceptionStatus（例外だけ見せる）', () => {
+  it('担当なし・休みの人・重なりは目立たせ、条件に合わないは目立たせない', () => {
+    expect(isBandIssue('unassigned')).toBe(true);
+    expect(isBandIssue('off')).toBe(true);
+    expect(isBandIssue('late')).toBe(true);
+    expect(isBandIssue('notAllowed')).toBe(false);
+  });
+  it('要対応を絞って数え直し、拘束超は見せない。元は変えない', () => {
+    const s = {
+      ...day('2026-11-04', { a: ['notAllowed'], b: ['notAllowed', 'late'], c: ['unassigned'] }),
+      overSpan: ['s1'],
+    };
+    const e = exceptionStatus(s);
+    expect([...e.issues.keys()]).toEqual(['b', 'c']);
+    expect(e.issues.get('b')?.map((x) => x.kind)).toEqual(['late']);
+    expect(e.care).toBe(2);
+    expect(e.needsCare).toBe(true);
+    expect(e.overSpan).toEqual([]);
+    expect(s.care).toBe(3);
+    expect(s.overSpan).toEqual(['s1']);
+  });
+  it('条件に合わないだけの日は赤にしない', () => {
+    const e = exceptionStatus(day('2026-11-04', { a: ['notAllowed'] }));
+    expect(e.care).toBe(0);
+    expect(e.needsCare).toBe(false);
   });
 });

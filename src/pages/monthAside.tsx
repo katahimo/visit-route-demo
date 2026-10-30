@@ -3,12 +3,14 @@
 import { CalendarDays, CalendarRange, CircleAlert, ListChecks, Lock, PencilLine, Timer, X } from 'lucide-react';
 import { useId } from 'react';
 import { Link } from 'react-router-dom';
+import { DetailsFold } from '../components/DetailsFold';
 import { PersonButton } from '../components/PersonPopover';
 import { ClientDot } from '../components/parts';
 import { StaffMark } from '../components/StaffMark';
 import { SelectionBar } from '../components/scheduleParts';
 import { Term } from '../components/Term';
 import { SidePanel, WithIcon } from '../components/ui';
+import { useConfirmStep, useExceptionsOnly } from '../components/useFeature';
 import { SelectToggle, VisitRow, type VisitRowData } from '../components/visitParts';
 import type { Client, Staff, Visit, VisitType } from '../contracts/documents';
 import type { Features } from '../contracts/features';
@@ -20,6 +22,7 @@ import { type Attention, type DayStatus, type StaffMonth, shortName, type TypeCo
 import { hoursText, longDate } from '../lib/monthCell';
 import { DAY_STATE_TEXT } from '../lib/monthList';
 import { REQUESTED_OFF_NOTE } from '../lib/requestedOff';
+import { changesText } from '../lib/settledView';
 
 /**
  * その日の回の一覧（月のマスで Enter。PRD D340）：右の欄の先頭に、その日の回を1行ずつ（共通の VisitRow）。
@@ -198,6 +201,9 @@ export function MonthAttention({
   spanLimitHours: number;
   onOpen: (t: LinkTarget) => void;
 }) {
+  // 切（例外だけ見せる。PRD D384）：件数の内訳（括弧）は「詳しく」へ、未連絡の変更は「変更あり」、拘束超の行は無い
+  const only = useExceptionsOnly();
+  const confirmStep = useConfirmStep();
   return (
     <>
       <h2 className="month-aside-title">
@@ -206,7 +212,9 @@ export function MonthAttention({
       </h2>
       {attention.length === 0 ? (
         <p className="sub">
-          今日以降で、要対応の訪問（担当なし・担当が休み・条件に合わない・時間に間に合わない）・未連絡の変更・出勤〜退勤（拘束）が上限を超える日はありません。
+          {only
+            ? '今日以降で、担当なし・重なり・休みの人・変更ありの日はありません。'
+            : '今日以降で、要対応の訪問（担当なし・担当が休み・条件に合わない・時間に間に合わない）・未連絡の変更・出勤〜退勤（拘束）が上限を超える日はありません。'}
         </p>
       ) : (
         <ul className="month-attention" data-testid="month-attention">
@@ -226,12 +234,12 @@ export function MonthAttention({
                   <span>
                     {a.kind === 'care' && (
                       <WithIcon icon={CircleAlert} size={14}>
-                        要対応 {a.count}件{a.names.length > 0 ? `（${a.names.join('・')}）` : ''}
+                        要対応 {a.count}件{!only && a.names.length > 0 ? `（${a.names.join('・')}）` : ''}
                       </WithIcon>
                     )}
                     {a.kind === 'changed' && (
                       <WithIcon icon={PencilLine} size={14}>
-                        未連絡の変更 {a.count}件
+                        {changesText(a.count, confirmStep)}
                       </WithIcon>
                     )}
                     {a.kind === 'overSpan' && (
@@ -247,6 +255,19 @@ export function MonthAttention({
             );
           })}
         </ul>
+      )}
+      {only && attention.some((a) => a.names.length > 0) && (
+        <DetailsFold testId="month-attention-details">
+          <ul className="month-attention-breakdown sub">
+            {attention
+              .filter((a) => a.kind === 'care' && a.names.length > 0)
+              .map((a) => (
+                <li key={a.date}>
+                  {dateText(a.date)}：{a.names.join('・')}
+                </li>
+              ))}
+          </ul>
+        </DetailsFold>
       )}
     </>
   );

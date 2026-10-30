@@ -2,12 +2,14 @@ import { describe, expect, it } from 'vitest';
 import {
   detailItems,
   exceptionsOnly,
+  foldedParts,
   introKey,
   introShown,
   introText,
   isFolded,
   mainTools,
   proposalWords,
+  reassignWords,
   showLegs,
 } from './exceptionView';
 
@@ -37,6 +39,34 @@ describe('mainTools（操作の行は主ボタン1つ＋最大1つ）', () => {
   it('欠勤・キャンセルを切っていれば出さない。何も無ければ両方 null', () => {
     expect(mainTools('month', { ...all, absence: false })).toEqual({ primary: 'arrange', second: null });
     expect(mainTools('week', { add: false, arrange: false, absence: false })).toEqual({ primary: null, second: null });
+  });
+});
+
+describe('foldedParts（詳しく：中身があるものだけ）', () => {
+  it('入は空。切は畳む項目のうち中身があるものだけ。無ければ空（詳しくを出さない）', () => {
+    expect(foldedParts('week', false, { status: true, legend: true })).toEqual([]);
+    expect(foldedParts('week', true, { status: true, legend: true })).toEqual(['status', 'legend']);
+    expect(foldedParts('week', true, { status: false, legend: true })).toEqual(['legend']);
+    expect(foldedParts('week', true, { status: false, legend: false })).toEqual([]);
+    expect(foldedParts('month', true, { progress: true, summary: true, legend: true })).toEqual([
+      'progress',
+      'summary',
+      'legend',
+    ]);
+  });
+});
+
+describe('reassignWords（振り直しの言葉）', () => {
+  it('切は 反映・ピン・点数の行 を出さない。入は今のまま', () => {
+    const w = reassignWords(true);
+    const text = [w.current, w.applied, w.choose('案A'), w.none, w.resultTitle, w.hint].join('');
+    for (const bad of ['反映', 'ピン', '標準', '提案', 'プリセット']) expect(text).not.toContain(bad);
+    expect(w.pinNote).toBeUndefined();
+    expect(w.scoreInTable).toBe(false);
+    const x = reassignWords(false);
+    expect(x.choose('案A')).toBe('案Aを反映する');
+    expect(x.pinNote).toBe('ピン');
+    expect(x.scoreInTable).toBe(true);
   });
 });
 

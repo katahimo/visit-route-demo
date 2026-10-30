@@ -3,8 +3,10 @@
 import { useMemo } from 'react';
 import type { BandModel } from '../components/progressBand';
 import { useDayStatuses } from '../components/useDayStatuses';
+import { useExceptionsOnly } from '../components/useFeature';
 import type { DemoData } from '../contracts/data';
 import type { Visit } from '../contracts/documents';
+import { exceptionStatus } from '../lib/attentionBand';
 import { bulkConfirmTargets } from '../lib/confirmDay';
 import {
   attentionList,
@@ -34,7 +36,12 @@ export function useMonthDays(data: DemoData, compileInput: CompileInput, ym: str
 
   // ---- 日の問題と状態（lib/useDayStatuses。月とホームで共通）----
   const perDay = useDayStatuses(data, compileInput, days);
-  const statuses = useMemo(() => new Map([...perDay].map(([d, x]) => [d, x.status])), [perDay]);
+  // 切（例外だけ見せる。PRD D384）は要対応を帯と同じ分け方に絞る（lib/attentionBand の exceptionStatus）。マス・右の欄・進み具合の数が帯とそろう
+  const only = useExceptionsOnly();
+  const statuses = useMemo(
+    () => new Map([...perDay].map(([d, x]) => [d, only ? exceptionStatus(x.status) : x.status])),
+    [perDay, only],
+  );
 
   /** その日の担当の並び（訪問の今の担当）。問題は上で作ったものを使う */
   const dayPlans = useMemo(() => {
