@@ -373,7 +373,7 @@ describe('エキスパート機能が切のメニュー（PRD D383。ADR-0073）
     expect(on('schedule', '/clients')).toBe(false);
     expect(on('clients', '/staff')).toBe(false);
   });
-  it('相性は、どちらのタブから来たかの側（last.people）の項目に印が付く（PRD D388）', () => {
+  it('相性は、どちらのタブから来たかの側（last.people）の項目に印が付く（PRD D389）', () => {
     const staffSide = menuSections(terms, TODAY, off, { people: 'staff' });
     expect(isActiveNav(item('staff', staffSide), '/compat')).toBe(true);
     expect(isActiveNav(item('clients', staffSide), '/compat')).toBe(false);

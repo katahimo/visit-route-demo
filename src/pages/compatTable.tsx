@@ -83,7 +83,7 @@ const CompatRow = memo(function CompatRow({
 
 /** 凡例・点のしくみ・表を並べ直す（写しが古いときだけ） */
 export function CompatLegend({ stale, onResort }: { stale: boolean; onResort: () => void }) {
-  // エキスパート機能が切なら、点・条件の重みを言わない（PRD D384・D388）
+  // エキスパート機能が切なら、点・条件の重みを言わない（PRD D384・D389）
   const only = useExceptionsOnly();
   return (
     <div className="compat-legend">

@@ -14,7 +14,7 @@
 //    段階・特性・決まりごと・担当・相性（〈スタッフ〉は自宅・特性・求めること・日ごとの勤務ほか）は「詳しく ▾」の中（閉じていると見えない・開くと見える）。
 //    日の予定の地図はふだん閉じ、「地図」のボタンで開く（1366px・390px）。月のマスの読み方は帯の3種類と「変更あり」に合わせ、条件に合わない・拘束超は言わない、
 // 5f 「予定を入れる」と〈スタッフ〉・〈利用者さん〉のタブ（PRD D388。ADR-0073 第4段）：月・週の主ボタンは「予定を入れる」（操作の行は2つまで・担当なしの訪問を組むは「その他 ▾」）、
-//    押すと引き出し（定期＝〈利用者さん〉・曜日・時刻・くり返し／単発＝〈利用者さん〉・日付・時刻・所要）で「入れる」→ 予定に出て担当が自動で付く。
+//    押すと引き出し（定期＝〈利用者さん〉・曜日・くり返し・時刻・所要／単発＝〈利用者さん〉・日付・時刻・所要）で「入れる」→ 予定に出て担当が自動で付く。
 //    〈スタッフ〉の一覧の上のタブ（一覧・勤務・相性）と〈利用者さん〉のタブ（一覧・相性）で行き来でき、メニューの印は〈スタッフ〉／〈利用者さん〉に付き、
 //    相性・勤務の画面に禁句・点数が出ない。1366px・390px。幅は落ちても戻す、
 // 6 エキスパート機能を入にすると今のメニュー（ホーム・予定を組む・予定・空き状況・設定）・ホームの画面・帯は出ない。入では操作の行・説明・進み具合は今のまま。
@@ -879,7 +879,7 @@ async function openAdd(page, kind, label) {
   return box;
 }
 
-/** 定期：月で押す → 〈利用者さん〉・曜日・時刻・くり返し → 入れる → 繰り返しが増え、予定に担当付きで出る */
+/** 定期：月で押す → 〈利用者さん〉・曜日・くり返し・時刻・所要 → 入れる → 繰り返しが増え、予定に担当付きで出る */
 async function addRecurring(page, w) {
   await addToolbar(page, '/month', 'month', w, true);
   const terms = (await data(page)).org.terms;
@@ -902,7 +902,30 @@ async function addRecurring(page, w) {
   const days = box.getByTestId('add-plan-weekdays').locator('button');
   for (let i = 0; i < 7; i++)
     if ((await days.nth(i).getAttribute('aria-pressed')) === 'true') await days.nth(i).click();
+  // 誤りの経路：曜日なし → 曜日の欄に誤り・フォーカス、所要0 → 所要の欄に誤り・フォーカス（データは増えない）
+  const focusedTestId = () => page.evaluate(() => document.activeElement?.getAttribute('data-testid'));
+  await box.getByTestId('add-plan-duration').fill('0');
+  await page.getByTestId('add-plan-save').click();
+  await until(async () => (await focusedTestId()) === 'add-plan-weekdays');
+  check(
+    (await box.getByTestId('add-plan-weekdays').getAttribute('aria-invalid')) === 'true' &&
+      /曜日を1つ以上/.test(await box.locator('[role="alert"]').innerText()),
+    `定期（${w}）：曜日なしは曜日の欄に誤り（aria-invalid）`,
+  );
+  check((await focusedTestId()) === 'add-plan-weekdays', `定期（${w}）：誤った曜日の欄へフォーカス`);
   await days.nth(5).click();
+  await page.getByTestId('add-plan-save').click();
+  await until(async () => (await focusedTestId()) === 'add-plan-duration');
+  const durText = await box.locator('[role="alert"]').innerText();
+  check(
+    (await box.getByTestId('add-plan-duration').getAttribute('aria-invalid')) === 'true' &&
+      durText === '所要は5〜720分で入れてください',
+    `定期（${w}）：所要0は所要の欄に誤り（aria-invalid）`,
+    durText,
+  );
+  check((await focusedTestId()) === 'add-plan-duration', `定期（${w}）：誤った所要の欄へフォーカス`);
+  check((await data(page)).patterns.length === d0.patterns.length, `定期（${w}）：誤りのときは増えない`);
+  await box.getByTestId('add-plan-duration').fill('60');
   await box.getByTestId('add-plan-start').fill('13:15');
   await box.getByTestId('add-plan-repeat').selectOption('2');
   await page.getByTestId('add-plan-save').click();
@@ -968,6 +991,15 @@ async function addOneOff(page, w) {
   const client = await box.getByTestId('add-plan-client').locator('option').nth(1).getAttribute('value');
   await box.getByTestId('add-plan-client').selectOption(client);
   const date = await box.getByTestId('add-plan-date').inputValue();
+  await box.getByTestId('add-plan-duration').fill('0');
+  await page.getByTestId('add-plan-save').click();
+  await until(async () =>
+    page.evaluate(() => document.activeElement?.getAttribute('data-testid') === 'add-plan-duration'),
+  );
+  check(
+    (await box.locator('[role="alert"]').innerText()) === '所要は5〜720分で入れてください',
+    `単発（${w}）：所要の誤りの文は定期と同じ`,
+  );
   await box.getByTestId('add-plan-start').fill('14:20');
   await box.getByTestId('add-plan-duration').fill('90');
   await page.getByTestId('add-plan-save').click();

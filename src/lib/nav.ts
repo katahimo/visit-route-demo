@@ -345,7 +345,7 @@ function arrangeMenuItem(
  * メニューの4つ（エキスパート機能が切のとき。PRD D383。ADR-0073）：予定・〈利用者さん〉・〈スタッフ〉・設定（呼び名は terms）。
  * 見出し・子の項目・件数の印は無い（ホームは無く、要対応は予定の上の帯、空き状況は予定の「その他 ▾」）。
  * 今の画面の印：予定は月・週・日・比較・空き状況・担当を組む、〈利用者さん〉は一覧・予定と相性、〈スタッフ〉は一覧・勤務時間（シフト）・勤務の見込み、
- * 相性は最後に開いた側（どちらのタブから来たか。lib/peopleTabs。PRD D388）、
+ * 相性は最後に開いた側（どちらのタブから来たか。lib/peopleTabs。PRD D389）、
  * 設定は設定のタブ。切った機能の画面は出さない
  */
 function simpleMenuItems(terms: Pick<Terms, 'client' | 'staff'>, features: Features, last: LastViews): MenuItem[] {

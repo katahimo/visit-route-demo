@@ -1,4 +1,4 @@
-// 相性の画面で、〈利用者さん〉・〈スタッフ〉のどちらのタブから来たかの覚え（PRD D388。lib/peopleTabs）。
+// 相性の画面で、〈利用者さん〉・〈スタッフ〉のどちらのタブから来たかの覚え（PRD D389。lib/peopleTabs）。
 // 画面の状態なので保存しない。メニューの印（app/useAdminShell）とタブ（SettingsTabs の PeopleTabs）が同じ値を読むよう、モジュールに置く
 import { activeNavPath } from '../lib/nav';
 import { type PeopleSide, rememberedSide } from '../lib/peopleTabs';

@@ -52,7 +52,7 @@ export default function ClientsPage() {
   return (
     <div className="stack">
       <PageHeader
-        // 切は一覧・相性（〈スタッフ〉は勤務も）の小さいタブ（PRD D388）。入は基本情報のタブ
+        // 切は一覧・相性（〈スタッフ〉は勤務も）の小さいタブ（PRD D389）。入は基本情報のタブ
         nav={<BasicsNav />}
         icon={House}
         title={`${terms.client}一覧`}

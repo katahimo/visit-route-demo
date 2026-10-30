@@ -4,6 +4,8 @@ import {
   addPlanClients,
   addPlanDate,
   addPlanDone,
+  addPlanError,
+  addPlanFieldOf,
   addPlanKind,
   addPlanPatternForm,
   addPlanVisitDraft,
@@ -36,13 +38,13 @@ describe('addPlanClients・addPlanDate', () => {
 });
 
 describe('初めの欄', () => {
-  it('定期：開始日は今日・曜日は初めの日の曜日・10:00・60分・毎週・種類なし', () => {
+  it('定期：開始日は初めの日・曜日は初めの日の曜日・10:00・60分・毎週・種類なし', () => {
     // 2026-11-05 は木曜
     const f = addPlanPatternForm('2026-11-05', '2026-10-30');
     expect(f).toMatchObject({
       id: null,
       weekdays: [4],
-      from: '2026-10-30',
+      from: '2026-11-05',
       earliestStart: '10:00',
       durationMinutes: '60',
       everyWeeks: 1,
@@ -70,5 +72,32 @@ describe('toggleWeekday・addPlanDone', () => {
   it('知らせ：自動で組む依頼を出したときだけ書く', () => {
     expect(addPlanDone('月 10:00', true)).toBe('予定を入れました（月 10:00・担当を自動で組みます）');
     expect(addPlanDone('月 10:00', false)).toBe('予定を入れました（月 10:00）');
+  });
+});
+
+describe('addPlanError・addPlanFieldOf', () => {
+  const ok = { clientId: 'a', weekdays: [4], duration: 60 };
+  it('よければ null。定期の曜日なしは曜日の欄、単発は曜日を見ない', () => {
+    expect(addPlanError('recurring', ok, '利用者さん')).toBeNull();
+    expect(addPlanError('recurring', { ...ok, weekdays: [] }, '利用者さん')).toMatchObject({ field: 'weekdays' });
+    expect(addPlanError('oneOff', { ...ok, weekdays: [] }, 'お客様')).toBeNull();
+  });
+  it('〈利用者さん〉未選択は呼び名つき。所要の誤りの文は定期・単発で同じ', () => {
+    expect(addPlanError('oneOff', { ...ok, clientId: '' }, 'お客様')).toEqual({
+      text: 'お客様を選んでください',
+      field: 'client',
+    });
+    const a = addPlanError('recurring', { ...ok, duration: 0 }, 'x');
+    const b = addPlanError('oneOff', { ...ok, duration: Number.NaN }, 'x');
+    expect(a).toEqual(b);
+    expect(a?.field).toBe('duration');
+    expect(addPlanError('oneOff', { ...ok, duration: 721 }, 'x')?.field).toBe('duration');
+  });
+  it('今ある仕組みの文から欄を結ぶ', () => {
+    expect(addPlanFieldOf('開始（遅）は開始（早）以降にしてください')).toBe('start');
+    expect(addPlanFieldOf('時刻を正しく入れてください')).toBe('start');
+    expect(addPlanFieldOf('日付を入れてください')).toBe('date');
+    expect(addPlanFieldOf('今日より前の日にはできません')).toBe('date');
+    expect(addPlanFieldOf('入力を確かめてください')).toBeUndefined();
   });
 });
