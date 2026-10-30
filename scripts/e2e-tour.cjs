@@ -632,11 +632,11 @@ async function tourToday(b) {
     st,
   );
   // 初期データに今日の担当がある（PRD D225）ので、そのまま確定の手前まで見える
-  await page.getByTestId('plan-summary').waitFor({ timeout: 30000 });
-  // 初めて開く「基本」はエキスパート機能が切：確定の段階（まだ伝えていない・確定のボタン）は出さない（ADR-0073）
+  // 案内をもう一度見るは印「all」（すべて入＝エキスパート機能が入）で開くので、確定の段階（まだ伝えていない）が出る
+  await page.getByTestId('confirm-state').waitFor({ timeout: 30000 });
   check(
-    (await page.getByTestId('confirm-state').count()) === 0 && (await page.getByTestId('adopt').count()) === 0,
-    '「今日の予定を開く」：今日の担当が出ている（基本は確定の段階を出さない）',
+    /まだ伝えていない/.test(await page.getByTestId('confirm-state').innerText()),
+    '「今日の予定を開く」：今日の担当が出ている（まだ伝えていない）',
   );
   await ctx.close();
 }
