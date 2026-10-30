@@ -1,15 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  shouldAutoOpenTour,
-  TOUR_START_CHOICES,
-  TOUR_START_NOTE,
-  TOUR_START_QUESTION,
-  TOUR_TODAY_LABEL,
-  tourCountText,
-  tourMove,
-  tourNextLabel,
-  tourSteps,
-} from './tour';
+import { TOUR_TODAY_LABEL, tourCountText, tourMove, tourNextLabel, tourSteps } from './tour';
 
 const terms = { staff: 'スタッフ', client: '利用者さん' };
 
@@ -61,16 +51,6 @@ describe('tourSteps（PRD D277）', () => {
   });
 });
 
-describe('「どこまで使うか」の選択肢（PRD D276）', () => {
-  it('基本 → すべての2つ。名前と説明', () => {
-    expect(TOUR_START_CHOICES.map((c) => c.id)).toEqual(['basic', 'all']);
-    expect(TOUR_START_CHOICES.map((c) => c.label)).toEqual(['基本', 'すべて']);
-    for (const c of TOUR_START_CHOICES) expect(c.description).not.toBe('');
-    expect(TOUR_START_QUESTION).toBe('どこまで使いますか');
-    expect(TOUR_START_NOTE).toContain('管理者設定');
-  });
-});
-
 describe('tourMove', () => {
   it('次へ・戻る・とばす', () => {
     expect(tourMove(0, 5, 'next')).toBe(1);
@@ -92,22 +72,5 @@ describe('tourMove', () => {
     expect(tourNextLabel(2, 3)).toBe('閉じる');
     expect(TOUR_TODAY_LABEL).toBe('今日の予定を開く');
     expect(tourCountText(1, 3)).toBe('2 / 3');
-  });
-});
-
-describe('shouldAutoOpenTour', () => {
-  it('まだ見ていないときだけ', () => {
-    expect(shouldAutoOpenTour(false, '')).toBe(true);
-    expect(shouldAutoOpenTour(true, '')).toBe(false);
-    expect(shouldAutoOpenTour(false, '?ym=2026-10&layout=list')).toBe(true);
-  });
-  it('?id=・?do= のリンクで開いたときは開かない', () => {
-    expect(shouldAutoOpenTour(false, '?id=c1')).toBe(false);
-    expect(shouldAutoOpenTour(false, '?date=2026-10-21&do=absence')).toBe(false);
-    expect(shouldAutoOpenTour(false, '?do=batch')).toBe(false);
-    // 人の画面へのリンク（PRD D308）
-    expect(shouldAutoOpenTour(false, '', '/clients/c1')).toBe(false);
-    expect(shouldAutoOpenTour(false, '', '/clients')).toBe(true);
-    expect(shouldAutoOpenTour(true, '?id=c1')).toBe(false);
   });
 });

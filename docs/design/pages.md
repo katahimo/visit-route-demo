@@ -42,7 +42,8 @@
 | `#/types` | `pages/TypesPage.tsx` | 訪問の種類 | [pages-rules.md](pages-rules.md) |
 | `#/items` | `pages/ItemsPage.tsx` | 特性の項目 | [pages-rules.md](pages-rules.md) |
 | `#/data` | `pages/DataPage.tsx` | データ（控え・Excel・初期状態に戻す・案内をもう一度見る） | [pages-data.md](pages-data.md) |
-| `#/settings` | `pages/SettingsPage.tsx` | 管理者設定（機能の入り切り。だれでも開ける） | [pages-data.md](pages-data.md) |
+| `#/settings` | `pages/SettingsPage.tsx` | 管理者設定（機能の入り切り。だれでも開ける。いちばん下に「最初の設定をやり直す」） | [pages-data.md](pages-data.md) |
+| `#/start` | `pages/StartGuidePage.tsx` | 登録の案内（自分のデータで始めたあとの3段。`?step=`。PRD D381。ADR-0073） | [pages-common.md](pages-common.md) |
 | `*`（`#/` を含む） | （`Navigate`） | `/home` へ（replace） | — |
 
 ルートの URL は変えない（古いリンクを壊さない）。メニューは「予定」（`#/month`・`#/week`・`#/plan`）と「予定を組む」（`#/basics`・`#/standard`・`#/arrange`・`#/compare`・寄り道の `#/rules`。見出しの下の予定を組むの段で移る。ADR-0066・ADR-0067）と「設定」（`#/types`・`#/items`・`#/settings`・`#/data`。見出しの下の設定のタブで切り替える）にまとめ、〈利用者さん〉・〈スタッフ〉・相性 `#/compat`・勤務時間（シフト）は予定を組むの子「基本情報」のタブに置き（PRD D283・D362。ADR-0047・ADR-0067）、`#/workload` は勤務時間（シフト）・月の予定の中から開く（PRD D273・D275）。
@@ -232,7 +233,7 @@
 | ファイル | 役割 | 詳細 |
 |---|---|---|
 | `scheduleMode.ts` | 組む月（月の後半は来月）・担当なしの日の数・メニューの件数（PRD D349・D355） | [pages-common.md](pages-common.md) |
-| `nav.ts`・`commandPalette.ts`・`confirmDialog.ts`・`inertLock.ts`・`scrollLock.ts`・`panelFit.ts`・`personPopover.ts`・`glossary.ts`・`emptyGuide.ts`・`tour.ts`・`links.ts`・`features.ts`・`mailto.ts`・`mail.ts`・`mapsLink.ts`・`clipboard.ts` | 画面横断 | このファイル（nav・パレット・確認・ロック・features）・[pages-common.md](pages-common.md)（ほか） |
+| `nav.ts`・`commandPalette.ts`・`confirmDialog.ts`・`inertLock.ts`・`scrollLock.ts`・`panelFit.ts`・`personPopover.ts`・`glossary.ts`・`emptyGuide.ts`・`tour.ts`・`firstRun.ts`・`startGuide.ts`・`links.ts`・`features.ts`・`mailto.ts`・`mail.ts`・`mapsLink.ts`・`clipboard.ts` | 画面横断 | このファイル（nav・パレット・確認・ロック・features）・[pages-common.md](pages-common.md)（ほか） |
 | `dayModel.ts`・`dayStatuses.ts`・`home.ts`・`progressBand.ts` | 日のモデルの計算（`daySlotsOf`・`ownerMap`）・日の状態の覚え（`createDayStatusMemo`）・ホーム・帯 | [pages-home.md](pages-home.md)・[pages-plan.md](pages-plan.md) |
 | `absences.ts`・`sudden.ts`・`contacts.ts`・`dayPlan.ts`・`confirmDay.ts`・`scoreReason.ts`・`routeView.ts`・`timeline.ts`・`visitEdit.ts`・`dragStart.ts` | 日の予定 | [pages-plan.md](pages-plan.md)・[pages-plan-absence.md](pages-plan-absence.md) |
 | `month.ts`・`monthList.ts`・`monthGuide.ts`・`monthPrint.ts`・`requestedOff.ts` | 月 | [pages-month.md](pages-month.md) |
@@ -259,5 +260,5 @@
 - [ ] （ADR-0022）月・週・日の名前から詳細の吹き出しが開き、Esc・外を押す・もう一度押す・Tab で閉じてボタンへ戻る。同時に1つ、見出しが消えたら閉じる。リンクでその人の画面が開く。印刷では i を出さない（`lib/personPopover` のテスト・`scripts/e2e-details.cjs`・`scripts/e2e-details2.cjs`）
 - [ ] （PRD D220〜D222）390×844 で条件の重み・特性の項目・〈スタッフ〉一覧・〈利用者さん〉一覧・比較が横に巻かず、行がカードになる。条件の重みのスライダーと必須が画面の中。〈利用者さん〉一覧の絞り込みが「絞り込み（N）」に畳まれる。比較の主ボタンがタブに隠れない。週は今日の列が見え、空き状況の表は 9:00 から（`lib/scrollEdge`・`lib/weekView`・`lib/clientFilter` のテスト・`scripts/e2e-mobile.cjs`）
 - [ ] 右の欄の確定のボタンの帯：短い欄は帯が内容のすぐ下・区切りなし、長い欄は欄の下に貼り付き、内容が隠れている間だけ区切り。390px の並び・タブに隠れない・キーボード（`lib/panelFit` のテスト・`scripts/e2e-panel-foot.cjs`）
-- [ ] 用語の説明・空の画面・ツアー（`lib/glossary`・`lib/emptyGuide`・`lib/tour`・`src/store/tour.test.ts` のテスト・`scripts/e2e-words.cjs`・`scripts/e2e-tour.cjs`）
+- [ ] 用語の説明・空の画面・ツアー（`lib/glossary`・`lib/emptyGuide`・`lib/tour` のテスト・`scripts/e2e-words.cjs`・`scripts/e2e-tour.cjs`）
 - [ ] 行き先のリンク（`lib/links` のテスト・`scripts/e2e-links.cjs`）・機能の入り切り（`scripts/e2e-features.cjs`）

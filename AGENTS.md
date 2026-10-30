@@ -27,15 +27,15 @@
 ```
 src/
   contracts/   … 型と Worker メッセージ（境界の契約）
-  store/       … localStorage（データのほか、ツアー・メニューの開け閉め・組み直しの知らせの鍵の覚え）・JSON入出力・版の確かめ（データの持ち主。古い版は移さず初期データで始める。ADR-0053）
-  seed/        … デモの初期データ（PoC本体 scripts/seedDemo.ts から写す）
+  store/       … localStorage（データのほか、メニューの開け閉め・組み直しの知らせの鍵の覚え）・JSON入出力・版の確かめ・最初の2問の答えでデータを作り直す（データの持ち主。古い版は移さず初期データで始める。ADR-0053）
+  seed/        … デモの初期データ（PoC本体 scripts/seedDemo.ts から写す）・単発のデモ（oneOff）・空のデータ（blank。ADR-0073）
   domain/      … PoC本体 packages/shared 等から写した純粋関数（先頭に写した元のコミットを書く）
   matching/    … 項目・条件 → Problem（可否・費用表）と理由
   solver/      … 焼きなまし（solve 純粋関数 ＋ worker.ts）
   evaluate/    … 採点・説明・差分
   excel/       … DemoData と Excel のブックの変換（ADR-0006。データは書き換えない）
   patterns/    … 繰り返しの回を見るときに計算する純粋関数（visitsOn・visitsIn・putVisits。ADR-0012・ADR-0053）
-  lib/         … 画面から使う純粋関数（React・store・画面の部品を import しない。日の割当と確定 dayPlan・confirmDay、日のモデルの計算 dayModel・日ごとの状態の覚え dayStatuses、月・週の状態 month・week（週のデータを書く操作は weekOps）、組む月 scheduleMode、AI で組む monthBatch（担当を組む）、入れた分の自動の組み autoArrange（計算）・autoArrangeBatch（解く入れ物。ADR-0072）、組み方の標準 standard、訪問の札の見た目・選ぶ・落とし先の判定・キーの読み方 visitLook・visitSelect・visitDrop・visitKeys、訪問を直す visitOps・選んだ訪問をまとめて直す multiEdit、地図の点・線と選び方の遷移 routeView など）
+  lib/         … 画面から使う純粋関数（React・store・画面の部品を import しない。最初の2問の答え → 呼び名・ひな形・データ firstRun・登録の案内の3段 startGuide、日の割当と確定 dayPlan・confirmDay、日のモデルの計算 dayModel・日ごとの状態の覚え dayStatuses、月・週の状態 month・week（週のデータを書く操作は weekOps）、組む月 scheduleMode、AI で組む monthBatch（担当を組む）、入れた分の自動の組み autoArrange（計算）・autoArrangeBatch（解く入れ物。ADR-0072）、組み方の標準 standard、訪問の札の見た目・選ぶ・落とし先の判定・キーの読み方 visitLook・visitSelect・visitDrop・visitKeys、訪問を直す visitOps・選んだ訪問をまとめて直す multiEdit、地図の点・線と選び方の遷移 routeView など）
   components/  … 画面の部品と React のフック（use*。日のモデル useDayModel・日の状態 useDayStatuses・機能の入り切り useFeature・useMedia・useScrollEdge・地図の選択 useRouteSelection・入れ物を読む valueStore・自動の組みの知らせと帯 autoArrangeHost・編集中の印 dirtyForms・別のチャンクの部品 lazyComponent・選んでいる日付 day など）
   pages/       … 画面（components と lib を組み合わせる）
   app/         … 殻（App・ErrorBoundary・ルートと分けた画面 lazyPages）

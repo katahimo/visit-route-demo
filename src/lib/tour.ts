@@ -1,9 +1,9 @@
-// 初回の案内ツアー（PRD D192・D193・D226・D276・D277。ADR-0025・ADR-0045）の純粋な部分：案内の中身（3枚。最後の枚は
-// 「今日の予定を開く」）、1枚目で聞く「どこまで使うか」の選択肢、「次へ」「戻る」「とばす」の行き先、自動で開くか。
-// 画面は components/Tour.tsx、見たかの保存は store/tour.ts
+// 案内ツアー（PRD D192・D193・D226・D277。ADR-0025・ADR-0045）の純粋な部分：案内の中身（3枚。最後の枚は
+// 「今日の予定を開く」）、「次へ」「戻る」「とばす」の行き先。初めて開いたときの「どこまで使うか」（D276）は最初の2問（lib/firstRun。
+// PRD D379）に置き換え、ツアーは自動で開かない（データの画面の「案内をもう一度見る」だけ）。画面は components/Tour.tsx
 import type { Terms } from '../contracts/documents';
 import type { FeatureId, Features } from '../contracts/features';
-import { isOn, type TemplateId } from './features';
+import { isOn } from './features';
 
 /** 案内の1枚 */
 export type TourStep = {
@@ -59,27 +59,6 @@ export function tourSteps(terms: Pick<Terms, 'client' | 'staff'>, features: Feat
   return all.filter((s) => !s.feature || isOn(features, s.feature));
 }
 
-/** 1枚目で聞く「どこまで使うか」の選択肢（PRD D276。ひな形の ID と、画面に出す名前・1行の説明） */
-export type TourStartChoice = { id: Extract<TemplateId, 'basic' | 'all'>; label: string; description: string };
-export const TOUR_START_CHOICES: readonly TourStartChoice[] = [
-  {
-    id: 'basic',
-    label: '基本',
-    description: '予定・欠勤・キャンセル・空き状況・相性など、まず使う機能だけ（おすすめ）',
-  },
-  {
-    id: 'all',
-    label: 'すべて',
-    description:
-      '組み方の標準・条件の重み・提案を比べる（エキスパート機能）・勤務の見込み・Excel なども含めた、すべての機能',
-  },
-];
-/** 選択肢の見出し */
-export const TOUR_START_QUESTION = 'どこまで使いますか';
-/** 選択肢の下の注記 */
-export const TOUR_START_NOTE =
-  '「次へ」で決まります。あとから「設定」の「管理者設定」で、機能を1つずつ入り切りできます。';
-
 /** 押したボタン（Esc は skip と同じ） */
 export type TourMove = 'next' | 'back' | 'skip';
 
@@ -102,16 +81,3 @@ export const TOUR_TODAY_LABEL = '今日の予定を開く';
 
 /** 何枚目か（「2 / 3」） */
 export const tourCountText = (index: number, count: number): string => `${index + 1} / ${count}`;
-
-/**
- * 起動したときに自動で開くか：まだ見ていない（とばしていない）ときだけ。
- * URL に `?id=`（人の画面へ移る）か `?do=`（操作の欄）があるリンク、人の画面のリンクで開いたときは開かない（裏で右の欄が開きフォーカスが移るため。
- * 見たことにはしないので、次にふつうに開いたときに出る）。search は HashRouter の location.search
- */
-export function shouldAutoOpenTour(seen: boolean, search: string, pathname = '/'): boolean {
-  if (seen) return false;
-  // 〈利用者さん〉・〈スタッフ〉の画面（`/clients/:id`。PRD D308）へのリンクで開いたときも出さない（`?id=` と同じ）
-  if (/^\/(clients|staff)\/[^/]+$/.test(pathname)) return false;
-  const q = new URLSearchParams(search);
-  return !q.has('id') && !q.has('do');
-}

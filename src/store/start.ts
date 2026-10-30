@@ -1,26 +1,52 @@
-// 初めて開いたとき（保存データが無い）の機能の入り切り（PRD D276。ADR-0045）。
-// 既定は「基本」のひな形。DemoData とは別のキーに「すべて」と書いてあれば、すべて入（{}）で始める
+// 初めて開いたとき（保存データが無い）に最初の2問を出さず、今までの初期データ＋すべて入で始める印（PRD D379。ADR-0045・ADR-0073）。
+// DemoData とは別のキーに「all」と書いてあれば、2問を出さず、すべて入（{}）の今の初期データで始める
 // （e2e の共通の部品 scripts/lib/startFeatures.cjs と、全機能を見せたいデモの前準備のため。値は印だけで個人の情報は持たない）。
-// localStorage を触るのは store の中だけ（AGENTS.md）。読めなければ既定（基本）
-import type { Features } from '../contracts/features';
-import { applyTemplate } from '../lib/features';
+// localStorage を触るのは store の中だけ（AGENTS.md）。読めなければ印なし（2問を出す）
+
+import type { FirstRunBooking } from '../lib/firstRun';
 
 /** localStorage のキー（DemoData の STORAGE_KEY とは別。データの版・書き出し・初期状態に戻すに入れない） */
 export const FEATURES_START_KEY = 'vrdemo:features:start';
-/** 「すべて入で始める」の印 */
+/** 「2問を出さず、すべて入で始める」の印 */
 export const FEATURES_START_ALL = 'all';
 
 type KeyStore = Pick<Storage, 'getItem'>;
 
-/**
- * 初めて開いたときの入り切り：キーが「all」ならすべて入（{}。今までの初期データと同じ）、ほかは基本のひな形
- * （22の ID を明示して書く。あとから入れた機能は管理者設定で入れる）
- */
-export function startFeatures(getStorage: () => KeyStore | null = () => globalThis.localStorage ?? null): Features {
+/** 印「all」があるか（あれば初めて開いたときに2問を出さず、今の初期データ＋すべて入で始める） */
+export function startsWithAll(getStorage: () => KeyStore | null = () => globalThis.localStorage ?? null): boolean {
   try {
-    if (getStorage()?.getItem(FEATURES_START_KEY) === FEATURES_START_ALL) return {};
+    return getStorage()?.getItem(FEATURES_START_KEY) === FEATURES_START_ALL;
   } catch {
-    // 読めなければ既定
+    return false;
   }
-  return applyTemplate('basic');
+}
+
+/** 最後の問2の答え（単発／定期）の印のキー（DemoData とは別。初期状態に戻すが「デモ×その答え」で作り直すための印。個人の情報は持たない） */
+export const LAST_BOOKING_KEY = 'vrdemo:booking:last';
+
+type BookingStore = Pick<Storage, 'getItem' | 'setItem'>;
+const BOOKINGS = ['oneOff', 'regular'] as const;
+
+/** 最後の問2の答えを残す（書けなくても続ける） */
+export function rememberBooking(
+  booking: FirstRunBooking,
+  getStorage: () => BookingStore | null = () => globalThis.localStorage ?? null,
+): void {
+  try {
+    getStorage()?.setItem(LAST_BOOKING_KEY, booking);
+  } catch {
+    // 書けなくても続ける（印が無ければ定期）
+  }
+}
+
+/** 最後の問2の答え。印が無い・読めない・知らない値なら null（呼ぶ側は定期として扱う） */
+export function lastBooking(
+  getStorage: () => KeyStore | null = () => globalThis.localStorage ?? null,
+): FirstRunBooking | null {
+  try {
+    const v = getStorage()?.getItem(LAST_BOOKING_KEY);
+    return BOOKINGS.find((b) => b === v) ?? null;
+  } catch {
+    return null;
+  }
 }

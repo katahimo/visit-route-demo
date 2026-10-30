@@ -8,6 +8,8 @@ import {
   canKeepPrevious,
   currentData,
   exportJson,
+  FEATURES_START_ALL,
+  FEATURES_START_KEY,
   flushSave,
   importJson,
   isImportError,
@@ -26,8 +28,10 @@ import {
   reset,
   samePreviousInfo,
   save,
+  startWithAnswer,
   swapPrevious,
 } from './index';
+import { LAST_BOOKING_KEY } from './start';
 
 /** 環境は node なので localStorage の簡単なモック */
 function mockStorage() {
@@ -107,7 +111,10 @@ describe('版1のデータ（ADR-0053。移行しない）', () => {
 });
 
 describe('load・save', () => {
-  it('無ければ初期データを作って保存する', () => {
+  it('無ければ（印「all」があるとき）初期データを作って保存する。印が無ければ2問に答えるまで書かない（PRD D379）', () => {
+    expect(loadWithStatus().firstRun).toBe(true);
+    expect(mem.has(STORAGE_KEY)).toBe(false);
+    mem.set(FEATURES_START_KEY, FEATURES_START_ALL);
     const d = load();
     expect(d.version).toBe(DATA_VERSION);
     expect(mem.has(STORAGE_KEY)).toBe(true);
@@ -215,6 +222,31 @@ describe('load・save', () => {
     const d = reset();
     expect(d.seed).toBe(1);
     expect((JSON.parse(mem.get(STORAGE_KEY) ?? '{}') as DemoData).seed).toBe(1);
+  });
+});
+
+describe('初期状態に戻す（最後の問2の答え。PRD D216）', () => {
+  it('印が無ければ今までどおり（定期の初期データ）', () => {
+    const d = reset();
+    expect(d.org.terms?.client).toBe('利用者さん');
+  });
+
+  it('単発で始めたあとは、単発のデモデータ（呼び名・ひな形）で作り直す。入り切りは今のまま', () => {
+    startWithAnswer({ start: 'own', booking: 'oneOff' });
+    expect(mem.get(LAST_BOOKING_KEY)).toBe('oneOff');
+    const d = reset();
+    expect(d.org.terms?.client).toBe('お客様');
+    expect(d.org.features).toEqual(currentData()?.org.features);
+    expect((JSON.parse(mem.get(STORAGE_KEY) ?? '{}') as DemoData).org.terms?.client).toBe('お客様');
+  });
+
+  it('定期で始めたあとは定期。印「all」のときは今までどおり', () => {
+    startWithAnswer({ start: 'demo', booking: 'oneOff' });
+    startWithAnswer({ start: 'demo', booking: 'regular' });
+    expect(reset().org.terms?.client).toBe('利用者さん');
+    startWithAnswer({ start: 'demo', booking: 'oneOff' });
+    mem.set(FEATURES_START_KEY, FEATURES_START_ALL);
+    expect(reset().org.terms?.client).toBe('利用者さん');
   });
 });
 
