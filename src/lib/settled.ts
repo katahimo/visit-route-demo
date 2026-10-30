@@ -38,14 +38,18 @@ function savedByDate(visits: readonly Visit[], today: string): Map<string, Visit
   return out;
 }
 
-/** 同じ保存した訪問の並びか（順は問わない。参照が同じなら速く、違えば中身で比べる） */
-function sameVisits(a: readonly Visit[], b: readonly Visit[]): boolean {
-  if (a.length !== b.length) return false;
-  const byId = new Map(a.map((v) => [v.id, v]));
-  return b.every((v) => {
-    const x = byId.get(v.id);
-    return x !== undefined && (x === v || JSON.stringify(x) === JSON.stringify(v));
+/** 同じ中身の訪問か（参照が同じなら速く、違えば中身で比べる） */
+const sameVisit = (a: Visit, b: Visit): boolean => a === b || JSON.stringify(a) === JSON.stringify(b);
+
+/** before から after で変わった訪問（増えた・中身が変わった。after 側）と、消えた訪問があるか */
+function diffVisits(before: readonly Visit[], after: readonly Visit[]): { changed: Visit[]; removed: boolean } {
+  const was = new Map(before.map((v) => [v.id, v]));
+  const changed = after.filter((v) => {
+    const x = was.get(v.id);
+    return x === undefined || !sameVisit(x, v);
   });
+  const now = new Set(after.map((v) => v.id));
+  return { changed, removed: before.some((v) => !now.has(v.id)) };
 }
 
 /**
@@ -54,7 +58,7 @@ function sameVisits(a: readonly Visit[], b: readonly Visit[]): boolean {
  * その日の問題で tellDay する（at は記録の時刻）。
  * - 拾う：data.visits を変える操作すべて（入れた分の自動の組み・AI の提案の反映・手の直し・まとめて直す（multiEdit）・ドラッグ・
  *   取り消し・欠勤の振り直し・空き時間に入れる・訪問の追加など）。自動の組みも担当・開始を visits に書くだけなので同じ規則で拾える
- * - 拾わない：担当なし・ピンなしの訪問（自動の組みの対象）が残る日（組んだあとの update で拾う）、今日より前の日・範囲の外の日、すでに伝えた記録がある日（書き換えない。その後の変更は未連絡の変更＝「変更あり」になる）、
+ * - 拾わない：今回入れた・変えた訪問に担当なし・ピンなしのもの（自動の組みの対象）が残る日（組んだあとの update で拾う。前からある担当なしの訪問は待たない）、今日より前の日・範囲の外の日、すでに伝えた記録がある日（書き換えない。その後の変更は未連絡の変更＝「変更あり」になる）、
  *   expert 入のとき（今の確定の操作のまま）、訪問が変わらない操作（〈スタッフ〉の勤務・繰り返しパターン・〈利用者さん〉の休みなど
  *   visits の外のデータだけを変える操作。繰り返しの回は上書きするまで保存した訪問にならない）、
  *   計算に入れる訪問が無い日（全部取り消し・休みの日。伝える中身が無い）
@@ -66,10 +70,13 @@ export function autoTell(before: DemoData, after: DemoData, today: string, at: n
   const dates = [...new Set([...was.keys(), ...now.keys()])].sort();
   let out = after;
   for (const date of dates) {
-    if (own(after.snapshots, date) || sameVisits(was.get(date) ?? [], now.get(date) ?? [])) continue;
-    // 組む対象（担当なし・ピンなしの訪問）が残る日は、まだ決まっていない（自動の組みが担当を付けるまで待つ。
-    // 先に伝えた記録を付けると、自動の組みは伝えた日を飛ばして組めなくなる）
-    if (activeDayVisits(after, date).some((v) => isFree(after, v, today))) continue;
+    if (own(after.snapshots, date)) continue;
+    const { changed, removed } = diffVisits(was.get(date) ?? [], now.get(date) ?? []);
+    if (changed.length === 0 && !removed) continue;
+    // 今回入れた・変えた訪問に、組む対象（担当なし・ピンなし）が残る日は、まだ決まっていない（自動の組みが担当を付けるまで待つ。
+    // 先に伝えた記録を付けると、自動の組みは伝えた日を飛ばして組めなくなる）。前からある担当なしの訪問は待たない
+    const active = new Set(activeDayVisits(after, date).map((v) => v.id));
+    if (changed.some((v) => active.has(v.id) && isFree(after, v, today))) continue;
     const problem = dayProblemOf(after, date);
     if (problem && problem.visits.length > 0) out = tellDay(out, date, problem, at);
   }

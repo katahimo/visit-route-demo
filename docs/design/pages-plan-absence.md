@@ -26,6 +26,7 @@
 - 段階の表示は `ol.sudden-steps`（aria-label「段階」。今の段階に `aria-current="step"`）。段階の見出し（`h3`・`data-return-focus`）へ `focusKey` でフォーカス
 - 戻る（`sudden-back`）・閉じる（`sudden-close`）。Esc で閉じると入口へフォーカス。閉じる `onClose(toBar)`：閉じたあと、振り直していれば差の欄へ（`returnFocus` と `goToBar`）。5段目からは差の欄へ移らない
 - 振り直し・欠勤だけ登録・欠勤の取り消し・取り消し・確定・元に戻すは日の予定の関数を受けて呼ぶだけ。4段目の振り直しの結果（まとめ `ReassignSummary`・担当が移る訪問 `ReassignMoves`・`AnnealBox`）は日の予定が `result` で、5段目の連絡の一覧は `contacts`（`ContactRow[]`。差を出せなければ null）で、〈スタッフ〉あてのメールは `contactMail`（メールを切っていれば渡さない）で渡す
+- エキスパート機能（`expert`）が切のとき（ADR-0073・PRD D382）は確定の段階を出さない：5段目の「連絡したので確定」「あとで確定する」と確定の状態の文は出さず（`confirmNote` の `confirmStep`。変更ありのときだけ「連絡の一覧で『連絡した』を押す」案内）、帯は「終わる」だけ。振り直しは store の `update` が自動で伝えた記録を付ける／伝えた日なら「変更あり」になる
 - 確定のボタンは欄の下の帯（`footer`）。600px 以下は幅いっぱい、4段目の表は欄の中で横に巻く
 - `plan.css`：`.plan-sudden-btn`（入口）・`.sudden-steps`（段階の表示）・`.sudden-choice`（1段目の選択肢）・`.sudden-option`（3段目の案）・`.sudden-contacts`・`.sudden-contact`（5段目の1人1枚）
 

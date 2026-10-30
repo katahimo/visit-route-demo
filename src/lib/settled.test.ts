@@ -109,7 +109,7 @@ describe('autoTell', () => {
     const cancelled = { ...before, visits: [{ ...before.visits[0]!, cancelled: true }] };
     expect(autoTell(before, cancelled, TODAY, AT).snapshots).toEqual({});
   });
-  it('担当なし・ピンなしの訪問が残る日は付けない（自動の組みが担当を付けたあとの update で付く）', () => {
+  it('今回入れた・変えた訪問が担当なし・ピンなしの日は付けない（自動の組みが担当を付けたあとの update で付く）。前からの担当なしは待たない', () => {
     const before = base({ visits: [fixed('a', '09:00', { staffId: 's1' })] });
     const added = { ...before, visits: [...before.visits, fixed('b', '11:00')] };
     expect(autoTell(before, added, TODAY, AT).snapshots).toEqual({});
@@ -118,6 +118,12 @@ describe('autoTell', () => {
       visits: putVisits(added.visits, [{ ...added.visits[1]!, staffId: 's2', start: '11:00' }]),
     };
     expect(autoTell(added, arranged, TODAY, AT).snapshots[DATE]!.visits.map((x) => x.staffId)).toEqual(['s1', 's2']);
+    // 前からある担当なしの訪問（b）は待たず、別の訪問（a）を手で直せば付く
+    const edited = {
+      ...added,
+      visits: putVisits(added.visits, [{ ...added.visits[0]!, staffId: 's2', start: '09:00' }]),
+    };
+    expect(autoTell(added, edited, TODAY, AT).snapshots[DATE]!.visits.map((x) => x.staffId)).toEqual(['s2', null]);
   });
   it('まとめて直す（multiEdit）の結果も拾う', () => {
     const before = base();
