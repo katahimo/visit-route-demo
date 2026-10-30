@@ -9,6 +9,7 @@ import { slotsText } from '../domain/availability';
 import { NONE } from '../domain/scheduleModel';
 import { absenceText } from '../lib/absences';
 import { own } from '../lib/common';
+import { showLegs, showUnplacedReasons } from '../lib/exceptionView';
 import { unplacedReasons } from '../lib/planView';
 import { hardReasonLabels, notAllowedText } from '../lib/reassignMenu';
 import { homeLegKey, homeTravel } from '../lib/routeView';
@@ -22,7 +23,8 @@ import type { PlanCtx } from './usePlanPage';
 
 /** 列の最後の「自宅まで N分」（押すと地図でその区間を強調。もう一度押すと外す。自宅の位置が無い人は出さない） */
 export function homeLeg(p: PlanCtx, sid: string) {
-  const { problem, routes, staffById, sel } = bv(p);
+  const { problem, routes, staffById, sel, only } = bv(p);
+  if (!showLegs(only)) return null;
   const t = homeTravel(problem, staffById.get(sid), routes);
   if (t === null) return null;
   const x = { id: homeLegKey(sid), set: PLAN_SET };
@@ -173,6 +175,7 @@ export function noneCol(p: PlanCtx) {
     reassignMarks,
     placeCandidate,
     date,
+    only,
   } = bv(p);
   return (
     <div
@@ -214,7 +217,7 @@ export function noneCol(p: PlanCtx) {
               {client && <PersonInfo kind="client" id={client.id} name={client.displayName} testId="unplaced-info" />}
               {/* 理由の札は符号の無い言葉（PRD D229。内部の値は title にだけ）。
                 担当なしの理由の一覧なので、（担当にできない）は付けない（札の名前が理由そのもの。title に残る） */}
-              {reasons.map((r) => {
+              {(showUnplacedReasons(only) ? reasons : []).map((r) => {
                 const f = reasonFace(r);
                 return (
                   <span
@@ -249,7 +252,8 @@ export function noneCol(p: PlanCtx) {
 
 /** 時間軸の列（PRD D58） */
 export function timelineCol(p: PlanCtx, sid: string): TimelineColumn {
-  const { problem, routes, owner, explained, staffById, slotsOf, colorOfStaff, dragging, dropTo, dropProps } = bv(p);
+  const { problem, routes, owner, explained, staffById, slotsOf, colorOfStaff, dragging, dropTo, dropProps, only } =
+    bv(p);
   const ids = own(routes, sid) ?? [];
   const avail = slotsOf.get(sid);
   const stops = ids.flatMap((id) => {
@@ -269,7 +273,10 @@ export function timelineCol(p: PlanCtx, sid: string): TimelineColumn {
     baseSlots: spansOf(avail?.baseSlots ?? []),
     slots: spansOf(avail?.slots ?? []),
     bands: ids.map((id) => bandOf(p, id, sid)),
-    legs: stops.length === ids.length ? legsOf(stops, homeTravel(problem, staffById.get(sid), routes)) : [],
+    legs:
+      showLegs(only) && stops.length === ids.length
+        ? legsOf(stops, homeTravel(problem, staffById.get(sid), routes))
+        : [],
     shadow,
     emptyText: 'ここへドラッグすると移せます',
   };

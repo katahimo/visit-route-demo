@@ -5,6 +5,7 @@ import { type ReactNode, useEffect, useMemo } from 'react';
 import { hashPathname, isMacPlatform } from '../lib/commandPalette';
 import { appHistory, historyKey, historyKeysOn, isTextTarget } from '../lib/history';
 import { useDemoData } from '../store';
+import type { MenuItem } from './MenuButton';
 import { type ToastAction, useToast } from './Toast';
 import { WithIcon } from './ui';
 import { useValueStore } from './valueStore';
@@ -109,4 +110,39 @@ export function UndoButtons({ redoShown = true }: { redoShown?: boolean }) {
       )}
     </>
   );
+}
+
+/**
+ * 「元に戻す」「やり直す」を「その他 ▾」の項目で（エキスパート機能が切のとき。操作の行のボタンを2つまでにするため。PRD D384）。
+ * 戻せない間は押せない項目（理由は title）。やり直すは戻した手があるときだけ。キー（Ctrl+Z）とトーストの「元に戻す」は今のまま
+ */
+export function useHistoryMenuItems(): MenuItem[] {
+  const h = useValueStore(appHistory.state);
+  const { undo, redo } = useHistoryOps();
+  return [
+    {
+      key: 'undo',
+      group: '操作',
+      label: '元に戻す',
+      icon: Undo2,
+      note: UNDO_KEY,
+      disabled: h.undo === null ? '戻せる操作がありません' : false,
+      description: h.undo === null ? undefined : `「${h.undo}」を戻します`,
+      onSelect: undo,
+      testId: 'more-undo',
+    },
+    ...(h.redo === null
+      ? []
+      : [
+          {
+            key: 'redo',
+            label: 'やり直す',
+            icon: Redo2,
+            note: REDO_KEY,
+            description: `「${h.redo}」をやり直します`,
+            onSelect: redo,
+            testId: 'more-redo',
+          },
+        ]),
+  ];
 }

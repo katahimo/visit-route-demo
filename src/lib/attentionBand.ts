@@ -2,7 +2,7 @@
 // 日ごとの状態（lib/month の DayStatus。月の画面のマス・要対応と同じ数え方）から、目立たせる訪問だけを数える純粋関数。データは書き換えない
 import { addDays } from '../domain/time';
 import { autoRange } from './autoArrange';
-import type { IssueKind } from './dayPlan';
+import type { IssueKind, VisitIssue } from './dayPlan';
 import type { DayStatus } from './month';
 
 /** 帯に数える種類：担当なし・重なり（時間が前の訪問と重なる・間に合わない）・休みの人（休みの人に割り当てた訪問） */
@@ -25,6 +25,23 @@ const BAND_OF: Record<IssueKind, BandKind | null> = {
   late: 'overlap',
   notAllowed: null,
 };
+
+/** 帯に数える種類の検査か（担当なし・重なり・休みの人。条件に合わないは数えない）。訪問の札の目立たせ方（lib/visitLook の exceptionsOnly）も同じ分け方 */
+export const isBandIssue = (kind: IssueKind): boolean => BAND_OF[kind] !== null;
+
+/**
+ * 例外だけ見せる（エキスパート機能が切。PRD D384）ときの日の状態：要対応の検査を帯と同じ分け方（担当なし・重なり・休みの人。条件に合わないは除く）に絞り、
+ * 要対応の訪問の件数（care）・赤（needsCare）を数え直し、拘束超は見せない（overSpan を空に）。月のマス・右の欄・進み具合・帯の数がそろう。
+ * 元の状態は書き換えない
+ */
+export function exceptionStatus(s: DayStatus): DayStatus {
+  const issues = new Map<string, VisitIssue[]>();
+  for (const [id, list] of s.issues) {
+    const kept = list.filter((x) => isBandIssue(x.kind));
+    if (kept.length > 0) issues.set(id, kept);
+  }
+  return { ...s, issues, care: issues.size, needsCare: issues.size > 0, overSpan: [] };
+}
 
 /** 帯が見る日：今日から翌月末まで（自動の組みの範囲 autoRange と同じ。「その他 ▾」の「担当なしの訪問を組む」と件数の範囲をそろえる） */
 export function bandDays(today: string): string[] {

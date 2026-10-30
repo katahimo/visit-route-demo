@@ -13,7 +13,13 @@ import { useDemoData } from '../store';
 import type { MenuItem } from './MenuButton';
 import { useValueStore } from './valueStore';
 
-export function useSimpleMoreItems(): MenuItem[] {
+/** 予定の操作の行へ足すもの：「その他 ▾」の項目と、担当なしの訪問を組む（主ボタンにするときの件数・走っているか・走らせる） */
+export type SimpleMore = {
+  items: MenuItem[];
+  arrange: { count: number; running: boolean; run: () => void };
+};
+
+export function useSimpleMore(): SimpleMore {
   const { data } = useDemoData();
   const navigate = useNavigate();
   const running = useValueStore(autoArrange.run) !== null;
@@ -26,6 +32,9 @@ export function useSimpleMoreItems(): MenuItem[] {
     [simple, data, today],
   );
   const kinds = simpleMoreKinds(features, unassigned);
+  const run = () => {
+    if (!running) requestUnassignedArrange(data, today);
+  };
   const byKind: Record<SimpleMoreKind, MenuItem> = {
     'auto-arrange': {
       key: 'auto-arrange',
@@ -34,9 +43,7 @@ export function useSimpleMoreItems(): MenuItem[] {
       icon: Sparkles,
       description: '今日から来月末までの担当なしの訪問を、いまの条件で組みます',
       disabled: running ? '組んでいます' : false,
-      onSelect: () => {
-        if (!running) requestUnassignedArrange(data, today);
-      },
+      onSelect: run,
       testId: 'more-auto-arrange',
     },
     vacancy: {
@@ -48,5 +55,8 @@ export function useSimpleMoreItems(): MenuItem[] {
     },
   };
   // 足す項目は「予定まわり」のまとまりにする（スマホの日の予定の「そのほか」の見出しの中に入れない）
-  return kinds.map((k, i) => (i === 0 ? { ...byKind[k], group: '予定まわり' } : byKind[k]));
+  return {
+    items: kinds.map((k, i) => (i === 0 ? { ...byKind[k], group: '予定まわり' } : byKind[k])),
+    arrange: { count: unassigned, running, run },
+  };
 }

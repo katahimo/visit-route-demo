@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Problem } from '../contracts/problem';
 import type { ContactList, ContactVisit } from '../contracts/reassign';
 import { ALLOWED_STAFF_RULE_ID, VISIT_TYPE_RULE_ID } from '../matching';
-import { dayLooks, type LookFacts, PIN_TITLE, toldTexts, visitLook } from './visitLook';
+import { bandTone, cardTone, dayLooks, type LookFacts, PIN_TITLE, toldTexts, visitLook } from './visitLook';
 
 /** 何も印のない訪問の元（テストごとに足す） */
 const base = (over: Partial<LookFacts> = {}): LookFacts => ({
@@ -205,7 +205,7 @@ const opts = (o: Partial<Parameters<typeof dayLooks>[2]> = {}) => ({
 
 describe('その日の訪問の見た目 dayLooks', () => {
   const src = {
-    issues: new Map([['v1', [{ label: '時間が合わない' }]]]),
+    issues: new Map([['v1', [{ kind: 'late' as const, label: '時間が合わない' }]]]),
     told: list({ staffChanged: [cv({ visitId: 'v1', fromStaffId: 'a', toStaffId: 's1' })] }),
     problem: problemWith(VISIT_TYPE_RULE_ID),
   };
@@ -214,6 +214,22 @@ describe('その日の訪問の見た目 dayLooks', () => {
     expect(m.get('v1')!.kinds).toBe('unfit told');
     expect(m.get('v1')!.marks[1]!.title).toBe('未連絡の変更：担当 名a→名s1');
     expect(m.get('v2')).toEqual({ marks: [], tone: null, text: '', kinds: '' });
+  });
+  it('例外だけ（exceptionsOnly）：資格✗・ピン・仮押さえは出さず、担当なし・重なり・休みの人と「変更あり」だけ。条件に合わないは目立たせない', () => {
+    const pinned = { ...visit('v1'), pinned: true };
+    const m = dayLooks(src, [pinned], opts({ exceptionsOnly: true, tentativeOf: () => true }));
+    expect(m.get('v1')!.kinds).toBe('issue told');
+    expect(m.get('v1')!.tone).toBe('issue');
+    const notAllowed = new Map([['v1', [{ kind: 'notAllowed' as const, label: '条件に合わない' }]]]);
+    const q = dayLooks({ ...src, issues: notAllowed, told: null }, [pinned], opts({ exceptionsOnly: true }));
+    expect(q.get('v1')).toEqual({ marks: [], tone: null, text: '', kinds: '' });
+    const none = new Map([['v1', [{ kind: 'unassigned' as const, label: '担当なし' }]]]);
+    const u = dayLooks(
+      { ...src, issues: none, told: null },
+      [visit('v1', { staffId: null })],
+      opts({ exceptionsOnly: true }),
+    );
+    expect(u.get('v1')!.tone).toBe('unassigned');
   });
   it('限✗も引く', () => {
     const m = dayLooks({ ...src, problem: problemWith(ALLOWED_STAFF_RULE_ID) }, [visit('v1')], opts());
@@ -284,5 +300,26 @@ describe('決まった予定の「変更あり」の印（expert 切。ADR-0073�
   it('日付が無い元は押せない印（「変更あり」の文にはしない）', () => {
     const m = visitLook(base({ told: 'x', confirmStep: false })).marks[0]!;
     expect(m.short).toBe('未');
+  });
+});
+
+describe('札の色 cardTone・bandTone', () => {
+  const look = (tone: 'issue' | 'unassigned' | 'off' | null) => ({ marks: [], tone, text: '', kinds: '' });
+  it('順番のカード：入は必須の違反が赤・ピンが pinned。切は担当なし・要対応だけ赤で、違反・ピンは色にしない', () => {
+    expect(cardTone({ only: false, look: look(null), hard: true, pinned: true })).toBe('red');
+    expect(cardTone({ only: false, look: look(null), hard: false, pinned: true })).toBe('pinned');
+    expect(cardTone({ only: false, look: look('unassigned'), hard: false, pinned: false })).toBeNull();
+    expect(cardTone({ only: true, look: look('unassigned'), hard: false, pinned: false })).toBe('red');
+    expect(cardTone({ only: true, look: look('issue'), hard: false, pinned: false })).toBe('red');
+    expect(cardTone({ only: true, look: look(null), hard: true, pinned: true })).toBeNull();
+    expect(cardTone({ only: true, look: look('off'), hard: false, pinned: false })).toBeNull();
+    expect(cardTone({ only: true, look: undefined, hard: false, pinned: false })).toBeNull();
+  });
+  it('時間軸の帯：入は要対応か今日以降の違反が赤・ピンが pinned。切は要対応だけ赤', () => {
+    expect(bandTone({ only: false, look: look('issue'), hard: false, pinned: false, upcoming: false })).toBe('red');
+    expect(bandTone({ only: false, look: look(null), hard: true, pinned: false, upcoming: true })).toBe('red');
+    expect(bandTone({ only: false, look: look(null), hard: true, pinned: true, upcoming: false })).toBe('pinned');
+    expect(bandTone({ only: true, look: look('issue'), hard: false, pinned: true, upcoming: true })).toBe('red');
+    expect(bandTone({ only: true, look: look(null), hard: true, pinned: true, upcoming: true })).toBeNull();
   });
 });

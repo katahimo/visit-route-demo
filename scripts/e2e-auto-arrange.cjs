@@ -71,7 +71,7 @@ async function open() {
 
 /** 1 単発の訪問を足す → 組まれる → 元に戻す */
 async function single(page) {
-  await fresh(page, `/plan?date=${TODAY}`, '[data-testid="plan-summary"]');
+  await fresh(page, `/plan?date=${TODAY}`, '[data-testid="sched-nav"]');
   const d0 = await data(page);
   check(d0.org.features.expert === false, '前提：初めて開くとエキスパート機能は切', d0.org.features);
   const n0 = d0.visits.length;
@@ -106,17 +106,15 @@ async function moreArrange(page) {
   await page.goto(`${BASE}#/month`);
   await page.getByTestId('sched-nav').waitFor({ timeout: 60000 });
   await settle(page, 500);
-  const item = page.getByTestId('more-auto-arrange');
-  // 「その他 ▾」を開いて、項目の「N件」を読む（閉じる）
+  // 月は主ボタンが「担当なしの訪問を組む N件」（PRD D384）。0件ならボタンが消える
+  const item = page.getByTestId('toolbar-arrange');
   const countOf = async () => {
-    await page.getByTestId('month-more').click();
     await item.waitFor({ timeout: 30000 });
-    const n = Number(/(\d+)件/.exec(await item.innerText().catch(() => ''))?.[1] ?? 0);
-    return n;
+    return Number(/(\d+)件/.exec(await item.innerText().catch(() => ''))?.[1] ?? 0);
   };
   const n0 = await countOf();
   // 初期データにも担当なしの繰り返しの回があるので、件数は「足した1件を含む N件」（N は2以上）
-  check(n0 >= 2, '「その他 ▾」に「担当なしの訪問を組む N件」（元に戻した1件を含む）', n0);
+  check(n0 >= 2, '主ボタンに「担当なしの訪問を組む N件」（元に戻した1件を含む）', n0);
   const before = await data(page);
   const target = before.visits.find((y) => y.staffId === null && !y.pinned && y.earliestStart === '10:00');
   check(!!target, '前提：元に戻した担当なしの訪問が残っている', before.visits.length);
@@ -131,11 +129,8 @@ async function moreArrange(page) {
   await page.keyboard.press('Escape').catch(() => {});
   await settle(page, 500);
   const n1 = await until(async () => {
-    if ((await page.getByTestId('month-more').count()) === 0) return null;
-    await page.getByTestId('month-more').click();
     const there = (await item.count()) > 0;
     const n = there ? Number(/(\d+)件/.exec(await item.innerText())?.[1] ?? 0) : 0;
-    await page.keyboard.press('Escape');
     return n < n0 ? { n } : null;
   });
   check(n1 !== null && n1 !== undefined && n1.n < n0, '組んだあとは「担当なし」の件数が減る（0件なら項目が消える）', {

@@ -1,15 +1,19 @@
 // 日の予定の区画（PRD D63・D84・D300・D334）：上のナビの行・本体（差の欄・一覧／日ごとのリスト／時間軸・順番・地図）・
 // 浮かぶ地図と振り直しの近道・計算に入れなかった訪問・右の欄。どれも usePlanPage の戻り値から描く
 import { CalendarDays, Map as MapIcon, TriangleAlert } from 'lucide-react';
+import { DetailsFold } from '../components/DetailsFold';
+import { DayLines } from '../components/dayLines';
 import { DayList } from '../components/dayList';
 import { MapDock } from '../components/MapDock';
 import { RouteMap } from '../components/RouteMap';
 import { StaffLegend } from '../components/routeView';
 import { ScheduleNav } from '../components/ScheduleNav';
 import { Empty, Hint, SectionTitle } from '../components/ui';
+import { useExceptionsOnly } from '../components/useFeature';
 import { jstDate } from '../domain/time';
 import { own } from '../lib/common';
 import { dateText } from '../lib/dateText';
+import { foldedParts } from '../lib/exceptionView';
 import { typeOf } from '../lib/patternText';
 import { showContactedButton } from '../lib/settledView';
 import { ReassignBar } from './absenceParts';
@@ -19,16 +23,19 @@ import { DayMailPanel } from './mailPanels';
 import { visitNode } from './planCards';
 import { PlanBoard } from './planColumns';
 import { PlanDetailPanel } from './planDetail';
-import { PlanConfirmActions } from './planHeader';
+import { PlanConfirmActions, PlanOneLine } from './planHeader';
 import { AnnealBox, ContactButton, ReassignDock } from './reassignParts';
 import { SuddenPanel } from './SuddenPanel';
 import type { PlanCtx } from './usePlanPage';
+import { planIssueRows } from './usePlanShown';
 import { EMPTY_CONTACTS } from './useSuddenFlow';
 import { VisitList } from './visitList';
 
 /** 上のナビの行（日・週・月で同じ。PRD D347。ADR-0060）。日送り・今日・［月｜週｜日］・状態の印・メールで送る・確定 */
 export function PlanNavRow({ p }: { p: PlanCtx }) {
   const { date, setDate, dates, d, confirm } = p;
+  /** 切（例外だけ見せる）はメールで送るを「その他 ▾」へ（PRD D384。planToolbar） */
+  const only = useExceptionsOnly();
   /** 上のナビの行の日付（PRD D347）：データの日付から選ぶ。今日はデータに無くても選べる（setDate は選んだ日を足す） */
   const todayDate = jstDate(Date.now());
   const dayOptions = [...new Set([...dates, date])].sort().map((x) => ({ value: x, text: dateText(x) }));
@@ -48,7 +55,7 @@ export function PlanNavRow({ p }: { p: PlanCtx }) {
             toldState={d.toldState}
             toldCount={d.toldCount}
             date={date}
-            mailOn={p.f.mailOn}
+            mailOn={p.f.mailOn && !only}
             confirmStep={p.f.confirmStep}
             running={p.running}
             onPickDate={setDate}
@@ -62,10 +69,69 @@ export function PlanNavRow({ p }: { p: PlanCtx }) {
   );
 }
 
+/** 「今の担当」の1行（訪問・入らない・守れない条件・移動・点数・理由・詳しく。PRD D63・D345）。訪問のある日だけ */
+export function PlanOneLineBlock({ p }: { p: PlanCtx }) {
+  const { date, d, f, nav, v } = p;
+  const { hasPlan, cs } = d;
+  const issueRows = planIssueRows(d);
+  if (!hasPlan || !cs) return null;
+  return (
+    <PlanOneLine
+      cs={cs}
+      visitCount={d.visits.length}
+      droppedRows={issueRows.dropped}
+      hardRows={issueRows.hard}
+      hundredNow={d.hundredNow}
+      scoreRulerName={d.scoreRulerName}
+      reasonNow={d.reasonNow}
+      rulesOn={f.rulesOn}
+      compatOn={f.compatOn}
+      date={date}
+      lookNone={nav.lookNone}
+      lookAt={nav.lookAt}
+      goToNone={nav.goToNone}
+      onOpen={(id) => nav.openVisit(id)}
+      onDetail={() => v.setPanel('detail')}
+    />
+  );
+}
+
+/** 担当ごとの1日（PRD D84）。訪問のある日だけ。狭い幅では畳む */
+export function PlanDayLines({ p }: { p: PlanCtx }) {
+  const { d, v, nav } = p;
+  if (!d.hasPlan || !d.cs || v.compact) return null;
+  return (
+    <DayLines
+      lines={p.staffLines.lines}
+      range={p.staffLines.range}
+      nameOf={d.staffName}
+      onPick={nav.goToStaff}
+      staffTerm={d.terms.staff}
+      collapsed={v.narrowOrPrint}
+      detailName={(sid) => d.staffById.get(sid)?.name ?? ''}
+    />
+  );
+}
+
+/** 「詳しく」（エキスパート機能が切のとき。畳んでおく。PRD D384）：今の担当の1行（点数・理由・移動）と担当ごとの1日 */
+export function PlanDetails({ p }: { p: PlanCtx }) {
+  const has = p.d.hasPlan && !!p.d.cs;
+  const parts = foldedParts('day', useExceptionsOnly(), { oneLine: has, dayLines: has && !p.v.compact });
+  if (parts.length === 0) return null;
+  return (
+    <DetailsFold testId="day-details">
+      {parts.includes('oneLine') && <PlanOneLineBlock p={p} />}
+      {parts.includes('dayLines') && <PlanDayLines p={p} />}
+    </DetailsFold>
+  );
+}
+
 /** 訪問の一覧（表示の「一覧」。休みのため無しの訪問も薄く出す。ADR-0013） */
 function PlanVisitList({ p }: { p: PlanCtx }) {
   const { d } = p;
   const { problem, owner, staffName, staffById, pins, unassigned, hardOf, data } = d;
+  // 切（例外だけ見せる。PRD D384）：ピン・条件に合わない（必須の違反）の札は出さない
+  const only = useExceptionsOnly();
   return (
     <VisitList
       visits={d.sortedVisits}
@@ -78,8 +144,8 @@ function PlanVisitList({ p }: { p: PlanCtx }) {
       notes={(id) => ({
         outside: !!problem && !problem.visits.some((v) => v.id === id),
         dropped: unassigned.includes(id),
-        pinned: !!own(pins, id),
-        hard: hardOf.get(id),
+        pinned: !only && !!own(pins, id),
+        hard: only ? undefined : hardOf.get(id),
       })}
       clientLabel={d.terms.client}
       typeOfVisit={(v) => typeOf(data.visitTypes, v.typeId)}

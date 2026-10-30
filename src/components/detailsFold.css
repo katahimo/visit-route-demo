@@ -1,0 +1,24 @@
+.details-fold {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  padding: 0 12px;
+}
+.details-fold > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 8px 0;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--sub);
+}
+.details-fold > summary::-webkit-details-marker {
+  display: none;
+}
+.details-fold[open] > summary {
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 8px;
+}
+.details-fold-body {
+  padding-bottom: 10px;
+}

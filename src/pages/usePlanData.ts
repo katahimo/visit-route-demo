@@ -17,6 +17,7 @@ import {
   type VisitIssue,
   visitIssues,
 } from '../lib/dayPlan';
+import { exceptionsOnly } from '../lib/exceptionView';
 import { issueBreakdown } from '../lib/month';
 import { leavePeople } from '../lib/personLinks';
 import { hardLabelsOf, planColumns, toldMarksOf } from '../lib/planView';
@@ -114,6 +115,7 @@ function usePlanTold(date: string, c: PlanCore) {
         tentativeOf: (cid) => !!clientById.get(cid)?.tentative,
         past: date < jstDate(Date.now()),
         confirmStep: showConfirmStep(data.org.features),
+        exceptionsOnly: exceptionsOnly(data.org.features),
       }),
     [date, issues, told, hasPlan, problem, m.allVisits, m.leaveVisits, clientById, staffById, data.org.features],
   );

@@ -14,6 +14,7 @@ import { FieldError, invalidAttrs } from '../components/FieldError';
 import { PersonButton } from '../components/PersonPopover';
 import { StaffMarkById } from '../components/StaffMark';
 import { Hint, WithIcon } from '../components/ui';
+import { useExceptionsOnly } from '../components/useFeature';
 import type { DemoData, ReassignInfo } from '../contracts/data';
 import type { Absence, Visit } from '../contracts/documents';
 import type { Problem } from '../contracts/problem';
@@ -22,6 +23,7 @@ import { HALF_HOURS, type Slot, slotsText, timeText as t } from '../domain/avail
 import { hhmmToMinutes, minutesToHhmm } from '../domain/time';
 import { absenceText } from '../lib/absences';
 import { attempt, deltaText, r0 } from '../lib/common';
+import { reassignWords } from '../lib/exceptionView';
 import { absenceBaseOf, hasBase, reassignFrom } from '../lib/planReassign';
 import { shiftText } from '../lib/reassignMenu';
 import { type AbsenceDraft, reassignMoveRows } from '../lib/sudden';
@@ -217,6 +219,7 @@ export function ReassignBar({
   /** 下に足す欄（案B。2回目） */
   children?: ReactNode;
 }) {
+  const only = useExceptionsOnly();
   const titleId = useId();
   /** 担当が変わった訪問の件数（一覧を畳んだ見出しに出す） */
   const moveCount = diff ? reassignMoveRows(diff, visitLabel).length : 0;
@@ -303,9 +306,7 @@ export function ReassignBar({
         {info.method === 'anneal'
           ? `案B（変更を減らす ${info.stayWeight ?? ''}）では、ほかの人の訪問も少し動かしています（薄い列は変わらない人）`
           : '振り直しでは、ほかの人の担当・順番・時刻は変えていません（「受けられる人」から入れた分・手直しは除く。薄い列は変わらない人）'}
-        <Hint>
-          振り直した訪問に「代行」、開始が変わった訪問に「+N分」が付きます。担当が変わった訪問にはピンが付きます。担当なしの訪問は「受けられる人」から入れられます。
-        </Hint>
+        <Hint>{reassignWords(only).hint}</Hint>
       </span>
       {cancelled && (
         <span className="warn-text row" style={{ gap: 4 }}>
@@ -338,10 +339,11 @@ export function ReassignResultBox({
   staffName: (id: string) => string;
   children: ReactNode;
 }) {
+  const only = useExceptionsOnly();
   return (
     <div className="stack" style={{ gap: 8 }} data-testid="sudden-result">
       <strong>
-        反映した振り直し：
+        {reassignWords(only).resultTitle}
         {info.method === 'anneal' ? '案B（少し動かした案）' : '案A（空き時間に入れた案）'}
       </strong>
       {diff && <ReassignSummary diff={diff} left={left} testId="sudden-summary" />}

@@ -3,14 +3,18 @@
 
 import { CalendarRange } from 'lucide-react';
 import { AttentionBand } from '../components/attentionBand';
+import { DetailsFold } from '../components/DetailsFold';
 import { FieldError } from '../components/FieldError';
 import type { MenuItem } from '../components/MenuButton';
 import { type BandModel, ProgressBand } from '../components/progressBand';
 import { ScheduleNav } from '../components/ScheduleNav';
 import { RangeProposalBand, ScheduleToolbar, SelectionBar } from '../components/scheduleParts';
 import { PageHeader } from '../components/ui';
+import { useExceptionsOnly } from '../components/useFeature';
+import { useIntro } from '../components/useIntro';
 import { KeyMoveBand } from '../components/visitKeys';
 import type { DemoData } from '../contracts/data';
+import { detailItems, foldedParts, isFolded } from '../lib/exceptionView';
 import type { BandOp } from '../lib/progressBand';
 import { addMonths, ymOf } from '../lib/ym';
 import {
@@ -22,7 +26,15 @@ import {
   MonthUnconfirmed,
 } from './monthAside';
 import { MonthGrid, MonthList } from './monthGrid';
-import { MonthBatchProgress, MonthHelp, MonthLayoutSwitch, MonthLegend, MonthOffBar, MonthPickers } from './monthParts';
+import {
+  MonthBatchProgress,
+  MonthHelp,
+  MonthLayoutSwitch,
+  MonthLegend,
+  MonthOffBar,
+  MonthPickers,
+  monthLayoutItems,
+} from './monthParts';
 import type { MonthAside } from './useMonthAside';
 import type { MonthBatchState } from './useMonthBatch';
 import { focusCellEl, type MonthDayList } from './useMonthDayList';
@@ -51,13 +63,12 @@ export function MonthTopBars({
   moreItems: MenuItem[];
 }) {
   const { ym, today } = nav;
+  const only = useExceptionsOnly();
+  const folded = detailItems('month', only);
+  const lead = useIntro('month', '一月の担当を見て、担当なしや要対応を手で直し、確定します');
   return (
     <>
-      <PageHeader
-        icon={CalendarRange}
-        title="月の予定"
-        lead="一月の担当を見て、担当なしや要対応を手で直し、確定します"
-      />
+      <PageHeader icon={CalendarRange} title="月の予定" lead={lead} />
       {/* 上のナビの行（日・週・月で同じ。PRD D347。ADR-0060）。月送り・今日・［月｜週｜日］。主ボタンは進み具合の帯（D154） */}
       <ScheduleNav
         current="month"
@@ -75,9 +86,14 @@ export function MonthTopBars({
       {/* 要対応の帯（エキスパート機能が切のときだけ。PRD D383） */}
       <AttentionBand />
       {/* 進み具合の帯（PRD D151〜D155）。担当なしの次の一手は担当を組むの画面へ（ADR-0063） */}
-      <ProgressBand ym={ym} model={band} primary onOp={onBandOp} />
+      {/* 切のときは進み具合を「詳しく」へ畳む（MonthDetails。主ボタンは操作の行の1つだけ。PRD D384） */}
+      {!isFolded(folded, 'progress') && <ProgressBand ym={ym} model={band} primary onOp={onBandOp} />}
       {/* 操作の行（日・週・月で同じ並び。PRD D327）。月送り・今月のほかのときどき使う操作は「その他 ▾」（PRD D278） */}
-      <ScheduleToolbar zoom="month" absence={absence} moreItems={moreItems}>
+      <ScheduleToolbar
+        zoom="month"
+        absence={absence}
+        moreItems={only ? [...monthLayoutItems(nav.layout, nav.pickLayout), ...moreItems] : moreItems}
+      >
         {/* カレンダーと日ごとの一覧の切り替え（PRD D189。600px 以下ははじめ一覧。URL の ?layout=。操作の欄より上） */}
         <MonthLayoutSwitch layout={nav.layout} onPick={nav.pickLayout} />
       </ScheduleToolbar>
@@ -86,6 +102,47 @@ export function MonthTopBars({
     </>
   );
 }
+
+/**
+ * 「詳しく」（エキスパート機能が切のときだけ。畳んでおく。PRD D384）：進み具合の帯・月全体の件数・凡例。
+ * 入のときは今の画面のとおり（進み具合は上の帯、件数と凡例は見出しの欄）なので何も出さない
+ */
+export function MonthDetails({
+  ym,
+  band,
+  onBandOp,
+  summary,
+  legendBar,
+}: {
+  ym: string;
+  band: BandModel;
+  onBandOp: (op: BandOp) => void;
+  summary: MonthDays['summary'];
+  legendBar: 'load' | 'staff' | null;
+}) {
+  const parts = foldedParts('month', useExceptionsOnly(), { progress: true, summary: true, legend: true });
+  if (parts.length === 0) return null;
+  return (
+    <DetailsFold testId="month-details">
+      {parts.includes('progress') && <ProgressBand ym={ym} model={band} onOp={onBandOp} />}
+      {parts.includes('summary') && <MonthSummaryLine summary={summary} />}
+      {parts.includes('legend') && <MonthLegend bar={legendBar} />}
+    </DetailsFold>
+  );
+}
+
+/** 月全体の件数の行（担当なし・当日キャンセル） */
+function MonthSummaryLine({ summary }: { summary: MonthDays['summary'] }) {
+  return (
+    <span className="month-summary sub" data-testid="month-summary">
+      月全体：担当なし {summary.unassigned}件{summary.sameDay > 0 ? `・当日キャンセル ${summary.sameDay}件` : ''}
+    </span>
+  );
+}
+
+/** 凡例の棒の種類（全体は混み具合、〈スタッフ〉はその人の時間帯） */
+export const legendBarOf = (kind: MonthFocusState['focus']['kind']): 'load' | 'staff' | null =>
+  kind === 'all' ? 'load' : kind === 'staff' ? 'staff' : null;
 
 /** 見出しの欄：月全体の要約・表示の選択の段・説明・「休みを入れる」の帯・凡例・範囲の AI で組む（担当を組む）の進み具合・止まった理由 */
 export function MonthHeadCard({
@@ -117,13 +174,26 @@ export function MonthHeadCard({
 }) {
   const terms = data.org.terms;
   const { focus } = fs;
+  const folded = detailItems('month', useExceptionsOnly());
+  const summaryFolded = isFolded(folded, 'summary');
+  // 切は件数の行・凡例を「詳しく」へ畳むので、ほかに出すものが無ければ欄ごと出さない
+  if (
+    summaryFolded &&
+    !pickersShown &&
+    !noVisitsWhy &&
+    !panels.helpOpen &&
+    off.offStaffId === null &&
+    !batch.batch &&
+    !batch.error
+  )
+    return null;
   return (
     <div className="card stack month-head">
-      <div className="row month-nav">
-        <span className="month-summary sub" data-testid="month-summary">
-          月全体：担当なし {summary.unassigned}件{summary.sameDay > 0 ? `・当日キャンセル ${summary.sameDay}件` : ''}
-        </span>
-      </div>
+      {!summaryFolded && (
+        <div className="row month-nav">
+          <MonthSummaryLine summary={summary} />
+        </div>
+      )}
       {pickersShown && (
         <MonthPickers
           selectRef={panels.focusSelectRef}
@@ -160,7 +230,7 @@ export function MonthHeadCard({
       {off.offStaffId !== null && (
         <MonthOffBar name={fs.focusName} offDays={fd.offDates.length} note={off.offNote} onOpenDay={nav.openDay} />
       )}
-      <MonthLegend bar={focus.kind === 'all' ? 'load' : focus.kind === 'staff' ? 'staff' : null} />
+      {!isFolded(folded, 'legend') && <MonthLegend bar={legendBarOf(focus.kind)} />}
       {batch.batch && <MonthBatchProgress batch={batch.batch} current={batch.current} onStop={batch.stop} />}
       <FieldError>{batch.error}</FieldError>
     </div>

@@ -4,7 +4,9 @@
 import type { Visit } from '../contracts/documents';
 import type { Problem } from '../contracts/problem';
 import type { ContactList } from '../contracts/reassign';
+import { isBandIssue } from './attentionBand';
 import { clockTime } from './dateText';
+import type { IssueKind } from './dayPlan';
 import { CHANGED_WORD } from './settledView';
 import { type UnfitMark, unfitMarks } from './week';
 
@@ -47,6 +49,11 @@ export type LookFacts = {
   tentative: boolean;
   /** 確定（伝えた）の段階を出すか（lib/settledView の showConfirmStep。省略は出す）。切なら未連絡の変更は「変更あり」の印（押せる） */
   confirmStep?: boolean;
+  /**
+   * 例外だけ見せる（エキスパート機能が切。PRD D384）：目立たせるのは担当なし・重なり・休みの人（要対応の中身は呼ぶ側が帯と同じ分け方で絞る）と
+   * 「変更あり」だけ。資格✗・限✗・ピン・この回だけ変更・仮押さえの印は出さない
+   */
+  exceptionsOnly?: boolean;
 };
 
 export const PIN_TITLE = 'ピン（AI で組み直しても担当を変えない）';
@@ -57,9 +64,11 @@ export function visitLook(f: LookFacts): VisitLook {
   const marks: LookMark[] = [];
   if (!off) {
     // 資格✗・限✗があれば、同じことを言う「条件に合わない」の印は重ねない（日の予定の帯と同じ）
-    if (f.issues.length > 0 && f.unfit.length === 0)
+    if (f.issues.length > 0 && (f.exceptionsOnly || f.unfit.length === 0))
       marks.push({ kind: 'issue', short: '!', title: `要対応：${f.issues.join('・')}`, tone: 'red' });
-    for (const u of f.unfit) marks.push({ kind: 'unfit', short: u.short, title: `${u.short}：${u.why}`, tone: 'red' });
+    if (!f.exceptionsOnly)
+      for (const u of f.unfit)
+        marks.push({ kind: 'unfit', short: u.short, title: `${u.short}：${u.why}`, tone: 'red' });
   }
   if (f.told) {
     // expert 切：決まったあとの変更。押すと連絡の一覧が開く（日の画面はその場、週・月はその日の日の予定へ）
@@ -73,12 +82,13 @@ export function visitLook(f: LookFacts): VisitLook {
       });
     else marks.push({ kind: 'told', short: '未', title: `未連絡の変更：${f.told}`, tone: 'warn' });
   }
-  if (!off) {
+  if (!off && !f.exceptionsOnly) {
     if (f.visit.pinned && f.visit.staffId) marks.push({ kind: 'pin', short: 'ピ', title: PIN_TITLE, tone: 'pin' });
     if (f.visit.pattern?.edited) marks.push({ kind: 'edited', short: '変', title: 'この回だけ変更', tone: 'plain' });
     if (f.tentative) marks.push({ kind: 'tentative', short: '仮', title: '仮押さえ（本登録の前）', tone: 'plain' });
   }
   const bad = marks.some((m) => m.tone === 'red');
+  // 例外だけ：要対応の中身（f.issues）は帯と同じ分け方で絞ってあるので、無ければ目立たせない
   const tone = off ? 'off' : bad || f.issues.length > 0 ? (f.visit.staffId ? 'issue' : 'unassigned') : null;
   return {
     marks,
@@ -106,7 +116,7 @@ export function toldTexts(told: ContactList | null, staffName: (id: string) => s
 /** 1日の状態から、その日の訪問の見た目の元を引く形 */
 export type DayLookSource = {
   /** 要対応（訪問ID → 検査の言葉） */
-  issues: ReadonlyMap<string, readonly { label: string }[]>;
+  issues: ReadonlyMap<string, readonly { kind: IssueKind; label: string }[]>;
   /** 伝えた内容との違い（伝えていない日は null） */
   told: ContactList | null;
   /** その日の問題（資格✗・限✗を見る。無ければ null） */
@@ -129,6 +139,8 @@ export function dayLooks(
     past?: boolean;
     /** 確定（伝えた）の段階を出すか（省略は出す。lib/settledView） */
     confirmStep?: boolean;
+    /** 例外だけ見せる（エキスパート機能が切。担当なし・重なり・休みの人と「変更あり」だけ目立たせる。lib/attentionBand と同じ分け方） */
+    exceptionsOnly?: boolean;
   },
 ): Map<string, VisitLook> {
   const told = toldTexts(src.told, opts.staffName);
@@ -136,18 +148,48 @@ export function dayLooks(
   for (const v of visits) {
     const off = v.cancelled || opts.leaveOf(v);
     const quiet = off || !!opts.past;
+    const issues = (src.issues.get(v.id) ?? []).filter((x) => !opts.exceptionsOnly || isBandIssue(x.kind));
     out.set(
       v.id,
       visitLook({
         visit: v,
         leave: !v.cancelled && opts.leaveOf(v),
-        issues: quiet ? [] : (src.issues.get(v.id) ?? []).map((x) => x.label),
+        issues: quiet ? [] : issues.map((x) => x.label),
         told: told.get(v.id) ?? null,
         unfit: quiet ? [] : unfitMarks(src.problem, v.id, v.staffId),
         tentative: opts.tentativeOf(v.clientId),
         confirmStep: opts.confirmStep,
+        exceptionsOnly: opts.exceptionsOnly,
       }),
     );
   }
   return out;
+}
+
+/** 日の順番のカード・時間軸の帯の色：red＝要対応、pinned＝ピン、null＝ふつう */
+export type PlanTone = 'red' | 'pinned' | null;
+
+/**
+ * 順番のカードの色。切（only＝例外だけ見せる。PRD D384）は札の見た目（look）の tone だけ（担当なし・重なり・休みの人。ピン・必須の違反は色にしない）。
+ * 入は必須の違反（hard）なら red、ピンなら pinned
+ */
+export function cardTone(x: { only: boolean; look: VisitLook | undefined; hard: boolean; pinned: boolean }): PlanTone {
+  if (x.only) return x.look?.tone === 'issue' || x.look?.tone === 'unassigned' ? 'red' : null;
+  return x.hard ? 'red' : x.pinned ? 'pinned' : null;
+}
+
+/**
+ * 時間軸の帯の色。切は要対応（look.tone が issue）だけ red。入は要対応か「今日以降の日の必須の違反」なら red、ピンなら pinned
+ * （今日より前の日は必須の違反を赤にしない。月・ホームと同じ決まり）
+ */
+export function bandTone(x: {
+  only: boolean;
+  look: VisitLook | undefined;
+  hard: boolean;
+  pinned: boolean;
+  /** 今日以降の日か */
+  upcoming: boolean;
+}): PlanTone {
+  if (x.only) return x.look?.tone === 'issue' ? 'red' : null;
+  return x.look?.tone === 'issue' || (x.hard && x.upcoming) ? 'red' : x.pinned ? 'pinned' : null;
 }
