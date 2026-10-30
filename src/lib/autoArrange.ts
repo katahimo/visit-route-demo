@@ -31,7 +31,7 @@ export function autoRange(today: string): DateRange {
 type TargetData = Pick<DemoData, 'visits' | 'patterns' | 'clients' | 'clientLeaves' | 'snapshots'>;
 
 /** 組む対象になれる訪問か：担当なし・ピンなし・取り消しでない・今日以降・その日が伝えていない */
-function isFree(data: Pick<DemoData, 'snapshots'>, v: Visit, today: string): boolean {
+export function isFree(data: Pick<DemoData, 'snapshots'>, v: Visit, today: string): boolean {
   return v.staffId === null && !v.pinned && !v.cancelled && v.date >= today && !own(data.snapshots, v.date);
 }
 

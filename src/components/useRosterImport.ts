@@ -92,6 +92,6 @@ export function useRosterImport(x: {
       done: rosterDoneText({ term, staffTerm: terms.staff, hasLastDay, keep }),
       keep,
     };
-    update((d) => (d === base ? r.data : d), '名簿の読み込み');
+    update((d) => (d === base ? r.data : d), '名簿の読み込み', { tell: false });
   };
 }

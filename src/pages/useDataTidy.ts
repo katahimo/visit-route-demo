@@ -27,7 +27,7 @@ export function useDataTidy() {
     if (!ok) return;
     const target = ym;
     // 戻せない操作：全体の「元に戻す」の履歴に積まず、履歴を捨てる（前の手へ戻すと消した記録が戻り、容量が足りなくなるため。PRD D329）
-    update((d) => tidyOld(d, target), '古い記録を消す', { history: false });
+    update((d) => tidyOld(d, target), '古い記録を消す', { history: false, tell: false });
     toast(`${tidyMonthLabel(target)}の訪問の記録を消しました`);
   };
   /** 容量が足りないときの案内から、片づけの欄へ移る */
