@@ -81,9 +81,13 @@ export const showUnplacedReasons = (only: boolean): boolean => !only;
 
 // ---- 画面の上の説明 ----
 
-/** 画面の上の説明（見出しの下の1行）。切は確定の段階の言葉を使わない1行 */
-export function introText(zoom: ScheduleZoom, only: boolean, expertText: string): string {
+/** 画面の上の説明を持つ画面：予定の月・週・日と、〈利用者さん〉・〈スタッフ〉の一覧 */
+export type IntroScreen = ScheduleZoom | 'clients' | 'staff';
+
+/** 画面の上の説明（見出しの下の1行）。切は確定の段階の言葉を使わない1行（月・週・日。一覧は simpleText を渡す） */
+export function introText(zoom: IntroScreen, only: boolean, expertText: string, simpleText?: string): string {
   if (!only) return expertText;
+  if (zoom === 'clients' || zoom === 'staff') return simpleText ?? expertText;
   const text: Record<ScheduleZoom, string> = {
     month: '一月の予定です。担当なしや重なりは、日を押して直せます',
     week: 'この週の予定です。訪問をドラッグで動かせます',
@@ -93,10 +97,10 @@ export function introText(zoom: ScheduleZoom, only: boolean, expertText: string)
 }
 
 /** 説明を閉じたかを覚える鍵（store/navOpen の「開け閉め」に流用：開＝出している・閉＝閉じた。画面ごと） */
-export const introKey = (zoom: ScheduleZoom): string => `intro:${zoom}`;
+export const introKey = (zoom: IntroScreen): string => `intro:${zoom}`;
 
 /** 説明を出すか：入は今のまま出す。切は初回だけ（閉じたら覚えて、読み直しても出さない） */
-export const introShown = (stored: Readonly<Record<string, boolean>>, zoom: ScheduleZoom, only: boolean): boolean =>
+export const introShown = (stored: Readonly<Record<string, boolean>>, zoom: IntroScreen, only: boolean): boolean =>
   !only || stored[introKey(zoom)] !== false;
 
 // ---- 言葉 ----

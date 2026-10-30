@@ -97,7 +97,10 @@ const HIDDEN = {
 };
 /** パレットの画面（エキスパート機能が切ならホームは無い。ADR-0073） */
 const screensFor = (t) =>
-  ALL_SCREENS.filter((l) => !HIDDEN[t].includes(l) && (l !== 'ホーム' || TEMPLATE_ON[t].includes('expert')));
+  ALL_SCREENS.filter((l) => !HIDDEN[t].includes(l) && (l !== 'ホーム' || TEMPLATE_ON[t].includes('expert'))).map((l) =>
+    // エキスパート機能が切なら〈利用者さん〉・〈スタッフ〉は「人」の区分をやめ呼び名そのまま（PRD D385）
+    TEMPLATE_ON[t].includes('expert') ? l : l.replace(/^(利用者さん|スタッフ)一覧$/, '$1'),
+  );
 /** 予定を組むの子の項目の key（子は機能の入り切りで変わらない。標準を登録したあとは担当を組むだけ。ADR-0066） */
 const arrangeKidsFor = (t, hasStandard = false) =>
   TEMPLATE_ON[t].includes('expert') ? (hasStandard ? ARRANGE_KIDS_WITH_STANDARD : ARRANGE_KIDS) : [];

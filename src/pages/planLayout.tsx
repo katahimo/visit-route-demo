@@ -214,6 +214,7 @@ function PlanMapCard({ p }: { p: PlanCtx }) {
 /** 本体：訪問が無い日の案内か、差の欄と一覧／日ごとのリスト／時間軸・順番と地図 */
 export function PlanMain({ p }: { p: PlanCtx }) {
   const { d, v, flow } = p;
+  const only = useExceptionsOnly();
   const { shownView, compact } = v;
   if (shownView !== 'day' && d.visits.length === 0 && d.m.leaveVisits.length > 0) return <PlanVisitList p={p} />;
   if (shownView !== 'day' && d.visits.length === 0)
@@ -255,7 +256,8 @@ export function PlanMain({ p }: { p: PlanCtx }) {
           <PlanBoard p={p} />
         )}
       </div>
-      {d.hasPlan && <PlanMapCard p={p} />}
+      {/* 切（PRD D385）は地図をふだん閉じ、「地図」のボタン（MapDock）で開く */}
+      {d.hasPlan && !only && <PlanMapCard p={p} />}
     </div>
   );
 }
@@ -263,16 +265,18 @@ export function PlanMain({ p }: { p: PlanCtx }) {
 /** 浮かぶ地図（地図のカードが画面の外のとき）と、差の欄が画面の外のときの振り直しの近道 */
 export function PlanDocks({ p }: { p: PlanCtx }) {
   const { d, sel, flow, shown } = p;
+  const only = useExceptionsOnly();
   if (!d.hasPlan) return null;
   const { focusStaff } = sel;
   return (
     <>
       <MapDock
-        target={p.v.mapCardRef}
+        target={only ? null : p.v.mapCardRef}
         points={p.map.points}
         lines={p.map.lines}
         title={`地図${focusStaff ? `：${d.staffName(focusStaff)}` : ''}`}
         focusKey={sel.focusKey}
+        onClearFocus={only && focusStaff ? sel.clear : undefined}
       />
       {flow.info && (
         <ReassignDock

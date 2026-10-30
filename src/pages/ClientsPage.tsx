@@ -5,11 +5,13 @@ import { ClientFilter } from '../components/ClientFilter';
 import { RosterButton, RosterCard } from '../components/RosterCard';
 import { BasicsNav } from '../components/SettingsTabs';
 import { PageHeader, WithIcon } from '../components/ui';
-import { useFeature } from '../components/useFeature';
+import { useExceptionsOnly, useFeature } from '../components/useFeature';
+import { useIntro } from '../components/useIntro';
 import { COMPACT_QUERY, useMedia } from '../components/useMedia';
 import type { Client } from '../contracts/documents';
 import { EMPTY_FILTER } from '../lib/clientFilter';
 import { STAGE_LABELS } from '../lib/clientStage';
+import { peopleIntro, showStageNote } from '../lib/peopleView';
 import { ClientsTable } from './clientsTable';
 import { PlaceAllPanel } from './PlaceAllPanel';
 import { useClientsList } from './useClientsList';
@@ -26,6 +28,8 @@ export default function ClientsPage() {
   const stageOn = useFeature('clientStage');
   const allowedOn = useFeature('allowedStaff');
   const geocodeOn = useFeature('geocode');
+  // エキスパート機能が切なら一覧の列は名前・住所・いつもの予定の3列だけ（PRD D385）
+  const only = useExceptionsOnly();
   // 名簿の欄（Excel・CSV。ADR-0068）。Excel の入出力を切っていれば出さない（ADR-0028 の excel）
   const excelOn = useFeature('excel');
   const [rosterOpen, setRosterOpen] = useState(false);
@@ -40,6 +44,7 @@ export default function ClientsPage() {
   const { data, clients, staff, activeStaff, filter, setFilter, facts, shown, filterCount, periodLabel, usualMap } =
     useClientsList();
   const terms = data.org.terms;
+  const lead = useIntro('clients', `${terms.client}の住所・特性・条件を決めます`, peopleIntro('clients'));
   const navigate = useNavigate();
   /** その人の画面へ */
   const openPerson = (c: Client) => navigate(`/clients/${encodeURIComponent(c.id)}`);
@@ -47,10 +52,11 @@ export default function ClientsPage() {
   return (
     <div className="stack">
       <PageHeader
-        nav={<BasicsNav />}
+        // 切は基本情報のタブ（予定と相性・相性・勤務時間）を出さない（メニューは〈利用者さん〉の1つ。PRD D383・D385）
+        nav={only ? undefined : <BasicsNav />}
         icon={House}
         title={`${terms.client}一覧`}
-        lead={`${terms.client}の住所・特性・条件を決めます`}
+        lead={lead}
         actions={
           <>
             {excelOn && (
@@ -99,11 +105,13 @@ export default function ClientsPage() {
             visitTypes={data.visitTypes}
             testId="clients-cf"
           />
-          <span className="sub">
-            {STAGE_LABELS.inquiry}〜{STAGE_LABELS.contract}
-            の人は、一覧の「状態」の印で見分けられます。新しい相談は「空き状況」の画面で受けられる曜日・時間を試算し、仮押さえすると「
-            {STAGE_LABELS.inquiry}」で入ります
-          </span>
+          {showStageNote(only) && (
+            <span className="sub">
+              {STAGE_LABELS.inquiry}〜{STAGE_LABELS.contract}
+              の人は、一覧の「状態」の印で見分けられます。新しい相談は「空き状況」の画面で受けられる曜日・時間を試算し、仮押さえすると「
+              {STAGE_LABELS.inquiry}」で入ります
+            </span>
+          )}
         </div>
       </div>
 
@@ -122,6 +130,7 @@ export default function ClientsPage() {
           usualMap={usualMap}
           stageOn={stageOn}
           allowedOn={allowedOn}
+          only={only}
           onOpen={openPerson}
         />
       </div>

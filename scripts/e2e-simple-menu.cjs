@@ -9,8 +9,12 @@
 //    点数・理由・件数の内訳・凡例・進み具合は「詳しく」の中（閉じているときは見えない・開くと見える）、移動・待ちの分数の線と担当なしの理由の札は出ない、
 //    訪問の札は時刻・名前の1行（順番の表示）、ピン・資格✗の印は出ない、「標準・提案・反映・ピン・プリセット」の言葉が月・週・日と「その他 ▾」「詳しく」に出ない、
 // 5c 画面の上の説明は1行で、閉じたら読み直しても出ない（画面ごと。この端末に覚える）、
+// 5e 人の画面は畳む・日の予定の地図はボタンで開く・月のマスの読み方（PRD D385・D384）：〈利用者さん〉の一覧は名前・住所・いつもの予定の3列、
+//    〈スタッフ〉は名前・勤務日・勤務時間の3列。詳細は〈利用者さん〉＝名前・住所・予定（繰り返し）／〈スタッフ〉＝名前・勤務日・勤務時間を出し、
+//    段階・特性・決まりごと・担当・相性（〈スタッフ〉は自宅・特性・求めること・日ごとの勤務ほか）は「詳しく ▾」の中（閉じていると見えない・開くと見える）。
+//    日の予定の地図はふだん閉じ、「地図」のボタンで開く（1366px・390px）。月のマスの読み方は帯の3種類と「変更あり」に合わせ、条件に合わない・拘束超は言わない、
 // 6 エキスパート機能を入にすると今のメニュー（ホーム・予定を組む・予定・空き状況・設定）・ホームの画面・帯は出ない。入では操作の行・説明・進み具合は今のまま。
-// スクリーンショット：simple-month-1366・simple-band-plan-1366・simple-menu-more-1366・simple-week-390・simple-tabs-390・simple-drawer-390
+// スクリーンショット：simple-clients-1366・simple-staff-1366・simple-plan-map-closed-1366 ほか（5e は simple-people-*・simple-plan-map-*）、simple-month-1366・simple-band-plan-1366・simple-menu-more-1366・simple-week-390・simple-tabs-390・simple-drawer-390
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-simple-menu.cjs
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）
@@ -555,6 +559,29 @@ async function expertSame(page) {
   check((await page.getByTestId('undo-btn').count()) === 1, '入：元に戻すは操作の行にある');
   check((await page.getByTestId('page-intro').count()) === 0, '入：説明に閉じるボタンは無い（今のまま）');
   check((await page.locator('.page-lead').count()) === 1, '入：説明は今のまま出る');
+  // 入の一覧：旧の列・基本情報のタブは今のまま、休止中は状態の列だけに出る（名前のそばに二重に出さない）
+  const offName = await page.evaluate((k) => {
+    const d = JSON.parse(localStorage.getItem(k));
+    d.staff[0].active = false;
+    localStorage.setItem(k, JSON.stringify(d));
+    return d.staff[0].name;
+  }, STORAGE_KEY);
+  await page.goto('about:blank');
+  await page.goto(`${BASE}#/staff`);
+  await page.getByTestId('staff-row').first().waitFor({ timeout: 60000 });
+  const row = page.getByTestId('staff-row').filter({ hasText: offName }).first();
+  check((await page.getByTestId('people-tabs').count()) === 1, '入：〈スタッフ〉一覧に基本情報のタブがある');
+  check((await row.locator('td').count()) === 7, '入：〈スタッフ〉一覧の列は今のまま（6列＋開く）');
+  check((await row.getByText('休止中').count()) === 1, '入：休止中は状態の列に1つだけ（名前のそばに重ねない）');
+  check((await row.locator('td').first().getByText('休止中').count()) === 0, '入：名前のセルに休止中が無い');
+  await page.goto('about:blank');
+  await page.goto(`${BASE}#/clients`);
+  await page.getByTestId('client-row').first().waitFor({ timeout: 60000 });
+  check((await page.getByTestId('people-tabs').count()) === 1, '入：〈利用者さん〉一覧に基本情報のタブがある');
+  check(
+    (await page.getByTestId('client-row').first().locator('td').count()) === 7,
+    '入：〈利用者さん〉一覧の列は今のまま',
+  );
   await open1(page, '/plan');
   check((await page.getByTestId('plan-summary').count()) === 1, '入：日の「今の担当」の1行は上にある');
   check((await page.getByTestId('plan-help-btn').count()) === 1, '入：使い方は操作の行にある');
@@ -600,6 +627,197 @@ async function expertOn(page) {
   check(/^#\/home/.test(hash(page)), 'expert 入：知らない URL はホームへ', hash(page));
 }
 
+/** 画面ごとの欄（節）の data-section の並び。「詳しく」の外／中 */
+const sections = (loc) =>
+  loc.locator('[data-testid="person-sec"]').evaluateAll((els) => els.map((e) => e.dataset.section));
+
+/** 人の画面（?tab=…）を開いて、出す欄と「詳しく」の中の欄を確かめる。shown は外に見える欄、folded は「詳しく」の中の欄（の一部） */
+async function peopleDetail(page, { label, base, tab, shown, folded, absentTab, brief, shot: name }) {
+  await page.goto('about:blank');
+  await page.goto(`${BASE}#${base}${tab ? `?tab=${tab}` : ''}`);
+  await page.getByTestId('person-view').waitFor({ timeout: 60000 });
+  await settle(page, 600);
+  const tabs = await page
+    .locator('[data-testid="person-tabs"] [data-tab]')
+    .evaluateAll((els) => els.map((e) => e.getAttribute('data-tab')));
+  check(!tabs.includes(absentTab), `${label}：${absentTab} のタブは出さない（中身は「詳しく」の中）`, tabs);
+  if (brief) {
+    const t = await page.getByTestId('person-brief').innerText();
+    check(brief.test(t), `${label}：見出しに住所・いつもの予定を出す`, t);
+  }
+  const fold = page.getByTestId('person-details');
+  check((await fold.count()) === 1, `${label}：「詳しく」がある`);
+  check(!(await fold.evaluate((e) => e.open)), `${label}：「詳しく」は初め閉じている`);
+  const outer = await sections(
+    page.locator(
+      '[data-testid="person-view"] > .person-sections, [data-testid="person-view"] > .stack > .person-sections',
+    ),
+  );
+  for (const k of shown) check(outer.includes(k), `${label}：「${k}」の欄は外に出ている`, outer);
+  const inner = await sections(fold);
+  for (const k of folded) check(inner.includes(k), `${label}：「${k}」の欄は「詳しく」の中`, inner);
+  for (const k of folded) check(!outer.includes(k), `${label}：「${k}」の欄は外に出ない`, outer);
+  const first = fold.locator(`[data-section="${folded[0]}"]`);
+  check(!(await first.isVisible()), `${label}：閉じている間は「${folded[0]}」が見えない`);
+  const body = await page.getByTestId('person-view').innerText();
+  check(!BANNED.test(body), `${label}：禁句が出ない`, body.match(BANNED)?.[0]);
+  await shot(page, `simple-people-${name}-closed-${page.viewportSize().width}`);
+  await page.getByTestId('person-details-summary').click();
+  check(await fold.evaluate((e) => e.open), `${label}：「詳しく」を押すと開く`);
+  check(await first.isVisible(), `${label}：開くと「${folded[0]}」が見える`);
+  await shot(page, `simple-people-${name}-open-${page.viewportSize().width}`);
+}
+
+/** 一覧の列 */
+async function peopleList(page, { label, to, table, heads, row }) {
+  await page.goto('about:blank');
+  await page.goto(`${BASE}#${to}`);
+  await page.locator(row).first().waitFor({ timeout: 60000 });
+  await settle(page, 500);
+  const ths = (await texts(page.locator(`[data-testid="${table}"] thead th`))).filter((t) => t);
+  check(JSON.stringify(ths) === JSON.stringify(heads), `${label}：一覧の列は ${heads.join('・')} の3列だけ`, ths);
+  const cells = await page.locator(row).first().locator('td').count();
+  check(cells === heads.length + 1, `${label}：行のセルは3列＋開く`, cells);
+  const body = await page.locator('main, .content').first().innerText();
+  check(!BANNED.test(body), `${label}：一覧に禁句が出ない`, body.match(BANNED)?.[0]);
+  check((await page.getByTestId('people-tabs').count()) === 0, `${label}：基本情報のタブ（people-tabs）を出さない`);
+  check(!/状態」の印/.test(body), `${label}：状態の列が無いので「状態」の印の説明を出さない`);
+  const intro = await page
+    .getByTestId('page-intro')
+    .innerText()
+    .catch(() => '');
+  check(
+    intro.includes(heads.join('・')) || intro.includes(heads.slice(0, 3).join('・')),
+    `${label}：説明は名前・住所…の1行（初回だけ）`,
+    intro,
+  );
+  const sn = page.getByTestId('screen-name');
+  if (await sn.isVisible()) {
+    const t = (await sn.innerText()).trim();
+    check(!/^人・/.test(t), `${label}：上の帯の画面名に「人・」が付かない`, t);
+  }
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+  check(!overflow, `${label}：横にはみ出さない`);
+  await shot(page, `simple-people-${to.slice(1)}-list-${page.viewportSize().width}`);
+}
+
+/** 5e 切：人の画面は畳む・日の予定の地図はボタンで開く・月のマスの読み方（幅ごとに回す。落ちても幅は restoreWidth が戻す） */
+async function people(page) {
+  await fresh(page, '/clients', '[data-testid="client-row"]', { start: 'demo' });
+  const terms = (await data(page)).org.terms;
+  await page.evaluate((k) => localStorage.removeItem(k), INTRO_KEY);
+  const cid = await page.evaluate((k) => JSON.parse(localStorage.getItem(k)).clients[0].id, STORAGE_KEY);
+  const sid = await page.evaluate((k) => JSON.parse(localStorage.getItem(k)).staff[0].id, STORAGE_KEY);
+  for (const width of [1366, 390]) {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 768 });
+    const w = `${width}px`;
+    await peopleList(page, {
+      label: `${terms.client}一覧（${w}）`,
+      to: '/clients',
+      table: 'narrow-clients',
+      heads: ['名前', '住所', 'いつもの予定'],
+      row: '[data-testid="client-row"]',
+    });
+    await peopleList(page, {
+      label: `${terms.staff}一覧（${w}）`,
+      to: '/staff',
+      table: 'narrow-staff',
+      heads: ['名前', '勤務日', '勤務時間'],
+      row: '[data-testid="staff-row"]',
+    });
+    await peopleDetail(page, {
+      label: `${terms.client}の画面（${w}）`,
+      base: `/clients/${cid}`,
+      tab: 'basic',
+      shown: ['basic', 'place'],
+      folded: ['stage', 'traits', 'staffing', 'conds'],
+      absentTab: 'staffing',
+      brief: /\S/,
+      shot: 'client',
+    });
+    await peopleDetail(page, {
+      label: `${terms.staff}の基本情報（${w}）`,
+      base: `/staff/${sid}`,
+      tab: 'basic',
+      shown: ['basic'],
+      folded: ['home', 'traits', 'conds', 'compat'],
+      absentTab: 'compat',
+      shot: 'staff',
+    });
+    await peopleDetail(page, {
+      label: `${terms.staff}の勤務時間（${w}）`,
+      base: `/staff/${sid}`,
+      tab: 'hours',
+      shown: ['hours'],
+      folded: ['overrides'],
+      absentTab: 'compat',
+      shot: 'staff-hours',
+    });
+    await planMap(page, w);
+  }
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await monthTip(page);
+}
+
+/** 日の予定の地図：ふだん閉じ、「地図」のボタンで開く（PC もスマホと同じ形） */
+async function planMap(page, w) {
+  await open1(page, '/plan');
+  await page.getByTestId('attention-band').waitFor({ timeout: 60000 });
+  check((await page.getByTestId('plan-map').count()) === 0, `日の予定（${w}）：地図は閉じている（ページに置かない）`);
+  const fab = page.locator('.map-dock-fab');
+  await fab.waitFor({ timeout: 10000 });
+  check(/地図/.test(await fab.innerText()), `日の予定（${w}）：「地図」のボタンがある`);
+  check((await page.locator('section.map-dock').count()) === 0, `日の予定（${w}）：ボタンを押すまで地図は出ない`);
+  await shot(page, `simple-plan-map-closed-${page.viewportSize().width}`);
+  await fab.click();
+  const dock = page.locator('section.map-dock');
+  await dock.waitFor({ timeout: 10000 });
+  await settle(page, 1200);
+  check(await dock.isVisible(), `日の予定（${w}）：「地図」を押すと地図が開く`);
+  const focused = (name) => page.evaluate((n) => document.activeElement?.getAttribute('aria-label') === n, name);
+  check(await focused('地図を閉じる'), `日の予定（${w}）：開いたら閉じるボタンへフォーカス`);
+  check(
+    (await dock.getByLabel('地図を閉じる').getAttribute('aria-expanded')) === 'true',
+    `日の予定（${w}）：閉じるボタンに aria-expanded=true`,
+  );
+  check((await dock.getByLabel('ページの地図へ移る').count()) === 0, `日の予定（${w}）：ページの地図へ移る矢印は無い`);
+  await shot(page, `simple-plan-map-open-${page.viewportSize().width}`);
+  // 訪問の帯を選ぶと担当に絞られる：地図の見出しの「全員のルートを見る」で解ける（ページに地図が無いのでここに出す）
+  await dock.getByLabel('地図を閉じる').click();
+  await fab.waitFor({ timeout: 10000 });
+  check(await focused('地図を開く'), `日の予定（${w}）：閉じたら「地図」のボタンへフォーカス`);
+  check(
+    (await fab.getAttribute('aria-expanded')) === 'false',
+    `日の予定（${w}）：「地図」のボタンに aria-expanded=false`,
+  );
+  const band = page.locator('.tl-band-btn');
+  if ((await band.count()) === 0) return;
+  await band.first().click();
+  await settle(page, 600);
+  const clear = page.getByTestId('dock-clear-focus');
+  if (await clear.count()) {
+    await clear.click();
+    await settle(page, 300);
+    check((await clear.count()) === 0, `日の予定（${w}）：「全員のルートを見る」で絞りが解ける`);
+  } else check(true, `日の予定（${w}）：訪問の選びでは担当に絞らない（全員のルートのまま）`);
+}
+
+/** 月のマスの「このマスの読み方」：切は帯の3種類と「変更あり」。条件に合わない・拘束超は言わない */
+async function monthTip(page) {
+  await open1(page, '/month');
+  const cell = page.locator('.month-cell.is-care [data-tip]').first();
+  await cell.waitFor({ timeout: 30000 });
+  await cell.hover();
+  const tip = page.getByTestId('month-cell-tip');
+  await tip.waitFor({ timeout: 10000 });
+  const t = await tip.innerText();
+  check(/担当なし・重なり・休みの人/.test(t), '月のマスの読み方：要対応は 担当なし・重なり・休みの人', t);
+  check(!/条件に合わない|拘束/.test(t), '月のマスの読み方：条件に合わない・拘束超は言わない', t);
+  check(!BANNED.test(t), '月のマスの読み方：禁句が出ない', t.match(BANNED)?.[0]);
+  await shot(page, 'simple-month-tip-1366');
+  await page.mouse.move(0, 0);
+}
+
 /** 途中で落ちても幅を戻す（スマホの段が落ちて、あとの段が 390px のまま走らないように） */
 const restoreWidth = (fn) => async (page) => {
   try {
@@ -621,6 +839,7 @@ const steps = sharedPage({
     ['5b 切：例外だけ見せる（操作の行・詳しく・札・言葉）', exceptions],
     ['5c 切：画面の上の説明は1行・閉じたら出ない', intro],
     ['5d 切：スマホの操作の行・詳しく', restoreWidth(mobileExceptions)],
+    ['5e 切：人の画面は畳む・地図はボタンで開く・マスの読み方', restoreWidth(people)],
     ['6 入：今のメニュー・ホーム・帯なし', expertOn],
     ['6b 入：操作の行・説明・進み具合は今のまま', expertSame],
   ],

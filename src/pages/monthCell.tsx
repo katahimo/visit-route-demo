@@ -26,7 +26,7 @@ import {
 } from '../lib/monthCell';
 import type { TipStore } from '../lib/monthGuide';
 import type { OffDayState } from '../lib/requestedOff';
-import { shownDayState } from '../lib/settledView';
+import { changedFlagText, shownDayState } from '../lib/settledView';
 import { dropShadowText, dropTone } from '../lib/visitDrop';
 import { isMultiClick } from '../lib/visitSelect';
 import type { DayLoadSlot } from '../vacancy';
@@ -82,11 +82,14 @@ function CellFlags({
   otherIssues,
   making,
   ctx,
+  confirmStep,
 }: {
   s: DayStatus;
   otherIssues: readonly string[];
   making: boolean;
   ctx: CellContext;
+  /** 確定の段階を出すか（切は札を「変更あり N」にする） */
+  confirmStep: boolean;
 }) {
   return (
     <span className="month-flags">
@@ -109,7 +112,7 @@ function CellFlags({
           data-testid="month-changed"
         >
           <PencilLine size={12} aria-hidden="true" />
-          未連絡 {s.changes}
+          {changedFlagText(s.changes, confirmStep)}
         </span>
       )}
       {s.overSpan.length > 0 && (
@@ -328,7 +331,7 @@ export const DayCell = memo(function DayCell(props: CellProps) {
     ctx.tipStore.set(d, { head: longDate(d), text: tipText, lines: guide });
   }, [ctx.tipStore, d, tipText, guideKey]);
   const offPress = offState === 'open' || offState === 'requested';
-  const flags = <CellFlags s={s} otherIssues={text.otherIssues} making={making} ctx={ctx} />;
+  const flags = <CellFlags s={s} otherIssues={text.otherIssues} making={making} ctx={ctx} confirmStep={confirmStep} />;
   return (
     <td
       className={[

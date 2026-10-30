@@ -27,6 +27,24 @@ const {
   writeFeaturesInOtherTab,
 } = require('./lib/features.cjs');
 
+/** 人の画面の「詳しく ▾」を開く（エキスパート機能が切のとき、段階・担当などは中。PRD D385。無ければ何もしない） */
+async function openFold(page) {
+  const fold = page.getByTestId('person-details');
+  if ((await fold.count()) === 0 || (await fold.evaluate((e) => e.open))) return;
+  await page.getByTestId('person-details-summary').click();
+}
+
+/** 担当・相性（入はタブ。切はタブが無く基本情報の「詳しく」の中）の画面を開く。base は `/clients/ID` か `/staff/ID`、tab は staffing か compat */
+async function openPart(page, base, tab) {
+  await open(page, `${base}?tab=${tab}`, '[data-testid="person-view"]');
+  if ((await page.getByTestId('person-tabs').locator(`[data-tab="${tab}"]`).count()) > 0) {
+    await page.locator('[data-testid="person-sec"]').first().waitFor({ timeout: 30000 });
+    return;
+  }
+  await open(page, `${base}?tab=basic`, '[data-testid="person-sec"]');
+  await openFold(page);
+}
+
 async function insideEntries(page, dlg, ctx) {
   for (const t of ['oneOff', 'basic', 'laborContract', 'monthlyField', 'all']) {
     const on = (id) => TEMPLATE_ON[t].includes(id);
@@ -102,6 +120,7 @@ async function insideEntries(page, dlg, ctx) {
       `${label}：休みのタブ`,
     );
     await open(page, `/clients/${cid}?tab=basic`, '[data-testid="person-sec"]');
+    await openFold(page);
     const viewText = await page.getByTestId('person-view').innerText();
     check(viewText.includes('紹介元') === on('clientStage'), `${label}：基本情報の紹介元`);
     check(viewText.includes('訪問先の決まりごと') === on('visitNotes'), `${label}：基本情報の決まりごと`);
@@ -125,7 +144,7 @@ async function insideEntries(page, dlg, ctx) {
     check((await count('client-postal-search')) === (on('geocode') ? 1 : 0), `${label}：住所を探す`);
     check((await count('client-postal')) === 1, `${label}：郵便番号の欄は残る`);
     await csec('place').getByTestId('sec-cancel').click();
-    await open(page, `/clients/${cid}?tab=staffing`, '[data-testid="person-sec"]');
+    await openPart(page, `/clients/${cid}`, 'staffing');
     check(
       (await page.getByTestId('person-view').innerText()).includes('担当できる人') === on('allowedStaff'),
       `${label}：担当の節の担当できる人`,
@@ -151,13 +170,14 @@ async function insideEntries(page, dlg, ctx) {
     const staff = data.staff[0];
     const sid = encodeURIComponent(staff.id);
     await open(page, `/staff/${sid}?tab=basic`, '[data-testid="person-sec"]');
+    await openFold(page);
     const staffView = await page.getByTestId('person-view').innerText();
     check(staffView.includes('メールアドレス') === on('mail'), `${label}：〈スタッフ〉の基本情報のメールアドレス`);
     check((await csec('lastDay').count()) === (on('offboard') ? 1 : 0), `${label}：最終勤務日の節`);
     await csec('basic').getByTestId('sec-edit').click();
     check((await count('staff-email')) === (on('mail') ? 1 : 0), `${label}：〈スタッフ〉のメールアドレスの欄`);
     await csec('basic').getByTestId('sec-cancel').click();
-    await open(page, `/staff/${sid}?tab=compat`, '[data-testid="person-sec"]');
+    await openPart(page, `/staff/${sid}`, 'compat');
     check(
       (await page.getByTestId('person-view').innerText()).includes('◎ 選ばれやすい') === on('compat'),
       `${label}：〈スタッフ〉の相性`,
@@ -247,6 +267,7 @@ async function keepData(page, dlg, ctx) {
   // 〈利用者さん〉：段階・担当できる人の欄が無いまま保存する（節ごとに保存）
   const sec = (name) => page.locator(`[data-testid="person-sec"][data-section="${name}"]`);
   await open(page, `/clients/${encodeURIComponent(ids.client)}?tab=basic`, '[data-testid="person-sec"]');
+  await openFold(page);
   await sec('stage').getByTestId('sec-edit').click();
   await page.getByTestId('client-stage-select').waitFor({ timeout: 5000 });
   check(
@@ -255,7 +276,7 @@ async function keepData(page, dlg, ctx) {
   );
   await sec('stage').getByTestId('sec-save').click();
   await sec('stage').getByTestId('sec-edit').waitFor({ timeout: 5000 });
-  await open(page, `/clients/${encodeURIComponent(ids.client)}?tab=staffing`, '[data-testid="person-sec"]');
+  await openPart(page, `/clients/${encodeURIComponent(ids.client)}`, 'staffing');
   await sec('staffing').getByTestId('sec-edit').click();
   await sec('staffing').getByTestId('sec-save').click();
   await sec('staffing').getByTestId('sec-edit').waitFor({ timeout: 5000 });

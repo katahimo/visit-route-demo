@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useConfirm } from '../components/ConfirmDialog';
-import { useFeature } from '../components/useFeature';
+import { useExceptionsOnly, useFeature } from '../components/useFeature';
 import { COMPACT_QUERY, useMedia } from '../components/useMedia';
 import { jstDate } from '../domain/time';
 import type { ClientSecKey } from '../lib/clientEdit';
 import { byName } from '../lib/common';
+import { clientFolded, clientTabKeys } from '../lib/peopleView';
 import { CLIENT_TABS, type ClientTab, NEW_PERSON_ID, tabOf } from '../lib/personPage';
 import { useDemoData } from '../store';
 import { ClientLeavesSection } from './ClientLeavesSection';
@@ -106,15 +107,16 @@ function ClientPageBody({
   const patternsOn = useFeature('patterns');
   const notesOn = useFeature('visitNotes');
   const compatOn = useFeature('compat');
+  const only = useExceptionsOnly(); // 切は段階・特性・決まりごと・担当・相性を「詳しく ▾」へ畳む（PRD D385）
   const isNew = id === NEW_PERSON_ID;
   const saved = data.clients.find((c) => c.id === id);
   const staff = useMemo(() => [...data.staff].sort(byName), [data.staff]);
   const activeStaff = useMemo(() => staff.filter((s) => s.active), [staff]);
   const clientItems = data.items.filter((i) => i.target === 'client');
-  const tab: ClientTab = isNew ? 'basic' : tabOf(CLIENT_TABS, params.get('tab'));
+  const tab: ClientTab = isNew ? 'basic' : tabOf(clientTabKeys(CLIENT_TABS, only), params.get('tab'));
 
   // ---- 節の編集・保存 ----
-  const ed = useClientEdit({ isNew, saved, staff, nextColor: data.clients.length, terms, onDirty, onLeave });
+  const ed = useClientEdit({ isNew, saved, staff, nextColor: data.clients.length, terms, only, onDirty, onLeave });
   const { edit, error, errorId } = ed;
   const { save, confirmTentative, cancelTentative } = useClientSave({
     edit,
@@ -127,7 +129,6 @@ function ClientPageBody({
     discardAll: ed.discardAll,
     onLeave,
   });
-  // ---- 予定のカレンダー（URL の cal・d） ----
   const cal = useClientCal(today);
 
   // 新しい人を保存・取り消して移る間（節を閉じたあと）は何も出さない
@@ -148,6 +149,22 @@ function ClientPageBody({
     errorId,
   });
 
+  /** 担当・相性（入はタブ、切は基本情報の「詳しく」の中） */
+  const staffingTab = saved && (
+    <ClientStaffingTab
+      c={c}
+      saved={saved}
+      ctx={ctx}
+      limit={edit ? edit.limit : null}
+      setLimit={ed.setLimit}
+      sec={sec}
+      data={data}
+      activeStaff={activeStaff}
+      allowedOn={allowedOn}
+      compatOn={compatOn}
+    />
+  );
+
   return (
     <div
       className="stack person-page person-view"
@@ -165,12 +182,8 @@ function ClientPageBody({
         tab={tab}
         compatOn={compatOn}
         leavesOn={leavesOn}
-        onAskTab={async () => {
-          // 替えるなら直している節・繰り返し・休みの入力を捨てる（戻ったときに古い下書きを出さない）
-          const ok = await ed.ask('tab');
-          if (ok) ed.discardAll();
-          return ok;
-        }}
+        only={only}
+        onAskTab={ed.askTab}
       />
 
       {tab === 'schedule' && saved && (
@@ -205,25 +218,15 @@ function ClientPageBody({
           clientItems={clientItems}
           stageOn={stageOn}
           notesOn={notesOn}
+          only={only}
+          editKey={edit?.key}
+          more={clientFolded(only).includes('staffing') && saved ? staffingTab : null}
           onConfirmTentative={confirmTentative}
           onCancelTentative={cancelTentative}
         />
       )}
 
-      {tab === 'staffing' && saved && (
-        <ClientStaffingTab
-          c={c}
-          saved={saved}
-          ctx={ctx}
-          limit={edit ? edit.limit : null}
-          setLimit={ed.setLimit}
-          sec={sec}
-          data={data}
-          activeStaff={activeStaff}
-          allowedOn={allowedOn}
-          compatOn={compatOn}
-        />
-      )}
+      {tab === 'staffing' && staffingTab}
 
       {tab === 'leaves' && saved && leavesOn && (
         <div className="card stack" data-testid="person-leaves">

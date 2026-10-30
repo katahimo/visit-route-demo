@@ -39,7 +39,13 @@ export type CellGuideInput = {
   edited?: boolean;
   staffTerm: string;
   clientTerm: string;
+  /** 確定（伝えた）の段階を出すか（省略は出す）。切（エキスパート機能が切）は帯の3種類（担当なし・重なり・休みの人）と「変更あり」に合わせ、条件に合わない・拘束超は言わない（PRD D384） */
+  confirmStep?: boolean;
 };
+
+/** 要対応の内訳の文（入は4種類、切は帯の3種類） */
+const CARE_KINDS = '担当なし・担当が休み・条件に合わない・時間に間に合わない';
+const CARE_KINDS_SIMPLE = '担当なし・重なり・休みの人';
 
 /**
  * マスの読み方の行（出ている印の順。出ていない印は書かない）。例「休 2＝休む〈スタッフ〉の人数（希＝希望休の人数）」
@@ -47,14 +53,17 @@ export type CellGuideInput = {
  */
 export function cellGuide(x: CellGuideInput): string[] {
   const out: string[] = [];
+  const simple = x.confirmStep === false;
   if (x.stateText) out.push(`背景の色＝日の状態（${x.stateText}）`);
   else out.push('白い背景＝訪問の無い日');
   if (x.care)
-    out.push(
-      `${x.attention ? '赤い枠' : '赤い点・赤い枠'}＝要対応（担当なし・担当が休み・条件に合わない・時間に間に合わない）`,
-    );
+    out.push(`${x.attention ? '赤い枠' : '赤い点・赤い枠'}＝要対応（${simple ? CARE_KINDS_SIMPLE : CARE_KINDS}）`);
   if (x.attention)
-    out.push('赤い「要対応 N」の札＝要対応の件数（右の「要対応」の欄の行の数。要対応の訪問・未連絡の変更・拘束超）');
+    out.push(
+      simple
+        ? '赤い「要対応 N」の札＝要対応の件数（右の「要対応」の欄の行の数。担当なし・重なり・休みの人・変更あり）'
+        : '赤い「要対応 N」の札＝要対応の件数（右の「要対応」の欄の行の数。要対応の訪問・未連絡の変更・拘束超）',
+    );
   if (x.focus === 'all') {
     if (x.count > 0) out.push('右上の「N件」＝この日の訪問の件数');
     if (x.types) out.push('色の帯＝訪問の種類ごとの件数');
@@ -67,8 +76,13 @@ export function cellGuide(x: CellGuideInput): string[] {
   }
   if (x.unassigned) out.push('「担当なし N」＝担当の決まっていない訪問の件数');
   if (x.issues) out.push('「担当が休み N」など＝担当を確かめる訪問の件数（日の予定で直す）');
-  if (x.changed) out.push('「未連絡 N」＝確定（伝えた）あとに担当・時刻が変わった訪問の件数（連絡の一覧で確かめる）');
-  if (x.overSpan) out.push('「拘束超 N」＝出勤〜退勤（拘束）が上限を超える人数');
+  if (x.changed)
+    out.push(
+      simple
+        ? '「変更あり N」＝決まったあとに担当・時刻が変わった訪問の件数（押すと連絡の一覧）'
+        : '「未連絡 N」＝確定（伝えた）あとに担当・時刻が変わった訪問の件数（連絡の一覧で確かめる）',
+    );
+  if (x.overSpan && !simple) out.push('「拘束超 N」＝出勤〜退勤（拘束）が上限を超える人数');
   if (x.loadBar === 'load') out.push(`下の3段の棒＝30分ごとの空きの人数（高いほど空きが少ない。${barRowsText()}）`);
   else if (x.loadBar === 'noPlan') out.push('棒が無い＝この日は空きを数えられない');
   if (x.focus === 'staff')

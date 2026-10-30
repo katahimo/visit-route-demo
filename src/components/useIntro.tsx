@@ -3,18 +3,18 @@
 import { X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useSyncExternalStore } from 'react';
-import { introKey, introShown, introText, type ScheduleZoom } from '../lib/exceptionView';
+import { type IntroScreen, introKey, introShown, introText } from '../lib/exceptionView';
 import { navOpenMemory } from '../store';
 import './intro.css';
 import { IconButton } from './ui';
 import { useExceptionsOnly } from './useFeature';
 
-/** 見出しの下に出す説明（出さないときは undefined）。expertText は入のときの今の文 */
-export function useIntro(zoom: ScheduleZoom, expertText: string): ReactNode {
+/** 見出しの下に出す説明（出さないときは undefined）。expertText は入のときの今の文（simpleText は切の一覧の文。月・週・日は lib/exceptionView が持つ） */
+export function useIntro(zoom: IntroScreen, expertText: string, simpleText?: string): ReactNode {
   const only = useExceptionsOnly();
   const stored = useSyncExternalStore(navOpenMemory.subscribe, navOpenMemory.read, navOpenMemory.cached);
   if (!introShown(stored, zoom, only)) return undefined;
-  const text = introText(zoom, only, expertText);
+  const text = introText(zoom, only, expertText, simpleText);
   if (!only) return text;
   return (
     <span className="page-lead-row" data-testid="page-intro">

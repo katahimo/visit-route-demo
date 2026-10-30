@@ -11,17 +11,22 @@ import {
   Sparkles,
   UserRound,
 } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ConditionsEditor, TraitsEditor } from '../components/conditions';
+import { DetailsFold } from '../components/DetailsFold';
 import { CondRows, DlRow, StaffHoursRow, StaffLastDayRow, StaffTraitRows } from '../components/personDetail';
 import { EditSection } from '../components/personPage';
 import { placeText, StaffClientRows } from '../components/personView';
 import { AddressField } from '../components/placeLookup';
 import { Hint, WithIcon } from '../components/ui';
-import type { Staff } from '../contracts/documents';
+import type { DemoData } from '../contracts/data';
+import type { Staff, Terms } from '../contracts/documents';
+import type { Item } from '../contracts/rules';
 import { slotsText } from '../domain/availability';
 import { encodeStaffFilter } from '../lib/compatView';
 import { dateText } from '../lib/dateText';
+import { type StaffPart, splitFolded } from '../lib/peopleView';
 import { orDash } from '../lib/viewMode';
 import { useDemoData } from '../store';
 import { StaffBasicFields, StaffBasicView, StaffHoursFields, StaffLastDayFields } from './staffFields';
@@ -31,31 +36,192 @@ import type { StaffSchedule } from './useStaffSchedule';
 /** 節の編集（useStaffEdit の戻り値） */
 type StaffEdit = ReturnType<typeof useStaffEdit>;
 
-/** 基本情報のタブ（新しい人は基本の節だけを開いた形） */
+type StaffBasicArgs = { s: Staff; ed: StaffEdit; mailOn: boolean; offboardOn: boolean; data: DemoData };
+
+/** 基本情報のタブの節（欄の種類つき。切は畳む欄を分ける。lib/peopleView の splitFolded） */
+function basicSections({ s, ed, mailOn, offboardOn, data }: StaffBasicArgs): { part: StaffPart; node: ReactNode }[] {
+  const terms = data.org.terms;
+  const staffItems = data.items.filter((i) => i.target === 'staff');
+  const { form, setForm, bad, sec } = ed;
+  const basicFields = form && (
+    <StaffBasicFields form={form} setForm={setForm} bad={bad} previewColor={ed.previewColor} mailOn={mailOn} />
+  );
+  return [
+    {
+      part: 'basic',
+      node: (
+        <EditSection
+          key="basic"
+          {...sec('basic')}
+          icon={UserRound}
+          title="基本"
+          view={<StaffBasicView s={s} mailOn={mailOn} />}
+        >
+          {basicFields}
+        </EditSection>
+      ),
+    },
+    {
+      part: 'home',
+      node: (
+        <EditSection
+          key="home"
+          {...sec('home')}
+          icon={Home}
+          title="自宅"
+          view={
+            <dl>
+              <DlRow term="住所" value={orDash(s.home.address)} />
+              <DlRow term="地図の位置" value={placeText(s.home)} />
+            </dl>
+          }
+        >
+          {/* 郵便番号は住所を探すためだけで保存しない（自宅は契約の Place のまま。PRD D121） */}
+          {form && (
+            <AddressField
+              value={form.home}
+              onChange={(home) => setForm((f) => ({ ...f, home }))}
+              testId="staff-home"
+              postalLabel="郵便番号（任意。住所を探すためだけで、保存しません）"
+            />
+          )}
+        </EditSection>
+      ),
+    },
+    {
+      part: 'traits',
+      node: (
+        <EditSection
+          key="traits"
+          {...sec('traits')}
+          icon={BadgeCheck}
+          title="特性"
+          view={
+            <dl>
+              <StaffTraitRows staff={s} data={data} />
+            </dl>
+          }
+        >
+          {form && (
+            <TraitsEditor items={staffItems} value={form.traits} onChange={(traits) => setForm({ ...form, traits })} />
+          )}
+        </EditSection>
+      ),
+    },
+    {
+      part: 'conds',
+      node: (
+        <EditSection
+          key="conds"
+          {...sec('conds')}
+          icon={SlidersHorizontal}
+          title={`${terms.client}に求めること`}
+          view={
+            <dl>
+              <CondRows requirements={s.requirements} preferences={s.preferences} data={data} />
+            </dl>
+          }
+        >
+          {form && <StaffCondsFields form={form} setForm={setForm} terms={terms} items={data.items} />}
+        </EditSection>
+      ),
+    },
+    ...(offboardOn
+      ? [
+          {
+            part: 'lastDay' as const,
+            node: (
+              <EditSection
+                key="lastDay"
+                {...sec('lastDay')}
+                icon={CalendarX}
+                title="最終勤務日（退職・担当替え）"
+                view={
+                  <dl>
+                    <StaffLastDayRow staff={s} />
+                  </dl>
+                }
+              >
+                {form && <StaffLastDayFields form={form} setForm={setForm} bad={bad} terms={terms} />}
+              </EditSection>
+            ),
+          },
+        ]
+      : []),
+  ];
+}
+
+/** 必要条件・希望の入力欄（〈スタッフ〉に求めることの節） */
+function StaffCondsFields({
+  form,
+  setForm,
+  terms,
+  items,
+}: {
+  form: Staff;
+  setForm: (s: Staff) => void;
+  terms: Terms;
+  items: Item[];
+}) {
+  return (
+    <>
+      <h3 className="person-subhead">
+        <WithIcon icon={SlidersHorizontal} size={16}>
+          必要条件
+        </WithIcon>
+      </h3>
+      <Hint>
+        {terms.client}
+        の特性への条件です。例：ペットのいる家を避けるなら、「ペットあり」を「なし」にします。合わない
+        {terms.client}は、点が下がるか、必須なら担当になりません。
+      </Hint>
+      <ConditionsEditor
+        items={items}
+        target="client"
+        value={form.requirements}
+        onChange={(requirements) => setForm({ ...form, requirements })}
+      />
+      <h3 className="person-subhead">
+        <WithIcon icon={Sparkles} size={16}>
+          希望
+        </WithIcon>
+      </h3>
+      <ConditionsEditor
+        items={items}
+        target="client"
+        value={form.preferences}
+        onChange={(preferences) => setForm({ ...form, preferences })}
+      />
+    </>
+  );
+}
+
+/** 基本情報のタブ（新しい人は基本の節だけを開いた形）。切は自宅・特性・求めること・最終勤務日（と相性）を「詳しく ▾」へ畳む（PRD D385） */
 export function StaffBasicTab({
   s,
   isNew,
   ed,
   mailOn,
   offboardOn,
+  folded,
+  more,
 }: {
   s: Staff;
   isNew: boolean;
   ed: StaffEdit;
   mailOn: boolean;
   offboardOn: boolean;
+  /** 「詳しく ▾」へ畳む欄（切のとき。入は空。lib/peopleView の staffFolded） */
+  folded: readonly StaffPart[];
+  /** 「詳しく ▾」の中に足す相性（担当）の節（切のとき。相性のタブを出さないので） */
+  more: ReactNode;
 }) {
   const { data } = useDemoData();
-  const terms = data.org.terms;
-  const staffItems = data.items.filter((i) => i.target === 'staff');
-  const { edit, form, setForm, bad, sec } = ed;
-  const basicFields = form && (
-    <StaffBasicFields form={form} setForm={setForm} bad={bad} previewColor={ed.previewColor} mailOn={mailOn} />
-  );
-  const hoursFields = form && <StaffHoursFields form={form} setForm={setForm} bad={bad} />;
-  return (
-    <div className="person-sections">
-      {isNew && edit ? (
+  const { edit, form, setForm, bad } = ed;
+  const parts = splitFolded(basicSections({ s, ed, mailOn, offboardOn, data }), isNew ? [] : folded);
+  if (isNew && edit)
+    return (
+      <div className="person-sections">
         <EditSection
           name="new"
           icon={UserRound}
@@ -68,165 +234,94 @@ export function StaffBasicTab({
           errorId={ed.errorId}
           view={null}
         >
-          {basicFields}
-          {hoursFields}
+          {form && (
+            <StaffBasicFields form={form} setForm={setForm} bad={bad} previewColor={ed.previewColor} mailOn={mailOn} />
+          )}
+          {form && <StaffHoursFields form={form} setForm={setForm} bad={bad} />}
           <Hint label="ほかの項目">自宅・特性・求めること・最終勤務日は、保存してから入れられます。</Hint>
         </EditSection>
-      ) : (
-        <>
-          <EditSection {...sec('basic')} icon={UserRound} title="基本" view={<StaffBasicView s={s} mailOn={mailOn} />}>
-            {basicFields}
-          </EditSection>
-          <EditSection
-            {...sec('home')}
-            icon={Home}
-            title="自宅"
-            view={
-              <dl>
-                <DlRow term="住所" value={orDash(s.home.address)} />
-                <DlRow term="地図の位置" value={placeText(s.home)} />
-              </dl>
-            }
-          >
-            {/* 郵便番号は住所を探すためだけで保存しない（自宅は契約の Place のまま。PRD D121） */}
-            {form && (
-              <AddressField
-                value={form.home}
-                onChange={(home) => setForm((f) => ({ ...f, home }))}
-                testId="staff-home"
-                postalLabel="郵便番号（任意。住所を探すためだけで、保存しません）"
-              />
-            )}
-          </EditSection>
-          <EditSection
-            {...sec('traits')}
-            icon={BadgeCheck}
-            title="特性"
-            view={
-              <dl>
-                <StaffTraitRows staff={s} data={data} />
-              </dl>
-            }
-          >
-            {form && (
-              <TraitsEditor
-                items={staffItems}
-                value={form.traits}
-                onChange={(traits) => setForm({ ...form, traits })}
-              />
-            )}
-          </EditSection>
-          <EditSection
-            {...sec('conds')}
-            icon={SlidersHorizontal}
-            title={`${terms.client}に求めること`}
-            view={
-              <dl>
-                <CondRows requirements={s.requirements} preferences={s.preferences} data={data} />
-              </dl>
-            }
-          >
-            {form && (
-              <>
-                <h3 className="person-subhead">
-                  <WithIcon icon={SlidersHorizontal} size={16}>
-                    必要条件
-                  </WithIcon>
-                </h3>
-                <Hint>
-                  {terms.client}
-                  の特性への条件です。例：ペットのいる家を避けるなら、「ペットあり」を「なし」にします。合わない
-                  {terms.client}は、点が下がるか、必須なら担当になりません。
-                </Hint>
-                <ConditionsEditor
-                  items={data.items}
-                  target="client"
-                  value={form.requirements}
-                  onChange={(requirements) => setForm({ ...form, requirements })}
-                />
-                <h3 className="person-subhead">
-                  <WithIcon icon={Sparkles} size={16}>
-                    希望
-                  </WithIcon>
-                </h3>
-                <ConditionsEditor
-                  items={data.items}
-                  target="client"
-                  value={form.preferences}
-                  onChange={(preferences) => setForm({ ...form, preferences })}
-                />
-              </>
-            )}
-          </EditSection>
-          {offboardOn && (
-            <EditSection
-              {...sec('lastDay')}
-              icon={CalendarX}
-              title="最終勤務日（退職・担当替え）"
-              view={
-                <dl>
-                  <StaffLastDayRow staff={s} />
-                </dl>
-              }
-            >
-              {form && <StaffLastDayFields form={form} setForm={setForm} bad={bad} terms={terms} />}
-            </EditSection>
-          )}
-        </>
+      </div>
+    );
+  return (
+    <>
+      <div className="person-sections">{parts.shown}</div>
+      {(parts.folded.length > 0 || more) && (
+        <DetailsFold testId="person-details">
+          {parts.folded.length > 0 && <div className="person-sections">{parts.folded}</div>}
+          {more}
+        </DetailsFold>
       )}
-    </div>
+    </>
   );
 }
 
-/** 勤務時間のタブ（ふだんの勤務の節と、これからの日ごとに変えた勤務） */
+/** 日ごとに変えた勤務（これから）の節（勤務の見込み。切は「詳しく ▾」の中） */
+function StaffOverridesSection({ overrides }: { overrides: StaffSchedule['overrides'] }) {
+  return (
+    <section className="card stack person-sec" data-testid="person-sec" data-section="overrides">
+      <div className="section-title">
+        <h2>
+          <CalendarDays size={18} strokeWidth={2.2} aria-hidden="true" />
+          日ごとに変えた勤務（これから）
+        </h2>
+        <div className="section-aside">
+          <Link to="/availability" className="btn btn-small" data-testid="to-availability">
+            勤務時間（シフト）で直す
+          </Link>
+        </div>
+      </div>
+      {overrides.length === 0 ? (
+        <span className="sub">日ごとに変えた勤務はありません</span>
+      ) : (
+        <ul className="person-list">
+          {overrides.map((o) => (
+            <li key={o.date}>
+              <strong>{dateText(o.date)}</strong> <span className="sub">{slotsText(o.slots)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+/** 勤務時間のタブ（ふだんの勤務の節と、これからの日ごとに変えた勤務。切は後者を「詳しく ▾」へ） */
 export function StaffHoursTab({
   s,
   ed,
   overrides,
+  folded,
 }: {
   s: Staff;
   ed: StaffEdit;
   overrides: StaffSchedule['overrides'];
+  /** 「詳しく ▾」へ畳む欄（切のとき。入は空。lib/peopleView の staffFolded） */
+  folded: readonly StaffPart[];
 }) {
   const { form, setForm, bad, sec } = ed;
+  const fold = folded.includes('overrides');
   return (
-    <div className="person-sections">
-      <EditSection
-        {...sec('hours')}
-        icon={Clock}
-        title="ふだんの勤務"
-        view={
-          <dl>
-            <StaffHoursRow staff={s} />
-          </dl>
-        }
-      >
-        {form && <StaffHoursFields form={form} setForm={setForm} bad={bad} />}
-      </EditSection>
-      <section className="card stack person-sec" data-testid="person-sec" data-section="overrides">
-        <div className="section-title">
-          <h2>
-            <CalendarDays size={18} strokeWidth={2.2} aria-hidden="true" />
-            日ごとに変えた勤務（これから）
-          </h2>
-          <div className="section-aside">
-            <Link to="/availability" className="btn btn-small" data-testid="to-availability">
-              勤務時間（シフト）で直す
-            </Link>
-          </div>
-        </div>
-        {overrides.length === 0 ? (
-          <span className="sub">日ごとに変えた勤務はありません</span>
-        ) : (
-          <ul className="person-list">
-            {overrides.map((o) => (
-              <li key={o.date}>
-                <strong>{dateText(o.date)}</strong> <span className="sub">{slotsText(o.slots)}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+    <div className="stack">
+      <div className="person-sections">
+        <EditSection
+          {...sec('hours')}
+          icon={Clock}
+          title="ふだんの勤務"
+          view={
+            <dl>
+              <StaffHoursRow staff={s} />
+            </dl>
+          }
+        >
+          {form && <StaffHoursFields form={form} setForm={setForm} bad={bad} />}
+        </EditSection>
+        {!fold && <StaffOverridesSection overrides={overrides} />}
+      </div>
+      {fold && (
+        <DetailsFold testId="person-details">
+          <StaffOverridesSection overrides={overrides} />
+        </DetailsFold>
+      )}
     </div>
   );
 }

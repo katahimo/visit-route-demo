@@ -8,6 +8,7 @@ import { PageHeader, WithIcon } from '../components/ui';
 import type { Staff } from '../contracts/documents';
 import { WEEKDAY_LABELS } from '../lib/common';
 import { mdText } from '../lib/dateText';
+import { staffTabKeys } from '../lib/peopleView';
 import type { StaffTab } from '../lib/personPage';
 
 export function StaffPersonHeader({
@@ -16,6 +17,7 @@ export function StaffPersonHeader({
   isNew,
   tab,
   compatOn,
+  only,
   staffTerm,
   askTab,
 }: {
@@ -24,11 +26,13 @@ export function StaffPersonHeader({
   isNew: boolean;
   tab: StaffTab;
   compatOn: boolean;
+  /** エキスパート機能が切か（切は相性のタブを出さず、中身は基本情報の「詳しく」へ。PRD D385） */
+  only: boolean;
   staffTerm: string;
   /** タブを替えてよいか（替えるなら直している入力を捨てる） */
   askTab: () => Promise<boolean>;
 }) {
-  const tabs: PersonTabDef<StaffTab>[] = [
+  const all: PersonTabDef<StaffTab>[] = [
     { key: 'schedule', label: '予定', icon: CalendarDays, disabled: isNew ? '保存してから見られます' : false },
     { key: 'basic', label: '基本情報', icon: UserRound },
     { key: 'hours', label: '勤務時間', icon: Clock, disabled: isNew ? '保存してから直せます' : false },
@@ -39,6 +43,11 @@ export function StaffPersonHeader({
       disabled: isNew ? '保存してから見られます' : false,
     },
   ];
+  const keys = staffTabKeys(
+    all.map((t) => t.key),
+    only,
+  );
+  const tabs = all.filter((t) => keys.includes(t.key));
   return (
     <PageHeader
       icon={isNew ? Plus : UserRound}

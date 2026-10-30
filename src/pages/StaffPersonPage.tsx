@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useConfirm } from '../components/ConfirmDialog';
-import { useFeature } from '../components/useFeature';
+import { useExceptionsOnly, useFeature } from '../components/useFeature';
 import { jstDate } from '../domain/time';
+import { staffFolded, staffTabKeys } from '../lib/peopleView';
 import { NEW_PERSON_ID, STAFF_TABS, type StaffTab, tabOf } from '../lib/personPage';
 import { useDemoData } from '../store';
 import { OffboardPanel } from './OffboardPanel';
@@ -93,12 +94,15 @@ function StaffPageBody({
   const today = jstDate(Date.now());
   // 機能の入り切り（ADR-0028）
   const offboardOn = useFeature('offboard');
+  // エキスパート機能が切：名前・勤務日・勤務時間を出し、資格・特性・勤務の見込み（ほか）は「詳しく ▾」へ畳む（PRD D385）
+  const only = useExceptionsOnly();
+  const folded = staffFolded(only);
   const compatOn = useFeature('compat');
   const mailOn = useFeature('mail');
   const allowedStaffOn = useFeature('allowedStaff');
   const isNew = id === NEW_PERSON_ID;
   const saved = data.staff.find((s) => s.id === id);
-  const tab: StaffTab = isNew ? 'basic' : tabOf(STAFF_TABS, params.get('tab'));
+  const tab: StaffTab = isNew ? 'basic' : tabOf(staffTabKeys(STAFF_TABS, only), params.get('tab'));
   /** 担当の振り直しの欄（最終勤務日を入れて保存したとき。PRD D71） */
   const [offboard, setOffboard] = useState(false);
 
@@ -125,6 +129,7 @@ function StaffPageBody({
         isNew={isNew}
         tab={tab}
         compatOn={compatOn}
+        only={only}
         staffTerm={terms.staff}
         askTab={async () => {
           // 替えるなら直している節・繰り返し・休みの入力を捨てる（戻ったときに古い下書きを出さない）
@@ -144,9 +149,19 @@ function StaffPageBody({
         />
       )}
 
-      {tab === 'basic' && <StaffBasicTab s={s} isNew={isNew} ed={ed} mailOn={mailOn} offboardOn={offboardOn} />}
+      {tab === 'basic' && (
+        <StaffBasicTab
+          s={s}
+          isNew={isNew}
+          ed={ed}
+          mailOn={mailOn}
+          offboardOn={offboardOn}
+          folded={folded}
+          more={folded.includes('compat') && saved ? <StaffCompatTab saved={saved} compatOn={compatOn} /> : null}
+        />
+      )}
 
-      {tab === 'hours' && saved && <StaffHoursTab s={s} ed={ed} overrides={schedule.overrides} />}
+      {tab === 'hours' && saved && <StaffHoursTab s={s} ed={ed} overrides={schedule.overrides} folded={folded} />}
 
       {tab === 'compat' && saved && <StaffCompatTab saved={saved} compatOn={compatOn} />}
 

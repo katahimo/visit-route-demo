@@ -462,7 +462,7 @@ export function menuSections(
  * メニューでタブにまとめた画面（月・週・日の予定・基本情報のタブ・勤務の見込み・設定のタブ）も1つずつ持つ。
  * ホーム（切のときは無い。PRD D383）／予定（月の予定・週の予定・日の予定。切のときは担当を組む・空き状況もここ）／
  * 予定を組む（入のとき：条件の重み・組み方の標準・担当を組む）／空き状況（入のとき）／
- * 基本情報（切のときは「人」。予定と相性・〈利用者さん〉一覧・〈スタッフ〉一覧・相性・勤務時間（シフト）・勤務の見込み。ADR-0067）／
+ * 基本情報（切のときは区分の名前なし。〈利用者さん〉・〈スタッフ〉は呼び名そのまま。予定と相性・〈利用者さん〉一覧・〈スタッフ〉一覧・相性・勤務時間（シフト）・勤務の見込み。ADR-0067）／
  * 設定（訪問の種類・特性の項目・管理者設定・データ）。
  * 項目名は画面の見出しと同じ。切った機能の画面は出さない
  */
@@ -497,12 +497,12 @@ export function screenSections(terms: Pick<Terms, 'client' | 'staff'>, features:
     },
     { items: expert ? [vacancyScreen] : [] },
     {
-      // エキスパート機能が切なら「人」（メニューと同じ呼び名。ADR-0072）
-      title: expert ? '基本情報' : '人',
+      // エキスパート機能が切なら「人」の区分はやめ、〈利用者さん〉・〈スタッフ〉を呼び名そのままの項目にする（上の帯は「スタッフ」。PRD D383・D385）
+      title: expert ? '基本情報' : undefined,
       items: [
         { key: 'basics', to: '/basics', label: '予定と相性', icon: 'people' },
-        { key: 'clients', to: '/clients', label: `${terms.client}一覧`, icon: 'clients' },
-        { key: 'staff', to: '/staff', label: `${terms.staff}一覧`, icon: 'staff' },
+        { key: 'clients', to: '/clients', label: expert ? `${terms.client}一覧` : terms.client, icon: 'clients' },
+        { key: 'staff', to: '/staff', label: expert ? `${terms.staff}一覧` : terms.staff, icon: 'staff' },
         { key: 'compat', to: '/compat', label: '相性', icon: 'compat' },
         { key: 'availability', to: '/availability', label: '勤務時間（シフト）', icon: 'hours' },
         { key: 'workload', to: '/workload', label: '勤務の見込み', icon: 'workload' },

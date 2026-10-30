@@ -13,12 +13,17 @@ import { STAGE_LABELS } from '../lib/clientStage';
 import { colorOf, initialOf } from '../lib/colors';
 import { hasLocation } from '../lib/common';
 import { narrowRole } from '../lib/narrowRoles';
+import { addressLine, type ClientCol, clientColumns, clientNameNote, usualPlanText } from '../lib/peopleView';
 import { formatPostalCode } from '../lib/postalCode';
 import { shouldOpenRow } from '../lib/rowOpen';
+import { orDash } from '../lib/viewMode';
 
 /** どの行でも同じもの */
 type RowContext = {
   data: DemoData;
+  /** 出す列（切は名前・住所・いつもの予定の3列。lib/peopleView） */
+  cols: readonly ClientCol[];
+  only: boolean;
   stageOn: boolean;
   allowedOn: boolean;
   clientItems: Item[];
@@ -29,6 +34,18 @@ type RowContext = {
   onOpen: (c: Client) => void;
 };
 
+/** 列の見出し（呼び名は org.terms から） */
+const COL_LABEL: Record<ClientCol, (staffTerm: string) => string> = {
+  name: () => '名前',
+  address: () => '住所',
+  plan: () => 'いつもの予定',
+  place: () => '位置',
+  traits: () => '特性',
+  requires: (staff) => `${staff}に求めること`,
+  usual: () => 'いつもの担当',
+  state: () => '状態',
+};
+
 export function ClientsTable({
   shown,
   data,
@@ -36,6 +53,7 @@ export function ClientsTable({
   usualMap,
   stageOn,
   allowedOn,
+  only,
   onOpen,
 }: {
   shown: Client[];
@@ -46,13 +64,18 @@ export function ClientsTable({
   usualMap: ReadonlyMap<string, string>;
   stageOn: boolean;
   allowedOn: boolean;
+  /** エキスパート機能が切か（切は3列だけ。PRD D385） */
+  only: boolean;
   /** 行を押したとき（その人の画面へ） */
   onOpen: (c: Client) => void;
 }) {
   const terms = data.org.terms;
   const staffName = (id: string | null) => (id ? (staff.find((s) => s.id === id)?.name ?? '（不明）') : '');
+  const cols = clientColumns(only);
   const ctx: RowContext = {
     data,
+    cols,
+    only,
     stageOn,
     allowedOn,
     clientItems: data.items.filter((i) => i.target === 'client'),
@@ -66,19 +89,18 @@ export function ClientsTable({
     <table {...narrowRole.table} className="people-table narrow-cards" data-testid="narrow-clients">
       <thead {...narrowRole.rowgroup}>
         <tr {...narrowRole.row}>
-          <th {...narrowRole.columnheader}>名前</th>
-          <th {...narrowRole.columnheader}>位置</th>
-          <th {...narrowRole.columnheader}>特性</th>
-          <th {...narrowRole.columnheader}>{terms.staff}に求めること</th>
-          <th {...narrowRole.columnheader}>いつもの担当</th>
-          <th {...narrowRole.columnheader}>状態</th>
+          {cols.map((col) => (
+            <th key={col} {...narrowRole.columnheader}>
+              {COL_LABEL[col](terms.staff)}
+            </th>
+          ))}
           <th {...narrowRole.columnheader} aria-label="操作" />
         </tr>
       </thead>
       <tbody {...narrowRole.rowgroup}>
         {shown.length === 0 && (
           <tr {...narrowRole.row}>
-            <td {...narrowRole.cell} colSpan={7} className="sub">
+            <td {...narrowRole.cell} colSpan={cols.length + 1} className="sub">
               当てはまる{terms.client}がいません
             </td>
           </tr>
@@ -92,8 +114,7 @@ export function ClientsTable({
 }
 
 function ClientsRow({ c, ctx }: { c: Client; ctx: RowContext }) {
-  const { data, stageOn, allowedOn, clientItems, itemById, usualMap, staffName, today, onOpen } = ctx;
-  const terms = data.org.terms;
+  const { cols, onOpen } = ctx;
   return (
     <tr
       {...narrowRole.row}
@@ -111,72 +132,9 @@ function ClientsRow({ c, ctx }: { c: Client; ctx: RowContext }) {
         onOpen(c);
       }}
     >
-      <td {...narrowRole.cell} className="narrow-title" data-label="名前">
-        <span className="row person-name">
-          <span className="dot dot-sm" style={{ background: colorOf(c.color) }}>
-            {initialOf(c.displayName)}
-          </span>
-          <span className="person-main">
-            <span className="row" style={{ gap: 6 }}>
-              {c.displayName}
-              {c.tentative && <TentativeMark />}
-            </span>
-            {c.kana && <small className="person-sub">{c.kana}</small>}
-            {(c.place.address || c.place.postalCode) && (
-              <small className="person-sub">
-                {c.place.postalCode && `〒${formatPostalCode(c.place.postalCode)} `}
-                {c.place.address}
-              </small>
-            )}
-            {stageOn && c.referrer.name && <small className="person-sub">紹介元：{c.referrer.name}</small>}
-          </span>
-        </span>
-      </td>
-      <td {...narrowRole.cell} data-label="位置">
-        {hasLocation(c.place) ? (
-          <span className="chip chip-ok" title="位置あり">
-            <MapPin size={13} strokeWidth={2.2} aria-hidden="true" />
-            <span className="sr-only">あり</span>
-          </span>
-        ) : (
-          <span className="chip chip-warn">未登録</span>
-        )}
-      </td>
-      <td {...narrowRole.cell} data-label="特性">
-        <TraitChips traits={c.traits} items={clientItems} />
-      </td>
-      <td {...narrowRole.cell} className="cond-cell" data-label={`${terms.staff}に求めること`}>
-        <CondChips requirements={c.requirements} preferences={c.preferences} itemById={itemById} />
-      </td>
-      <td {...narrowRole.cell} className="nowrap" data-label="いつもの担当">
-        {usualMap.get(c.id) && (
-          <span className="with-staff-mark">
-            <StaffMarkById id={usualMap.get(c.id)!} size="xs" />
-            {staffName(usualMap.get(c.id)!)}
-          </span>
-        )}
-        {allowedOn && c.allowedStaffIds.length > 0 && (
-          <span
-            className="chip chip-limit"
-            title={`担当できる人を限っています：${c.allowedStaffIds.map(staffName).join('、')}`}
-            data-testid="client-limit"
-          >
-            <ShieldCheck size={13} aria-hidden="true" />限{' '}
-            {c.allowedStaffIds.map((id) => staffName(id).split(/\s+/)[0]).join('、')}
-          </span>
-        )}
-      </td>
-      <td {...narrowRole.cell} className="narrow-head" data-label="状態">
-        <span className={`chip stage-chip is-${c.stage}`} data-testid="client-stage">
-          {STAGE_LABELS[c.stage]}
-        </span>
-        {c.tentative && <span className="chip chip-warn">仮押さえ</span>}
-        {leaveOn(data.clientLeaves, c.id, today) && (
-          <span className="chip chip-warn" title={leaveOn(data.clientLeaves, c.id, today)?.note || undefined}>
-            休み中
-          </span>
-        )}
-      </td>
+      {cols.map((col) => (
+        <ClientCell key={col} col={col} c={c} ctx={ctx} />
+      ))}
       <td {...narrowRole.cell} className="narrow-act">
         <Link
           className="icon-btn tone-plain"
@@ -190,4 +148,134 @@ function ClientsRow({ c, ctx }: { c: Client; ctx: RowContext }) {
       </td>
     </tr>
   );
+}
+
+/** 名前のセル（色の丸・名前・仮の印。入はよみ・住所・紹介元も添える） */
+function NameCell({ c, ctx }: { c: Client; ctx: RowContext }) {
+  const simple = ctx.only;
+  return (
+    <td {...narrowRole.cell} className="narrow-title" data-label="名前">
+      <span className="row person-name">
+        <span className="dot dot-sm" style={{ background: colorOf(c.color) }}>
+          {initialOf(c.displayName)}
+        </span>
+        <span className="person-main">
+          <span className="row" style={{ gap: 6 }}>
+            {c.displayName}
+            {c.tentative && <TentativeMark />}
+            {/* 切は状態の列を出さないので、例外の休み中は名前のそばに残す */}
+            {clientNameNote(!!leaveOn(ctx.data.clientLeaves, c.id, ctx.today), ctx.cols) && (
+              <span className="chip chip-warn">休み中</span>
+            )}
+          </span>
+          {!simple && c.kana && <small className="person-sub">{c.kana}</small>}
+          {!simple && (c.place.address || c.place.postalCode) && (
+            <small className="person-sub">
+              {c.place.postalCode && `〒${formatPostalCode(c.place.postalCode)} `}
+              {c.place.address}
+            </small>
+          )}
+          {ctx.stageOn && !simple && c.referrer.name && <small className="person-sub">紹介元：{c.referrer.name}</small>}
+        </span>
+      </span>
+    </td>
+  );
+}
+
+/** 担当できる人を限る印つきのいつもの担当 */
+function UsualCell({ c, ctx }: { c: Client; ctx: RowContext }) {
+  const { allowedOn, usualMap, staffName } = ctx;
+  return (
+    <td {...narrowRole.cell} className="nowrap" data-label="いつもの担当">
+      {usualMap.get(c.id) && (
+        <span className="with-staff-mark">
+          <StaffMarkById id={usualMap.get(c.id)!} size="xs" />
+          {staffName(usualMap.get(c.id)!)}
+        </span>
+      )}
+      {allowedOn && c.allowedStaffIds.length > 0 && (
+        <span
+          className="chip chip-limit"
+          title={`担当できる人を限っています：${c.allowedStaffIds.map(staffName).join('、')}`}
+          data-testid="client-limit"
+        >
+          <ShieldCheck size={13} aria-hidden="true" />限{' '}
+          {c.allowedStaffIds.map((id) => staffName(id).split(/\s+/)[0]).join('、')}
+        </span>
+      )}
+    </td>
+  );
+}
+
+/** 状態のセル（段階・仮押さえ・休み中） */
+function StateCell({ c, ctx }: { c: Client; ctx: RowContext }) {
+  const { data, today } = ctx;
+  return (
+    <td {...narrowRole.cell} className="narrow-head" data-label="状態">
+      <span className={`chip stage-chip is-${c.stage}`} data-testid="client-stage">
+        {STAGE_LABELS[c.stage]}
+      </span>
+      {c.tentative && <span className="chip chip-warn">仮押さえ</span>}
+      {leaveOn(data.clientLeaves, c.id, today) && (
+        <span className="chip chip-warn" title={leaveOn(data.clientLeaves, c.id, today)?.note || undefined}>
+          休み中
+        </span>
+      )}
+    </td>
+  );
+}
+
+/** 1つの列のセル（列の種類ごとの分岐はここに集める） */
+function ClientCell({ col, c, ctx }: { col: ClientCol; c: Client; ctx: RowContext }) {
+  const { data, clientItems, itemById } = ctx;
+  const terms = data.org.terms;
+  switch (col) {
+    case 'name':
+      return <NameCell c={c} ctx={ctx} />;
+    case 'address':
+      return (
+        <td {...narrowRole.cell} data-label="住所" data-testid="client-address">
+          {orDash(addressLine(c.place))}
+        </td>
+      );
+    case 'plan':
+      return (
+        <td {...narrowRole.cell} data-label="いつもの予定" data-testid="client-plan">
+          {orDash(usualPlanText(data.patterns, c.id, ctx.today))}
+        </td>
+      );
+    case 'place':
+      return (
+        <td {...narrowRole.cell} data-label="位置">
+          {hasLocation(c.place) ? (
+            <span className="chip chip-ok" title="位置あり">
+              <MapPin size={13} strokeWidth={2.2} aria-hidden="true" />
+              <span className="sr-only">あり</span>
+            </span>
+          ) : (
+            <span className="chip chip-warn">未登録</span>
+          )}
+        </td>
+      );
+    case 'traits':
+      return (
+        <td {...narrowRole.cell} data-label="特性">
+          <TraitChips traits={c.traits} items={clientItems} />
+        </td>
+      );
+    case 'requires':
+      return (
+        <td {...narrowRole.cell} className="cond-cell" data-label={`${terms.staff}に求めること`}>
+          <CondChips requirements={c.requirements} preferences={c.preferences} itemById={itemById} />
+        </td>
+      );
+    case 'usual':
+      return <UsualCell c={c} ctx={ctx} />;
+    case 'state':
+      return <StateCell c={c} ctx={ctx} />;
+    default: {
+      const _: never = col;
+      return _;
+    }
+  }
 }

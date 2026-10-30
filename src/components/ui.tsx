@@ -1,6 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 import { Info, X } from 'lucide-react';
-import { type ButtonHTMLAttributes, type ReactNode, type RefObject, useId, useRef } from 'react';
+import { type ButtonHTMLAttributes, type ReactNode, type Ref, type RefObject, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { submitHandler } from './FieldError';
 import { usePanelFoot, usePanelToastPlace, useVisualViewportFit } from './usePanelFoot';
@@ -132,6 +132,8 @@ export function IconButton({
   icon: LucideIcon;
   label: string;
   tone?: 'plain' | 'danger';
+  /** フォーカスを移すときなどに（React 19 は ref を props で受ける） */
+  ref?: Ref<HTMLButtonElement>;
 } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'>) {
   return (
     <button type="button" className={`icon-btn tone-${tone} ${className}`} title={label} aria-label={label} {...rest}>

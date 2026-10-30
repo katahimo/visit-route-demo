@@ -1,6 +1,6 @@
 # 〈利用者さん〉の一覧と、〈利用者さん〉・〈スタッフ〉の画面・住所の入力・絞り込み（共通部品）
 
-> この画面のファイル：`src/pages/ClientsPage.tsx`（一覧の表 `clientsTable.tsx`・状態 `useClientsList.ts`。名簿の欄 `src/components/RosterCard.tsx`・`useRosterCard.ts`・`useRosterImport.ts`）・`ClientPage.tsx`（見出しとタブ `clientPageHeader.tsx`・タブ `clientBasicTab.tsx`・`clientBasicSections.tsx`・`clientStaffingTab.tsx`・`clientScheduleTab.tsx`・節の編集 `useClientEdit.ts`・保存 `useClientSave.ts`・カレンダーの URL `useClientCal.ts`）・`PatternsSection.tsx`（一覧 `patternsList.tsx`・入力欄 `patternsForm.tsx`・状態 `usePatternsFlow.ts`）・`ClientLeavesSection.tsx`（`clientLeaveParts.tsx`・`useClientLeaves.ts`）・`PlaceAllPanel.tsx`（`usePlaceAllRun.ts`）、`src/components/personPage.tsx`（`personPage.css`）・`PersonCalendar.tsx`（`personCalendar.css`。区画 `personCalendarParts.tsx`・状態と処理 `usePersonCalendar.ts`・ドラッグの影 `usePcalGhost.ts`・空き時間に入れる知らせ `useInsertNotice.ts`）・`personView.tsx`（`personView.css`）・`placeLookup.tsx`（`placeLookup.css`・`useAddressLookup.ts`）・`ClientFilter.tsx`（`clientFilter.css`・`useClientFilterModel.ts`）・`ClientPicker.tsx`（`clientPicker.css`・`ClientPickerParts.tsx`・`useClientPicker.ts`・`usePickerLookups.ts`・`clientPickerKeys.ts`・`clientPickerTypes.ts`）・`VisitRules.tsx`・`PickChips.tsx`、`src/lib/personPage.ts`・`viewMode.ts`・`visitLists.ts`（`staffVisitsIn`）・`visitOps.ts`（`endPatternOp`）・`clientFilter.ts`・`area.ts`・`search.ts`・`leaves.ts`・`patternText.ts`・`tentative.ts`・`clientStage.ts`・`addressLookup.ts`・`geocode.ts`・`postalCode.ts`・`placeAll.ts`・`clientEdit.ts`・`newClient.ts`・`patternForm.ts`・`patternConfirm.ts`。関連 ADR：0012・0013・0014・0015・0016（追記を含む）・0017・0021・0026・0051・0052・0056。関連 PRD：D36〜D40・D47・D60〜D62・D64〜D66・D68・D86〜D92・D108〜D112・D285・D118〜D121・D220・D308〜D313・D339〜D341。
+> この画面のファイル：`src/pages/ClientsPage.tsx`（一覧の表 `clientsTable.tsx`・状態 `useClientsList.ts`。名簿の欄 `src/components/RosterCard.tsx`・`useRosterCard.ts`・`useRosterImport.ts`）・`ClientPage.tsx`（見出しとタブ `clientPageHeader.tsx`・タブ `clientBasicTab.tsx`・`clientBasicSections.tsx`・`clientStaffingTab.tsx`・`clientScheduleTab.tsx`・節の編集 `useClientEdit.ts`・保存 `useClientSave.ts`・カレンダーの URL `useClientCal.ts`）・`PatternsSection.tsx`（一覧 `patternsList.tsx`・入力欄 `patternsForm.tsx`・状態 `usePatternsFlow.ts`）・`ClientLeavesSection.tsx`（`clientLeaveParts.tsx`・`useClientLeaves.ts`）・`PlaceAllPanel.tsx`（`usePlaceAllRun.ts`）、`src/components/personPage.tsx`（`personPage.css`）・`PersonCalendar.tsx`（`personCalendar.css`。区画 `personCalendarParts.tsx`・状態と処理 `usePersonCalendar.ts`・ドラッグの影 `usePcalGhost.ts`・空き時間に入れる知らせ `useInsertNotice.ts`）・`personView.tsx`（`personView.css`）・`placeLookup.tsx`（`placeLookup.css`・`useAddressLookup.ts`）・`ClientFilter.tsx`（`clientFilter.css`・`useClientFilterModel.ts`）・`ClientPicker.tsx`（`clientPicker.css`・`ClientPickerParts.tsx`・`useClientPicker.ts`・`usePickerLookups.ts`・`clientPickerKeys.ts`・`clientPickerTypes.ts`）・`VisitRules.tsx`・`PickChips.tsx`、`src/lib/personPage.ts`・`peopleView.ts`（切の列・畳む欄）・`viewMode.ts`・`visitLists.ts`（`staffVisitsIn`）・`visitOps.ts`（`endPatternOp`）・`clientFilter.ts`・`area.ts`・`search.ts`・`leaves.ts`・`patternText.ts`・`tentative.ts`・`clientStage.ts`・`addressLookup.ts`・`geocode.ts`・`postalCode.ts`・`placeAll.ts`・`clientEdit.ts`・`newClient.ts`・`patternForm.ts`・`patternConfirm.ts`。関連 ADR：0012・0013・0014・0015・0016（追記を含む）・0017・0021・0026・0051・0052・0056。関連 PRD：D36〜D40・D47・D60〜D62・D64〜D66・D68・D86〜D92・D108〜D112・D285・D118〜D121・D220・D308〜D313・D339〜D341。
 > 〈スタッフ〉の画面の中身は [pages-staff.md](pages-staff.md)（画面の殻・タブ・節・予定のカレンダーはこのファイルと共通）。訪問の詳細の欄は [pages-common.md](pages-common.md)。
 
 ### 〈利用者さん〉一覧（`#/clients`）
@@ -15,6 +15,7 @@
 - `?id=`（古いリンク・ブックマーク）：その人がいればその人の画面へ `replace` で移る。いなければ URL から消すだけ
 
 - 見出しの右、「〈利用者さん〉を追加」の左に「Excel・CSV」（`roster-toggle`。下の「名簿の欄」）
+- エキスパート機能が切のとき（PRD D385。ADR-0073。判定は `lib/peopleView`）：一覧の列は 名前・住所（`client-address`）・いつもの予定（`client-plan`。終わっていない繰り返しを `patternWhenText` でつないだ文）の3列と右端の「開く」だけ（位置・特性・求めること・いつもの担当・状態の列は出さない。名前のセルにはよみ・住所・紹介元を添えず、仮の印と、休み中の印（`clientNameNote`。入は状態の列）を残す）。基本情報のタブ（`BasicsNav`）と「状態の印で見分けられます」の説明は出さず、見出しの下の説明は名前・住所・いつもの予定の1行を初回だけ（`useIntro('clients')`）。絞り込み・行を押して開く・追加・名簿の欄は今のまま
 
 #### 名簿の欄（〈利用者さん〉一覧・〈スタッフ〉一覧。PRD D103〜D107・D365。ADR-0020・ADR-0068）
 
@@ -48,6 +49,12 @@
 - 画面は `edit = { key, form, opened }`（〈利用者さん〉は担当できる人を限るかも）を1つ持つ。`lib/clientEdit` の `CLIENT_SECTIONS`（〈スタッフ〉は `lib/staffEdit` の `STAFF_SECTIONS`。節 → 保存する項目）で、変更があるかは `pickFields` の項目だけを `lib/viewMode` の `isDirty` で比べ、保存は保存した中身に `mergeFields` でその項目だけ重ねる（ほかの節の項目・まとめて置いた位置を古い入力で上書きしない）。検査（郵便番号・メール・同じ名前・アイコン）も直している節の項目だけ（ほかの節の古い値で保存を止めない）。新しい人は `key: 'new'` で全部の項目
 - 変更の確認（`components/personPage` の `useAskDiscard`・`discardChanges`）：取り消し・Esc は「変更を捨てますか？」（確定「捨てる」）、別の節は「変更を捨てて、ほかの節を直しますか？」、タブは「変更を捨てて、タブを替えますか？」、別の人は「変更を捨てて、〈名前〉を開きますか？」、メニュー・リンク・パレットで移るときは `useLeaveGuard`（「変更を捨てて移りますか？」「捨てて移る」。確定すると `onLeave` で入力を捨ててから移る。行き先は止めた時点で持ち、確認の間にリンクが外れた（名前の吹き出しが閉じた）ら行き先へ `navigate`）。訪問の詳細の欄の「日の予定で見る」・休みの注意の「…の予定を開く」も移る前に `confirmLeave`。取り消し側はどれも「編集を続ける」・危険の色。再読込・タブを閉じるは `beforeunload`（変更があるときだけ）。繰り返し・休みの入力の変更も数える（`onDirty`）。別のタブの変更の知らせ（D227）にも変更ありを知らせる
 - 〈利用者さん〉の担当できる人は、比べる前に保存のときと同じ値（限らなければ空・限るなら利用中の人だけ）にそろえる。特性は `cleanTraits` で未入力を取り除いて比べる
+
+#### 切のとき：人の画面は畳む（PRD D385。ADR-0073。`lib/peopleView`）
+
+- 〈利用者さん〉の画面：見出しの状態の行に 住所・いつもの予定（`person-brief`）を出し（段階・いつもの担当は出さない。仮押さえ・休み中の印は残す）、タブは［予定｜基本情報｜休み］（担当・相性のタブは出さない。`?tab=staffing` は予定へ）
+- 基本情報のタブは 基本・住所の節を出し、段階・特性・決まりごと（`visitNotes` が入のとき）と担当・相性（担当を限る・求めること・相性。入ではタブの中身）を「詳しく ▾」（`person-details`。閉じて始まる。`components/DetailsFold`）に畳む。節の「直す」「保存」は今のまま（開いた中で直せる）。新しい人は段階の欄を出さず（説明・案内文も段階・特性・担当に触れない。`newClientLead`・`newClientHint`）、基本の節だけ。`?edit=` で「詳しく」の中の節（段階・特性・決まりごと・担当・求めること）を指すと、基本情報のタブで「詳しく」を開いて始める（`clientTabFor`・`editInFold`）
+- 予定のタブ（繰り返し・休み・カレンダー）は今のまま
 
 #### 予定のタブの形
 
@@ -220,5 +227,6 @@
 - [ ] （ADR-0052）一覧の行・「開く」・`?id=` でその人の画面（`#/clients/:id`）が開き、節は読むだけ。「直す」でその節だけ入力欄になり、保存・取り消しで戻る。変更があるまま取り消す・タブを替える・別の人を開く・画面を移ると確認が出る。「追加」は新しい人の画面（`scripts/e2e-view.cjs`）
 - [ ] （ADR-0056）人の予定表の回を Ctrl＋クリックで選べ（下に選んだ訪問の帯）、↓ で15分後へ動く（Ctrl+Z で戻る）。〈スタッフ〉の画面は ↓ で動かず、帯に時刻をずらすが無い。印は日・週・月と同じ。390px は「選ぶ」・長押しで選べ、2段目の行は日ごとのリストと同じ形（`scripts/e2e-shared-parts.cjs`）
 - [ ] （ADR-0052）予定のタブのカレンダーで回を押すと訪問の詳細の欄、空き枠を縦にドラッグすると所要の長さで新しい訪問、回をドラッグすると範囲を選んで動かせる。繰り返しを足す・直す・終わらせる（`scripts/e2e-person-page.cjs`）
+- [ ] （D385。expert 切）〈利用者さん〉の一覧は 名前・住所・いつもの予定の3列。画面は 名前・住所・予定を出し、段階・特性・決まりごと・担当・相性は「詳しく ▾」の中で閉じて始まる（`scripts/e2e-simple-menu.cjs` 5e）。入は今のまま
 - [ ] （ADR-0016）`scripts/e2e-address.cjs` が通る：開いた・打っただけでは送らず送るのは zipcode・q だけ、郵便番号の正規化、候補と元に戻す、見つからない・つながらない・時間切れで知らせてデータを変えない、連打で1回・途中で閉じたら書かない・途中の書き換えで古い応答を捨てる、〈利用者さん〉の data-testid と保存
 - [ ] `lib/leaves`・`lib/patternText`・`lib/area`・`lib/clientFilter`・`lib/search`・`lib/viewMode`・`lib/personPage`・`lib/visitOps`・`lib/addressLookup`・`lib/postalCode`・`lib/geocode`（偽物）・`lib/clientStage` のテストが通る

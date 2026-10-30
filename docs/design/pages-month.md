@@ -59,7 +59,7 @@
   - 件数（取り消し・休みの訪問を除く。`month-count`）
   - 種類ごとの件数の積み上げバー（種類の色。`title` に内訳）
   - 印 `month-marks`（`lib/month` の `dayMarks`）：「休 N」（勤務の無い人＋希望休の人。同じ月の同じ曜日の最頻値＝ふだんより多い日だけ出す。希望休のある日は常に出す。過去の日にも同じ決め方を使う。決め方は `lib/monthRest` の `usualRestByWeekday`・`showRestMark`。読み上げ・吹き出しの文には人数を残す。PRD D295。希望休がいれば紫。title「休む〈スタッフ〉 N人（内訳）」）・「欠 名前」（希望休でない欠勤だけ。title に名前。`month-absent`。欠勤の人に担当の訪問が残れば、その訪問が要対応に出る（PRD D321））・その日に始まる（▶）・終わる（■）定期パターンのある〈利用者さん〉・〈利用者さん〉の休み（ベッドのアイコンと、1人なら名前の頭・2人以上なら人数。title・読み上げに名前。`dayMarks.leaves`）・「最終 名前」（最終勤務日。title「最終勤務日（翌日から勤務なし）：…」）
-  - 旗 `month-flags`：「担当なし N」（赤。`month-unassigned`）・ほかの要対応の内訳（担当が休み N・条件に合わない N・間に合わない N。赤。`month-issue`）・「未連絡 N」（黄。`month-changed`）・「拘束超 N」（`month-over-span`）
+  - 旗 `month-flags`：「担当なし N」（赤。`month-unassigned`）・ほかの要対応の内訳（担当が休み N・条件に合わない N・間に合わない N。赤。`month-issue`）・「未連絡 N」（黄。`month-changed`。切は「変更あり N」。`lib/settledView` の `changedFlagText`）・「拘束超 N」（`month-over-span`）
   - 混み具合バー `month-load`（`LoadBar`）
 - 始まる・終わるの印の決め方：始まるは基準日（`baseDate`＝データの最初の日）より後に始まり、前日にその〈利用者さん〉のどのパターンの期間でもないもの。終わるは翌日にその〈利用者さん〉のどのパターンの期間でもないもの（初期データの全パターンが基準日に始まるのと、「以降すべて」で分けたパターンの継ぎ目を印にしない）
 

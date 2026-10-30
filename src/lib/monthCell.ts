@@ -263,6 +263,7 @@ export function dayCellText(x: DayCellInput): DayCellText {
     edited: cv.some((v) => v.edited && !v.cancelled),
     staffTerm: x.staffTerm,
     clientTerm: x.clientTerm,
+    confirmStep,
   });
   const tipText = `${parts.slice(1).join('・')}${
     x.offState
