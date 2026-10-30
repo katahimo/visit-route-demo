@@ -275,10 +275,19 @@ async function mobile(page) {
   await tabs.locator('[data-tab="staff"]').click();
   await until(async () => /^#\/staff/.test(hash(page)));
   check(/^#\/staff/.test(hash(page)), '〈スタッフ〉のタブで一覧へ', hash(page));
-  // 引き出しも4つ
-  await page.getByTestId('menu-btn').click();
+  // 引き出しも4つ。移った先の画面（別のチャンク）が描き終わってから開く（描き直しで引き出しが閉じないように）。開かなければ1回だけ押し直す
+  await settle(page, 800);
   const drawer = page.getByRole('dialog', { name: 'メニュー' });
-  await drawer.waitFor({ timeout: 10000 });
+  await page.getByTestId('menu-btn').click();
+  if (
+    !(await drawer.waitFor({ timeout: 5000 }).then(
+      () => true,
+      () => false,
+    ))
+  ) {
+    await page.getByTestId('menu-btn').click();
+    await drawer.waitFor({ timeout: 10000 });
+  }
   const dl = await texts(drawer.locator('[data-testid="nav-link"]'));
   check(
     JSON.stringify(dl) === JSON.stringify(['予定', terms.client, terms.staff, '設定']),
@@ -323,6 +332,7 @@ async function open1(page, to) {
 
 /** 5b 例外だけ見せる：操作の行・「詳しく」・札・言葉（月・週・日） */
 async function exceptions(page) {
+  await page.setViewportSize({ width: 1366, height: 768 });
   await fresh(page, '/month', NAV_READY, { start: 'demo' });
   for (const [to, zoom, primaryText, detailsId, hidden] of [
     [
@@ -482,6 +492,7 @@ async function exceptions(page) {
 
 /** 5c 画面の上の説明：1行・初回だけ・閉じたら覚える（画面ごと） */
 async function intro(page) {
+  await page.setViewportSize({ width: 1366, height: 768 });
   await page.evaluate((k) => localStorage.removeItem(k), INTRO_KEY);
   for (const to of ['/month', '/week', '/plan']) {
     await open1(page, to);
@@ -589,6 +600,15 @@ async function expertOn(page) {
   check(/^#\/home/.test(hash(page)), 'expert 入：知らない URL はホームへ', hash(page));
 }
 
+/** 途中で落ちても幅を戻す（スマホの段が落ちて、あとの段が 390px のまま走らないように） */
+const restoreWidth = (fn) => async (page) => {
+  try {
+    await fn(page);
+  } finally {
+    await page.setViewportSize({ width: 1366, height: 768 });
+  }
+};
+
 const steps = sharedPage({
   open,
   steps: [
@@ -597,10 +617,10 @@ const steps = sharedPage({
     ['3 切：予定の上の要対応の帯（押すとその訪問へ）', band],
     ['3b 切：訪問が無ければ帯を出さない', noBand],
     ['4 切：予定の「その他 ▾」から空き状況', more],
-    ['5 切：スマホの下のタブ・引き出し・帯', mobile],
+    ['5 切：スマホの下のタブ・引き出し・帯', restoreWidth(mobile)],
     ['5b 切：例外だけ見せる（操作の行・詳しく・札・言葉）', exceptions],
     ['5c 切：画面の上の説明は1行・閉じたら出ない', intro],
-    ['5d 切：スマホの操作の行・詳しく', mobileExceptions],
+    ['5d 切：スマホの操作の行・詳しく', restoreWidth(mobileExceptions)],
     ['6 入：今のメニュー・ホーム・帯なし', expertOn],
     ['6b 入：操作の行・説明・進み具合は今のまま', expertSame],
   ],

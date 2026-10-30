@@ -1,0 +1,17 @@
+/* 画面の上の説明（エキスパート機能が切。PRD D384）：どの幅・どの字でも1行。はみ出す分は省略（全文は title） */
+.page-lead-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  min-width: 0;
+}
+.page-intro-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.page-lead-row .icon-btn {
+  flex: none;
+}

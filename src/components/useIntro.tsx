@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { useSyncExternalStore } from 'react';
 import { introKey, introShown, introText, type ScheduleZoom } from '../lib/exceptionView';
 import { navOpenMemory } from '../store';
+import './intro.css';
 import { IconButton } from './ui';
 import { useExceptionsOnly } from './useFeature';
 
@@ -17,7 +18,9 @@ export function useIntro(zoom: ScheduleZoom, expertText: string): ReactNode {
   if (!only) return text;
   return (
     <span className="page-lead-row" data-testid="page-intro">
-      {text}
+      <span className="page-intro-text" title={text}>
+        {text}
+      </span>
       <IconButton
         icon={X}
         label="説明を閉じる"

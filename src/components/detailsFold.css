@@ -22,8 +22,3 @@
 .details-fold-body {
   padding-bottom: 10px;
 }
-.page-lead-row {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
