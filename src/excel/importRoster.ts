@@ -6,7 +6,8 @@ import type { Client, Staff, Terms } from '../contracts/documents';
 import { STAGE_LABELS, withStage } from '../lib/clientStage';
 import { nameKey } from '../lib/common';
 import { isImportError, migrate } from '../store/persist';
-import { loadRosterBook } from './rosterCsv';
+import { ledgerErrorMessage } from './ledgerCsv';
+import { type LoadedRoster, loadRosterBook } from './rosterCsv';
 import {
   openRoster,
   type Read,
@@ -136,7 +137,19 @@ export async function importRoster(
 ): Promise<RosterImportResult | ImportError> {
   const loaded = await loadRosterBook(buf, base, kind);
   if ('code' in loaded) return loaded;
-  const { book, source } = loaded;
+  const r = readLoaded(loaded, base, kind, mode);
+  // 顧客台帳の形で読んだときは、誤りの文の列名も台帳の列名で出す（ADR-0073）
+  return 'code' in r && loaded.ledger ? { ...r, message: ledgerErrorMessage(r.message) } : r;
+}
+
+/** 開いた名簿のブック → 今のデータに当てた結果（importRoster の本体） */
+function readLoaded(
+  loaded: LoadedRoster,
+  base: DemoData,
+  kind: RosterKind,
+  mode: RosterMode,
+): RosterImportResult | ImportError {
+  const { book, source, ledger } = loaded;
   const opened = openRoster(book, base, kind);
   if ('code' in opened) return opened;
   const { ctx, rows } = opened;
@@ -178,6 +191,7 @@ export async function importRoster(
     lastDaySet,
     activeBefore,
     source,
+    ledger,
   };
 }
 

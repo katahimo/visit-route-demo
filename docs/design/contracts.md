@@ -46,7 +46,8 @@ ReassignInfo = { method: 'insert' | 'anneal', stayWeight? /* 案B 0〜5 */, inse
 RosterKind = 'client' | 'staff'; RosterMode = 'merge' /* 既定 */ | 'replace' /* ブックに無い人を終了・休止 */
 RosterImportResult = { data /* migrate 済み */, added /* 行の順。「名前（終了）」など */, updated, unchanged: number,
   retired, allowedRemoved /* 休止で担当できる人から外れる〈利用者さん〉 */, allowedEmptied /* 限らないに戻る */,
-  lastDaySet, activeBefore /* 外せる人の数 */ }
+  lastDaySet, activeBefore /* 外せる人の数 */, source /* ADR-0068 */,
+  ledger /* 顧客台帳の形で読んだときだけ { skippedColumns: string[] }。ほかは null（ADR-0073） */ }
 ```
 
 - その日の割当は訪問から決まる（`lib/dayPlan` の `dayRoutes`：計算に入れる訪問を担当ごとに組んだ開始の順。担当なしは `unassignedOf`）。AI の提案・ドラッグ・担当の変更・振り直し・月や週の AI で組むは `writeRoutes` で担当と開始を訪問に書く

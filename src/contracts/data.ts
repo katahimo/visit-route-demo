@@ -136,6 +136,8 @@ export type RosterMode = 'merge' | 'replace';
 export type RosterSource =
   | { format: 'xlsx' }
   | { format: 'csv'; encoding: 'UTF-8' | 'UTF-16LE' | 'UTF-16BE' | 'Shift_JIS' | 'EUC-JP' };
+/** 顧客台帳の形で読んだときの結果（ADR-0073。PRD D386・D387）：読まなかった列の名前（請求・口座・生年月日など。データに残さない） */
+export type LedgerRead = { skippedColumns: string[] };
 /**
  * 名簿の読み込みの結果（PRD D106）。data は名簿を当てた新しいデータ（store の migrate を通したもの。画面が store の update で入れる）。
  * 件数は migrate のあとの結果を ID で引き、今の人と比べて数える（repair で元に戻る違いは変更とみなさない）
@@ -160,4 +162,6 @@ export type RosterImportResult = {
   activeBefore: number;
   /** 読んだファイルの形（.xlsx か CSV と文字コード。ADR-0068） */
   source: RosterSource;
+  /** 顧客台帳の形で読んだときだけ（名簿の形・.xlsx は null。ADR-0073） */
+  ledger: LedgerRead | null;
 };
