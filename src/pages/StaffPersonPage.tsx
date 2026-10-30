@@ -157,7 +157,7 @@ function StaffPageBody({
           mailOn={mailOn}
           offboardOn={offboardOn}
           folded={folded}
-          more={only && saved ? <StaffCompatTab saved={saved} compatOn={compatOn} /> : null}
+          more={folded.includes('compat') && saved ? <StaffCompatTab saved={saved} compatOn={compatOn} /> : null}
         />
       )}
 

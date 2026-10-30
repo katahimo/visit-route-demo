@@ -95,7 +95,7 @@ describe('cellGuide', () => {
     expect(lines).toContain(
       '赤い「要対応 N」の札＝要対応の件数（右の「要対応」の欄の行の数。担当なし・重なり・休みの人・変更あり）',
     );
-    expect(lines.some((l) => l.includes('変更あり。連絡の一覧'))).toBe(true);
+    expect(lines.some((l) => l.startsWith('「変更あり N」'))).toBe(true);
     expect(lines.some((l) => l.includes('条件に合わない') || l.includes('拘束') || l.includes('確定'))).toBe(false);
     // 入（省略）は今のまま
     const full = cellGuide({ ...base, count: 3, stateText: 'x', care: true, overSpan: true });

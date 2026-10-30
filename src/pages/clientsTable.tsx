@@ -13,7 +13,7 @@ import { STAGE_LABELS } from '../lib/clientStage';
 import { colorOf, initialOf } from '../lib/colors';
 import { hasLocation } from '../lib/common';
 import { narrowRole } from '../lib/narrowRoles';
-import { addressLine, type ClientCol, clientColumns, usualPlanText } from '../lib/peopleView';
+import { addressLine, type ClientCol, clientColumns, clientNameNote, usualPlanText } from '../lib/peopleView';
 import { formatPostalCode } from '../lib/postalCode';
 import { shouldOpenRow } from '../lib/rowOpen';
 import { orDash } from '../lib/viewMode';
@@ -163,6 +163,10 @@ function NameCell({ c, ctx }: { c: Client; ctx: RowContext }) {
           <span className="row" style={{ gap: 6 }}>
             {c.displayName}
             {c.tentative && <TentativeMark />}
+            {/* 切は状態の列を出さないので、例外の休み中は名前のそばに残す */}
+            {clientNameNote(!!leaveOn(ctx.data.clientLeaves, c.id, ctx.today), ctx.cols) && (
+              <span className="chip chip-warn">休み中</span>
+            )}
           </span>
           {!simple && c.kana && <small className="person-sub">{c.kana}</small>}
           {!simple && (c.place.address || c.place.postalCode) && (

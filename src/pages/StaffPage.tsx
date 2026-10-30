@@ -6,11 +6,12 @@ import { BasicsNav } from '../components/SettingsTabs';
 import { useToast } from '../components/Toast';
 import { PageHeader, WithIcon } from '../components/ui';
 import { useExceptionsOnly, useFeature } from '../components/useFeature';
+import { useIntro } from '../components/useIntro';
 import { jstDate } from '../domain/time';
 import { byName } from '../lib/common';
 import { narrowRole } from '../lib/narrowRoles';
 import { offboardScope } from '../lib/offboard';
-import { staffColumns } from '../lib/peopleView';
+import { peopleIntro, staffColumns } from '../lib/peopleView';
 import { useDemoData } from '../store';
 import { leavingStaff, OffboardPanel } from './OffboardPanel';
 import { StaffHead, type StaffLeaving, StaffLeavingCard, StaffRow } from './staffList';
@@ -26,12 +27,14 @@ import './settings.css';
 export default function StaffPage() {
   const { data } = useDemoData();
   const terms = data.org.terms;
+  const lead = useIntro('staff', `${terms.staff}の勤務・特性・条件を決めます`, peopleIntro('staff'));
   // 機能の入り切り（ADR-0028）：退職・担当替えを切れば振り直しの欄を出さない（最終勤務日の値は事実なので一覧の「最終」の印は残す）
   const offboardOn = useFeature('offboard');
   // 名簿の欄（Excel・CSV。ADR-0068）。Excel の入出力を切っていれば出さない（ADR-0028 の excel）
   const excelOn = useFeature('excel');
   // エキスパート機能が切なら一覧の列は名前・勤務日・勤務時間の3列だけ（PRD D385）
-  const cols = staffColumns(useExceptionsOnly());
+  const only = useExceptionsOnly();
+  const cols = staffColumns(only);
   const [rosterOpen, setRosterOpen] = useState(false);
   const rosterId = useId();
   /** 担当の振り直しの欄を開いている〈スタッフ〉（PRD D71。null：閉じている） */
@@ -83,10 +86,11 @@ export default function StaffPage() {
   return (
     <div className="stack">
       <PageHeader
-        nav={<BasicsNav />}
+        // 切は基本情報のタブを出さない（PRD D385）
+        nav={only ? undefined : <BasicsNav />}
         icon={UserRound}
         title={`${terms.staff}一覧`}
-        lead={`${terms.staff}の勤務・特性・条件を決めます`}
+        lead={lead}
         actions={
           <>
             {excelOn && (

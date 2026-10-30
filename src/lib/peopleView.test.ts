@@ -3,8 +3,17 @@ import {
   addressLine,
   clientColumns,
   clientFolded,
+  clientNameNote,
+  clientPartOf,
+  clientTabFor,
   clientTabKeys,
+  editInFold,
+  newClientHint,
+  newClientLead,
+  newClientShowsStage,
+  peopleIntro,
   shiftText,
+  showStageNote,
   splitFolded,
   staffColumns,
   staffFolded,
@@ -73,9 +82,31 @@ describe('短い文', () => {
     expect(workDaysText({ workDays: [5, 1, 3] })).toBe('月水金');
     expect(shiftText({ shiftStart: '9:00', shiftEnd: '17:00' })).toBe('9:00〜17:00');
   });
-  it('休止中だけ名前のそばに印', () => {
-    expect(staffNameNote({ active: true })).toBe('');
-    expect(staffNameNote({ active: false })).toBe('休止中');
+  it('状態の列が無い（切）ときだけ、休止中・休み中を名前のそばに印。入は列に出すので二重にしない', () => {
+    expect(staffNameNote({ active: true }, staffColumns(true))).toBe('');
+    expect(staffNameNote({ active: false }, staffColumns(true))).toBe('休止中');
+    expect(staffNameNote({ active: false }, staffColumns(false))).toBe('');
+    expect(clientNameNote(true, clientColumns(true))).toBe('休み中');
+    expect(clientNameNote(false, clientColumns(true))).toBe('');
+    expect(clientNameNote(true, clientColumns(false))).toBe('');
+  });
+  it('切の説明・新しい人の言い方・節の欄・タブ', () => {
+    expect(peopleIntro('clients')).toMatch(/名前・住所・いつもの予定/);
+    expect(peopleIntro('staff')).toMatch(/名前・勤務日・勤務時間/);
+    expect(showStageNote(true)).toBe(false);
+    expect(showStageNote(false)).toBe(true);
+    expect(newClientShowsStage(true)).toBe(false);
+    expect(newClientLead(true, '利用者さん')).not.toMatch(/段階/);
+    expect(newClientLead(false, '利用者さん')).toMatch(/段階/);
+    expect(newClientHint(true)).not.toMatch(/特性|担当/);
+    expect(clientPartOf('conds')).toBe('staffing');
+    expect(clientPartOf('new')).toBeNull();
+    expect(editInFold(clientFolded(true), 'conds')).toBe(true);
+    expect(editInFold(clientFolded(true), 'place')).toBe(false);
+    expect(editInFold(clientFolded(false), 'stage')).toBe(false);
+    expect(clientTabFor('staffing', true)).toBe('basic');
+    expect(clientTabFor('staffing', false)).toBe('staffing');
+    expect(clientTabFor('schedule', true)).toBe('schedule');
   });
   const pat = (clientId: string, from: string, to: string | null, weekdays: number[], t: string) => ({
     clientId,

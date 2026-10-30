@@ -79,7 +79,7 @@ export function cellGuide(x: CellGuideInput): string[] {
   if (x.changed)
     out.push(
       simple
-        ? '「未連絡 N」＝決まったあとに担当・時刻が変わった訪問の件数（変更あり。連絡の一覧で確かめる）'
+        ? '「変更あり N」＝決まったあとに担当・時刻が変わった訪問の件数（押すと連絡の一覧）'
         : '「未連絡 N」＝確定（伝えた）あとに担当・時刻が変わった訪問の件数（連絡の一覧で確かめる）',
     );
   if (x.overSpan && !simple) out.push('「拘束超 N」＝出勤〜退勤（拘束）が上限を超える人数');

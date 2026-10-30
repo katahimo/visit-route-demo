@@ -559,6 +559,29 @@ async function expertSame(page) {
   check((await page.getByTestId('undo-btn').count()) === 1, '入：元に戻すは操作の行にある');
   check((await page.getByTestId('page-intro').count()) === 0, '入：説明に閉じるボタンは無い（今のまま）');
   check((await page.locator('.page-lead').count()) === 1, '入：説明は今のまま出る');
+  // 入の一覧：旧の列・基本情報のタブは今のまま、休止中は状態の列だけに出る（名前のそばに二重に出さない）
+  const offName = await page.evaluate((k) => {
+    const d = JSON.parse(localStorage.getItem(k));
+    d.staff[0].active = false;
+    localStorage.setItem(k, JSON.stringify(d));
+    return d.staff[0].name;
+  }, STORAGE_KEY);
+  await page.goto('about:blank');
+  await page.goto(`${BASE}#/staff`);
+  await page.getByTestId('staff-row').first().waitFor({ timeout: 60000 });
+  const row = page.getByTestId('staff-row').filter({ hasText: offName }).first();
+  check((await page.getByTestId('people-tabs').count()) === 1, '入：〈スタッフ〉一覧に基本情報のタブがある');
+  check((await row.locator('td').count()) === 7, '入：〈スタッフ〉一覧の列は今のまま（6列＋開く）');
+  check((await row.getByText('休止中').count()) === 1, '入：休止中は状態の列に1つだけ（名前のそばに重ねない）');
+  check((await row.locator('td').first().getByText('休止中').count()) === 0, '入：名前のセルに休止中が無い');
+  await page.goto('about:blank');
+  await page.goto(`${BASE}#/clients`);
+  await page.getByTestId('client-row').first().waitFor({ timeout: 60000 });
+  check((await page.getByTestId('people-tabs').count()) === 1, '入：〈利用者さん〉一覧に基本情報のタブがある');
+  check(
+    (await page.getByTestId('client-row').first().locator('td').count()) === 7,
+    '入：〈利用者さん〉一覧の列は今のまま',
+  );
   await open1(page, '/plan');
   check((await page.getByTestId('plan-summary').count()) === 1, '入：日の「今の担当」の1行は上にある');
   check((await page.getByTestId('plan-help-btn').count()) === 1, '入：使い方は操作の行にある');
@@ -657,6 +680,22 @@ async function peopleList(page, { label, to, table, heads, row }) {
   check(cells === heads.length + 1, `${label}：行のセルは3列＋開く`, cells);
   const body = await page.locator('main, .content').first().innerText();
   check(!BANNED.test(body), `${label}：一覧に禁句が出ない`, body.match(BANNED)?.[0]);
+  check((await page.getByTestId('people-tabs').count()) === 0, `${label}：基本情報のタブ（people-tabs）を出さない`);
+  check(!/状態」の印/.test(body), `${label}：状態の列が無いので「状態」の印の説明を出さない`);
+  const intro = await page
+    .getByTestId('page-intro')
+    .innerText()
+    .catch(() => '');
+  check(
+    intro.includes(heads.join('・')) || intro.includes(heads.slice(0, 3).join('・')),
+    `${label}：説明は名前・住所…の1行（初回だけ）`,
+    intro,
+  );
+  const sn = page.getByTestId('screen-name');
+  if (await sn.isVisible()) {
+    const t = (await sn.innerText()).trim();
+    check(!/^人・/.test(t), `${label}：上の帯の画面名に「人・」が付かない`, t);
+  }
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
   check(!overflow, `${label}：横にはみ出さない`);
   await shot(page, `simple-people-${to.slice(1)}-list-${page.viewportSize().width}`);
@@ -666,6 +705,7 @@ async function peopleList(page, { label, to, table, heads, row }) {
 async function people(page) {
   await fresh(page, '/clients', '[data-testid="client-row"]', { start: 'demo' });
   const terms = (await data(page)).org.terms;
+  await page.evaluate((k) => localStorage.removeItem(k), INTRO_KEY);
   const cid = await page.evaluate((k) => JSON.parse(localStorage.getItem(k)).clients[0].id, STORAGE_KEY);
   const sid = await page.evaluate((k) => JSON.parse(localStorage.getItem(k)).staff[0].id, STORAGE_KEY);
   for (const width of [1366, 390]) {
@@ -734,11 +774,32 @@ async function planMap(page, w) {
   await dock.waitFor({ timeout: 10000 });
   await settle(page, 1200);
   check(await dock.isVisible(), `日の予定（${w}）：「地図」を押すと地図が開く`);
+  const focused = (name) => page.evaluate((n) => document.activeElement?.getAttribute('aria-label') === n, name);
+  check(await focused('地図を閉じる'), `日の予定（${w}）：開いたら閉じるボタンへフォーカス`);
+  check(
+    (await dock.getByLabel('地図を閉じる').getAttribute('aria-expanded')) === 'true',
+    `日の予定（${w}）：閉じるボタンに aria-expanded=true`,
+  );
   check((await dock.getByLabel('ページの地図へ移る').count()) === 0, `日の予定（${w}）：ページの地図へ移る矢印は無い`);
   await shot(page, `simple-plan-map-open-${page.viewportSize().width}`);
+  // 訪問の帯を選ぶと担当に絞られる：地図の見出しの「全員のルートを見る」で解ける（ページに地図が無いのでここに出す）
   await dock.getByLabel('地図を閉じる').click();
   await fab.waitFor({ timeout: 10000 });
-  check(true, `日の予定（${w}）：閉じると「地図」のボタンに戻る`);
+  check(await focused('地図を開く'), `日の予定（${w}）：閉じたら「地図」のボタンへフォーカス`);
+  check(
+    (await fab.getAttribute('aria-expanded')) === 'false',
+    `日の予定（${w}）：「地図」のボタンに aria-expanded=false`,
+  );
+  const band = page.locator('.tl-band-btn');
+  if ((await band.count()) === 0) return;
+  await band.first().click();
+  await settle(page, 600);
+  const clear = page.getByTestId('dock-clear-focus');
+  if (await clear.count()) {
+    await clear.click();
+    await settle(page, 300);
+    check((await clear.count()) === 0, `日の予定（${w}）：「全員のルートを見る」で絞りが解ける`);
+  } else check(true, `日の予定（${w}）：訪問の選びでは担当に絞らない（全員のルートのまま）`);
 }
 
 /** 月のマスの「このマスの読み方」：切は帯の3種類と「変更あり」。条件に合わない・拘束超は言わない */

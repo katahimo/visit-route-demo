@@ -116,7 +116,7 @@ function ClientPageBody({
   const tab: ClientTab = isNew ? 'basic' : tabOf(clientTabKeys(CLIENT_TABS, only), params.get('tab'));
 
   // ---- 節の編集・保存 ----
-  const ed = useClientEdit({ isNew, saved, staff, nextColor: data.clients.length, terms, onDirty, onLeave });
+  const ed = useClientEdit({ isNew, saved, staff, nextColor: data.clients.length, terms, only, onDirty, onLeave });
   const { edit, error, errorId } = ed;
   const { save, confirmTentative, cancelTentative } = useClientSave({
     edit,
@@ -129,7 +129,6 @@ function ClientPageBody({
     discardAll: ed.discardAll,
     onLeave,
   });
-  // ---- 予定のカレンダー（URL の cal・d） ----
   const cal = useClientCal(today);
 
   // 新しい人を保存・取り消して移る間（節を閉じたあと）は何も出さない
@@ -219,8 +218,9 @@ function ClientPageBody({
           clientItems={clientItems}
           stageOn={stageOn}
           notesOn={notesOn}
-          folded={clientFolded(only)}
-          more={only && saved ? staffingTab : null}
+          only={only}
+          editKey={edit?.key}
+          more={clientFolded(only).includes('staffing') && saved ? staffingTab : null}
           onConfirmTentative={confirmTentative}
           onCancelTentative={cancelTentative}
         />

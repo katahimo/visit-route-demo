@@ -18,7 +18,14 @@ import { jstDate } from '../domain/time';
 import { colorOf } from '../lib/colors';
 import { hasLocation } from '../lib/common';
 import { traitText } from '../lib/compatView';
-import { type ClientPart, splitFolded } from '../lib/peopleView';
+import {
+  type ClientPart,
+  clientFolded,
+  editInFold,
+  newClientHint,
+  newClientShowsStage,
+  splitFolded,
+} from '../lib/peopleView';
 import { formatPostalCode } from '../lib/postalCode';
 import { orDash } from '../lib/viewMode';
 import {
@@ -190,8 +197,9 @@ export function ClientBasicTab({
   clientItems,
   stageOn,
   notesOn,
-  folded,
+  only,
   more,
+  editKey,
   onConfirmTentative,
   onCancelTentative,
 }: {
@@ -209,14 +217,18 @@ export function ClientBasicTab({
   clientItems: Item[];
   stageOn: boolean;
   notesOn: boolean;
-  /** 「詳しく ▾」へ畳む欄（切のとき。入は空。lib/peopleView の clientFolded） */
-  folded: readonly ClientPart[];
+  /** エキスパート機能が切か（切は欄を「詳しく ▾」へ畳み、新しい人に段階を聞かない。lib/peopleView） */
+  only: boolean;
   /** 「詳しく ▾」の中に足す担当・相性の節（切のとき。担当・相性のタブを出さないので） */
   more: ReactNode;
+  /** 直している節の鍵（「詳しく」の中なら開いて始める） */
+  editKey: string | undefined;
   onConfirmTentative: (c: Client) => void;
   onCancelTentative: (c: Client) => void;
 }) {
   const { form, setForm, bad, terms } = ctx;
+  const folded = clientFolded(only);
+  const showStage = newClientShowsStage(only);
   if (newEdit) {
     const f = form && { form, setForm, bad, terms };
     return (
@@ -234,10 +246,8 @@ export function ClientBasicTab({
           view={null}
         >
           {f && <ClientBasicFields {...f} />}
-          {f && <ClientStageFields {...f} stageOn={stageOn} />}
-          <Hint label="ほかの項目">
-            住所・特性・担当・繰り返し（決まった曜日の訪問）・休みは、保存してから入れられます。
-          </Hint>
+          {f && showStage && <ClientStageFields {...f} stageOn={stageOn} />}
+          <Hint label="ほかの項目">{newClientHint(!showStage)}</Hint>
         </EditSection>
       </div>
     );
@@ -251,7 +261,7 @@ export function ClientBasicTab({
     <>
       <div className="person-sections">{parts.shown}</div>
       {(parts.folded.length > 0 || more) && (
-        <DetailsFold testId="person-details">
+        <DetailsFold testId="person-details" forceOpen={editInFold(folded, editKey)}>
           {parts.folded.length > 0 && <div className="person-sections">{parts.folded}</div>}
           {more}
         </DetailsFold>

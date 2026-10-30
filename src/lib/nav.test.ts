@@ -394,7 +394,7 @@ describe('エキスパート機能が切のメニュー（PRD D383。ADR-0073）
     expect(homePath(applyTemplate('basic'))).toBe('/month');
     expect(homePath(applyTemplate('oneOff'))).toBe('/week');
   });
-  it('画面の一覧：ホームは無く、担当を組む・空き状況は予定のグループ、基本情報のグループ名は「人」', () => {
+  it('画面の一覧：ホームは無く、担当を組む・空き状況は予定のグループ、基本情報の区分名は無く〈利用者さん〉・〈スタッフ〉は呼び名そのまま', () => {
     const s = screenSections(terms, off);
     expect(s.some((x) => x.items.some((i) => i.to === '/home'))).toBe(false);
     expect(s.some((x) => x.title === '予定を組む')).toBe(false);
@@ -408,10 +408,18 @@ describe('エキスパート機能が切のメニュー（PRD D383。ADR-0073）
     expect(navTitleParts(s, '/arrange')).toEqual({ group: null, item: '担当を組む' });
     expect(navTitleParts(s, '/vacancy')).toEqual({ group: null, item: '空き状況' });
     expect(s.some((x) => x.title === '基本情報')).toBe(false);
-    expect(s.find((x) => x.title === '人')?.items[0]?.to).toBe('/basics');
+    expect(s.some((x) => x.title === '人')).toBe(false);
+    const people = s.find((x) => x.items.some((i) => i.to === '/clients'));
+    expect(people?.title).toBeUndefined();
+    expect(people?.items.find((i) => i.to === '/clients')?.label).toBe('利用者さん');
+    expect(people?.items.find((i) => i.to === '/staff')?.label).toBe('スタッフ');
+    expect(navTitleParts(s, '/staff')).toEqual({ group: null, item: 'スタッフ' });
     const on = screenSections(terms, {});
     expect(on.some((x) => x.items.some((i) => i.to === '/home'))).toBe(true);
     expect(on.some((x) => x.title === '基本情報')).toBe(true);
+    expect(on.find((x) => x.title === '基本情報')?.items.find((i) => i.to === '/clients')?.label).toBe(
+      '利用者さん一覧',
+    );
     expect(on.find((x) => x.title === '予定を組む')?.items.map((i) => i.to)).toEqual([
       '/rules',
       '/standard',

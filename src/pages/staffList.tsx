@@ -89,12 +89,14 @@ export function StaffHead({ cols, clientTerm }: { cols: readonly StaffCol[]; cli
 /** 1つの列のセル（列の種類ごとの分岐はここに集める） */
 function StaffCell({
   col,
+  cols,
   s,
   clientTerm,
   staffItems,
   itemById,
 }: {
   col: StaffCol;
+  cols: readonly StaffCol[];
   s: Staff;
   clientTerm: string;
   staffItems: Item[];
@@ -108,7 +110,7 @@ function StaffCell({
             <StaffMark staff={s} size="md" />
             {s.name}
             {/* 切は状態の列を出さないので、例外の休止中だけ名前のそばに残す */}
-            {staffNameNote(s) && <span className="chip">{staffNameNote(s)}</span>}
+            {staffNameNote(s, cols) && <span className="chip">{staffNameNote(s, cols)}</span>}
           </span>
         </td>
       );
@@ -217,7 +219,15 @@ export function StaffRow({
       }}
     >
       {cols.map((col) => (
-        <StaffCell key={col} col={col} s={s} clientTerm={clientTerm} staffItems={staffItems} itemById={itemById} />
+        <StaffCell
+          key={col}
+          col={col}
+          cols={cols}
+          s={s}
+          clientTerm={clientTerm}
+          staffItems={staffItems}
+          itemById={itemById}
+        />
       ))}
       <td {...narrowRole.cell} className="nowrap narrow-act">
         <div className="actions">

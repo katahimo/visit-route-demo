@@ -10,7 +10,7 @@ import { leaveOn } from '../domain/leaves';
 import { jstDate } from '../domain/time';
 import { STAGE_LABELS } from '../lib/clientStage';
 import { colorOf } from '../lib/colors';
-import { addressLine, clientTabKeys, usualPlanText } from '../lib/peopleView';
+import { addressLine, clientTabKeys, newClientLead, usualPlanText } from '../lib/peopleView';
 import type { ClientTab } from '../lib/personPage';
 import { usualStaffOf } from '../lib/usualStaff';
 
@@ -137,7 +137,7 @@ export function ClientPageHeader({
       }
       lead={
         isNew ? (
-          `${terms.client}の名前と段階を入れて保存します`
+          newClientLead(only, terms.client)
         ) : (
           <ClientStateChips c={c} saved={saved} data={data} staff={staff} today={today} only={only} />
         )

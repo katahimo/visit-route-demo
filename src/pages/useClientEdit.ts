@@ -18,6 +18,7 @@ import {
 } from '../lib/clientEdit';
 import { CLIENT_COLORS } from '../lib/colors';
 import { newClient } from '../lib/newClient';
+import { clientTabFor } from '../lib/peopleView';
 
 /** 入力を直す（新しい値か、今の入力から作る関数） */
 export type SetClientForm = (f: Client | ((c: Client) => Client)) => void;
@@ -28,6 +29,7 @@ export function useClientEdit({
   staff,
   nextColor,
   terms,
+  only,
   onDirty,
   onLeave,
 }: {
@@ -37,6 +39,8 @@ export function useClientEdit({
   /** 新しい人の色（今の人数） */
   nextColor: number;
   terms: Terms;
+  /** エキスパート機能が切か（切は担当・相性のタブが無いので、その節は基本情報のタブへ。PRD D385） */
+  only: boolean;
   onDirty: (dirty: boolean, who: string) => void;
   onLeave: () => void;
 }) {
@@ -127,7 +131,8 @@ export function useClientEdit({
     if (!editParam) return;
     if (editParam in CLIENT_SECTIONS && saved) setEdit(openClientEdit(editParam as ClientSecKey, saved, staff));
     // 節のあるタブへ移す（予定のタブなど、節の無いタブで開いたとき）
-    const onTab = editParam in CLIENT_SECTIONS ? CLIENT_SECTION_TAB[editParam as ClientSecKey] : null;
+    const onTab =
+      editParam in CLIENT_SECTIONS ? clientTabFor(CLIENT_SECTION_TAB[editParam as ClientSecKey], only) : null;
     setParams(
       (prev) => {
         const p = new URLSearchParams(prev);

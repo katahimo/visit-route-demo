@@ -115,5 +115,44 @@ export function usualPlanText(
     .join('、');
 }
 
-/** 〈スタッフ〉の名前のそばに出す印：休止中だけ（切の一覧は状態の列を出さない代わりに、例外の休止中は名前のそばへ） */
-export const staffNameNote = (s: Pick<Staff, 'active'>): string => (s.active ? '' : '休止中');
+/** 〈スタッフ〉の名前のそばに出す印：状態の列を出さないとき（切）だけ、例外の休止中を名前のそばへ（状態の列がある入は列に出すので二重にしない） */
+export const staffNameNote = (s: Pick<Staff, 'active'>, cols: readonly StaffCol[]): string =>
+  cols.includes('state') || s.active ? '' : '休止中';
+
+/** 〈利用者さん〉の名前のそばに出す印：状態の列を出さないとき（切）だけ、休み中を名前のそばへ（入は状態の列に出す） */
+export const clientNameNote = (onLeave: boolean, cols: readonly ClientCol[]): string =>
+  !cols.includes('state') && onLeave ? '休み中' : '';
+
+/** 一覧の見出しの下の説明（切の1行。入は今の文のまま画面が出す。PRD D385） */
+export const peopleIntro = (kind: 'clients' | 'staff'): string =>
+  kind === 'clients'
+    ? '名前・住所・いつもの予定です。行を押すと、その人の画面を開きます'
+    : '名前・勤務日・勤務時間です。行を押すと、その人の画面を開きます';
+
+/** 一覧の下の「状態の印で見分けられます」の説明を出すか（状態の列がある入のときだけ） */
+export const showStageNote = (only: boolean): boolean => !only;
+
+/** 節の鍵 → 欄（担当の節と求めることの節は「担当」の欄にまとめる）。新しい人（new）は null */
+export function clientPartOf(key: string | undefined): ClientPart | null {
+  if (!key || key === 'new') return null;
+  if (key === 'conds' || key === 'staffing') return 'staffing';
+  return (['basic', 'stage', 'place', 'traits', 'rules'] as const).find((p) => p === key) ?? null;
+}
+
+/** 開いて始める節が「詳しく」の中か（その節を直しているとき、「詳しく」を開く） */
+export const editInFold = (folded: readonly ClientPart[], key: string | undefined): boolean => {
+  const part = clientPartOf(key);
+  return part !== null && folded.includes(part);
+};
+
+/** 節のあるタブ（切は担当・相性のタブを出さないので基本情報へ） */
+export const clientTabFor = (tab: ClientTab, only: boolean): ClientTab => (only && tab === 'staffing' ? 'basic' : tab);
+
+/** 新しい〈利用者さん〉：切は段階を聞かず、名前だけ（段階は保存した先で「詳しく」から） */
+export const newClientShowsStage = (only: boolean): boolean => !only;
+export const newClientLead = (only: boolean, client: string): string =>
+  only ? `${client}の名前を入れて保存します` : `${client}の名前と段階を入れて保存します`;
+export const newClientHint = (only: boolean): string =>
+  only
+    ? '住所・繰り返し（決まった曜日の訪問）・休みは、保存してから入れられます。'
+    : '住所・特性・担当・繰り返し（決まった曜日の訪問）・休みは、保存してから入れられます。';

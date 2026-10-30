@@ -276,6 +276,7 @@ export function PlanDocks({ p }: { p: PlanCtx }) {
         lines={p.map.lines}
         title={`地図${focusStaff ? `：${d.staffName(focusStaff)}` : ''}`}
         focusKey={sel.focusKey}
+        onClearFocus={only && focusStaff ? sel.clear : undefined}
       />
       {flow.info && (
         <ReassignDock
