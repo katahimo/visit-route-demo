@@ -115,6 +115,7 @@ AI・人が「何を知りたいときに、どのファイルを読むか」を
 | [0070](adr/0070-trait-columns-per-option-and-start-year.md) | Excel・CSV の選択肢から複数の特性を選択肢ごとの列（○・×）にし、経験年数を開始年で持つ（条件はその日までの年数） |
 | [0071](adr/0071-cloudflare-workers-hosting.md) | 公開先を GitHub Pages から Cloudflare Workers（静的アセット）に移す（GitHub Actions＋wrangler。リポジトリを非公開にできる） |
 | [0072](adr/0072-auto-arrange-on-input-expert-features.md) | 希望日時を入れたら入れた分だけ自動で組み（即反映・元に戻す）、組み方の標準・案比べ・条件の重み・予定を組むをエキスパート機能（`expert`）にする。ベビーシッター型は単発のみのひな形 |
+| [0073](adr/0073-first-run-two-questions-auto-settle-less-on-screen.md) | 最初の2問（デモ／自分のデータ × 単発／定期）で始め、組んだ予定は1か月先まで決まった扱い、メニュー4つ・ホーム統合・例外だけ見せる。顧客台帳の CSV を読む |
 
 ## 文書の保ち方
 
