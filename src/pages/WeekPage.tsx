@@ -1,5 +1,6 @@
 import { CalendarClock } from 'lucide-react';
 import { useState } from 'react';
+import { AttentionBand } from '../components/attentionBand';
 import { EmptyNext } from '../components/EmptyNext';
 import { ScheduleNav } from '../components/ScheduleNav';
 import { RangeProposalBand, ScheduleToolbar, SelectionBar } from '../components/scheduleParts';
@@ -100,6 +101,8 @@ export default function WeekPage() {
           )
         }
       />
+      {/* 要対応の帯（エキスパート機能が切のときだけ。PRD D383） */}
+      <AttentionBand />
       {/* 1行の状態（PRD D332。進み具合の帯は月の予定だけ） */}
       <WeekStatusLine prep={prep} />
       {/* 操作の行（日・週・月で同じ並び。PRD D327）。メールで送るは見出しのボタンなので「その他 ▾」は出さない（PRD D344・D346） */}

@@ -21,6 +21,7 @@ import { WithIcon } from './ui';
 import { UndoButtons } from './undo';
 import { saveAppliedBasis } from './useArrangeBasis';
 import { useSelectionBar } from './useSelectionBar';
+import { useSimpleMoreItems } from './useSimpleMoreItems';
 import { useValueStore } from './valueStore';
 import './scheduleParts.css';
 
@@ -66,6 +67,12 @@ export function ScheduleToolbar({
   className?: string;
 }) {
   const today = jstDate(Date.now());
+  // エキスパート機能が切のときは、メニューから外した空き状況と担当なしの［組む］を「その他 ▾」に足す（PRD D383）
+  const simpleItems = useSimpleMoreItems();
+  const items =
+    simpleItems.length > 0
+      ? [...moreItems, { ...simpleItems[0]!, separatorBefore: moreItems.length > 0 }, ...simpleItems.slice(1)]
+      : moreItems;
   return (
     <div className={`row schedule-toolbar ${className}`} data-testid="schedule-toolbar" data-zoom={zoom}>
       {absence &&
@@ -95,10 +102,10 @@ export function ScheduleToolbar({
         ))}
       <UndoButtons />
       {children}
-      {moreItems.length > 0 && (
+      {items.length > 0 && (
         <MenuButton
           label="その他"
-          items={moreItems}
+          items={items}
           testId={`${zoom === 'day' ? 'plan' : zoom}-more`}
           className="plan-more"
         />

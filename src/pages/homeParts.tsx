@@ -17,11 +17,9 @@ import { useId, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { StaffMarkById } from '../components/StaffMark';
 import { useOpenVisit } from '../components/VisitPanel';
-import { useValueStore } from '../components/valueStore';
 import { addDays, jstHhmm } from '../domain/time';
-import { autoArrange, requestUnassignedArrange } from '../lib/autoArrangeBatch';
 import { dateText } from '../lib/dateText';
-import { type HomeEntry, type HomeEntryKey, type HomeTask, type HomeTaskKind, taskAction } from '../lib/home';
+import type { HomeEntry, HomeEntryKey, HomeTask, HomeTaskKind } from '../lib/home';
 import { dayVisitRows, unassignedVisits, type VisitRow } from '../lib/visitLists';
 import { useDemoData } from '../store';
 
@@ -31,7 +29,6 @@ const KIND_ICON: Record<HomeTaskKind, LucideIcon> = {
   today: CalendarDays,
   confirm: Lock,
   create: Sparkles,
-  auto: Sparkles,
 };
 
 const ENTRY_ICON: Record<HomeEntryKey, LucideIcon> = {
@@ -63,22 +60,19 @@ function LeadBadges({ tone }: { tone: HomeTask['tone'] }) {
 
 /**
  * 次の一手のカード。lead は先頭の「まずこれ」（主ボタンの塗りで幅いっぱい。ホームの主ボタンはこの1つ。PRD D263）。
- * 「まずこれ」は見える札で、読み上げでも題名の前に読む。押したときの動きは lib/home の taskAction：画面へ移るカード（全体が1つのリンク。
- * onPick は移る前に選んでいる日付を変える）と、その場で組むカード（［組む］のボタン）
+ * 「まずこれ」は見える札で、読み上げでも題名の前に読む。押すと画面へ移る（全体が1つのリンク。
+ * onPick は移る前に選んでいる日付を変える）
  */
 export function TaskCard({
   task: t,
   lead,
-  today,
   onPick,
 }: {
   task: HomeTask;
   lead: boolean;
-  today: string;
   onPick: (date?: string) => void;
 }) {
   const Icon = KIND_ICON[t.kind];
-  const action = taskAction(t);
   const body = (
     <>
       <span className="home-task-icon" aria-hidden="true">
@@ -98,37 +92,11 @@ export function TaskCard({
     'data-tone': t.tone,
     'data-lead': lead || undefined,
   };
-  if (action.type === 'arrange')
-    return (
-      <div className={cls} {...attrs}>
-        {body}
-        <ArrangeButton today={today} />
-      </div>
-    );
   return (
-    <Link to={action.to} className={cls} onClick={() => onPick(action.date)} {...attrs}>
+    <Link to={t.to} className={cls} onClick={() => onPick(t.date)} {...attrs}>
       {body}
       <ChevronRight size={18} className="home-task-go" aria-hidden="true" />
     </Link>
-  );
-}
-
-/** ［組む］：今日〜翌月末の担当なしの訪問を、いまの条件で自動で組む（ホームでエキスパート機能が切のとき）。計算中は押せない */
-function ArrangeButton({ today }: { today: string }) {
-  const { data } = useDemoData();
-  const running = useValueStore(autoArrange.run) !== null;
-  return (
-    <button
-      type="button"
-      className="btn btn-small"
-      aria-disabled={running || undefined}
-      onClick={() => {
-        if (!running) requestUnassignedArrange(data, today);
-      }}
-      data-testid="home-auto-arrange"
-    >
-      {running ? '組んでいます…' : '組む'}
-    </button>
   );
 }
 

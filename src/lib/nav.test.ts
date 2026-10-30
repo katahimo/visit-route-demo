@@ -6,13 +6,14 @@ import {
   absenceHref,
   activeNavPath,
   arrangeSteps,
-  BASICS_PATHS,
   basicsTabs,
   bottomTabs,
+  homePath,
   isActiveNav,
   isNavAction,
   isScheduleView,
   isSettingsPath,
+  isSimpleMenu,
   type MenuItem,
   menuSections,
   NAV_OPEN_DEFAULT,
@@ -73,16 +74,16 @@ describe('menuSections（PRD D326・D349・D364。ADR-0054・0063・0067）', ()
     const early = menuSections(terms, '2026-10-03', {});
     expect(item('month-view', early).to).toBe('/month?ym=2026-10');
     expect(item('arrange:assign', early).to).toBe('/arrange?ym=2026-10');
-    expect(NAV_OPEN_DEFAULT).toEqual({ schedule: true, arrange: true, people: true, settings: false });
+    expect(NAV_OPEN_DEFAULT).toEqual({ schedule: true, arrange: true, settings: false });
   });
   it('件数の印：組む月の担当なしの日は「担当を組む」、今日をまだ伝えていないは「今日の予定」', () => {
     const g = menuSections(terms, TODAY, {}, {}, { planUnassignedDays: 3, todayUntold: true });
     expect(item('arrange:assign', g).badge).toEqual({ text: '3日', label: '担当なしの訪問がある日 3日' });
     expect(item('today', g).badge?.text).toBe('未確定');
     expect(item('arrange:assign').badge).toBeUndefined();
-    // expert 切は確定の段階が無いので「未確定」の印は出さない（ADR-0073）
+    // expert 切は子の項目・件数の印の無い4つ（ADR-0073。PRD D383）
     const off = menuSections(terms, TODAY, { expert: false }, {}, { todayUntold: true });
-    expect(item('today', off).badge).toBeUndefined();
+    expect(item('today', off)).toBeUndefined();
     // 基本情報が変わった印は担当なしの日の数より先（ADR-0067）
     const changed = menuSections(
       terms,
@@ -342,44 +343,79 @@ describe('showsDateSwitch（PRD D267・D347）', () => {
   });
 });
 
-describe('エキスパート機能が切のメニュー（PRD D377。ADR-0072）', () => {
+describe('エキスパート機能が切のメニュー（PRD D383。ADR-0073）', () => {
   const off = { expert: false };
   const g = menuSections(terms, TODAY, off, {}, { planUnassignedDays: 3, basisChanged: true, hasStandard: true });
-  it('ホーム・予定・人・空き状況・設定。予定を組むは出さない', () => {
-    expect(g.flatMap((x) => x.items.map((i) => i.label))).toEqual(['ホーム', '予定', '人', '空き状況', '設定']);
+  it('メニューは 予定・〈利用者さん〉・〈スタッフ〉・設定 の4つ（見出し・子の項目・件数の印なし。ホームは無い）', () => {
+    expect(g.map((x) => x.title ?? null)).toEqual([null]);
+    expect(g.flatMap((x) => x.items.map((i) => i.label))).toEqual(['予定', '利用者さん', 'スタッフ', '設定']);
+    expect(g.flatMap((x) => x.items.map((i) => i.key))).toEqual(['schedule', 'clients', 'staff', 'settings']);
+    expect(g.flatMap((x) => x.items).some((i) => i.children || i.badge)).toBe(false);
+    expect(item('home', g)).toBeUndefined();
     expect(item('arrange', g)).toBeUndefined();
   });
-  it('「人」の子は 予定と相性・〈利用者さん〉一覧・〈スタッフ〉一覧。担当を組むの印は付けない', () => {
-    const people = item('people', g);
-    expect(people).toMatchObject({ to: '/basics', icon: 'people', match: BASICS_PATHS });
-    expect(people.children?.map((i) => [i.key, i.label, i.to])).toEqual([
-      ['people:basics', '予定と相性', '/basics'],
-      ['people:clients', '利用者さん一覧', '/clients'],
-      ['people:staff', 'スタッフ一覧', '/staff'],
-    ]);
-    expect(people.badge).toBeUndefined();
-    expect(people.children?.some((c) => c.badge)).toBe(false);
-    for (const p of ['/basics', '/compat', '/availability', '/workload', '/clients', '/staff/s1'])
-      expect(isActiveNav(people, p)).toBe(true);
+  it('呼び名は terms から', () => {
+    const t = menuSections({ client: 'お客様', staff: 'シッター' }, TODAY, off);
+    expect(t.flatMap((x) => x.items.map((i) => i.label))).toEqual(['予定', 'お客様', 'シッター', '設定']);
   });
-  it('入のメニューには「人」が無い', () => {
-    expect(item('people')).toBeUndefined();
+  it('行き先：予定は最後に開いた表示（既定は日の予定）、設定は最後に開いたタブ（無ければ訪問の種類）', () => {
+    expect(g.flatMap((x) => x.items.map((i) => i.to))).toEqual(['/plan', '/clients', '/staff', '/types']);
+    const last = menuSections(terms, TODAY, off, { schedule: '/week', settings: '/data' });
+    expect(last.flatMap((x) => x.items.map((i) => i.to))).toEqual(['/week', '/clients', '/staff', '/data']);
   });
-  it('画面の一覧：予定を組むのグループは無く担当を組むは予定のグループ、基本情報のグループ名は「人」', () => {
+  it('今の画面の印：予定は月・週・日・比較・空き状況・担当を組む、〈利用者さん〉・〈スタッフ〉は一覧と人の画面と関わる画面、設定は設定のタブ', () => {
+    const on = (key: string, p: string) => isActiveNav(item(key, g), p);
+    for (const p of ['/month', '/week', '/plan', '/schedule', '/vacancy', '/arrange', '/compare'])
+      expect(on('schedule', p)).toBe(true);
+    for (const p of ['/clients', '/clients/c1', '/basics', '/compat']) expect(on('clients', p)).toBe(true);
+    for (const p of ['/staff', '/staff/s1', '/availability', '/workload']) expect(on('staff', p)).toBe(true);
+    for (const p of ['/types', '/settings', '/data']) expect(on('settings', p)).toBe(true);
+    expect(on('schedule', '/clients')).toBe(false);
+    expect(on('clients', '/staff')).toBe(false);
+  });
+  it('切った機能の画面の項目は出さない（切っていない機能だけ）', () => {
+    const items = menuSections(terms, TODAY, { expert: false, vacancy: false }).flatMap((x) => x.items);
+    expect(items.map((i) => i.key)).toEqual(['schedule', 'clients', 'staff', 'settings']);
+  });
+  it('下のタブはメニューの4つ（そのあとに「探す」「メニュー」は画面で足す）。入はホーム・予定・欠勤のまま', () => {
+    expect(bottomTabs(g, true).map((t) => t.key)).toEqual(['schedule', 'clients', 'staff', 'settings']);
+    expect(bottomTabs(groups).map((t) => t.key)).toEqual(['home', 'schedule', 'absence']);
+    expect(bottomTabs(g, true).map(tabLabel)).toEqual(['予定', '利用者さん', 'スタッフ', '設定']);
+  });
+  it('isSimpleMenu：エキスパート機能が切のときだけ。入（無い ID も入）はメニュー5項目', () => {
+    expect(isSimpleMenu(off)).toBe(true);
+    expect(isSimpleMenu({})).toBe(false);
+    expect(isSimpleMenu({ expert: true })).toBe(false);
+    expect(isSimpleMenu(applyTemplate('basic'))).toBe(true);
+    expect(isSimpleMenu(applyTemplate('all'))).toBe(false);
+  });
+  it('homePath：入はホーム、切は予定の画面（繰り返しを使うなら月、使わないなら週。最初に開く画面と同じ）', () => {
+    expect(homePath({})).toBe('/home');
+    expect(homePath(applyTemplate('basic'))).toBe('/month');
+    expect(homePath(applyTemplate('oneOff'))).toBe('/week');
+  });
+  it('画面の一覧：ホームは無く、担当を組む・空き状況は予定のグループ、基本情報のグループ名は「人」', () => {
     const s = screenSections(terms, off);
+    expect(s.some((x) => x.items.some((i) => i.to === '/home'))).toBe(false);
     expect(s.some((x) => x.title === '予定を組む')).toBe(false);
+    expect(s.find((x) => x.title === '予定')?.items.map((i) => i.to)).toEqual([
+      '/month',
+      '/week',
+      '/plan',
+      '/arrange',
+      '/vacancy',
+    ]);
     expect(navTitleParts(s, '/arrange')).toEqual({ group: null, item: '担当を組む' });
+    expect(navTitleParts(s, '/vacancy')).toEqual({ group: null, item: '空き状況' });
     expect(s.some((x) => x.title === '基本情報')).toBe(false);
     expect(s.find((x) => x.title === '人')?.items[0]?.to).toBe('/basics');
     const on = screenSections(terms, {});
+    expect(on.some((x) => x.items.some((i) => i.to === '/home'))).toBe(true);
     expect(on.some((x) => x.title === '基本情報')).toBe(true);
     expect(on.find((x) => x.title === '予定を組む')?.items.map((i) => i.to)).toEqual([
       '/rules',
       '/standard',
       '/arrange',
     ]);
-  });
-  it('下のタブはホーム・予定・欠勤のまま', () => {
-    expect(bottomTabs(g).map((t) => t.key)).toEqual(['home', 'schedule', 'absence']);
   });
 });

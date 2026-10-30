@@ -85,9 +85,10 @@ export function AppHeader({
   );
 }
 
-/** スマホだけ：よく使うタブ（ホーム・予定・欠勤）と「探す」「メニュー」（PRD D336。印刷では出さない） */
+/** スマホだけ：よく使うタブ（ホーム・予定・欠勤。エキスパート機能が切ならメニューの4つ）と「探す」「メニュー」（PRD D336・D383。印刷では出さない） */
 export function BottomTabs({
   groups,
+  simple,
   pathname,
   paletteOpen,
   openPalette,
@@ -97,6 +98,8 @@ export function BottomTabs({
   openMenu,
 }: {
   groups: readonly NavSection<MenuItem>[];
+  /** エキスパート機能が切（メニューの4つを並べる。PRD D383） */
+  simple: boolean;
   pathname: string;
   paletteOpen: boolean;
   openPalette: () => void;
@@ -107,7 +110,7 @@ export function BottomTabs({
 }) {
   return (
     <nav className="bottom-tabs" aria-label="よく使う画面" data-testid="bottom-tabs">
-      {bottomTabs(groups).map((item) => {
+      {bottomTabs(groups, simple).map((item) => {
         const { key, to, icon } = item;
         const Icon = NAV_ICONS[icon];
         // 「予定」は月・週・日の予定で印（PRD D273）。欠勤は操作なので印を付けない

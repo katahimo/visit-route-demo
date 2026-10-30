@@ -1,5 +1,6 @@
 import { CalendarDays } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { AttentionBand } from '../components/attentionBand';
 import { DayLines } from '../components/dayLines';
 import { OpenToldContext } from '../components/openTold';
 import { SelectionBar } from '../components/scheduleParts';
@@ -44,6 +45,8 @@ export default function PlanPage() {
           }
         />
         <PlanNavRow p={p} />
+        {/* 要対応の帯（エキスパート機能が切のときだけ。PRD D383） */}
+        <AttentionBand />
         {/* 進み具合の帯は月の予定だけ（PRD D332）。日は見出しの状態の印と「今の担当」の1行 */}
         {d.m.clients.length === 0 && (
           <div className="card">

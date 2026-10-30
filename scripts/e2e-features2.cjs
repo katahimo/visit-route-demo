@@ -31,9 +31,9 @@ async function insideEntries(page, dlg, ctx) {
   for (const t of ['oneOff', 'basic', 'laborContract', 'monthlyField', 'all']) {
     const on = (id) => TEMPLATE_ON[t].includes(id);
     const label = TEMPLATE_LABEL[t];
-    await open(page, '/home', '[data-testid="home-tasks"]');
+    await open(page, '/data');
     await page.evaluate((key) => localStorage.removeItem(key), STORAGE_KEY);
-    await open(page, '/home', '[data-testid="home-tasks"]');
+    await open(page, '/data');
     await writeFeaturesInOtherTab(ctx, asFeatures(TEMPLATE_ON[t]));
     const data = await page.evaluate((k) => JSON.parse(localStorage.getItem(k)), STORAGE_KEY);
     check(same(data.org.features, asFeatures(TEMPLATE_ON[t])), `${label}：入り切りを書いた`);
@@ -208,9 +208,9 @@ async function insideEntries(page, dlg, ctx) {
  * 〈スタッフ〉のメールアドレス、毎月のパターンの繰り返し方（repeat）と第何週（monthWeeks）
  */
 async function keepData(page, dlg, ctx) {
-  await open(page, '/home', '[data-testid="home-tasks"]');
+  await open(page, '/data');
   await page.evaluate((key) => localStorage.removeItem(key), STORAGE_KEY);
-  await open(page, '/home', '[data-testid="home-tasks"]');
+  await open(page, '/data');
   const other = await ctx.newPage();
   await other.goto(`${BASE}#/data`);
   await other.locator('h1').first().waitFor({ timeout: 30000 });
@@ -402,7 +402,7 @@ const steps = sharedPage({
     const s = await openPage();
     // 確認は独自のダイアログで受ける（ネイティブのダイアログが出たら失敗。PRD D146）
     const dlg = await answerConfirms(s.page);
-    await s.page.goto(`${BASE}#/home`);
+    await s.page.goto(`${BASE}#/data`);
     return { ...s, dlg };
   },
   call: (fn, s) => fn(s.page, s.dlg, s.ctx),

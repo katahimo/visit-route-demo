@@ -11,6 +11,9 @@ import { scrollBehavior } from '../lib/motion';
 import type { PlanData } from './usePlanData';
 import type { PlanView } from './usePlanView';
 
+/** 画面を移るときの state（週の帯・要対応の帯から開く訪問）から訪問の ID */
+const visitIdOf = (state: unknown): string | null => (state as { visitId?: string } | null)?.visitId ?? null;
+
 /** 予定の画面の地図・選択で使うルートの集まりのキー（今の担当の並びは1つだけ） */
 export const PLAN_SET = 'plan';
 
@@ -202,18 +205,29 @@ export function usePlanNav(x: { date: string; setDate: (d: string) => void; d: P
       },
     });
   useUrlEntry(date, setDate, d, go.goToNone);
-  /** 週間の帯から開いたときに選ぶ訪問（並びが出たら1回だけ選んで見える所へ） */
-  const wantVisit = useRef<string | null>((location.state as { visitId?: string } | null)?.visitId ?? null);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: 並びが出たときに1回だけ
+  /** 週間の帯・要対応の帯から開いたときに選ぶ訪問（並びが出たら1回だけ選んで見える所へ） */
+  const wantVisit = useRef<string | null>(visitIdOf(location.state));
+  const [wantTick, setWantTick] = useState(0);
+  // 日の予定を開いたまま移ってきたとき（要対応の帯を日の予定で押したとき）も受ける（開いたときの state は初期値で読む）
+  const seenKey = useRef(location.key);
+  useEffect(() => {
+    if (seenKey.current === location.key) return;
+    seenKey.current = location.key;
+    wantVisit.current = visitIdOf(location.state);
+    setWantTick((n) => n + 1);
+  }, [location.key, location.state]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 並びが出たとき・新しく頼まれたときに1回だけ
   useEffect(() => {
     const id = wantVisit.current;
-    if (!id || !d.hasPlan) return;
+    // 日付を移した直後は前の日の並び：その訪問がこの日にあるときだけ受ける
+    if (!id || !d.hasPlan || !d.visitById.has(id)) return;
     wantVisit.current = null;
-    if (d.owner.has(id)) sel.togglePick({ id, set: PLAN_SET });
+    const x = { id, set: PLAN_SET };
+    if (d.owner.has(id) && !sel.isPicked(x)) sel.togglePick(x);
     requestAnimationFrame(() =>
       document.querySelector(`[data-visit="${CSS.escape(id)}"]`)?.scrollIntoView({ block: 'center' }),
     );
-  }, [d.hasPlan, d.owner]);
+  }, [d.hasPlan, d.owner, wantTick]);
   /** キーで動かしたあと（日付を移ったらその日へ、フォーカスは動かした帯） */
   const onKeyMoved = (r: { date: string; visitId: string }) => {
     if (r.date !== date) setDate(r.date);

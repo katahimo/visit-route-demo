@@ -59,8 +59,8 @@ const asFeatures = (on) => Object.fromEntries(FEATURE_IDS.map((id) => [id, on.in
 
 /** メニューの最上位（5項目。予定・予定を組む・設定は畳める子の項目を持つ。「人」は無い。PRD D349・D361。ADR-0067） */
 const MENU = ['ホーム', '予定を組む', '予定', '空き状況', '設定'];
-/** エキスパート機能が切のメニュー（「予定を組む」の代わりに「人」。ADR-0072） */
-const MENU_NO_EXPERT = ['ホーム', '予定', '人', '空き状況', '設定'];
+/** エキスパート機能が切のメニュー（4つ：予定・〈利用者さん〉・〈スタッフ〉・設定。子の項目なし。呼び名は初期データの利用者さん・スタッフ。ADR-0073。PRD D383） */
+const MENU_NO_EXPERT = ['予定', '利用者さん', 'スタッフ', '設定'];
 /** 予定を組むの子の項目の key（すべて入：基本情報・組み方の標準・担当を組む。作業の順。条件の重みは子に入れない。ADR-0067） */
 const ARRANGE_KIDS = ['arrange:basics', 'arrange:clients', 'arrange:staff', 'arrange:standard', 'arrange:assign'];
 /** 組み方の標準を登録したあとの予定を組むの子（基本情報・担当を組む。標準の組み直しは担当を組むの見出しの［標準の組み方を変える］から） */
@@ -95,25 +95,39 @@ const HIDDEN = {
   monthlyField: ['勤務の見込み', '条件の重み', '組み方の標準', '特性の項目'],
   all: [],
 };
-const screensFor = (t) => ALL_SCREENS.filter((l) => !HIDDEN[t].includes(l));
+/** パレットの画面（エキスパート機能が切ならホームは無い。ADR-0073） */
+const screensFor = (t) =>
+  ALL_SCREENS.filter((l) => !HIDDEN[t].includes(l) && (l !== 'ホーム' || TEMPLATE_ON[t].includes('expert')));
 /** 予定を組むの子の項目の key（子は機能の入り切りで変わらない。標準を登録したあとは担当を組むだけ。ADR-0066） */
 const arrangeKidsFor = (t, hasStandard = false) =>
   TEMPLATE_ON[t].includes('expert') ? (hasStandard ? ARRANGE_KIDS_WITH_STANDARD : ARRANGE_KIDS) : [];
-/** 「人」の子の項目の key（エキスパート機能が切のとき。予定と相性・〈利用者さん〉一覧・〈スタッフ〉一覧。ADR-0072） */
-const PEOPLE_MENU_KIDS = ['people:basics', 'people:clients', 'people:staff'];
-/** 人の子（入のときは無い） */
-const peopleKidsFor = (t) => (TEMPLATE_ON[t].includes('expert') ? [] : PEOPLE_MENU_KIDS);
+/** 「人」の子の項目（メニュー4つにしたので、入でも切でも無い。ADR-0073） */
+const peopleKidsFor = () => [];
 /** 設定のタブ（ひな形ごと。特性の項目は rules を切ると出さない。条件の重み・組み方の標準は予定を組む。ADR-0063・ADR-0066） */
 const SETTINGS_TABS = ['訪問の種類', '特性の項目', '管理者設定', 'データ'];
 const settingsTabsFor = (t) => SETTINGS_TABS.filter((l) => !HIDDEN[t].includes(l));
-/** メニューの最上位は空き状況を切ると減る */
+/** メニューの最上位は空き状況を切ると減る（エキスパート機能が切なら4つで変わらない） */
 const menuFor = (on) =>
-  (on.includes('expert') ? MENU : MENU_NO_EXPERT).filter((l) => l !== '空き状況' || on.includes('vacancy'));
-/** 予定の子の項目の key（今日の予定・◯月の予定・欠勤・キャンセル。欠勤・キャンセルは sudden を切ると出さない） */
+  on.includes('expert') ? MENU.filter((l) => l !== '空き状況' || on.includes('vacancy')) : MENU_NO_EXPERT;
+/** 予定の子の項目の key（今日の予定・◯月の予定・欠勤・キャンセル。欠勤・キャンセルは sudden を切ると出さない。エキスパート機能が切なら子は無い） */
 const scheduleKidsFor = (on) =>
-  ['today', 'month-view', 'absence'].filter((k) => k !== 'absence' || on.includes('sudden'));
-/** 下のタブ（ホーム・予定・欠勤。「探す」「メニュー」はボタン。空き状況は下のタブに無い。PRD D336） */
-const tabsFor = (on) => ['ホーム', '予定', '欠勤'].filter((l) => l !== '欠勤' || on.includes('sudden'));
+  on.includes('expert')
+    ? ['today', 'month-view', 'absence'].filter((k) => k !== 'absence' || on.includes('sudden'))
+    : [];
+/** 設定の子の項目（設定のタブ。エキスパート機能が切ならメニューに子は無い。タブは画面の上に出る） */
+const settingsKidsFor = (t) => (TEMPLATE_ON[t].includes('expert') ? settingsTabsFor(t) : []);
+/** 下のタブ（ホーム・予定・欠勤。「探す」「メニュー」はボタン。空き状況は下のタブに無い。PRD D336。切ならメニューの4つ） */
+const tabsFor = (on) =>
+  on.includes('expert')
+    ? ['ホーム', '予定', '欠勤'].filter((l) => l !== '欠勤' || on.includes('sudden'))
+    : MENU_NO_EXPERT;
+/** 起動・ホームの URL の行き先（エキスパート機能が入ならホーム、切なら予定の画面：繰り返しを使うなら月、使わないなら週。ADR-0073） */
+const homeHashFor = (on) => (on.includes('expert') ? '#/home' : on.includes('patterns') ? '#/month' : '#/week');
+/** 起動の画面を開く（入はホームの「今日やること」、切は予定の上のナビの行を待つ） */
+const openHome = (page, on) =>
+  on.includes('expert')
+    ? open(page, '/home', '[data-testid="home-tasks"]')
+    : open(page, homeHashFor(on).slice(1), '[data-testid="sched-nav"]');
 
 /** 切った機能の URL（ひな形ごとに、ホームへ移るもの・移らないもの） */
 const ROUTES = [
@@ -242,6 +256,9 @@ module.exports = {
   screensFor,
   SETTINGS_TABS,
   settingsTabsFor,
+  settingsKidsFor,
+  homeHashFor,
+  openHome,
   menuFor,
   scheduleKidsFor,
   tabsFor,
