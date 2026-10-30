@@ -76,7 +76,7 @@ async function moveVisit(page, vid) {
 
 /** 1 切の日の画面：確定の段階（確定のボタン・確定済み・まだ伝えていない）が無い */
 async function plain(page) {
-  await fresh(page, `/plan?date=${TODAY}`, '[data-testid="plan-summary"]');
+  await fresh(page, `/plan?date=${TODAY}`, '[data-testid="sched-nav"]');
   const d = await data(page);
   check(d.org.features.expert === false, '前提：初めて開くとエキスパート機能は切', d.org.features);
   check(!d.snapshots[TODAY], '前提：初期データに今日の伝えた記録は無い', Object.keys(d.snapshots));
@@ -126,7 +126,7 @@ async function changed(page) {
   );
   // 印を押すと連絡の一覧（札は選び直さない）
   const picked0 = await page.locator('.tl-band.is-picked').count();
-  await page.getByTestId('plan-summary').scrollIntoViewIfNeeded();
+  await page.getByTestId('schedule-toolbar').scrollIntoViewIfNeeded();
   await mark.click();
   await sheet(page).waitFor({ timeout: 10000 });
   check(true, '印を押すと連絡の一覧が開く');
@@ -152,7 +152,9 @@ async function changed(page) {
   );
   check((await sheet(page).count()) === 0, '「連絡した」のあと連絡の一覧は閉じる');
   // 元に戻す（今の確定と同じ扱い）：伝えた記録が前に戻り、変更ありが戻る
-  await page.getByTestId('undo-btn').click();
+  // 元に戻すは「その他 ▾」の中（エキスパート機能が切。PRD D384）
+  await page.getByTestId('plan-more').click();
+  await page.getByTestId('more-undo').click();
   const undone = await dataWhen(page, (x) => x.snapshots[TODAY].at === before.at);
   check(undone.snapshots[TODAY].at === before.at, '操作の行の［元に戻す］で「連絡した」の前に戻る');
   await page.locator('[data-told-date]').first().waitFor({ timeout: 10000 });
@@ -163,6 +165,8 @@ async function changed(page) {
 async function fromWeek(page) {
   await page.goto('about:blank');
   await page.goto(`${BASE}#/week`);
+  // 1行の状態は「詳しく」の中（PRD D384）。開く
+  await page.getByTestId('week-details-summary').click();
   await page.locator('[data-testid="week-status"]').first().waitFor({ timeout: 60000 });
   await settle(page, 600);
   const text = await page.getByTestId('week-status').innerText();
@@ -191,6 +195,8 @@ async function fromWeek(page) {
 async function month(page) {
   await page.goto('about:blank');
   await page.goto(`${BASE}#/month`);
+  // 進み具合の帯は「詳しく」の中（PRD D384）。開く
+  await page.getByTestId('month-details-summary').click();
   await page.getByTestId('progress-band').waitFor({ timeout: 60000 });
   await settle(page, 600);
   check((await page.getByTestId('band-confirm').count()) === 0, '月の帯に「確定 N/N日」を出さない');
@@ -225,7 +231,7 @@ async function month(page) {
 
 /** 8 エキスパート機能が入なら今の確定（伝えた）の操作が出て、自動では伝えない */
 async function expertOn(page) {
-  await fresh(page, `/plan?date=${TODAY}`, '[data-testid="plan-summary"]');
+  await fresh(page, `/plan?date=${TODAY}`, '[data-testid="sched-nav"]');
   await page.evaluate((k) => {
     const d = JSON.parse(localStorage.getItem(k));
     d.org.features = { ...d.org.features, expert: true };
@@ -246,7 +252,7 @@ async function expertOn(page) {
 
 /** 9 決まった日に担当なしの訪問を足すと、自動の組みが担当を付ける（伝えた内容は書き換えず、足した訪問は「変更あり」） */
 async function addToSettled(page) {
-  await fresh(page, `/plan?date=${TODAY}`, '[data-testid="plan-summary"]');
+  await fresh(page, `/plan?date=${TODAY}`, '[data-testid="sched-nav"]');
   await moveVisit(page, await firstVisit(page));
   const d0 = await dataWhen(page, (x) => !!x.snapshots[TODAY]);
   const n0 = d0.visits.length;

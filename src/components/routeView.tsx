@@ -85,6 +85,7 @@ export function VisitCard({
   dragging = false,
   detail,
   mark,
+  oneLine = false,
   children,
 }: {
   visitId: string;
@@ -108,17 +109,20 @@ export function VisitCard({
   detail: ReactNode;
   /** 名前の横に出す小さな印（訪問の種類。ADR-0012） */
   mark?: ReactNode;
+  /** 時刻・名前を1行で出し、移動・待ちの分数の線は出さない（エキスパート機能が切のとき。PRD D384） */
+  oneLine?: boolean;
   children?: ReactNode;
 }) {
   const t = timing;
   return (
     <div>
-      {t && (
+      {t && !oneLine && (
         <LegLine kind={first ? 'fromHome' : 'drive'} minutes={t.travelIn} wait={t.wait} on={legOn} onToggle={onLeg} />
       )}
       <div
         className={[
           'route-item',
+          oneLine ? 'is-oneline' : '',
           tone ? `is-${tone}` : '',
           picked ? 'is-picked' : '',
           dragging ? 'is-dragging' : '',

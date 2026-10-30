@@ -205,7 +205,7 @@ const opts = (o: Partial<Parameters<typeof dayLooks>[2]> = {}) => ({
 
 describe('その日の訪問の見た目 dayLooks', () => {
   const src = {
-    issues: new Map([['v1', [{ label: '時間が合わない' }]]]),
+    issues: new Map([['v1', [{ kind: 'late' as const, label: '時間が合わない' }]]]),
     told: list({ staffChanged: [cv({ visitId: 'v1', fromStaffId: 'a', toStaffId: 's1' })] }),
     problem: problemWith(VISIT_TYPE_RULE_ID),
   };
@@ -214,6 +214,22 @@ describe('その日の訪問の見た目 dayLooks', () => {
     expect(m.get('v1')!.kinds).toBe('unfit told');
     expect(m.get('v1')!.marks[1]!.title).toBe('未連絡の変更：担当 名a→名s1');
     expect(m.get('v2')).toEqual({ marks: [], tone: null, text: '', kinds: '' });
+  });
+  it('例外だけ（exceptionsOnly）：資格✗・ピン・仮押さえは出さず、担当なし・重なり・休みの人と「変更あり」だけ。条件に合わないは目立たせない', () => {
+    const pinned = { ...visit('v1'), pinned: true };
+    const m = dayLooks(src, [pinned], opts({ exceptionsOnly: true, tentativeOf: () => true }));
+    expect(m.get('v1')!.kinds).toBe('issue told');
+    expect(m.get('v1')!.tone).toBe('issue');
+    const notAllowed = new Map([['v1', [{ kind: 'notAllowed' as const, label: '条件に合わない' }]]]);
+    const q = dayLooks({ ...src, issues: notAllowed, told: null }, [pinned], opts({ exceptionsOnly: true }));
+    expect(q.get('v1')).toEqual({ marks: [], tone: null, text: '', kinds: '' });
+    const none = new Map([['v1', [{ kind: 'unassigned' as const, label: '担当なし' }]]]);
+    const u = dayLooks(
+      { ...src, issues: none, told: null },
+      [visit('v1', { staffId: null })],
+      opts({ exceptionsOnly: true }),
+    );
+    expect(u.get('v1')!.tone).toBe('unassigned');
   });
   it('限✗も引く', () => {
     const m = dayLooks({ ...src, problem: problemWith(ALLOWED_STAFF_RULE_ID) }, [visit('v1')], opts());

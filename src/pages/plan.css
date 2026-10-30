@@ -1071,3 +1071,11 @@ p.plan-band.error {
     display: none;
   }
 }
+
+/* 例外だけ見せる（エキスパート機能が切。PRD D384）：訪問の札は時刻・名前（担当は列）の1行 */
+.route-item.is-oneline .route-btn {
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 8px;
+}

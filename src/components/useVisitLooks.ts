@@ -2,6 +2,7 @@
 import { useMemo } from 'react';
 import { isOnLeave } from '../domain/leaves';
 import { jstDate } from '../domain/time';
+import { exceptionsOnly } from '../lib/exceptionView';
 import { showConfirmStep } from '../lib/settledView';
 import { dayLooks, type VisitLook } from '../lib/visitLook';
 import { visitsOn } from '../patterns';
@@ -19,6 +20,7 @@ export function useVisitLooks(dates: readonly string[]): (visitId: string) => Vi
   const statuses = useDayStatuses(data, compileInput, dates);
   const today = jstDate(Date.now());
   const confirmStep = showConfirmStep(data.org.features);
+  const only = exceptionsOnly(data.org.features);
   return useMemo(() => {
     const staffById = new Map(data.staff.map((s) => [s.id, s.name]));
     const tentative = new Set(data.clients.filter((c) => c.tentative).map((c) => c.id));
@@ -38,10 +40,11 @@ export function useVisitLooks(dates: readonly string[]): (visitId: string) => Vi
           tentativeOf: (id) => tentative.has(id),
           past: d < today,
           confirmStep,
+          exceptionsOnly: only,
         },
       );
       for (const [id, l] of looks) all.set(id, l);
     }
     return (id: string) => all.get(id);
-  }, [data, dates, statuses, today, confirmStep]);
+  }, [data, dates, statuses, today, confirmStep, only]);
 }

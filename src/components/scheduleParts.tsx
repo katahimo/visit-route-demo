@@ -8,6 +8,7 @@ import type { ReactNode, Ref, RefObject } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { jstDate } from '../domain/time';
 import { dateText } from '../lib/dateText';
+import { type ProposalWords, proposalWords, type ScheduleZoom } from '../lib/exceptionView';
 import { monthBatch, proposalCounts, proposalDayFresh } from '../lib/monthBatch';
 import { selectionText } from '../lib/multiEdit';
 import { absenceHref } from '../lib/nav';
@@ -16,17 +17,16 @@ import type { useConfirm } from './ConfirmDialog';
 import { MenuButton, type MenuItem } from './MenuButton';
 import { ProposalChanges } from './proposalChanges';
 import { StaffMark } from './StaffMark';
+import { type AddTool, SimpleToolbar } from './simpleToolbar';
 import { useToast } from './Toast';
 import { WithIcon } from './ui';
 import { UndoButtons } from './undo';
 import { saveAppliedBasis } from './useArrangeBasis';
+import { useExceptionsOnly } from './useFeature';
 import { useSelectionBar } from './useSelectionBar';
-import { useSimpleMoreItems } from './useSimpleMoreItems';
+import { useSimpleMore } from './useSimpleMore';
 import { useValueStore } from './valueStore';
 import './scheduleParts.css';
-
-/** 予定の拡大率（日・週・月） */
-export type ScheduleZoom = 'day' | 'week' | 'month';
 
 /**
  * 新しく組み始める前に、反映していない範囲の提案があれば捨ててよいか確かめる（提案は1つだけ。PR #81 のレビュー）。
@@ -56,6 +56,7 @@ export function ScheduleToolbar({
   children,
   after,
   className = '',
+  add = null,
 }: {
   zoom: ScheduleZoom;
   absence: { onClick: () => void; disabled?: boolean; ref?: Ref<HTMLButtonElement> } | { date: string } | null;
@@ -65,38 +66,55 @@ export function ScheduleToolbar({
   /** その他 ▾ のあとに置くもの */
   after?: ReactNode;
   className?: string;
+  /** 日の「訪問を追加」（エキスパート機能が切のとき主ボタンにする。入のときは呼ぶ側が children に置く）。スマホ・出さないときは null */
+  add?: AddTool | null;
 }) {
   const today = jstDate(Date.now());
-  // エキスパート機能が切のときは、メニューから外した空き状況と担当なしの［組む］を「その他 ▾」に足す（PRD D383）
-  const simpleItems = useSimpleMoreItems();
-  const items = [...moreItems, ...simpleItems];
+  const only = useExceptionsOnly();
+  // エキスパート機能が切のときは、メニューから外した空き状況と担当なしの［組む］を足す（PRD D383）。切は操作の行を主ボタン1つ＋1つにする（PRD D384）
+  const more = useSimpleMore();
+  const absenceNode =
+    absence &&
+    ('onClick' in absence ? (
+      <button
+        ref={absence.ref}
+        type="button"
+        className="btn plan-sudden-btn"
+        onClick={absence.onClick}
+        disabled={absence.disabled}
+        data-testid="sudden-open"
+      >
+        <WithIcon icon={UserRoundX}>
+          <span className="tb-label">欠勤・キャンセルを登録</span>
+        </WithIcon>
+      </button>
+    ) : (
+      <Link
+        to={absenceHref(absence.date < today ? today : absence.date)}
+        className="btn plan-sudden-btn"
+        data-testid="sudden-open"
+      >
+        <WithIcon icon={UserRoundX}>
+          <span className="tb-label">欠勤・キャンセルを登録</span>
+        </WithIcon>
+      </Link>
+    ));
+  if (only)
+    return (
+      <SimpleToolbar
+        zoom={zoom}
+        className={className}
+        absence={absenceNode}
+        add={add}
+        moreItems={moreItems}
+        more={more}
+        after={after}
+      />
+    );
+  const items = [...moreItems, ...more.items];
   return (
     <div className={`row schedule-toolbar ${className}`} data-testid="schedule-toolbar" data-zoom={zoom}>
-      {absence &&
-        ('onClick' in absence ? (
-          <button
-            ref={absence.ref}
-            type="button"
-            className="btn plan-sudden-btn"
-            onClick={absence.onClick}
-            disabled={absence.disabled}
-            data-testid="sudden-open"
-          >
-            <WithIcon icon={UserRoundX}>
-              <span className="tb-label">欠勤・キャンセルを登録</span>
-            </WithIcon>
-          </button>
-        ) : (
-          <Link
-            to={absenceHref(absence.date < today ? today : absence.date)}
-            className="btn plan-sudden-btn"
-            data-testid="sudden-open"
-          >
-            <WithIcon icon={UserRoundX}>
-              <span className="tb-label">欠勤・キャンセルを登録</span>
-            </WithIcon>
-          </Link>
-        ))}
+      {absenceNode}
       <UndoButtons />
       {children}
       {items.length > 0 && (
@@ -130,7 +148,9 @@ function ProposalBand({
   details,
   detailsLabel,
   detailsOpen,
+  words,
 }: {
+  words: ProposalWords;
   title: ReactNode;
   moved: number;
   shifted: number;
@@ -147,7 +167,7 @@ function ProposalBand({
   return (
     <section
       className="plan-band schedule-band proposal-band stack"
-      aria-label="AI の提案"
+      aria-label={words.aria}
       data-testid="proposal-band"
       data-kind="range"
     >
@@ -166,12 +186,12 @@ function ProposalBand({
           data-testid="proposal-apply"
         >
           <WithIcon icon={CircleCheck} size={14}>
-            反映する
+            {words.apply}
           </WithIcon>
         </button>
         <button type="button" className="btn btn-small" onClick={onDiscard} data-testid="proposal-discard">
           <WithIcon icon={X} size={14}>
-            捨てる
+            {words.discard}
           </WithIcon>
         </button>
       </div>
@@ -200,6 +220,7 @@ export function RangeProposalBand() {
   const run = useValueStore(monthBatch.run);
   const toast = useToast();
   const navigate = useNavigate();
+  const words = proposalWords(useExceptionsOnly());
   if (!proposal) return null;
   const counts = proposalCounts(proposal);
   const staleDays = proposal.days.filter((d) => !proposalDayFresh(data, d)).length;
@@ -208,16 +229,13 @@ export function RangeProposalBand() {
     if (!r) return;
     // 組み始めたときの基本情報を覚える（あとで変われば担当を組むで組み直しを知らせる。ADR-0067）
     if (r.applied.length > 0) saveAppliedBasis(data);
-    toast(
-      r.applied.length === 0
-        ? '提案を出したあとに訪問が変わったので、反映しませんでした。もう一度 AI で組んでください'
-        : `${proposal.label}の提案を反映しました（${r.applied.length}日${r.skipped.length > 0 ? `・変わった ${r.skipped.length}日は反映しません` : ''}）`,
-    );
+    toast(r.applied.length === 0 ? words.staleOne : words.applied(proposal.label, r.applied.length, r.skipped.length));
   };
   const changed = proposal.days.filter((d) => (d.diff?.moved.length ?? 0) + (d.diff?.shifted.length ?? 0) > 0);
   return (
     <ProposalBand
-      title={`提案（${proposal.label}・${counts.days}日分）`}
+      words={words}
+      title={words.title(proposal.label, counts.days)}
       moved={counts.moved}
       shifted={counts.shifted}
       note={
@@ -226,13 +244,11 @@ export function RangeProposalBand() {
           {counts.unassignedDays > 0 ? `。担当なしの残る日 ${counts.unassignedDays}日` : ''}
         </>
       }
-      stale={
-        staleDays > 0 ? `提案を出したあとに訪問が変わった日が ${staleDays}日あります（その日は反映しません）` : null
-      }
+      stale={staleDays > 0 ? words.stale(staleDays) : null}
       applyDisabled={run !== null || staleDays === proposal.days.length}
       onApply={apply}
       onDiscard={() => monthBatch.discard()}
-      detailsLabel={`変わる訪問を見る（${changed.length}日）`}
+      detailsLabel={words.detailsLabel(changed.length)}
       detailsOpen={changed.length === 1}
       details={
         changed.length === 0 ? (

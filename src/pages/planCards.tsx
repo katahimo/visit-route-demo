@@ -15,6 +15,7 @@ import { TypeMark } from '../components/visitType';
 import { hhmmToMinutes, jstDate } from '../domain/time';
 import { colorOf } from '../lib/colors';
 import { own } from '../lib/common';
+import { exceptionsOnly } from '../lib/exceptionView';
 import { HOME_LABEL } from '../lib/mapsLink';
 import { typeOf } from '../lib/patternText';
 import { leftReasonText } from './absenceParts';
@@ -57,6 +58,8 @@ function namesOf(p: PlanCtx) {
     placeCandidate: edits.placeCandidate,
     openVisit: nav.openVisit,
     visitKeys: nav.visitKeys,
+    /** 例外だけ見せる（エキスパート機能が切。PRD D384） */
+    only: exceptionsOnly(d.data.org.features),
   };
 }
 
@@ -159,9 +162,10 @@ export function whoOf(p: PlanCtx, id: string, sid: string | null, withClient = t
  * pinHint：「固定」に用語の説明を付ける（順番の表示では並びで最初の固定の訪問だけ。押して開く説明は別に数える。PRD D241）
  */
 export function tagsOf(p: PlanCtx, id: string, pinHint = true) {
-  const { pins, staffName, hardOf, toldMarks, running, reassignMarks, leftById, unpin } = bv(p);
-  const pin = own(pins, id);
-  const hard = hardOf.get(id);
+  const { pins, staffName, hardOf, toldMarks, running, reassignMarks, leftById, unpin, only } = bv(p);
+  // 例外だけ見せる（切）：ピン・条件に合わない印は出さない（担当なし・重なり・休みの人と「変更あり」だけ目立たせる）
+  const pin = only ? undefined : own(pins, id);
+  const hard = only ? undefined : hardOf.get(id);
   const subFrom = reassignMarks.substitute.get(id);
   const shift = reassignMarks.shifted.get(id);
   const stay = leftById.get(id);
@@ -262,9 +266,25 @@ export function firstPinnedCard(p: PlanCtx) {
 
 /** 訪問カード（ドラッグで担当を移す。押すと理由） */
 export function card(p: PlanCtx, id: string) {
-  const { routes, pins, owner, explained, visitById, clientOf, data, hardOf, sel, multi, dragging, dragProps } = bv(p);
+  const {
+    routes,
+    pins,
+    owner,
+    explained,
+    visitById,
+    clientOf,
+    data,
+    hardOf,
+    sel,
+    multi,
+    dragging,
+    dragProps,
+    only,
+    looks,
+  } = bv(p);
   const pin = own(pins, id);
   const hard = hardOf.get(id);
+  const tone = only ? (looks.get(id)?.tone === 'issue' || looks.get(id)?.tone === 'unassigned' ? 'red' : null) : null;
   const ownerId = owner.get(id) ?? null;
   const x = { id, set: PLAN_SET };
   return (
@@ -281,7 +301,8 @@ export function card(p: PlanCtx, id: string) {
       onPick={() => sel.togglePick(x)}
       multi={multi.has(id)}
       onMulti={() => multi.toggle(id)}
-      tone={hard ? 'red' : pin ? 'pinned' : null}
+      tone={only ? tone : hard ? 'red' : pin ? 'pinned' : null}
+      oneLine={only}
       drag={dragProps(id)}
       dragging={dragging === id}
       detail={
@@ -323,6 +344,7 @@ export function bandOf(p: PlanCtx, id: string, sid: string): TimelineBand {
     reassignMarks,
     leftById,
     visitKeys,
+    only,
   } = bv(p);
   const v = visitById.get(id);
   const t = explained.get(id)?.timing ?? null;
@@ -390,7 +412,15 @@ export function bandOf(p: PlanCtx, id: string, sid: string): TimelineBand {
     name: client?.displayName ?? '（不明）',
     color: type ? colorOf(type.color) : null,
     // 今日より前の日は要対応の赤にしない（印と同じ。月・ホームと同じ決まり）
-    tone: look?.tone === 'issue' || (hard && date >= jstDate(Date.now())) ? 'red' : pin ? 'pinned' : null,
+    tone: only
+      ? look?.tone === 'issue'
+        ? 'red'
+        : null
+      : look?.tone === 'issue' || (hard && date >= jstDate(Date.now()))
+        ? 'red'
+        : pin
+          ? 'pinned'
+          : null,
     kinds: look?.kinds ?? '',
     picked: sel.isPicked(x),
     dragging: dragging === id,

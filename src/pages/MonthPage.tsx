@@ -1,7 +1,15 @@
 import { useRef, useState } from 'react';
 import { useDayModel } from '../components/useDayModel';
 import { monthFeatures, monthPrintHref } from '../lib/monthView';
-import { MonthAsideCard, MonthBodyCard, MonthHeadCard, MonthSheet, MonthTopBars } from './monthSections';
+import {
+  legendBarOf,
+  MonthAsideCard,
+  MonthBodyCard,
+  MonthDetails,
+  MonthHeadCard,
+  MonthSheet,
+  MonthTopBars,
+} from './monthSections';
 import { useMonthAside } from './useMonthAside';
 import { useMonthBatch } from './useMonthBatch';
 import { useMonthDayList } from './useMonthDayList';
@@ -109,6 +117,14 @@ export default function MonthPage() {
         onBandOp={aside.onBandOp}
         absence={on.sudden ? { date } : null}
         moreItems={more.items}
+      />
+
+      <MonthDetails
+        ym={ym}
+        band={month.band}
+        onBandOp={aside.onBandOp}
+        summary={month.summary}
+        legendBar={legendBarOf(focus.kind)}
       />
 
       <MonthHeadCard

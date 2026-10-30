@@ -26,6 +26,9 @@ const BAND_OF: Record<IssueKind, BandKind | null> = {
   notAllowed: null,
 };
 
+/** 帯に数える種類の検査か（担当なし・重なり・休みの人。条件に合わないは数えない）。訪問の札の目立たせ方（lib/visitLook の exceptionsOnly）も同じ分け方 */
+export const isBandIssue = (kind: IssueKind): boolean => BAND_OF[kind] !== null;
+
 /** 帯が見る日：今日から翌月末まで（自動の組みの範囲 autoRange と同じ。「その他 ▾」の「担当なしの訪問を組む」と件数の範囲をそろえる） */
 export function bandDays(today: string): string[] {
   const { from, to } = autoRange(today);

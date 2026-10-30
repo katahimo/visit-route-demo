@@ -1,15 +1,17 @@
 import { Check, Lock, Mail, RefreshCw, Sparkles, TriangleAlert, X } from 'lucide-react';
 import { ClientFilter } from '../components/ClientFilter';
 import { ClientPicker } from '../components/ClientPicker';
+import { DetailsFold } from '../components/DetailsFold';
 import { PickChips } from '../components/PickChips';
 import { StaffMark } from '../components/StaffMark';
 import { Hint, WithIcon } from '../components/ui';
-import { useConfirmStep } from '../components/useFeature';
+import { useConfirmStep, useExceptionsOnly } from '../components/useFeature';
 import type { InsertNoticeFlow } from '../components/useInsertNotice';
 import { TypeDot } from '../components/visitType';
 import type { Terms } from '../contracts/documents';
 import { WEEK_TABLE_FILTER } from '../lib/clientFilter';
 import { mdText } from '../lib/dateText';
+import { detailItems } from '../lib/exceptionView';
 import { TIMELINE_CLIENT_MAX } from '../lib/timelineClients';
 import { SNAP_MINUTES, staffWithQualification } from '../lib/week';
 import { type WeekPrep, weekStatusText } from '../lib/weekPrep';
@@ -100,6 +102,32 @@ export function WeekStatusLine({ prep }: { prep: WeekPrep }) {
     <p className="week-status sub" data-testid="week-status">
       この週の今日以降：{weekStatusText(prep.line, confirmStep)}
     </p>
+  );
+}
+
+/**
+ * 「詳しく」（エキスパート機能が切のときだけ。畳んでおく。PRD D384）：この週の1行の状態・時間軸の凡例と使い方。
+ * 入のときは今の画面のとおり（1行の状態は上、凡例は上の欄）なので何も出さない
+ */
+export function WeekDetails({
+  prep,
+  model,
+  by,
+  tab,
+}: {
+  prep: WeekPrep;
+  model: WeekModel;
+  by: WeekNav['by'];
+  tab: WeekNav['tab'];
+}) {
+  const only = useExceptionsOnly();
+  const folded = detailItems('week', only);
+  if (folded.length === 0) return null;
+  return (
+    <DetailsFold testId="week-details">
+      <WeekStatusLine prep={prep} />
+      {tab === 'timeline' && <TimelineTools model={model} by={by} />}
+    </DetailsFold>
   );
 }
 
@@ -276,6 +304,7 @@ export function WeekHead({
 }) {
   const { data, terms, clients, activeStaff } = model;
   const { tab, by, view } = nav;
+  const only = useExceptionsOnly();
   const clientTimeline = tab === 'timeline' && by === 'client';
   return (
     <div className="card stack week-head">
@@ -295,7 +324,7 @@ export function WeekHead({
           ))}
         </fieldset>
       </div>
-      {tab === 'timeline' && <TimelineTools model={model} by={by} />}
+      {tab === 'timeline' && !only && <TimelineTools model={model} by={by} />}
       {tab === 'timeline' && by === 'staff' && <StaffPick model={model} nav={nav} allowedNow={allowedNow} />}
       {clientTimeline && <ClientPick people={people} terms={terms} model={model} />}
       {/* 〈利用者さん〉×曜日の表の絞り込み（PRD D108〜D112。変わるのは押したときだけで、ドラッグ中に高さを変えない） */}

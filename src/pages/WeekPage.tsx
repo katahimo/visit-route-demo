@@ -1,11 +1,13 @@
-import { CalendarClock } from 'lucide-react';
+import { CalendarClock, Mail } from 'lucide-react';
 import { useState } from 'react';
 import { AttentionBand } from '../components/attentionBand';
 import { EmptyNext } from '../components/EmptyNext';
+import type { MenuItem } from '../components/MenuButton';
 import { ScheduleNav } from '../components/ScheduleNav';
 import { RangeProposalBand, ScheduleToolbar, SelectionBar } from '../components/scheduleParts';
 import { PageHeader } from '../components/ui';
-import { useFeature } from '../components/useFeature';
+import { useExceptionsOnly, useFeature } from '../components/useFeature';
+import { useIntro } from '../components/useIntro';
 import { KeyMoveBand } from '../components/visitKeys';
 import { addDays } from '../domain/time';
 import { periodEmptyGuide } from '../lib/emptyGuide';
@@ -17,7 +19,7 @@ import { useWeekNav } from './useWeekNav';
 import { useWeekPrep } from './useWeekPrep';
 import { useWeekTodayScroll } from './useWeekTodayScroll';
 import { useWeekVisits } from './useWeekVisits';
-import { WeekHead, WeekNavActions, WeekNotice, WeekStatusLine } from './weekParts';
+import { WeekDetails, WeekHead, WeekNavActions, WeekNotice, WeekStatusLine } from './weekParts';
 import { ClientWeekCard, StaffWeekCard, type WeekTableCtx } from './weekTables';
 import { WeekTimeline } from './weekTimeline';
 import './week.css';
@@ -46,7 +48,23 @@ export default function WeekPage() {
   const [mailOpen, setMailOpen] = useState(false);
   const mailOn = useFeature('mail');
   /** ナビの行のメールで送る（組むのモードでは出さない。PRD D348） */
-  const mailBtn = mailOn;
+  /** エキスパート機能が切のときは例外だけ見せる（PRD D384）：メールで送るは「その他 ▾」へ、1行の状態・凡例は「詳しく」へ */
+  const only = useExceptionsOnly();
+  const mailBtn = mailOn && !only;
+  const moreItems: MenuItem[] =
+    only && mailOn
+      ? [
+          {
+            key: 'mail',
+            group: '予定まわり',
+            label: '予定をメールで送る',
+            icon: Mail,
+            onSelect: () => setMailOpen(true),
+            testId: 'week-mail',
+          },
+        ]
+      : [];
+  const lead = useIntro('week', `この週の担当を見て、日時をドラッグでずらし、${terms.staff}に伝えたら確定します`);
   const { timelineRef, tableScrollRef, clientScrollRef } = useWeekTodayScroll(nav);
   // ---- この週の準備（PRD D280・D282。ADR-0046・ADR-0053）：担当なしを組む → 確定 → 済み の主ボタン1つ ----
   const prepFlow = useWeekPrep({ data, compileInput, dates, today });
@@ -77,11 +95,7 @@ export default function WeekPage() {
 
   return (
     <div className="stack week-page">
-      <PageHeader
-        icon={CalendarClock}
-        title="週の予定"
-        lead={`この週の担当を見て、日時をドラッグでずらし、${terms.staff}に伝えたら確定します`}
-      />
+      <PageHeader icon={CalendarClock} title="週の予定" lead={lead} />
       {/* 上のナビの行（日・週・月で同じ。PRD D347。ADR-0060）。週送り・今日・［月｜週｜日］・メールで送る・確定 */}
       <ScheduleNav
         current="week"
@@ -104,9 +118,10 @@ export default function WeekPage() {
       {/* 要対応の帯（エキスパート機能が切のときだけ。PRD D383） */}
       <AttentionBand />
       {/* 1行の状態（PRD D332。進み具合の帯は月の予定だけ） */}
-      <WeekStatusLine prep={prep} />
+      {!only && <WeekStatusLine prep={prep} />}
+      <WeekDetails prep={prep} model={model} by={by} tab={tab} />
       {/* 操作の行（日・週・月で同じ並び。PRD D327）。メールで送るは見出しのボタンなので、エキスパート機能が入のときは「その他 ▾」を出さない（PRD D344・D346）。切のときだけ ScheduleToolbar が空き状況・担当なしの訪問を組むを足す（PRD D383） */}
-      <ScheduleToolbar zoom="week" absence={suddenOn ? { date: anchor } : null} moreItems={[]} />
+      <ScheduleToolbar zoom="week" absence={suddenOn ? { date: anchor } : null} moreItems={moreItems} />
       {/* 担当を組むの画面で組んだ範囲の提案（日・週・月で同じ帯。PRD D328） */}
       <RangeProposalBand />
 

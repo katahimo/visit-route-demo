@@ -1,0 +1,77 @@
+import { describe, expect, it } from 'vitest';
+import {
+  detailItems,
+  exceptionsOnly,
+  introKey,
+  introShown,
+  introText,
+  isFolded,
+  mainTools,
+  proposalWords,
+  showLegs,
+} from './exceptionView';
+
+const all = { add: true, arrange: true, absence: true };
+
+describe('exceptionsOnly', () => {
+  it('エキスパート機能が切のときだけ（無い ID は入）', () => {
+    expect(exceptionsOnly({ expert: false })).toBe(true);
+    expect(exceptionsOnly({ expert: true })).toBe(false);
+    expect(exceptionsOnly({})).toBe(false);
+  });
+});
+
+describe('mainTools（操作の行は主ボタン1つ＋最大1つ）', () => {
+  it('日は 訪問を追加（主）＋欠勤・キャンセル。組むは「その他 ▾」', () => {
+    expect(mainTools('day', all)).toEqual({ primary: 'add', second: 'absence' });
+  });
+  it('日でスマホ（追加できない）は 担当なしを組む（主）＋欠勤・キャンセル', () => {
+    expect(mainTools('day', { ...all, add: false })).toEqual({ primary: 'arrange', second: 'absence' });
+  });
+  it('週・月は 担当なしを組む（主）＋欠勤・キャンセル。訪問を追加は出さない', () => {
+    for (const z of ['week', 'month'] as const) {
+      expect(mainTools(z, all)).toEqual({ primary: 'arrange', second: 'absence' });
+      expect(mainTools(z, { add: true, arrange: false, absence: true })).toEqual({ primary: null, second: 'absence' });
+    }
+  });
+  it('欠勤・キャンセルを切っていれば出さない。何も無ければ両方 null', () => {
+    expect(mainTools('month', { ...all, absence: false })).toEqual({ primary: 'arrange', second: null });
+    expect(mainTools('week', { add: false, arrange: false, absence: false })).toEqual({ primary: null, second: null });
+  });
+});
+
+describe('詳しく・説明・言葉', () => {
+  it('入は畳まない・切は画面ごとの部品を畳む', () => {
+    for (const z of ['day', 'week', 'month'] as const) expect(detailItems(z, false)).toEqual([]);
+    expect(isFolded(detailItems('month', true), 'progress')).toBe(true);
+    expect(isFolded(detailItems('month', true), 'legend')).toBe(true);
+    expect(isFolded(detailItems('week', true), 'status')).toBe(true);
+    expect(isFolded(detailItems('day', true), 'oneLine')).toBe(true);
+    expect(isFolded(detailItems('day', true), 'progress')).toBe(false);
+    expect(showLegs(true)).toBe(false);
+    expect(showLegs(false)).toBe(true);
+  });
+  it('説明：入は今の文。切は閉じるまで出し、閉じたら（覚えていれば）出さない。画面ごと', () => {
+    expect(introText('month', false, '今の文')).toBe('今の文');
+    expect(introText('month', true, '今の文')).not.toContain('確定');
+    expect(introShown({}, 'month', true)).toBe(true);
+    expect(introShown({ [introKey('month')]: false }, 'month', true)).toBe(false);
+    expect(introShown({ [introKey('month')]: false }, 'week', true)).toBe(true);
+    expect(introShown({ [introKey('month')]: false }, 'month', false)).toBe(true);
+  });
+  it('提案の帯の言葉：切は 標準・提案・反映・ピン・プリセット を使わない', () => {
+    const w = proposalWords(true);
+    const text = [
+      w.aria,
+      w.title('11月', 3),
+      w.apply,
+      w.discard,
+      w.detailsLabel(2),
+      w.applied('11月', 3, 1),
+      w.stale(1),
+      w.staleOne,
+    ].join('');
+    for (const bad of ['標準', '提案', '反映', 'ピン', 'プリセット']) expect(text).not.toContain(bad);
+    expect(proposalWords(false).apply).toBe('反映する');
+  });
+});

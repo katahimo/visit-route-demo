@@ -4,6 +4,7 @@ import { CalendarOff, LayoutGrid, List, Lock, PencilLine, Square } from 'lucide-
 import { type RefObject, useId } from 'react';
 import { ClientPicker } from '../components/ClientPicker';
 import { LoadLegend, LoadRowsSample } from '../components/loadBar';
+import type { MenuItem } from '../components/MenuButton';
 import { StaffLegend } from '../components/staffBar';
 import { Term } from '../components/Term';
 import { WithIcon } from '../components/ui';
@@ -45,6 +46,26 @@ export function MonthLayoutSwitch({ layout, onPick }: { layout: MonthLayout; onP
         </button>
       ))}
     </fieldset>
+  );
+}
+
+/** 見せ方の切り替えを「その他 ▾」の項目で（エキスパート機能が切のとき。操作の行のボタンを2つまでにするため。PRD D384） */
+export function monthLayoutItems(layout: MonthLayout, onPick: (next: MonthLayout) => void): MenuItem[] {
+  return (
+    [
+      ['calendar', 'カレンダー', LayoutGrid],
+      ['list', '日ごとの一覧', List],
+    ] as const
+  ).map(
+    ([k, label, icon], i): MenuItem => ({
+      key: `layout-${k}`,
+      group: i === 0 ? '表示' : undefined,
+      label: `${label}で見る`,
+      icon,
+      current: layout === k,
+      onSelect: () => onPick(k),
+      testId: `month-layout-${k}`,
+    }),
   );
 }
 
