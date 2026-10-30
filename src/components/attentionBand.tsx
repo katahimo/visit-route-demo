@@ -1,5 +1,5 @@
 import { ChevronRight, TriangleAlert } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { confirmLeave } from '../lib/leaveGuard';
 import { useDay } from './day';
 import { WithIcon } from './ui';
@@ -15,12 +15,14 @@ export function AttentionBand() {
   const band = useAttentionBand();
   const { setDate } = useDay();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   if (!band) return null;
   const go = async () => {
-    // 下書きのある画面（月の「休みを入れる」の入力中など）から移るときは確かめる（断れば移らない）
+    // 下書きを持つ画面から移るときの確かめ（lib/leaveGuard。日・週・月の予定は通常は下書きを持たないので素通り。断れば移らない）
     if (!(await confirmLeave())) return;
     setDate(band.first.date);
-    navigate('/plan', { state: { visitId: band.first.visitId } });
+    // 日の予定で押したときは履歴を積まず置き換える
+    navigate('/plan', { state: { visitId: band.first.visitId }, replace: pathname === '/plan' });
   };
   return (
     <button type="button" className="attention-band" onClick={() => void go()} data-testid="attention-band">

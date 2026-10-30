@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { attentionBand } from './attentionBand';
+import { attentionBand, bandDays } from './attentionBand';
 import type { IssueKind } from './dayPlan';
 import type { DayStatus } from './month';
 
@@ -49,6 +49,21 @@ describe('attentionBand（要対応の帯。PRD D383）', () => {
   });
   it('今日より前の日は数えない', () => {
     expect(attentionBand([day('2026-10-20', { a: ['unassigned'] })], TODAY)).toBeNull();
+  });
+  it('最初の訪問は日付 → 開始時刻の順（検査の並びが時刻順でなくても）', () => {
+    const start: Record<string, number> = { a: 600, b: 540, c: 480 };
+    const b = attentionBand(
+      [day(TODAY, { a: ['unassigned'], b: ['late'], c: ['notAllowed'] }), day('2026-10-22', { z: ['off'] })],
+      TODAY,
+      (id) => start[id] ?? null,
+    );
+    expect(b?.first).toEqual({ date: TODAY, visitId: 'b' });
+  });
+  it('bandDays：今日から翌月末まで（自動の組みの範囲と同じ）', () => {
+    const d = bandDays('2026-10-21');
+    expect(d[0]).toBe('2026-10-21');
+    expect(d.at(-1)).toBe('2026-11-30');
+    expect(d).toHaveLength(41);
   });
   it('最初の訪問：いちばん早い日の、その日の先頭の該当の訪問（日付が前後して渡されても）', () => {
     const b = attentionBand(

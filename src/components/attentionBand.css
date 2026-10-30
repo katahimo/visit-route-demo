@@ -12,13 +12,13 @@
   font: inherit;
   font-weight: 700;
   color: var(--danger);
-  background: #fdecec;
+  background: color-mix(in srgb, var(--danger) 9%, white);
   border: 1px solid var(--danger);
   border-radius: 12px;
   cursor: pointer;
 }
 .attention-band:hover {
-  background: #fbe1dd;
+  background: color-mix(in srgb, var(--danger) 16%, white);
 }
 .attention-band .band-text {
   min-width: 0;

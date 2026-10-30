@@ -6,9 +6,9 @@ import { useNavigate } from 'react-router-dom';
 import { jstDate } from '../domain/time';
 import { autoRange, targetCount, unassignedTargets } from '../lib/autoArrange';
 import { autoArrange, requestUnassignedArrange } from '../lib/autoArrangeBatch';
-import { isHrefOn } from '../lib/features';
 import { confirmLeave } from '../lib/leaveGuard';
 import { isSimpleMenu } from '../lib/nav';
+import { type SimpleMoreKind, simpleMoreKinds } from '../lib/simpleMore';
 import { useDemoData } from '../store';
 import type { MenuItem } from './MenuButton';
 import { useValueStore } from './valueStore';
@@ -25,10 +25,9 @@ export function useSimpleMoreItems(): MenuItem[] {
     () => (simple ? targetCount(unassignedTargets(data, today, autoRange(today))) : 0),
     [simple, data, today],
   );
-  if (!simple) return [];
-  const items: MenuItem[] = [];
-  if (unassigned > 0)
-    items.push({
+  const kinds = simpleMoreKinds(features, unassigned);
+  const byKind: Record<SimpleMoreKind, MenuItem> = {
+    'auto-arrange': {
       key: 'auto-arrange',
       label: '担当なしの訪問を組む',
       note: running ? '組んでいます…' : `${unassigned}件`,
@@ -39,14 +38,15 @@ export function useSimpleMoreItems(): MenuItem[] {
         if (!running) requestUnassignedArrange(data, today);
       },
       testId: 'more-auto-arrange',
-    });
-  if (isHrefOn(features, '/vacancy'))
-    items.push({
+    },
+    vacancy: {
       key: 'vacancy',
       label: '空き状況',
       icon: CalendarSearch,
       onSelect: () => void confirmLeave().then((ok) => ok && navigate('/vacancy')),
       testId: 'more-vacancy',
-    });
-  return items;
+    },
+  };
+  // 足す項目は「予定まわり」のまとまりにする（スマホの日の予定の「そのほか」の見出しの中に入れない）
+  return kinds.map((k, i) => (i === 0 ? { ...byKind[k], group: '予定まわり' } : byKind[k]));
 }

@@ -275,21 +275,21 @@ export const scheduleHref = (last?: string | null): string =>
   last && SCHEDULE_VIEWS.includes(last) ? last : SCHEDULE_DEFAULT;
 
 /**
- * 基本情報の画面へ入る子の項目（予定と相性・〈利用者さん〉一覧・〈スタッフ〉一覧）。親の key を前に付ける。
+ * 予定を組む（エキスパート機能が入のとき）の、基本情報の画面へ入る子の項目（基本情報・〈利用者さん〉一覧・〈スタッフ〉一覧。key は `arrange:*`）。
  * 〈利用者さん〉・〈スタッフ〉の画面はよく開くので、基本情報のタブだけでなく子にも出して印を付ける（ADR-0067 追記）
  */
-function basicsChildren(terms: Pick<Terms, 'client' | 'staff'>, parent: string): MenuItem[] {
+function basicsChildren(terms: Pick<Terms, 'client' | 'staff'>): MenuItem[] {
   return [
     {
-      key: `${parent}:basics`,
+      key: 'arrange:basics',
       to: '/basics',
       label: '基本情報',
       icon: 'people',
       // 〈利用者さん〉一覧・〈スタッフ〉一覧はすぐ下の子に印
       match: BASICS_PATHS.filter((p) => p !== '/clients' && p !== '/staff'),
     },
-    { key: `${parent}:clients`, to: '/clients', label: `${terms.client}一覧`, icon: 'clients' },
-    { key: `${parent}:staff`, to: '/staff', label: `${terms.staff}一覧`, icon: 'staff' },
+    { key: 'arrange:clients', to: '/clients', label: `${terms.client}一覧`, icon: 'clients' },
+    { key: 'arrange:staff', to: '/staff', label: `${terms.staff}一覧`, icon: 'staff' },
   ];
 }
 
@@ -312,7 +312,7 @@ function arrangeMenuItem(
     match: ['/standard', '/rules'],
   };
   const children: MenuItem[] = [
-    ...basicsChildren(terms, 'arrange'),
+    ...basicsChildren(terms),
     ...(badges.hasStandard ? [] : [standardChild]),
     {
       key: 'arrange:assign',

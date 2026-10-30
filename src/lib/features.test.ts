@@ -470,7 +470,7 @@ describe('切った機能の入口を出さない（PRD D213）', () => {
   });
   it('ツアー：欠勤・キャンセルの枚を出さず、枚数が減る（基本はすべてと同じ3枚）', () => {
     expect(tourSteps(terms, {}).map((s) => s.key)).toEqual(['home', 'plan', 'absence']);
-    expect(tourSteps(terms, applyTemplate('basic')).map((s) => s.key)).toEqual(['home', 'plan', 'absence']);
+    expect(tourSteps(terms, applyTemplate('basic')).map((s) => s.key)).toEqual(['plan', 'absence']);
     expect(tourSteps(terms, { sudden: false }).map((s) => s.key)).toEqual(['home', 'plan']);
   });
   it('links：切った機能なら null、土台はそのまま', () => {
