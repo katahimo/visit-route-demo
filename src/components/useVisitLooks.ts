@@ -2,6 +2,7 @@
 import { useMemo } from 'react';
 import { isOnLeave } from '../domain/leaves';
 import { jstDate } from '../domain/time';
+import { showConfirmStep } from '../lib/settledView';
 import { dayLooks, type VisitLook } from '../lib/visitLook';
 import { visitsOn } from '../patterns';
 import { useDemoData } from '../store';
@@ -17,6 +18,7 @@ export function useVisitLooks(dates: readonly string[]): (visitId: string) => Vi
   const compileInput = useCompileInput(data);
   const statuses = useDayStatuses(data, compileInput, dates);
   const today = jstDate(Date.now());
+  const confirmStep = showConfirmStep(data.org.features);
   return useMemo(() => {
     const staffById = new Map(data.staff.map((s) => [s.id, s.name]));
     const tentative = new Set(data.clients.filter((c) => c.tentative).map((c) => c.id));
@@ -35,10 +37,11 @@ export function useVisitLooks(dates: readonly string[]): (visitId: string) => Vi
           leaveOf: (v) => isOnLeave(data.clientLeaves, { clientId: v.clientId, date: d }),
           tentativeOf: (id) => tentative.has(id),
           past: d < today,
+          confirmStep,
         },
       );
       for (const [id, l] of looks) all.set(id, l);
     }
     return (id: string) => all.get(id);
-  }, [data, dates, statuses, today]);
+  }, [data, dates, statuses, today, confirmStep]);
 }

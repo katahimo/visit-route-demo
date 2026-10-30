@@ -369,7 +369,8 @@ export function menuSections(
       label: '今日の予定',
       icon: 'day',
       match: ['/plan'],
-      badge: badges.todayUntold ? { text: '未確定', label: '今日はまだ伝えていない' } : undefined,
+      // 「未確定」は確定の段階の印。expert 切は確定の段階が無いので出さない（ADR-0073）
+      badge: badges.todayUntold && expert ? { text: '未確定', label: '今日はまだ伝えていない' } : undefined,
     },
     {
       key: 'month-view',

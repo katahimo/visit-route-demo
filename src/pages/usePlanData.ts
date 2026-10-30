@@ -21,6 +21,7 @@ import { issueBreakdown } from '../lib/month';
 import { leavePeople } from '../lib/personLinks';
 import { hardLabelsOf, planColumns, toldMarksOf } from '../lib/planView';
 import { reasonOfRoutes } from '../lib/scoreReason';
+import { showConfirmStep } from '../lib/settledView';
 import { dayLooks } from '../lib/visitLook';
 import { workStats } from '../lib/workload';
 import { explainMap } from './planParts';
@@ -112,8 +113,9 @@ function usePlanTold(date: string, c: PlanCore) {
         leaveOf: (v) => m.leaveVisits.some((x) => x.id === v.id),
         tentativeOf: (cid) => !!clientById.get(cid)?.tentative,
         past: date < jstDate(Date.now()),
+        confirmStep: showConfirmStep(data.org.features),
       }),
-    [date, issues, told, hasPlan, problem, m.allVisits, m.leaveVisits, clientById, staffById],
+    [date, issues, told, hasPlan, problem, m.allVisits, m.leaveVisits, clientById, staffById, data.org.features],
   );
   return {
     told,

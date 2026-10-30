@@ -10,6 +10,7 @@ import { dateText } from './dateText';
 import { isHrefOn, isOn } from './features';
 import { absenceHref, isNavAction, type MenuItem, type NavSection } from './nav';
 import { normalizeKana } from './search';
+import { showConfirmStep } from './settledView';
 import { addMonths, ymOf } from './ym';
 
 /** 候補の種類（出す順）：操作 → 画面 → 〈利用者さん〉 → 〈スタッフ〉 → 訪問（PRD D304） */
@@ -218,7 +219,8 @@ export function paletteActions(today: string, { features = {} }: { features?: Fe
       words: ['といあわせ', 'あきじょうきょう', '空き状況'],
     }),
   ];
-  return all.filter((a) => isHrefOn(features, a.to));
+  // 確定していない日は確定の段階の操作。expert 切は出さない（ADR-0073）
+  return all.filter((a) => isHrefOn(features, a.to) && (a.id !== 'action:unconfirmed' || showConfirmStep(features)));
 }
 
 /**

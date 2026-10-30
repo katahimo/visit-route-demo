@@ -1,6 +1,7 @@
 import { useId, useMemo, useRef } from 'react';
 import { useBulkConfirm } from '../components/useBulkConfirm';
 import { useDayStatuses } from '../components/useDayStatuses';
+import { useConfirmStep } from '../components/useFeature';
 import { useValueStore } from '../components/valueStore';
 import type { DemoData } from '../contracts/data';
 import { rangeProgress } from '../lib/month';
@@ -29,7 +30,8 @@ export function useWeekPrep(x: {
   }, [weekStatuses, futureDates, data, today]);
   /** 月の予定の担当を組む計算（ADR-0042）：組んでいる間は確定しない */
   const batchRun = useValueStore(monthBatch.run);
-  const next = weekNext({ futureDays: prep.futureDays, bulk: prep.bulk, running: batchRun !== null });
+  const confirmStep = useConfirmStep();
+  const next = weekNext({ futureDays: prep.futureDays, bulk: prep.bulk, running: batchRun !== null, confirmStep });
   /** 主ボタンの場所（押したあとボタンが状態の文に替わったら、ここへフォーカスを戻す） */
   const nextRef = useRef<HTMLDivElement>(null);
   /** 押せない理由の文の id（主ボタンの aria-describedby） */

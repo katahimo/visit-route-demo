@@ -169,8 +169,13 @@ export function cancelImpact(i: {
   return out;
 }
 
-/** 4段目の確定の文（伝えた状態：none＝まだ伝えていない・told＝伝えた・changed＝伝えたあとに変わった） */
-export function confirmNote(state: 'none' | 'told' | 'changed'): string {
+/** 4段目の確定の文（伝えた状態：none＝まだ伝えていない・told＝伝えた・changed＝伝えたあとに変わった。confirmStep が false なら変更ありの案内だけ） */
+export function confirmNote(state: 'none' | 'told' | 'changed', confirmStep = true): string {
+  // expert 切（ADR-0073）：確定の段階が無いので、決まったあとの変更（変更あり）のときだけ連絡の一覧への案内を出す
+  if (!confirmStep)
+    return state === 'changed'
+      ? '決まったあとに変わった訪問があります（変更あり）。連絡したら、日の予定の連絡の一覧で「連絡した」を押してください'
+      : '';
   if (state === 'told') return '今の担当は伝えた内容と同じです（確定済み）';
   if (state === 'changed')
     return '伝えたあとに変わった訪問があります（未連絡の変更）。連絡してから「確定」を押してください';

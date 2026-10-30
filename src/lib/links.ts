@@ -24,6 +24,12 @@ export function suddenHref(date: string, staffId?: string): string {
 /** その日の日の画面を開く URL（PRD D204。日の画面が ?date= を読んで消す。新しいタブでも開ける） */
 export const dayHref = (date: string): string => `/plan?date=${date}`;
 
+/** 日の画面で連絡の一覧（未連絡の変更）を開く `?do=` の値（expert 切の「変更あり」の印から。ADR-0073。PRD D382） */
+export const TOLD_DO = 'told';
+
+/** その日の日の画面で、連絡の一覧（未連絡の変更）を開いた状態にする URL（週・月の「変更あり」の印の行き先。日の画面が1回で URL から消す） */
+export const toldHref = (date: string): string => `/plan?date=${date}&do=${TOLD_DO}`;
+
 /** 日の画面で「入らなかった訪問」の列へ巻いて開く URL（PRD D201） */
 export const unassignedHref = (date: string): string => `/plan?date=${date}&do=${UNASSIGNED_DO}`;
 

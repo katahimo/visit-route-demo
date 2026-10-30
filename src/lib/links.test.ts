@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { attentionTarget, dayHref, suddenHref, UNASSIGNED_DO, unassignedHref, workloadHref } from './links';
+import {
+  attentionTarget,
+  dayHref,
+  suddenHref,
+  TOLD_DO,
+  toldHref,
+  UNASSIGNED_DO,
+  unassignedHref,
+  workloadHref,
+} from './links';
 import type { Attention } from './month';
 
 const D = '2026-10-21';
@@ -57,5 +66,12 @@ describe('月の要対応の行き先（attentionTarget。PRD D201）', () => {
   });
   it('未連絡の変更は日の画面', () => {
     expect(attentionTarget(at('changed'), {})).toEqual({ to: '/plan', date: D, note: '（日の予定で開く）' });
+  });
+});
+
+describe('toldHref（変更ありの印の行き先。ADR-0073）', () => {
+  it('その日の日の画面で連絡の一覧を開く URL', () => {
+    expect(TOLD_DO).toBe('told');
+    expect(toldHref(D)).toBe('/plan?date=2026-10-21&do=told');
   });
 });

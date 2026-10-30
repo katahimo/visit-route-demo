@@ -1,6 +1,6 @@
 // 連絡の一覧（欠勤の振り直し・未連絡の変更。PRD D35・D94。ADR-0011・ADR-0017）：担当が変わる訪問先・時刻が変わる訪問・
 // 仕事が増える/減るスタッフと、スタッフごと・訪問先ごとの連絡文（コピー・メール）。印刷するとこの欄だけが出る。送信はしない
-import { ClipboardCopy, MessageSquareText, Printer, X } from 'lucide-react';
+import { Check, ClipboardCopy, MessageSquareText, Printer, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { MailButton, MailLengthNote } from '../components/mailParts';
 import { StaffMarkById } from '../components/StaffMark';
@@ -33,6 +33,7 @@ export function ContactPanel({
   terms,
   staffMail,
   onCopied,
+  onContacted,
   onClose,
 }: {
   list: ContactList;
@@ -47,6 +48,11 @@ export function ContactPanel({
   staffMail?: (staffId: string, text: string) => BuiltMail | null;
   /** コピーしたあと（ok：できたか） */
   onCopied: (ok: boolean, what: string) => void;
+  /**
+   * 「連絡した」（expert 切の未連絡の変更の一覧だけ。メール機能の入り切りに関係なく出す。ADR-0073）：今の担当・時刻を伝えた記録にする。
+   * 渡さなければボタンを出さない
+   */
+  onContacted?: () => void;
   onClose: () => void;
 }) {
   const clients = clientMessages(list, words);
@@ -73,6 +79,17 @@ export function ContactPanel({
           <button type="button" className="btn" disabled={empty} onClick={() => window.print()}>
             <WithIcon icon={Printer}>印刷</WithIcon>
           </button>
+          {onContacted && (
+            <button
+              type="button"
+              className="btn"
+              onClick={onContacted}
+              title="今の担当と時刻を伝えた内容として残します（変更ありが消えます）"
+              data-testid="contacted"
+            >
+              <WithIcon icon={Check}>連絡した</WithIcon>
+            </button>
+          )}
           <button type="button" className="btn" onClick={onClose}>
             <WithIcon icon={X}>閉じる</WithIcon>
           </button>

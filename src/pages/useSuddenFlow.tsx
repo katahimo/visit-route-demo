@@ -137,6 +137,8 @@ type SuddenArgs = {
     told: ContactList | null;
     toldState: 'none' | 'told' | 'changed';
   };
+  /** 確定（伝えた）の段階を出すか（expert 入） */
+  confirmStep: boolean;
   contactWords: ContactWords;
   /** 訪問を取り消す（取り消しの欄と共通） */
   applyCancel: (visitId: string, sameDay: boolean) => void;
@@ -227,6 +229,7 @@ export function useSuddenFlow(x: SuddenArgs): {
       running: !!flow.planRun.running,
       hasPlan: plan.hasPlan,
       confirmState: plan.toldState,
+      confirmStep: x.confirmStep,
       result: suddenResult(x),
       onReassign: (a, anneal) => flow.registerAndReassign(a, anneal, true),
       ...suddenActions(x, toast, confirmDialog),

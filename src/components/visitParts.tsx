@@ -61,9 +61,11 @@ export function VisitMarks({
           className={`vmark is-${m.tone}`}
           title={m.title}
           data-kind={m.kind}
+          data-told-date={m.toldDate}
           data-testid={testIdPrefix ? `${testIdPrefix}-${m.kind}` : undefined}
         >
-          {ICONS[m.kind]?.(size) ?? m.short}
+          {/* 「変更あり」の印（expert 切）は文字で出し、押すとその日の連絡の一覧（札のクリックの中で見分ける。components/openTold） */}
+          {m.toldDate ? m.short : (ICONS[m.kind]?.(size) ?? m.short)}
         </span>
       ))}
     </span>

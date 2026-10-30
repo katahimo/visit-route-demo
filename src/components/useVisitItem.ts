@@ -12,6 +12,7 @@ import {
   useState,
 } from 'react';
 import { isMultiClick, isMultiKey, toggleGroup, toggleId } from '../lib/visitSelect';
+import { toldDateOf, useOpenTold } from './openTold';
 
 /**
  * 帯・行・札の button に重ねる props（useVisitItem の押し方・useVisitDrag の source・呼ぶ側の data-*）
@@ -70,6 +71,7 @@ export function useVisitItem(opts: {
 }) {
   const ref = useRef(opts);
   ref.current = opts;
+  const openTold = useOpenTold();
   const press = useRef<{
     id: string;
     x: number;
@@ -91,6 +93,13 @@ export function useVisitItem(opts: {
         const p = press.current;
         press.current = null;
         if (p && p.id === visitId && (p.long || p.moved)) return;
+        // 「変更あり」の印（expert 切。ADR-0073）：札の選択・開くにはせず、その日の連絡の一覧を開く
+        const toldDate = toldDateOf(e.target);
+        if (toldDate !== null) {
+          e.preventDefault();
+          openTold(toldDate);
+          return;
+        }
         if (isMultiClick(e) && o.selection) {
           e.preventDefault();
           if (f.selectable) o.selection.toggle(visitId);

@@ -337,10 +337,10 @@ export function bandOf(p: PlanCtx, id: string, sid: string): TimelineBand {
   const stay = leftById.get(id);
   const notes: string[] = [];
   const icons: ReactNode[] = [];
-  const mark = (key: string, tone: TlMarkTone, title: string, body: ReactNode, testId?: string) => {
+  const mark = (key: string, tone: TlMarkTone, title: string, body: ReactNode, testId?: string, toldDate?: string) => {
     notes.push(title);
     icons.push(
-      <TlMark key={key} tone={tone} title={title} testId={testId}>
+      <TlMark key={key} tone={tone} title={title} testId={testId} toldDate={toldDate}>
         {body}
       </TlMark>,
     );
@@ -364,13 +364,18 @@ export function bandOf(p: PlanCtx, id: string, sid: string): TimelineBand {
       lm.kind === 'issue' ? (
         <ShieldAlert size={11} aria-hidden="true" />
       ) : lm.kind === 'told' ? (
-        <MessageSquareText size={11} aria-hidden="true" />
+        lm.toldDate ? (
+          lm.short
+        ) : (
+          <MessageSquareText size={11} aria-hidden="true" />
+        )
       ) : lm.kind === 'pin' ? (
         <Pin size={11} strokeWidth={2.4} aria-hidden="true" />
       ) : (
         lm.short
       ),
       lm.kind === 'issue' ? 'issue-mark' : lm.kind === 'told' ? 'told-mark' : undefined,
+      lm.toldDate,
     );
   if (subFrom) mark('sub', 'is-move', `代行（元の担当：${staffName(subFrom)}さん）`, '代', 'substitute');
   if (shift !== undefined) {

@@ -7,6 +7,7 @@ import { type MonthLayout, monthListFocusDate } from '../lib/monthList';
 import { type MonthFocus, type MonthListEntry, monthListEntries } from '../lib/monthView';
 import { scrollBehavior } from '../lib/motion';
 import { offDayState } from '../lib/requestedOff';
+import { showConfirmStep } from '../lib/settledView';
 
 export function useMonthListRows(x: {
   layout: MonthLayout;
@@ -55,6 +56,7 @@ export function useMonthListRows(x: {
             staffName: (id) => staffById.get(id)?.name ?? '',
             offStateOf: (d) => (offStaffId ? offDayState(data, offStaffId, d, today) : undefined),
             attentionByDate,
+            confirmStep: showConfirmStep(data.org.features),
           }),
     [layout, days, statuses, staffDays, clientDays, focus, staffById, offStaffId, data, today, attentionByDate],
   );

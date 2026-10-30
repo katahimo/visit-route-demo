@@ -11,6 +11,7 @@ import { jstDate } from '../domain/time';
 import { own } from '../lib/common';
 import { dateText } from '../lib/dateText';
 import { typeOf } from '../lib/patternText';
+import { showContactedButton } from '../lib/settledView';
 import { ReassignBar } from './absenceParts';
 import { CancelVisitPanel } from './cancelVisitPanel';
 import { ContactPanel } from './contactPanel';
@@ -48,6 +49,7 @@ export function PlanNavRow({ p }: { p: PlanCtx }) {
             toldCount={d.toldCount}
             date={date}
             mailOn={p.f.mailOn}
+            confirmStep={p.f.confirmStep}
             running={p.running}
             onPickDate={setDate}
             onOpenTold={() => confirm.setToldOpen(true)}
@@ -308,7 +310,13 @@ export function PlanPanels({ p }: { p: PlanCtx }) {
       )}
       {/* 未連絡の変更の連絡の一覧（伝えた内容 → 今。ADR-0053） */}
       {confirm.toldOpen && d.told && (
-        <ContactPanel list={d.told} left={[]} {...contactProps} onClose={() => confirm.setToldOpen(false)} />
+        <ContactPanel
+          list={d.told}
+          left={[]}
+          {...contactProps}
+          onContacted={showContactedButton(d.toldState, f.confirmStep) ? confirm.contacted : undefined}
+          onClose={() => confirm.setToldOpen(false)}
+        />
       )}
       {sudden.panel && <SuddenPanel key={date} {...sudden.panel} />}
     </>

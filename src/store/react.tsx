@@ -1,9 +1,9 @@
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { type DemoData, STORAGE_KEY } from '../contracts/data';
 import type { Features } from '../contracts/features';
+import { jstDate } from '../domain/time';
 import { appHistory } from '../lib/history';
 import { autoTell } from '../lib/settled';
-import { jstDate } from '../domain/time';
 import {
   flushSave,
   importJson,

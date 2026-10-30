@@ -4,6 +4,7 @@ import { ClientPicker } from '../components/ClientPicker';
 import { PickChips } from '../components/PickChips';
 import { StaffMark } from '../components/StaffMark';
 import { Hint, WithIcon } from '../components/ui';
+import { useConfirmStep } from '../components/useFeature';
 import type { InsertNoticeFlow } from '../components/useInsertNotice';
 import { TypeDot } from '../components/visitType';
 import type { Terms } from '../contracts/documents';
@@ -11,7 +12,7 @@ import { WEEK_TABLE_FILTER } from '../lib/clientFilter';
 import { mdText } from '../lib/dateText';
 import { TIMELINE_CLIENT_MAX } from '../lib/timelineClients';
 import { SNAP_MINUTES, staffWithQualification } from '../lib/week';
-import type { WeekPrep } from '../lib/weekPrep';
+import { type WeekPrep, weekStatusText } from '../lib/weekPrep';
 import { allowedStaffText, timelineClientMaxText } from '../lib/weekScreen';
 import { WEEK_VIEWS, type WeekView, weekViewLabel } from '../lib/weekView';
 import type { WeekClients } from './useWeekClients';
@@ -93,11 +94,11 @@ export function WeekNavActions({
 
 /** 1行の状態（PRD D332。進み具合の帯は月の予定だけ）。今日以降に訪問の無い週は出さない */
 export function WeekStatusLine({ prep }: { prep: WeekPrep }) {
+  const confirmStep = useConfirmStep();
   if (prep.futureDays === 0) return null;
   return (
     <p className="week-status sub" data-testid="week-status">
-      この週の今日以降：確定済み {prep.line.told}日・まだ伝えていない {prep.line.notYet}日
-      {prep.line.changed > 0 ? `・未連絡の変更 ${prep.line.changed}日` : ''}・要対応 {prep.line.care}件
+      この週の今日以降：{weekStatusText(prep.line, confirmStep)}
     </p>
   );
 }

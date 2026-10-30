@@ -243,5 +243,16 @@ export function useConfirmDay(x: { date: string; d: PlanData; update: Update; bu
     toast(`${head}${care > 0 ? `（要対応の訪問 ${care}件あり）` : ''}`, { action: undoAction });
     return true;
   };
-  return { toldOpen, setToldOpen, adopt, confirmByMail };
+  /**
+   * 連絡した（expert 切。ADR-0073・PRD D382）：連絡の一覧の「連絡した」。今の担当・時刻を伝えた記録にする（確定と同じ書き方。
+   * 確認は出さず、知らせの「元に戻す」で戻せる）。残せたら true
+   */
+  const contacted = (): boolean => {
+    if ((!hasPlan || !problem) && toldState !== 'changed') return false;
+    if (x.busy()) return false;
+    write('連絡した');
+    toast('連絡した内容を残しました', { action: undoAction });
+    return true;
+  };
+  return { toldOpen, setToldOpen, adopt, confirmByMail, contacted };
 }

@@ -26,6 +26,8 @@ export type WeekNextInput = {
   bulk: BulkConfirm;
   /** 月の予定の担当を組む計算（lib/monthBatch）を回しているか */
   running: boolean;
+  /** 確定（伝えた）の段階を出すか（lib/settledView の showConfirmStep。省略は出す）。切なら主ボタンも状態も出さない（ADR-0073） */
+  confirmStep?: boolean;
 };
 
 /** 確定のボタンの文（月の「問題の無い日をまとめて確定（N日）」の範囲を週にしたもの） */
@@ -40,6 +42,7 @@ export const weekConfirmLabel = (n: number): string => `この週の問題の無
  */
 export function weekNext(x: WeekNextInput): WeekNext {
   const busy = x.running;
+  if (x.confirmStep === false) return { kind: 'none', label: '', short: '', why: null };
   if (x.futureDays === 0)
     return { kind: 'none', label: 'この週の今日以降に訪問はありません', short: '訪問なし', why: null };
   if (x.bulk.targets.length > 0)
@@ -63,6 +66,13 @@ export function weekNext(x: WeekNextInput): WeekNext {
 /** 日の見出しの件数の文（PRD D282）：「N件」、担当なしがあれば「N件・担当なしM」 */
 export function weekDayCountText(x: { count: number; unassigned: number }): string {
   return `${x.count}件${x.unassigned > 0 ? `・担当なし${x.unassigned}` : ''}`;
+}
+
+/** 1行の状態の文（「この週の今日以降：…」の続き）。expert 切は確定の段階が無いので、変更ありの日数と要対応だけ */
+export function weekStatusText(line: WeekPrep['line'], confirmStep: boolean): string {
+  if (confirmStep)
+    return `確定済み ${line.told}日・まだ伝えていない ${line.notYet}日${line.changed > 0 ? `・未連絡の変更 ${line.changed}日` : ''}・要対応 ${line.care}件`;
+  return `${line.changed > 0 ? `変更あり ${line.changed}日・` : ''}要対応 ${line.care}件`;
 }
 
 /** この週の準備のまとめ（PRD D280・D332）：まとめて確定の振り分け・今日以降の訪問のある日の数・1行の状態 */

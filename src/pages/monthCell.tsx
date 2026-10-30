@@ -5,6 +5,7 @@ import { BedSingle, CalendarOff, CircleAlert, Lock, PencilLine, Timer, UserX } f
 import { memo, type KeyboardEvent as ReactKeyboardEvent, useLayoutEffect } from 'react';
 import { LoadBar, loadSummary, TypeStack } from '../components/loadBar';
 import { StaffBar } from '../components/staffBar';
+import { useConfirmStep } from '../components/useFeature';
 import type { DropHover } from '../components/visitParts';
 import type { Staff, VisitType } from '../contracts/documents';
 import { inBar, loadEdgeTexts, withEdges } from '../lib/barRows';
@@ -24,6 +25,7 @@ import {
 } from '../lib/monthCell';
 import type { TipStore } from '../lib/monthGuide';
 import type { OffDayState } from '../lib/requestedOff';
+import { shownDayState } from '../lib/settledView';
 import { dropShadowText, dropTone } from '../lib/visitDrop';
 import { isMultiClick } from '../lib/visitSelect';
 import type { DayLoadSlot } from '../vacancy';
@@ -252,15 +254,17 @@ function CellHead({
   ctx: CellContext;
   selected: number;
 }) {
+  // expert 切は「確定済み」の鍵を出さない（変更ありだけ。ADR-0073）
+  const shown = shownDayState(s.state, useConfirmStep());
   return (
     <span className="month-cell-head">
       <span className="month-day">
         {Number(d.slice(8, 10))}
         {d === ctx.today && <span className="month-today">今日</span>}
       </span>
-      {s.count > 0 && s.state === 'told' && <Lock size={12} className="month-lock" aria-hidden="true" />}
+      {s.count > 0 && shown === 'told' && <Lock size={12} className="month-lock" aria-hidden="true" />}
       {/* 未連絡の変更あり（淡い黄）は色だけで分けない */}
-      {s.count > 0 && s.state === 'changed' && (
+      {s.count > 0 && shown === 'changed' && (
         <PencilLine size={12} className="month-diff-icon" aria-hidden="true" data-testid="month-diff-mark" />
       )}
       {text.attention > 0 ? (
@@ -284,7 +288,9 @@ function CellHead({
 export const DayCell = memo(function DayCell(props: CellProps) {
   const { date: d, status: s, ctx, making, marks: mk, load, offState } = props;
   const { today, focus, typeById, staffById } = ctx;
+  const confirmStep = useConfirmStep();
   const text = dayCellText({
+    confirmStep,
     date: d,
     status: s,
     today,
@@ -317,7 +323,7 @@ export const DayCell = memo(function DayCell(props: CellProps) {
     <td
       className={[
         'month-cell',
-        s.count > 0 ? `is-state-${s.state}` : 'is-novisit',
+        s.count > 0 ? `is-state-${shownDayState(s.state, confirmStep)}` : 'is-novisit',
         text.past ? 'is-past' : '',
         text.care ? 'is-care' : '',
         d === today ? 'is-today' : '',

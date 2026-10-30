@@ -8,6 +8,7 @@ import { monthLabel } from '../lib/dateText';
 import { type PrepPart, prepParts } from '../lib/glance';
 import type { MonthProgress } from '../lib/month';
 import { type BandNextKind, type BandOp, bandHref, bandNext, visitsText } from '../lib/progressBand';
+import { useConfirmStep } from './useFeature';
 import './glance.css';
 import './progressBand.css';
 
@@ -35,6 +36,13 @@ const PART_LABEL: Record<PrepPart['kind'], string> = {
   none: '要対応あり',
 };
 
+/** expert 切の凡例（確定の段階が無いので、確定済みも未確定も「担当あり」） */
+const PART_LABEL_SETTLED: Record<PrepPart['kind'], string> = {
+  confirmed: '担当あり',
+  planned: '担当あり',
+  none: '要対応あり',
+};
+
 /**
  * 進み具合の帯（見た目だけ）。数字とボタンは月の画面の欄（`?do=`）か担当を組むの画面（`#/arrange?ym=`）へのリンク。onOp を渡すと移らずにそれを呼ぶ（月の画面）。
  * model が null の間（数えている間）は同じ高さで「数えています」
@@ -52,6 +60,8 @@ export const ProgressBand = memo(function ProgressBand({
   onOp?: (op: BandOp) => void;
 }) {
   const month = monthLabel(ym);
+  /** 確定（伝えた）の段階を出すか（expert 入。切なら「確定」の数・次の一手の「確定していない日」を出さない。ADR-0073） */
+  const confirmStep = useConfirmStep();
   const click = (op: BandOp) => (e: MouseEvent) => {
     // Ctrl・⌘・Shift・Alt・中ボタンのクリックはブラウザに任せる（新しいタブ・窓で月の画面を開く）
     if (!onOp || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
@@ -72,7 +82,7 @@ export const ProgressBand = memo(function ProgressBand({
     );
   }
   const { progress: p } = model;
-  const next = bandNext(model);
+  const next = bandNext({ ...model, confirmStep });
   const NextIcon = NEXT_ICON[next.kind];
   const unconfirmed = p.unconfirmed.length;
   const visitsDone = p.visits > 0 && model.emptyTargets === 0;
@@ -123,25 +133,27 @@ export const ProgressBand = memo(function ProgressBand({
             <span className="pb-long">日</span>
           </Link>
         </li>
-        <li>
-          <Link
-            to={bandHref(ym, 'unconfirmed')}
-            onClick={click('unconfirmed')}
-            className={`pb-item${confirmDone ? ' is-done' : ''}`}
-            title={`確定した日 ${p.confirmed}/${p.days}日（確定していない日 ${unconfirmed}日）。押すと月の予定の「確定していない日」を開きます`}
-            data-testid="band-confirm"
-            data-confirmed={p.confirmed}
-            data-unconfirmed={unconfirmed}
-            aria-label={`確定した日 ${p.confirmed}/${p.days}日${done(confirmDone)}（確定していない日 ${unconfirmed}日）。確定していない日を開く`}
-          >
-            {confirmDone && <DoneMark />}
-            確定
-            <strong>
-              {p.confirmed}/{p.days}
-            </strong>
-            <span className="pb-long">日</span>
-          </Link>
-        </li>
+        {confirmStep && (
+          <li>
+            <Link
+              to={bandHref(ym, 'unconfirmed')}
+              onClick={click('unconfirmed')}
+              className={`pb-item${confirmDone ? ' is-done' : ''}`}
+              title={`確定した日 ${p.confirmed}/${p.days}日（確定していない日 ${unconfirmed}日）。押すと月の予定の「確定していない日」を開きます`}
+              data-testid="band-confirm"
+              data-confirmed={p.confirmed}
+              data-unconfirmed={unconfirmed}
+              aria-label={`確定した日 ${p.confirmed}/${p.days}日${done(confirmDone)}（確定していない日 ${unconfirmed}日）。確定していない日を開く`}
+            >
+              {confirmDone && <DoneMark />}
+              確定
+              <strong>
+                {p.confirmed}/{p.days}
+              </strong>
+              <span className="pb-long">日</span>
+            </Link>
+          </li>
+        )}
         <li>
           <Link
             to={bandHref(ym, 'attention')}
@@ -194,13 +206,15 @@ export const ProgressBand = memo(function ProgressBand({
       </span>
       {/* 読み上げ：数え直して変わったときだけ（最初は空の要素を置き、後から中身を入れる） */}
       <BandLive
-        text={`${month}：担当 ${p.planned}/${p.days}日・確定 ${p.confirmed}/${p.days}日・要対応 ${p.attention}件。次は${next.label}`}
+        text={`${month}：担当 ${p.planned}/${p.days}日・${confirmStep ? `確定 ${p.confirmed}/${p.days}日・` : ''}要対応 ${p.attention}件。次は${next.label}`}
       />
       {p.days > 0 && (
         <span
           className="prep-bar pb-bar"
           aria-hidden="true"
-          title={parts.map((x) => `${PART_LABEL[x.kind]} ${x.days}日`).join('・')}
+          title={parts
+            .map((x) => `${confirmStep ? PART_LABEL[x.kind] : PART_LABEL_SETTLED[x.kind]} ${x.days}日`)
+            .join('・')}
         >
           {parts
             .filter((x) => x.days > 0)

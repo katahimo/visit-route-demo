@@ -340,3 +340,8 @@
 .tl-head .spread > .chip {
   margin-left: auto;
 }
+/* 「変更あり」の印（expert 切。押すとその日の連絡の一覧） */
+.tl-mark[data-told-date] {
+  cursor: pointer;
+  white-space: nowrap;
+}

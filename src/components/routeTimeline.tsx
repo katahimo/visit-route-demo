@@ -10,6 +10,7 @@ import type { Span } from '../lib/spans';
 import { backgroundOf, boxOf, hourMarks, type LegSpan, TL_PX_PER_MIN, timeRange } from '../lib/timeline';
 import { isMultiClick } from '../lib/visitSelect';
 import { EdgeScroll } from './EdgeScroll';
+import { toldDateOf, useOpenTold } from './openTold';
 
 /**
  * 列の最小の幅（px。PRD D269）：1366px の画面で多くの列が入るよう詰める（前は 150px）。名前は折り返して切らない
@@ -220,6 +221,7 @@ function Band({
   px: number;
   alignRight: boolean;
 }) {
+  const openTold = useOpenTold();
   const box = boxOf(b, range, px, MIN_BAND_PX);
   const time = `${clockTime(b.start)}〜${clockTime(b.end)}`;
   return (
@@ -248,6 +250,12 @@ function Band({
           aria-label={`${time} ${b.name}${b.note ? `（${b.note}）` : ''}${b.multi ? '（選択中）' : ''}`}
           title={`${time} ${b.name}${b.note ? `\n${b.note}` : ''}\n押すと理由を見られます。ドラッグで別の担当へ移せます${b.onMulti ? '。Shift・Ctrl＋クリックで複数選べます' : ''}${b.onKey ? '。↑↓で15分・←→で1日・Shift+←→で隣の担当・Enterで詳細・Deleteで取り消し' : ''}`}
           onClick={(ev) => {
+            // 「変更あり」の印（expert 切。ADR-0073）：その日の連絡の一覧を開く（帯は選ばない）
+            const toldDate = toldDateOf(ev.target);
+            if (toldDate !== null) {
+              openTold(toldDate);
+              return;
+            }
             if (b.onMulti && isMultiClick(ev)) {
               ev.preventDefault();
               b.onMulti();
