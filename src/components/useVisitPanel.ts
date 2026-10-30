@@ -15,7 +15,7 @@ import { applyVisitEdit, cancelVisitOp, restoreOccurrenceOp, toldDaysChanged, un
 import { savedText } from '../lib/visitPanelText';
 import { staffChoices } from '../lib/visitStaff';
 import { findVisit } from '../patterns';
-import { useDemoData } from '../store';
+import { type UpdateOptions, useDemoData } from '../store';
 import { useConfirm } from './ConfirmDialog';
 import { useDay } from './day';
 import { invalidAttrs } from './FieldError';
@@ -107,10 +107,10 @@ export function useVisitWriter(visitId: string | null, isNew: boolean, latest: {
    * 書く（書く前のデータが今のデータのときだけ。確認を待つ間などに別の変更が入っていれば書かずに null を返し、呼ぶ側が誤りを出す）。
    * 書いたら「元に戻す」の操作を返す。label は全体の履歴の手の名前
    */
-  const write = (next: DemoData, label: string) => {
+  const write = (next: DemoData, label: string, opts?: UpdateOptions) => {
     const before = data;
     if (latest.current !== before) return null;
-    update((d) => (d === before ? next : d), label);
+    update((d) => (d === before ? next : d), label, opts);
     if (visitId) baseRef.current = findVisit(next, visitId);
     return undoAction;
   };
@@ -181,7 +181,8 @@ export function useVisitSave(p: {
       )
         return;
     }
-    const action = write(r.data, isNew ? '訪問を追加' : '訪問を保存');
+    // 自動の組みの依頼を出さない保存（担当なしをはっきり選んだ）は、組むのを待たずに決まった扱いにする（ADR-0073）
+    const action = write(r.data, isNew ? '訪問を追加' : '訪問を保存', staff === null ? { settleNow: true } : undefined);
     if (!action) {
       setError({ text: STALE });
       return;

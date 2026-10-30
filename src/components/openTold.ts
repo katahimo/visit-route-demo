@@ -16,7 +16,8 @@ export function useOpenTold(): (date: string) => void {
 }
 
 /** クリックの対象が「変更あり」の印の中なら、その日付（印は data-told-date を持つ）。そうでなければ null */
-export function toldDateOf(target: EventTarget | null): string | null {
-  if (!(target instanceof Element)) return null;
-  return target.closest('[data-told-date]')?.getAttribute('data-told-date') ?? null;
+export function toldDateOf(target: unknown): string | null {
+  const el = target as { closest?: (selector: string) => { getAttribute(name: string): string | null } | null } | null;
+  if (!el || typeof el.closest !== 'function') return null;
+  return el.closest('[data-told-date]')?.getAttribute('data-told-date') ?? null;
 }

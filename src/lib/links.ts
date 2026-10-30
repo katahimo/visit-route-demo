@@ -4,6 +4,7 @@
 // 機能の入り切り（PRD D213。ADR-0028）：切った機能（欠勤・キャンセル・稼働の見込み）の行き先は出さない
 import type { Features } from '../contracts/features';
 import { isHrefOn } from './features';
+import { isDate } from './isDate';
 import type { Attention } from './month';
 import { SUDDEN_DO } from './sudden';
 import { ymOf } from './ym';
@@ -29,6 +30,19 @@ export const TOLD_DO = 'told';
 
 /** その日の日の画面で、連絡の一覧（未連絡の変更）を開いた状態にする URL（週・月の「変更あり」の印の行き先。日の画面が1回で URL から消す） */
 export const toldHref = (date: string): string => `/plan?date=${date}&do=${TOLD_DO}`;
+
+/**
+ * 日の画面の URL の入口 `?do=told`：受けたら移る先の日（?date= が正しければその日、無ければ今の日）。`?do=told` でなければ null。
+ * 受けたら画面は ?do=・?date= を URL から消す（useToldEntry）
+ */
+export function toldEntryDate(doParam: string | null, dateParam: string | null, current: string): string | null {
+  if (doParam !== TOLD_DO) return null;
+  return dateParam && isDate(dateParam) ? dateParam : current;
+}
+
+/** 受けた日（pending）が今の日になったとき、連絡の一覧を開くか：未連絡の変更がある日だけ（変更の無い日は開かない） */
+export const shouldOpenTold = (pending: string | null, date: string, canOpen: boolean): boolean =>
+  pending !== null && pending === date && canOpen;
 
 /** 日の画面で「入らなかった訪問」の列へ巻いて開く URL（PRD D201） */
 export const unassignedHref = (date: string): string => `/plan?date=${date}&do=${UNASSIGNED_DO}`;

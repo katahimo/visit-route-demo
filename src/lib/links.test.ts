@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   attentionTarget,
   dayHref,
+  shouldOpenTold,
   suddenHref,
   TOLD_DO,
+  toldEntryDate,
   toldHref,
   UNASSIGNED_DO,
   unassignedHref,
@@ -73,5 +75,21 @@ describe('toldHref（変更ありの印の行き先。ADR-0073）', () => {
   it('その日の日の画面で連絡の一覧を開く URL', () => {
     expect(TOLD_DO).toBe('told');
     expect(toldHref(D)).toBe('/plan?date=2026-10-21&do=told');
+  });
+});
+
+describe('toldEntryDate・shouldOpenTold（?do=told の入口）', () => {
+  it('?do=told だけ受ける。?date= が正しければその日、無い・不正なら今の日', () => {
+    expect(toldEntryDate('told', D, '2026-10-01')).toBe(D);
+    expect(toldEntryDate('told', null, '2026-10-01')).toBe('2026-10-01');
+    expect(toldEntryDate('told', 'abc', '2026-10-01')).toBe('2026-10-01');
+    expect(toldEntryDate('unassigned', D, '2026-10-01')).toBeNull();
+    expect(toldEntryDate(null, D, '2026-10-01')).toBeNull();
+  });
+  it('受けた日になったとき、未連絡の変更がある日だけ開く（変更の無い日は開かない）', () => {
+    expect(shouldOpenTold(D, D, true)).toBe(true);
+    expect(shouldOpenTold(D, D, false)).toBe(false);
+    expect(shouldOpenTold(D, '2026-10-22', true)).toBe(false);
+    expect(shouldOpenTold(null, D, true)).toBe(false);
   });
 });

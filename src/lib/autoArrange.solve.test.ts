@@ -38,6 +38,9 @@ function withNew(d: DemoData, x: Partial<Pattern> = {}): DemoData {
   return { ...d, patterns: [...d.patterns, np] };
 }
 
+/** expert 入（伝えた日は自動の組みから外す）にしたデータ */
+const expertOn = (d: DemoData): DemoData => ({ ...d, org: { ...d.org, features: { expert: true } } });
+
 /** その日の対象（新しい繰り返しの回）を解く */
 function dayOf(d: DemoData, date: string): AutoDay {
   const targetIds = [`${date}_pn`];
@@ -55,7 +58,7 @@ function dayOf(d: DemoData, date: string): AutoDay {
 const staffOf = (d: DemoData, id: string) => findVisit(d, id)?.staffId ?? null;
 
 describe('applyAutoArrange（反映。D373・D374）', () => {
-  const d = withNew(unassigned());
+  const d = expertOn(withNew(unassigned()));
   const dates = [0, 1, 2].map((i) => addDays(TODAY, i));
 
   it('対象の担当を書き、ほかの訪問の担当・ピンは変えない。書いた件数と日を返す', () => {
@@ -86,7 +89,10 @@ describe('applyAutoArrange（反映。D373・D374）', () => {
         { id: 'ab', staffId: 's1', date: dates[1]!, kind: 'absent' as const, note: '' } as never,
       ],
     };
-    const told = { ...changed, snapshots: { [dates[2]!]: { date: dates[2]!, at: 0, visits: [] } } };
+    const told = {
+      ...changed,
+      snapshots: { [dates[2]!]: { date: dates[2]!, at: 0, visits: [] } },
+    };
     const r = applyAutoArrange(told, days, { writeUsual: false, rangeTo: RANGE_TO });
     expect(r.appliedDays).toEqual([dates[0]]);
     expect(r.skippedDays).toEqual([dates[1], dates[2]]);
@@ -167,13 +173,34 @@ describe('繰り返しの担当（D376）', () => {
   });
 });
 
+describe('決まった日（expert 切）の自動の組み（ADR-0073）', () => {
+  const off = withNew(unassigned());
+  const date = addDays(TODAY, 1);
+  const told = { ...off, snapshots: { [date]: { date, at: 0, visits: [] } } };
+
+  it('伝えた日でも担当なしの訪問を埋める。expert 入なら伝えた日は組まない', () => {
+    const r = applyAutoArrange(told, [dayOf(told, date)], { writeUsual: false, rangeTo: RANGE_TO });
+    expect(r.appliedDays).toEqual([date]);
+    expect(staffOf(r.data, `${date}_pn`)).not.toBeNull();
+    // 伝えた内容は書き換えない
+    expect(r.data.snapshots).toBe(told.snapshots);
+    const on = expertOn(told);
+    expect(autoDayPlan(on, date, [`${date}_pn`])).toBeNull();
+    const skipped = applyAutoArrange(on, [dayOf(told, date)], { writeUsual: false, rangeTo: RANGE_TO });
+    expect(skipped.appliedDays).toEqual([]);
+  });
+});
+
 describe('繰り返しの担当を書いても、過去・伝えた日の回は変えない（D376）', () => {
   const yesterday = addDays(TODAY, -1);
-  const d = withNew(unassigned(), { from: yesterday });
+  const d = expertOn(withNew(unassigned(), { from: yesterday }));
   const dates = [0, 1, 2].map((i) => addDays(TODAY, i));
 
   it('繰り返しの from が昨日のとき、昨日の回は担当なしのまま。伝えた日・飛ばした日の回も変わらない', () => {
-    const told = { ...d, snapshots: { [dates[1]!]: { date: dates[1]!, at: 0, visits: [] } } };
+    const told = {
+      ...d,
+      snapshots: { [dates[1]!]: { date: dates[1]!, at: 0, visits: [] } },
+    };
     const days = dates.map((x) => dayOf(d, x));
     const r = applyAutoArrange(told, days, { writeUsual: true, rangeTo: RANGE_TO });
     const usual = r.data.patterns.find((p) => p.id === 'pn')!.usualStaffId;

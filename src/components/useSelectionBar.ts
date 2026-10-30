@@ -40,7 +40,8 @@ export function useSelectionBar(ids: readonly string[], dates: readonly string[]
   const run = (what: string, fn: Edit) => {
     // 結果の数は今のデータで見るが、書くのは store の最新のデータに反映し直す（確認を待つ間の別のタブの変更を消さない）
     const r = fn(data);
-    if (r.done > 0) update((d) => fn(d).data, what);
+    // 選んだ訪問のまとめ直しは自動の組みを依頼しないので、決まった扱いは待たずに付ける（ADR-0073）
+    if (r.done > 0) update((d) => fn(d).data, what, { settleNow: true });
     toast(multiResultText(what, { done: r.done, failed: r.failed.map((f) => ({ visitId: '', why: f.why })) }));
     return r.done;
   };

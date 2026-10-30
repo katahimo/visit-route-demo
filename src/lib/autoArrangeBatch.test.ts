@@ -228,10 +228,25 @@ describe('createAutoArrange（自動の組みの入れ物。ADR-0072）', () => 
     expect(a.request(job(1))).toBe(true);
   });
 
+  it('expert 切：何も書かなくても、仕事が終わったら対象の日を決まった扱いにする（同じ1手。ADR-0073）', async () => {
+    const s = fakeSolve();
+    const a = createAutoArrange(s.fn);
+    const none = { ...start(), staff: start().staff.map((x) => ({ ...x, active: false })) };
+    const h = hostOf(none);
+    a.connect(h.host);
+    a.request(job(2));
+    await tick();
+    await tick();
+    expect(s.calls).toHaveLength(0);
+    expect(h.labels).toEqual([AUTO_ARRANGE_LABEL]);
+    expect(Object.keys(h.data().snapshots).filter((d) => d >= TODAY)).toEqual(days(2));
+  });
+
   it('外すと捨てる。組めた担当が無ければ書かず、知らせは0件', async () => {
     const s = fakeSolve();
     const a = createAutoArrange(s.fn);
-    const h = hostOf({ ...start(), staff: start().staff.map((x) => ({ ...x, active: false })) });
+    const none = { ...start(), staff: start().staff.map((x) => ({ ...x, active: false })) };
+    const h = hostOf({ ...none, org: { ...none.org, features: { expert: true } } });
     const off = a.connect(h.host);
     a.request(job(1));
     await tick();

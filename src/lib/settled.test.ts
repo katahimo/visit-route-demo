@@ -5,8 +5,9 @@ import { addDays } from '../domain/time';
 import { client, DATE, makeData, staff, visit } from '../matching/fixtures.testkit';
 import { putVisits } from '../patterns';
 import { dayProblemOf, dayRoutes, toldChanges, toldStateOf, writeRoutes } from './dayPlan';
+import { createHistory } from './history';
 import { assignMany, cancelMany, moveManyToDate } from './multiEdit';
-import { autoTell, isSettledDate, settledUntil } from './settled';
+import { autoTell, settleDates, settledUntil, settleUpdate } from './settled';
 
 const fixed = (id: string, at: string, over = {}) => visit(id, 'c1', at, at, { windowKind: 'fixed', ...over });
 const TODAY = DATE;
@@ -30,12 +31,6 @@ describe('settledUntil（今日の1か月後の同じ日。無い日は月末）
     expect(settledUntil('2028-01-31')).toBe('2028-02-29');
     expect(settledUntil('2026-12-31')).toBe('2027-01-31');
     expect(settledUntil('2026-10-12')).toBe('2026-11-12');
-  });
-  it('範囲は両端を含み、今日より前・先の日は外', () => {
-    expect(isSettledDate('2026-10-30', '2026-10-30')).toBe(true);
-    expect(isSettledDate('2026-11-30', '2026-10-30')).toBe(true);
-    expect(isSettledDate('2026-12-01', '2026-10-30')).toBe(false);
-    expect(isSettledDate('2026-10-29', '2026-10-30')).toBe(false);
   });
 });
 
@@ -135,5 +130,73 @@ describe('autoTell', () => {
     const staffed = assignMany(before, ['v2'], 's2', TODAY).data;
     const m = moveManyToDate(staffed, ['v2'], addDays(TODAY, 1), TODAY);
     expect(Object.keys(autoTell(staffed, m.data, TODAY, AT).snapshots).sort()).toEqual([TODAY, addDays(TODAY, 1)]);
+  });
+});
+
+describe('待ちの条件（自動の組みの依頼が出る訪問だけ待つ）', () => {
+  it('担当を外した（担当なしの列へ）・日時が同じ担当なしへの変更は待たない', () => {
+    const before = base({ visits: [fixed('a', '09:00', { staffId: 's1' }), fixed('b', '11:00', { staffId: 's2' })] });
+    const none = {
+      ...before,
+      visits: putVisits(before.visits, [{ ...before.visits[1]!, staffId: null, start: null }]),
+    };
+    expect(autoTell(before, none, TODAY, AT).snapshots[DATE]).toBeTruthy();
+  });
+  it('別の日へ移した担当なしの訪問は待つ。依頼を出さない保存（wait:false）は待たない', () => {
+    const before = base({ visits: [fixed('a', '09:00', { staffId: 's1' }), fixed('b', '11:00')] });
+    const day = addDays(TODAY, 1);
+    const moved = { ...before, visits: putVisits(before.visits, [{ ...before.visits[1]!, date: day }]) };
+    // 元の日（a だけ残る）は付き、移した先は待つ
+    expect(Object.keys(autoTell(before, moved, TODAY, AT).snapshots)).toEqual([TODAY]);
+    expect(Object.keys(autoTell(before, moved, TODAY, AT, { wait: false }).snapshots).sort()).toEqual([TODAY, day]);
+  });
+});
+
+describe('settleDates（自動の組みが終わったとき。待っていた日を終わらせる）', () => {
+  it('範囲内で伝えた記録の無い日に付ける。付いている日・範囲外・今日より前は変えない', () => {
+    const d = base({
+      visits: [fixed('a', '09:00', { staffId: 's1' }), fixed('b', '09:00', { date: addDays(TODAY, 1) })],
+    });
+    const out = settleDates(
+      d,
+      [TODAY, addDays(TODAY, 1), addDays(TODAY, -1), addDays(settledUntil(TODAY), 1)],
+      TODAY,
+      AT,
+    );
+    expect(Object.keys(out.snapshots).sort()).toEqual([TODAY, addDays(TODAY, 1)]);
+    expect(out.snapshots[TODAY]!.at).toBe(AT);
+    // 付いている日は書き換えない
+    expect(settleDates(out, [TODAY], TODAY, AT + 1).snapshots[TODAY]!.at).toBe(AT);
+  });
+  it('expert 入なら何もしない', () => {
+    const d = base({ org: { ...makeData().org, features: { expert: true } } });
+    expect(settleDates(d, [TODAY], TODAY, AT)).toBe(d);
+  });
+});
+
+describe('settleUpdate（store の update が使う1か所）', () => {
+  const NOW = Date.parse('2026-10-12T12:00:00+09:00');
+  const edit = (d: DemoData) => writeRoutes(d, DATE, dayProblemOf(d, DATE)!, { s2: ['v1', 'v2'] });
+
+  it('今日（日本時間）の日に伝えた記録を付ける。tell:false なら付けない', () => {
+    const before = base();
+    const made = edit(before);
+    expect(settleUpdate(before, made, undefined, NOW).snapshots[DATE]!.at).toBe(NOW);
+    expect(settleUpdate(before, made, { tell: false }, NOW)).toBe(made);
+  });
+  it('設定の操作（訪問の種類を消すなど visits を書くが予定の直しでない）は tell:false で記録しない', () => {
+    const before = base({ visits: [fixed('a', '09:00', { staffId: 's1', typeId: 't1' })] });
+    const made = { ...before, visits: before.visits.map((v) => ({ ...v, typeId: null })) };
+    expect(Object.keys(settleUpdate(before, made, undefined, NOW).snapshots)).toEqual([DATE]);
+    expect(settleUpdate(before, made, { tell: false }, NOW).snapshots).toEqual({});
+  });
+  it('記録は同じ1手に入り、元に戻すで一緒に戻る（履歴は前後のデータを持つ）', () => {
+    const before = base();
+    const after = settleUpdate(before, edit(before), undefined, NOW);
+    const h = createHistory();
+    h.record(before, after, '手直し');
+    const r = h.undo(after);
+    expect(r!.data).toBe(before);
+    expect(r!.data.snapshots).toEqual({});
   });
 });

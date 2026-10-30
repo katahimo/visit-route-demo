@@ -59,7 +59,7 @@ export function useTypeForm() {
       tone: 'danger',
     });
     if (!ok) return;
-    update((d) => removeVisitType(d, t.id), '訪問の種類を消す');
+    update((d) => removeVisitType(d, t.id), '訪問の種類を消す', { tell: false });
     setForm(null);
     toast(`種類「${t.name}」を消しました`);
   };

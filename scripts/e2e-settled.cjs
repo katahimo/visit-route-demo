@@ -6,7 +6,8 @@
 // 5 「連絡した」で今の担当・時刻が伝えた記録になり「変更あり」が消える（操作の行の［元に戻す］で戻る）、
 // 6 週の予定の印を押すとその日の日の予定へ移り連絡の一覧が開く（URL の ?do=told・?date= は消える）、
 // 7 月の予定：確定の段階（進み具合の帯の「確定」・右の欄の「確定していない日」・まとめて確定）が無い、
-// 8 エキスパート機能を入にすると今の確定（伝えた）の操作が出て、自動では伝えない（直しても snapshots は増えない）。
+// 8 エキスパート機能を入にすると今の確定（伝えた）の操作が出て、自動では伝えない（直しても snapshots は増えない）、
+// 9 決まった日に訪問を足すと自動の組みが担当を付け、足した訪問は「変更あり」（伝えた記録は書き換えない）。月のマスの印からも日の予定の連絡の一覧へ移る。
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-settled.cjs
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）
@@ -189,6 +190,13 @@ async function month(page) {
   check((await page.getByTestId('band-confirm').count()) === 0, '月の帯に「確定 N/N日」を出さない');
   const next = await page.getByTestId('band-next').getAttribute('data-kind');
   check(next !== 'unconfirmed', '月の帯の次の一手に「確定していない日を見る」を出さない', next);
+  // マスの「変更あり」の印を押すとその日の日の予定の連絡の一覧（マスは選ばず移る）
+  const cellMark = page.locator(`[data-testid="month-day"][data-date="${TODAY}"] [data-told-date]`);
+  await cellMark.waitFor({ timeout: 15000 });
+  await cellMark.click();
+  await sheet(page).waitFor({ timeout: 15000 });
+  const mh = new URL(page.url()).hash;
+  check(/^#\/plan/.test(mh) && !/do=told|date=/.test(mh), '月のマスの印を押すと日の予定へ移り連絡の一覧が開く', mh);
   await page.goto('about:blank');
   await page.goto(`${BASE}#/month?do=unconfirmed`);
   await page.getByTestId('month-aside').waitFor({ timeout: 60000 });
@@ -228,6 +236,26 @@ async function expertOn(page) {
   check(!d.snapshots[TODAY], 'expert 入：手で直しても自動では伝えた記録を付けない', Object.keys(d.snapshots));
 }
 
+/** 9 決まった日に担当なしの訪問を足すと、自動の組みが担当を付ける（伝えた内容は書き換えず、足した訪問は「変更あり」） */
+async function addToSettled(page) {
+  await fresh(page, `/plan?date=${TODAY}`, '[data-testid="plan-summary"]');
+  await moveVisit(page, await firstVisit(page));
+  const d0 = await dataWhen(page, (x) => !!x.snapshots[TODAY]);
+  const n0 = d0.visits.length;
+  await page.getByTestId('plan-visit-add').click();
+  await page.getByTestId('visit-panel').waitFor();
+  await page.getByTestId('visit-panel').getByTestId('vp-start').fill('10:00');
+  await settle(page, 400);
+  await page.getByTestId('vp-save').click();
+  await page.getByTestId('visit-panel').waitFor({ state: 'detached', timeout: 10000 });
+  const d1 = await dataWhen(page, (x) => x.visits.length === n0 + 1 && x.visits.at(-1).staffId !== null);
+  const v = d1.visits.at(-1);
+  check(v.staffId !== null && v.date === TODAY, '決まった日に足した訪問にも自動で担当が付く', v);
+  check(d1.snapshots[TODAY].at === d0.snapshots[TODAY].at, '伝えた記録は書き換えない');
+  await page.locator(`.tl-band[data-visit="${v.id}"] [data-told-date]`).waitFor({ timeout: 10000 });
+  check(true, '足した訪問は「変更あり」（伝える必要がある）');
+}
+
 const steps = sharedPage({
   open,
   steps: [
@@ -237,6 +265,7 @@ const steps = sharedPage({
     ['6 週の印から日の予定の連絡の一覧へ', fromWeek],
     ['7 月・ホームに確定の段階が無い', month],
     ['8 expert 入は今の確定の操作', expertOn],
+    ['9 決まった日に足した訪問も自動で組まれる', addToSettled],
   ],
   call: (fn, s) => fn(s.page, s.dlg),
 });

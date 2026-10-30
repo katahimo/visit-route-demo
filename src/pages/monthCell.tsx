@@ -4,6 +4,7 @@
 import { BedSingle, CalendarOff, CircleAlert, Lock, PencilLine, Timer, UserX } from 'lucide-react';
 import { memo, type KeyboardEvent as ReactKeyboardEvent, useLayoutEffect } from 'react';
 import { LoadBar, loadSummary, TypeStack } from '../components/loadBar';
+import { toldDateOf, useOpenTold } from '../components/openTold';
 import { StaffBar } from '../components/staffBar';
 import { useConfirmStep } from '../components/useFeature';
 import type { DropHover } from '../components/visitParts';
@@ -255,7 +256,8 @@ function CellHead({
   selected: number;
 }) {
   // expert 切は「確定済み」の鍵を出さない（変更ありだけ。ADR-0073）
-  const shown = shownDayState(s.state, useConfirmStep());
+  const confirmStep = useConfirmStep();
+  const shown = shownDayState(s.state, confirmStep);
   return (
     <span className="month-cell-head">
       <span className="month-day">
@@ -265,7 +267,14 @@ function CellHead({
       {s.count > 0 && shown === 'told' && <Lock size={12} className="month-lock" aria-hidden="true" />}
       {/* 未連絡の変更あり（淡い黄）は色だけで分けない */}
       {s.count > 0 && shown === 'changed' && (
-        <PencilLine size={12} className="month-diff-icon" aria-hidden="true" data-testid="month-diff-mark" />
+        // expert 切：押すとその日の日の予定の連絡の一覧（マスのクリックの中で見分ける。components/openTold。ADR-0073）
+        <span
+          className={confirmStep ? undefined : 'month-told-btn'}
+          data-told-date={confirmStep ? undefined : d}
+          title={confirmStep ? undefined : '変更あり（押すと連絡の一覧）'}
+        >
+          <PencilLine size={12} className="month-diff-icon" aria-hidden="true" data-testid="month-diff-mark" />
+        </span>
       )}
       {text.attention > 0 ? (
         <span className="month-attn" data-testid="month-attn">
@@ -289,6 +298,7 @@ export const DayCell = memo(function DayCell(props: CellProps) {
   const { date: d, status: s, ctx, making, marks: mk, load, offState } = props;
   const { today, focus, typeById, staffById } = ctx;
   const confirmStep = useConfirmStep();
+  const openTold = useOpenTold();
   const text = dayCellText({
     confirmStep,
     date: d,
@@ -352,6 +362,13 @@ export const DayCell = memo(function DayCell(props: CellProps) {
         // 見た目の説明は title ではなく読み方の吹き出し（MonthCellTip。title と二重に出さない）
         data-tip="cell"
         onClick={(e) => {
+          // 「変更あり」の印（expert 切）：その日の連絡の一覧へ（日を選ぶのではなく移る）
+          const toldDate = toldDateOf(e.target);
+          if (toldDate !== null && !offState) {
+            e.preventDefault();
+            openTold(toldDate);
+            return;
+          }
           // Shift／Ctrl＋クリックはその日の訪問をまとめて選ぶ（休みを入れる間は今どおり）
           if (!offState && isMultiClick(e)) {
             e.preventDefault();

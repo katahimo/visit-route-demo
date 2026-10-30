@@ -142,6 +142,10 @@ flowchart LR
 データは版2（ADR-0053）：担当は訪問に持ち（`Visit` の `staffId`・`start`・`pinned`）、AI は提案を出して「反映する」で訪問に書き、確定は〈スタッフ〉に伝えた内容（`snapshots`）。その日の担当の並びは `lib/dayPlan` の `dayRoutes`（訪問の担当と組んだ開始から作る）。
 
 確定（伝えた）はエキスパート機能（expert）の入り切りで扱いが分かれる（ADR-0073。PRD D382）。入：今までどおり、日の画面・月・週の「確定（伝えた）」で `snapshots` に残し、あとの変更は「未連絡の変更」。切（既定）：確定の段階を出さず、今日から1か月先（今日の1か月後の同じ日。無ければ月末）までの日は、組んだ・手で直した（保存した訪問が変わった）ときに store の `update` が自動で伝えた記録を付け（`lib/settled` の `autoTell`。同じ書き方の `tellDay`）、そのあとの変更は訪問に「変更あり」の印（押すと連絡の一覧）、連絡の一覧の「連絡した」で今の担当・時刻を伝えた記録にする。メールで送る・予約したときの伝えた記録は入切によらず今どおり（`confirmByMail`）。見せ方の入切は `lib/settledView` の1か所。
+- 自動の組みと決まった日：expert 切のときは伝えた（決まった）日も担当なしの訪問を自動の組みで埋める（`lib/autoArrange` の `skipsToldDays`。担当のある訪問は固定のまま動かさず、伝えた記録も書き換えない。足した訪問は伝えた内容と違うので「変更あり」）。expert 入は今のまま伝えた日を飛ばす
+- 記録のタイミング（`lib/settled`）：今回増えた・日時が変わった担当なし・ピンなしの訪問（`autoTargets` と同じ条件＝自動の組みの依頼が出るもの）がある日は、組んだあとまで待つ。自動の組みの仕事が終わったら、反映した・何も書かなかったに関わらず対象の日を `settleDates` で記録する（同じ1手。繰り返しの保存からの組みで visits が変わらない日も拾う）。依頼を出さない保存（担当なしをはっきり選んだ・まとめて直す）は `UpdateOptions.settleNow` で待たない
+- 拾う update：`visits` を変える予定の直しすべて（組み・手直し・ドラッグ・まとめて直す・欠勤の振り直し・最終勤務日の振り直し（offboard）・空き時間に入れる・訪問の追加・取り消し・〈利用者さん〉の終了・仮押さえの取り消し・繰り返しの保存で変わる訪問）。止める update（`tell: false`）：名簿の読み込み・古い記録を消す・訪問の種類を消す（設定。訪問の種類の外れだけで予定は変わらない）。ほかの設定（項目・条件・プリセット・呼び名・機能の入り切り・〈スタッフ〉の勤務）は visits を書き換えないので記録されない
+- 「変更あり」の印はマウスで押す（日・週・月のマスと札）。キーボードの道は日の画面の上の「変更あり N件」のチップ（Tab で届き Enter で連絡の一覧）。札の読み上げの名前には「変更あり：…」を含める
 
 ### store（データ一式の保存）
 - 責務：`DemoData` の読み込み・保存・検査（zod）・版の確かめ（版1は移さず初期データで始める。ADR-0053）・修復（repair）、JSON の書き出し・読み込み、初期状態に戻す、置き換える前の1世代の控え（ADR-0032）。画面へは `useDemoData()`（`data`・`update(fn, label?)`・`undo()`・`redo()`・`replace(d)`・`reset(features?)`・`saveError`・`keepPrevious(reason)`・`restorePrevious()`・`previous`・`broken`・`outdated`・`brokenKept`・`dismissBroken()`・`startedFresh`・`externalReloads`・`replacedCount`・`previousDrops`）。書き換えは update・replace・reset・restorePrevious だけ

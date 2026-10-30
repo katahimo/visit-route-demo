@@ -1,9 +1,8 @@
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { type DemoData, STORAGE_KEY } from '../contracts/data';
 import type { Features } from '../contracts/features';
-import { jstDate } from '../domain/time';
 import { appHistory } from '../lib/history';
-import { autoTell } from '../lib/settled';
+import { settleUpdate } from '../lib/settled';
 import {
   flushSave,
   importJson,
@@ -26,9 +25,10 @@ import {
  * update の扱い：history が false なら履歴に積まず履歴を捨てる（戻せない操作）。group を渡すと、同じ group の続けての update を
  * 1手にまとめる（1回の操作で何度も書くとき。住所をまとめて探すなど）。tell が false なら、エキスパート機能が切のときの
  * 「決まった予定」の自動の伝えた記録（lib/settled の autoTell。ADR-0073）を付けない（名簿の読み込み・古い記録を消すなど、
- * 予定を直す操作ではない update）
+ * 予定を直す操作ではない update）。settleNow が true なら、自動の組みの依頼が出る訪問（今回増えた・日時が変わった担当なし）があっても待たずに
+ * 記録する（依頼を出さない保存・まとめて直すなど。待ちが終わらないため）
  */
-export type UpdateOptions = { history?: boolean; group?: object; tell?: false };
+export type UpdateOptions = { history?: boolean; group?: object; tell?: false; settleNow?: true };
 
 export type DemoStore = {
   data: DemoData;
@@ -180,13 +180,12 @@ function useHistoryActions(st: StoreState) {
     (fn: (d: DemoData) => DemoData, label?: string, opts?: UpdateOptions) => {
       const token = {};
       const keep = opts?.history !== false;
-      const tell = opts?.tell !== false;
       if (!keep) appHistory.clear();
       setData((d) => {
         // 決まった予定（ADR-0073）：fn の結果に自動の伝えた記録を付ける。記録も同じ1手（元に戻すで一緒に戻る）。
         // 戻す・やり直す・丸ごと差し替えは update を通らないので付けない
         const made = fn(d);
-        const n = tell ? autoTell(d, made, jstDate(Date.now()), Date.now()) : made;
+        const n = settleUpdate(d, made, opts, Date.now());
         if (keep) appHistory.record(d, n, label, token, opts?.group);
         return n;
       });

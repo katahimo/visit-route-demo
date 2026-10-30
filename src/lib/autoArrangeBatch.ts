@@ -22,6 +22,7 @@ import {
   unassignedTargets,
 } from './autoArrange';
 import { type BatchHost, dayInputsOf } from './monthBatch';
+import { settleDates } from './settled';
 import { createValueStore, type ReadableStore } from './valueStore';
 
 /** 全体の履歴（元に戻す）に出る手の名前 */
@@ -189,10 +190,13 @@ export function createAutoArrange(solve: Solve = runSolve): AutoArrange {
     const now = h.get();
     const opts = { writeUsual: job.writeUsual, rangeTo: job.rangeTo };
     const r: AutoApplied = applyAutoArrange(now, days, opts);
-    if (r.data !== now) {
+    // 仕事が終わったら、反映した・何も書かなかったに関わらず、対象の日を決まった扱いにする（expert 切。待っていた日を終わらせる。ADR-0073）
+    const dates = job.targets.map((t) => t.date);
+    const settle = (d: DemoData) => settleDates(d, dates, job.today);
+    if (r.data !== now || settle(r.data) !== r.data) {
       wrote = true;
-      // 書くときの今のデータで、組み始めたときのままの日だけをもう一度確かめて書く（1手）
-      h.update((d) => applyAutoArrange(d, days, opts).data, AUTO_ARRANGE_LABEL);
+      // 書くときの今のデータで、組み始めたときのままの日だけをもう一度確かめて書く（1手。決まった扱いにする記録も同じ手）
+      h.update((d) => settle(applyAutoArrange(d, days, opts).data), AUTO_ARRANGE_LABEL);
     }
     // 計算中にほかの変更が入って飛ばした日は、あと1回だけ組み直す
     const again = retryOf(job, r.skippedDays, now);

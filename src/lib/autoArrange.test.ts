@@ -96,7 +96,11 @@ describe('autoTargets（増えた・日時が変わった担当なしの訪問�
 
   it('伝えた日・昨日・範囲外は対象でない', () => {
     const d = withPattern(before, { from: addDays(TODAY, -3) });
-    const told = { ...d, snapshots: { [addDays(TODAY, 2)]: { date: addDays(TODAY, 2), at: 0, visits: [] } } };
+    const told = {
+      ...d,
+      org: { ...d.org, features: { expert: true } },
+      snapshots: { [addDays(TODAY, 2)]: { date: addDays(TODAY, 2), at: 0, visits: [] } },
+    };
     const t = autoTargets(before, told, TODAY, RANGE);
     expect(dates(t)).not.toContain(addDays(TODAY, 2));
     expect(dates(t).every((x) => x >= TODAY)).toBe(true);
@@ -123,7 +127,11 @@ describe('unassignedTargets（ホームの取りこぼし）', () => {
         .filter((v) => !v.cancelled)
         .map((v) => v.id),
     );
-    const told = { ...d, snapshots: { [TODAY]: { date: TODAY, at: 0, visits: [] } } };
+    const told = {
+      ...d,
+      org: { ...d.org, features: { expert: true } },
+      snapshots: { [TODAY]: { date: TODAY, at: 0, visits: [] } },
+    };
     expect(dates(unassignedTargets(told, TODAY, RANGE))).not.toContain(TODAY);
   });
 
@@ -179,8 +187,18 @@ describe('autoDayPlan（1日の問題）', () => {
     expect(autoDayPlan(d, TODAY, [`${TODAY}_pn`])).not.toBeNull();
     expect(autoDayPlan(d, TODAY, [])).toBeNull();
     expect(autoDayPlan(d, TODAY, ['nothing'])).toBeNull();
-    const told = { ...d, snapshots: { [TODAY]: { date: TODAY, at: 0, visits: [] } } };
+    const told = {
+      ...d,
+      org: { ...d.org, features: { expert: true } },
+      snapshots: { [TODAY]: { date: TODAY, at: 0, visits: [] } },
+    };
     expect(autoDayPlan(told, TODAY, [`${TODAY}_pn`])).toBeNull();
+    // expert 切：決まった（伝えた）日も担当なしの訪問を埋める対象（担当のある訪問は固定。ADR-0073）
+    const settled = { ...told, org: { ...told.org, features: { expert: false } } };
+    const plan = autoDayPlan(settled, TODAY, [`${TODAY}_pn`]);
+    expect(plan).not.toBeNull();
+    expect(plan!.targetIds).toEqual([`${TODAY}_pn`]);
+    expect(dates(unassignedTargets(settled, TODAY, RANGE))).toContain(TODAY);
     // 担当のスタッフがいなければ問題にならない
     const none = { ...d, staff: d.staff.map((s) => ({ ...s, active: false })) };
     expect(autoDayPlan(none, TODAY, [`${TODAY}_pn`])).toBeNull();

@@ -3,8 +3,7 @@
 // 呼ぶ側は useConfirmDay のあとにこのフックを呼ぶ
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { isDate } from '../lib/isDate';
-import { TOLD_DO } from '../lib/links';
+import { shouldOpenTold, toldEntryDate } from '../lib/links';
 
 /**
  * date は今選んでいる日、canOpen はその日に未連絡の変更があるか（無ければ開かない）、open は連絡の一覧を開く
@@ -18,9 +17,8 @@ export function useToldEntry(x: { date: string; setDate: (d: string) => void; ca
   const [asked, setAsked] = useState(0);
   // biome-ignore lint/correctness/useExhaustiveDependencies: ?do= が付いたときだけ
   useEffect(() => {
-    if (doParam !== TOLD_DO) return;
-    const raw = params.get('date');
-    const target = raw && isDate(raw) ? raw : date;
+    const target = toldEntryDate(doParam, params.get('date'), date);
+    if (target === null) return;
     if (target !== date) setDate(target);
     pending.current = target;
     setAsked((n) => n + 1);
@@ -36,7 +34,8 @@ export function useToldEntry(x: { date: string; setDate: (d: string) => void; ca
   // biome-ignore lint/correctness/useExhaustiveDependencies: 日付が変わった・受けたときだけ
   useEffect(() => {
     if (pending.current === null || pending.current !== date) return;
+    const go = shouldOpenTold(pending.current, date, canOpen);
     pending.current = null;
-    if (canOpen) open();
+    if (go) open();
   }, [date, asked]);
 }
