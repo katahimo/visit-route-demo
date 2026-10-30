@@ -29,7 +29,7 @@
 
 #### ルートと状態
 
-- `#/clients/:id`（`pages/ClientPage`）・`#/staff/:staffId`（`pages/StaffPersonPage`）。`new` は新しい人。メニューの印（予定を組むの子「基本情報」）・上の帯の名前（「基本情報・利用者さん一覧」）は一覧と同じ（`lib/nav` の `activeNavPath` が `/clients/:id` を `/clients` に当てる。`tabClick` は一覧の項目を押すと一覧へ移る）。初回の案内ツアーはこの URL で開いたときは出さない（`lib/tour` の `shouldAutoOpenTour`）
+- `#/clients/:id`（`pages/ClientPage`）・`#/staff/:staffId`（`pages/StaffPersonPage`）。`new` は新しい人。メニューの印（予定を組むの子「基本情報」）・上の帯の名前（「基本情報・利用者さん一覧」）は一覧と同じ（`lib/nav` の `activeNavPath` が `/clients/:id` を `/clients` に当てる。`tabClick` は一覧の項目を押すと一覧へ移る）
 - 外側の部品が「URL の人」と「開いている人」を分けて持つ。URL の人が替わったら（パレット・吹き出し・hash の書き換え）、変更があれば確かめ（確認は画面の移動で待っている確認を取り消す処理のあとに出す）、断れば元の人の URL（クエリも）へ `replace` で戻す。中身は開いている人の ID を key にして作り直す。App の `Guarded` の ErrorBoundary の key は `/clients/:id` にそろえる（人が替わっても画面を作り直さない）
 - いない人の URL は一覧へ `replace`（`state.missing`）し、一覧で「その〈利用者さん〉は見つかりません（消されたか、URL が違います）」と知らせる
 - 外枠 `person-view`（`data-kind`＝client／staff・`data-id`。新しい人は空）。`.person-view` の dl の並び（`personView.css`）を使う

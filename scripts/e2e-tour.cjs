@@ -1,15 +1,14 @@
-// 区切り8b（PRD D189〜D193。ADR-0025）を本物のブラウザで確かめる：
-// 初回の案内ツアー（初めて開くと中央のカード・role="dialog"・aria-modal・見出しと本文・1 / 3・最初のフォーカスは「次へ」・
-// 裏の inert とスクロールのロック・「戻る」は最初の枚で押せずフォーカスを「次へ」へ・Tab と Shift+Tab が中で回る・
-// 開いている間は Ctrl+K でパレットを開かない・3枚（ホーム・予定・欠勤。PRD D277）・予定の枚は「予定を組んで、直して、確定します」と3段（組む（AI。メニューの「予定を組む」）→ ピン → 確定（伝えた））の説明・
-// 最後の枚は主ボタン「今日の予定を開く」・「閉じる」（とばすは出さない。PRD D226）・
-// 初めて開くと機能は「基本」で、1枚目に「どこまで使いますか」（基本／すべて。Tab は選んだ方だけ・矢印で選び直しても当てない）・
-// 「すべて」を選んで「次へ」（とばすでも）でその入り切りで初期データを作り直す・「基本」に戻せる・
-// 別のタブで変わっていたら入り切りだけ書き換える・もう一度見るでは聞かない（PRD D276）・
-// 「閉じる」で閉じて見たことを localStorage（DemoData と別のキー）に覚える・「今日の予定を開く」で閉じて今日の日の画面へ・
-// 最後の枚まで進んだら覚える・読み直しても出ない・Esc と「とばす」でも覚える・?id=・?do=・人の画面（#/clients/:id）のリンクでは出さない（見たことにもしない）・データの画面の「案内をもう一度見る」で開き閉じるとフォーカスがボタンへ・
-// 初期状態に戻しても見たことは残る・「見た」の印（scripts/lib/tourSeen.cjs）があれば自動で出ない・月の印刷の画面では出ない・
-// 390px で収まる・印刷で出さない）、
+// 最初の2問と案内ツアー（PRD D189〜D193・D379〜D381。ADR-0025・ADR-0045・ADR-0073）を本物のブラウザで確かめる：
+// 最初の2問（初めて開く＝保存データも印「all」も無いと、案内ツアーは自動で出ず、1画面に2問と主ボタン「はじめる」だけ。答えるまでデータを書かない・
+// 読み直してもまた2問・Tab は選んだ方だけ・矢印で選び直す）・デモ×定期（今の初期データ・利用者さん／スタッフ・「基本」・最初は月）・
+// デモ×単発（架空の単発の予約が今日から2週間分・お客様／シッター・「単発のみ」・最初は週）・
+// 自分のデータ（空のデータ＋3段の登録の案内：上に「1/3」・①②は「CSV・Excel を読み込む」（名簿の欄）と「1人ずつ入れる」（追加の画面）・③は予定へ・
+// 空のデータで月・週・日・一覧・設定などが壊れない）・印「all」（scripts/lib/startFeatures.cjs）があれば2問を出さず今の初期データ＋すべて入・
+// 設定の「最初の設定をやり直す」（確認の文は元に戻す Ctrl+Z の対象外・先に書き出す案内 → 2問へ戻る → 答えでデータを作り直す・控えが残る）、
+// 案内ツアー（データの画面の「案内をもう一度見る」から開く：role="dialog"・aria-modal・見出しと本文・1 / 3・最初のフォーカスは「次へ」・
+// 裏の inert とスクロールのロック・「戻る」は最初の枚で押せない・Tab と Shift+Tab が中で回る・開いている間は Ctrl+K でパレットを開かない・
+// 3枚（ホーム・予定・欠勤。PRD D277）・予定の枚は3段の説明・最後の枚は主ボタン「今日の予定を開く」・「閉じる」（とばすは出さない。PRD D226）・
+// Esc と「とばす」・閉じるとフォーカスが「案内をもう一度見る」へ・「今日の予定を開く」で今日の日の画面・390px で収まる・印刷で出さない）、
 // データの画面のファイル選択（すべて同じ部品・日本語のボタン「ファイルを選ぶ」と未選択の文・ブラウザ標準の input は見えない・
 // input はボタンと同じ大きさ・入力欄の名前（何を読み込むか＋ファイルを選ぶ）・Tab で届きフォーカスの枠・Space で選ぶ画面・控え（JSON）を選ぶと確認と
 // ファイル名・取り消してもデータはそのまま・確定で読み込む・Excel の壊れたファイルは誤りの文・名簿は一覧へのリンク）、
@@ -46,7 +45,6 @@ const { guard } = require('./lib/steps.cjs');
 const { visitsIn } = require('./lib/visits.cjs');
 
 const YM = TODAY.slice(0, 7);
-const TOUR_KEY = 'vrdemo:tour:seen';
 
 /** ページのエラー（終わりに失敗に数える。env.cjs の pageErrors） */
 const errors = pageErrors;
@@ -56,11 +54,10 @@ const visible = (loc) => loc.isVisible().catch(() => false);
 /** フォーカスがツアーのカードの中か */
 const focusInTour = (page) => page.evaluate(() => !!document.activeElement?.closest('[data-testid="tour"]'));
 const activeTestId = (page) => page.evaluate(() => document.activeElement?.getAttribute('data-testid') ?? '');
-const seenValue = (page) => page.evaluate((k) => localStorage.getItem(k), TOUR_KEY);
 
 /**
- * 新しいブラウザの文脈（localStorage は空）。human なら「見た」の印を入れない（人が初めて開いたとき。機能は「基本」で始まる。
- * start: 'all' なら初回の入り切りだけ「すべて」に固定）。そうでなければ skipTour（初回の入り切りも「すべて」）
+ * 新しいブラウザの文脈（localStorage は空）。human なら印を入れない（人が初めて開いたとき。最初の2問が出る。
+ * start: 'all' なら印「all」だけ入れる＝2問を出さず今の初期データ＋すべて入）。そうでなければ skipTour（印「all」）
  */
 async function newPage(b, { human, width = 1400, height = 1000, start }) {
   const ctx = await b.newContext({ viewport: { width, height } });
@@ -89,10 +86,373 @@ async function open(page, hash, ready) {
   await page.locator(ready).first().waitFor({ timeout: 30000 });
 }
 
-// ---- ツアー：初めて開いたとき・枚の行き来・閉じる・覚える ----
-async function tourFirst(b) {
-  const { ctx, page } = await newPage(b, { human: true });
-  await open(page, '/', '[data-testid="tour"]');
+// ---- 最初の2問（PRD D379〜D381。ADR-0073）----
+const askingPage = (b, opts = {}) => newPage(b, { human: true, ...opts });
+const answered = (page) => page.getByTestId('first-run').waitFor({ state: 'detached', timeout: 30000 });
+const stored2 = (page) => page.evaluate((k) => JSON.parse(localStorage.getItem(k) ?? 'null'), STORAGE_KEY);
+const FAIL_TEXT = /画面を表示できませんでした|画面を読み込めませんでした/;
+
+/** 画面を開いて、見出しが出て、例外の画面にならないことを確かめる */
+async function screenOk(page, hash, label) {
+  await page.goto('about:blank');
+  await page.goto(`${BASE}#${hash}`);
+  await page.locator('.app-main h1').first().waitFor({ timeout: 30000 });
+  await settle(page, 200);
+  const body = await page.locator('body').innerText();
+  check(!FAIL_TEXT.test(body), `${label}：空のデータでも例外の画面にならない`, hash);
+}
+
+// 初めて開く：2問の画面（ツアーは自動で出ない・データはまだ書かない）→ デモ・定期で始める
+async function firstRun(b) {
+  const { ctx, page } = await askingPage(b);
+  await page.goto(`${BASE}#/`);
+  await page.getByTestId('first-run').waitFor({ timeout: 30000 });
+  check((await tour(page).count()) === 0, '初めて開いたとき：案内ツアーは自動で出ない（最初の2問に置き換えた）');
+  check((await stored2(page)) === null, '2問に答えるまでデータを書かない');
+  const text = await page.getByTestId('first-run').innerText();
+  check(
+    text.includes('デモで試す') &&
+      text.includes('自分のデータで始める') &&
+      text.includes('単発の予約が中心') &&
+      text.includes('例：ベビーシッター') &&
+      text.includes('定期の訪問が中心') &&
+      text.includes('訪問介護・看護、家事代行の定期'),
+    '2問：問1（デモで試す／自分のデータで始める）・問2（単発の予約が中心／定期の訪問が中心）の選択肢と例',
+    text,
+  );
+  const primary = await page.getByTestId('first-run').locator('.btn-primary').allInnerTexts();
+  check(primary.length === 1 && primary[0].trim() === 'はじめる', '主ボタンは「はじめる」の1つだけ', primary);
+  check(
+    (await page.getByTestId('first-run-start-demo').isChecked()) &&
+      (await page.getByTestId('first-run-booking-regular').isChecked()),
+    '初めに選んである：デモで試す・定期の訪問が中心',
+  );
+  // ラジオは標準の radio group：Tab は選んだ方だけ、矢印で選び直す
+  const stops = [];
+  for (let i = 0; i < 6; i++) {
+    await page.keyboard.press('Tab');
+    stops.push(await activeTestId(page));
+  }
+  check(
+    stops.includes('first-run-start-demo') &&
+      !stops.includes('first-run-start-own') &&
+      stops.includes('first-run-booking-regular') &&
+      !stops.includes('first-run-booking-oneOff'),
+    '2問：Tab は選んでいる方だけに止まる',
+    stops,
+  );
+  await page.getByTestId('first-run-start-demo').focus();
+  await page.keyboard.press('ArrowDown');
+  check(await page.getByTestId('first-run-start-own').isChecked(), '2問：矢印で選び直す');
+  await page.screenshot({ path: path.join(OUT_DIR, 'first-run.png') });
+  // 読み直しても、答えるまではまた2問
+  await page.reload();
+  await page.getByTestId('first-run').waitFor({ timeout: 30000 });
+  check((await stored2(page)) === null, '読み直しても、答えるまではデータを書かず、また2問');
+  // デモ・定期：今の初期データ。呼び名は利用者さん／スタッフ・ひな形は基本・最初は月の予定
+  await page.getByTestId('first-run-start-demo').check();
+  await page.getByTestId('first-run-booking-regular').check();
+  await page.getByTestId('first-run-submit').click();
+  await answered(page);
+  await page.locator('.app-main h1').first().waitFor({ timeout: 30000 });
+  await until(async () => (await stored2(page)) !== null, 10000);
+  const d = await stored2(page);
+  const f = d.org.features;
+  check(/#\/month/.test(hashOf(page)), 'デモ・定期：最初に開く画面は月の予定', hashOf(page));
+  check(
+    d.org.terms.client === '利用者さん' && d.org.terms.staff === 'スタッフ',
+    'デモ・定期：呼び名は利用者さん／スタッフ',
+    d.org.terms,
+  );
+  check(
+    f.patterns === true && f.expert === false && f.rules === false && f.compare === false && f.workload === false,
+    'デモ・定期：ひな形は「基本」（エキスパート機能は切）',
+    f,
+  );
+  check(
+    d.clients.length === 20 && d.patterns.some((p) => p.usualStaffId) && d.visits.length === 0,
+    'デモ・定期：今の初期データ（20人・繰り返しの担当あり）',
+    { clients: d.clients.length, visits: d.visits.length },
+  );
+  check((await tour(page).count()) === 0, '2問のあともツアーは出ない');
+  await page.reload();
+  await page.locator('.app-main h1').first().waitFor({ timeout: 30000 });
+  check((await page.getByTestId('first-run').count()) === 0, '答えたあとは、読み直しても2問を出さない');
+  await ctx.close();
+  // 印「all」（e2e の前準備）があれば2問を出さず、今までの初期データ＋すべて入で始める
+  const a = await newPage(b, { human: true, start: 'all' });
+  await a.page.goto(`${BASE}#/home`);
+  await a.page.getByTestId('home-tasks').waitFor({ timeout: 30000 });
+  const ad = await stored2(a.page);
+  check(
+    (await a.page.getByTestId('first-run').count()) === 0 &&
+      Object.values(ad.org.features).length === 0 &&
+      ad.clients.length === 20,
+    '印「all」があれば2問を出さず、今までの初期データ＋すべて入（features は {}）で始める',
+    ad.org.features,
+  );
+  await a.ctx.close();
+}
+
+// デモ・単発：架空の単発の予約（今日から2週間分・繰り返しなし）。お客様／シッター・単発のみ・最初は週の予定
+async function firstRunOneOff(b) {
+  const { ctx, page } = await askingPage(b);
+  await page.goto(`${BASE}#/`);
+  await page.getByTestId('first-run').waitFor({ timeout: 30000 });
+  await page.getByTestId('first-run-start-demo').check();
+  await page.getByTestId('first-run-booking-oneOff').check();
+  await page.getByTestId('first-run-submit').click();
+  await answered(page);
+  await page.locator('.app-main h1').first().waitFor({ timeout: 30000 });
+  await until(async () => (await stored2(page)) !== null, 10000);
+  const d = await stored2(page);
+  check(/#\/week/.test(hashOf(page)), 'デモ・単発：最初に開く画面は週の予定', hashOf(page));
+  check(
+    d.org.terms.client === 'お客様' && d.org.terms.staff === 'シッター',
+    'デモ・単発：呼び名はお客様／シッター',
+    d.org.terms,
+  );
+  check(
+    d.org.features.patterns === false && d.org.features.expert === false,
+    'デモ・単発：ひな形は「単発のみ」（繰り返しを切・エキスパート機能は切）',
+    d.org.features,
+  );
+  const days = new Set(d.visits.map((v) => v.date));
+  check(
+    d.patterns.length === 0 && d.visits.length >= 14 && days.size === 14 && d.visits.every((v) => v.pattern === null),
+    'デモ・単発：今日から2週間分の単発の予約（繰り返しなし）',
+    { patterns: d.patterns.length, visits: d.visits.length, days: days.size },
+  );
+  check(
+    d.visits.every((v) => v.date >= TODAY) && d.visits.some((v) => v.date === TODAY),
+    'デモ・単発：予約は今日から（今日の予約がある）',
+    [...days].sort().slice(0, 2),
+  );
+  check(
+    (await page.locator('.app-main').innerText()).includes('お客様') || d.clients.length > 0,
+    'デモ・単発：週の予定が出る',
+  );
+  for (const [hash, label] of [
+    [`/plan?date=${TODAY}`, '日の予定'],
+    ['/month', '月の予定'],
+    ['/clients', 'お客様の一覧'],
+    ['/staff', 'シッターの一覧'],
+  ])
+    await screenOk(page, hash, `デモ・単発の${label}`);
+  const heading = await page.locator('.app-main h1').first().innerText();
+  check(heading.includes('シッター'), '単発：〈スタッフ〉の一覧の見出しは呼び名に従う（シッター）', heading);
+  await ctx.close();
+}
+
+// 自分のデータで始める：空のデータ＋3段の登録の案内（1/3・①②は読み込む／1人ずつ・③は予定へ）。空の画面が壊れない
+async function firstRunOwn(b) {
+  const { ctx, page } = await askingPage(b);
+  await page.goto(`${BASE}#/`);
+  await page.getByTestId('first-run').waitFor({ timeout: 30000 });
+  await page.getByTestId('first-run-start-own').check();
+  await page.getByTestId('first-run-booking-regular').check();
+  await page.getByTestId('first-run-submit').click();
+  await answered(page);
+  await page.getByTestId('start-guide').waitFor({ timeout: 30000 });
+  await until(async () => (await stored2(page)) !== null, 10000);
+  const d = await stored2(page);
+  check(
+    d.clients.length === 0 && d.staff.length === 0 && d.visits.length === 0 && d.patterns.length === 0,
+    '自分のデータ：空のデータ（人・訪問・繰り返しは無い）',
+  );
+  check(
+    d.visitTypes.length > 0 && d.org.terms.client === '利用者さん' && d.org.features.patterns === true,
+    '自分のデータ：訪問の種類と呼び名が入っている',
+    d.visitTypes,
+  );
+  check(/#\/start/.test(hashOf(page)), '自分のデータ：最初は登録の案内', hashOf(page));
+  const count = () => page.getByTestId('start-guide-count').innerText();
+  const title = () => page.locator('.app-main h1').first().innerText();
+  check(
+    (await count()).trim() === '1/3' && (await title()).includes('① 利用者さんを入れる'),
+    '案内 1/3：① 利用者さん',
+    {
+      count: await count(),
+      title: await title(),
+    },
+  );
+  check((await page.getByTestId('start-guide').locator('.btn-primary').count()) === 1, '案内：主ボタンは1つ');
+  // ① 読み込む → 名簿の欄が開く
+  check(!(await page.getByTestId('roster-card').isVisible()), '案内①：はじめは名簿の欄を閉じている');
+  await page.getByTestId('start-guide-import').click();
+  await page.getByTestId('roster-card').waitFor({ state: 'visible' });
+  check(
+    (await page.getByTestId('roster-card').innerText()).includes('利用者さんの名簿'),
+    '案内①：「CSV・Excel を読み込む」で利用者さんの名簿の読み込み（今の名簿の欄）が開く',
+  );
+  await page.screenshot({ path: path.join(OUT_DIR, 'start-guide-1.png') });
+  // ① 1人ずつ → 追加の画面
+  await page.getByTestId('start-guide-add').click();
+  await page.waitForURL(/#\/clients\/new/);
+  check(true, '案内①：「1人ずつ入れる」で利用者さんの追加の画面へ');
+  await page.goBack();
+  await page.getByTestId('start-guide').waitFor();
+  // ② スタッフ
+  await page.getByTestId('start-guide-next').click();
+  await page.waitForURL(/step=2/);
+  await page.getByTestId('start-guide-count').filter({ hasText: '2/3' }).waitFor();
+  check((await count()).trim() === '2/3' && (await title()).includes('② スタッフを入れる'), '案内 2/3：② スタッフ');
+  await page.getByTestId('start-guide-import').click();
+  check(
+    (await page.getByTestId('roster-card').innerText()).includes('スタッフの名簿'),
+    '案内②：「CSV・Excel を読み込む」でスタッフの名簿の欄が開く',
+  );
+  await page.getByTestId('start-guide-add').click();
+  await page.waitForURL(/#\/staff\/new/);
+  check(true, '案内②：「1人ずつ入れる」でスタッフの追加の画面へ');
+  await page.goBack();
+  await page.getByTestId('start-guide').waitFor();
+  // ③ 予定
+  await page.getByTestId('start-guide-next').click();
+  await page.waitForURL(/step=3/);
+  await page.getByTestId('start-guide-count').filter({ hasText: '3/3' }).waitFor();
+  const btns = await page.getByTestId('start-guide').locator('.btn-primary').allInnerTexts();
+  check(
+    (await count()).trim() === '3/3' && (await title()).includes('③ 予定を入れる') && btns.join() === '予定を入れる',
+    '案内 3/3：③ 予定。主ボタンは「予定を入れる」',
+    btns,
+  );
+  await page.screenshot({ path: path.join(OUT_DIR, 'start-guide-3.png') });
+  await page.getByTestId('start-guide-plan').click();
+  await page.waitForURL(/#\/month/);
+  check(true, '案内③：「予定を入れる」で予定の画面（定期は月）へ');
+  // 空のデータで各画面が壊れない
+  for (const [hash, label] of [
+    ['/month', '月の予定'],
+    ['/week', '週の予定'],
+    [`/plan?date=${TODAY}`, '日の予定'],
+    ['/home', 'ホーム'],
+    ['/clients', '利用者さんの一覧'],
+    ['/staff', 'スタッフの一覧'],
+    ['/settings', '管理者設定'],
+    ['/data', 'データ'],
+    ['/types', '訪問の種類'],
+    ['/vacancy', '空き状況'],
+    ['/compat', '相性'],
+    ['/availability', '勤務時間'],
+    ['/start?step=2', '登録の案内'],
+  ])
+    await screenOk(page, hash, label);
+  await page.goto('about:blank');
+  await page.goto(`${BASE}#/clients`);
+  await page.locator('.app-main h1').first().waitFor({ timeout: 30000 });
+  check(
+    (await page.locator('.app-main').innerText()).includes('いません'),
+    '空の利用者さんの一覧に「当てはまる利用者さんがいません」の文が出る',
+  );
+  await ctx.close();
+  // 単発で自分のデータ：呼び名はお客様／シッター・③は週の予定へ
+  const o = await askingPage(b);
+  await o.page.goto(`${BASE}#/`);
+  await o.page.getByTestId('first-run').waitFor({ timeout: 30000 });
+  await o.page.getByTestId('first-run-start-own').check();
+  await o.page.getByTestId('first-run-booking-oneOff').check();
+  await o.page.getByTestId('first-run-submit').click();
+  await o.page.getByTestId('start-guide').waitFor({ timeout: 30000 });
+  check(
+    (await o.page.locator('.app-main h1').first().innerText()).includes('① お客様を入れる'),
+    '自分のデータ・単発：案内の呼び名はお客様',
+  );
+  await o.page.goto('about:blank');
+  await o.page.goto(`${BASE}#/start?step=3`);
+  await o.page.getByTestId('start-guide-plan').click();
+  await o.page.waitForURL(/#\/week/);
+  check(true, '自分のデータ・単発：③の「予定を入れる」は週の予定へ');
+  for (const [hash, label] of [
+    ['/week', '週の予定'],
+    ['/month', '月の予定'],
+    [`/plan?date=${TODAY}`, '日の予定'],
+    ['/clients', 'お客様の一覧'],
+    ['/staff', 'シッターの一覧'],
+  ])
+    await screenOk(o.page, hash, `単発・${label}`);
+  await o.ctx.close();
+}
+
+// 設定の「最初の設定をやり直す」：確認（元に戻すの対象外・先に書き出す案内）→ 2問へ戻る → 選んだ答えでデータを作り直す
+async function firstRunRestart(b) {
+  const { ctx, page } = await newPage(b, { human: false });
+  await page.goto(`${BASE}#/settings`);
+  await page.getByTestId('restart-first-run-button').waitFor({ timeout: 30000 });
+  const before = await stored2(page);
+  check(before.clients.length === 20, '前提：今の初期データ（20人）');
+  // 取り消すとそのまま
+  await page.getByTestId('restart-first-run-button').click();
+  const body = await page.getByTestId('confirm-body').innerText();
+  check(
+    body.includes('Ctrl+Z') && body.includes('対象外') && body.includes('書き出して'),
+    '確認の文：元に戻す（Ctrl+Z）の対象外なので、先にデータを書き出す案内',
+    body,
+  );
+  await page.getByTestId('confirm-cancel').click();
+  await settle(page, 300);
+  check(
+    (await page.getByTestId('first-run').count()) === 0 && (await stored2(page)).clients.length === 20,
+    '取り消すと2問へ戻らず、データはそのまま',
+  );
+  // 2問へ戻る：答えるまではデータはそのまま・読み直すと元の画面
+  await page.getByTestId('restart-first-run-button').click();
+  await page.getByTestId('confirm-ok').click();
+  await page.getByTestId('first-run').waitFor({ timeout: 30000 });
+  check((await stored2(page)).clients.length === 20, '2問へ戻っても、答えるまではデータを作り直さない');
+  await page.reload();
+  await page.locator('.app-main h1').first().waitFor({ timeout: 30000 });
+  check(
+    (await page.getByTestId('first-run').count()) === 0,
+    '2問のまま読み直すと、元のデータで開く（作り直していない）',
+  );
+  // もう一度：単発・自分のデータで作り直す
+  await page.goto('about:blank');
+  await page.goto(`${BASE}#/settings`);
+  await page.getByTestId('restart-first-run-button').click();
+  await page.getByTestId('confirm-ok').click();
+  await page.getByTestId('first-run').waitFor({ timeout: 30000 });
+  await page.getByTestId('first-run-start-own').check();
+  await page.getByTestId('first-run-booking-oneOff').check();
+  await page.getByTestId('first-run-submit').click();
+  await page.getByTestId('start-guide').waitFor({ timeout: 30000 });
+  await until(async () => (await stored2(page)).clients.length === 0, 10000);
+  const after = await stored2(page);
+  check(
+    after.org.terms.client === 'お客様' && after.org.features.patterns === false && after.staff.length === 0,
+    '選んだ答えでデータを作り直す（単発・自分のデータ：お客様／シッター・単発のみ・空）',
+    after.org,
+  );
+  check(
+    /#\/start/.test(hashOf(page)),
+    'やり直したあとは選んだ答えの最初の画面（自分のデータ＝登録の案内）',
+    hashOf(page),
+  );
+  // 1世代の控えが残り、データの画面の「直前の状態に戻す」で戻れる
+  await page.goto('about:blank');
+  await page.goto(`${BASE}#/data`);
+  await page.getByTestId('tour-again').waitFor({ timeout: 30000 });
+  check(
+    (await page.getByRole('button', { name: /直前の状態に戻す/ }).count()) > 0,
+    'やり直す前のデータは1世代の控えに残る（データの画面の「直前の状態に戻す」）',
+  );
+  await ctx.close();
+}
+
+// ---- 案内ツアー（初回には自動で出ない。データの画面の「案内をもう一度見る」から開く）----
+/** データの画面からツアーを開く */
+async function openTourFromData(page) {
+  await open(page, '/data', '[data-testid="tour-again"]');
+  await page.getByTestId('tour-again').click();
+  await tour(page).waitFor();
+}
+
+async function tourDialog(b) {
+  const { ctx, page } = await newPage(b, { human: false });
+  await open(page, '/', '[data-testid="home-tasks"]');
+  await settle(page, 500);
+  check((await tour(page).count()) === 0, 'ツアーは自動で出ない（初回の2問に置き換えた）');
+  await openTourFromData(page);
   const t = tour(page);
   const attrs = await t.evaluate((el) => ({
     role: el.getAttribute('role'),
@@ -102,11 +462,14 @@ async function tourFirst(b) {
   }));
   check(
     attrs.role === 'dialog' && attrs.modal === 'true' && /今日やること/.test(attrs.title) && attrs.body.length > 10,
-    'ツアー：初めて開くと出る（role=dialog・aria-modal・見出し・本文）',
+    'ツアー：開くと出る（role=dialog・aria-modal・見出し・本文）',
     attrs,
   );
-  check(/#\/home/.test(hashOf(page)), 'ツアー：裏はホーム', hashOf(page));
   check((await page.getByTestId('tour-count').innerText()).includes('1 / 3'), 'ツアー：1 / 3');
+  check(
+    (await page.getByTestId('tour-start').count()) === 0,
+    'ツアー：「どこまで使いますか」は無い（最初の2問に置き換えた）',
+  );
   check((await activeTestId(page)) === 'tour-next', 'ツアー：最初のフォーカスは「次へ」');
   check(await page.getByTestId('tour-back').isDisabled(), 'ツアー：最初の枚は「戻る」を押せない');
   const lock = await page.evaluate(() => ({
@@ -140,7 +503,6 @@ async function tourFirst(b) {
   await page.getByTestId('tour-next').click();
   check((await page.getByTestId('tour-count').innerText()).includes('2 / 3'), 'ツアー：次へで 2 / 3');
   check((await tour(page).getAttribute('data-step')) === 'plan', 'ツアー：2枚目は予定（月・週・日）');
-  check((await page.getByTestId('tour-start').count()) === 0, 'ツアー：「どこまで使いますか」は1枚目だけ');
   await page.getByTestId('tour-back').click();
   check((await page.getByTestId('tour-count').innerText()).includes('1 / 3'), 'ツアー：戻るで 1 / 3');
   check(
@@ -151,17 +513,16 @@ async function tourFirst(b) {
   for (let i = 0; i < 2; i++) {
     keys.push(await tour(page).getAttribute('data-step'));
     if (i === 1) {
-      check((await seenValue(page)) === null, 'ツアー：途中（2枚目まで）は覚えない');
       // 予定の枚：3段の説明（PRD D226。組むのは「予定を組む」。ADR-0063）と［月｜週｜日］の切り替え
       const points = await page.getByTestId('tour-points').locator('li').allInnerTexts();
       check(
         (await page.getByTestId('tour-title').innerText()) === '予定を組んで、直して、確定します' &&
           (await page.getByTestId('tour-body').innerText()).includes('［月｜週｜日］') &&
-          // 初めて開くと機能は「基本」（エキスパート機能は切）なので、組むのは担当を組む画面（ADR-0072）
-          (await page.getByTestId('tour-body').innerText()).includes('［この日の担当を組む］') &&
+          // 印「all」（すべて入。エキスパート機能も入）なので、組むのはメニューの「予定を組む」（ADR-0072）
+          (await page.getByTestId('tour-body').innerText()).includes('「予定を組む」') &&
           points.length === 3 &&
           /^組む（AI）：/.test(points[0]) &&
-          points[0].includes('担当を組む画面') &&
+          points[0].includes('メニューの「予定を組む」') &&
           /^ピン：/.test(points[1]) &&
           /^確定（伝えた）：/.test(points[2]),
         'ツアー：予定の枚は題名「予定を組んで、直して、確定します」・［月｜週｜日］と3段（組む（AI）→ ピン → 確定（伝えた））の説明',
@@ -204,224 +565,34 @@ async function tourFirst(b) {
     'ツアー：最後の枚に入るとフォーカスは主ボタン「今日の予定を開く」',
     await activeTestId(page),
   );
-  check((await seenValue(page)) === '1', 'ツアー：最後の枚まで進んだら閉じる前でも見たことを覚える');
   await page.screenshot({ path: path.join(OUT_DIR, 'tour-last.png') });
   await page.getByTestId('tour-next').click();
   await tour(page).waitFor({ state: 'detached' });
-  const after = await page.evaluate(
-    ([k, d]) => ({
-      seen: localStorage.getItem(k),
-      inert: document.getElementById('root').inert,
-      html: document.documentElement.style.overflow,
-      dataHasTour: (localStorage.getItem(d) ?? '').includes('tour'),
-    }),
-    [TOUR_KEY, STORAGE_KEY],
-  );
-  check(
-    after.seen === '1' && !after.inert && after.html === '' && !after.dataHasTour,
-    '「閉じる」で閉じ、見たことを DemoData と別のキーに覚える・裏の inert とロックを戻す',
-    after,
-  );
-  // 読み直しても出ない
-  await open(page, '/', '[data-testid="home-tasks"]');
-  await settle(page, 500);
-  check((await tour(page).count()) === 0, '読み直しても出ない（見たことを覚えている）');
-  await ctx.close();
-}
-
-// 初めて開いたときの機能の入り切り（PRD D276。ADR-0045）：保存データが無ければ「基本」で始め、1枚目で「どこまで使いますか」。
-// 「すべて」を選ぶとその入り切りで初期データを作り直し（繰り返しの担当も入る）、「基本」に戻せる
-async function tourStart(b) {
-  const { ctx, page } = await newPage(b, { human: true });
-  await open(page, '/', '[data-testid="tour"]');
-  const data = () => page.evaluate((k) => JSON.parse(localStorage.getItem(k) ?? 'null'), STORAGE_KEY);
-  /** 初期データの担当：繰り返しの担当（usualStaffId）の入った繰り返しの数。保存した訪問は空（AI で組まない。版2） */
-  const assignedOf = (d) => (d?.patterns ?? []).filter((p) => p.usualStaffId).length;
-  let d = await data();
-  const f0 = d?.org?.features ?? {};
-  check(
-    f0.rules === false && f0.compare === false && f0.workload === false && f0.sudden === true && f0.compat === true,
-    '初めて開くと機能は「基本」（条件の重み・案を比べる・勤務の見込みは切）',
-    f0,
-  );
-  check(
-    assignedOf(d) > 0 && d?.visits?.length === 0,
-    '初めて開いたときに初期データの担当（繰り返しの担当）が入っていて、保存した訪問は空',
-    { usual: assignedOf(d), visits: d?.visits?.length },
-  );
-  const start = page.getByTestId('tour-start');
-  check(await start.isVisible(), '1枚目に「どこまで使いますか」を出す');
-  check(
-    (await start.locator('legend').innerText()).includes('どこまで使いますか') &&
-      (await page.getByTestId('tour-start-basic').isChecked()) &&
-      !(await page.getByTestId('tour-start-all').isChecked()) &&
-      (await start.innerText()).includes('管理者設定'),
-    '「どこまで使いますか」：基本を選んだ状態・すべて・管理者設定の注記',
-  );
-  check((await activeTestId(page)) === 'tour-next', '「どこまで使いますか」があっても最初のフォーカスは「次へ」');
-  await page.screenshot({ path: path.join(OUT_DIR, 'tour-start.png') });
-  // ラジオは標準の radio group：Tab は選んでいる方だけ、矢印で選び直す。選び直しただけでは当てない（1枚目を離れるときに当てる）
-  const stops = [];
-  for (let i = 0; i < 8; i++) {
-    await page.keyboard.press('Tab');
-    stops.push(await activeTestId(page));
-  }
-  check(
-    stops.includes('tour-start-basic') && !stops.includes('tour-start-all'),
-    '「どこまで使いますか」：Tab は選んでいる方（基本）だけに止まる',
-    stops,
-  );
-  await page.getByTestId('tour-start-basic').focus();
-  await page.keyboard.press('ArrowDown');
-  check(
-    (await page.getByTestId('tour-start-all').isChecked()) && (await activeTestId(page)) === 'tour-start-all',
-    '「どこまで使いますか」：矢印で「すべて」へ選び直す',
-  );
-  await page.keyboard.press('ArrowUp');
-  await page.keyboard.press('ArrowDown');
-  await settle(page, 300);
-  check((await data())?.org?.features?.rules === false, '矢印で選び直しただけでは当てない（データはそのまま）');
-  // 「次へ」で当てる
+  const after = await page.evaluate(() => ({
+    inert: document.getElementById('root').inert,
+    html: document.documentElement.style.overflow,
+  }));
+  check(!after.inert && after.html === '', '「閉じる」で閉じ、裏の inert とロックを戻す', after);
+  check((await activeTestId(page)) === 'tour-again', '閉じたらフォーカスは「案内をもう一度見る」へ');
+  // Esc・とばす
+  await page.getByTestId('tour-again').click();
+  await tour(page).waitFor();
   await page.getByTestId('tour-next').click();
-  await until(async () => (await data())?.org?.features?.rules === true, 10000);
-  d = await data();
-  const f1 = d?.org?.features ?? {};
-  check(
-    Object.values(f1).length === 22 && Object.values(f1).every((v) => v === true),
-    '「すべて」を選んで「次へ」で、すべての機能を入れる',
-    f1,
-  );
-  check(assignedOf(d) > 0, '「すべて」を当てると初期データを作り直し、繰り返しの担当も入っている', assignedOf(d));
-  // 戻って「基本」に戻せる
-  await page.getByTestId('tour-back').click();
-  check(await page.getByTestId('tour-start-all').isChecked(), '戻ると「すべて」を選んだ状態');
-  await page.getByTestId('tour-start-basic').check();
-  await page.getByTestId('tour-next').click();
-  await until(async () => (await data())?.org?.features?.rules === false, 10000);
-  check((await data())?.org?.features?.compare === false, '「基本」に戻せる');
-  await page.getByTestId('tour-back').click();
-  await page.getByTestId('tour-start-all').check();
-  // 「とばす」でも当てる
+  await page.keyboard.press('Escape');
+  await tour(page).waitFor({ state: 'detached' });
+  check(/#\/data/.test(hashOf(page)), 'Esc で閉じても画面はそのまま', hashOf(page));
+  await page.getByTestId('tour-again').click();
+  await tour(page).waitFor();
   await page.getByTestId('tour-skip').click();
   await tour(page).waitFor({ state: 'detached' });
-  await until(async () => (await data())?.org?.features?.rules === true, 10000);
-  check(
-    Object.values((await data())?.org?.features ?? {}).every((v) => v === true) && assignedOf(await data()) > 0,
-    '「とばす」でも選んだもの（すべて）を当てる（繰り返しの担当も入っている）',
-  );
-  // 読み直しても入り切りは残り、ツアーは出ない
-  await open(page, '/settings', '[data-testid="settings-tabs"]');
-  await settle(page, 400);
-  const tabs = await page.getByTestId('settings-tabs').locator('a').allInnerTexts();
-  check(
-    tabs.length === 4 && (await tour(page).count()) === 0,
-    '読み直しても「すべて」のまま（設定のタブ4つ。条件の重みは予定を組む）・ツアーは出ない',
-    tabs,
-  );
+  check(true, '「とばす」で閉じる');
   await ctx.close();
-  // 起動したあと別のタブでデータが変わっていたら、作り直さずに入り切りだけ書き換える（別のタブの変更を消さない）
-  {
-    const o = await newPage(b, { human: true });
-    await open(o.page, '/', '[data-testid="tour"]');
-    const other = await o.ctx.newPage();
-    await other.goto(`${BASE}#/data`);
-    await other.locator('h1').first().waitFor({ timeout: 30000 });
-    await other.evaluate((k) => {
-      const x = JSON.parse(localStorage.getItem(k));
-      x.org.name = 'e2e 別のタブで変えた事業所';
-      localStorage.setItem(k, JSON.stringify(x));
-    }, STORAGE_KEY);
-    await other.close();
-    await settle(o.page, 500);
-    await o.page.getByTestId('tour-start-all').check();
-    await o.page.getByTestId('tour-next').click();
-    const od = () => o.page.evaluate((k) => JSON.parse(localStorage.getItem(k) ?? 'null'), STORAGE_KEY);
-    await until(async () => (await od())?.org?.features?.rules === true, 10000);
-    check(
-      (await od())?.org?.name === 'e2e 別のタブで変えた事業所',
-      '別のタブで変わったあとに「すべて」を当てても作り直さず、別のタブの変更は残る（入り切りだけ書き換える）',
-      (await od())?.org?.name,
-    );
-    await o.ctx.close();
-  }
-  // 保存データがある人：features の無い古いデータは今までどおりすべて入（1問も出さない）
-  const h = await newPage(b, { human: true });
-  await open(h.page, '/', '[data-testid="tour"]');
-  await h.page.evaluate((k) => {
-    const x = JSON.parse(localStorage.getItem(k));
-    delete x.org.features;
-    localStorage.setItem(k, JSON.stringify(x));
-  }, STORAGE_KEY);
-  await open(h.page, '/', '[data-testid="tour"]');
-  check(
-    (await h.page.getByTestId('tour-start').count()) === 0,
-    '保存データがある人（初めてでない）には「どこまで使いますか」を出さない',
-  );
-  await h.page.getByTestId('tour-skip').click();
-  await open(h.page, '/settings', '[data-testid="settings-tabs"]');
-  check(
-    (await h.page.getByTestId('settings-tabs').locator('a').count()) === 4,
-    'features の無い保存データは今までどおりすべて入（設定のタブ4つ）',
-  );
-  await h.ctx.close();
 }
 
-async function tourEscSkip(b) {
-  // Esc
-  {
-    const { ctx, page } = await newPage(b, { human: true });
-    await open(page, '/week', '[data-testid="tour"]');
-    await page.getByTestId('tour-next').click();
-    await page.keyboard.press('Escape');
-    await tour(page).waitFor({ state: 'detached' });
-    check((await seenValue(page)) === '1', 'Esc で閉じ、見たことを覚える');
-    check(/#\/week/.test(hashOf(page)), 'Esc で閉じても画面はそのまま', hashOf(page));
-    await ctx.close();
-  }
-  // とばす
-  {
-    const { ctx, page } = await newPage(b, { human: true });
-    await open(page, '/', '[data-testid="tour"]');
-    await page.getByTestId('tour-skip').click();
-    await tour(page).waitFor({ state: 'detached' });
-    check((await seenValue(page)) === '1', '「とばす」で閉じ、見たことを覚える');
-    await ctx.close();
-  }
-  // ?id=・?do= のリンク、人の画面（#/clients/:id）のリンクで開いたときは出ない。次にふつうに開くと出る
-  {
-    const { ctx, page } = await newPage(b, { human: true });
-    await open(page, '/clients?id=c1', '[data-testid="person-view"]');
-    await settle(page, 500);
-    check(
-      (await tour(page).count()) === 0 && (await page.getByTestId('person-view').getAttribute('data-id')) === 'c1',
-      '?id= のリンクで開くとツアーは出ず、その人の画面',
-    );
-    await open(page, '/staff/s1', '[data-testid="person-view"]');
-    await settle(page, 500);
-    check((await tour(page).count()) === 0, '人の画面（#/staff/:id）のリンクで開くとツアーは出ない');
-    check((await seenValue(page)) === null, '?id= で出さなくても見たことにはしない');
-    await open(page, `/plan?date=${TODAY}&do=absence`, '.drawer');
-    await settle(page, 500);
-    check((await tour(page).count()) === 0, '?do= のリンクで開くとツアーは出ない');
-    await open(page, '/', '[data-testid="tour"]');
-    check(true, '次にふつうに開くとツアーが出る');
-    await ctx.close();
-  }
-  // 月の印刷の画面（メニューの外）では出ない（初回は「基本」で月の印刷を切っているので、初回の入り切りを「すべて」にして開く）
-  {
-    const { ctx, page } = await newPage(b, { human: true, start: 'all' });
-    await page.goto(`${BASE}#/month/print?ym=${YM}`);
-    await page.locator('.mprint').first().waitFor({ timeout: 30000 });
-    await settle(page, 400);
-    check((await tour(page).count()) === 0, '月の印刷の画面では出ない');
-    await ctx.close();
-  }
-}
-
-// 最後の枚の「今日の予定を開く」（PRD D226）：閉じて今日の日の画面（選んでいる日付は今日）。見たことを覚える
+// 最後の枚の「今日の予定を開く」（PRD D226）：閉じて今日の日の画面（選んでいる日付は今日）
 async function tourToday(b) {
-  const { ctx, page } = await newPage(b, { human: true });
-  await open(page, '/month', '[data-testid="tour"]');
+  const { ctx, page } = await newPage(b, { human: false });
+  await openTourFromData(page);
   for (let i = 0; i < 2; i++) await page.getByTestId('tour-next').click();
   check(
     (await tour(page).getAttribute('data-step')) === 'absence',
@@ -434,18 +605,14 @@ async function tourToday(b) {
   await page.waitForURL(/#\/plan/);
   await page.locator('.date-switch select').waitFor({ timeout: 30000 });
   await page.waitForFunction(() => !/date=/.test(location.hash), null, { timeout: 5000 }).catch(() => {});
-  const st = await page.evaluate(
-    (k) => ({
-      date: document.querySelector('.date-switch select')?.value,
-      hash: decodeURIComponent(location.hash),
-      seen: localStorage.getItem(k),
-      inert: document.getElementById('root').inert,
-    }),
-    TOUR_KEY,
-  );
+  const st = await page.evaluate(() => ({
+    date: document.querySelector('.date-switch select')?.value,
+    hash: decodeURIComponent(location.hash),
+    inert: document.getElementById('root').inert,
+  }));
   check(
-    st.date === TODAY && st.hash === '#/plan' && st.seen === '1' && !st.inert,
-    '「今日の予定を開く」で閉じ、今日の日の予定（?date= は消える）・見たことを覚える',
+    st.date === TODAY && st.hash === '#/plan' && !st.inert,
+    '「今日の予定を開く」で閉じ、今日の日の予定（?date= は消える）',
     st,
   );
   // 初期データに今日の担当がある（PRD D225）ので、そのまま確定の手前まで見える
@@ -457,54 +624,9 @@ async function tourToday(b) {
   await ctx.close();
 }
 
-async function tourAgain(b) {
-  // 「見た」の印があれば自動で出ない（ほかの e2e は skipTour で印を入れる）。データの画面から開ける
-  const { ctx, page } = await newPage(b, { human: false });
-  await open(page, '/', '[data-testid="home-tasks"]');
-  await settle(page, 500);
-  check(
-    (await tour(page).count()) === 0,
-    '「見た」の印があれば自動で出ない（ほかの e2e は scripts/lib/tourSeen.cjs で印を入れる）',
-  );
-  await open(page, '/data', '[data-testid="tour-again"]');
-  const btn = page.getByTestId('tour-again');
-  await btn.click();
-  await tour(page).waitFor();
-  check(
-    (await page.getByTestId('tour-count').innerText()).includes('1 / 3'),
-    'データの「案内をもう一度見る」で1枚目から開く',
-  );
-  check(
-    (await page.getByTestId('tour-start').count()) === 0,
-    '「案内をもう一度見る」では「どこまで使いますか」を出さない',
-  );
-  await page.keyboard.press('Escape');
-  await tour(page).waitFor({ state: 'detached' });
-  check((await activeTestId(page)) === 'tour-again', '閉じたらフォーカスは「案内をもう一度見る」へ');
-  check((await seenValue(page)) === '1', 'もう一度見て閉じても見たまま');
-  // 初期状態に戻しても見たことは残る
-  await page.getByRole('button', { name: 'デモの初期状態に戻す' }).click();
-  await page.getByTestId('confirm-ok').click();
-  await page.locator('.toast').filter({ hasText: '初期状態に戻しました' }).waitFor();
-  check((await seenValue(page)) === '1', '初期状態に戻しても見たことは残る（データとは別）');
-  await ctx.close();
-  // 人のブラウザで：見たあとに初期状態に戻して読み直しても出ない
-  const h = await newPage(b, { human: true });
-  await open(h.page, '/data', '[data-testid="tour"]');
-  await h.page.getByTestId('tour-skip').click();
-  await h.page.getByRole('button', { name: 'デモの初期状態に戻す' }).click();
-  await h.page.getByTestId('confirm-ok').click();
-  await h.page.locator('.toast').filter({ hasText: '初期状態に戻しました' }).waitFor();
-  await settle(h.page, 600);
-  await open(h.page, '/', '[data-testid="home-tasks"]');
-  await settle(h.page, 500);
-  check((await tour(h.page).count()) === 0, '初期状態に戻して読み直してもツアーは出ない');
-  await h.ctx.close();
-}
-
 async function tourMobilePrint(b) {
-  const { ctx, page } = await newPage(b, { human: true, width: 390, height: 844 });
-  await open(page, '/', '[data-testid="tour"]');
+  const { ctx, page } = await newPage(b, { human: false, width: 390, height: 844 });
+  await openTourFromData(page);
   for (let i = 0; i < 3; i++) {
     const box = await tour(page).boundingBox();
     const btns = await page
@@ -530,7 +652,16 @@ async function tourMobilePrint(b) {
   await page.emulateMedia({ media: 'print' });
   check(!(await visible(tour(page))), '印刷ではツアーを出さない');
   await page.emulateMedia({ media: 'screen' });
+  // 最初の2問も 390px で収まる（人が初めて開く画面）
   await ctx.close();
+  const h = await askingPage(b, { width: 390, height: 844 });
+  await h.page.goto(`${BASE}#/`);
+  await h.page.getByTestId('first-run').waitFor({ timeout: 30000 });
+  const fb = await h.page.locator('[data-testid="first-run"] form').boundingBox();
+  const fsw = await h.page.evaluate(() => document.documentElement.scrollWidth);
+  check(fb.x >= 0 && fb.x + fb.width <= 390 && fsw <= 390, '390px：最初の2問の画面が横にはみ出さない', { fb, fsw });
+  await h.page.screenshot({ path: path.join(OUT_DIR, 'first-run-390.png') });
+  await h.ctx.close();
 }
 
 // ---- データの画面のファイル選択 ----
@@ -1050,11 +1181,12 @@ const steps = [
     },
   ],
   ...[
-    ['tour-first', tourFirst],
-    ['tour-start', tourStart],
-    ['tour-esc-skip', tourEscSkip],
+    ['first-run', firstRun],
+    ['first-run-one-off', firstRunOneOff],
+    ['first-run-own', firstRunOwn],
+    ['first-run-restart', firstRunRestart],
+    ['tour-dialog', tourDialog],
     ['tour-today', tourToday],
-    ['tour-again', tourAgain],
     ['tour-mobile-print', tourMobilePrint],
     ['file-pick', filePick],
     ['month-list', monthList],

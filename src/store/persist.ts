@@ -3,9 +3,10 @@ import { z } from 'zod';
 import { DATA_VERSION, type DemoData, demoDataSchema, type ImportError, STORAGE_KEY } from '../contracts/data';
 import { type Features, featuresSchema } from '../contracts/features';
 import { jstDate } from '../domain/time';
+import { createFirstRunData, type FirstRunAnswer } from '../lib/firstRun';
 import { createInitialData } from '../seed/plans';
 import { repair } from './repair';
-import { startFeatures } from './start';
+import { startsWithAll } from './start';
 
 /** 壊れた JSON の退避先 */
 export const BROKEN_KEY = 'vrdemo:data:broken';
@@ -191,23 +192,30 @@ function keepBroken(ls: Storage, text: string): boolean {
  * 読み込む。broken：保存していたデータが読めず、元の文字を BROKEN_KEY に退避して初期データで開いた（PRD D227。画面が知らせる）。
  * outdated：読めなかった理由が前の版（版1）のデータ（ADR-0053。画面は「データの形が変わったので初期データで始めます」と知らせる。broken も true）。
  * brokenKept：元の文字を退避できた（できなければ画面は「今すぐ書き出してください」と知らせる。元の文字は開いている間 brokenText で書き出せる）。
- * fresh：保存データが無く、初めて開いた（初期データを作った）。初めての入り切りは「基本」のひな形（startFeatures。PRD D276）
+ * firstRun：保存データが無く、初めて開いた（印「all」が無いとき。画面は最初の2問を出し、答えが決まるまでデータを書かない。PRD D379）。
+ * 印「all」（start.ts）があれば2問を出さず、今の初期データ＋すべて入（{}）で書いて始める（e2e の前準備）
  */
 export function loadWithStatus(): {
   data: DemoData;
   broken: boolean;
   outdated: boolean;
   brokenKept: boolean;
-  fresh: boolean;
+  firstRun: boolean;
 } {
   const ls = storage();
   const todayDate = today();
   const text = ls?.getItem(STORAGE_KEY) ?? null;
   if (text === null) {
-    const d = createInitialData(todayDate, startFeatures());
-    writeNow(d);
+    if (startsWithAll()) {
+      const d = createInitialData(todayDate, {});
+      writeNow(d);
+      current = d;
+      return { data: d, broken: false, outdated: false, brokenKept: false, firstRun: false };
+    }
+    // 最初の2問に答えるまでは書かない（読み直すとまた2問）。それまでの仮のデータは空（画面は2問の画面だけを出す）
+    const d = createFirstRunData({ start: 'own', booking: 'regular' }, todayDate);
     current = d;
-    return { data: d, broken: false, outdated: false, brokenKept: false, fresh: true };
+    return { data: d, broken: false, outdated: false, brokenKept: false, firstRun: true };
   }
   const r = importJson(text);
   if (isImportError(r)) {
@@ -225,16 +233,16 @@ export function loadWithStatus(): {
     }
     // 退避が容量超過なら1世代の控えを捨ててもう1回（keepBroken）。退避できなくても続ける
     const brokenKept = ls ? keepBroken(ls, text) : false;
-    // 壊れたデータ（版は読めない）は reset と同じく入り切りを {}（すべて入）で始める（ADR-0028。初めて開いたときだけ startFeatures が基本にする）
+    // 壊れたデータ（版は読めない）は reset と同じく入り切りを {}（すべて入）で始める（ADR-0028。最初の2問は保存データが無いときだけ）
     const d = createInitialData(todayDate, features ?? {});
     // 退避できたら作った初期データを書く（読み直すたびに初期データの計算と退避を繰り返さない）。
     // 退避できなかったときは元の文字を残す（上書きすると壊れたデータが消える。brokenText が本体のキーから返す）
     if (brokenKept) writeNow(d);
     current = d;
-    return { data: d, broken: true, outdated, brokenKept, fresh: false };
+    return { data: d, broken: true, outdated, brokenKept, firstRun: false };
   }
   current = r;
-  return { data: r, broken: false, outdated: false, brokenKept: false, fresh: false };
+  return { data: r, broken: false, outdated: false, brokenKept: false, firstRun: false };
 }
 
 export function load(): DemoData {
@@ -472,11 +480,23 @@ export function readPrevious(): DemoData | ImportError | null {
  * 今のデータが無い（読み込みが例外で落ちた例外の画面から戻す）ときはすべて入（{}）：今まで全部入りだった人を「基本」にしない
  */
 export function reset(features: Features = current?.org.features ?? {}): DemoData {
+  return commitNew(createInitialData(today(), features));
+}
+
+/** 待っている保存を捨て、新しいデータを書いて画面が使うデータにする */
+function commitNew(d: DemoData): DemoData {
   if (timer) clearTimeout(timer);
   timer = null;
   pending = null;
-  const d = createInitialData(today(), features);
   writeNow(d);
   current = d;
   return d;
+}
+
+/**
+ * 最初の2問の答えでデータを作って書く（初めて開いたとき・設定の「最初の設定をやり直す」。PRD D379〜D381）。
+ * 呼び名・ひな形・データは答えで決まる（lib/firstRun）。機能の入り切りも答えのひな形で決め直す
+ */
+export function startWithAnswer(answer: FirstRunAnswer): DemoData {
+  return commitNew(createFirstRunData(answer, today()));
 }

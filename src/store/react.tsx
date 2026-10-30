@@ -1,6 +1,7 @@
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { type DemoData, STORAGE_KEY } from '../contracts/data';
 import type { Features } from '../contracts/features';
+import type { FirstRunAnswer } from '../lib/firstRun';
 import { appHistory } from '../lib/history';
 import {
   flushSave,
@@ -17,6 +18,7 @@ import {
   reset as resetStore,
   samePreviousInfo,
   save,
+  startWithAnswer,
   swapPrevious,
 } from './persist';
 
@@ -60,8 +62,18 @@ export type DemoStore = {
   /** 読めなかった元の文字を退避できたか（できなければ知らせは「今すぐ書き出してください」） */
   brokenKept: boolean;
   dismissBroken(): void;
-  /** 起動したとき保存データが無く、初めて開いたか（初回の案内ツアーで「どこまで使うか」を聞く。PRD D276） */
-  startedFresh: boolean;
+  /**
+   * 最初の2問を出すか（PRD D379〜D381。ADR-0073）：保存データが無く初めて開いたとき（印「all」が無ければ）と、
+   * 設定の「最初の設定をやり直す」（askFirstRun）のあと。答えるまでデータは書かない
+   */
+  needsFirstRun: boolean;
+  /**
+   * 最初の2問の答えでデータを作り直して書く（呼び名・ひな形・データが決まる。履歴は捨てる。元に戻す Ctrl+Z の対象外）。
+   * やり直し（すでにデータがあったとき）は、先に1世代の控えに残す（「直前の状態に戻す」で戻せる）
+   */
+  startFirstRun(answer: FirstRunAnswer): void;
+  /** 最初の2問をもう一度出す（設定の「最初の設定をやり直す」。答えるまでは今のデータのまま） */
+  askFirstRun(): void;
   /** 別のタブの変更で読み直した回数（画面が知らせを出すきっかけ） */
   externalReloads: number;
   /**
@@ -87,6 +99,8 @@ function useStoreState() {
     [],
   );
   const [broken, setBroken] = useState(initial.broken);
+  /** 最初の2問：first＝初めて開いたとき、redo＝設定からのやり直し、null＝出さない */
+  const [firstRun, setFirstRun] = useState<'first' | 'redo' | null>(initial.firstRun ? 'first' : null);
   const [externalReloads, setExternalReloads] = useState(0);
   const [replacedCount, setReplacedCount] = useState(0);
   const replaced = useCallback(() => setReplacedCount((n) => n + 1), []);
@@ -105,6 +119,8 @@ function useStoreState() {
     setPrevious,
     broken,
     setBroken,
+    firstRun,
+    setFirstRun,
     externalReloads,
     setExternalReloads,
     replacedCount,
@@ -120,7 +136,17 @@ type StoreState = ReturnType<typeof useStoreState>;
 
 /** データが変わったら保存し、別のタブの変更を読み直し、ページを離れるときに保存を書き切る */
 function useStorageSync(st: StoreState): void {
-  const { data, setData, setSaveError, setPrevious, setPreviousDrops, setExternalReloads, replaced, skipSave } = st;
+  const {
+    data,
+    setData,
+    setSaveError,
+    setPrevious,
+    setPreviousDrops,
+    setExternalReloads,
+    setFirstRun,
+    replaced,
+    skipSave,
+  } = st;
   useEffect(() => {
     // 例外の画面の控えは、画面が使っている最新のデータを書き出す（別のタブから読み直したデータも）
     rememberCurrent(data);
@@ -151,6 +177,8 @@ function useStorageSync(st: StoreState): void {
       // 別のタブの変更で読み直したら、履歴は捨てる（古いデータへ戻さない）
       appHistory.clear();
       setData(r);
+      // 別のタブで最初の2問に答えて保存されたら、このタブの2問は出さない（そのデータで開く）
+      setFirstRun(null);
       replaced();
       setExternalReloads((n) => n + 1);
     };
@@ -161,7 +189,7 @@ function useStorageSync(st: StoreState): void {
       window.removeEventListener('storage', onStorage);
       window.removeEventListener('pagehide', onUnload);
     };
-  }, [setPrevious, replaced, skipSave, setData, setExternalReloads]);
+  }, [setPrevious, replaced, skipSave, setData, setExternalReloads, setFirstRun]);
 }
 
 /** 書き換え・元に戻す・やり直す（全体の「元に戻す」の履歴。PRD D329。ADR-0054） */
@@ -202,7 +230,7 @@ function useHistoryActions(st: StoreState) {
 
 /** 丸ごと差し替える操作（読み込み・初期状態に戻す）と、1世代の控え（PRD D227。ADR-0032） */
 function useReplaceActions(st: StoreState) {
-  const { setData, setSaveError, setPrevious, setBroken, replaced, latest } = st;
+  const { setData, setSaveError, setPrevious, setBroken, setFirstRun, firstRun, replaced, latest } = st;
   /** 丸ごと差し替える（履歴は捨てる。差し替えの前のデータへは「直前の状態に戻す」で戻る） */
   const swapIn = useCallback(
     (d: DemoData) => {
@@ -251,7 +279,19 @@ function useReplaceActions(st: StoreState) {
     return null;
   }, [setPrevious, replaced, swapIn, latest, setSaveError]);
   const dismissBroken = useCallback(() => setBroken(false), [setBroken]);
-  return { replace, reset, keepPrevious, restorePrevious, dismissBroken };
+  /** 最初の2問の答えでデータを作り直す。やり直し（初めて開いたときでない）なら先にいまのデータを1世代の控えに残す */
+  const startFirstRun = useCallback(
+    (answer: FirstRunAnswer) => {
+      if (firstRun === 'redo') keepPrevious('最初の設定をやり直す');
+      setSaveError(null);
+      swapIn(startWithAnswer(answer));
+      replaced();
+      setFirstRun(null);
+    },
+    [firstRun, keepPrevious, replaced, swapIn, setSaveError, setFirstRun],
+  );
+  const askFirstRun = useCallback(() => setFirstRun('redo'), [setFirstRun]);
+  return { replace, reset, keepPrevious, restorePrevious, dismissBroken, startFirstRun, askFirstRun, firstRun };
 }
 
 export function DemoDataProvider({ children }: { children: ReactNode }): ReactNode {
@@ -259,7 +299,8 @@ export function DemoDataProvider({ children }: { children: ReactNode }): ReactNo
   useStorageSync(st);
   // ---- 全体の「元に戻す」の履歴（PRD D329。ADR-0054）----
   const { update, undo, redo } = useHistoryActions(st);
-  const { replace, reset, keepPrevious, restorePrevious, dismissBroken } = useReplaceActions(st);
+  const { replace, reset, keepPrevious, restorePrevious, dismissBroken, startFirstRun, askFirstRun, firstRun } =
+    useReplaceActions(st);
   const { initial, data, saveError, previous, broken, externalReloads, replacedCount, previousDrops } = st;
 
   const value = useMemo(
@@ -278,7 +319,9 @@ export function DemoDataProvider({ children }: { children: ReactNode }): ReactNo
       outdated: initial.outdated,
       brokenKept: initial.brokenKept,
       dismissBroken,
-      startedFresh: initial.fresh,
+      needsFirstRun: firstRun !== null,
+      startFirstRun,
+      askFirstRun,
       externalReloads,
       replacedCount,
       previousDrops,
@@ -297,7 +340,9 @@ export function DemoDataProvider({ children }: { children: ReactNode }): ReactNo
       broken,
       initial.brokenKept,
       dismissBroken,
-      initial.fresh,
+      firstRun,
+      startFirstRun,
+      askFirstRun,
       initial.outdated,
       externalReloads,
       replacedCount,

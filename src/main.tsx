@@ -5,6 +5,7 @@ import { HashRouter } from 'react-router-dom';
 import App from './app/App';
 import { ErrorBoundary } from './app/ErrorBoundary';
 import { ConfirmProvider } from './components/ConfirmDialog';
+import { FirstRunGate } from './components/FirstRunPage';
 import { ToastProvider } from './components/Toast';
 import { DemoDataProvider, reset } from './store';
 
@@ -27,7 +28,10 @@ createRoot(document.getElementById('root')!).render(
           <ToastProvider>
             {/* 独自の確認ダイアログ（PRD D146。ブラウザの confirm の代わり） */}
             <ConfirmProvider>
-              <App />
+              {/* 最初の2問（PRD D379）：保存データが無い初回・設定からのやり直しのあいだは、本体の代わりに2問を出す */}
+              <FirstRunGate>
+                <App />
+              </FirstRunGate>
             </ConfirmProvider>
           </ToastProvider>
         </HashRouter>

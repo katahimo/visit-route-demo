@@ -1,0 +1,73 @@
+/* 最初の2問（PRD D379。ADR-0073）：1画面に2問と主ボタン「はじめる」。選んだ方は縁と地の色に加えラジオの印で示す */
+.first-run {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+.first-run-card {
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.first-run-card h1 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+.first-run-card h1:focus {
+  outline: none;
+}
+.first-run-choice {
+  margin: 0;
+  padding: 10px 12px 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.first-run-choice-title {
+  padding: 0 4px;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.first-run-choice-item {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  color: var(--ink);
+  font-size: 0.95rem;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  line-height: 1.5;
+}
+.first-run-choice-item input {
+  width: auto;
+  margin: 4px 0 0;
+  padding: 0;
+  flex: none;
+}
+.first-run-choice-item.is-on {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+.first-run-choice-desc {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--sub);
+}
+.first-run-note {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--sub);
+}
+.first-run-actions {
+  display: flex;
+  justify-content: flex-end;
+}

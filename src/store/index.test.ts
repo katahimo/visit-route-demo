@@ -8,6 +8,8 @@ import {
   canKeepPrevious,
   currentData,
   exportJson,
+  FEATURES_START_ALL,
+  FEATURES_START_KEY,
   flushSave,
   importJson,
   isImportError,
@@ -107,7 +109,10 @@ describe('版1のデータ（ADR-0053。移行しない）', () => {
 });
 
 describe('load・save', () => {
-  it('無ければ初期データを作って保存する', () => {
+  it('無ければ（印「all」があるとき）初期データを作って保存する。印が無ければ2問に答えるまで書かない（PRD D379）', () => {
+    expect(loadWithStatus().firstRun).toBe(true);
+    expect(mem.has(STORAGE_KEY)).toBe(false);
+    mem.set(FEATURES_START_KEY, FEATURES_START_ALL);
     const d = load();
     expect(d.version).toBe(DATA_VERSION);
     expect(mem.has(STORAGE_KEY)).toBe(true);

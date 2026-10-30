@@ -30,6 +30,7 @@ import StaffPage from '../pages/StaffPage';
 import StaffPersonPage from '../pages/StaffPersonPage';
 import StaffViewPage from '../pages/StaffViewPage';
 import StandardPage from '../pages/StandardPage';
+import StartGuidePage from '../pages/StartGuidePage';
 import TypesPage from '../pages/TypesPage';
 import WeekPage from '../pages/WeekPage';
 import WorkloadPage from '../pages/WorkloadPage';
@@ -117,6 +118,8 @@ export default function App() {
                 <Route path="/clients" element={<ClientsPage />} />
                 <Route path="/clients/:id" element={<ClientPage />} />
                 <Route path="/availability" element={<AvailabilityPage />} />
+                {/* 登録の案内（PRD D381。ADR-0073）：自分のデータで始めたあとの3段 */}
+                <Route path="/start" element={<StartGuidePage />} />
                 <Route path="/data" element={<DataPage />} />
                 {/* 管理者設定（PRD D210。ADR-0028）：機能の入り切り。だれでも開ける・切れない */}
                 <Route path="/settings" element={<SettingsPage />} />

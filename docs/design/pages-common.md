@@ -271,19 +271,28 @@
   - `compareEmptyGuide({ date })`（比較の画面）：「この日には訪問がありません」と［日の予定で訪問を足す］
 - `components/EmptyNext.tsx`：見出し・補足・ボタン（日の予定は呼ぶ側の `onOpenDay`＝選んでいる日付を変えて `/plan`）。`primary={false}` で主ボタンにしない。480px 以下は縦に並べ、印刷ではボタンを出さない。使う所：週（`week-empty`。`compact`）・勤務の見込み（`work-empty`）・比較（`compare-empty`）
 
-### 初回の案内ツアー（PRD D192・D193・D226・D276・D277。ADR-0045）
+### 案内ツアー（PRD D192・D193・D226・D277。ADR-0045・ADR-0073）
 
-- `lib/tour.ts`（純粋関数。テストあり）：`tourSteps(terms, features)`（3枚：home・plan・absence。見出し・本文・場所、plan は `points`（3段の説明：組む（AI。予定を組むの担当を組む）／ピン（手で替えた訪問）／確定（伝えた））と［月｜週｜日］の切り替え。場所はメニュー・下のタブの名前（「予定」「欠勤・キャンセルを登録」・下のタブの「欠勤」）。切った機能の枚（absence）は出さない）、`TOUR_START_CHOICES`（基本・すべての名前と1行の説明）・`TOUR_START_QUESTION`（「どこまで使いますか」）・`TOUR_START_NOTE`、`tourMove(index, count, 'next'|'back'|'skip')`（閉じるときは null。最初の「戻る」は動かない）、`tourNextLabel`（最後は「閉じる」）、`TOUR_TODAY_LABEL`（「今日の予定を開く」）、`tourCountText`、`shouldAutoOpenTour(seen, search)`（`?id=`・`?do=` があれば開かない）
-- 見たことは DemoData と別のキーに覚える（`tourMemory`。初期状態に戻しても残る）
+初めて開いたときには自動で出さない（最初の2問に置き換えた。PRD D379）。データの画面の「案内をもう一度見る」だけで開く。
+
+- `lib/tour.ts`（純粋関数。テストあり）：`tourSteps(terms, features)`（3枚：home・plan・absence。見出し・本文・場所、plan は `points`（3段の説明：組む（AI。予定を組むの担当を組む）／ピン（手で替えた訪問）／確定（伝えた））と［月｜週｜日］の切り替え。場所はメニュー・下のタブの名前（「予定」「欠勤・キャンセルを登録」・下のタブの「欠勤」）。切った機能の枚（absence）は出さない）、`tourMove(index, count, 'next'|'back'|'skip')`（閉じるときは null。最初の「戻る」は動かない）、`tourNextLabel`（最後は「閉じる」）、`TOUR_TODAY_LABEL`（「今日の予定を開く」）、`tourCountText`
+- 見たことは覚えない（自動で開かないので。旧キー `vrdemo:tour:seen` は読まない）
 - `components/Tour.tsx`（`tour.css`）：
-  - `TourProvider`：`AdminShell` の外側。はじめに `shouldAutoOpenTour(tourMemory.seen(), location.search)` で開く（月の印刷の画面では出ない）。自動で開いたときに store の `startedFresh`（保存データが無く初めて開いた）なら、1枚目に「どこまで使いますか」（`StartChoice`）を出す（「案内をもう一度見る」では出さない。PRD D276）。閉じたら・最後の枚まで進んだら `tourMemory.markSeen()`。「今日の予定を開く」は閉じて `dayHref(今日)`（`/plan?date=今日`）へ移る（PRD D226）
+  - `TourProvider`：`AdminShell` の外側。開く・閉じるの state だけを持つ（自動では開かない）。「今日の予定を開く」は閉じて `dayHref(今日)`（`/plan?date=今日`）へ移る（PRD D226）
   - `useTour()`：開く関数（データの画面の「案内をもう一度見る」`tour-again`）
   - `TourDialog`：body の直下の中央のカード `role="dialog"`・`aria-modal`・`aria-labelledby`・`aria-describedby`。`inertLock`・`useBodyScrollLock`・捕捉の段で Esc（とばすと同じ）と Tab（`trapTarget`）。Ctrl+K を開かない。最初のフォーカスは「次へ」、枚が変わってフォーカスが外れたら「次へ」へ、閉じたら開く前の要素へ。見出しと本文は `aria-live="polite"`。z-index 1250（トーストより前・確認ダイアログより後ろ）。印刷では出さない
   - 本文 `tour-body` は文と、`points` があれば番号付きの一覧 `tour-points`（aria-describedby は両方を含む）
-  - `StartChoice`（1枚目の場所の下）：`fieldset.tour-choice`（`legend`「どこまで使いますか」・data-testid `tour-start`）にラジオ2つ（`tour-start-basic`・`tour-start-all`。名前と1行の説明。今の入り切りが `matchTemplate` で基本・すべてのどちらかならそれを選んだ状態）と注記「あとから「設定」の「管理者設定」で、機能を1つずつ入り切りできます。」。ネイティブのラジオ（Tab は選んでいる方だけ・矢印で選び直す。カードの Tab の閉じ込めも選んでいないラジオを飛ばす）。選んでもすぐには当てず、1枚目を離れるとき（次へ・とばす・Esc）に `TourProvider` の `choose(id)` で当てる：起動してから（または前に当ててから）データが変わっていなければ store の `reset(applyTemplate(id))`（その入り切りで初期データを作り直す）、変わっていれば `update` で `org.features` だけ書き換える（別のタブの変更を消さない）
   - 最後の枚：「次へ」は「閉じる」（主ボタンにしない）、その右に主ボタン「今日の予定を開く」（`tour-today`）。「とばす」は出さない。最後の枚に入るとフォーカスは「今日の予定を開く」
   - data-testid：`tour`（`data-step`）・`tour-count`・`tour-title`・`tour-body`・`tour-points`・`tour-next`・`tour-back`・`tour-skip`・`tour-today`
-- e2e は文脈を作ったらすぐ `scripts/lib/tourSeen.cjs` の `skipTour(ctx)` を呼ぶ（e2e-tour は除く）。`skipTour` は既定で `scripts/lib/startFeatures.cjs` の `startAll` も呼び、初めて開いたときの入り切りを「すべて」にする（初回の「基本」を確かめるときは `skipTour(ctx, { start: 'basic' })`）
+- e2e は文脈を作ったらすぐ `scripts/lib/tourSeen.cjs` の `skipTour(ctx)` を呼ぶ（e2e-tour は除く）。`skipTour` は既定で `scripts/lib/startFeatures.cjs` の `startAll`（印 `vrdemo:features:start` = `all`）を入れ、初めて開いたときの最初の2問を出さず、今の初期データ＋すべて入で始める（2問そのものを確かめるときは `skipTour(ctx, { start: 'ask' })` か呼ばず、`scripts/lib/firstRun.cjs` の `answerFirstRun`・`answerIfAsked` で答える）
+
+### 最初の2問・登録の案内（PRD D379〜D381。ADR-0073）
+
+- `lib/firstRun.ts`（純粋関数。テストあり）：`FirstRunAnswer`（問1 `start`＝`demo`／`own`・問2 `booking`＝`oneOff`／`regular`）、画面の文（`FIRST_RUN_*`）、`firstRunSetup(booking)`（呼び名＝単発 お客様／シッター・定期 利用者さん／スタッフ、ひな形＝単発「単発のみ」・定期「基本」とその入り切り（エキスパート機能は切）、最初の画面＝単発 `/week`・定期 `/month`）、`createFirstRunData(answer, today)`（デモ＝単発は `seed/oneOff`・定期は今の `createInitialData`。自分のデータ＝`seed/blank` の空のデータ）、`firstRunLanding(answer)`（デモ＝最初の画面・自分のデータ＝登録の案内 `/start`）、設定の「最初の設定をやり直す」の文（`RESTART_*`・`restartConfirmBody`）
+- `lib/startGuide.ts`（純粋関数。テストあり）：3段（`startGuideSteps(terms)`：①〈利用者さん〉②〈スタッフ〉③予定。呼び名は terms から引く）、`startGuideIndex`（`?step=`）・`startGuideCount`（「1/3」）・`startGuideNeighbors`・`startGuideHref`・`startGuidePlanPath(features)`（繰り返しを使えば月・使わなければ週）
+- `components/FirstRunPage.tsx`（`firstRun.css`）：`FirstRunGate`（`main.tsx` のルーターの中。`needsFirstRun` のあいだ本文の代わりに2問を出す）と、1画面に2問と主ボタン「はじめる」（`first-run-submit`。主ボタンは1つ）。ネイティブのラジオ（Tab は選んでいる方だけ・矢印で選び直す。`first-run-start-<demo|own>`・`first-run-booking-<oneOff|regular>`）。初めは デモで試す・定期を選んでおく。「はじめる」で先に最初の画面へ移り、移ったあとに `startFirstRun(answer)`（逆にすると本体が `#/` のまま先に出て、知らない URL のホームへの移動に上書きされる）。ツアーはこのあと出さない
+- `pages/StartGuidePage.tsx`（`#/start`。メニューの外のような扱いで `AdminShell` の中・上の帯の名前は「登録の案内」）：上に「1/3」（`start-guide-count`）、1画面1項目。①②は「CSV・Excel を読み込む」（`start-guide-import`。名簿の欄 `components/RosterCard` をその場で開く。Excel の入り切りにかかわらず読み込める）と「1人ずつ入れる」（`start-guide-add`。`/clients/new`・`/staff/new`）、いま入っている人数、主ボタン「次へ」（`start-guide-next`）・「戻る」。③は主ボタン「予定を入れる」（`start-guide-plan`。月か週の予定へ）。段は URL の `?step=`
+- 空のデータの画面：予定の月・週・日・〈利用者さん〉・〈スタッフ〉の一覧・設定・データなどは、人も訪問も無くても壊れない（既存の空の画面の文：「〈期間〉には訪問がありません」「当てはまる〈利用者さん〉がいません」。e2e-tour で確かめる）
 
 ### 行き先のリンク（`lib/links.ts`。PRD D201〜D204）
 
@@ -348,7 +357,7 @@
 - `scripts/e2e-dialog.cjs`：条件を消す（ARIA・中央・最初のフォーカス・Tab が回る・Esc・取り消す・背景で変わらない・閉じたらボタンへフォーカス・inert とロックを戻す・確定（キーボード）で消える）／初期状態に戻す（取り消すと知らせなし・確定で知らせ）／日の予定の確定（伝えた）（Esc で未確定のまま・確定で「確定済み」）／確認中に「戻る」（確認が閉じデータが変わらない）／ダブルクリックでも確認が残る／〈スタッフ〉の変更を捨てる（右の欄の上で Esc は確認だけを閉じる・「捨てて閉じる」で保存しない）／選択肢を消す／390px で収まりボタンが縦・印刷で出さない。どれもネイティブのダイアログが出たら失敗
 - `scripts/e2e-nav.cjs`：メニューの並び・名前・aria-current・見出し・欠勤・キャンセルの項目、Ctrl+K で開く・ARIA・inert・↑↓ が回る・Enter で移る・見つからない・Ctrl+K で閉じる・操作（欠勤・キャンセル・N月の担当を組む）・右の欄の上では開かない、よみ（カタカナ）で〈利用者さん〉・名前で〈スタッフ〉の画面、Tab が回る・Esc・背景・×でフォーカスがボタンへ・入力欄の中の Ctrl+K・今の画面は閉じるだけ、390px（上の帯に「探す」は無く下のタブの「探す」で開く・パレットが収まる・上の帯の名前（人・利用者さん一覧・予定は項目名だけ）・引き出しの並び・下のタブ5つ（ホーム・予定・欠勤・探す・メニュー）・比較は「予定」のタブ・「予定」のタブは最後に開いた表示・「欠勤」のタブで今日の欠勤・キャンセルの欄）、印刷、300人×60人で1文字の中央値 `PERF_MS_NAV`（既定 100ms）と「要対応」を打ったときのいちばん長く止まる時間 `PERF_MS_NAV_CARE`（既定 300ms。検査は1日ずつ間を空ける）
 - `scripts/e2e-panel-foot.cjs`（1400px・390px）：欠勤・キャンセルの1〜4段目・キャンセルの2・3段目・訪問の詳細の欄（〈利用者さん〉の画面の予定の回から）・日の差の欄の「連絡の一覧」。短い欄（広い画面は欄の高さが内容に合い、上に寄り、画面の下端まで伸びない）・長い欄・Tab で帯の裏の入力欄が隠れない・Tab が回る・Esc で戻る・裏を巻かない・390px の並び・タブに隠れない・safe-area・visualViewport を差し替えたキーボード・印刷で帯を出さない
-- `scripts/e2e-tour.cjs`：ツアー（初めて開くと出る・ARIA・中央・フォーカス・inert とロック・Tab が回る・Ctrl+K を開かない・次へ／戻る・3枚・予定の枚の3段・初めて開くと「基本」で1枚目に「どこまで使いますか」・「すべて」を選ぶとメニューと入り切りが変わる（その入り切りで初期データを作り直す）・もう一度見るでは聞かない・「閉じる」・「今日の予定を開く」で今日の日の予定・覚える（別のキー）・読み直しても出ない・Esc・とばす・月の印刷では出ない・`?id=`・`?do=` のリンクでは出ない・印があれば自動で出ない・最後の枚で覚える・もう一度見る・フォーカスを戻す・初期状態に戻しても残る・390px・印刷）、ファイル選択、月の一覧
+- `scripts/e2e-tour.cjs`：最初の2問（初めて開くとツアーは自動で出ず2問・答えるまでデータを書かない・Tab と矢印・デモ×定期（今の初期データ・月の予定）・デモ×単発（今日から2週間分の単発・週の予定）・自分のデータ（空のデータと3段の案内 1/3〜3/3・名簿の読み込み・1人ずつ入れる・空の画面が壊れない）・印 `all` で2問を出さない・「最初の設定をやり直す」（確認の文・2問へ戻る・作り直す・控え））・案内ツアー（「案内をもう一度見る」で開く・ARIA・中央・フォーカス・inert とロック・Tab が回る・Ctrl+K を開かない・次へ／戻る・3枚・予定の枚の3段・「閉じる」・「今日の予定を開く」で今日の日の予定・Esc・とばす・フォーカスを戻す・390px・印刷）、ファイル選択、月の一覧
 - `scripts/e2e-words.cjs`：点数の理由・用語の説明（マウス・Tab・Esc・タッチ・同時に1つ・入力欄の名前）・言い換え・空の画面・月の凡例・相性のセルの記号・390px・印刷
 - `scripts/e2e-links.cjs`：行き先のリンク（月の要対応の4種類・`?do=unassigned`・勤務の見込み・勤務時間（シフト）・空き状況）
 - `scripts/e2e-shared-parts.cjs`（1400px・390px）：訪問の札の共通の部品（ADR-0056）を週の表の札（〈スタッフ〉×曜日・〈利用者さん〉×曜日）・月のカレンダー（マスのキー・その日の回の一覧）・人の予定表で確かめる。複数選択（Ctrl＋クリック・Shift＋Enter・Esc）とキー（↓ 15分・Enter 欄・Ctrl+Z）、〈スタッフ〉の画面は日時を動かさない、帯の見た目（`data-marks`）が3画面と週の時間軸で同じ、ドラッグの落とし先の判定（今日より前の日は置けない・同じ理由の文・入る日へ落とすと落とした日の欄）、390px で長押しの選ぶ・2段目の行が日ごとのリストと同じ形

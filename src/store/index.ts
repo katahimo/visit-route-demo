@@ -8,6 +8,5 @@ export { navOpenMemory } from './navOpen';
 export * from './persist';
 export { DemoDataProvider, useDemoData } from './react';
 export { repair } from './repair';
-export { FEATURES_START_ALL, FEATURES_START_KEY, startFeatures } from './start';
+export { FEATURES_START_ALL, FEATURES_START_KEY, startsWithAll } from './start';
 export { cancelTentative } from './tentative';
-export { TOUR_SEEN_KEY, tourMemory } from './tour';
