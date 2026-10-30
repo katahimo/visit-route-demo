@@ -489,6 +489,60 @@ async function roster(page, dlg) {
     (await card.locator('.file-pick-caption').innerText()).endsWith('の名簿（Excel・CSV）'),
     '〈利用者さん〉一覧にも名簿の欄',
   );
+  // 顧客台帳の形（ADR-0073。PRD D386・D387）：タブ区切り・CRLF の UTF-8（架空の値）。名簿と同じ確認で、読まなかった列を出す
+  const ledgerHead =
+    '利用者名,利用者カナ,利用者生年月日,性別,郵便番号,都道府県,市区町村,町名以下,建物名,利用者電話番号,利用者携帯電話番号,請求方法,請求送付先,請求先氏名,続柄,請求先郵便番号,請求先都道府県,請求先市区町村,請求先町名以下,請求先建物名,請求先電話番号,顧客番号,銀行番号,支店番号,口座種別,口座番号,口座名義名カナ,利用者状態,備考'.split(
+      ',',
+    );
+  const ledgerRow = (v) => ledgerHead.map((h) => v[h] ?? '');
+  const ledger = [
+    ledgerHead,
+    ledgerRow({
+      利用者名: '台帳 花子',
+      利用者カナ: 'ダイチョウ ハナコ',
+      利用者生年月日: '1997/1/6',
+      郵便番号: '9893202',
+      都道府県: '架空県',
+      市区町村: '架空市',
+      町名以下: '中山台1-2-14',
+      利用者電話番号: '022-000-0000',
+      顧客番号: '98765',
+      利用者状態: '利用中',
+      備考: '移動支援',
+    }),
+    ledgerRow({ 利用者名: '台帳 太郎', 利用者カナ: 'ダイチョウ タロウ', 郵便番号: '342-0035', 利用者状態: '終了' }),
+  ]
+    .map((r) => r.join('\t'))
+    .join('\r\n');
+  const askedLedger = dlg.messages.length;
+  await page.getByTestId('roster-file-input').setInputFiles({
+    name: 'ledger.tsv',
+    mimeType: 'text/tab-separated-values',
+    buffer: Buffer.from(`${ledger}\r\n`, 'utf8'),
+  });
+  await page.locator('.toast').filter({ hasText: '名簿を読み込みました' }).waitFor({ timeout: 20000 });
+  const got = await waitStored(page, (d) => d.clients.some((c) => c.displayName === '台帳 花子'));
+  const hanako = got.clients.find((c) => c.displayName === '台帳 花子');
+  const taro = got.clients.find((c) => c.displayName === '台帳 太郎');
+  const ledgerMsg = dlg.messages.slice(askedLedger).join('\n');
+  check(
+    hanako.kana === 'だいちょうはなこ' &&
+      hanako.place.postalCode === '9893202' &&
+      hanako.place.address === '架空県架空市中山台1-2-14' &&
+      hanako.note === '電話 022-000-0000\n移動支援' &&
+      hanako.stage === 'active' &&
+      taro?.stage === 'ended' &&
+      !JSON.stringify(got).includes('98765'),
+    '顧客台帳の形（タブ・CRLF）：名前・よみ・郵便番号・住所・備考の先頭に電話・状態を読み、請求・口座・顧客番号は残さない',
+    { hanako, taro },
+  );
+  check(
+    ledgerMsg.includes('顧客台帳の形として読みました') &&
+      ledgerMsg.includes('読まなかった列：') &&
+      ledgerMsg.includes('請求方法'),
+    '顧客台帳の形：確認の本文に形と読まなかった列を出す',
+    ledgerMsg.slice(0, 300),
+  );
   await page.goto(`${BASE}#/staff/${encodeURIComponent(sid)}`);
   await settle(page, 600);
 

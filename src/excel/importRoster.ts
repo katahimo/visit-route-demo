@@ -136,7 +136,7 @@ export async function importRoster(
 ): Promise<RosterImportResult | ImportError> {
   const loaded = await loadRosterBook(buf, base, kind);
   if ('code' in loaded) return loaded;
-  const { book, source } = loaded;
+  const { book, source, ledger } = loaded;
   const opened = openRoster(book, base, kind);
   if ('code' in opened) return opened;
   const { ctx, rows } = opened;
@@ -178,6 +178,7 @@ export async function importRoster(
     lastDaySet,
     activeBefore,
     source,
+    ledger,
   };
 }
 
