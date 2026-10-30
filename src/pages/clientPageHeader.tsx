@@ -10,12 +10,13 @@ import { leaveOn } from '../domain/leaves';
 import { jstDate } from '../domain/time';
 import { STAGE_LABELS } from '../lib/clientStage';
 import { colorOf } from '../lib/colors';
+import { addressLine, clientTabKeys, usualPlanText } from '../lib/peopleView';
 import type { ClientTab } from '../lib/personPage';
 import { usualStaffOf } from '../lib/usualStaff';
 
-/** タブ（新しい人は予定・担当・休みを押せない。休みの機能を切れば休みのタブを出さない） */
-function clientTabs(isNew: boolean, compatOn: boolean, leavesOn: boolean): PersonTabDef<ClientTab>[] {
-  return [
+/** タブ（新しい人は予定・担当・休みを押せない。休みの機能を切れば休みのタブを出さない。エキスパート機能が切なら担当・相性のタブは出さず、中身は基本情報の「詳しく」へ） */
+function clientTabs(isNew: boolean, compatOn: boolean, leavesOn: boolean, only: boolean): PersonTabDef<ClientTab>[] {
+  const all: PersonTabDef<ClientTab>[] = [
     { key: 'schedule', label: '予定', icon: CalendarDays, disabled: isNew ? '保存してから見られます' : false },
     { key: 'basic', label: '基本情報', icon: UserRound },
     {
@@ -35,6 +36,11 @@ function clientTabs(isNew: boolean, compatOn: boolean, leavesOn: boolean): Perso
         ]
       : []),
   ];
+  const keys = clientTabKeys(
+    all.map((t) => t.key),
+    only,
+  );
+  return all.filter((t) => keys.includes(t.key));
 }
 
 /** 状態（段階・仮押さえ・休み中・いつもの担当） */
@@ -44,12 +50,14 @@ function ClientStateChips({
   data,
   staff,
   today,
+  only,
 }: {
   c: Client;
   saved: Client | undefined;
   data: DemoData;
   staff: Staff[];
   today: string;
+  only: boolean;
 }) {
   const leaveNow = saved ? leaveOn(data.clientLeaves, saved.id, today) : null;
   const staffName = (sid: string | null) => (sid ? (staff.find((s) => s.id === sid)?.name ?? '（不明）') : '');
@@ -57,16 +65,24 @@ function ClientStateChips({
   const usualId = usualStaffOf(data.patterns, c.id, jstDate(Date.now()));
   return (
     <span className="person-state" data-testid="person-state">
-      <span className={`chip stage-chip is-${c.stage}`} data-testid="client-stage">
-        {STAGE_LABELS[c.stage]}
-      </span>
+      {/* 切は名前・住所・予定（繰り返し）を見出しに出す。段階・いつもの担当は「詳しく」の中（PRD D385） */}
+      {only ? (
+        <span className="sub" data-testid="person-brief">
+          {[addressLine(c.place), usualPlanText(data.patterns, c.id, today)].filter(Boolean).join('　／　') ||
+            '住所・予定はまだありません'}
+        </span>
+      ) : (
+        <span className={`chip stage-chip is-${c.stage}`} data-testid="client-stage">
+          {STAGE_LABELS[c.stage]}
+        </span>
+      )}
       {c.tentative && <span className="chip chip-warn">仮押さえ</span>}
       {leaveNow && (
         <span className="chip chip-warn" title={leaveNow.note || undefined}>
           休み中
         </span>
       )}
-      {usualId && (
+      {!only && usualId && (
         <span className="with-staff-mark sub">
           <StaffMarkById id={usualId} size="xs" />
           いつもの担当 {staffName(usualId)}
@@ -86,6 +102,7 @@ export function ClientPageHeader({
   tab,
   compatOn,
   leavesOn,
+  only,
   onAskTab,
 }: {
   isNew: boolean;
@@ -98,6 +115,8 @@ export function ClientPageHeader({
   tab: ClientTab;
   compatOn: boolean;
   leavesOn: boolean;
+  /** エキスパート機能が切か（切は見出しに住所・予定を出し、担当・相性のタブを出さない。PRD D385） */
+  only: boolean;
   /** タブを替える前の確認（替えるなら入力を捨てる） */
   onAskTab: () => Promise<boolean>;
 }) {
@@ -120,13 +139,13 @@ export function ClientPageHeader({
         isNew ? (
           `${terms.client}の名前と段階を入れて保存します`
         ) : (
-          <ClientStateChips c={c} saved={saved} data={data} staff={staff} today={today} />
+          <ClientStateChips c={c} saved={saved} data={data} staff={staff} today={today} only={only} />
         )
       }
       actions={<BackToList to="/clients" label={`${terms.client}一覧`} />}
       nav={
         <PersonTabs
-          tabs={clientTabs(isNew, compatOn, leavesOn)}
+          tabs={clientTabs(isNew, compatOn, leavesOn, only)}
           current={tab}
           ask={onAskTab}
           label={`${terms.client}の画面の切り替え`}

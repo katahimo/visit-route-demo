@@ -9,6 +9,7 @@ import type { Item } from '../contracts/rules';
 import { hasLocation, WEEKDAY_LABELS } from '../lib/common';
 import { mdText } from '../lib/dateText';
 import { narrowRole } from '../lib/narrowRoles';
+import { type StaffCol, shiftText, staffNameNote, workDaysText } from '../lib/peopleView';
 import { shouldOpenRow } from '../lib/rowOpen';
 
 /** 最終勤務日のある人と、振り直しが残っているもの（〈利用者さん〉の人数・訪問の件数） */
@@ -59,15 +60,138 @@ export function StaffLeavingCard({
   );
 }
 
+/** 列の見出し（呼び名は org.terms から） */
+const COL_LABEL: Record<StaffCol, (clientTerm: string) => string> = {
+  name: () => '名前',
+  days: () => '勤務日',
+  hours: () => '勤務時間',
+  work: () => '勤務',
+  traits: () => '特性',
+  requires: (client) => `${client}に求めること`,
+  home: () => '自宅の位置',
+  state: () => '状態',
+};
+
+/** 一覧の見出しの行 */
+export function StaffHead({ cols, clientTerm }: { cols: readonly StaffCol[]; clientTerm: string }) {
+  return (
+    <tr {...narrowRole.row}>
+      {cols.map((col) => (
+        <th key={col} {...narrowRole.columnheader}>
+          {COL_LABEL[col](clientTerm)}
+        </th>
+      ))}
+      <th {...narrowRole.columnheader} aria-label="操作" />
+    </tr>
+  );
+}
+
+/** 1つの列のセル（列の種類ごとの分岐はここに集める） */
+function StaffCell({
+  col,
+  s,
+  clientTerm,
+  staffItems,
+  itemById,
+}: {
+  col: StaffCol;
+  s: Staff;
+  clientTerm: string;
+  staffItems: Item[];
+  itemById: Map<string, Item>;
+}) {
+  switch (col) {
+    case 'name':
+      return (
+        <td {...narrowRole.cell} className="person-name narrow-title" data-label="名前">
+          <span className="with-staff-mark">
+            <StaffMark staff={s} size="md" />
+            {s.name}
+            {/* 切は状態の列を出さないので、例外の休止中だけ名前のそばに残す */}
+            {staffNameNote(s) && <span className="chip">{staffNameNote(s)}</span>}
+          </span>
+        </td>
+      );
+    case 'days':
+      return (
+        <td {...narrowRole.cell} className="nowrap" data-label="勤務日" data-testid="staff-days">
+          {workDaysText(s)}
+        </td>
+      );
+    case 'hours':
+      return (
+        <td {...narrowRole.cell} className="nowrap" data-label="勤務時間" data-testid="staff-hours">
+          {shiftText(s)}
+        </td>
+      );
+    case 'work':
+      return (
+        <td {...narrowRole.cell} className="nowrap" data-label="勤務">
+          <WithIcon icon={Clock} size={14}>
+            {s.workDays.map((d) => WEEKDAY_LABELS[d]).join('')} {s.shiftStart}〜{s.shiftEnd}
+          </WithIcon>
+        </td>
+      );
+    case 'traits':
+      return (
+        <td {...narrowRole.cell} data-label="特性">
+          <TraitChips traits={s.traits} items={staffItems} />
+        </td>
+      );
+    case 'requires':
+      return (
+        <td {...narrowRole.cell} className="cond-cell" data-label={`${clientTerm}に求めること`}>
+          <CondChips requirements={s.requirements} preferences={s.preferences} itemById={itemById} />
+        </td>
+      );
+    case 'home':
+      return (
+        <td {...narrowRole.cell} data-label="自宅の位置">
+          {hasLocation(s.home) ? (
+            <span className="chip chip-ok">
+              <WithIcon icon={MapPin} size={13}>
+                あり
+              </WithIcon>
+            </span>
+          ) : (
+            <span className="chip chip-warn">未登録</span>
+          )}
+        </td>
+      );
+    case 'state':
+      return (
+        <td {...narrowRole.cell} className="narrow-head" data-label="状態">
+          {!s.active && <span className="chip">休止中</span>}
+          {s.lastDay && (
+            <span
+              className="chip chip-lastday"
+              title={`最終勤務日 ${s.lastDay}（翌日から勤務なし）`}
+              data-testid="staff-lastday"
+            >
+              最終 {mdText(s.lastDay)}
+            </span>
+          )}
+        </td>
+      );
+    default: {
+      const _: never = col;
+      return _;
+    }
+  }
+}
+
 /** 一覧の1行（行のどこを押してもその人の画面へ） */
 export function StaffRow({
   s,
+  cols,
   clientTerm,
   staffItems,
   itemById,
   onOpen,
 }: {
   s: Staff;
+  /** 出す列（切は名前・勤務日・勤務時間。lib/peopleView） */
+  cols: readonly StaffCol[];
   clientTerm: string;
   /** 〈スタッフ〉の項目（特性のチップ） */
   staffItems: Item[];
@@ -92,46 +216,9 @@ export function StaffRow({
         onOpen();
       }}
     >
-      <td {...narrowRole.cell} className="person-name narrow-title" data-label="名前">
-        <span className="with-staff-mark">
-          <StaffMark staff={s} size="md" />
-          {s.name}
-        </span>
-      </td>
-      <td {...narrowRole.cell} className="nowrap" data-label="勤務">
-        <WithIcon icon={Clock} size={14}>
-          {s.workDays.map((d) => WEEKDAY_LABELS[d]).join('')} {s.shiftStart}〜{s.shiftEnd}
-        </WithIcon>
-      </td>
-      <td {...narrowRole.cell} data-label="特性">
-        <TraitChips traits={s.traits} items={staffItems} />
-      </td>
-      <td {...narrowRole.cell} className="cond-cell" data-label={`${clientTerm}に求めること`}>
-        <CondChips requirements={s.requirements} preferences={s.preferences} itemById={itemById} />
-      </td>
-      <td {...narrowRole.cell} data-label="自宅の位置">
-        {hasLocation(s.home) ? (
-          <span className="chip chip-ok">
-            <WithIcon icon={MapPin} size={13}>
-              あり
-            </WithIcon>
-          </span>
-        ) : (
-          <span className="chip chip-warn">未登録</span>
-        )}
-      </td>
-      <td {...narrowRole.cell} className="narrow-head" data-label="状態">
-        {!s.active && <span className="chip">休止中</span>}
-        {s.lastDay && (
-          <span
-            className="chip chip-lastday"
-            title={`最終勤務日 ${s.lastDay}（翌日から勤務なし）`}
-            data-testid="staff-lastday"
-          >
-            最終 {mdText(s.lastDay)}
-          </span>
-        )}
-      </td>
+      {cols.map((col) => (
+        <StaffCell key={col} col={col} s={s} clientTerm={clientTerm} staffItems={staffItems} itemById={itemById} />
+      ))}
       <td {...narrowRole.cell} className="nowrap narrow-act">
         <div className="actions">
           <Link

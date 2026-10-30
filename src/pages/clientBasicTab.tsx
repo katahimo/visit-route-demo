@@ -1,8 +1,9 @@
 // 〈利用者さん〉の画面の基本情報のタブ（PRD D308・D311。ADR-0016・0052）：節「基本」「段階と紹介元」「住所」「特性」
 // 「訪問先の決まりごと」。新しい人は「基本」の節に基本と段階の入力をまとめて開く
 import { BadgeCheck, DoorOpen, House, Route, UserRound } from 'lucide-react';
-import { useMemo } from 'react';
+import { type ReactNode, useMemo } from 'react';
 import { TraitsEditor } from '../components/conditions';
+import { DetailsFold } from '../components/DetailsFold';
 import type { FormErr } from '../components/FieldError';
 import { ClientAreaRow, DlRow } from '../components/personDetail';
 import { EditSection } from '../components/personPage';
@@ -17,6 +18,7 @@ import { jstDate } from '../domain/time';
 import { colorOf } from '../lib/colors';
 import { hasLocation } from '../lib/common';
 import { traitText } from '../lib/compatView';
+import { type ClientPart, splitFolded } from '../lib/peopleView';
 import { formatPostalCode } from '../lib/postalCode';
 import { orDash } from '../lib/viewMode';
 import {
@@ -88,6 +90,93 @@ function ClientRulesFields({ form, setForm, terms }: ClientFormCtx) {
   );
 }
 
+type BasicSectionsArgs = Pick<
+  Parameters<typeof ClientBasicTab>[0],
+  'c' | 'saved' | 'sec' | 'clientItems' | 'stageOn' | 'notesOn' | 'onConfirmTentative' | 'onCancelTentative' | 'ctx'
+>;
+
+/** 基本情報のタブの節（欄の種類つき。切は畳む欄を分ける。lib/peopleView の splitFolded） */
+function basicSections(a: BasicSectionsArgs): { part: ClientPart; node: ReactNode }[] {
+  const { c, saved, sec, clientItems, stageOn, notesOn, onConfirmTentative, onCancelTentative, ctx } = a;
+  const { form, setForm, bad, terms } = ctx;
+  const f = form && { form, setForm, bad, terms };
+  const basicFields = f && <ClientBasicFields {...f} />;
+  const stageFields = f && <ClientStageFields {...f} stageOn={stageOn} />;
+  const today = jstDate(Date.now());
+  const section = (part: ClientPart, node: ReactNode) => ({ part, node });
+  return [
+    section(
+      'basic',
+      <EditSection key="basic" {...sec('basic')} icon={UserRound} title="基本" view={<ClientBasicView c={c} />}>
+        {basicFields}
+      </EditSection>,
+    ),
+    section(
+      'stage',
+      <EditSection
+        key="stage"
+        {...sec('stage')}
+        icon={Route}
+        title={stageOn ? '段階と紹介元' : '段階'}
+        view={
+          <ClientStageView
+            c={c}
+            saved={saved}
+            stageOn={stageOn}
+            terms={terms}
+            onConfirmTentative={onConfirmTentative}
+            onCancelTentative={onCancelTentative}
+          />
+        }
+      >
+        {stageFields}
+      </EditSection>,
+    ),
+    section(
+      'place',
+      <EditSection key="place" {...sec('place')} icon={House} title="住所" view={<ClientPlaceView c={c} />}>
+        {form && <ClientPlaceEditor value={form.place} onChange={(place) => setForm((x) => ({ ...x, place }))} />}
+      </EditSection>,
+    ),
+    section(
+      'traits',
+      <EditSection
+        key="traits"
+        {...sec('traits')}
+        icon={BadgeCheck}
+        title="特性"
+        view={
+          <dl>
+            {clientItems.map((it) => (
+              <DlRow key={it.id} term={it.name} value={traitText(it, c.traits[it.id], today)} />
+            ))}
+          </dl>
+        }
+      >
+        {form && (
+          <TraitsEditor items={clientItems} value={form.traits} onChange={(traits) => setForm({ ...form, traits })} />
+        )}
+      </EditSection>,
+    ),
+    ...(notesOn
+      ? [
+          section(
+            'rules',
+            <EditSection
+              key="rules"
+              {...sec('rules')}
+              icon={DoorOpen}
+              title="訪問先の決まりごと"
+              view={<ClientRulesView c={c} />}
+            >
+              {f && <ClientRulesFields {...f} />}
+            </EditSection>,
+          ),
+        ]
+      : []),
+  ];
+}
+
 export function ClientBasicTab({
   c,
   saved,
@@ -101,6 +190,8 @@ export function ClientBasicTab({
   clientItems,
   stageOn,
   notesOn,
+  folded,
+  more,
   onConfirmTentative,
   onCancelTentative,
 }: {
@@ -118,17 +209,18 @@ export function ClientBasicTab({
   clientItems: Item[];
   stageOn: boolean;
   notesOn: boolean;
+  /** 「詳しく ▾」へ畳む欄（切のとき。入は空。lib/peopleView の clientFolded） */
+  folded: readonly ClientPart[];
+  /** 「詳しく ▾」の中に足す担当・相性の節（切のとき。担当・相性のタブを出さないので） */
+  more: ReactNode;
   onConfirmTentative: (c: Client) => void;
   onCancelTentative: (c: Client) => void;
 }) {
   const { form, setForm, bad, terms } = ctx;
-  const f = form && { form, setForm, bad, terms };
-  const basicFields = f && <ClientBasicFields {...f} />;
-  const stageFields = f && <ClientStageFields {...f} stageOn={stageOn} />;
-  const today = jstDate(Date.now());
-  return (
-    <div className="person-sections">
-      {newEdit ? (
+  if (newEdit) {
+    const f = form && { form, setForm, bad, terms };
+    return (
+      <div className="person-sections">
         <EditSection
           name="new"
           icon={UserRound}
@@ -141,64 +233,29 @@ export function ClientBasicTab({
           errorId={errorId}
           view={null}
         >
-          {basicFields}
-          {stageFields}
+          {f && <ClientBasicFields {...f} />}
+          {f && <ClientStageFields {...f} stageOn={stageOn} />}
           <Hint label="ほかの項目">
             住所・特性・担当・繰り返し（決まった曜日の訪問）・休みは、保存してから入れられます。
           </Hint>
         </EditSection>
-      ) : (
-        <>
-          <EditSection {...sec('basic')} icon={UserRound} title="基本" view={<ClientBasicView c={c} />}>
-            {basicFields}
-          </EditSection>
-          <EditSection
-            {...sec('stage')}
-            icon={Route}
-            title={stageOn ? '段階と紹介元' : '段階'}
-            view={
-              <ClientStageView
-                c={c}
-                saved={saved}
-                stageOn={stageOn}
-                terms={terms}
-                onConfirmTentative={onConfirmTentative}
-                onCancelTentative={onCancelTentative}
-              />
-            }
-          >
-            {stageFields}
-          </EditSection>
-          <EditSection {...sec('place')} icon={House} title="住所" view={<ClientPlaceView c={c} />}>
-            {form && <ClientPlaceEditor value={form.place} onChange={(place) => setForm((x) => ({ ...x, place }))} />}
-          </EditSection>
-          <EditSection
-            {...sec('traits')}
-            icon={BadgeCheck}
-            title="特性"
-            view={
-              <dl>
-                {clientItems.map((it) => (
-                  <DlRow key={it.id} term={it.name} value={traitText(it, c.traits[it.id], today)} />
-                ))}
-              </dl>
-            }
-          >
-            {form && (
-              <TraitsEditor
-                items={clientItems}
-                value={form.traits}
-                onChange={(traits) => setForm({ ...form, traits })}
-              />
-            )}
-          </EditSection>
-          {notesOn && (
-            <EditSection {...sec('rules')} icon={DoorOpen} title="訪問先の決まりごと" view={<ClientRulesView c={c} />}>
-              {f && <ClientRulesFields {...f} />}
-            </EditSection>
-          )}
-        </>
+      </div>
+    );
+  }
+  // 切は段階・特性・決まりごと（と担当・相性）を「詳しく ▾」へ畳み、名前（基本）・住所を出す（PRD D385）
+  const parts = splitFolded(
+    basicSections({ c, saved, sec, clientItems, stageOn, notesOn, onConfirmTentative, onCancelTentative, ctx }),
+    folded,
+  );
+  return (
+    <>
+      <div className="person-sections">{parts.shown}</div>
+      {(parts.folded.length > 0 || more) && (
+        <DetailsFold testId="person-details">
+          {parts.folded.length > 0 && <div className="person-sections">{parts.folded}</div>}
+          {more}
+        </DetailsFold>
       )}
-    </div>
+    </>
   );
 }

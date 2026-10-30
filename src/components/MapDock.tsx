@@ -8,7 +8,8 @@ import { IconButton } from './ui';
 
 /**
  * 画面の外にある地図を、右下に小さく浮かせて見せる。
- * 元の地図（target）が見えていないときだけ出す。スタッフ・区間・訪問を選ぶと自動で開き、閉じてもボタンで開き直せる
+ * 元の地図（target）が見えていないときだけ出す。スタッフ・区間・訪問を選ぶと自動で開き、閉じてもボタンで開き直せる。
+ * target が null（ページに地図を置かない。エキスパート機能が切の日の予定。PRD D385）のときは、いつも「地図」のボタンを出し、押すと開く
  */
 export function MapDock({
   target,
@@ -17,8 +18,8 @@ export function MapDock({
   title,
   focusKey,
 }: {
-  /** ページの中の地図のカード（見えているあいだは浮かせない） */
-  target: RefObject<HTMLElement | null>;
+  /** ページの中の地図のカード（見えているあいだは浮かせない）。null はページに地図が無い */
+  target: RefObject<HTMLElement | null> | null;
   points: MapPoint[];
   lines: MapLine[];
   title: string;
@@ -31,7 +32,7 @@ export function MapDock({
   const edgeRef = useFloatingEdge('map-dock');
 
   useEffect(() => {
-    const el = target.current;
+    const el = target?.current;
     if (!el) return;
     const io = new IntersectionObserver(([e]) => setInView(e?.isIntersecting ?? true), { threshold: 0.25 });
     io.observe(el);
@@ -45,7 +46,7 @@ export function MapDock({
     if (focusKey) setOpen(true);
   }, [focusKey]);
 
-  if (inView || lines.length === 0) return null;
+  if ((target && inView) || lines.length === 0) return null;
   if (!open)
     return (
       <button
@@ -64,11 +65,13 @@ export function MapDock({
       <div className="map-dock-head">
         <MapIcon size={15} aria-hidden="true" />
         <strong className="ellipsis">{title}</strong>
-        <IconButton
-          icon={ArrowDownToLine}
-          label="ページの地図へ移る"
-          onClick={() => target.current?.scrollIntoView({ behavior: scrollBehavior(), block: 'center' })}
-        />
+        {target && (
+          <IconButton
+            icon={ArrowDownToLine}
+            label="ページの地図へ移る"
+            onClick={() => target.current?.scrollIntoView({ behavior: scrollBehavior(), block: 'center' })}
+          />
+        )}
         <IconButton icon={X} label="地図を閉じる" onClick={() => setOpen(false)} />
       </div>
       <RouteMap points={points} lines={lines} height={260} />

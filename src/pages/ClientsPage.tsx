@@ -5,7 +5,7 @@ import { ClientFilter } from '../components/ClientFilter';
 import { RosterButton, RosterCard } from '../components/RosterCard';
 import { BasicsNav } from '../components/SettingsTabs';
 import { PageHeader, WithIcon } from '../components/ui';
-import { useFeature } from '../components/useFeature';
+import { useExceptionsOnly, useFeature } from '../components/useFeature';
 import { COMPACT_QUERY, useMedia } from '../components/useMedia';
 import type { Client } from '../contracts/documents';
 import { EMPTY_FILTER } from '../lib/clientFilter';
@@ -26,6 +26,8 @@ export default function ClientsPage() {
   const stageOn = useFeature('clientStage');
   const allowedOn = useFeature('allowedStaff');
   const geocodeOn = useFeature('geocode');
+  // エキスパート機能が切なら一覧の列は名前・住所・いつもの予定の3列だけ（PRD D385）
+  const only = useExceptionsOnly();
   // 名簿の欄（Excel・CSV。ADR-0068）。Excel の入出力を切っていれば出さない（ADR-0028 の excel）
   const excelOn = useFeature('excel');
   const [rosterOpen, setRosterOpen] = useState(false);
@@ -122,6 +124,7 @@ export default function ClientsPage() {
           usualMap={usualMap}
           stageOn={stageOn}
           allowedOn={allowedOn}
+          only={only}
           onOpen={openPerson}
         />
       </div>

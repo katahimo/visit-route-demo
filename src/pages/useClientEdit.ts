@@ -139,6 +139,13 @@ export function useClientEdit({
     );
   }, [editParam]);
 
+  /** タブを替えてよいか（替えるなら直している節・繰り返し・休みの入力を捨てる。戻ったときに古い下書きを出さない） */
+  const askTab = async () => {
+    const ok = await ask('tab');
+    if (ok) discardAll();
+    return ok;
+  };
+
   return {
     edit,
     setEdit,
@@ -150,6 +157,7 @@ export function useClientEdit({
     whoText,
     discardAll,
     ask,
+    askTab,
     startEdit,
     cancelEdit,
     setForm,

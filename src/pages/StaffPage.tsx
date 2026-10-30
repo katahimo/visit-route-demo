@@ -5,14 +5,15 @@ import { RosterButton, RosterCard } from '../components/RosterCard';
 import { BasicsNav } from '../components/SettingsTabs';
 import { useToast } from '../components/Toast';
 import { PageHeader, WithIcon } from '../components/ui';
-import { useFeature } from '../components/useFeature';
+import { useExceptionsOnly, useFeature } from '../components/useFeature';
 import { jstDate } from '../domain/time';
 import { byName } from '../lib/common';
 import { narrowRole } from '../lib/narrowRoles';
 import { offboardScope } from '../lib/offboard';
+import { staffColumns } from '../lib/peopleView';
 import { useDemoData } from '../store';
 import { leavingStaff, OffboardPanel } from './OffboardPanel';
-import { type StaffLeaving, StaffLeavingCard, StaffRow } from './staffList';
+import { StaffHead, type StaffLeaving, StaffLeavingCard, StaffRow } from './staffList';
 import './settings.css';
 
 /**
@@ -29,6 +30,8 @@ export default function StaffPage() {
   const offboardOn = useFeature('offboard');
   // 名簿の欄（Excel・CSV。ADR-0068）。Excel の入出力を切っていれば出さない（ADR-0028 の excel）
   const excelOn = useFeature('excel');
+  // エキスパート機能が切なら一覧の列は名前・勤務日・勤務時間の3列だけ（PRD D385）
+  const cols = staffColumns(useExceptionsOnly());
   const [rosterOpen, setRosterOpen] = useState(false);
   const rosterId = useId();
   /** 担当の振り直しの欄を開いている〈スタッフ〉（PRD D71。null：閉じている） */
@@ -104,21 +107,14 @@ export default function StaffPage() {
       <div className="card table-scroll">
         <table {...narrowRole.table} className="people-table narrow-cards" data-testid="narrow-staff">
           <thead {...narrowRole.rowgroup}>
-            <tr {...narrowRole.row}>
-              <th {...narrowRole.columnheader}>名前</th>
-              <th {...narrowRole.columnheader}>勤務</th>
-              <th {...narrowRole.columnheader}>特性</th>
-              <th {...narrowRole.columnheader}>{terms.client}に求めること</th>
-              <th {...narrowRole.columnheader}>自宅の位置</th>
-              <th {...narrowRole.columnheader}>状態</th>
-              <th {...narrowRole.columnheader} aria-label="操作" />
-            </tr>
+            <StaffHead cols={cols} clientTerm={terms.client} />
           </thead>
           <tbody {...narrowRole.rowgroup}>
             {staff.map((s) => (
               <StaffRow
                 key={s.id}
                 s={s}
+                cols={cols}
                 clientTerm={terms.client}
                 staffItems={staffItems}
                 itemById={itemById}

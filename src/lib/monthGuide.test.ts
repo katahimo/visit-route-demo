@@ -79,6 +79,29 @@ describe('cellGuide', () => {
     });
     expect(lines.filter((l) => /^「(担当なし|担当が休み|未連絡|拘束超)/.test(l))).toHaveLength(4);
   });
+  it('切（confirmStep が false）：要対応は帯の3種類と「変更あり」で言い、条件に合わない・拘束超は言わない（PRD D384）', () => {
+    const lines = cellGuide({
+      ...base,
+      count: 3,
+      stateText: '変更あり',
+      care: true,
+      attention: 2,
+      unassigned: true,
+      changed: true,
+      overSpan: true,
+      confirmStep: false,
+    });
+    expect(lines).toContain('赤い枠＝要対応（担当なし・重なり・休みの人）');
+    expect(lines).toContain(
+      '赤い「要対応 N」の札＝要対応の件数（右の「要対応」の欄の行の数。担当なし・重なり・休みの人・変更あり）',
+    );
+    expect(lines.some((l) => l.includes('変更あり。連絡の一覧'))).toBe(true);
+    expect(lines.some((l) => l.includes('条件に合わない') || l.includes('拘束') || l.includes('確定'))).toBe(false);
+    // 入（省略）は今のまま
+    const full = cellGuide({ ...base, count: 3, stateText: 'x', care: true, overSpan: true });
+    expect(full.some((l) => l.includes('条件に合わない'))).toBe(true);
+    expect(full.some((l) => l.startsWith('「拘束超 N」'))).toBe(true);
+  });
   it('〈スタッフ〉・〈利用者さん〉の表示：全体の印（件数・休 N）は書かず、その表示の棒・印', () => {
     const staff = cellGuide({ ...base, focus: 'staff', count: 3, stateText: 'まだ伝えていない', resting: 2 });
     expect(staff.some((l) => l.startsWith('棒＝この人の時間帯ごとの状態'))).toBe(true);
