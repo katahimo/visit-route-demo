@@ -3,7 +3,16 @@ import { describe, expect, it } from 'vitest';
 import type { Client } from '../contracts/documents';
 import { client, makeData } from '../matching/fixtures.testkit';
 import type { GeoHit, LookupResult, PostalHit } from './geocode';
-import { keepStorePlace, type PlaceAllResult, placeAll, placeAllTargets, sleep, withFoundPlace } from './placeAll';
+import {
+  hasAddressNotFound,
+  keepStorePlace,
+  type PlaceAllResult,
+  placeAll,
+  placeAllLead,
+  placeAllTargets,
+  sleep,
+  withFoundPlace,
+} from './placeAll';
 
 const noPlace = (id: string, address: string, postalCode = '', over: Partial<Client> = {}) =>
   client(id, 0, 0, { displayName: id, place: { address, lat: null, lng: null, postalCode }, ...over });
@@ -25,6 +34,46 @@ describe('placeAllTargets（まとめて置く対象）', () => {
     const { targets, skipped } = placeAllTargets(cs);
     expect(targets.map((c) => c.id)).toEqual(['あ', 'い']);
     expect(skipped.map((c) => c.id)).toEqual(['う']);
+  });
+});
+
+describe('placeAllLead（名簿を読み込んだあとの導線。PRD D399）', () => {
+  const on = { asked: true, geocodeOn: true, running: false, targets: 3 };
+  it('名簿が入った後で、対象がいれば「位置の無い N人を地図に置く」', () => {
+    expect(placeAllLead(on)).toBe('位置の無い3人を地図に置く');
+  });
+  it('読み込む前・検索を切っている・置いている最中・対象が0人なら出さない', () => {
+    expect(placeAllLead({ ...on, asked: false })).toBeNull();
+    expect(placeAllLead({ ...on, geocodeOn: false })).toBeNull();
+    expect(placeAllLead({ ...on, running: true })).toBeNull();
+    expect(placeAllLead({ ...on, targets: 0 })).toBeNull();
+  });
+  it('N は placeAllTargets の対象の数（住所も郵便番号も無い人・終了の人・位置のある人は数えない）', () => {
+    const cs = [
+      noPlace('a', '太白区大野田'),
+      noPlace('b', '', '9800811'),
+      noPlace('c', ''),
+      noPlace('d', '宮城県', '', { stage: 'ended', active: false }),
+      client('e', 38, 140),
+    ];
+    expect(placeAllLead({ ...on, targets: placeAllTargets(cs).targets.length })).toBe('位置の無い2人を地図に置く');
+  });
+});
+
+describe('hasAddressNotFound（市区町村の1行を足すか）', () => {
+  const from = { address: '', postalCode: '' };
+  const fail = (step: 'postal' | 'address', reason: 'notFound' | 'network'): PlaceAllResult => ({
+    clientId: 'a',
+    ok: false,
+    reason,
+    step,
+    foundAddress: null,
+    from,
+  });
+  it('住所から位置が見つからなかった人がいるときだけ', () => {
+    expect(hasAddressNotFound([fail('address', 'notFound')])).toBe(true);
+    expect(hasAddressNotFound([fail('postal', 'notFound'), fail('address', 'network')])).toBe(false);
+    expect(hasAddressNotFound([])).toBe(false);
   });
 });
 
