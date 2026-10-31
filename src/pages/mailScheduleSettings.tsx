@@ -76,12 +76,12 @@ export function MailScheduleSettingsCard() {
         {ms.ready && <span className="feature-badge">つないでいます</span>}
       </h2>
       <div className="feature-desc-line">
-        <span className="sub">日の予定のメールを、確定するときに Google に預け、前日の決めた時刻に自動で送ります</span>
-        <Hint label="詳しい説明" ariaLabel="メールの予約送信の詳しい説明">
+        <span className="sub">
+          日の予定のメールを、確定するときにまとめて事業所の Google のアカウントに預け、前日の決めた時刻に自動で送ります
+        </span>
+        <Hint ariaLabel="メールの予約送信の説明">
           <span data-testid="mail-schedule-notes">
-            送るまでに{GAS_TRIGGER_MINUTES}分ほど遅れることがあります。予定・住所は事業所の Google
-            のアカウント（スプレッドシート）を通ります。Google を使わないときは、今までどおり「メールを作る」で
-            メールアプリから送れます。
+            {`送るまでに${GAS_TRIGGER_MINUTES}分ほど遅れることがあります。予定・住所は事業所の Google のアカウント（スプレッドシート）を通ります。Google を使わないときは、今までどおり「メールを作る」でメールアプリから送れます。`}
           </span>
         </Hint>
       </div>

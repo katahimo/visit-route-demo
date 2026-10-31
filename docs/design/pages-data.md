@@ -70,14 +70,15 @@
 ### 管理者設定（`#/settings`。ADR-0028。PRD D210〜D216）
 
 - メニューの「設定」の「管理者設定」のタブ（見出しの下に設定のタブ。PRD D275）。だれでも開ける。土台で切れない。`lead`「使う機能だけを入れると、メニューと画面がすっきりします。切った機能のデータは消えません」。主ボタンは置かない（スイッチはその場で保存）
-- ひな形（`feature-templates`）：5つ（`feature-template`。今のひな形に「いまの設定」`feature-template-now`、どれとも違えば「カスタム」`feature-custom`）。「適用」（`feature-template-apply`・aria-label「ひな形「〈名前〉」を適用する」）は独自の確認ダイアログで `templateDiff`（入る機能・切れる機能）を出し、取り消すと変わらない。説明「よく使う組み合わせを一度に適用します。適用したあとも、下のスイッチで1つずつ直せます。」
-- グループ（`FEATURE_GROUPS`＝予定／当日・問い合わせ／人／AI の条件／連絡／データ。メニューの項目とは別に、機能を探しやすい分け方）ごと（`feature-group`）の行（`feature-row`）：名前・1行の説明・「切ると隠れるもの：…」・依存の注記（依存先が切なら「「〈名前〉」を入れると使えます」で押せない、入なら「「〈名前〉」が入っているときに使えます」）とスイッチ（`feature-switch`。`role="switch"`・`aria-checked`。「入」「切」）
+- 見せ方（PRD D395。ADR-0074 段4）：長い説明は ⓘ（`Hint`。ラベルは「説明」、読み上げは「〈名前〉の説明」）と「詳しく ▾」（`DetailsFold`）に畳み、閉じて始める（開閉は覚えない）
+- ひな形（`feature-templates`）：見出しの横に今のひな形の印「いま：〈名前〉」（`feature-template-current`。どれとも違えば「いま：カスタム」`feature-custom`。読み上げは「今のひな形：〈名前〉」）。5つは「詳しく ▾」（`feature-templates-fold`）の中（`feature-template`。今のひな形に「いまの設定」`feature-template-now`）。「適用」（`feature-template-apply`・aria-label「ひな形「〈名前〉」を適用する」）は独自の確認ダイアログで `templateDiff`（入る機能・切れる機能）を出し、取り消すと変わらない。説明「よく使う組み合わせを一度に適用します。適用したあとも、下のスイッチで1つずつ直せます。」
+- グループ（`FEATURE_GROUPS`＝予定／当日・問い合わせ／人／AI の条件／連絡／データ。メニューの項目とは別に、機能を探しやすい分け方）ごと（`feature-group`）の行（`feature-row`）：名前・1行の説明・ⓘ・スイッチ（`feature-switch`。`role="switch"`・`aria-checked`。「入」「切」）。ⓘ は説明の下の行に置き、開いても動かない。ⓘ の中は「切ると隠れるもの：…」（`feature-hides`）と、依存先が入のときの注記「「〈名前〉」が入っているときに使えます」（`feature-req-note`）。依存先が切のときは注記「「〈名前〉」を入れると使えます」を行に出し、スイッチは押せない（aria-disabled）。スイッチの読み上げ（aria-describedby）は、閉じた `<details>` の中を読まないので、説明・（押せないときの）依存の注記・hidden の写し（`feature-sr`。隠れるものと依存の注記）を指す
 - 押すとすぐ保存（`update`）とトースト「〈機能〉を入れました／切りました」
 - 切るときデータがあれば `turnOffImpact` の件数と効き方の確認（相性など）。データの無い機能は確認なし。取り消すと変わらない
 - 切った機能の URL を開くとホームへ移り、閉じられる知らせと管理者設定へのリンク
 - 390px で横にはみ出さない。印刷で知らせ・「適用」を出さない
-- いちばん下に「メールの予約送信（Google）」のカード（`pages/mailScheduleSettings`・data-testid `mail-schedule-settings`。メールの機能が入のときだけ。PRD D366。ADR-0069）：説明、手順の4行（ひな型のコピーのリンク `mail-schedule-template`。`GAS_TEMPLATE_URL` が空なら「まだ用意されていません」の文）、欄 `mail-schedule-url`・`mail-schedule-token`（password）・`mail-schedule-time`（time）、`mail-schedule-test`「接続を試す」・`mail-schedule-save`「保存」・`mail-schedule-clear`「この端末の設定を消す」（確認つき。設定があるときだけ）。誤りは押したあとに欄ごと（`settingsErrors`）。つないでいれば見出しに「つないでいます」
-- 「最初の設定をやり直す」のカード（メールの予約送信のカードの下、いちばん下。`pages/RestartCard`・data-testid `restart-first-run`・ボタン `restart-first-run-button`。PRD D381。ADR-0073）：独自の確認（危険の色。本文は `lib/firstRun` の `restartConfirmBody`：元に戻す（Ctrl+Z）の対象外なので先にデータの画面で書き出して控えを残す案内と、1世代の控えの文 `keepNote`）。OK で `askFirstRun()`（2問の画面 `components/FirstRunPage` へ。答えるまで今のデータのまま・読み直すと元のデータで開く）。答えると `startFirstRun(answer)` が1世代の控えを残してデータを作り直し、最初の画面（デモ＝週／月、自分のデータ＝登録の案内）へ移る。
+- いちばん下に「メールの予約送信（Google）」のカード（`pages/mailScheduleSettings`・data-testid `mail-schedule-settings`。メールの機能が入のときだけ。PRD D366・D395。ADR-0069）：1行の説明（確定するときにまとめて Google に預け、前日の時刻に自動で送る）と ⓘ（ラベル「説明」・aria-label「メールの予約送信の説明」。中は `mail-schedule-notes`：遅れる分数・Google のアカウントを通ること・使わないときは「メールを作る」で送れること）、手順の4行は「詳しく ▾」（`mail-schedule-steps-fold`。見出しの横に「手順 4つ」。ひな型のコピーのリンク `mail-schedule-template`。`GAS_TEMPLATE_URL` が空なら「まだ用意されていません」の文）、欄 `mail-schedule-url`・`mail-schedule-token`（password）・`mail-schedule-time`（time）、`mail-schedule-test`「接続を試す」・`mail-schedule-save`「保存」・`mail-schedule-clear`「この端末の設定を消す」（確認つき。設定があるときだけ）。誤りは押したあとに欄ごと（`settingsErrors`）。つないでいれば見出しに「つないでいます」
+- 「最初の設定をやり直す」のカード（メールの予約送信のカードの下、いちばん下。`pages/RestartCard`・data-testid `restart-first-run`・ボタン `restart-first-run-button`。PRD D381。ADR-0073）：説明1行（`RESTART_HINT`）と、畳まない注意「いまのデータは消えます。」（`restart-first-run-warn`）。独自の確認（危険の色。本文は `lib/firstRun` の `restartConfirmBody`：元に戻す（Ctrl+Z）の対象外なので先にデータの画面で書き出して控えを残す案内と、1世代の控えの文 `keepNote`）。OK で `askFirstRun()`（2問の画面 `components/FirstRunPage` へ。答えるまで今のデータのまま・読み直すと元のデータで開く）。答えると `startFirstRun(answer)` が1世代の控えを残してデータを作り直し、最初の画面（デモ＝週／月、自分のデータ＝登録の案内）へ移る。
 
 ### 完了の条件
 

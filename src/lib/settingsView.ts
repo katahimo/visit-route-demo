@@ -1,9 +1,9 @@
 // 管理者設定の見せ方（PRD D395。ADR-0074 段4）：スイッチの行は名前と1行の説明だけを出し、「切ると隠れるもの」・依存の注記は
-// ⓘ の中へ回す（依存先が切で押せないときの理由だけは行に出す）。ひな形は今のものの名前だけ出して畳む。
+// ⓘ（ラベルは「説明」）の中へ回す（依存先が切で押せないときの理由だけは行に出す）。ひな形は今のものの名前だけ出して畳む。
 // 画面は表（lib/features）から文を受け取る。データは書き換えない
 import type { Terms } from '../contracts/documents';
 import type { Features } from '../contracts/features';
-import { type FeatureDef, featureLabel, fillTerms, isOn, matchTemplate, templateDef } from './features';
+import { type FeatureDef, featureLabel, fillTerms, isOn, type TemplateId, templateDef } from './features';
 
 /** スイッチの行の文 */
 export type FeatureRowText = {
@@ -35,8 +35,7 @@ export function featureRowText(
 }
 
 /** ひな形の見出しに出す「今使っているもの」（どのひな形とも違えば「カスタム」） */
-export function currentTemplateName(features: Features): { name: string; custom: boolean } {
-  const id = matchTemplate(features);
+export function currentTemplateName(id: TemplateId | 'custom'): { name: string; custom: boolean } {
   return id === 'custom' ? { name: 'カスタム', custom: true } : { name: templateDef(id).label, custom: false };
 }
 

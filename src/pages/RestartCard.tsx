@@ -1,12 +1,13 @@
 import { RotateCcw } from 'lucide-react';
 import { useConfirm } from '../components/ConfirmDialog';
-import { Hint, SectionTitle, WithIcon } from '../components/ui';
+import { SectionTitle, WithIcon } from '../components/ui';
 import { keepNote } from '../lib/dataScreen';
 import {
   RESTART_CONFIRM_LABEL,
   RESTART_CONFIRM_TITLE,
   RESTART_HINT,
   RESTART_TITLE,
+  RESTART_WARN,
   restartConfirmBody,
 } from '../lib/firstRun';
 import { canKeepPrevious, useDemoData } from '../store';
@@ -30,7 +31,10 @@ export function RestartCard() {
   return (
     <section className="card stack" data-testid="restart-first-run">
       <SectionTitle icon={RotateCcw}>{RESTART_TITLE}</SectionTitle>
-      <Hint>{RESTART_HINT}</Hint>
+      <p className="sub">{RESTART_HINT}</p>
+      <p className="restart-warn" data-testid="restart-first-run-warn">
+        {RESTART_WARN}
+      </p>
       <button
         type="button"
         className="btn"

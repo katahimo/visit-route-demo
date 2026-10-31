@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyTemplate, featureDef, withFeature } from './features';
+import { applyTemplate, FEATURES, featureDef, matchTemplate, withFeature } from './features';
 import { currentTemplateName, featureRowText, mailStepsHeading } from './settingsView';
 
 const terms = { client: '利用者さん', staff: 'スタッフ' };
@@ -14,8 +14,8 @@ describe('featureRowText（スイッチの行の文）', () => {
     expect(t.hides.startsWith('切ると隠れるもの：')).toBe(true);
   });
   it('どの機能の説明も1文で、「切ると」を含まない（隠れるものは ⓘ の中）', () => {
-    for (const id of ['expert', 'vacancy', 'patterns', 'excel'] as const) {
-      const t = featureRowText(featureDef(id), all, terms);
+    for (const f of FEATURES) {
+      const t = featureRowText(f, all, terms);
       expect(t.description).not.toContain('切ると');
       expect(t.description.split('。').filter(Boolean)).toHaveLength(1);
     }
@@ -35,9 +35,12 @@ describe('featureRowText（スイッチの行の文）', () => {
 
 describe('currentTemplateName（ひな形の見出しの名前）', () => {
   it('同じひな形ならその名前、どれとも違えば「カスタム」', () => {
-    expect(currentTemplateName(applyTemplate('basic'))).toEqual({ name: '基本', custom: false });
-    expect(currentTemplateName(all)).toEqual({ name: 'すべて', custom: false });
-    expect(currentTemplateName(withFeature(all, 'vacancy', false))).toEqual({ name: 'カスタム', custom: true });
+    expect(currentTemplateName(matchTemplate(applyTemplate('basic')))).toEqual({ name: '基本', custom: false });
+    expect(currentTemplateName(matchTemplate(all))).toEqual({ name: 'すべて', custom: false });
+    expect(currentTemplateName(matchTemplate(withFeature(all, 'vacancy', false)))).toEqual({
+      name: 'カスタム',
+      custom: true,
+    });
   });
 });
 

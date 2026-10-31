@@ -361,7 +361,7 @@ flowchart LR
 - 表の `doParams`：`sudden` は `/plan?do=absence`
 - `turnOffImpact`（D215）は計算に効くものだけ：相性は利用中の〈利用者さん〉×休止でない〈スタッフ〉、担当を限るは限った人に休止でない人がいる利用中の〈利用者さん〉、休み・希望休・欠勤は今日以降、空き状況は仮押さえの〈利用者さん〉
 - 出し分け：`menuSections(terms, today, features)`、`app/App.tsx` のルート（切った URL は予定の画面（`homePath`）へ移し、知らせと `#/settings` へのリンク）、`lib/commandPalette`・`lib/attentionBand`・`lib/tour`・`lib/links`（切なら null）、画面の欄・ボタン（`useFeature`）。`rules` を切っても AI で組むのは点数の基準のプリセットの重み（`data.rules` はいつも基準にそろっている）。事実の表示（休みの人に N・振り直しの差・連絡の一覧）は残し、入力・操作の入口だけ隠す
-- 管理者設定 `pages/SettingsPage.tsx`（`#/settings`。だれでも開ける。入切とも同じ見せ方。PRD D395）：ひな形（`TemplatesCard`。見出しの横に今のひな形の名前か「カスタム」だけ出し、5つは `DetailsFold`＝閉じて始め開閉は覚えない。適用するときは `templateDiff` の確認）とグループごとのスイッチ（`featureRows`。role="switch"、その場で保存。名前と1行の説明を出し、「切ると隠れるもの」と依存の注記は ⓘ（`Hint`）の中、依存先が切で押せない理由だけ行に出す。データがあれば `turnOffImpact` の確認）。文は `lib/settingsView`（`featureRowText`・`currentTemplateName`）。メールの予約送信（`mailScheduleSettings`）は説明1行＋ⓘ、手順4つは `DetailsFold`（見出しに「手順 4つ」）
+- 管理者設定 `pages/SettingsPage.tsx`（`#/settings`。だれでも開ける。入切とも同じ見せ方。PRD D395）：ひな形（`TemplatesCard`。見出しの横に「いま：〈名前〉」（どれとも違えば「いま：カスタム」。読み上げは「今のひな形：〜」）だけ出し、5つは `DetailsFold`＝閉じて始め開閉は覚えない。適用するときは `templateDiff` の確認）とグループごとのスイッチ（`featureRows`。role="switch"、その場で保存。名前と1行の説明を出し、「切ると隠れるもの」と依存の注記は ⓘ（`Hint`。ラベルは「説明」。ⓘ は説明の下の行）の中、依存先が切で押せない理由だけ行に出す。閉じた `<details>` の中は読み上げに入らないので、スイッチの aria-describedby は外に置いた hidden の写しを指す。データがあれば `turnOffImpact` の確認）。文は `lib/settingsView`（`featureRowText`・`currentTemplateName`）。メールの予約送信（`mailScheduleSettings`）は説明1行＋ⓘ（「説明」）、手順4つは `DetailsFold`（見出しに「手順 4つ」）
 - 依存するもの：contracts、store（読むだけ）
 - 配置：`src/lib/features.ts`・`src/components/useFeature.ts`・`src/components/FeatureOffNotice.tsx`（切った URL を開いたときの知らせ）・`src/pages/SettingsPage.tsx`
 - 完了の条件：

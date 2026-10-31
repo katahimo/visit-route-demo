@@ -82,6 +82,22 @@ const steps = sharedPage({
           ) && !(await page.getByTestId('mail-schedule-notes').isVisible()),
           '予約送信の説明は1行（詳しい説明は ⓘ の中）',
         );
+        const noteSummary = card.locator('details.hint > summary');
+        check(
+          (await noteSummary.innerText()).trim() === '説明' &&
+            (await noteSummary.getAttribute('aria-label')) === 'メールの予約送信の説明',
+          'ⓘ のラベルは「説明」（読み上げは「メールの予約送信の説明」）',
+        );
+        await noteSummary.click();
+        const notes = (await page.getByTestId('mail-schedule-notes').innerText()).replace(/\s+/g, '');
+        check(
+          notes.includes('分ほど遅れることがあります') &&
+            notes.includes('Googleのアカウント（スプレッドシート）を通ります') &&
+            notes.includes('「メールを作る」でメールアプリから送れます'),
+          'ⓘ を開くと、遅れる分数・Google を通ること・「メールを作る」で送れることが読める',
+          notes,
+        );
+        await noteSummary.click();
         await openDetails(page, 'mail-schedule-steps-fold');
         check((await page.getByTestId('mail-schedule-template').count()) === 1, 'ひな型のコピーの行がある');
         check(
