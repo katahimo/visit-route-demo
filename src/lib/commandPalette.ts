@@ -145,8 +145,8 @@ export function paletteActions(today: string, { features = {} }: { features?: Fe
   const ym = ymOf(today);
   const next = addMonths(ym, 1);
   const monthNo = (m: string) => Number(m.slice(5, 7));
-  // エキスパート機能が切なら「予定を組む」のメニューは無いので、担当を組むの hint は予定（ADR-0072）
-  const arrangeHint = isOn(features, 'expert') ? '予定を組む' : '予定';
+  // エキスパート機能が切なら「組む」のメニューは無いので、担当を組むの hint は予定（ADR-0072）
+  const arrangeHint = isOn(features, 'expert') ? '組む' : '予定';
   const month = (op: string, m = ym) => `/month?ym=${m}&do=${op}`;
   const all = [
     paletteItem({
