@@ -18,8 +18,18 @@ const day = (date: string, issues: Record<string, IssueKind[]> = {}): DayStatus 
 });
 
 const TODAY = '2026-10-21';
+const ZERO = {
+  unassigned: 0,
+  overlap: 0,
+  off: 0,
+  notAllowed: 0,
+  overSpan: 0,
+  noStandard: 0,
+  rebuild: 0,
+  unconfirmed: 0,
+};
 
-describe('attentionBand（要対応の帯。PRD D383）', () => {
+describe('attentionBand（要対応の帯。PRD D383・D391）', () => {
   it('何も無ければ null（帯を出さない）', () => {
     expect(attentionBand([], TODAY)).toBeNull();
     expect(attentionBand([day(TODAY), day('2026-10-22')], TODAY)).toBeNull();
@@ -32,20 +42,18 @@ describe('attentionBand（要対応の帯。PRD D383）', () => {
       ],
       TODAY,
     );
-    expect(b?.counts).toEqual({ unassigned: 3, overlap: 1, off: 1 });
-    expect(b?.total).toBe(5);
+    expect(b?.counts).toEqual({ ...ZERO, unassigned: 3, overlap: 1, off: 1 });
     expect(b?.text).toBe('担当なし 3件・重なり 1件・休みの人 1件');
     expect(attentionBand([day(TODAY, { a: ['off'] })], TODAY)?.text).toBe('休みの人 1件');
   });
   it('条件に合わない（notAllowed）だけの訪問は数えない。重なりと重なった訪問は重なりに数える', () => {
     expect(attentionBand([day(TODAY, { a: ['notAllowed'] })], TODAY)).toBeNull();
     const b = attentionBand([day(TODAY, { a: ['notAllowed', 'late'], b: ['notAllowed'] })], TODAY);
-    expect(b?.counts).toEqual({ unassigned: 0, overlap: 1, off: 0 });
+    expect(b?.counts).toEqual({ ...ZERO, overlap: 1 });
   });
   it('1つの訪問は1つの種類（休みの人と重なりが重なっても休みの人）', () => {
     const b = attentionBand([day(TODAY, { a: ['late', 'off'] })], TODAY);
-    expect(b?.counts).toEqual({ unassigned: 0, overlap: 0, off: 1 });
-    expect(b?.total).toBe(1);
+    expect(b?.counts).toEqual({ ...ZERO, off: 1 });
   });
   it('今日より前の日は数えない', () => {
     expect(attentionBand([day('2026-10-20', { a: ['unassigned'] })], TODAY)).toBeNull();
@@ -57,7 +65,7 @@ describe('attentionBand（要対応の帯。PRD D383）', () => {
       TODAY,
       (id) => start[id] ?? null,
     );
-    expect(b?.first).toEqual({ date: TODAY, visitId: 'b' });
+    expect(b?.go).toEqual({ to: '/plan', date: TODAY, visitId: 'b' });
   });
   it('bandDays：今日から翌月末まで（自動の組みの範囲と同じ）', () => {
     const d = bandDays('2026-10-21');
@@ -70,7 +78,89 @@ describe('attentionBand（要対応の帯。PRD D383）', () => {
       [day('2026-10-25', { z: ['unassigned'] }), day('2026-10-22', { x: ['notAllowed'], y: ['off'], w: ['late'] })],
       TODAY,
     );
-    expect(b?.first).toEqual({ date: '2026-10-22', visitId: 'y' });
+    expect(b?.go).toEqual({ to: '/plan', date: '2026-10-22', visitId: 'y' });
+  });
+});
+
+describe('attentionBand の入だけの種類（エキスパート機能が入。PRD D391）', () => {
+  const open = { hasStandard: true, basisChanged: false, planYm: '2026-11', isOn: () => true };
+  /** 訪問があって伝えていない日 */
+  const untold = (date: string): DayStatus => ({ ...day(date), state: 'none' });
+  const told = (date: string): DayStatus => ({ ...day(date), state: 'told' });
+  it('切（渡さない）は、伝えていない日・組み直し・標準が無いを数えない', () => {
+    expect(attentionBand([untold(TODAY)], TODAY)).toBeNull();
+  });
+  it('未確定：訪問があって伝えていない日・未連絡の変更のある日を日数で数える。伝えた日・訪問の無い日・今日より前は数えない', () => {
+    const changed: DayStatus = { ...day('2026-10-24'), state: 'changed' };
+    const empty: DayStatus = { ...untold('2026-10-25'), count: 0 };
+    const b = attentionBand(
+      [untold(TODAY), told('2026-10-22'), untold('2026-10-23'), changed, empty, untold('2026-10-20')],
+      TODAY,
+      undefined,
+      open,
+    );
+    expect(b?.counts.unconfirmed).toBe(3);
+    expect(b?.text).toBe('未確定 3日');
+    expect(attentionBand([told(TODAY)], TODAY, undefined, open)).toBeNull();
+  });
+  it('未確定の押した先：1日だけならその日の日の予定、2日以上なら最初の日の月の右の欄', () => {
+    expect(attentionBand([untold('2026-10-23')], TODAY, undefined, open)?.go).toEqual({
+      to: '/plan',
+      date: '2026-10-23',
+    });
+    expect(attentionBand([untold('2026-11-02'), untold('2026-10-23')], TODAY, undefined, open)?.go).toEqual({
+      to: '/month?ym=2026-10&do=unconfirmed',
+    });
+  });
+  it('標準が無い：標準を登録していなければ1件（組み方の標準へ）。基本情報が変わったは標準を登録しているときだけ（担当を組む・組む月へ）', () => {
+    const noStd = attentionBand([], TODAY, undefined, { ...open, hasStandard: false, basisChanged: true });
+    expect(noStd?.counts).toEqual({ ...ZERO, noStandard: 1 });
+    expect(noStd?.text).toBe('組み方の標準が無い');
+    expect(noStd?.go).toEqual({ to: '/standard' });
+    const changed = attentionBand([], TODAY, undefined, { ...open, basisChanged: true });
+    expect(changed?.counts).toEqual({ ...ZERO, rebuild: 1 });
+    expect(changed?.text).toBe('基本情報が変わった（組み直す）');
+    expect(changed?.go).toEqual({ to: '/arrange?ym=2026-11' });
+    expect(attentionBand([], TODAY, undefined, open)).toBeNull();
+  });
+  it('条件に合わない（必須の違反の訪問）・拘束超（日）は入だけ数え、切（渡さない）は数えない。ホームの要対応が知らせていたもの', () => {
+    const told1 = {
+      ...told(TODAY),
+      ...day(TODAY, { a: ['notAllowed'], b: ['notAllowed', 'late'] }),
+      state: 'told' as const,
+    };
+    const span = { ...told('2026-10-23'), overSpan: ['s1'] };
+    const b = attentionBand([told1, span], TODAY, undefined, open);
+    // b は重なりに数える。a だけが条件に合わない
+    expect(b?.counts).toEqual({ ...ZERO, overlap: 1, notAllowed: 1, overSpan: 1 });
+    expect(b?.text).toBe('重なり 1件・条件に合わない 1件・拘束超 1日');
+    expect(attentionBand([told1, span], TODAY)?.text).toBe('重なり 1件');
+    // 押した先：訪問の種類が先。条件に合わないだけなら最初のその訪問、拘束超だけならその日の日の予定
+    expect(
+      attentionBand([{ ...told1, issues: new Map([['a', told1.issues.get('a')!]]) }], TODAY, undefined, open)?.go,
+    ).toEqual({
+      to: '/plan',
+      date: TODAY,
+      visitId: 'a',
+    });
+    expect(attentionBand([span], TODAY, undefined, open)?.go).toEqual({ to: '/plan', date: '2026-10-23' });
+  });
+  it('切った機能の種類は出さない（組み方の標準・担当を組むの URL が切れていれば）', () => {
+    const off = { ...open, hasStandard: false, isOn: () => false };
+    expect(attentionBand([], TODAY, undefined, off)).toBeNull();
+    expect(attentionBand([], TODAY, undefined, { ...off, hasStandard: true, basisChanged: true })).toBeNull();
+  });
+  it('文は 訪問の種類 → 標準が無い／組み直し → 未確定 の順にまとめ、押した先は先頭の種類（訪問があれば訪問）', () => {
+    const b = attentionBand([day(TODAY, { a: ['unassigned'], b: ['late'] }), untold('2026-10-23')], TODAY, undefined, {
+      ...open,
+      hasStandard: false,
+    });
+    expect(b?.text).toBe('担当なし 1件・重なり 1件・組み方の標準が無い・未確定 2日');
+    expect(b?.go).toEqual({ to: '/plan', date: TODAY, visitId: 'a' });
+    // 訪問の種類が無ければ、標準が無いへ（未確定より先）
+    expect(attentionBand([untold('2026-10-23')], TODAY, undefined, { ...open, hasStandard: false })?.go).toEqual({
+      to: '/standard',
+    });
   });
 });
 

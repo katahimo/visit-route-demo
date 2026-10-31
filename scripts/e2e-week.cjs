@@ -728,12 +728,12 @@ async function weekDoneElsewhere(page) {
   check((await rangeBand(page).innerText()).includes(W2_LABEL), '別の週の画面にも組んだ週の提案の帯', W2_LABEL);
   // ホームでは帯が見えないので、終わった知らせに［担当を組むを開く］（次の組む）
   await rangeBand(page).getByTestId('proposal-discard').click();
-  await page.goto(`${BASE}#/home`);
+  await page.goto(`${BASE}#/data`);
   await page.locator('h1').waitFor();
   await open(page, `/week?d=${W2}`);
   await startWeek(page, W2, null);
   await page.evaluate(() => {
-    location.hash = '#/home';
+    location.hash = '#/data';
   });
   await page.getByTestId('batch-band').waitFor({ timeout: 10000 });
   const toast2 = page.locator('.toast').filter({ hasText: `${W2_LABEL}の提案を出しました` });

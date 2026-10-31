@@ -11,7 +11,7 @@ import { useCompileInput } from './useDayModel';
 import { useDayStatuses } from './useDayStatuses';
 
 /**
- * 期間の訪問の見た目（訪問ID → VisitLook）。日の状態（月の予定・週の予定・ホームと同じ useDayStatuses の覚え）から引くので、
+ * 期間の訪問の見た目（訪問ID → VisitLook）。日の状態（月の予定・週の予定・要対応の帯と同じ useDayStatuses の覚え）から引くので、
  * どの画面でも同じ判定になる。dates は useMemo した配列を渡す
  */
 export function useVisitLooks(dates: readonly string[]): (visitId: string) => VisitLook | undefined {

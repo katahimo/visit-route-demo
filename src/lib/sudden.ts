@@ -10,7 +10,7 @@ export type SuddenKind = 'staff' | 'client';
 /** 段階（1：何が起きたか 2：人・訪問を選ぶ 3：影響の確認と振り直し 4：案を選ぶ 5：連絡して確定。PRD D243・ADR-0053） */
 export type SuddenStep = 1 | 2 | 3 | 4 | 5;
 
-/** URL の `?do=` で欄を開く値（ホームの「急な欠勤・キャンセルを登録」。PRD D172） */
+/** URL の `?do=` で欄を開く値（「欠勤・キャンセルを登録」の入口。PRD D172） */
 export const SUDDEN_DO = 'absence';
 
 /** 段階の短い名前（欄の上の1行の段階の表示。種類を選ぶ前は〈スタッフ〉の流れの名前で出す） */

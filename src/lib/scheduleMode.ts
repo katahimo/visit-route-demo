@@ -3,23 +3,27 @@
 import type { DemoData } from '../contracts/data';
 import { addDays } from '../domain/time';
 import { own } from './common';
-import { monthLabel } from './dateText';
 import { activeDayVisits } from './dayPlan';
-import { HOME_NEXT_MONTH_FROM_DAY } from './home';
 import { hasStandard } from './standard';
 import { monthDates, ymOf } from './ym';
 
 /** 来月（YYYY-MM） */
 export const nextYm = (today: string): string => ymOf(addDays(`${ymOf(today)}-01`, 31));
 
-/** 月の後半か（ホームが来月の準備を出すのと同じ日から。PRD D255） */
-export const isLateMonth = (today: string): boolean => Number(today.slice(8, 10)) >= HOME_NEXT_MONTH_FROM_DAY;
+/**
+ * この日（日付の日）以降を月の後半とし、来月の準備を始める日にする（シフトの希望・利用者さんへの連絡は月の後半に始まり、月末7日では
+ * 来月の担当を組むのが遅い。事業所ごとに変えない：契約に足すほどの差が無い。PRD D255 の日。段1でホームを無くして移した。ADR-0074）
+ */
+export const LATE_MONTH_FROM_DAY = 15;
+
+/** 月の後半か */
+export const isLateMonth = (today: string): boolean => Number(today.slice(8, 10)) >= LATE_MONTH_FROM_DAY;
 
 /** 組む月：月の後半なら来月、前半なら今月（メニューの「◯月の予定」・「担当を組む」） */
 export const planYm = (today: string): string => (isLateMonth(today) ? nextYm(today) : ymOf(today));
 
 /**
- * その月の、担当なしの訪問がある日（今日以降・まだ伝えていない日）の数。ホームの「N月の担当を AI で組む」と同じ日の数え方
+ * その月の、担当なしの訪問がある日（今日以降・まだ伝えていない日）の数。メニューの「組む」の印の数え方
  * （担当が null の訪問。取り消し・〈利用者さん〉の休みの回は数えない）。compile しないので軽い
  */
 export function unassignedDayCount(
@@ -51,21 +55,16 @@ function countUnassigned(
   return n;
 }
 
-/** メニューの「◯月の予定」の名前 */
-export const planLabel = (today: string): string => `${monthLabel(planYm(today))}の予定`;
-
 /**
- * メニューの件数の印（PRD D349）：組む月の担当なしの日の数（unassignedDayCount）と、今日に訪問があってまだ伝えていないか、
- * 組み方の標準があるか（PRD D360）。
+ * メニューの件数の印（PRD D349・D390）：組む月の担当なしの日の数（unassignedDayCount）と、組み方の標準があるか（PRD D360）。
  * compile しないので画面を移るたびに数えても軽い
  */
 export function menuBadges(
   data: Pick<DemoData, 'visits' | 'patterns' | 'clients' | 'clientLeaves' | 'snapshots' | 'standard'>,
   today: string,
-): { planUnassignedDays: number; todayUntold: boolean; hasStandard: boolean } {
+): { planUnassignedDays: number; hasStandard: boolean } {
   return {
     hasStandard: hasStandard(data),
     planUnassignedDays: unassignedDayCount(data, planYm(today), today),
-    todayUntold: !own(data.snapshots, today) && activeDayVisits(data, today).length > 0,
   };
 }

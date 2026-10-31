@@ -360,17 +360,17 @@ flowchart LR
 - 提供するAPI：`lib/features.ts` の `FEATURES`・`FEATURE_GROUPS`・`isOn`（依存先が切なら切）・`isSwitchOn`・`featureOfLocation(pathname, search)`・`featureOfHref`・`isHrefOn`（土台は null。パスは小文字・末尾の `/` を落とす）・`TEMPLATES`（`oneOff` 単発のみ／`basic` 基本／`laborContract` 労務・契約管理／`monthlyField` 月次予定・現場共有／`all` すべて）・`applyTemplate`・`matchTemplate`（違えば `custom`）・`templateDiff`・`turnOffImpact(data, id, today)`・`withFeature`。画面から読むのは `components/useFeature.ts` の `useFeatures()`・`useFeature(id)`（`isOn` で依存も見る。欄・ボタンを出すかを部品の中で決める）
 - 表の `doParams`：`sudden` は `/plan?do=absence`
 - `turnOffImpact`（D215）は計算に効くものだけ：相性は利用中の〈利用者さん〉×休止でない〈スタッフ〉、担当を限るは限った人に休止でない人がいる利用中の〈利用者さん〉、休み・希望休・欠勤は今日以降、空き状況は仮押さえの〈利用者さん〉
-- 出し分け：`menuSections(terms, today, features)`、`app/App.tsx` のルート（切った URL は `#/home` へ移し、知らせと `#/settings` へのリンク）、`lib/commandPalette`・`lib/home`・`lib/tour`・`lib/links`（切なら null）、画面の欄・ボタン（`useFeature`）。`rules` を切っても AI で組むのは点数の基準のプリセットの重み（`data.rules` はいつも基準にそろっている）。事実の表示（休みの人に N・振り直しの差・連絡の一覧）は残し、入力・操作の入口だけ隠す
+- 出し分け：`menuSections(terms, today, features)`、`app/App.tsx` のルート（切った URL は予定の画面（`homePath`）へ移し、知らせと `#/settings` へのリンク）、`lib/commandPalette`・`lib/attentionBand`・`lib/tour`・`lib/links`（切なら null）、画面の欄・ボタン（`useFeature`）。`rules` を切っても AI で組むのは点数の基準のプリセットの重み（`data.rules` はいつも基準にそろっている）。事実の表示（休みの人に N・振り直しの差・連絡の一覧）は残し、入力・操作の入口だけ隠す
 - 管理者設定 `pages/SettingsPage.tsx`（`#/settings`。だれでも開ける）：ひな形の5つ（適用するときは `templateDiff` の確認）とグループごとのスイッチ（role="switch"、その場で保存。データがあれば `turnOffImpact` の確認）
 - 依存するもの：contracts、store（読むだけ）
 - 配置：`src/lib/features.ts`・`src/components/useFeature.ts`・`src/components/FeatureOffNotice.tsx`（切った URL を開いたときの知らせ）・`src/pages/SettingsPage.tsx`
 - 完了の条件：
   - [ ] `org.features` の無いデータで画面・計算が変わらない（テスト）
-  - [ ] メニュー・パレット・ホーム・ツアー・links の行き先が土台か表の機能に属する。依存（`vacancy`→`vacancyNotice`、`workload`→`fare`）、ひな形と `matchTemplate`（テスト）
-  - [ ] 切った URL はホーム（エキスパート機能が切なら予定の画面。`homePath`）へ移り知らせ。設定と土台は切れない（e2e `scripts/e2e-features.cjs`：ひな形5通り・390px・印刷）
+  - [ ] メニュー・パレット・要対応の帯・ツアー・links の行き先が土台か表の機能に属する。依存（`vacancy`→`vacancyNotice`、`workload`→`fare`）、ひな形と `matchTemplate`（テスト）
+  - [ ] 切った URL は予定の画面（`homePath`。ホームは無い）へ移り知らせ。設定と土台は切れない（e2e `scripts/e2e-features.cjs`：ひな形5通り・390px・印刷）
 
 ### pages（画面）
-- 責務：管理者の画面（ホーム・日・月・週の予定・担当を組む・組み方の標準・提案を比べる・空き状況・〈利用者さん〉・〈スタッフ〉・相性・勤務時間（シフト）・勤務の見込み・訪問の種類・特性の項目・条件の重み・管理者設定・データ）。データの書き換えは store の `update(fn)` を通す
+- 責務：管理者の画面（日・月・週の予定・担当を組む・組み方の標準・提案を比べる・空き状況・〈利用者さん〉・〈スタッフ〉・相性・勤務時間（シフト）・勤務の見込み・訪問の種類・特性の項目・条件の重み・管理者設定・データ）。データの書き換えは store の `update(fn)` を通す
 - 持つデータ（持ち主）：画面の一時状態のみ（空き状況の入力はタブの間だけ sessionStorage の `vrdemo:vacancy:input`。PRD D258）。範囲（日・週・月）の AI で組むの進み具合と提案は画面の外の入れ物 `lib/monthBatch`（ページを開いている間だけ。ADR-0042・ADR-0054。訪問には書かず、提案の帯の「反映する」で1回の update）。全体の元に戻すの履歴は `lib/history` の `appHistory`（store が積む）
 - 提供するAPI：なし（ルートは [design/pages.md](design/pages.md) の表）
 - 依存するもの：store・matching・solver（Worker）・evaluate・reassign・patterns・vacancy・features
@@ -391,9 +391,9 @@ flowchart LR
     - **人の小さいタブ**（expert 切。PRD D389）：〈スタッフ〉＝一覧・勤務・相性、〈利用者さん〉＝一覧・相性。一覧と、タブ先の相性・勤務の画面の見出しの下（`BasicsNav` が切のとき `PeopleTabs` を出す）。並び・印・呼び名の名前・どちらの側かは `lib/peopleTabs`（`peopleTabs`・`peopleSideOf`・`peopleMatch`。テストあり）、相性（両方から来る1つの画面）でどちらから来たかは画面の中だけの覚え `components/peopleSide`（保存しない）。メニューの印（`simpleMenuItems` の `match`）も同じ覚えで相性を来た側に付ける。予定と相性（`#/basics`）など旧画面のタブは出さない。相性の画面の説明は 点・条件の重み を言わない（`peopleView` の `compatHintLabel`・`showCompatWeightNote`）
     - **日の予定の地図はボタンで開く**（同 D385）：切はページに地図のカード（`plan-map`）を置かず、スマホですでにある「地図」のボタン（`components/MapDock` の `map-dock-fab`）をいつも出し、押すと浮かせた地図が開く（PC も同じ形。`target` が null の MapDock）。入は今のまま（カードを置き、画面の外のときだけ浮かせる）
     - 月のマスの「このマスの読み方」は、切では帯の3種類（担当なし・重なり・休みの人）と「変更あり」に合わせ、条件に合わない・拘束超の説明を出さない（`lib/monthGuide` の `confirmStep`）
-  - **入の画面は切の作りを土台に整える**（予定。PRD D390〜D395。ADR-0074）：入でも画面の骨組みは切と同じにし、専門の操作・情報は「その他 ▾」・小さいタブ・「詳しく ▾」（閉じて始め、見出しの1行に点数・移動・未確定などの数。開閉は画面ごとに端末に覚える）に足す（機能は消さない）。入のメニューは 予定・〈利用者さん〉・〈スタッフ〉・組む・設定 の5つでホームは無くし、入だけの種類（未確定・組み直し・標準が無い）は要対応の帯へ。入の主ボタンは 月・週＝「予定を入れる」＋「担当を組む」、日＝「予定を入れる」＋「確定（伝えた）」。段：0＝ADR・要件・e2e の共通の手（`scripts/lib/ui.cjs`。ここまで。画面は今のまま）→ 1＝メニュー・ホーム・帯 → 2＝予定の操作の行と「詳しく ▾」→ 3＝人の一覧・タブ → 4＝説明1行・設定 → 5＝後片付け。実装されるまでは、この節の「例外だけ見せる」・メニューの記述（入は今のまま）が正で、各段でここを書き直す
-  - 担当なしの［組む］は予定（月・週・日）の「その他 ▾」の「担当なしの訪問を組む N件」（`components/useSimpleMore`。expert が切のときだけ。切では日以外が主ボタンにもなる（下の「例外だけ見せる」）。入のときは従来の「担当なしの訪問を組む」＝担当を組むへ移る）。押すと `requestUnassignedArrange`。ホームの「担当なし N件」カードは無くした（切のときはホームが無い。ADR-0073 段(4)。PRD D383）
-  - 機能 ID `expert`（既定は切。ADR-0028）が入のときだけ、下の予定を組む・組み方の標準・案を比べる・条件の重みの入口を `menuSections` に出す。切のときはメニューを 予定・〈利用者さん〉・〈スタッフ〉・設定 の4つにし、ホームを無くして予定の上の要対応の帯と「その他 ▾」へ畳む（`lib/nav` の `isSimpleMenu`・`homePath`・`lib/attentionBand`。ADR-0073 段(4)。PRD D383）。機能 `patterns`（繰り返し。既定は入）を切ると〈利用者さん〉の画面から繰り返しの欄を隠す（今ある繰り返しの回は残る）
+  - **入の画面は切の作りを土台に整える**（PRD D390〜D395。ADR-0074）：入でも画面の骨組みは切と同じにし、専門の操作・情報は「その他 ▾」・小さいタブ・「詳しく ▾」（閉じて始め、見出しの1行に点数・移動・未確定などの数。開閉は画面ごとに端末に覚える）に足す（機能は消さない）。入のメニューは 予定・〈利用者さん〉・〈スタッフ〉・組む・設定 の5つでホームは無く、入だけの種類（組み方の標準が無い・基本情報が変わった（組み直す）・未確定 N日）は要対応の帯の種類（段1。実装済み）。入の主ボタンは 月・週＝「予定を入れる」＋「担当を組む」、日＝「予定を入れる」＋「確定（伝えた）」（段2）。段：0＝ADR・要件・e2e の共通の手（`scripts/lib/ui.cjs`）→ **1＝メニュー・ホームを無くす・帯の入の種類・下のタブ・ツアーの予定の枚・切の担当を組むの言葉（実装済み。`lib/nav` の `menuSections`・`bottomTabKeys`・`homePath`、`lib/attentionBand`、`lib/tour`、`lib/exceptionView` の `arrangeWords`）** → 2＝予定の操作の行と「詳しく ▾」 → 3＝人の一覧・タブ → 4＝説明1行・設定 → 5＝後片付け。段2〜4 が実装されるまでは、この節の「例外だけ見せる」の記述（入は今のまま）が正で、各段でここを書き直す
+  - 担当なしの［組む］は予定（月・週・日）の「その他 ▾」の「担当なしの訪問を組む N件」（`components/useSimpleMore`。expert が切のときだけ。切では日以外が主ボタンにもなる（下の「例外だけ見せる」）。入は「担当を組む」の画面で組むので足さず、「その他 ▾」には空き状況だけ足す。`lib/simpleMore`）。押すと `requestUnassignedArrange`。ホームの「担当なし N件」カードは無くした（切のときはホームが無い。ADR-0073 段(4)。PRD D383）
+  - 機能 ID `expert`（既定は切。ADR-0028）が入のときだけ、下の組む（組み方の標準・案を比べる・条件の重みの入口を含む）を `menuSections` に出す。切のときはメニューを 予定・〈利用者さん〉・〈スタッフ〉・設定 の4つにする。ホームは入切とも無く、予定の上の要対応の帯と「その他 ▾」へ畳む（`lib/nav` の `homePath`・`lib/attentionBand`。ADR-0073 段(4)・ADR-0074 段1。PRD D383・D390・D391）。機能 `patterns`（繰り返し。既定は入）を切ると〈利用者さん〉の画面から繰り返しの欄を隠す（今ある繰り返しの回は残る）
 - 予定を組む（PRD D350〜D356・D359〜D364。ADR-0063・ADR-0065〜ADR-0067）：1段ずつ進む段（段の表示 `components/SettingsTabs` の `ArrangeSteps`。並びは `lib/nav` の `arrangeSteps`）。1 基本情報は予定と相性の表 `pages/BasicsPage`（計算は `lib/basicsView`）と、基本情報のタブ（`BasicsNav`。〈利用者さん〉・〈スタッフ〉・相性・勤務時間（シフト）。前のメニュー「人」）。標準が無い間は 2 案をくらべる → 3 標準にする（表で直す（下書き）と登録）を組み方の標準 `pages/StandardPage` で（標準を決める道はここだけ。今の段は `lib/standardDraft` の `standardWork.step`）、最後に 担当を組む `pages/ArrangePage`。標準があれば 1 基本情報 → 2 担当を組む で、［標準の組み方を変える］で組み方の標準の手順へ戻る。条件の重み `pages/RulesPage` は案をくらべるからの寄り道。考え方（点数の基準）を替えるのは条件の重みと標準にするの登録だけ。基本情報の鍵（`lib/arrangeBasis`）を提案の反映・標準の登録で `store/arrangeBasis`（`vrdemo:arrange:basis`。DemoData の外）に覚え、変われば担当を組むに組み直しの知らせ（`components/useArrangeBasis`）
 - 最初の2問・登録の案内（PRD D379〜D381。ADR-0073）：保存データが無く初めて開いたとき（印 `vrdemo:features:start` = `all` が無いとき）と設定の「最初の設定をやり直す」のあと、本文の代わりに1画面2問（`components/FirstRunPage` の `FirstRunGate`）。答え（問1 デモ／自分のデータ × 問2 単発／定期）から決まる呼び名・ひな形・最初の画面・データは `lib/firstRun`（純粋関数）、データは単発のデモ `seed/oneOff`・空のデータ `seed/blank`・定期のデモは今の `createInitialData`。自分のデータで始めると `#/start` の3段（`lib/startGuide`・`pages/StartGuidePage`）。案内ツアー（D192）は初回に自動で出さず、データの画面の「案内をもう一度見る」だけ。詳細は [design/pages-common.md](design/pages-common.md)・[design/pages-data.md](design/pages-data.md)
 - スマホ・キーボード（PRD D333〜D338。ADR-0055）：600px 以下の日の予定は `components/dayList` の日ごとのリスト（長押し・「選ぶ」で複数選択・スワイプで日を送る）、訪問の詳細の欄は `SidePanel` の `sheet`（下から出る欄）、帯・札をキーで動かすのは `components/visitKeys`（書くのは `lib/visitKeys` → `lib/visitOps`）
@@ -405,7 +405,7 @@ flowchart LR
   - 共通事項・ルート一覧・確認ダイアログ・機能の入り切り（画面側）：[design/pages.md](design/pages.md)。メニュー・コマンドパレット：[design/pages-nav.md](design/pages-nav.md)
   - 画面共通の部品（右の欄・訪問の詳細の欄（`components/VisitPanel`・`lib/visitOps`）・名前の詳細・用語・ツアー・リンク・メール・道順）：[design/pages-common.md](design/pages-common.md)
   - 3段の時間帯のバー・ひと目で分かる表示：[design/pages-bars.md](design/pages-bars.md)
-  - ホーム：[design/pages-home.md](design/pages-home.md)
+  - 進み具合の帯・日の状態（ホームは無くした）：[design/pages-home.md](design/pages-home.md)
   - 日の予定：[design/pages-plan.md](design/pages-plan.md)／欠勤・キャンセル・振り直し・連絡：[design/pages-plan-absence.md](design/pages-plan-absence.md)
   - 月（希望休・まとめて確定・印刷）：[design/pages-month.md](design/pages-month.md)
   - 週：[design/pages-week.md](design/pages-week.md)
@@ -551,11 +551,11 @@ Worker 内の例外は `error` で返し、内部の文言は出さない（「A
 | 退職・拘束・段階 | 最終勤務日＋一括振り直し、上限は注意だけ、段階が正 |  | 0015 |
 | 住所から位置 | 押したときだけ外部の検索（郵便番号は fetch、だめなら JSONP） |  | 0016 |
 | メール・道順 | `mailto:` と Maps URLs のリンク。日の予定のメールは事業所の GAS に預ける予約送信も（ひな型のシートをコピー） |  | 0017・0018・0069 |
-| メニュー・パレット | 5項目（ホーム・予定を組む・予定・空き状況・設定）。エキスパート機能が切なら 予定・〈利用者さん〉・〈スタッフ〉・設定 の4つ（ホームは無く、要対応は予定の上の帯、空き状況は予定の「その他 ▾」。ADR-0073。PRD D383）。予定・予定を組む・設定は畳める子の項目を持ち（予定の子はリンク、予定を組むの子は基本情報・〈利用者さん〉一覧・〈スタッフ〉一覧・組み方の標準・担当を組む（作業の順。前の「人」は基本情報のタブ。条件の重みは寄り道。標準があれば組み方の標準を出さない）、設定の子はタブ。開け閉めは端末に覚える）。パレットは画面を1つずつ引ける（案を比べるは担当を組むから） |  | 0019・0027・0034・0045・0047・0054・0063・0065・0066・0067 |
+| メニュー・パレット | 5項目（予定・〈利用者さん〉・〈スタッフ〉・組む・設定。ADR-0074 段1。PRD D390）。エキスパート機能が切なら「組む」を除いた4つ（ADR-0073。PRD D383）。ホームは無く、要対応は予定の上の帯、空き状況は予定の「その他 ▾」。子の項目を持つのは組むだけ（基本情報・組み方の標準・担当を組む（作業の順。条件の重みは寄り道。標準があれば組み方の標準を出さない）。開け閉めは端末に覚える）。パレットは画面を1つずつ引ける（案を比べるは担当を組むから） |  | 0019・0027・0034・0045・0047・0054・0063・0065・0066・0067・0074 |
 | 見出し・ボタン | 見出しは `PageHeader` の1つの型（題名・1行の説明・右に主ボタン1つ・予定の3画面はすぐ下のナビの行に［月｜週｜日］。PRD D347）、ボタンは塗り＝主／枠＝副／文字＝ついでの3段 |  | 0036 |
 | 名簿 | 1シートを ID か名前で突き合わせ、総入れ替えは終了・休止。入出力は各一覧の名簿の欄で、Excel と CSV（文字コードは自動で見分ける） |  | 0020・0068 |
 | 絞り込み・詳細・人の画面 | 共通の `ClientFilter`、吹き出し、人は全画面（タブ・予定のカレンダー・節ごとの「直す → 保存」） |  | 0021・0022・0052 |
-| スマホ・ホーム・確認 | 下のタブ（ホーム・予定・欠勤・探す（パレット）・メニュー（引き出し）。エキスパート機能が切なら メニューの4つ・探す・メニュー）、ホームの「今日やること」（入のときだけ）、要対応の帯（切のとき）、`useConfirm` |  | 0024〜0026・0045・0073 |
+| スマホ・確認 | 下のタブ（予定・〈利用者さん〉・〈スタッフ〉・組む・探す（パレット）・メニュー（引き出し）。エキスパート機能が切なら 組むの代わりに設定）、要対応の帯（入切とも。入は入だけの種類つき）、`useConfirm` |  | 0024〜0026・0045・0073・0074 |
 | スマホの予定・キーボード | スマホは日ごとのリストと下から出る欄（見る・取り消す・担当替えだけ）、週・月は「まとめて見る」。広い画面は帯を矢印キーで動かし、繰り返しの回は小さな帯で範囲 |  | 0055 |
 | 訪問の札の共通の部品 | 見た目・選ぶ・キー・落とし先の判定を共通の部品に。札は3段・入れ物は時間軸・表・リスト。月のマスは押すと右の欄にその日の行 |  | 0056・0057 |
 | 機能の入り切り | 機能ごと（22）を `org.features`、ひな形は一度書き込む、好み・決まりは計算からも外す。初めて開いたときは最初の2問の答えでひな形（単発＝「単発のみ」・定期＝「基本」）が決まる（ADR-0073） |  | 0028・0045 |

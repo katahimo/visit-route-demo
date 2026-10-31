@@ -493,7 +493,7 @@ export function issueBreakdown(issues: ReadonlyMap<string, readonly VisitIssue[]
 
 /**
  * 要対応の一覧（今日以降の日。日付の順、同じ日は 要対応の訪問 → 未連絡の変更 → 拘束）。
- * マスの赤（needsCare）はどれも行になるので、マスの札とホーム・進み具合の帯の数がそろう
+ * マスの赤（needsCare）はどれも行になるので、マスの札と進み具合の帯の数がそろう
  */
 export function attentionList(
   data: Pick<DemoData, 'staff'>,

@@ -11,7 +11,7 @@ export const COMPACT_QUERY = MONTH_LIST_QUERY;
 
 /**
  * 狭い画面（スマホのメニュー・下のタブに切り替わる幅。styles.css の @media (max-width: 860px) と同じ。PRD D132）。
- * App のメニューの切り替えと、ホームの先頭の欠勤・キャンセルの入口（PRD D247）で使う
+ * App のメニューの切り替えなどで使う
  */
 export const NARROW_QUERY = '(max-width: 860px)';
 

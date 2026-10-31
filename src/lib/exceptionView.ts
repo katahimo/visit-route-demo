@@ -2,10 +2,10 @@
 // 操作の行のどのボタンを残すか・画面の上の説明の文と出し分け。画面（月・週・日）はここを読み、切／入の判定を画面ごとに持たない。
 // 入のときは今の画面のまま（何も畳まず、ボタンも今のまま）。データは書き換えない
 import type { Features } from '../contracts/features';
-import { isSimpleMenu } from './nav';
+import { isOn } from './features';
 
 /** エキスパート機能が切か（切のときだけ、例外だけを見せる） */
-export const exceptionsOnly = (features: Features): boolean => isSimpleMenu(features);
+export const exceptionsOnly = (features: Features): boolean => !isOn(features, 'expert');
 
 /** 予定の拡大率（日・週・月） */
 export type ScheduleZoom = 'day' | 'week' | 'month';
@@ -150,6 +150,28 @@ export function proposalWords(only: boolean): ProposalWords {
       `${label}の案にしました（${days}日${skipped > 0 ? `・変わった ${skipped}日はそのまま` : ''}）`,
     stale: (days) => `案を出したあとに訪問が変わった日が ${days}日あります（その日は変えません）`,
     staleOne: '案を出したあとに訪問が変わったので、案にしませんでした。もう一度 AI で組んでください',
+  };
+}
+
+/** 担当を組むの画面の言葉：切は「提案・反映・ピン」を使わず、proposalWords と同じ言い方（案・この案にする・手で替えた訪問）にする */
+export type ArrangeWords = {
+  /** 見出しの下の1行 */
+  lead: string;
+  /** 「AI で組む」の下の注記。pinned は手で替えた訪問などの言い方（入はピンの訪問・標準の担当、切は手で替えた訪問・繰り返しの担当） */
+  note: (pinned: string) => string;
+};
+
+export function arrangeWords(only: boolean): ArrangeWords {
+  if (!only)
+    return {
+      lead: '範囲を選んで AI で担当を組み、提案を見て反映します。予定（月・週・日）では手で直します',
+      note: (pinned) =>
+        `ピンの訪問（手で替えた訪問・${pinned}）はそのままで、ほかの訪問の担当と時刻を組みます。今日より前の日・確定した日は組みません。1日ずつ組み、終わったら提案を出します。見て「反映する」と担当が変わります（「元に戻す」で戻せます）。ほかの画面へ移っても組み続けます。`,
+    };
+  return {
+    lead: '範囲を選んで AI で担当を組み、案を見て「この案にする」。予定（月・週・日）では手で直します',
+    note: (pinned) =>
+      `手で替えた訪問・${pinned}はそのままで、ほかの訪問の担当と時刻を組みます。今日より前の日・決まった日は組みません。1日ずつ組み、終わったら案を出します。見て「この案にする」と担当が変わります（「元に戻す」で戻せます）。ほかの画面へ移っても組み続けます。`,
   };
 }
 

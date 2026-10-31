@@ -84,30 +84,32 @@ describe('候補', () => {
   it('画面はメニューと同じ名前・同じ順で、操作の項目（欠勤・キャンセル）は入れない', () => {
     const s = paletteScreens(screenSections(terms, {}), terms);
     expect(s.map((x) => x.label)).toEqual([
-      'ホーム',
       '月の予定',
       '週の予定',
       '日の予定',
-      '条件の重み',
-      '組み方の標準',
-      '担当を組む',
       '空き状況',
+      '利用者さん',
+      'スタッフ',
       '予定と相性',
-      '利用者さん一覧',
-      'スタッフ一覧',
       '相性',
       '勤務時間（シフト）',
       '勤務の見込み',
+      '条件の重み',
+      '組み方の標準',
+      '担当を組む',
       '訪問の種類',
       '特性の項目',
       '管理者設定',
       'データ',
     ]);
-    expect(s.find((x) => x.to === '/clients')!.hint).toBe('基本情報');
+    expect(s.find((x) => x.to === '/clients')!.hint).toBe('');
+    expect(s.find((x) => x.to === '/availability')!.hint).toBe('基本情報');
     expect(s.find((x) => x.to === '/data')!.hint).toBe('設定');
     expect(s.find((x) => x.to === '/plan')!.hint).toBe('予定');
-    // 条件の重みは予定を組むの1段目（ADR-0065）
-    expect(s.find((x) => x.to === '/rules')!.hint).toBe('予定を組む');
+    expect(s.find((x) => x.to === '/vacancy')!.hint).toBe('予定');
+    expect(s.some((x) => x.to === '/home')).toBe(false);
+    // 条件の重みは組むの1段目（ADR-0065・ADR-0074）
+    expect(s.find((x) => x.to === '/rules')!.hint).toBe('組む');
   });
   it('名前を変えた画面は前の名前でも引ける（月間・週間・日の画面・稼働時間・稼働の見込み。PRD D230）', () => {
     const scr = paletteScreens(screenSections(terms, {}), terms);
@@ -137,8 +139,8 @@ describe('候補', () => {
     const acts = paletteActions(TODAY);
     expect(acts.find((x) => x.id === 'action:absence')!.hint).toBe('日の予定（今日）');
     expect(acts.find((x) => x.id === 'action:today')!.hint).toBe('日の予定');
-    expect(acts.find((x) => x.id === 'action:batch')!.hint).toBe('予定を組む');
-    // エキスパート機能が切なら「予定を組む」のメニューは無いので hint は予定（ADR-0072）
+    expect(acts.find((x) => x.id === 'action:batch')!.hint).toBe('組む');
+    // エキスパート機能が切なら「組む」のメニューは無いので hint は予定（ADR-0072）
     const off = paletteActions(TODAY, { features: { expert: false } });
     expect(off.find((x) => x.id === 'action:batch')!.hint).toBe('予定');
     expect(filterPalette(acts, '当日の対応').flat.map((i) => i.id)).toEqual(['action:absence']);

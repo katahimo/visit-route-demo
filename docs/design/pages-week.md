@@ -39,7 +39,7 @@ URL を書くときは履歴を増やさない `replace`（表示の切り替え
   - 担当を組むの画面で担当を組んでいる間（`monthBatch.run` が null でない間。`weekNext` の `running: boolean`）は 2 を押せず（`aria-disabled`）、下に理由「担当を組んでいる間は確定できません。終わってから押せます」（data-testid `week-next-why`。id は `useId` で `aria-describedby`）
   - 600px 以下は短い文（確定は「この週をまとめて確定（N日）」）。印刷では出さない
 - 担当を組むのは担当を組むの画面（範囲を週にして `/arrange?d=`。[pages-arrange.md](pages-arrange.md)）。出た提案は週の予定でも範囲の提案の帯で「反映する」
-- 数え方：週の今日以降の日を `useDayStatuses`（月の予定・ホームと同じ）で数え、確定していない日を `bulkConfirmTargets(unconfirmed, statusOf, attentionList(…))`（月の D223 と同じ決まり）に通す
+- 数え方：週の今日以降の日を `useDayStatuses`（月の予定・要対応の帯と同じ）で数え、確定していない日を `bulkConfirmTargets(unconfirmed, statusOf, attentionList(…))`（月の D223 と同じ決まり）に通す
 - 確定（`confirmWeek`）：組んでいる間は何もしない。独自の確認 `bulkConfirmDialog`（月と同じ見出し・日付・残す日）。1回の `update`（手の名前「N日をまとめて確定」）で日ごとに `confirmDay`
 - 月をまたぐ週も1度に確定する（2つの月の日）
 

@@ -36,9 +36,9 @@ function addDays(d, n) {
  * 消えるのを避ける）。wait の要素が出るまで待つ
  */
 const open = (page, hash, wait) => goTo(page, hash, { ready: wait, timeout: 60000, h1: false, settleMs: 300 });
-/** 初期データに戻す（ホームはデータを書かないので、ホームで消してから読み直す） */
+/** 初期データに戻す（データの画面は開くだけではデータを書かないので、そこで消してから読み直す） */
 async function resetData(page) {
-  await open(page, '/home', 'h1');
+  await open(page, '/data', 'h1');
   await page.evaluate((k) => localStorage.removeItem(k), STORAGE_KEY);
   await page.reload();
   await page.locator('h1').waitFor();
@@ -538,7 +538,7 @@ async function unplacedWords(page) {
   await planDays(page);
   await openPlan(page);
   await page.goto('about:blank');
-  await page.goto(`${BASE}#/home`);
+  await page.goto(`${BASE}#/data`);
   await page.locator('h1').waitFor();
   const moved = await page.evaluate(
     ({ k, today }) => {

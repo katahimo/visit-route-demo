@@ -22,7 +22,7 @@ export function useWeekPrep(x: {
   const { data, compileInput, dates, today } = x;
   /** 週の今日以降の日（組む・確定するのはこの日だけ。月をまたぐ週も1度に） */
   const futureDates = useMemo(() => dates.filter((d) => d >= today), [dates, today]);
-  /** 日の状態（月の予定・ホームと同じ数え方。lib/useDayStatuses） */
+  /** 日の状態（月の予定と同じ数え方。lib/useDayStatuses） */
   const weekStatuses = useDayStatuses(data, compileInput, futureDates);
   const prep = useMemo(() => {
     const statusOf = (d: string) => weekStatuses.get(d)?.status;

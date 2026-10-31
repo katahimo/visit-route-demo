@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { simpleMoreKinds } from './simpleMore';
 
-describe('simpleMoreKinds（予定の「その他 ▾」に足す項目。PRD D383）', () => {
-  it('エキスパート機能が入（{} も）なら足さない', () => {
-    expect(simpleMoreKinds({}, 5)).toEqual([]);
-    expect(simpleMoreKinds({ expert: true }, 5)).toEqual([]);
+describe('simpleMoreKinds（予定の「その他 ▾」に足す項目。PRD D383・D390）', () => {
+  it('エキスパート機能が入（{} も）なら、空き状況だけ（担当なしの訪問を組むは担当を組むの画面で組む）', () => {
+    expect(simpleMoreKinds({}, 5)).toEqual(['vacancy']);
+    expect(simpleMoreKinds({ expert: true }, 5)).toEqual(['vacancy']);
+    expect(simpleMoreKinds({ vacancy: false }, 5)).toEqual([]);
   });
   it('切なら 担当なしの訪問を組む → 空き状況 の順', () => {
     expect(simpleMoreKinds({ expert: false }, 3)).toEqual(['auto-arrange', 'vacancy']);

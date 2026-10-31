@@ -6,8 +6,8 @@
 
 ### 責務・持つデータ・依存
 
-- 責務：PoC本体の管理者画面（予定・稼働時間帯・〈スタッフ〉・訪問先）を Firebase なしで動かす。加えて ホーム・月・週・担当を組む・組み方の標準・提案を比べる・空き状況・勤務の見込み・項目・条件（重みのスライダー 0〜5・必須の切り替え。ClassClassify の Setup にならう）・訪問の種類・相性の表・データ・管理者設定・〈スタッフ〉の今日の順番を見る画面（D16。表示だけ）
-- 最初に開く画面：`#/home`（ホーム。見出しの下に「今日やること」。`#/`・知らない URL もここへ。ADR-0025）。エキスパート機能が切のときはホームが無く、`#/home`・`#/`・知らない URL は予定の画面（繰り返しを使うなら月、使わないなら週。`lib/nav` の `homePath`）へ移る（PRD D383。ADR-0073）
+- 責務：PoC本体の管理者画面（予定・稼働時間帯・〈スタッフ〉・訪問先）を Firebase なしで動かす。加えて 月・週・担当を組む・組み方の標準・提案を比べる・空き状況・勤務の見込み・項目・条件（重みのスライダー 0〜5・必須の切り替え。ClassClassify の Setup にならう）・訪問の種類・相性の表・データ・管理者設定・〈スタッフ〉の今日の順番を見る画面（D16。表示だけ）
+- 最初に開く画面：予定の画面（繰り返しを使うなら月、使わないなら週。`lib/nav` の `homePath`）。ホームは無く（PRD D383・D390。ADR-0073・ADR-0074）、`#/home`・`#/`・知らない URL・切った機能の URL はここへ移る（入切とも）
 - 持つデータ（持ち主）：画面の一時状態のみ。`DemoData` を書き換えるのは store だけで、画面は `update(fn)` を通す
 - 提供するAPI：なし（ルートは下の表）
 - 依存するもの：store・matching・solver（Worker）・evaluate・reassign・patterns・vacancy・features、Leaflet（PoC本体 `RouteMap.tsx` を写す）
@@ -19,7 +19,6 @@
 
 | ルート | ページのファイル | 役割 | 詳細 |
 |---|---|---|---|
-| `#/home` | `pages/HomePage.tsx` | ホーム（見出しの下に「今日やること」）。起動・知らない URL の行き先（エキスパート機能が入のときだけ。切なら予定の画面へ移す） | [pages-home.md](pages-home.md) |
 | `#/plan` | `pages/PlanPage.tsx` | 日の予定（訪問と担当を手で直す・確定（伝えた）・欠勤の振り直し）。`?date=`・`?do=absence|unassigned`・`&staff=` | [pages-plan.md](pages-plan.md)・[pages-plan-absence.md](pages-plan-absence.md) |
 | `#/schedule` | （`Navigate`） | 古いリンク。`#/plan` へ移す | — |
 | `#/month` | `pages/MonthPage.tsx` | 月の予定（カレンダー／日ごとの一覧・希望休・まとめて確定）。`?ym=`・`?staff=`・`?client=`・`?layout=`・`?do=` | [pages-month.md](pages-month.md) |
@@ -44,7 +43,7 @@
 | `#/data` | `pages/DataPage.tsx` | データ（控え・Excel・初期状態に戻す・案内をもう一度見る） | [pages-data.md](pages-data.md) |
 | `#/settings` | `pages/SettingsPage.tsx` | 管理者設定（機能の入り切り。だれでも開ける。いちばん下に「最初の設定をやり直す」） | [pages-data.md](pages-data.md) |
 | `#/start` | `pages/StartGuidePage.tsx` | 登録の案内（自分のデータで始めたあとの3段。`?step=`。PRD D381。ADR-0073） | [pages-common.md](pages-common.md) |
-| `*`（`#/` を含む） | （`Navigate`） | `/home` へ（replace） | — |
+| `*`（`#/` を含む） | （`Navigate`） | 予定の画面（`homePath`。月か週）へ（replace）。`#/home` も同じ | — |
 
 ルートの URL は変えない（古いリンクを壊さない）。メニューは「予定」（`#/month`・`#/week`・`#/plan`）と「予定を組む」（`#/basics`・`#/standard`・`#/arrange`・`#/compare`・寄り道の `#/rules`。見出しの下の予定を組むの段で移る。ADR-0066・ADR-0067）と「設定」（`#/types`・`#/items`・`#/settings`・`#/data`。見出しの下の設定のタブで切り替える）にまとめ、〈利用者さん〉・〈スタッフ〉・相性 `#/compat`・勤務時間（シフト）は予定を組むの子「基本情報」のタブに置き（PRD D283・D362。ADR-0047・ADR-0067）、`#/workload` は勤務時間（シフト）・月の予定の中から開く（PRD D273・D275）。
 
@@ -54,7 +53,7 @@
 |---|---|
 | [pages-nav.md](pages-nav.md) | メニュー・`lib/nav.ts`（基本情報のタブ・予定を組むの段）・上の帯と下のタブ・引き出し・予定の切り替え・設定のタブ・コマンドパレット |
 | [pages-common.md](pages-common.md) | 画面共通の部品：右の欄 `SidePanel` と確定のボタンの帯・浮いている部品とトースト・名前から開く詳細（`PersonPopover`）・用語の説明（`Term`）・空の画面（`EmptyNext`）・初回の案内ツアー・行き先のリンク（`lib/links`）・メールと道順のリンク・画面横断の e2e |
-| [pages-home.md](pages-home.md) | ホーム（今日やること）・月の予定の進み具合の帯（`ProgressBand`）・`useDayStatuses` |
+| [pages-home.md](pages-home.md) | 月の予定の進み具合の帯（`ProgressBand`）・`useDayStatuses` |
 | [pages-plan.md](pages-plan.md) | 日の予定：並び・状態の印と確定（伝えた）・1行のまとめ・手で直す・右の欄（詳しく）・時間軸／順番／一覧・担当ごとの1日・地図・入らなかった訪問・担当を変える ▾・訪問の欄・取り消し・点数の理由・日の予定のメール・道順のリンク |
 | [pages-plan-absence.md](pages-plan-absence.md) | 日の予定の「欠勤・キャンセル」の欄（5段階）・振り直し（案A・案B）・差の欄・左下の帯・連絡の一覧・比較の画面の「欠勤前」 |
 | [pages-month.md](pages-month.md) | 月：カレンダーと日ごとの一覧・日のマスと読み方の吹き出し・マスを押すと右の欄のその日の行（スマホは下から出る欄）・別の日へ・凡例・表示の選択・担当を組んでいる間・希望休・要対応・まとめて確定・月の印刷 |
@@ -117,7 +116,7 @@
 | `--primary` | `#b8503e`（濃い朱） | 主ボタンの地（白い文字）・選んだ印の枠・今の画面の印 | 白い文字 4.9 |
 | `--primary-dark` | `#9c4232` | 主ボタンの影・選んだ印の文字（淡い朱の地 `--primary-soft` の上） | 白で 6.5・淡い朱で 5.5 |
 | `--primary-hover` | `#a64838` | 主ボタンを重ねたときの地（`.btn-primary:hover`） | 白い文字 5.8 |
-| `--accent` | `#e8735f`（明るい朱） | 飾りの帯・線だけ（確認ダイアログとツアーの上の帯、ホームの「やること」と振り直しの帯の左の線）。文字・枠の印には使わない | — |
+| `--accent` | `#e8735f`（明るい朱） | 飾りの帯・線だけ（確認ダイアログとツアーの上の帯、振り直しの帯の左の線）。文字・枠の印には使わない | — |
 | `--focus` | `--primary-dark` | フォーカスの輪 | 白で 6.5・`--bg` で 5.8 |
 | `--ink` | `#3b2f2a` | 本文 | 白で 12.9 |
 | `--sub` | `#6f6058` | 補足の文字・表の見出し・メニューの見出し・パレットの種類の見出し・比較の A の札 | 白で 6.0・`--bg` で 5.4 |
@@ -129,7 +128,7 @@
 | 変数 | 色 | 使う所 | 比 |
 |---|---|---|---|
 | `--ok` | `#5aa57a` | 枠・帯・塗り（文字を載せない） | — |
-| `--ok-ink` | `#37734f` | 緑の文字とアイコン（`.chip-ok`・`.ok-text`・進み具合の帯の済み・ホームの準備ができた文など）・白い文字の札（担当できる） | 白で 5.6・淡い緑 `#e1f1e7` で 4.8 |
+| `--ok-ink` | `#37734f` | 緑の文字とアイコン（`.chip-ok`・`.ok-text`・進み具合の帯の済みなど）・白い文字の札（担当できる） | 白で 5.6・淡い緑 `#e1f1e7` で 4.8 |
 | `--warn` | `#d99a2b` | 枠・帯・塗り（文字を載せない） | — |
 | `--warn-ink` | `#8a5a00` | 黄の文字とアイコン（`.chip-warn`・`.warn-text`・押せない理由・注意の箱のアイコンなど） | 白で 5.9・淡い黄 `#fbefd6` で 5.2 |
 | `--warn-line` | `#b07a12` | 注意の線（条件の重みの下書きの行の左の帯・確定の帯の枠、キーで動かした繰り返しの回の小さな帯 `key-move-band` の枠、組み方の標準の下書きの注意。PRD D228） | 地 `#fffaf0` で 3.6・白で 3.7 |
@@ -179,7 +178,7 @@
 機能の表・ひな形・判定（`lib/features.ts` の `FEATURES`・`isOn`・`featureOfLocation`・`featureOfHref`・`TEMPLATES`・`applyTemplate`・`matchTemplate`・`templateDiff`・`turnOffImpact`）は design.md の「features」。画面での出し分け：
 
 - `components/useFeature.ts` の `useFeature(id): boolean`（`org.features` を読むだけ。依存も見る）。欄・ボタンを出すかは部品の中で `useFeature` を見て決める
-- URL の直書きをやめ機能の表から引く：`menuSections`（下のタブもここから）・`screenSections`（上の帯の名前・パレットの画面）・`settingsTabs`（設定のタブ）、`app/App.tsx` のルート（切った機能の URL（`?do=` も）は `#/home` へ移し（replace。`state.featureOff`）、知らせ（トースト）と `#/settings` へのリンク。管理者設定と土台の画面は開ける）、`lib/commandPalette.ts` の操作、`lib/home.ts` のカード、`lib/tour.ts` の枚、`lib/links.ts`、画面の中の欄・ボタン（`useFeature`）。切った機能の URL を開いたときの知らせは `components/FeatureOffNotice`
+- URL の直書きをやめ機能の表から引く：`menuSections`（下のタブもここから）・`screenSections`（上の帯の名前・パレットの画面）・`settingsTabs`（設定のタブ）、`app/App.tsx` のルート（切った機能の URL（`?do=` も）は予定の画面（`homePath`）へ移し（replace。`state.featureOff`）、知らせ（トースト）と `#/settings` へのリンク。管理者設定と土台の画面は開ける）、`lib/commandPalette.ts` の操作、`lib/attentionBand.ts` の帯の種類、`lib/tour.ts` の枚、`lib/links.ts`、画面の中の欄・ボタン（`useFeature`）。切った機能の URL を開いたときの知らせは `components/FeatureOffNotice`
 - `rules` が切なら、条件の重みの画面は開けず（組み方の標準の 2 の寄り道のリンクにも出さない）、担当を組む・組み方の標準は点数の基準のプリセットの重み（`planRulesOf(data, false)`）で作る。組み方の標準の案はプリセットごとのまま
 - 切っても事実の表示（月の「休みの人に N」・すでに振り直した案の差の欄・帯・連絡の一覧）は残し、隠すのは入力・操作の入口だけ
 - 切ったまま保存しても、データ（段階・担当できる人・メールアドレス・毎月のパターンの `repeat` と `monthWeeks`）は残す（毎月のパターンは読むだけと注記）。`clientStage` が切なら段階は「利用中／終了」の2つで選ばせる
@@ -234,7 +233,7 @@
 |---|---|---|
 | `scheduleMode.ts` | 組む月（月の後半は来月）・担当なしの日の数・メニューの件数（PRD D349・D355） | [pages-common.md](pages-common.md) |
 | `nav.ts`・`commandPalette.ts`・`confirmDialog.ts`・`inertLock.ts`・`scrollLock.ts`・`panelFit.ts`・`personPopover.ts`・`glossary.ts`・`emptyGuide.ts`・`tour.ts`・`firstRun.ts`・`startGuide.ts`・`links.ts`・`features.ts`・`mailto.ts`・`mail.ts`・`mapsLink.ts`・`clipboard.ts` | 画面横断 | このファイル（nav・パレット・確認・ロック・features）・[pages-common.md](pages-common.md)（ほか） |
-| `dayModel.ts`・`dayStatuses.ts`・`home.ts`・`progressBand.ts` | 日のモデルの計算（`daySlotsOf`・`ownerMap`）・日の状態の覚え（`createDayStatusMemo`）・ホーム・帯 | [pages-home.md](pages-home.md)・[pages-plan.md](pages-plan.md) |
+| `dayModel.ts`・`dayStatuses.ts`・`progressBand.ts` | 日のモデルの計算（`daySlotsOf`・`ownerMap`）・日の状態の覚え（`createDayStatusMemo`）・帯 | [pages-home.md](pages-home.md)・[pages-plan.md](pages-plan.md) |
 | `absences.ts`・`sudden.ts`・`contacts.ts`・`dayPlan.ts`・`confirmDay.ts`・`scoreReason.ts`・`routeView.ts`・`timeline.ts`・`visitEdit.ts`・`dragStart.ts` | 日の予定 | [pages-plan.md](pages-plan.md)・[pages-plan-absence.md](pages-plan-absence.md) |
 | `month.ts`・`monthList.ts`・`monthGuide.ts`・`monthPrint.ts`・`requestedOff.ts` | 月 | [pages-month.md](pages-month.md) |
 | `week.ts`・`weekOps.ts`・`weekView.ts`・`timelineClients.ts`・`fold.ts` | 週（`weekOps` は動かす・空き時間に入れる操作） | [pages-week.md](pages-week.md) |
@@ -254,11 +253,11 @@
 
 - [ ] 呼び方は `org.terms` から引き、「お客様」「シッター」を直書きしない。主ボタンは濃い朱1色・1画面1〜2個
 - [ ] 色は役割の変数から引き、文字は 4.5・枠とフォーカスの輪は 3 以上の比。フォーカスの輪は `--focus` の 3px。動きを減らす設定で動きが止まり、タッチの端末でアイコンのボタンの押せる所が 44px（`lib/motion` のテスト）
-- [ ] （ADR-0024・0045・0055）390×844 で左のメニューが出ず、上の帯に今の画面の名前（〈利用者さん〉一覧と〈スタッフ〉一覧を見分けられる）・日付の切り替えが出て横に巻かない。下のタブ（ホーム・予定・欠勤・探す・メニュー）の「探す」でパレットが開き、「メニュー」で左から見出し付きの引き出しが開き、画面を選ぶ・外を押す・Esc で閉じてフォーカスが「メニュー」に戻る。開いているあいだ裏は巻かず、Tab は中で回る。下のタブで移れ、今の画面（月・週・日・比較は「予定」）が `aria-current`。地図・欠勤の振り直しの帯・トーストがタブに重ならない。印刷に出ない。1400px の見た目（左のメニュー・上の帯 72px）は変わらない（`lib/nav` のテスト・`scripts/e2e-mobile.cjs`）
+- [ ] （ADR-0024・0045・0055）390×844 で左のメニューが出ず、上の帯に今の画面の名前（〈利用者さん〉一覧と〈スタッフ〉一覧を見分けられる）・日付の切り替えが出て横に巻かない。下のタブ（予定・〈利用者さん〉・〈スタッフ〉・組む・探す・メニュー。切は 組むの代わりに設定）の「探す」でパレットが開き、「メニュー」で左から見出し付きの引き出しが開き、画面を選ぶ・外を押す・Esc で閉じてフォーカスが「メニュー」に戻る。開いているあいだ裏は巻かず、Tab は中で回る。下のタブで移れ、今の画面（月・週・日・比較は「予定」）が `aria-current`。地図・欠勤の振り直しの帯・トーストがタブに重ならない。印刷に出ない。1400px の見た目（左のメニュー・上の帯 72px）は変わらない（`lib/nav` のテスト・`scripts/e2e-mobile.cjs`）
 - [ ] （ADR-0026）画面のどの確認もブラウザの確認でなく、画面の中央にアプリの見た目のダイアログで出る（見出しの問い・本文・動詞のボタン、消す・捨てるは赤）。最初のフォーカスは取り消し、Tab は中で回り、Esc・背景・取り消すでは何も変わらず、確定で進み、閉じたら押したボタンへ戻る。右の欄の上の Esc は確認だけを閉じる。390px で収まり、印刷では出ない（`scripts/e2e-dialog.cjs`）
-- [ ] （ADR-0073。PRD D383）エキスパート機能が切のとき、メニュー（左・引き出し・下のタブ）は 予定・〈利用者さん〉・〈スタッフ〉・設定 の4つ（見出し・子・件数の印なし）、`#/home`・`#/`・知らない URL は予定の画面へ移り、予定（月・週・日）の上に要対応の帯（担当なし・重なり・休みの人。無ければ出さない。押すとその訪問のある日の予定で訪問を選んで巻く）、「その他 ▾」に空き状況・担当なしの訪問を組む。エキスパート機能が入なら今のメニュー・ホーム（帯は出ない）（`scripts/e2e-simple-menu.cjs`）
+- [ ] （ADR-0073。PRD D383）エキスパート機能が切のとき、メニュー（左・引き出し・下のタブ）は 予定・〈利用者さん〉・〈スタッフ〉・設定 の4つ（見出し・子・件数の印なし）、`#/home`・`#/`・知らない URL は予定の画面へ移り、予定（月・週・日）の上に要対応の帯（担当なし・重なり・休みの人。無ければ出さない。押すとその訪問のある日の予定で訪問を選んで巻く）、「その他 ▾」に空き状況・担当なしの訪問を組む。エキスパート機能が入のメニューは下の項目（`scripts/e2e-simple-menu.cjs`）
 - [ ] （ADR-0073 第4段。PRD D388・D389）エキスパート機能が切のとき、月・週の操作の行は主「予定を入れる」＋「欠勤・キャンセルを登録」の2つだけ（担当なしの訪問を組むは「その他 ▾」）。押すと引き出しが開き、定期は 曜日・くり返し・時刻・所要、単発は 日付・時刻・所要 を入れて「入れる」で、繰り返し（定期）／その日の訪問（単発）が1件増えて担当が自動で付く。〈スタッフ〉の一覧の上のタブ（一覧・勤務・相性）と〈利用者さん〉のタブ（一覧・相性）で行き来でき、メニューの印は〈スタッフ〉／〈利用者さん〉。相性・勤務の画面に禁句・点が出ない。入では変わらない
-- [ ] （ADR-0027・0045・0063・0065〜0067。エキスパート機能が入のとき）メニューが ホーム・予定を組む・予定・空き状況・設定 の5項目（「人」は無い）で、予定・予定を組む・設定は子の項目（予定は 今日の予定・◯月の予定・欠勤・キャンセル、予定を組むは 基本情報・組み方の標準・担当を組む（標準があれば基本情報と担当を組むだけ）、設定は設定のタブ）を持ち ▾ で畳める（既定は設定を畳む。開け閉めを覚え、今の画面の親へ移ると開く）。印は開いていれば子、畳んでいれば親。件数の印（担当を組む の「変更」か「N日」・今日の予定 の「未確定」）が出る。1366×768 で巻かずに収まる。親を押すと最後に開いた表示・タブを開く。「〈利用者さん〉一覧」「〈スタッフ〉一覧」と見分けられ、画面の見出しが上の帯・パレットの名前と同じ。Ctrl+K（上の帯の「探す・移動」、狭い画面は下のタブの「探す」）で開き、打って↑↓・Enter で画面・操作・人の画面（〈利用者さん〉・〈スタッフ〉）へ移り、Esc でフォーカスが戻る（`scripts/e2e-nav.cjs`）
+- [ ] （ADR-0027・0045・0063・0065〜0067・0074 段1。PRD D390・D391。エキスパート機能が入のとき）メニュー（左・引き出し）が 予定・〈利用者さん〉・〈スタッフ〉・組む・設定 の5項目（ホーム・空き状況・「人」は無い）で、子の項目を持つのは組む（基本情報・組み方の標準・担当を組む。標準があれば基本情報と担当を組むだけ）だけ（▾ で畳める。既定は開く。開け閉めを覚え、今の画面の親へ移ると開く）。印は開いていれば子、畳んでいれば親。件数の印は組むの1つ（「変更」か「N日」）。`#/home`・`#/`・知らない URL は予定の画面へ移る。予定の上の要対応の帯に 担当なし・重なり・休みの人のほか 組み方の標準が無い・基本情報が変わった（組み直す）・未確定 N日 が出て、押すとそれぞれの行き先へ移る。予定の「その他 ▾」に空き状況がある。下のタブは 予定・〈利用者さん〉・〈スタッフ〉・組む・探す・メニュー。1366×768 で巻かずに収まる。親を押すと最後に開いた表示・タブを開く。画面の見出しが上の帯・パレットの名前と同じ。Ctrl+K（上の帯の「探す・移動」、狭い画面は下のタブの「探す」）で開き、打って↑↓・Enter で画面・操作・人の画面（〈利用者さん〉・〈スタッフ〉）へ移り、Esc でフォーカスが戻る（`scripts/e2e-nav.cjs`・`scripts/e2e-home.cjs`）
 - [ ] （ADR-0022）月・週・日の名前から詳細の吹き出しが開き、Esc・外を押す・もう一度押す・Tab で閉じてボタンへ戻る。同時に1つ、見出しが消えたら閉じる。リンクでその人の画面が開く。印刷では i を出さない（`lib/personPopover` のテスト・`scripts/e2e-details.cjs`・`scripts/e2e-details2.cjs`）
 - [ ] （PRD D220〜D222）390×844 で条件の重み・特性の項目・〈スタッフ〉一覧・〈利用者さん〉一覧・比較が横に巻かず、行がカードになる。条件の重みのスライダーと必須が画面の中。〈利用者さん〉一覧の絞り込みが「絞り込み（N）」に畳まれる。比較の主ボタンがタブに隠れない。週は今日の列が見え、空き状況の表は 9:00 から（`lib/scrollEdge`・`lib/weekView`・`lib/clientFilter` のテスト・`scripts/e2e-mobile.cjs`）
 - [ ] 右の欄の確定のボタンの帯：短い欄は帯が内容のすぐ下・区切りなし、長い欄は欄の下に貼り付き、内容が隠れている間だけ区切り。390px の並び・タブに隠れない・キーボード（`lib/panelFit` のテスト・`scripts/e2e-panel-foot.cjs`）

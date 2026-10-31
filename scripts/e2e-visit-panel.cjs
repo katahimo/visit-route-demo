@@ -2,7 +2,7 @@
 // 日の予定の時間軸の帯から開く（詳細の「詳細・変更」）・Esc で閉じてフォーカスは帯、日時と担当を同時に変えて保存（この回だけ。
 // 担当は今の担当で固定・フォーカスは開いた帯・トーストの「元に戻す」で戻る）、繰り返しの回の範囲（この回だけ／これ以降／すべて）、
 // 取り消しと取り消しをやめる（当日キャンセル）、週の予定の帯・月の予定で〈利用者さん〉を選んだときのリンクの先の回・日の予定の一覧の行から開いても
-// 同じ欄、新しい訪問（日の予定の「その他 ▾」・ホームのいつでも・コマンドパレットの操作）、ホームの今日の訪問から開く、
+// 同じ欄、新しい訪問（日の予定の「その他 ▾」・コマンドパレットの操作）、要対応の帯から日の予定へ移って訪問の欄を開く、
 // コマンドパレットで「名前 日付」から開く（画面は移らない）、390px（見る・取り消す・担当替えができ、日時の変更・追加は出さない・
 // 横にはみ出さない）、印刷で出さない。
 // スクリーンショット（OUT_DIR）：plan-band・scope・week・new（1400px）、narrow（390px）。
@@ -79,7 +79,7 @@ const toMin = (s) => Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5));
 const open = (page, hash, ready) => goTo(page, hash, { ready: ready, timeout: 60000, h1: false, settleMs: 400 });
 /** 初期データに戻して、今日の日の予定（今の担当が出て計算が終わるまで） */
 async function freshPlan(page, date = TODAY) {
-  await page.goto(`${BASE}#/home`);
+  await page.goto(`${BASE}#/data`);
   await page.evaluate((k) => localStorage.removeItem(k), STORAGE_KEY);
   await page.goto(`${BASE}#/plan?date=${date}`);
   await page.reload();
@@ -353,27 +353,26 @@ async function addNew(page) {
   );
 }
 
-async function home(page) {
+/** 予定の上の要対応の帯から日の予定へ移り、選ばれた訪問の欄を開く（ホームの今日の訪問から開く入口の代わり。PRD D391） */
+async function band(page) {
   await freshPlan(page);
-  await open(page, '/home', '[data-testid="home-visits"]');
-  const row = page.getByTestId('home-visit').first();
-  const id = await row.getAttribute('data-visit');
-  await row.click();
+  await open(page, '/month', '[data-testid="attention-band"]');
+  await page.getByTestId('attention-band').click();
+  await page.waitForURL(/#\/plan/);
+  const id = await page.evaluate(() => history.state?.usr?.visitId ?? null);
+  check(!!id, '要対応の帯から日の予定へ移り、行き先の訪問の ID を渡している', id);
+  // 帯の先頭は担当なしの訪問のことが多く、その札（未割当の欄）の詳細から欄を開く
+  const card = page.locator(`[data-visit="${id}"]`).first();
+  await card.waitFor({ timeout: 30000 });
+  await settle(page, 400);
+  await card.scrollIntoViewIfNeeded();
+  await card.click();
+  await page.getByTestId('visit-open').first().click();
   await panel(page).waitFor();
-  check((await panel(page).getAttribute('data-visit')) === id, 'ホームの今日の訪問から欄を開く');
+  check((await panel(page).getAttribute('data-visit')) === id, '帯から移った訪問の欄を開く');
   await page.keyboard.press('Escape');
   await closed(page);
-  check((await page.evaluate(() => document.activeElement?.dataset.visit ?? '')) === id, '閉じるとフォーカスは行');
-  check(hashOf(page).startsWith('#/home'), 'ホームのまま（画面を移らない）');
-  check(
-    (await page.locator('.btn-primary:visible, .home-task.is-lead:visible').count()) <= 1,
-    'ホームの主ボタンは増やさない',
-  );
-  await page.getByTestId('home-visit-add').click();
-  await panel(page).waitFor();
-  check((await panel(page).getAttribute('data-new')) === 'true', 'ホームのいつでもの「訪問を追加」で新規の欄');
-  await page.keyboard.press('Escape');
-  await closed(page);
+  check(hashOf(page).startsWith('#/plan'), '日の予定のまま（画面を移らない）');
 }
 
 async function palette(page) {
@@ -526,7 +525,7 @@ async function otherTab(page) {
   // 計算した回（保存していない回）なら、別のタブが保存した回として書く
   const computed = findVisit(await data(page), id);
   const other = await page.context().newPage();
-  await other.goto(`${BASE}#/home`);
+  await other.goto(`${BASE}#/data`);
   await other.evaluate(
     ([k, vid, c]) => {
       const d = JSON.parse(localStorage.getItem(k));
@@ -580,7 +579,7 @@ const steps = sharedPage({
     ['取り消しと取り消しをやめる', cancelAndBack],
     ['週・月・一覧から開いても同じ欄', sameEverywhere],
     ['新しい訪問', addNew],
-    ['ホームから開く', home],
+    ['要対応の帯から開く', band],
     ['コマンドパレットから開く', palette],
     ['日付を変えると選んでいた担当を戻す', pickReset],
     ['別のタブの変更を上書きしない', otherTab],

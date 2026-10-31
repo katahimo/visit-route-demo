@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   addVisitLabel,
+  arrangeWords,
   detailItems,
   exceptionsOnly,
   foldedParts,
@@ -114,5 +115,21 @@ describe('詳しく・説明・言葉', () => {
     ].join('');
     for (const bad of ['標準', '提案', '反映', 'ピン', 'プリセット']) expect(text).not.toContain(bad);
     expect(proposalWords(false).apply).toBe('反映する');
+  });
+});
+
+describe('arrangeWords（担当を組むの画面の言葉。ADR-0074 段1）', () => {
+  it('切は 標準・提案・反映・ピン・プリセット を使わず、proposalWords と同じ言い方（案・この案にする）', () => {
+    const w = arrangeWords(true);
+    const text = w.lead + w.note('繰り返しの担当');
+    for (const bad of ['標準', '提案', '反映', 'ピン', 'プリセット']) expect(text).not.toContain(bad);
+    expect(text).toContain(proposalWords(true).apply);
+    expect(text).toContain('繰り返しの担当');
+  });
+  it('入は今のまま（提案・反映・ピン）', () => {
+    const w = arrangeWords(false);
+    expect(w.lead).toContain('提案を見て反映します');
+    expect(w.note('組み方の標準の担当')).toContain('ピンの訪問（手で替えた訪問・組み方の標準の担当）');
+    expect(w.note('x')).toContain('「反映する」');
   });
 });

@@ -324,7 +324,7 @@ async function answer(page) {
   await page.getByTestId('wish-days').getByRole('button', { name: '木' }).click();
   await settle(page, 400);
   await page.evaluate(() => {
-    location.hash = '#/home';
+    location.hash = '#/data';
   });
   await page.locator('h1').first().waitFor();
   await page.evaluate(() => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DemoData } from '../contracts/data';
-import { isLateMonth, menuBadges, nextYm, planLabel, planYm, unassignedDayCount } from './scheduleMode';
+import { isLateMonth, menuBadges, nextYm, planYm, unassignedDayCount } from './scheduleMode';
 
 describe('月の後半・組む月', () => {
   it('15日から後半', () => {
@@ -14,7 +14,6 @@ describe('月の後半・組む月', () => {
   it('組む月は後半なら来月、前半なら今月', () => {
     expect(planYm('2026-10-24')).toBe('2026-11');
     expect(planYm('2026-10-03')).toBe('2026-10');
-    expect(planLabel('2026-10-24')).toBe('11月の予定');
   });
 });
 

@@ -61,7 +61,6 @@ export function paletteKindLabel(kind: PaletteKind, terms: Pick<Terms, 'client' 
  * （月間・週間・予定・日の画面・稼働時間・稼働の見込み。PRD D230。ADR-0034）
  */
 const SCREEN_WORDS: Record<string, readonly string[]> = {
-  '/home': ['ほーむ', 'きょうやること', '今日やること'],
   '/month': ['つき', 'げつ', 'かれんだー', 'つきのよてい', '月間', 'げっかん', '月の画面'],
   '/week': ['しゅう', 'しゅうのよてい', 'じかんじく', '週間', 'しゅうかん'],
   '/plan': ['ひ', 'にち', 'ひのよてい', 'わりあて', '予定', '日の画面', 'きょう'],
@@ -146,8 +145,8 @@ export function paletteActions(today: string, { features = {} }: { features?: Fe
   const ym = ymOf(today);
   const next = addMonths(ym, 1);
   const monthNo = (m: string) => Number(m.slice(5, 7));
-  // エキスパート機能が切なら「予定を組む」のメニューは無いので、担当を組むの hint は予定（ADR-0072）
-  const arrangeHint = isOn(features, 'expert') ? '予定を組む' : '予定';
+  // エキスパート機能が切なら「組む」のメニューは無いので、担当を組むの hint は予定（ADR-0072）
+  const arrangeHint = isOn(features, 'expert') ? '組む' : '予定';
   const month = (op: string, m = ym) => `/month?ym=${m}&do=${op}`;
   const all = [
     paletteItem({

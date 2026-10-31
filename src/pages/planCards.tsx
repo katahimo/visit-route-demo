@@ -420,7 +420,7 @@ export function bandOf(p: PlanCtx, id: string, sid: string): TimelineBand {
     end,
     name: client?.displayName ?? '（不明）',
     color: type ? colorOf(type.color) : null,
-    // 今日より前の日は要対応の赤にしない（印と同じ。月・ホームと同じ決まり）
+    // 今日より前の日は要対応の赤にしない（印と同じ。月と同じ決まり）
     tone: bandTone({ only, look, hard: !!hard, pinned: !!pin, upcoming: date >= jstDate(Date.now()) }),
     kinds: look?.kinds ?? '',
     picked: sel.isPicked(x),

@@ -125,7 +125,7 @@ export type DayLookSource = {
 
 /**
  * その日の訪問の見た目（訪問 → VisitLook）。leaveOf は〈利用者さん〉の休みか、tentativeOf は仮押さえか。
- * past（今日より前の日）は要対応・資格✗／限✗を出さない（月のマス・ホームと同じく、今日より前は要対応に数えない）。
+ * past（今日より前の日）は要対応・資格✗／限✗を出さない（月のマスと同じく、今日より前は要対応に数えない）。
  * 日・週・月・人の予定表で同じ関数を通す
  */
 export function dayLooks(
@@ -180,7 +180,7 @@ export function cardTone(x: { only: boolean; look: VisitLook | undefined; hard: 
 
 /**
  * 時間軸の帯の色。切は要対応（look.tone が issue）だけ red。入は要対応か「今日以降の日の必須の違反」なら red、ピンなら pinned
- * （今日より前の日は必須の違反を赤にしない。月・ホームと同じ決まり）
+ * （今日より前の日は必須の違反を赤にしない。月と同じ決まり）
  */
 export function bandTone(x: {
   only: boolean;

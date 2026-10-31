@@ -232,7 +232,7 @@
 #### `components/useDayModel.ts`（計算は `lib/dayModel.ts`）
 
 - `useDayModel`：その日の問題・今の担当の並び・採点など。`compileInput` に `absences`。`slotsOf`（`lib/dayModel` の `daySlotsOf`。テストあり）は欠勤を差し引いた時間帯と、その日の欠勤（`absence`。無ければ null）を返す（スタッフの画面の時刻も欠勤を差し引く）。`scoreRules` を返す
-- `useCompileInput(data)`：compile が読むデータだけ（ホーム・帯も使う）
+- `useCompileInput(data)`：compile が読むデータだけ（要対応の帯・進み具合の帯も使う）
 
 #### `lib/dayPlan.ts`（日の割当と確定。純粋関数。テストあり。ADR-0053）
 

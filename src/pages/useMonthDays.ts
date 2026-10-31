@@ -34,7 +34,7 @@ export function useMonthDays(data: DemoData, compileInput: CompileInput, ym: str
     return out;
   }, [data, days]);
 
-  // ---- 日の問題と状態（lib/useDayStatuses。月とホームで共通）----
+  // ---- 日の問題と状態（lib/useDayStatuses。月・週・要対応の帯で共通）----
   const perDay = useDayStatuses(data, compileInput, days);
   // 切（例外だけ見せる。PRD D384）は要対応を帯と同じ分け方に絞る（lib/attentionBand の exceptionStatus）。マス・右の欄・進み具合の数が帯とそろう
   const only = useExceptionsOnly();

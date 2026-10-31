@@ -1,5 +1,5 @@
 // 月の画面の右の欄（選ばないとき。PRD D143・D153・D223）：要対応／確定していない日の切り替えと、そこへ移る（帯の数字・ボタン、
-// ホーム・週・日の帯から来たときの ?do=）、問題の無い日をまとめて確定
+// 週・日の帯・要対応の帯から来たときの ?do=）、問題の無い日をまとめて確定
 import { useEffect, useRef, useState } from 'react';
 import type { NavigateFunction } from 'react-router-dom';
 import { useBulkConfirm } from '../components/useBulkConfirm';
@@ -45,7 +45,7 @@ export function useMonthAside(x: {
     else showAside(viewOf(op));
   };
 
-  // ---- ホーム・週・日の帯から来たときの操作（PRD D143・D153。?do=）----
+  // ---- 週・日の帯・要対応の帯から来たときの操作（PRD D153・D391。?do=）----
   // batch（古いリンク）：担当を組むの画面へ移す。attention・unconfirmed：右の欄の要対応・確定していない日へ。
   // 1回だけ行い、URL から ?do= を消す（戻る・再読込で繰り返さない）
   const doParam = x.params.get('do');

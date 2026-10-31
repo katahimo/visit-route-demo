@@ -14,14 +14,13 @@ import { NARROW_QUERY } from '../components/useMedia';
 import { VisitPanelProvider } from '../components/VisitPanel';
 import { addDays, jstDate } from '../domain/time';
 import { featureLabel, featureOfLocation, isFeatureOffState, isOn } from '../lib/features';
-import { homePath, isSimpleMenu, navTitleParts, tabClick } from '../lib/nav';
+import { homePath, navTitleParts, tabClick } from '../lib/nav';
 import ArrangePage from '../pages/ArrangePage';
 import AvailabilityPage from '../pages/AvailabilityPage';
 import BasicsPage from '../pages/BasicsPage';
 import ClientPage from '../pages/ClientPage';
 import ClientsPage from '../pages/ClientsPage';
 import DataPage from '../pages/DataPage';
-import HomePage from '../pages/HomePage';
 import ItemsPage from '../pages/ItemsPage';
 import MonthPrintPage from '../pages/MonthPrintPage';
 import RulesPage from '../pages/RulesPage';
@@ -66,8 +65,8 @@ export default function App() {
     : dates.includes(data.baseDate)
       ? data.baseDate
       : (dates[0] ?? data.baseDate);
-  // 切った機能の URL（ブックマーク・古いリンク・`?do=`）はホームへ移し、ホームの上で知らせる（PRD D213。ADR-0028）。
-  // エキスパート機能が切のときはホームが無いので、予定の画面へ移して知らせる（homePath。PRD D383）。
+  // 切った機能の URL（ブックマーク・古いリンク・`?do=`）は予定の画面（ホームは無い。homePath。PRD D213・D383・D390。ADR-0028）へ移し、
+  // その上で知らせる。
   // 管理者設定と土台の画面は表に無いので移さない（戻れなくならない）
   const { pathname, search } = useLocation();
   const needed = featureOfLocation(pathname, search);
@@ -98,12 +97,8 @@ export default function App() {
               <Route element={<AdminShell />}>
                 {/* 日の予定は #/plan。古いリンクの #/schedule はそこへ */}
                 <Route path="/schedule" element={<Navigate to="/plan" replace />} />
-                {/* ホーム（見出しの下に「今日やること」。PRD D141・D230。ADR-0025・0034）：起動したとき（#/・知らない URL）の画面。
-                    エキスパート機能が切のときはホームを無くして予定の画面へ移す（PRD D383。ADR-0073） */}
-                <Route
-                  path="/home"
-                  element={isSimpleMenu(data.org.features) ? <Navigate to={home} replace /> : <HomePage />}
-                />
+                {/* ホームは無い（PRD D383・D390。ADR-0073・ADR-0074）：古い #/home・起動したとき（#/・知らない URL）は予定の画面へ */}
+                <Route path="/home" element={<Navigate to={home} replace />} />
                 <Route path="/plan" element={<PlanPage />} />
                 <Route path="/month" element={<MonthPage />} />
                 <Route path="/week" element={<WeekPage />} />
@@ -170,7 +165,7 @@ function AdminShell() {
   const location = useLocation();
   const { pathname } = location;
   const navigate = useNavigate();
-  /** 切った機能の URL から移ってきたときの、その機能（ホームの上に知らせを出す。PRD D213） */
+  /** 切った機能の URL から移ってきたときの、その機能（予定の画面の上に知らせを出す。PRD D213） */
   const home = homePath(data.org.features);
   const featureOff = pathname === home && isFeatureOffState(location.state) ? location.state.featureOff : null;
   const { menuOpen, setMenuOpen, paletteOpen, openPalette, closePalette } = useShellOverlays(pathname);
@@ -231,7 +226,7 @@ function AdminShell() {
           </main>
           <BottomTabs
             groups={groups}
-            simple={isSimpleMenu(data.org.features)}
+            features={data.org.features}
             pathname={pathname}
             paletteOpen={paletteOpen}
             openPalette={openPalette}
