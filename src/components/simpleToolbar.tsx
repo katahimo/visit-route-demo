@@ -1,9 +1,10 @@
 // 予定の操作の行（エキスパート機能が切のとき。PRD D384。ADR-0073）：主ボタン1つ＋ボタン1つまで、ほかは「その他 ▾」へ。
 // どのボタンを残すかは lib/exceptionView の mainTools。日は「訪問を追加」が主ボタン（スマホは出さず「担当なしの訪問を組む」）、
-// 週・月は「担当なしの訪問を組む」が主ボタン（担当なしが無ければ主ボタンは無し）。もう1つは「欠勤・キャンセルを登録」
+// 週・月は「予定を入れる」が主ボタン（引き出しは AddPlanPanel。PRD D388）。もう1つは「欠勤・キャンセルを登録」。担当なしの訪問を組むは週・月では「その他 ▾」
 import { Plus, Sparkles } from 'lucide-react';
-import { type ReactNode, useEffect, useRef } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { mainTools, type ScheduleZoom } from '../lib/exceptionView';
+import { AddPlanPanel } from './AddPlanPanel';
 import { MenuButton, type MenuItem } from './MenuButton';
 import { WithIcon } from './ui';
 import { useHistoryMenuItems } from './undo';
@@ -32,8 +33,10 @@ export function SimpleToolbar({
   after?: ReactNode;
 }) {
   const history = useHistoryMenuItems();
+  const [adding, setAdding] = useState(false);
   const { primary, second } = mainTools(zoom, {
     add: add !== null,
+    plan: true,
     arrange: more.arrange.count > 0,
     absence: absence !== null,
   });
@@ -75,6 +78,18 @@ export function SimpleToolbar({
           </WithIcon>
         </button>
       )}
+      {primary === 'plan' && (
+        <button
+          type="button"
+          className="btn btn-primary tb-keep-label"
+          onClick={() => setAdding(true)}
+          data-testid="toolbar-add-plan"
+        >
+          <WithIcon icon={Plus}>
+            <span className="tb-label">予定を入れる</span>
+          </WithIcon>
+        </button>
+      )}
       {primary === 'arrange' && (
         <button
           type="button"
@@ -104,6 +119,7 @@ export function SimpleToolbar({
         className="plan-more"
       />
       {after}
+      {adding && <AddPlanPanel onClose={() => setAdding(false)} />}
     </div>
   );
 }

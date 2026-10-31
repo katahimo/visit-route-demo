@@ -156,3 +156,11 @@ export const newClientHint = (only: boolean): string =>
   only
     ? '住所・繰り返し（決まった曜日の訪問）・休みは、保存してから入れられます。'
     : '住所・特性・担当・繰り返し（決まった曜日の訪問）・休みは、保存してから入れられます。';
+
+// ---- 相性の画面の説明 ----
+
+/** 相性の凡例の下の説明の見出し：切は「点」（点数）を言わず「相性のしくみ」。入は今のまま（PRD D384・D389） */
+export const compatHintLabel = (only: boolean): string => (only ? '相性のしくみ' : '点のしくみ');
+
+/** 相性の説明に「条件の重み」の画面の話を入れるか（切はその画面を出さないので入れない） */
+export const showCompatWeightNote = (only: boolean): boolean => !only;

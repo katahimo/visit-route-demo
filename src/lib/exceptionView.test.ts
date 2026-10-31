@@ -13,7 +13,7 @@ import {
   showLegs,
 } from './exceptionView';
 
-const all = { add: true, arrange: true, absence: true };
+const all = { add: true, plan: true, arrange: true, absence: true };
 
 describe('exceptionsOnly', () => {
   it('エキスパート機能が切のときだけ（無い ID は入）', () => {
@@ -24,21 +24,24 @@ describe('exceptionsOnly', () => {
 });
 
 describe('mainTools（操作の行は主ボタン1つ＋最大1つ）', () => {
-  it('日は 訪問を追加（主）＋欠勤・キャンセル。組むは「その他 ▾」', () => {
+  it('日は 訪問を追加（主）＋欠勤・キャンセル。予定を入れる・組むは出さない（組むは「その他 ▾」）', () => {
     expect(mainTools('day', all)).toEqual({ primary: 'add', second: 'absence' });
   });
   it('日でスマホ（追加できない）は 担当なしを組む（主）＋欠勤・キャンセル', () => {
     expect(mainTools('day', { ...all, add: false })).toEqual({ primary: 'arrange', second: 'absence' });
   });
-  it('週・月は 担当なしを組む（主）＋欠勤・キャンセル。訪問を追加は出さない', () => {
+  it('週・月は 予定を入れる（主）＋欠勤・キャンセル。担当なしを組むは担当なしの有無によらず「その他 ▾」へ', () => {
     for (const z of ['week', 'month'] as const) {
-      expect(mainTools(z, all)).toEqual({ primary: 'arrange', second: 'absence' });
-      expect(mainTools(z, { add: true, arrange: false, absence: true })).toEqual({ primary: null, second: 'absence' });
+      expect(mainTools(z, all)).toEqual({ primary: 'plan', second: 'absence' });
+      expect(mainTools(z, { ...all, arrange: false })).toEqual({ primary: 'plan', second: 'absence' });
     }
   });
   it('欠勤・キャンセルを切っていれば出さない。何も無ければ両方 null', () => {
-    expect(mainTools('month', { ...all, absence: false })).toEqual({ primary: 'arrange', second: null });
-    expect(mainTools('week', { add: false, arrange: false, absence: false })).toEqual({ primary: null, second: null });
+    expect(mainTools('month', { ...all, absence: false })).toEqual({ primary: 'plan', second: null });
+    expect(mainTools('week', { add: false, plan: false, arrange: false, absence: false })).toEqual({
+      primary: null,
+      second: null,
+    });
   });
 });
 

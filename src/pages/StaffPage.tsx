@@ -86,8 +86,8 @@ export default function StaffPage() {
   return (
     <div className="stack">
       <PageHeader
-        // 切は基本情報のタブを出さない（PRD D385）
-        nav={only ? undefined : <BasicsNav />}
+        // 切は一覧・相性（〈スタッフ〉は勤務も）の小さいタブ（PRD D389）。入は基本情報のタブ
+        nav={<BasicsNav />}
         icon={UserRound}
         title={`${terms.staff}一覧`}
         lead={lead}

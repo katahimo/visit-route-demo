@@ -1,5 +1,6 @@
 import { type RefObject, useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { IS_MAC } from '../components/CommandPalette';
+import { rememberPeopleSide } from '../components/peopleSide';
 import { useBasisChanged } from '../components/useArrangeBasis';
 import { NARROW_QUERY } from '../components/useMedia';
 import type { DemoData } from '../contracts/data';
@@ -25,7 +26,7 @@ const lastViews: LastViews = {};
 function rememberView(pathname: string): LastViews {
   if (isScheduleView(pathname)) lastViews.schedule = activeNavPath(pathname);
   if (isSettingsPath(pathname)) lastViews.settings = pathname;
-  return { ...lastViews };
+  return { ...lastViews, people: rememberPeopleSide(pathname) };
 }
 
 /**
@@ -41,14 +42,22 @@ export function useShellNav(data: DemoData, pathname: string) {
   const last = rememberView(pathname);
   const lastSchedule = last.schedule;
   const lastSettings = last.settings;
+  const lastPeople = last.people;
   // 切った機能の項目は出さない（PRD D213）。下のタブもここから引く
   // 件数の印（PRD D349。compile しないので軽い）
   // 基本情報が最後に組んだあとに変われば担当を組むに「変更」の印（ADR-0067）
   const basisChanged = useBasisChanged(data);
   const badges = useMemo(() => ({ ...menuBadges(data, today), basisChanged }), [data, today, basisChanged]);
   const groups = useMemo(
-    () => menuSections(terms, today, features, { schedule: lastSchedule, settings: lastSettings }, badges),
-    [terms, today, features, lastSchedule, lastSettings, badges],
+    () =>
+      menuSections(
+        terms,
+        today,
+        features,
+        { schedule: lastSchedule, settings: lastSettings, people: lastPeople },
+        badges,
+      ),
+    [terms, today, features, lastSchedule, lastSettings, lastPeople, badges],
   );
   // 画面の一覧（メニューから外した画面も1つずつ）：上の帯の名前・パレットの画面（PRD D273・D275）
   const screens = useMemo(() => screenSections(terms, features), [terms, features]);

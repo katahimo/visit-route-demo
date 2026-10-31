@@ -1,0 +1,31 @@
+/* 曜日のトグル（繰り返しの欄 pages/patternsForm と「予定を入れる」の引き出し components/AddPlanPanel で共通） */
+.weekday-toggles {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.weekday-toggle {
+  min-width: 40px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1.5px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.weekday-toggle.is-on {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  color: var(--primary-dark);
+}
+.weekday-toggle:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+fieldset.weekday-toggles {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}

@@ -4,6 +4,7 @@
 import type { Terms } from '../contracts/documents';
 import type { Features } from '../contracts/features';
 import { isHrefOn, isOn } from './features';
+import { type PeopleSide, peopleMatch } from './peopleTabs';
 import { planLabel, planYm } from './scheduleMode';
 import { startGuidePlanPath } from './startGuide';
 import { SUDDEN_DO } from './sudden';
@@ -258,7 +259,7 @@ const SETTINGS_ICON: Record<string, NavIcon> = {
 export const absenceHref = (today: string): string => `/plan?date=${today}&do=${SUDDEN_DO}`;
 
 /** メニューの「予定」「設定」で開く画面（最後に開いた表示・タブ。無ければ既定。PRD D273・D275） */
-export type LastViews = { schedule?: string | null; settings?: string | null };
+export type LastViews = { schedule?: string | null; settings?: string | null; people?: PeopleSide };
 
 /**
  * メニューの「設定」で開くタブ：最後に開いた設定のタブ（切っていなければ）、無ければ先頭のタブ
@@ -343,7 +344,8 @@ function arrangeMenuItem(
 /**
  * メニューの4つ（エキスパート機能が切のとき。PRD D383。ADR-0073）：予定・〈利用者さん〉・〈スタッフ〉・設定（呼び名は terms）。
  * 見出し・子の項目・件数の印は無い（ホームは無く、要対応は予定の上の帯、空き状況は予定の「その他 ▾」）。
- * 今の画面の印：予定は月・週・日・比較・空き状況・担当を組む、〈利用者さん〉は一覧・予定と相性・相性、〈スタッフ〉は一覧・勤務時間（シフト）・勤務の見込み、
+ * 今の画面の印：予定は月・週・日・比較・空き状況・担当を組む、〈利用者さん〉は一覧・予定と相性、〈スタッフ〉は一覧・勤務時間（シフト）・勤務の見込み、
+ * 相性は最後に開いた側（どちらのタブから来たか。lib/peopleTabs。PRD D389）、
  * 設定は設定のタブ。切った機能の画面は出さない
  */
 function simpleMenuItems(terms: Pick<Terms, 'client' | 'staff'>, features: Features, last: LastViews): MenuItem[] {
@@ -363,7 +365,7 @@ function simpleMenuItems(terms: Pick<Terms, 'client' | 'staff'>, features: Featu
       label: terms.client,
       short: terms.client,
       icon: 'clients',
-      match: ['/clients', '/basics', '/compat'],
+      match: peopleMatch('clients', last.people),
     },
     {
       key: 'staff',
@@ -371,7 +373,7 @@ function simpleMenuItems(terms: Pick<Terms, 'client' | 'staff'>, features: Featu
       label: terms.staff,
       short: terms.staff,
       icon: 'staff',
-      match: ['/staff', '/availability', '/workload'],
+      match: peopleMatch('staff', last.people),
     },
     {
       key: 'settings',

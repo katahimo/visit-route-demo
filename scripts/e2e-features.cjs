@@ -47,6 +47,9 @@ const {
   storedFeatures,
   menu,
   basicsTabs,
+  peopleTabs,
+  CLIENT_TABS,
+  STAFF_TABS,
   paletteItems,
   paletteSearch,
   applyTemplate,
@@ -209,12 +212,26 @@ async function checkTemplate(page, t) {
   );
   const tabs = await page.getByTestId('bottom-tab').allInnerTexts();
   check(same(tabs, tabsFor(on)), `${label}：下のタブ`, tabs);
-  const bt = await basicsTabs(page);
-  check(
-    same(bt, PEOPLE_KIDS),
-    `${label}：基本情報のタブ（予定と相性・利用者さん・スタッフ・相性・勤務時間（シフト））`,
-    bt,
-  );
+  if (expert) {
+    const bt = await basicsTabs(page);
+    check(
+      same(bt, PEOPLE_KIDS),
+      `${label}：基本情報のタブ（予定と相性・利用者さん・スタッフ・相性・勤務時間（シフト））`,
+      bt,
+    );
+  } else {
+    // エキスパート機能が切：基本情報のタブでなく〈利用者さん〉・〈スタッフ〉の小さいタブ（予定と相性は出さない。PRD D389）
+    const ct = await peopleTabs(page, '/clients');
+    const st = await peopleTabs(page, '/staff');
+    check(
+      same(ct, CLIENT_TABS) && same(st, STAFF_TABS),
+      `${label}：小さいタブ（利用者さん＝一覧・相性、スタッフ＝一覧・勤務・相性）`,
+      {
+        ct,
+        st,
+      },
+    );
+  }
   await openHome(page, on);
   const pal = await paletteItems(page);
   check(same(pal.screens, screensFor(t)), `${label}：パレットの画面`, pal.screens);

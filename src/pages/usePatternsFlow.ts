@@ -4,6 +4,7 @@ import { useEffect, useId, useMemo, useState } from 'react';
 import { useConfirm } from '../components/ConfirmDialog';
 import { useToast } from '../components/Toast';
 import { useFeature } from '../components/useFeature';
+import { usePatternAdd } from '../components/usePatternAdd';
 import type { DemoData } from '../contracts/data';
 import type { Pattern } from '../contracts/documents';
 import { jstDate } from '../domain/time';
@@ -71,6 +72,7 @@ export function usePatternsFlow({
   const toast = useToast();
   const confirmDialog = useConfirm();
   const today = jstDate(Date.now());
+  const addPattern = usePatternAdd();
   const { form, setForm, ending, setEnding, open, errorState, error, setError } = usePatternsDraft(onDirty);
   /**
    * 毎月の第N週・曜日ごとの時刻（ADR-0028 の patternMonthly）。切なら選べない。今の値がそれなら欄は読むだけで出す
@@ -88,19 +90,13 @@ export function usePatternsFlow({
     if (!form) return;
     setError(null);
     if (!form.id) {
-      // 足す：回は見るときに計算するので、繰り返しを足すだけ（版2）
-      const p = parsePatternForm(form, form.from, clientId, data.visitTypes);
-      if (typeof p === 'string') {
-        setError(p);
+      const r = addPattern(form, clientId);
+      if ('error' in r) {
+        setError(r.error);
         return;
       }
-      const add = (d: DemoData): DemoData => ({ ...d, patterns: [...d.patterns, p] });
-      // 保存後のデータは先に1回だけ作り、store にもそれを入れる（自動の組みが読むデータと参照をそろえる）
-      const after = add(data);
-      update((d) => (d === data ? after : add(d)), '繰り返しを足す');
       open(null);
-      // 保存したあと、増えた担当なしの回を自動で組む（保存の前後のデータで対象を決める。繰り返しの担当も書く。ADR-0072）
-      const auto = arrangeAfter(data, after, today);
+      const { pattern: p, auto } = r;
       toast(
         p.usualStaffId
           ? `繰り返しを足しました（担当：${staffName(p.usualStaffId)}）`

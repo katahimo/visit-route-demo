@@ -40,6 +40,8 @@ export type DemoStore = {
    * opts.history が false の操作（戻せない操作：古い記録を消すなど）は積まず、履歴を捨てる（前の手へ戻すと消したものが戻るため）
    */
   update(fn: (d: DemoData) => DemoData, label?: string, opts?: UpdateOptions): void;
+  /** いまのデータ（保存の直前に、描画のあとで変わっていないかを確かめる用。読むだけ） */
+  latest: { readonly current: DemoData };
   /** 1手戻す（全体の履歴。戻した手の名前、戻せなければ null） */
   undo(): string | null;
   /** 1手やり直す（やり直した手の名前、無ければ null） */
@@ -340,6 +342,7 @@ export function DemoDataProvider({ children }: { children: ReactNode }): ReactNo
   const value = useMemo(
     () => ({
       data,
+      latest: st.latest,
       update,
       undo,
       redo,
@@ -384,6 +387,7 @@ export function DemoDataProvider({ children }: { children: ReactNode }): ReactNo
       externalReloads,
       replacedCount,
       previousDrops,
+      st.latest,
     ],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

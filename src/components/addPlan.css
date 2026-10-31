@@ -1,0 +1,18 @@
+/* 「予定を入れる」の引き出し（components/AddPlanPanel。PRD D388） */
+.add-plan {
+  gap: 12px;
+}
+.add-plan-days {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.add-plan-days > legend {
+  padding: 0;
+  margin-bottom: 4px;
+}
+/* 引き出しは狭いので1列（〈利用者さん〉・曜日・くり返し・時刻・所要を上から） */
+.add-plan .form-grid {
+  grid-template-columns: minmax(0, 1fr);
+}

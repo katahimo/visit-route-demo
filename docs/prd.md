@@ -114,7 +114,7 @@ PoC本体は「性別希望」と「NG」しか持たず、相性は登録のみ
 | 住所・地図・メール・道順 | [prd/contact.md](prd/contact.md) | D86〜D101 D118〜D121 D366〜D369 |
 | データ・Excel・フォーム・機能の入り切り | [prd/data.md](prd/data.md) | D1〜D3 D15 D23 D33 D44 D103〜D107 D191 D209〜D216 D227 D248〜D251 D253 D254 D276 D365 D371 |
 | メニュー・ホーム・スマホ・確認・用語 | [prd/navigation.md](prd/navigation.md) | D59 D132 D133 D135 D141〜D150 D174〜D176 D179〜D183 D190 D192〜D197 D220〜D222 D230 D231 D236 D238〜D241 D247 D252 D255 D263 D267 D268 D270 D272 D273 D275 D277 D284 D307 D333〜D338 D349 |
-| 最初の2問・決まった予定・情報量・顧客台帳 | [prd/simple.md](prd/simple.md) | D379〜D387 |
+| 最初の2問・決まった予定・情報量・顧客台帳 | [prd/simple.md](prd/simple.md) | D379〜D389 |
 
 ### 廃止した D番号
 

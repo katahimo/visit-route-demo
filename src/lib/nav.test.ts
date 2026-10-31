@@ -373,6 +373,15 @@ describe('エキスパート機能が切のメニュー（PRD D383。ADR-0073）
     expect(on('schedule', '/clients')).toBe(false);
     expect(on('clients', '/staff')).toBe(false);
   });
+  it('相性は、どちらのタブから来たかの側（last.people）の項目に印が付く（PRD D389）', () => {
+    const staffSide = menuSections(terms, TODAY, off, { people: 'staff' });
+    expect(isActiveNav(item('staff', staffSide), '/compat')).toBe(true);
+    expect(isActiveNav(item('clients', staffSide), '/compat')).toBe(false);
+    expect(isActiveNav(item('clients', staffSide), '/basics')).toBe(true);
+    const clientSide = menuSections(terms, TODAY, off, { people: 'clients' });
+    expect(isActiveNav(item('clients', clientSide), '/compat')).toBe(true);
+    expect(isActiveNav(item('staff', clientSide), '/compat')).toBe(false);
+  });
   it('切った機能の画面の項目は出さない（切っていない機能だけ）', () => {
     const items = menuSections(terms, TODAY, { expert: false, vacancy: false }).flatMap((x) => x.items);
     expect(items.map((i) => i.key)).toEqual(['schedule', 'clients', 'staff', 'settings']);
