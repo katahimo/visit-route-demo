@@ -16,11 +16,11 @@ describe('tourSteps（PRD D277）', () => {
     expect(JSON.stringify(s)).not.toContain('条件の重み');
     expect(JSON.stringify(s)).not.toContain('ホーム');
   });
-  it('エキスパート機能が切なら、「組む」のメニューを案内せず、「その他 ▾」から組むと書く。入はメニューの「組む」と帯の種類を書く（ADR-0072・ADR-0074）', () => {
+  it('エキスパート機能が切なら、「組む」のメニューを案内せず、帯の「担当なしを組む」で組むと書く。入はメニューの「組む」と帯の種類を書く（ADR-0072・ADR-0074）', () => {
     const plan = tourSteps(terms, { expert: false })[0]!;
     expect(plan.body).not.toContain('「組む」');
     expect(plan.points!.join('')).not.toContain('メニューの「組む」');
-    expect(plan.points!.join('')).toContain('担当なしの訪問を組む');
+    expect(plan.points!.join('')).toContain('赤い帯の「担当なしを組む」');
     const on = tourSteps(terms, {})[0]!;
     expect(on.body).toContain('「組む」で組みます');
     expect(on.body).toContain('未確定の日');
@@ -50,11 +50,11 @@ describe('tourSteps（PRD D277）', () => {
     expect(s[0]!.where).toBe('メニューの「予定」（スマホは下のタブの「予定」）');
     expect(s[1]!.where).toBe('日の予定の「欠勤・キャンセルを登録」');
   });
-  it('エキスパート機能が切ならホームの枚を出さず、帯・「その他 ▾」・日の予定の欠勤を案内する（PRD D383）', () => {
+  it('エキスパート機能が切ならホームの枚を出さず、帯・日の予定の欠勤を案内する（PRD D400・D403）', () => {
     const s = tourSteps(terms, { expert: false });
     expect(s.map((x) => x.key)).toEqual(['plan', 'absence']);
     expect(s[0]!.body).toContain('赤い帯');
-    expect(s[0]!.body).toContain('「その他 ▾」の「担当なしの訪問を組む」');
+    expect(s[0]!.body).toContain('帯の「担当なしを組む」');
     expect(s[0]!.points![2]).toMatch(/^決まったあと：/);
     expect(s[1]!.where).toBe('日の予定の「欠勤・キャンセルを登録」');
     expect(JSON.stringify(s)).not.toContain('ホーム');

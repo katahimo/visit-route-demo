@@ -24,7 +24,6 @@ import { UndoButtons } from './undo';
 import { saveAppliedBasis } from './useArrangeBasis';
 import { useExceptionsOnly } from './useFeature';
 import { useSelectionBar } from './useSelectionBar';
-import { useSimpleMore } from './useSimpleMore';
 import { useValueStore } from './valueStore';
 import './scheduleParts.css';
 
@@ -71,8 +70,7 @@ export function ScheduleToolbar({
 }) {
   const today = jstDate(Date.now());
   const only = useExceptionsOnly();
-  // エキスパート機能が切のときは、メニューから外した空き状況と担当なしの［組む］を足す（PRD D383）。切は操作の行を主ボタン1つ＋1つにする（PRD D384）
-  const more = useSimpleMore();
+  // 切は操作の行を主ボタン1つ＋1つにする（PRD D384）。担当なしを組むは要対応の帯、空き状況はメニュー（PRD D403・D400）
   const absenceNode =
     absence &&
     ('onClick' in absence ? (
@@ -107,20 +105,18 @@ export function ScheduleToolbar({
         absence={absenceNode}
         add={add}
         moreItems={moreItems}
-        more={more}
         after={after}
       />
     );
-  const items = [...moreItems, ...more.items];
   return (
     <div className={`row schedule-toolbar ${className}`} data-testid="schedule-toolbar" data-zoom={zoom}>
       {absenceNode}
       <UndoButtons />
       {children}
-      {items.length > 0 && (
+      {moreItems.length > 0 && (
         <MenuButton
           label="その他"
-          items={items}
+          items={moreItems}
           testId={`${zoom === 'day' ? 'plan' : zoom}-more`}
           className="plan-more"
         />

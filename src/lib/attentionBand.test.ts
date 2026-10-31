@@ -29,7 +29,7 @@ const ZERO = {
   unconfirmed: 0,
 };
 
-describe('attentionBand（要対応の帯。PRD D383・D391）', () => {
+describe('attentionBand（要対応の帯。PRD D400・D403・D404）', () => {
   it('何も無ければ null（帯を出さない）', () => {
     expect(attentionBand([], TODAY)).toBeNull();
     expect(attentionBand([day(TODAY), day('2026-10-22')], TODAY)).toBeNull();
@@ -66,6 +66,23 @@ describe('attentionBand（要対応の帯。PRD D383・D391）', () => {
       (id) => start[id] ?? null,
     );
     expect(b?.go).toEqual({ to: '/plan', date: TODAY, visitId: 'b' });
+  });
+  it('最初の訪問は重なり・休みの人を先に（担当なしのほうが早い日でも）、無ければ担当なし（PRD D403）', () => {
+    const start: Record<string, number> = { a: 480, w: 900 };
+    const b = attentionBand(
+      [day(TODAY, { a: ['unassigned'] }), day('2026-10-24', { w: ['late'] }), day('2026-10-25', { y: ['off'] })],
+      TODAY,
+      (id) => start[id] ?? null,
+    );
+    expect(b?.text).toBe('担当なし 1件・重なり 1件・休みの人 1件');
+    expect(b?.go).toEqual({ to: '/plan', date: '2026-10-24', visitId: 'w' });
+    expect(
+      attentionBand([day('2026-10-23', { u: ['unassigned'] }), day(TODAY, { v: ['unassigned'] })], TODAY)?.go,
+    ).toEqual({
+      to: '/plan',
+      date: TODAY,
+      visitId: 'v',
+    });
   });
   it('bandDays：今日から翌月末まで（自動の組みの範囲と同じ）', () => {
     const d = bandDays('2026-10-21');
@@ -156,7 +173,7 @@ describe('attentionBand の入だけの種類（エキスパート機能が入�
       hasStandard: false,
     });
     expect(b?.text).toBe('担当なし 1件・重なり 1件・組み方の標準が無い・未確定 2日');
-    expect(b?.go).toEqual({ to: '/plan', date: TODAY, visitId: 'a' });
+    expect(b?.go).toEqual({ to: '/plan', date: TODAY, visitId: 'b' }); // 重なりが先（PRD D403）
     // 訪問の種類が無ければ、標準が無いへ（未確定より先）
     expect(attentionBand([untold('2026-10-23')], TODAY, undefined, { ...open, hasStandard: false })?.go).toEqual({
       to: '/standard',

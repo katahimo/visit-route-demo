@@ -116,8 +116,8 @@ export const basicsTabs = (
   }));
 
 /**
- * 下のタブに並べる項目の key（そのあとに「探す」「メニュー」。PRD D383・D390）：エキスパート機能が切なら メニューの4つ
- * （予定・〈利用者さん〉・〈スタッフ〉・設定）、入なら 予定・〈利用者さん〉・〈スタッフ〉・組む（設定はメニューの中）
+ * 下のタブに並べる項目の key（そのあとに「探す」「メニュー」。PRD D400・D401）：エキスパート機能が切なら メニューのうち4つ
+ * （予定・〈利用者さん〉・〈スタッフ〉・設定。空き状況は引き出しとパレット。ADR-0078）、入なら 予定・〈利用者さん〉・〈スタッフ〉・組む（設定はメニューの中）
  */
 export const bottomTabKeys = (features: Features): readonly string[] =>
   isOn(features, 'expert') ? ['schedule', 'clients', 'staff', 'arrange'] : ['schedule', 'clients', 'staff', 'settings'];
@@ -324,12 +324,12 @@ function arrangeBadge(badges: MenuBadges): MenuItem['badge'] {
 }
 
 /**
- * メニューの並び（PRD D383・D390。ADR-0054・0063・0067・0072・0073・0074）：見出しの無いグループ1つ。
- * エキスパート機能が切なら 予定・〈利用者さん〉・〈スタッフ〉・設定 の4つ（呼び名は terms）、入なら その〈スタッフ〉と設定の間に「組む」を足した5つ。
- * ホームは無く（要対応は予定の上の帯。PRD D391）、空き状況・欠勤・キャンセルは予定の「その他 ▾」・操作の行から開く。
+ * メニューの並び（PRD D400・D401。ADR-0054・0063・0067・0072・0073・0074・0078）：見出しの無いグループ1つ。
+ * エキスパート機能が切なら 予定・空き状況・〈利用者さん〉・〈スタッフ〉・設定 の5つ（呼び名は terms）、入なら その〈スタッフ〉と設定の間に「組む」を足した6つ。
+ * ホームは無く（要対応は予定の上の帯。PRD D404）、欠勤・キャンセルは予定の操作の行から開く。
  * 子の項目を持つのは入の「組む」だけ（基本情報・組み方の標準（標準が無いときだけ）・担当を組む。作業の順。条件の重みは組み方の標準の寄り道。
  * ADR-0066・ADR-0067）。件数の印も「組む」の1つ（badges）。担当を組む（#/arrange）は切では予定の「その他 ▾」などから開き、メニューには出さない。
- * 今の画面の印：予定は月・週・日・空き状況（切はさらに比較・担当を組む）、〈利用者さん〉は一覧（切はさらに予定と相性）、
+ * 今の画面の印：予定は月・週・日（切はさらに比較・担当を組む）、空き状況は空き状況、〈利用者さん〉は一覧（切はさらに予定と相性）、
  * 〈スタッフ〉は一覧（切はさらに勤務時間（シフト）・勤務の見込み）、相性は切では最後に開いた側（lib/peopleTabs。PRD D389）、
  * 入では「組む」の基本情報に付く。設定は設定のタブ（親を押すと最後に開いたタブ）。
  * 案を比べるは担当を組むから開く（メニュー・パレットには出さない）。下のタブは短い名前（short）も使う。today は今日。
@@ -358,8 +358,10 @@ export function menuSections(
       label: '予定',
       short: '予定',
       icon: 'day',
-      match: expert ? [...SCHEDULE_PATHS, '/vacancy'] : [...SCHEDULE_PATHS, '/vacancy', '/arrange', '/compare'],
+      match: expert ? SCHEDULE_PATHS : [...SCHEDULE_PATHS, '/arrange', '/compare'],
     },
+    // 空き状況は予定の次の上の段の項目（入切とも。PRD D400・D401。ADR-0078）
+    { key: 'vacancy', to: '/vacancy', label: '空き状況', short: '空き状況', icon: 'vacancy' },
     person('clients', terms.client),
     person('staff', terms.staff),
     ...(expert ? [arrangeMenuItem(features, today, badges)] : []),
@@ -406,7 +408,7 @@ export function screenSections(terms: Pick<Terms, 'client' | 'staff'>, features:
         { key: 'day', to: '/plan', label: '日の予定', icon: 'day' },
         // エキスパート機能が切なら「予定を組む」のグループは出さず、担当を組むは予定のグループに置く（ADR-0072）
         ...(expert ? [] : [arrangeScreen]),
-        // 空き状況は予定の「その他 ▾」から開くので、予定のグループに置く（PRD D383・D390）
+        // 空き状況はメニューでは予定の次の項目なので、パレットでも予定のグループに置く（PRD D400・D401）
         vacancyScreen,
       ],
     },
