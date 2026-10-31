@@ -105,7 +105,7 @@ export default function VacancyPage() {
       <PageHeader
         icon={CalendarSearch}
         title="空き状況"
-        lead={`いつ・何をを入れると、受けられる曜日・時間帯と${terms.staff}の人数がすぐに出ます。場所はあとから足せます`}
+        lead={`いつ・何を入れると、受けられる曜日・時間帯と${terms.staff}の人数が出ます。場所はあとから足せます`}
       />
       <WhenStage data={data} input={input} durationOk={durationOk} fromOk={fromOk} wishOk={wishOk} />
       <PlaceStage input={input} hasPin={exactPlace !== null} />
