@@ -353,20 +353,20 @@ async function addNew(page) {
   );
 }
 
-/** 予定の上の要対応の帯から日の予定へ移り、選ばれた訪問の欄を開く（ホームの今日の訪問から開く入口の代わり。PRD D391） */
+/** 予定の上の要対応の帯から日の予定へ移り、選ばれた訪問の欄を開く（ホームの今日の訪問から開く入口の代わり。PRD D404。帯の［見に行く ›］は attention-band-go） */
 async function band(page) {
   await freshPlan(page);
   await open(page, '/month', '[data-testid="attention-band"]');
-  await page.getByTestId('attention-band').click();
+  await page.getByTestId('attention-band-go').click();
   await page.waitForURL(/#\/plan/);
   const id = await page.evaluate(() => history.state?.usr?.visitId ?? null);
   check(!!id, '要対応の帯から日の予定へ移り、行き先の訪問の ID を渡している', id);
-  // 帯の先頭は担当なしの訪問のことが多く、その札（未割当の欄）の詳細から欄を開く
+  // 重なり・休みの人の訪問があればその訪問（選ばれた札。もう一度押すと選びが外れるので押さない）、無ければ担当なしの訪問（未割当の欄の札）の詳細から欄を開く
   const card = page.locator(`[data-visit="${id}"]`).first();
   await card.waitFor({ timeout: 30000 });
   await settle(page, 400);
   await card.scrollIntoViewIfNeeded();
-  await card.click();
+  if (!(await card.evaluate((e) => e.classList.contains('is-picked')))) await card.click();
   await page.getByTestId('visit-open').first().click();
   await panel(page).waitFor();
   check((await panel(page).getAttribute('data-visit')) === id, '帯から移った訪問の欄を開く');

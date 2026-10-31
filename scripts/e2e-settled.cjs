@@ -218,7 +218,7 @@ async function month(page) {
     '?do=unconfirmed でも確定していない日の欄は出ない（要対応へ）',
   );
   check((await page.getByRole('button', { name: /まとめて確定/ }).count()) === 0, '「まとめて確定」のボタンを出さない');
-  // ホームは無い（切のとき。PRD D383）：#/home は予定へ移り、要対応の帯にも確定の話は出ない
+  // ホームは無い（切のとき。PRD D400）：#/home は予定へ移り、要対応の帯にも確定の話は出ない
   await page.goto('about:blank');
   await page.goto(`${BASE}#/home`);
   await page.getByTestId('sched-nav').waitFor({ timeout: 60000 });

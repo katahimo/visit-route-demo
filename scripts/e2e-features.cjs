@@ -2,7 +2,7 @@
 // すべて入（初期データ。e2e は初回もすべて入に固定。PRD D276）でメニューの最後に「設定」（タブに管理者設定・データ）、管理者設定の画面（見出し・説明・ひな形の5つ・
 // 「いまの設定」とカスタムの印・22のスイッチの role=switch・aria-checked・名前・説明）。
 // ひな形の5通り（基本・月次予定・現場共有・すべては管理者設定で適用する（独自の確認ダイアログに入る機能・切れる機能、取り消すと変わらない）、
-// 労務・契約管理は別のタブで localStorage を書き換えて作る）ごとに、メニューの項目（入は 予定・〈利用者さん〉・〈スタッフ〉・組む・設定 の5項目で、空き状況・欠勤・キャンセルの入り切りで変わらない。
+// 労務・契約管理は別のタブで localStorage を書き換えて作る）ごとに、メニューの項目（入は 予定・空き状況・〈利用者さん〉・〈スタッフ〉・組む・設定 の6項目で、空き状況の機能を切ると空き状況が消える（欠勤・キャンセルの入り切りでは変わらない）。
 // 子は組むだけ：基本情報・組み方の標準・担当を組む。ADR-0063・ADR-0067・ADR-0074）・設定のタブ・下のタブ・パレットの画面と操作・ホームのいつでもの入口・
 // 切った機能の URL（`?do=` も）を開くと予定の画面へ移り（replace）、その上に閉じられる知らせと管理者設定へのリンク、
 // スイッチ（押すとすぐ保存・トースト・依存先が切なら押せず理由）、390px で横にはみ出さない、印刷で知らせ・メニューを出さない。
@@ -10,7 +10,7 @@
 // 稼働の見込み・欠勤・キャンセル・月の印刷・提案を比べるを切ると、月の要対応の行・月のボタン・日の画面の拘束の帯・担当を組むの「案を比べる」・
 // 稼働時間の右の欄にそこへ移るリンク・ボタンが無い（日の予定に「AI で組む ▾」は無い。ADR-0063）。
 // レビューの反映：希望休のまとめ入力を切っても月の「担当が休み」の印は出す、欠勤・キャンセルを切ると稼働時間の凡例で登録の場所を出さない。
-// エキスパート機能が切のひな形（単発のみ・基本・労務・契約管理・月次予定・現場共有）は、メニューが4つ（予定・〈利用者さん〉・〈スタッフ〉・設定。子なし）・下のタブは6つ・ホームは無く予定の画面へ移る（ADR-0073。PRD D383。詳しくは e2e-simple-menu）。
+// エキスパート機能が切のひな形（単発のみ・基本・労務・契約管理・月次予定・現場共有）は、メニューが5つ（予定・空き状況・〈利用者さん〉・〈スタッフ〉・設定。子なし。下のタブは空き状況を除く4つ＋探す・メニュー）・下のタブは6つ・ホームは無く予定の画面へ移る（ADR-0073。PRD D400。詳しくは e2e-simple-menu）。
 // その2（画面の中の入口・相性を切る・切ったまま保存してもデータが残る）は e2e-features2.cjs（長いので2本に分けた）。
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-features.cjs
@@ -29,6 +29,7 @@ const {
   TEMPLATE_LABEL,
   asFeatures,
   MENU,
+  withoutVacancy,
   ARRANGE_KIDS,
   arrangeKidsFor,
   peopleKidsFor,
@@ -64,7 +65,7 @@ async function allOn(page) {
   check(m.labels.at(-1) === '設定', 'すべて入：メニューの最後は「設定」', m.labels);
   check(
     same(m.labels, MENU),
-    'すべて入：メニューの最上位は 予定・〈利用者さん〉・〈スタッフ〉・組む・設定 の5項目（ホームは無い）',
+    'すべて入：メニューの最上位は 予定・空き状況・〈利用者さん〉・〈スタッフ〉・組む・設定 の6項目（ホームは無い）',
     m.labels,
   );
   check(
@@ -158,14 +159,11 @@ async function switches(page) {
   const tabs = await page.getByTestId('bottom-tab').allInnerTexts();
   check(!tabs.includes('空き状況'), '下のタブから空き状況が消える（DOM）', tabs);
   const m = await menu(page);
-  check(same(m.labels, MENU), '空き状況を切ってもメニューは5項目のまま（空き状況はメニューに無い。PRD D390）', m);
-  await open(page, '/month', '[data-testid="sched-nav"]');
-  await page.getByTestId('month-more').click();
   check(
-    (await page.getByTestId('more-vacancy').count()) === 0,
-    '空き状況を切ると予定の「その他 ▾」から空き状況が消える',
+    same(m.labels, withoutVacancy(MENU)),
+    '空き状況を切るとメニューから「空き状況」が消える（残りは 予定・〈利用者さん〉・〈スタッフ〉・組む・設定 の5項目。PRD D401）',
+    m,
   );
-  await page.keyboard.press('Escape');
 
   // 切った機能の URL → 予定の画面へ（replace）・知らせ・管理者設定へのリンク
   await open(page, '/staff');
@@ -206,19 +204,17 @@ async function checkTemplate(page, t) {
   const label = TEMPLATE_LABEL[t];
   const expert = on.includes('expert');
   await openHome(page, on);
-  // 起動の画面（予定）の入口：欠勤・キャンセルを登録は sudden、「その他 ▾」の空き状況は vacancy に合う（ホームの入口の代わり。PRD D390）
+  // 起動の画面（予定）の入口：欠勤・キャンセルを登録は sudden、メニューの空き状況は vacancy に合う（ホームの入口の代わり。PRD D401）
   await settle(page, 300);
   check(
     (await page.getByTestId('sudden-open').count()) === (on.includes('sudden') ? 1 : 0),
     `${label}：起動の画面の「欠勤・キャンセルを登録」は欠勤・キャンセルの入り切りに合う`,
   );
-  const more = page.locator('[data-testid$="-more"]');
-  if ((await more.count()) > 0) await more.first().click();
   check(
-    (await page.getByTestId('more-vacancy').count()) === (on.includes('vacancy') ? 1 : 0),
-    `${label}：起動の画面の「その他 ▾」の空き状況は空き状況の入り切りに合う`,
+    (await page.locator('.side-nav [data-testid="nav-link"][data-key="vacancy"]').count()) ===
+      (on.includes('vacancy') ? 1 : 0),
+    `${label}：メニューの空き状況は空き状況の入り切りに合う`,
   );
-  await page.keyboard.press('Escape');
   const m = await menu(page);
   check(
     same(m.labels, menuFor(on)),
@@ -264,7 +260,7 @@ async function checkTemplate(page, t) {
     `${label}：パレットの操作`,
     pal.actions,
   );
-  // ホームは無く、起動の画面は予定（月・週。PRD D390）
+  // ホームは無く、起動の画面は予定（月・週。PRD D401）
   check(
     hashOf(page).startsWith(homeHashFor(on)),
     `${label}：ホームは無く予定の画面（${homeHashFor(on)}）が開く`,
@@ -421,7 +417,7 @@ async function pathVariants(page, dlg, ctx) {
     const hasNotice = (await page.getByTestId('feature-off-notice').count()) === 1;
     check(/^#\/month/.test(hashOf(page)) && hasNotice, `切った機能の ${h} も予定の画面へ移し知らせる`, hashOf(page));
   }
-  // 390px：空き状況を切っても下のタブは6つ（予定・〈利用者さん〉・〈スタッフ〉・組む・探す・メニュー。空き状況は元から下のタブに無い。PRD D336・D390）で、全幅を等分する
+  // 390px：空き状況を切っても下のタブは6つ（予定・〈利用者さん〉・〈スタッフ〉・組む・探す・メニュー。空き状況は元から下のタブに無い。PRD D336・D401）で、全幅を等分する
   await page.setViewportSize({ width: 390, height: 844 });
   await open(page, '/month', '[data-testid="sched-nav"]');
   const boxes = await page
@@ -451,8 +447,8 @@ async function pathVariants(page, dlg, ctx) {
   await open(page, '/month', '[data-testid="sched-nav"]');
   const m = await menu(page);
   check(
-    same(m.labels, MENU) && same(m.schedule, []) && m.titles.length === 0,
-    '欠勤・キャンセルと空き状況を切ってもメニューは 予定・〈利用者さん〉・〈スタッフ〉・組む・設定 の5項目のまま（見出しは無い）',
+    same(m.labels, withoutVacancy(MENU)) && same(m.schedule, []) && m.titles.length === 0,
+    '欠勤・キャンセルと空き状況を切るとメニューは 予定・〈利用者さん〉・〈スタッフ〉・組む・設定 の5項目（空き状況は消える。見出しは無い）',
     m,
   );
   await applyTemplate(page, dlg, 'all');

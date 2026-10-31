@@ -31,10 +31,12 @@ const SCREENS = {
 
 /**
  * 行き先の名前 → 左のメニューの項目（data-key）の候補。前にあるものから探す（メニューの作りが変わったらここだけ直す。
- * 空き状況・欠勤はメニューに無く、予定の「その他 ▾」・操作の行から（pressTool））
+ * 欠勤はメニューに無く、予定の操作の行から（pressTool）。空き状況は予定の次の項目（PRD D400。ADR-0078）。
+ * 担当なしを組むは予定の上の要対応の帯の attention-band-arrange（PRD D403））
  */
 const MENU_KEYS = {
   予定: ['schedule'],
+  空き状況: ['vacancy'],
   利用者さん: ['clients'],
   スタッフ: ['staff'],
   設定: ['settings'],
@@ -125,8 +127,6 @@ const TOOLS = {
   勤務の見込み: { id: 'month-workload', text: /勤務の見込み/ },
   印刷: { id: 'month-print', text: /印刷/ },
   表示を選ぶ: { text: /表示/ },
-  空き状況: { id: 'more-vacancy', text: /空き状況/ },
-  担当なしを組む: { id: 'toolbar-arrange', text: /担当なしの訪問を組む/ },
   // 日の主ボタン（plan-visit-add）の言葉は、切では「予定を入れる」（PR #140）、入は今は「訪問を追加」
   訪問を追加: { id: 'plan-visit-add', text: /訪問を追加|予定を入れる/ },
   予定を入れる: { id: 'toolbar-add-plan', text: /予定を入れる/ },

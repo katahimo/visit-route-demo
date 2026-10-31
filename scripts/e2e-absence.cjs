@@ -96,7 +96,7 @@ async function fromHome(page) {
   await page.reload();
   // 初期データは今日からの日を繰り返しの担当のままにするので、保存した担当の入った訪問を用意する（のちの段（recommend-b）も使う）
   await planDays(page, { cache: true });
-  // 月の予定の操作の行の「欠勤・キャンセルを登録」（メニュー・ホームには無い。PRD D390）
+  // 月の予定の操作の行の「欠勤・キャンセルを登録」（メニュー・ホームには無い。PRD D401）
   await goTo(page, '月');
   await page.getByTestId('sudden-open').waitFor();
   const href = await page.getByTestId('sudden-open').getAttribute('href');

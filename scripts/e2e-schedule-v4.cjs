@@ -95,7 +95,7 @@ async function menu(page) {
   await until(async () => JSON.stringify(await current(page)) === '["clients"]', 5000, 100).catch(() => {});
   check(
     JSON.stringify(await current(page)) === JSON.stringify(['clients']),
-    '〈利用者さん〉一覧はメニューの上の段の項目「利用者さん」が今の画面（PRD D390）',
+    '〈利用者さん〉一覧はメニューの上の段の項目「利用者さん」が今の画面（PRD D401）',
     await current(page),
   );
   check(
@@ -161,8 +161,11 @@ async function zoom(page) {
       `${zoomName}：欠勤・キャンセルを登録 → 元に戻す の並び（AI で組む ▾ は無い）`,
       order,
     );
-    // その他 ▾ は空き状況を入れるので日・週・月のどれにもある（PRD D344・D390）
-    check((await bar.locator('[data-testid$="-more"]').count()) === 1, `${zoomName}：その他 ▾ がある（空き状況）`);
+    // その他 ▾ は空き状況・担当なしの訪問を組むを外したので、月（表示を選ぶ・印刷など）にだけある（日・週は項目が無く出ない。PRD D344・D400・D403）
+    check(
+      (await bar.locator('[data-testid$="-more"]').count()) === (zoomName === 'month' ? 1 : 0),
+      `${zoomName}：その他 ▾ は月だけにある（空き状況・担当なしの訪問を組むは無い）`,
+    );
     check(
       (await page.getByTestId('progress-band').count()) === (zoomName === 'month' ? 1 : 0),
       `${zoomName}：進み具合の帯は月だけ`,

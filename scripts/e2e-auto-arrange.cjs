@@ -1,7 +1,7 @@
 // 自動の組み（PRD D372〜D378。ADR-0072 第2段）を本物のブラウザで確かめる。初めて開いたときの最初の2問に「デモで試す・定期」で答えて得る「基本」のひな形（エキスパート機能は切）で、
 // 1 予定の日の「訪問を追加」で担当を選ばずに単発の訪問を足す → 知らせ「N件の担当を組みました」と［元に戻す］が出てその訪問に担当が付く（ピンは付けない）
 //   → ［元に戻す］で担当なしに戻る（訪問は残る）、
-// 2 予定の「その他 ▾」：担当なしの訪問があると「担当なしの訪問を組む N件」が出て（月・週の操作の行には出さない。PRD D388）、押すと組まれて件数が減る（ホームの［組む］の代わり。PRD D383。エキスパート機能が入なら出さない）、
+// 2 予定の上の要対応の帯：担当なしの訪問があると従のボタン［担当なしを組む］が出て（操作の行・「その他 ▾」には出さない。PRD D403）、押すと組まれて件数が減る（ホームの［組む］の代わり。エキスパート機能が入なら出さない）、
 // 3 〈利用者さん〉の画面で担当なしの繰り返しを足す → 自動で組まれ、繰り返しの担当（usualStaffId）が書かれて行に出る
 //   （組んだ回は訪問として保存され、保存の直後に別の画面へ移っても組みは続く）、
 // 4 ひな形「単発のみ」を当てると〈利用者さん〉の画面の予定のタブから繰り返しの欄が消える（その入り切りの全体は e2e-features・e2e-features2）。
@@ -27,15 +27,17 @@ const dataWhen = async (page, ok) =>
   }, WAIT_MS)) ?? (await data(page));
 const panel = (page) => page.getByTestId('visit-panel');
 const toast = (page) => page.locator('.toast-layer .toast-text');
-/** 知らせの文が出るのを待って返す（出なければ空） */
-const toastText = async (page, re) => {
-  const ok = await until(async () =>
-    re.test(
-      (await toast(page)
-        .first()
-        .innerText()
-        .catch(() => '')) || '',
-    ),
+/** 知らせの文が出るのを待って返す（出なければ空）。ms は待つ長さ（既定は until の既定。帯の［担当なしを組む］は今日〜翌月末の全部を組むので長く待つ） */
+const toastText = async (page, re, ms) => {
+  const ok = await until(
+    async () =>
+      re.test(
+        (await toast(page)
+          .first()
+          .innerText()
+          .catch(() => '')) || '',
+      ),
+    ms,
   );
   return ok ? await toast(page).first().innerText() : '';
 };
@@ -100,44 +102,44 @@ async function single(page) {
   check(d2.visits.length === n0 + 1, '元に戻しても足した訪問は消えない', d2.visits.length);
 }
 
-/** 2 予定の「その他 ▾」：担当なしの訪問を組む（ホームの［組む］の代わり。PRD D383。1 のあとの状態から続ける） */
-async function moreArrange(page) {
+/** 2 要対応の帯の［担当なしを組む］：担当なしの訪問を組む（ホームの［組む］・前の「その他 ▾」の項目の代わり。PRD D403。1 のあとの状態から続ける） */
+async function bandArrange(page) {
   await page.goto('about:blank');
   await page.goto(`${BASE}#/month`);
   await page.getByTestId('sched-nav').waitFor({ timeout: 60000 });
   await settle(page, 500);
-  // 月の主ボタンは「予定を入れる」（PRD D388）。「担当なしの訪問を組む N件」は「その他 ▾」の中（0件なら項目が消える）
-  const item = page.getByTestId('more-auto-arrange');
-  const more = page.getByTestId('month-more');
+  // 月の主ボタンは「予定を入れる」（PRD D402）。［担当なしを組む］は予定の上の帯の従のボタン（組める担当なしが0件なら出ない）
+  const btn = page.getByTestId('attention-band-arrange');
   check((await page.getByTestId('toolbar-arrange').count()) === 0, '月の操作の行に「担当なしの訪問を組む」は出さない');
-  /** 「その他 ▾」を開いて件数を読む（項目が無ければ 0。開いたままにする） */
+  check((await page.getByTestId('more-auto-arrange').count()) === 0, '「その他 ▾」にも担当なしの訪問を組むは無い');
+  /** 帯の「担当なし N件」の N（帯が無い・担当なしが無ければ 0） */
   const countOf = async () => {
-    await more.click();
-    await item.waitFor({ timeout: 30000 }).catch(() => {});
-    return Number(/(\d+)件/.exec(await item.innerText().catch(() => ''))?.[1] ?? 0);
+    const t = (await page.getByTestId('attention-band-text').count())
+      ? await page.getByTestId('attention-band-text').innerText()
+      : '';
+    return Number(/担当なし (\d+)件/.exec(t)?.[1] ?? 0);
   };
+  await btn.waitFor({ timeout: 30000 });
   const n0 = await countOf();
   // 初期データにも担当なしの繰り返しの回があるので、件数は「足した1件を含む N件」（N は2以上）
-  check(n0 >= 2, '「その他 ▾」に「担当なしの訪問を組む N件」（元に戻した1件を含む）', n0);
+  check(n0 >= 2, '帯に「担当なし N件」（元に戻した1件を含む）', n0);
+  check((await btn.getAttribute('class'))?.includes('btn-primary') === false, '［担当なしを組む］は主ボタンではない');
   const before = await data(page);
   const target = before.visits.find((y) => y.staffId === null && !y.pinned && y.earliestStart === '10:00');
   check(!!target, '前提：元に戻した担当なしの訪問が残っている', before.visits.length);
-  await item.click();
-  const text = await toastText(page, /件の担当を組みました/);
-  check(/^\d+件の担当を組みました/.test(text), '「担当なしの訪問を組む」を押すと知らせ「N件の担当を組みました」', text);
+  await btn.click();
+  const text = await toastText(page, /件の担当を組みました/, 120000);
+  check(/^\d+件の担当を組みました/.test(text), '［担当なしを組む］を押すと知らせ「N件の担当を組みました」', text);
   const after = await dataWhen(page, (x) => x.visits.find((y) => y.id === target.id)?.staffId);
   const v = after.visits.find((y) => y.id === target.id);
   check(!!v?.staffId && v.pinned === false, '足した訪問に担当が付く（ピンは付けない）', v);
   check(hashOfPage(page).startsWith('#/month'), '月の予定のまま（画面を移らない）');
-  // 組んだ分だけ減る（組めない日の訪問は担当なしのまま残るので、項目は残ってもよい。0件なら項目が消える）
-  await page.keyboard.press('Escape').catch(() => {});
-  await settle(page, 500);
+  // 組んだ分だけ減る（組めない日の訪問は担当なしのまま残るので、帯の件数は残ってもよい。0件なら［担当なしを組む］が消える）
   const n1 = await until(async () => {
     const n = await countOf();
-    await page.keyboard.press('Escape').catch(() => {});
     return n < n0 ? { n } : null;
   });
-  check(n1 !== null && n1 !== undefined && n1.n < n0, '組んだあとは「担当なし」の件数が減る（0件なら項目が消える）', {
+  check(n1 !== null && n1 !== undefined && n1.n < n0, '組んだあとは帯の「担当なし」の件数が減る（0件なら消える）', {
     n0,
     n1,
   });
@@ -212,7 +214,7 @@ const steps = sharedPage({
   open,
   steps: [
     ['1 単発の訪問を足すと担当が組まれ、元に戻せる', single],
-    ['2 予定の「その他 ▾」の「担当なしの訪問を組む」', moreArrange],
+    ['2 要対応の帯の［担当なしを組む］', bandArrange],
     ['3 繰り返しを足すと組まれ、繰り返しの担当が書かれる', pattern],
     ['4 ひな形「単発のみ」で繰り返しの欄が消える', oneOff],
   ],

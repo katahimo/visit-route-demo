@@ -1,6 +1,6 @@
 // メニューの用途ごとの並びとコマンドパレット（PRD D178〜D183・D273〜D275。ADR-0027・0045）を本物のブラウザで確かめる：
-// メニュー（最上位5項目 予定・〈利用者さん〉・〈スタッフ〉・組む・設定。ホーム・空き状況は無い。子の項目を持つのは組むだけ（基本情報・組み方の標準・担当を組む。
-// PRD D390・ADR-0063・ADR-0067・ADR-0074。「人」は無い）・同じ名前が無い・件数の印は1つ・aria-current（月・週・日・空き状況は予定、担当を組む・比較は組むの子「担当を組む」、
+// メニュー（最上位6項目 予定・空き状況・〈利用者さん〉・〈スタッフ〉・組む・設定。ホームは無い。子の項目を持つのは組むだけ（基本情報・組み方の標準・担当を組む。
+// PRD D401・ADR-0063・ADR-0067・ADR-0074・ADR-0078。「人」は無い）・同じ名前が無い・件数の印は1つ・aria-current（月・週・日は予定、空き状況は空き状況、担当を組む・比較は組むの子「担当を組む」、
 // 組み方の標準は「組み方の標準」、条件の重みは組み方の標準に印、予定と相性・相性・勤務時間（シフト）・勤務の見込みは組むの子「基本情報」、〈利用者さん〉・〈スタッフ〉は上の段の項目、
 // 設定のタブは「設定」。親は has-current。畳むと親に印）、欠勤・キャンセルは予定の操作の行から今日の日の画面の欄を開く）・
 // 「予定」「設定」は最後に開いた表示・タブ・設定のタブ（4つ）・組むの段（4段。標準があれば2段。ADR-0066・ADR-0067）・メニューから外した画面の入口
@@ -72,9 +72,9 @@ async function seedPeople(page) {
 /** ひらがな → カタカナ */
 const toKata = (s) => s.replace(/[ぁ-ゖ]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) + 0x60));
 
-// メニューの最上位5つ（PRD D390。ADR-0067・ADR-0074 段1）：見出しは無い。ホーム・空き状況は無く、子の項目を持つのは「組む」だけ
+// メニューの最上位6つ（PRD D401。ADR-0067・ADR-0074 段1・ADR-0078）：見出しは無い。ホームは無く、空き状況は予定の次。子の項目を持つのは「組む」だけ
 const GROUPS = [];
-const LABELS = ['予定', '利用者さん', 'スタッフ', '組む', '設定'];
+const LABELS = ['予定', '空き状況', '利用者さん', 'スタッフ', '組む', '設定'];
 /**
  * 子の項目の key（組むだけ：基本情報・組み方の標準・担当を組む（条件の重みは組み方の標準の寄り道。ADR-0066・ADR-0067）。
  * 〈利用者さん〉・〈スタッフ〉は上の段の項目）
@@ -118,11 +118,11 @@ async function menu(page) {
   await open(page, '/month');
   const side = page.locator('.side-nav');
   const titles = await side.locator('h2.nav-group-title').allInnerTexts();
-  check(JSON.stringify(titles) === JSON.stringify(GROUPS), 'メニュー：グループの見出しは無い（最上位5項目）', titles);
+  check(JSON.stringify(titles) === JSON.stringify(GROUPS), 'メニュー：グループの見出しは無い（最上位6項目）', titles);
   const labels = await side.locator(TOP_LINKS).evaluateAll(labelsOf);
   check(
     JSON.stringify(labels) === JSON.stringify(LABELS),
-    'メニュー：最上位5項目の並びと名前（予定・〈利用者さん〉・〈スタッフ〉・組む・設定。ホーム・空き状況・「人」は無い）',
+    'メニュー：最上位6項目の並びと名前（予定・空き状況・〈利用者さん〉・〈スタッフ〉・組む・設定。ホーム・「人」は無い）',
     labels,
   );
   // 子の項目（畳んでいる親は ▾ で開いてから読む。開け閉めは aria-expanded）
@@ -152,11 +152,13 @@ async function menu(page) {
   const parentOn = async (key) =>
     (await side.locator(`[data-parent="${key}"] > .nav-parent-row > .nav-link.has-current`).count()) === 1;
   const link = (name) => side.getByTestId('nav-link').filter({ hasText: new RegExp(`^${name}`) });
-  // 予定：月・週・日・空き状況は「予定」に印（子は無い。PRD D390）
-  for (const hash of ['/month', '/week', '/plan', '/vacancy']) {
+  // 予定：月・週・日は「予定」に印（子は無い）、空き状況は「空き状況」に印（PRD D400・D401）
+  for (const hash of ['/month', '/week', '/plan']) {
     await open(page, hash);
     check(JSON.stringify(await current()) === '["schedule"]', `aria-current：${hash} は「予定」`, await current());
   }
+  await open(page, '/vacancy');
+  check(JSON.stringify(await current()) === '["vacancy"]', 'aria-current：/vacancy は「空き状況」', await current());
   // 比較は担当を組むの続き：組むの子「担当を組む」に印
   await open(page, '/compare');
   check(
@@ -302,7 +304,7 @@ async function menu(page) {
   await open(page, '/clients');
   check(
     JSON.stringify(await current()) === '["clients"]' && !(await parentOn('arrange')),
-    'aria-current：〈利用者さん〉一覧はメニューの上の段の項目「利用者さん」（組むの子ではない。PRD D390）',
+    'aria-current：〈利用者さん〉一覧はメニューの上の段の項目「利用者さん」（組むの子ではない。PRD D401）',
     await current(),
   );
   check(
@@ -560,7 +562,7 @@ async function keyboard(page) {
   list = await listed(page);
   check(
     list.some((o) => o.kind === 'screen' && o.label === '利用者さん'),
-    '呼び方のよみ（りようしゃ）で〈利用者さん〉（画面の名前は呼び名そのまま。PRD D390）',
+    '呼び方のよみ（りようしゃ）で〈利用者さん〉（画面の名前は呼び名そのまま。PRD D401）',
     list.map((o) => o.label),
   );
   await page.keyboard.press('Escape');
@@ -819,7 +821,7 @@ async function mobile(page) {
   check(
     JSON.stringify(tabs.map((t) => t.trim())) ===
       JSON.stringify(['予定', '利用者さん', 'スタッフ', '組む', '探す', 'メニュー']),
-    '390px：下のタブは 予定・〈利用者さん〉・〈スタッフ〉・組む・探す・メニュー（設定はメニューの中。PRD D336・D390）',
+    '390px：下のタブは 予定・〈利用者さん〉・〈スタッフ〉・組む・探す・メニュー（設定はメニューの中。PRD D336・D401）',
     tabs,
   );
   await open(page, '/compare');
@@ -833,7 +835,7 @@ async function mobile(page) {
 }
 
 /**
- * 下のタブの「予定」（PRD D273・D336・D390）：「予定」は月・週・日の予定で印、押すと最後に開いた表示（既定は日の予定）・
+ * 下のタブの「予定」（PRD D273・D336・D401）：「予定」は月・週・日の予定で印、押すと最後に開いた表示（既定は日の予定）・
  * 今の表示では何もしない。欠勤・キャンセルは下のタブに無い（予定の操作の行から開く）
  */
 async function scheduleTab(page) {
@@ -864,7 +866,7 @@ async function scheduleTab(page) {
   // 欠勤・キャンセルは下のタブに無い
   check(
     (await page.getByTestId('bottom-tab').filter({ hasText: '欠勤' }).count()) === 0,
-    '下のタブに「欠勤」は無い（予定の操作の行にある。PRD D390）',
+    '下のタブに「欠勤」は無い（予定の操作の行にある。PRD D401）',
   );
 }
 
