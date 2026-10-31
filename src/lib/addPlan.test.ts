@@ -8,7 +8,9 @@ import {
   addPlanFieldOf,
   addPlanKind,
   addPlanPatternForm,
+  addPlanSaveError,
   addPlanVisitDraft,
+  STALE_ERROR,
   toggleWeekday,
 } from './addPlan';
 import { applyTemplate } from './features';
@@ -99,5 +101,12 @@ describe('addPlanError・addPlanFieldOf', () => {
     expect(addPlanFieldOf('日付を入れてください')).toBe('date');
     expect(addPlanFieldOf('今日より前の日にはできません')).toBe('date');
     expect(addPlanFieldOf('入力を確かめてください')).toBeUndefined();
+  });
+});
+
+describe('addPlanSaveError', () => {
+  it('データが変わっていた（stale）なら入れ直しの文、そうでなければ今ある仕組みの文', () => {
+    expect(addPlanSaveError('日付を入れてください', true)).toBe(STALE_ERROR);
+    expect(addPlanSaveError('日付を入れてください', false)).toBe('日付を入れてください');
   });
 });

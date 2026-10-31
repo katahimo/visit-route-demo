@@ -13,6 +13,7 @@ import {
   addPlanFieldOf,
   addPlanKind,
   addPlanPatternForm,
+  addPlanSaveError,
   addPlanVisitDraft,
 } from '../lib/addPlan';
 import { requestAutoArrange } from '../lib/autoArrangeBatch';
@@ -37,7 +38,7 @@ const FIELD_OF: Partial<Record<string, AddPlanField>> = {
 };
 
 export function useAddPlan(onClose: () => void) {
-  const { data, update } = useDemoData();
+  const { data, update, latest } = useDemoData();
   const toast = useToast();
   const undoAction = useUndoAction();
   const addPattern = usePatternAdd();
@@ -75,10 +76,10 @@ export function useAddPlan(onClose: () => void) {
   const saveOneOff = () => {
     const input = { visitId: null, draft: { ...draft, clientId }, staff: undefined, scope: 'once' } as const;
     const ids = { visit: newId('v'), patterns: [newId('pt'), newId('pt')] } as const;
-    const r = applyVisitEdit(data, input, today, ids);
-    if (!r.ok) return fail(r.error, FIELD_OF[r.field ?? '']);
-    const before = data;
-    // 描画のあとにデータが変わっていても、今のデータで作り直して入れる（同じ ID。usePatternAdd と同じ安全さ）
+    // 描画のあとにデータが変わっていても、いまのデータで確かめて入れる。入れられなければ何も書かず・知らせず・組まず、誤りを出す
+    const before = latest.current;
+    const r = applyVisitEdit(before, input, today, ids);
+    if (!r.ok) return fail(addPlanSaveError(r.error, before !== data), FIELD_OF[r.field ?? '']);
     update((d) => {
       if (d === before) return r.data;
       const x = applyVisitEdit(d, input, today, ids);

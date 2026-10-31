@@ -69,3 +69,9 @@ export function addPlanFieldOf(text: string): AddPlanField | undefined {
   if (/日付|日にはできません/.test(text)) return 'date';
   return undefined;
 }
+
+/** 描画のあとにデータが変わっていて入れられないときの誤りの文 */
+export const STALE_ERROR = 'ほかの操作で予定が変わりました。もう一度入れてください';
+
+/** 単発を入れられなかったときの誤りの文：描画のあとでデータが変わっていた（stale）なら入れ直しを促す文、そうでなければ今ある仕組みの文 */
+export const addPlanSaveError = (error: string, stale: boolean): string => (stale ? STALE_ERROR : error);
