@@ -197,12 +197,14 @@ async function band(page) {
   );
   const el = page.locator(`[data-visit="${id}"]`).first();
   await el.waitFor({ timeout: 30000 });
-  await settle(page, 600);
-  const inView = await el.evaluate((e) => {
-    const r = e.getBoundingClientRect();
-    return r.bottom > 0 && r.top < window.innerHeight && r.right > 0 && r.left < window.innerWidth;
-  });
-  check(inView, '開いた訪問が画面に見える所にある（巻かれている）', id);
+  // 巻くのは滑らかに動く（動きを減らす設定でなければ）ので、止まるまで待つ
+  const visible = () =>
+    el.evaluate((e) => {
+      const r = e.getBoundingClientRect();
+      return r.bottom > 0 && r.top < window.innerHeight && r.right > 0 && r.left < window.innerWidth;
+    });
+  const inView = await until(visible, 10000);
+  check(!!inView, '開いた訪問が画面に見える所にある（巻かれている）', id);
   check((await page.getByTestId('attention-band').count()) === 1, '日の予定にも帯が出る', before);
   await shot(page, 'simple-band-plan-1366');
   await bandGoOnDay(page);
