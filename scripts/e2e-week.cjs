@@ -283,6 +283,20 @@ async function fold(page, w, h) {
   await page.setViewportSize({ width: w, height: h });
   await open(page, '/week?by=client');
   const more = page.getByTestId('week-client-chips-more');
+  // 「あと N人」は畳みの計測のあとに出る。遅い環境で出なかったときは、あとで原因を読めるよう幅・行・チップの数を記録する
+  await more.waitFor({ timeout: 30000 }).catch(async () => {
+    const diag = await page.getByTestId('week-client-chips').evaluate((root) => ({
+      width: root.clientWidth,
+      chips: root.querySelectorAll('[data-fold-item]').length,
+      tops: [
+        ...new Set(
+          [...root.querySelectorAll('[data-fold-item]')].map((e) => Math.round(e.getBoundingClientRect().top)),
+        ),
+      ],
+      fonts: document.fonts?.status,
+    }));
+    console.log(`  ${w}px：「あと N人」が出ない ${JSON.stringify(diag)}`);
+  });
   const shown = await allIds(page);
   const pressed = await pressedIds(page);
   const n = Number(((await more.innerText()).match(/\d+/) ?? ['0'])[0]);
@@ -584,6 +598,12 @@ async function weekConfirm(page) {
     kind === 'done' || kind === 'rest',
     '確定したあとは「済み」（残る日があれば日の予定で）。主ボタンは無くなる',
     kind,
+  );
+  const status = (await page.getByTestId('week-next-status').innerText()).trim();
+  check(
+    kind === 'done' ? status === '確定済み' : /^未確定 \d+日$/.test(status),
+    'ナビの行の状態は短い事実だけ（確定済み／未確定 N日）',
+    status,
   );
   check(
     (await page.evaluate(() => document.activeElement?.dataset.testid)) === 'week-next',

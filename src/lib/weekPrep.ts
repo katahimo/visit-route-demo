@@ -50,17 +50,15 @@ export function weekNext(x: WeekNextInput): WeekNext {
       kind: 'confirm',
       label: weekConfirmLabel(x.bulk.targets.length),
       short: `この週をまとめて確定（${x.bulk.targets.length}日）`,
-      why: busy ? '担当を組んでいる間は確定できません。終わってから押せます' : null,
+      why: busy ? '担当を組んでいる間は確定できません' : null,
     };
   const rest = x.bulk.problem.length + x.bulk.changed.length;
   if (rest > 0) {
     const why =
-      x.bulk.problem.length > 0
-        ? '要対応のある日は確かめてから、日の予定で確定します'
-        : '未連絡の変更のある日は、日の予定の連絡の一覧で確かめて確定します';
-    return { kind: 'rest', label: `確定していない ${rest}日は日の予定で`, short: `残り ${rest}日`, why };
+      x.bulk.problem.length > 0 ? '要対応の日は日の予定で確かめて確定' : '未連絡の変更の日は日の予定で確かめて確定';
+    return { kind: 'rest', label: `未確定 ${rest}日`, short: `未確定 ${rest}日`, why };
   }
-  return { kind: 'done', label: 'この週は確定済みです', short: '済み', why: null };
+  return { kind: 'done', label: '確定済み', short: '確定済み', why: null };
 }
 
 /** 日の見出しの件数の文（PRD D282）：「N件」、担当なしがあれば「N件・担当なしM」 */
