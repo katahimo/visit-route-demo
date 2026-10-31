@@ -30,7 +30,7 @@ const PRIMARY: Record<ScheduleZoom, readonly MainTool[]> = {
 const SECOND: readonly MainTool[] = ['absence'];
 
 /**
- * 日の主ボタン「訪問を追加」の言葉と、開いた新規の訪問の欄の見出し：切は月・週の主ボタンとそろえて「予定を入れる」（中身の欄は同じ。PRD D388）、
+ * 日の主ボタン「訪問を追加」の言葉と、開いた新規の訪問の欄の見出し：切は月・週の主ボタンとそろえて「予定を入れる」（中身の欄は同じ。PRD D402）、
  * 入は「訪問を追加」のまま
  */
 export const addVisitLabel = (only: boolean): string => (only ? '予定を入れる' : '訪問を追加');

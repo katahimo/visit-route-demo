@@ -1,4 +1,5 @@
 import { ChevronRight, Sparkles, TriangleAlert } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { confirmLeave } from '../lib/leaveGuard';
 import { useDay } from './day';
@@ -20,6 +21,16 @@ export function AttentionBand() {
   const { setDate } = useDay();
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const goRef = useRef<HTMLButtonElement>(null);
+  /** ［担当なしを組む］を押したあと、ボタンが消えるまで（組み終えて0件）。消えたらフォーカスを落とさず移す */
+  const pressed = useRef(false);
+  const shown = arrange !== null;
+  useEffect(() => {
+    if (shown || !pressed.current) return;
+    pressed.current = false;
+    // 帯が残れば［見に行く］、帯ごと消えたら操作の行の最初のボタン
+    (goRef.current ?? document.querySelector<HTMLElement>('[data-testid="schedule-toolbar"] :is(button, a)'))?.focus();
+  }, [shown]);
   if (!band) return null;
   const go = async () => {
     // 下書きを持つ画面から移るときの確かめ（lib/leaveGuard。日・週・月の予定は通常は下書きを持たないので素通り。断れば移らない）
@@ -46,7 +57,10 @@ export function AttentionBand() {
             type="button"
             className="btn btn-small attention-band-arrange"
             aria-disabled={arrange.running || undefined}
-            onClick={arrange.run}
+            onClick={() => {
+              pressed.current = true;
+              arrange.run();
+            }}
             title={`今日から来月末までの担当なしの訪問 ${arrange.count}件を、いまの条件で組みます`}
             data-testid="attention-band-arrange"
           >
@@ -55,7 +69,13 @@ export function AttentionBand() {
             </WithIcon>
           </button>
         )}
-        <button type="button" className="attention-band-go" onClick={() => void go()} data-testid="attention-band-go">
+        <button
+          ref={goRef}
+          type="button"
+          className="attention-band-go"
+          onClick={() => void go()}
+          data-testid="attention-band-go"
+        >
           見に行く
           <ChevronRight size={16} aria-hidden="true" />
         </button>

@@ -275,7 +275,7 @@
 
 初めて開いたときには自動で出さない（最初の2問に置き換えた。PRD D379）。データの画面の「案内をもう一度見る」だけで開く。
 
-- `lib/tour.ts`（純粋関数。テストあり）：`tourSteps(terms, features)`（2枚：plan・absence。ホームの枚は段1で無くした。ADR-0074。見出し・本文・場所、plan は上の要対応の帯の「見に行く」・`points`（3段の説明：組む（AI。入はメニューの「組む」の「担当を組む」、切は「その他 ▾」の「担当なしの訪問を組む」）／ピン（手で替えた訪問）／確定（伝えた）。切は「決まったあと」）と［月｜週｜日］の切り替え。場所はメニュー・下のタブの「予定」と、日の予定の「欠勤・キャンセルを登録」。切った機能の枚（absence）は出さない）、`tourMove(index, count, 'next'|'back'|'skip')`（閉じるときは null。最初の「戻る」は動かない）、`tourNextLabel`（最後は「閉じる」）、`TOUR_TODAY_LABEL`（「今日の予定を開く」）、`tourCountText`
+- `lib/tour.ts`（純粋関数。テストあり）：`tourSteps(terms, features)`（2枚：plan・absence。ホームの枚は段1で無くした。ADR-0074。見出し・本文・場所、plan は上の要対応の帯の「見に行く」・`points`（3段の説明：組む（AI。入はメニューの「組む」の「担当を組む」、切は予定の上の要対応の帯の「担当なしを組む」）／ピン（手で替えた訪問）／確定（伝えた）。切は「決まったあと」）と［月｜週｜日］の切り替え。場所はメニュー・下のタブの「予定」と、日の予定の「欠勤・キャンセルを登録」。切った機能の枚（absence）は出さない）、`tourMove(index, count, 'next'|'back'|'skip')`（閉じるときは null。最初の「戻る」は動かない）、`tourNextLabel`（最後は「閉じる」）、`TOUR_TODAY_LABEL`（「今日の予定を開く」）、`tourCountText`
 - 見たことは覚えない（自動で開かないので。旧キー `vrdemo:tour:seen` は読まない）
 - `components/Tour.tsx`（`tour.css`）：
   - `TourProvider`：`AdminShell` の外側。開く・閉じるの state だけを持つ（自動では開かない）。「今日の予定を開く」は閉じて `dayHref(今日)`（`/plan?date=今日`）へ移る（PRD D226）

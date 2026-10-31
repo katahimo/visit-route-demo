@@ -273,7 +273,7 @@ describe('navTitleParts（上の帯の名前。画面の一覧から引く）', 
   });
 });
 
-describe('bottomTabs（PRD D336・D390）', () => {
+describe('bottomTabs（PRD D336・D401）', () => {
   it('入：予定・〈利用者さん〉・〈スタッフ〉・組むの順に引く（5つ目以降の「探す」「メニュー」は画面のボタン。設定はメニューの中）', () => {
     expect(bottomTabs(groups, {}).map((i) => i.key)).toEqual(['schedule', 'clients', 'staff', 'arrange']);
     expect(bottomTabs(groups, {}).map(tabLabel)).toEqual(['予定', '利用者さん', 'スタッフ', '組む']);
@@ -405,7 +405,7 @@ describe('エキスパート機能が切のメニュー（PRD D400。ADR-0073・
     expect(bottomTabKeys(applyTemplate('basic'))).toEqual(['schedule', 'clients', 'staff', 'settings']);
     expect(bottomTabKeys(applyTemplate('all'))).toEqual(['schedule', 'clients', 'staff', 'arrange']);
   });
-  it('homePath：入切とも予定の画面（繰り返しを使うなら月、使わないなら週。最初に開く画面と同じ）。ホームは無い（PRD D390）', () => {
+  it('homePath：入切とも予定の画面（繰り返しを使うなら月、使わないなら週。最初に開く画面と同じ）。ホームは無い（PRD D401）', () => {
     expect(homePath({})).toBe('/month');
     expect(homePath(applyTemplate('all'))).toBe('/month');
     expect(homePath(applyTemplate('basic'))).toBe('/month');

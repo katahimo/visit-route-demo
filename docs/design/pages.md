@@ -7,7 +7,7 @@
 ### 責務・持つデータ・依存
 
 - 責務：PoC本体の管理者画面（予定・稼働時間帯・〈スタッフ〉・訪問先）を Firebase なしで動かす。加えて 月・週・担当を組む・組み方の標準・提案を比べる・空き状況・勤務の見込み・項目・条件（重みのスライダー 0〜5・必須の切り替え。ClassClassify の Setup にならう）・訪問の種類・相性の表・データ・管理者設定・〈スタッフ〉の今日の順番を見る画面（D16。表示だけ）
-- 最初に開く画面：予定の画面（繰り返しを使うなら月、使わないなら週。`lib/nav` の `homePath`）。ホームは無く（PRD D383・D390。ADR-0073・ADR-0074）、`#/home`・`#/`・知らない URL・切った機能の URL はここへ移る（入切とも）
+- 最初に開く画面：予定の画面（繰り返しを使うなら月、使わないなら週。`lib/nav` の `homePath`）。ホームは無く（PRD D400・D401。ADR-0073・ADR-0074）、`#/home`・`#/`・知らない URL・切った機能の URL はここへ移る（入切とも）
 - 持つデータ（持ち主）：画面の一時状態のみ。`DemoData` を書き換えるのは store だけで、画面は `update(fn)` を通す
 - 提供するAPI：なし（ルートは下の表）
 - 依存するもの：store・matching・solver（Worker）・evaluate・reassign・patterns・vacancy・features、Leaflet（PoC本体 `RouteMap.tsx` を写す）

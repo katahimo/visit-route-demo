@@ -193,7 +193,31 @@ async function reveal(page, testId, { timeout = 60000 } = {}) {
   return el;
 }
 
+/**
+ * 画面を移るときに渡した state（React Router の history.state.usr）を覚える。日の予定は受けた要対応の帯の state を履歴から消す
+ * （戻る・読み直しで欄を開き直さない。PRD D403）ので、移った直後の history.state では読めない。押す前に呼び、移ったあと navUsr で読む
+ */
+async function watchNavUsr(page) {
+  await page.evaluate(() => {
+    window.__navUsr = null;
+    if (window.__navUsrWatched) return;
+    window.__navUsrWatched = true;
+    for (const name of ['pushState', 'replaceState']) {
+      const orig = history[name].bind(history);
+      history[name] = (state, ...rest) => {
+        if (state?.usr) window.__navUsr = state.usr;
+        return orig(state, ...rest);
+      };
+    }
+  });
+}
+
+/** watchNavUsr のあとに移ったときの state（無ければ null） */
+const navUsr = (page) => page.evaluate(() => window.__navUsr ?? null);
+
 module.exports = {
+  watchNavUsr,
+  navUsr,
   SCREENS,
   MENU_KEYS,
   TOOLS,

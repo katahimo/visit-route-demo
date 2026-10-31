@@ -83,7 +83,7 @@ export function MonthTopBars({
           testId: 'month-title',
         }}
       />
-      {/* 要対応の帯（エキスパート機能が切のときだけ。PRD D383） */}
+      {/* 要対応の帯（入切とも。PRD D400・D403・D404） */}
       <AttentionBand />
       {/* 進み具合の帯（PRD D151〜D155）。担当なしの次の一手は担当を組むの画面へ（ADR-0063） */}
       {/* 切のときは進み具合を「詳しく」へ畳む（MonthDetails。主ボタンは操作の行の1つだけ。PRD D384） */}

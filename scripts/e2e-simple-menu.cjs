@@ -40,7 +40,7 @@ const {
 const { sharedPage } = require('./lib/steps.cjs');
 const { skipTour } = require('./lib/tourSeen.cjs');
 const { answerIfAsked } = require('./lib/firstRun.cjs');
-const { pressTool } = require('./lib/ui.cjs');
+const { navUsr, pressTool, watchNavUsr } = require('./lib/ui.cjs');
 
 const data = (page) => page.evaluate((k) => JSON.parse(localStorage.getItem(k)), STORAGE_KEY);
 const hash = (page) => new URL(page.url()).hash;
@@ -185,11 +185,16 @@ async function band(page) {
     '帯に［担当なしを組む］と［見に行く ›］がある（切で組める担当なしがある）',
   );
   check((await bandEl.locator('.btn-primary').count()) === 0, '帯のボタンは主ボタン（.btn-primary）ではない');
+  await watchNavUsr(page);
   await page.getByTestId('attention-band-go').click();
   await until(async () => /^#\/plan/.test(hash(page)));
   check(/^#\/plan/.test(hash(page)), '帯の［見に行く ›］を押すと日の予定へ移る', hash(page));
-  const id = await page.evaluate(() => history.state?.usr?.visitId ?? null);
+  const id = (await navUsr(page))?.visitId ?? null;
   check(!!id, '行き先の訪問の ID を渡している', id);
+  check(
+    (await page.evaluate(() => history.state?.usr ?? null)) === null,
+    '受けた state は履歴から消す（戻る・読み直しで開き直さない）',
+  );
   const el = page.locator(`[data-visit="${id}"]`).first();
   await el.waitFor({ timeout: 30000 });
   await settle(page, 600);
@@ -211,9 +216,10 @@ async function bandGoOnDay(page) {
   await page.locator(NAV_READY).waitFor({ timeout: 60000 });
   await page.getByTestId('attention-band-go').waitFor({ timeout: 60000 });
   await settle(page, 600);
-  const usr = () => page.evaluate(() => history.state?.usr ?? null);
+  const usr = () => navUsr(page);
   const dateOf = () => page.locator('.date-switch select').inputValue();
   const was = { key: await page.evaluate(() => history.state?.key ?? null), date: await dateOf() };
+  await watchNavUsr(page);
   await page.getByTestId('attention-band-go').click();
   await until(async () => (await usr())?.band === true);
   const st = await usr();
@@ -228,10 +234,14 @@ async function bandGoOnDay(page) {
   const text = await page.getByTestId('attention-band-text').innerText();
   // 重なり・休みの人があれば、その訪問のある日へ移って選ばれる（担当なしの欄は開かない）。無ければ担当なしの訪問の欄を開く
   if (/重なり \d+件|休みの人 \d+件/.test(text)) {
-    check(picked, '重なり・休みの人の訪問は、日の予定で選ばれる', { visitId: st.visitId, picked });
-    check((await dateOf()) === st.visitId.slice(0, 10), '重なり・休みの人の訪問のある日の予定へ移る', {
-      date: await dateOf(),
+    // 担当が休止中の訪問は担当の列に無く選べないので欄が開く（どちらかで画面が変わる）
+    check(picked || !!panelOpen, '重なり・休みの人の訪問は、日の予定で選ばれる（選べなければ欄が開く）', {
       visitId: st.visitId,
+      picked,
+    });
+    check((await dateOf()) !== was.date || picked || !!panelOpen, '今日を見たまま押しても画面が変わる', {
+      was: was.date,
+      date: await dateOf(),
     });
   } else {
     check(!!panelOpen, '担当なしだけなら、その訪問の欄（訪問の詳細）が開く', { visitId: st.visitId });

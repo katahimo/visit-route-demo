@@ -262,7 +262,7 @@ export function createAutoArrange(solve: Solve = runSolve): AutoArrange {
 export const autoArrange: AutoArrange = createAutoArrange();
 
 /**
- * 保存の前後で増えた・日時が変わった担当なしの訪問を自動で組む依頼を出す（欄の保存。PRD D375）。
+ * 保存の前後で増えた・日時が変わった担当なしの訪問を自動で組む依頼を出す（欄の保存。PRD D407）。
  * before・after は保存の前のデータと、保存で計算した次のデータ（store の data を後で読まない。保存は after をそのまま store に入れる）。依頼を出したら true
  */
 export function requestAutoArrange(a: {

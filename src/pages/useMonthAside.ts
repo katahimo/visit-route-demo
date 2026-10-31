@@ -45,7 +45,7 @@ export function useMonthAside(x: {
     else showAside(viewOf(op));
   };
 
-  // ---- 週・日の帯・要対応の帯から来たときの操作（PRD D153・D391。?do=）----
+  // ---- 週・日の帯・要対応の帯から来たときの操作（PRD D153・D404。?do=）----
   // batch（古いリンク）：担当を組むの画面へ移す。attention・unconfirmed：右の欄の要対応・確定していない日へ。
   // 1回だけ行い、URL から ?do= を消す（戻る・再読込で繰り返さない）
   const doParam = x.params.get('do');

@@ -1,4 +1,4 @@
-// 予約の CSV の読み込みの文（ADR-0075。PRD D398）
+// 予約の CSV の読み込みの文（ADR-0075。PRD D408）
 import { describe, expect, it } from 'vitest';
 import type { BookingImportResult, DemoData } from '../contracts/data';
 import {

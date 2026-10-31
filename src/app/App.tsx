@@ -65,7 +65,7 @@ export default function App() {
     : dates.includes(data.baseDate)
       ? data.baseDate
       : (dates[0] ?? data.baseDate);
-  // 切った機能の URL（ブックマーク・古いリンク・`?do=`）は予定の画面（ホームは無い。homePath。PRD D213・D383・D390。ADR-0028）へ移し、
+  // 切った機能の URL（ブックマーク・古いリンク・`?do=`）は予定の画面（ホームは無い。homePath。PRD D213・D400・D401。ADR-0028）へ移し、
   // その上で知らせる。
   // 管理者設定と土台の画面は表に無いので移さない（戻れなくならない）
   const { pathname, search } = useLocation();
@@ -97,7 +97,7 @@ export default function App() {
               <Route element={<AdminShell />}>
                 {/* 日の予定は #/plan。古いリンクの #/schedule はそこへ */}
                 <Route path="/schedule" element={<Navigate to="/plan" replace />} />
-                {/* ホームは無い（PRD D383・D390。ADR-0073・ADR-0074）：古い #/home・起動したとき（#/・知らない URL）は予定の画面へ */}
+                {/* ホームは無い（PRD D400・D401。ADR-0073・ADR-0074）：古い #/home・起動したとき（#/・知らない URL）は予定の画面へ */}
                 <Route path="/home" element={<Navigate to={home} replace />} />
                 <Route path="/plan" element={<PlanPage />} />
                 <Route path="/month" element={<MonthPage />} />

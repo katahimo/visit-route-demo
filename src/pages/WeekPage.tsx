@@ -115,11 +115,11 @@ export default function WeekPage() {
           )
         }
       />
-      {/* 要対応の帯（エキスパート機能が切のときだけ。PRD D383） */}
+      {/* 要対応の帯（入切とも。PRD D400・D403・D404） */}
       <AttentionBand />
       {/* 1行の状態（PRD D332。進み具合の帯は月の予定だけ） */}
       {!isFolded(detailItems('week', only), 'status') && <WeekStatusLine prep={prep} />}
-      {/* 操作の行（日・週・月で同じ並び。PRD D327）。メールで送るは見出しのボタンなので、エキスパート機能が入のときは「その他 ▾」を出さない（PRD D344・D346）。切のときだけ ScheduleToolbar が空き状況・担当なしの訪問を組むを足す（PRD D383） */}
+      {/* 操作の行（日・週・月で同じ並び。PRD D327）。メールで送るは見出しのボタンなので、エキスパート機能が入のときは「その他 ▾」を出さない（PRD D344・D346）。担当なしを組むは要対応の帯、空き状況はメニュー（PRD D400・D403） */}
       <ScheduleToolbar zoom="week" absence={suddenOn ? { date: anchor } : null} moreItems={moreItems} />
       {/* 切のときの「詳しく」は操作の行のすぐ下（日・月と同じ位置。PRD D384） */}
       <WeekDetails prep={prep} model={model} by={by} tab={tab} />

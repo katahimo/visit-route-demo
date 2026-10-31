@@ -1,4 +1,4 @@
-// 予約の CSV の読み込み（ADR-0075。PRD D398）の文と判定の純粋関数。確認の本文・知らせの文を組み立てる。データの書き換えは画面が store で行う
+// 予約の CSV の読み込み（ADR-0075。PRD D408）の文と判定の純粋関数。確認の本文・知らせの文を組み立てる。データの書き換えは画面が store で行う
 import type { BookingImportResult } from '../contracts/data';
 import type { Features } from '../contracts/features';
 import { keepNote, keptSuffix, otherFormSkippedText } from './dataScreen';

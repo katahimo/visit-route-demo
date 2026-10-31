@@ -120,7 +120,7 @@ function AddPlanFields({ a }: { a: ReturnType<typeof useAddPlan> }) {
 }
 
 /**
- * 「予定を入れる」の引き出し（エキスパート機能が切のとき、月・週の主ボタン。PRD D388。試作 simple-flow の panelHTML の add）：
+ * 「予定を入れる」の引き出し（エキスパート機能が切のとき、月・週の主ボタン。PRD D402。試作 simple-flow の panelHTML の add）：
  * 〈利用者さん〉を選び、定期は 曜日・くり返し・時刻・所要（〈利用者さん〉の繰り返しを足す）、単発は 日付・時刻・所要（その日の訪問を足す）を入れて「入れる」。
  * 入れたら担当なしの分は自動で組む（ADR-0072）。入れ方は繰り返しを使うか（機能 patterns）で決まる。状態と保存は useAddPlan
  */

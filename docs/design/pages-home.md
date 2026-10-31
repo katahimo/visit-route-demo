@@ -1,9 +1,9 @@
 # 予定に共通の進み具合の帯・日の状態の共通フック（ホームは無くした）
 
-> この画面のファイル：`src/components/progressBand.tsx`（`progressBand.css`）・`src/lib/progressBand.ts`・`src/lib/dayStatuses.ts`・`src/components/useDayStatuses.ts`。関連 ADR：0025（追記を含む）・0038・0044・0062。関連 PRD：D151〜D155（進み具合の帯）・D390・D391（ホームを無くした）・D161（条件が変わった）。
+> この画面のファイル：`src/components/progressBand.tsx`（`progressBand.css`）・`src/lib/progressBand.ts`・`src/lib/dayStatuses.ts`・`src/components/useDayStatuses.ts`。関連 ADR：0025（追記を含む）・0038・0044・0062。関連 PRD：D151〜D155（進み具合の帯）・D401・D404（ホームを無くした）・D161（条件が変わった）。
 > 版2（ADR-0053）：日の状態は まだ伝えていない／確定済み／未連絡の変更あり、要対応は訪問ごとの検査。「案を作る」は「担当を AI で組む」
 
-### ホームは無くした（PRD D390・D391。ADR-0074 段1）
+### ホームは無くした（PRD D401・D404。ADR-0074 段1）
 
 `#/home`・起動（`#/`）・知らない URL は予定の画面（`homePath(features)`＝月か週。入切とも）へ移す（`Navigate replace`。`App.tsx`）。ホームの「今日やること」の代わりは予定の上の要対応の帯（担当なし・重なり・休みの人、入は 組み方の標準が無い・基本情報が変わった・未確定 N日。[pages-nav.md](pages-nav.md) の「要対応の帯」）と「その他 ▾」。ホームの部品（`pages/HomePage`・`homeParts`・`useHomeTasks`・`home.css`・`lib/home`）は消した（月の後半の日 15 は `lib/scheduleMode` の `LATE_MONTH_FROM_DAY`）。
 

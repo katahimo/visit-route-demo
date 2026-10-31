@@ -56,7 +56,7 @@ function countUnassigned(
 }
 
 /**
- * メニューの件数の印（PRD D349・D390）：組む月の担当なしの日の数（unassignedDayCount）と、組み方の標準があるか（PRD D360）。
+ * メニューの件数の印（PRD D349・D401）：組む月の担当なしの日の数（unassignedDayCount）と、組み方の標準があるか（PRD D360）。
  * compile しないので画面を移るたびに数えても軽い
  */
 export function menuBadges(

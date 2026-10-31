@@ -99,7 +99,7 @@ describe('attentionBand（要対応の帯。PRD D400・D403・D404）', () => {
   });
 });
 
-describe('attentionBand の入だけの種類（エキスパート機能が入。PRD D391）', () => {
+describe('attentionBand の入だけの種類（エキスパート機能が入。PRD D404）', () => {
   const open = { hasStandard: true, basisChanged: false, planYm: '2026-11', isOn: () => true };
   /** 訪問があって伝えていない日 */
   const untold = (date: string): DayStatus => ({ ...day(date), state: 'none' });

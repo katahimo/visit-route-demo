@@ -226,14 +226,21 @@ export function usePlanNav(x: { date: string; setDate: (d: string) => void; d: P
     // 日付を移した直後は前の日の並び：その訪問がこの日にあるときだけ受ける
     if (!id || !d.hasPlan || !d.visitById.has(id)) return;
     wantVisit.current = null;
-    const x = { id, set: PLAN_SET };
-    if (d.owner.has(id)) {
-      if (!sel.isPicked(x)) sel.togglePick(x);
-    } else if (wantOpen.current) {
-      // 担当なしの訪問は担当の列に無く選べない：欄（受けられる人）を開く（同じ日を見ていても画面が変わる。PRD D403）
-      openVisit(id);
-    }
+    const band = wantOpen.current;
     wantOpen.current = false;
+    // 受けた state は履歴から消す（戻る・読み直しで欄をもう一度開かない。React Router の今の location はそのまま）
+    if ((window.history.state as { usr?: unknown } | null)?.usr)
+      window.history.replaceState({ ...window.history.state, usr: null }, '');
+    const sid = d.owner.get(id);
+    if (band) {
+      // 要対応の帯から（PRD D403）：担当のある訪問はその人の列で選んで巻く（選んだままなら絞り直してフォーカス。一覧なら時間軸へ）、
+      // 担当なしの訪問は担当の列に無く選べないので欄（受けられる人）を開く（同じ日を見ていても画面が変わる）
+      if (sid) go.goToStaff(sid, id);
+      else openVisit(id);
+      return;
+    }
+    const x = { id, set: PLAN_SET };
+    if (sid && !sel.isPicked(x)) sel.togglePick(x);
     requestAnimationFrame(() =>
       document.querySelector(`[data-visit="${CSS.escape(id)}"]`)?.scrollIntoView({ block: 'center' }),
     );

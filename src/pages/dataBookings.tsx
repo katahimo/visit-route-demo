@@ -1,4 +1,4 @@
-// データの画面の「予約の CSV」の欄（ADR-0075。PRD D398）：ほかのソフトの予約の CSV を、単発の訪問（担当なし）として読み込む。
+// データの画面の「予約の CSV」の欄（ADR-0075。PRD D408）：ほかのソフトの予約の CSV を、単発の訪問（担当なし）として読み込む。
 // 状態と処理は useBookingImport が持つ
 import { CalendarPlus } from 'lucide-react';
 import { useId } from 'react';

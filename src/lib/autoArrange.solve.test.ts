@@ -57,7 +57,7 @@ function dayOf(d: DemoData, date: string): AutoDay {
 }
 const staffOf = (d: DemoData, id: string) => findVisit(d, id)?.staffId ?? null;
 
-describe('applyAutoArrange（反映。D373・D374）', () => {
+describe('applyAutoArrange（反映。D373・D405）', () => {
   const d = expertOn(withNew(unassigned()));
   const dates = [0, 1, 2].map((i) => addDays(TODAY, i));
 

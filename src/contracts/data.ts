@@ -170,7 +170,7 @@ export type RosterImportResult = {
 };
 
 /**
- * 予約の CSV の読み込みの結果（ADR-0075。PRD D398）。data は予約を訪問（単発）として入れた新しいデータ（store の migrate を通したもの。
+ * 予約の CSV の読み込みの結果（ADR-0075。PRD D408）。data は予約を訪問（単発）として入れた新しいデータ（store の migrate を通したもの。
  * 画面が確かめてから store の update で入れる）。同じ予約番号の訪問は直し、ファイルに無い訪問はそのまま
  */
 export type BookingImportResult = {

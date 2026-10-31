@@ -123,7 +123,7 @@ export const bottomTabKeys = (features: Features): readonly string[] =>
   isOn(features, 'expert') ? ['schedule', 'clients', 'staff', 'arrange'] : ['schedule', 'clients', 'staff', 'settings'];
 
 /**
- * 起動したとき（#/・#/home・知らない URL）・切った機能の URL から移る先（PRD D213・D383・D390）：ホームは無いので予定の画面
+ * 起動したとき（#/・#/home・知らない URL）・切った機能の URL から移る先（PRD D213・D400・D401）：ホームは無いので予定の画面
  * （最初に開く画面と同じ：繰り返しを使うなら月、使わないなら週。lib/startGuide。エキスパート機能の入切に関わらず同じ）
  */
 export const homePath = (features: Features): '/month' | '/week' => startGuidePlanPath(features);
@@ -181,7 +181,7 @@ export function navTitleParts(
 }
 
 /**
- * 下のタブの項目：メニューから bottomTabKeys の順に引く（メニューに無い項目は出さない。PRD D336・D383・D390）
+ * 下のタブの項目：メニューから bottomTabKeys の順に引く（メニューに無い項目は出さない。PRD D336・D400・D401）
  */
 export function bottomTabs<T extends NavEntry & { key: string; children?: readonly T[] }>(
   groups: readonly NavSection<T>[],
@@ -236,7 +236,7 @@ export type MenuItem = NavEntry & {
 };
 
 /**
- * メニューの件数の印と状態（PRD D349・D360・D363・D390）：組む月の担当なしの日の数・組み方の標準があるか
+ * メニューの件数の印と状態（PRD D349・D360・D363・D401）：組む月の担当なしの日の数・組み方の標準があるか
  * （あれば「組む」の子に組み方の標準を出さない。ADR-0066 追記）・基本情報が最後に組んだあとに変わったか（ADR-0067）
  */
 export type MenuBadges = {
@@ -245,7 +245,7 @@ export type MenuBadges = {
   basisChanged?: boolean;
 };
 
-/** 畳める項目（親の key。いまは「組む」だけ）と既定で開いておくか（PRD D349・D390） */
+/** 畳める項目（親の key。いまは「組む」だけ）と既定で開いておくか（PRD D349・D401） */
 export const NAV_OPEN_DEFAULT: Readonly<Record<string, boolean>> = { arrange: true };
 
 /** 欠勤・キャンセルの欄を今日の日の予定で開く URL（PRD D172） */
@@ -271,7 +271,7 @@ export const scheduleHref = (last?: string | null): string =>
 /**
  * 組む（エキスパート機能が入のとき。ADR-0063・ADR-0066・ADR-0067・ADR-0074）：作業の順に 基本情報・組み方の標準（条件の重みもここ）・
  * 担当を組む。標準を登録したあとは組み方の標準を出さない（標準の見直しは担当を組むの［標準の組み方を変える］から。印は担当を組む。ADR-0066 追記）。
- * 〈利用者さん〉・〈スタッフ〉の一覧は子にせず、メニューの上の段の項目にする（PRD D390）。
+ * 〈利用者さん〉・〈スタッフ〉の一覧は子にせず、メニューの上の段の項目にする（PRD D401）。
  * 件数の印は「組む」の1つだけ（組み直しの知らせ。無ければ担当なしの日の数。標準が無い間は組み直しを知らせない。PRD D363）
  */
 function arrangeMenuItem(features: Features, today: string, badges: MenuBadges): MenuItem {
@@ -314,7 +314,7 @@ function arrangeMenuItem(features: Features, today: string, badges: MenuBadges):
   };
 }
 
-/** 「組む」の件数の印（組み直し＞担当なしの日の数。PRD D363・D390） */
+/** 「組む」の件数の印（組み直し＞担当なしの日の数。PRD D363・D401） */
 function arrangeBadge(badges: MenuBadges): MenuItem['badge'] {
   if (badges.hasStandard && badges.basisChanged)
     return { text: '変更', label: '基本情報が最後に組んだあとに変わった（組み直す）' };
@@ -328,7 +328,7 @@ function arrangeBadge(badges: MenuBadges): MenuItem['badge'] {
  * エキスパート機能が切なら 予定・空き状況・〈利用者さん〉・〈スタッフ〉・設定 の5つ（呼び名は terms）、入なら その〈スタッフ〉と設定の間に「組む」を足した6つ。
  * ホームは無く（要対応は予定の上の帯。PRD D404）、欠勤・キャンセルは予定の操作の行から開く。
  * 子の項目を持つのは入の「組む」だけ（基本情報・組み方の標準（標準が無いときだけ）・担当を組む。作業の順。条件の重みは組み方の標準の寄り道。
- * ADR-0066・ADR-0067）。件数の印も「組む」の1つ（badges）。担当を組む（#/arrange）は切では予定の「その他 ▾」などから開き、メニューには出さない。
+ * ADR-0066・ADR-0067）。件数の印も「組む」の1つ（badges）。担当を組む（#/arrange）は切では日の予定などから開き、メニューには出さない。
  * 今の画面の印：予定は月・週・日（切はさらに比較・担当を組む）、空き状況は空き状況、〈利用者さん〉は一覧（切はさらに予定と相性）、
  * 〈スタッフ〉は一覧（切はさらに勤務時間（シフト）・勤務の見込み）、相性は切では最後に開いた側（lib/peopleTabs。PRD D389）、
  * 入では「組む」の基本情報に付く。設定は設定のタブ（親を押すと最後に開いたタブ）。
@@ -381,7 +381,7 @@ export function menuSections(
 /**
  * 画面の一覧（PRD D182・D230・D273・D275・D331）：コマンドパレットの「画面」と上の帯の画面の名前はここから引く（案を比べるは出さない）。
  * メニューでタブにまとめた画面（月・週・日の予定・基本情報のタブ・勤務の見込み・設定のタブ）も1つずつ持つ。
- * 予定（月の予定・週の予定・日の予定・空き状況。切のときは担当を組むもここ。ホームは無い。PRD D383・D390）／
+ * 予定（月の予定・週の予定・日の予定・空き状況。切のときは担当を組むもここ。ホームは無い。PRD D400・D401）／
  * 〈利用者さん〉・〈スタッフ〉（入のとき。呼び名そのまま）／基本情報（入のとき：予定と相性・相性・勤務時間（シフト）・勤務の見込み。ADR-0067）／
  * 組む（入のとき：条件の重み・組み方の標準・担当を組む）／切のときは 予定と相性・〈利用者さん〉・〈スタッフ〉・相性・勤務を区分なしの1グループに並べる／
  * 設定（訪問の種類・特性の項目・管理者設定・データ）。
@@ -412,8 +412,8 @@ export function screenSections(terms: Pick<Terms, 'client' | 'staff'>, features:
         vacancyScreen,
       ],
     },
-    // 入：〈利用者さん〉・〈スタッフ〉は呼び名そのままの項目（メニューの上の段の項目。PRD D390）、基本情報（予定と相性・相性・勤務）は区分の名前つき。
-    // 切：区分の名前は付けず、1つのグループに並べる（上の帯は項目名だけ。PRD D383・D385）
+    // 入：〈利用者さん〉・〈スタッフ〉は呼び名そのままの項目（メニューの上の段の項目。PRD D401）、基本情報（予定と相性・相性・勤務）は区分の名前つき。
+    // 切：区分の名前は付けず、1つのグループに並べる（上の帯は項目名だけ。PRD D400・D385）
     ...(expert
       ? [{ items: [clientsScreen, staffScreen] }, { title: '基本情報', items: [basicsScreen, ...workScreens] }]
       : [{ items: [basicsScreen, clientsScreen, staffScreen, ...workScreens] }]),

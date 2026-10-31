@@ -15,7 +15,7 @@ const { answerConfirms } = require('./lib/confirmDialog.cjs');
 const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, hashOf, runSteps, settle, until } = require('./lib/env.cjs');
 const { findVisit } = require('./lib/visits.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
-const { goTo } = require('./lib/ui.cjs');
+const { goTo, navUsr, watchNavUsr } = require('./lib/ui.cjs');
 
 const shot = (page, name) => page.screenshot({ path: path.join(OUT_DIR, `${name}.png`) });
 const panel = (page) => page.getByTestId('visit-panel');
@@ -357,17 +357,22 @@ async function addNew(page) {
 async function band(page) {
   await freshPlan(page);
   await open(page, '/month', '[data-testid="attention-band"]');
+  await watchNavUsr(page);
   await page.getByTestId('attention-band-go').click();
   await page.waitForURL(/#\/plan/);
-  const id = await page.evaluate(() => history.state?.usr?.visitId ?? null);
+  await until(async () => !!(await navUsr(page))?.visitId);
+  const id = (await navUsr(page))?.visitId ?? null;
   check(!!id, '要対応の帯から日の予定へ移り、行き先の訪問の ID を渡している', id);
   // 重なり・休みの人の訪問があればその訪問（選ばれた札。もう一度押すと選びが外れるので押さない）、無ければ担当なしの訪問（未割当の欄の札）の詳細から欄を開く
   const card = page.locator(`[data-visit="${id}"]`).first();
   await card.waitFor({ timeout: 30000 });
   await settle(page, 400);
   await card.scrollIntoViewIfNeeded();
-  if (!(await card.evaluate((e) => e.classList.contains('is-picked')))) await card.click();
-  await page.getByTestId('visit-open').first().click();
+  // 担当なしの訪問なら帯から来たときに欄が開いている（PRD D403）。開いていなければ選ばれた札の詳細から開く
+  if ((await panel(page).count()) === 0) {
+    if (!(await card.evaluate((e) => e.classList.contains('is-picked')))) await card.click();
+    await page.getByTestId('visit-open').first().click();
+  }
   await panel(page).waitFor();
   check((await panel(page).getAttribute('data-visit')) === id, '帯から移った訪問の欄を開く');
   await page.keyboard.press('Escape');
