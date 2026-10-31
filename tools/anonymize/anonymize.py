@@ -30,8 +30,8 @@ from typing import Callable
 
 # ---------------------------------------------------------------- 仮名の材料
 
-# 江戸時代以前の歴史上の人物（皇族を除く）。(姓, セイ, 名, メイ)。ひとめで架空と分かるよう、実在の顧客に似せない
-FIGURES = [
+# 江戸時代以前の歴史上の人物（皇族を除く）。男女の2表に分け、交互に振る。(姓, セイ, 名, メイ)。ひとめで架空と分かるよう、実在の顧客に似せない
+_MEN = [
     ("織田", "オダ", "信長", "ノブナガ"), ("豊臣", "トヨトミ", "秀吉", "ヒデヨシ"), ("徳川", "トクガワ", "家康", "イエヤス"),
     ("武田", "タケダ", "信玄", "シンゲン"), ("上杉", "ウエスギ", "謙信", "ケンシン"), ("伊達", "ダテ", "政宗", "マサムネ"),
     ("真田", "サナダ", "幸村", "ユキムラ"), ("明智", "アケチ", "光秀", "ミツヒデ"), ("石田", "イシダ", "三成", "ミツナリ"),
@@ -50,12 +50,12 @@ FIGURES = [
     ("千", "セン", "利休", "リキュウ"), ("山本", "ヤマモト", "勘助", "カンスケ"), ("雑賀", "サイカ", "孫一", "マゴイチ"),
     ("服部", "ハットリ", "半蔵", "ハンゾウ"), ("石川", "イシカワ", "五右衛門", "ゴエモン"), ("酒井", "サカイ", "忠次", "タダツグ"),
     ("源", "ミナモト", "頼朝", "ヨリトモ"), ("源", "ミナモト", "義経", "ヨシツネ"), ("平", "タイラ", "清盛", "キヨモリ"),
-    ("木曽", "キソ", "義仲", "ヨシナカ"), ("北条", "ホウジョウ", "時宗", "トキムネ"), ("北条", "ホウジョウ", "政子", "マサコ"),
+    ("木曽", "キソ", "義仲", "ヨシナカ"), ("北条", "ホウジョウ", "時宗", "トキムネ"), 
     ("足利", "アシカガ", "尊氏", "タカウジ"), ("足利", "アシカガ", "義満", "ヨシミツ"), ("楠木", "クスノキ", "正成", "マサシゲ"),
     ("新田", "ニッタ", "義貞", "ヨシサダ"), ("武蔵坊", "ムサシボウ", "弁慶", "ベンケイ"), ("那須", "ナス", "与一", "ヨイチ"),
     ("平", "タイラ", "将門", "マサカド"), ("藤原", "フジワラ", "道長", "ミチナガ"), ("藤原", "フジワラ", "鎌足", "カマタリ"),
     ("蘇我", "ソガ", "馬子", "ウマコ"), ("安倍", "アベ", "晴明", "セイメイ"), ("坂上", "サカノウエ", "田村麻呂", "タムラマロ"),
-    ("菅原", "スガワラ", "道真", "ミチザネ"), ("小野", "オノ", "小町", "コマチ"), ("日野", "ヒノ", "富子", "トミコ"),
+    ("菅原", "スガワラ", "道真", "ミチザネ"), 
     ("細川", "ホソカワ", "勝元", "カツモト"), ("山名", "ヤマナ", "宗全", "ソウゼン"), ("太田", "オオタ", "道灌", "ドウカン"),
     ("徳川", "トクガワ", "秀忠", "ヒデタダ"), ("徳川", "トクガワ", "吉宗", "ヨシムネ"), ("徳川", "トクガワ", "光圀", "ミツクニ"),
     ("大岡", "オオオカ", "忠相", "タダスケ"), ("松平", "マツダイラ", "定信", "サダノブ"), ("田沼", "タヌマ", "意次", "オキツグ"),
@@ -66,11 +66,52 @@ FIGURES = [
     ("浅野", "アサノ", "長矩", "ナガノリ"), ("天草", "アマクサ", "四郎", "シロウ"), ("由井", "ユイ", "正雪", "ショウセツ"),
     ("間宮", "マミヤ", "林蔵", "リンゾウ"), ("緒方", "オガタ", "洪庵", "コウアン"),
 ]
-_REAL = {(s, g) for s, _, g, _ in FIGURES}
-# 実在の組を使い切ったあとは、同じ材料の姓と名を組み替える（徳川 信長、織田 家康など。これも一目で架空と分かる）
-_SURNAMES = list(dict.fromkeys((s, sk) for s, sk, _, _ in FIGURES))
-_GIVENS = list(dict.fromkeys((g, gk) for _, _, g, gk in FIGURES))
-_MIXED = [(s, g) for g in _GIVENS for s in _SURNAMES if (s[0], g[0]) not in _REAL]
+_WOMEN = [
+    ("北条", "ホウジョウ", "政子", "マサコ"), ("紫", "ムラサキ", "式部", "シキブ"), ("浅井", "アザイ", "茶々", "チャチャ"),
+    ("日野", "ヒノ", "富子", "トミコ"), ("清原", "キヨハラ", "少納言", "ショウナゴン"), ("織田", "オダ", "市", "イチ"),
+    ("小野", "オノ", "小町", "コマチ"), ("和泉", "イズミ", "式部", "シキブ"), ("杉原", "スギハラ", "寧々", "ネネ"),
+    ("巴", "トモエ", "御前", "ゴゼン"), ("赤染", "アカゾメ", "衛門", "エモン"), ("細川", "ホソカワ", "ガラシャ", "ガラシャ"),
+    ("静", "シズカ", "御前", "ゴゼン"), ("常盤", "トキワ", "御前", "ゴゼン"), ("徳川", "トクガワ", "千姫", "センヒメ"),
+    ("斎藤", "サイトウ", "福", "フク"), ("井伊", "イイ", "直虎", "ナオトラ"), ("立花", "タチバナ", "誾千代", "ギンチヨ"),
+    ("成田", "ナリタ", "甲斐姫", "カイヒメ"), ("出雲", "イズモ", "阿国", "オクニ"), ("葛飾", "カツシカ", "応為", "オウイ"),
+    ("加賀", "カガ", "千代女", "チヨジョ"), ("楠本", "クスモト", "イネ", "イネ"), ("島津", "シマヅ", "篤姫", "アツヒメ"),
+    ("今川", "イマガワ", "寿桂尼", "ジュケイニ"), ("浅井", "アザイ", "江", "ゴウ"), ("山内", "ヤマウチ", "千代", "チヨ"),
+    ("前田", "マエダ", "まつ", "マツ"), ("大石", "オオイシ", "りく", "リク"), ("平", "タイラ", "時子", "トキコ"),
+    ("日野", "ヒノ", "重子", "シゲコ"), ("高階", "タカシナ", "貴子", "タカコ"), ("只野", "タダノ", "真葛", "マクズ"),
+    ("井上", "イノウエ", "通女", "ツウジョ"),
+]
+
+
+_REAL = {(s, g) for s, _, g, _ in _MEN + _WOMEN}
+_SURNAMES = list(dict.fromkeys((s, sk) for s, sk, _, _ in _MEN + _WOMEN))
+
+
+def _spread(items: list) -> list:
+    """同じ姓・同じ名が続かないよう、互いに素な歩幅で並べ替える（順列なので重複は出ない）"""
+    n = len(items)
+    step = int(n * 0.618) | 1
+    while math.gcd(step, n) != 1:
+        step += 2
+    return [items[i * step % n] for i in range(n)]
+
+
+def _sequence(figures: list) -> list:
+    """振る順の名前（(姓, 姓カナ), (名, 名カナ)）。実在の組を先に、使い切ったら姓と名を組み替える（徳川 信長・織田 家康など。
+    これも一目で架空と分かる）"""
+    real = [((s, sk), (g, gk)) for s, sk, g, gk in figures]
+    givens = list(dict.fromkeys((g, gk) for _, _, g, gk in figures))
+    mixed = _spread([(s, g) for g in givens for s in _SURNAMES if (s[0], g[0]) not in _REAL])
+    return real + mixed
+
+
+NAME_SEQUENCE = {"M": _sequence(_MEN), "F": _sequence(_WOMEN)}
+
+
+def gender_of(v: str) -> str | None:
+    """性別の列の値 → M・F。それ以外（その他・空欄）は None"""
+    v = (v or "").strip()
+    return "M" if v.startswith("男") else "F" if v.startswith("女") else None
+
 
 # ---------------------------------------------------------------- 住所
 
@@ -163,18 +204,31 @@ class Pseudonymizer:
     persons: dict[str, int] = field(default_factory=dict)
     ids: dict[str, dict[str, str]] = field(default_factory=dict)
 
-    def person(self, name_key: str) -> int:
+    genders: dict[int, str] = field(default_factory=dict)
+    names: dict[int, tuple[tuple[str, str], tuple[str, str]]] = field(default_factory=dict)
+    _used: dict[str, int] = field(default_factory=lambda: {"M": 0, "F": 0})
+    _unknown: int = 0
+
+    def person(self, name_key: str, gender: str | None = None) -> int:
         k = _norm_key(name_key)
         if k not in self.persons:
             self.persons[k] = len(self.persons)
-        return self.persons[k]
+        idx = self.persons[k]
+        if gender and idx not in self.genders and idx not in self.names:
+            self.genders[idx] = gender
+        return idx
 
     def name(self, idx: int) -> tuple[tuple[str, str], tuple[str, str]]:
-        # 歴史上の人物を順に振り、使い切ったら姓と名を組み替える（組み替えで重複なしに何千人も振れる）
-        if idx < len(FIGURES):
-            s, sk, g, gk = FIGURES[idx]
-            return (s, sk), (g, gk)
-        return _MIXED[(idx - len(FIGURES)) % len(_MIXED)]
+        # 性別が分かる人はその性別の名前を、分からない人は男女交互に、順に振る（同じ人には最初に振った名前を返す）
+        if idx not in self.names:
+            g = self.genders.get(idx)
+            if g is None:
+                g = "MF"[self._unknown % 2]
+                self._unknown += 1
+            seq = NAME_SEQUENCE[g]
+            self.names[idx] = seq[self._used[g] % len(seq)]
+            self._used[g] += 1
+        return self.names[idx]
 
     def id(self, kind: str, prefix: str, raw: str) -> str:
         k = _norm_key(raw)
@@ -240,9 +294,9 @@ MEI = _person_part(lambda n: n[1][0])
 SEI_KANA = _person_part(lambda n: n[0][1])
 MEI_KANA = _person_part(lambda n: n[1][1])
 CUSTOMER_ID = _id("customer", "C")
-# スタッフ名：顧客と同じ表から振るので顧客の仮名と重ならない。同じスタッフには同じ仮名。「-」は担当なしの印なので残す
+# スタッフ名（全員女性）：顧客と同じ表から振るので顧客の仮名と重ならない。同じスタッフには同じ仮名。「-」は担当なしの印なので残す
 STAFF_NAME = _nonempty(lambda v, c: v if v.strip() in ("-", "－", "ー") else
-                       "{} {}".format(*(x[0] for x in c.p.name(c.p.person("staff:" + v)))))
+                       "{} {}".format(*(x[0] for x in c.p.name(c.p.person("staff:" + v, "F")))))
 
 RESERVATION_RULES: dict[str, Rule] = {
     "予約番号": _id("reservation", "R"),
@@ -265,6 +319,7 @@ RESERVATION_RULES: dict[str, Rule] = {
     "住所2": _address,
 }
 
+STAFF_GENDER = "女"  # スタッフは全員女性（元の表に性別の列はない）
 STAFF_RULES: dict[str, Rule] = {
     "ID": _id("staff", "S"),
     "氏名": STAFF_NAME,
@@ -370,17 +425,20 @@ def anonymize_rows(
     header = [h.strip() for h in rows[0]]
     stats: dict = {}
     unknown = [h for h in header if h not in rules]
-    out = [rows[0]]
+    out = [rows[0] + ["性別"] if kind == "staff" else rows[0]]
     for i, row in enumerate(rows[1:], start=2):
         if not any(cell.strip() for cell in row):
             continue
         key = _person_key(header, row, kind)
-        person = p.person(key) if _norm_key(key) not in ("", "id:", "staff:") else None
+        gender = gender_of(row[header.index("性別")]) if kind == "customers" and "性別" in header and header.index("性別") < len(row) else None
+        person = p.person(key, "F" if kind == "staff" else gender) if _norm_key(key) not in ("", "id:", "staff:") else None
         ctx = RowCtx(p, person, args, stats, i)
         new = []
         for col, cell in zip(header, row):
             rule = rules.get(col, keep if args.keep_unknown else blank)
             new.append(rule(cell, ctx))
+        if kind == "staff":  # スタッフは全員女性。列を最後に足す
+            new += [""] * (len(header) - len(new)) + [STAFF_GENDER]
         out.append(new)
     stats["行数"] = len(out) - 1
     stats["表にない列"] = unknown

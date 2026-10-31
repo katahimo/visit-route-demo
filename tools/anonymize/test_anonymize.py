@@ -58,22 +58,35 @@ class BlurLatLng(unittest.TestCase):
 
 
 class PseudoName(unittest.TestCase):
-    def test_歴史上の人物から順に振る(self):
+    def test_性別に合わせて歴史上の人物から順に振る(self):
         p = a.Pseudonymizer(b"s")
-        self.assertEqual(p.name(0), (("織田", "オダ"), ("信長", "ノブナガ")))
+        m = p.person("甲", "M")
+        f = p.person("乙", "F")
+        self.assertEqual(p.name(m), (("織田", "オダ"), ("信長", "ノブナガ")))
+        self.assertEqual(p.name(f), (("北条", "ホウジョウ"), ("政子", "マサコ")))
+        self.assertEqual(p.name(m), p.name(m))
+
+    def test_性別が分からない人は男女交互(self):
+        p = a.Pseudonymizer(b"s")
+        got = [p.name(p.person(f"x{i}")) for i in range(4)]
+        self.assertEqual([g[1][0] for g in got], ["信長", "政子", "秀吉", "式部"])
+
+    def test_性別の値(self):
+        self.assertEqual([a.gender_of(v) for v in ("男", "女", "男性", "その他", "")], ["M", "F", "M", None, None])
 
     def test_使い切っても重ならない(self):
-        p = a.Pseudonymizer(b"s")
-        n = len(a.FIGURES) + len(a._MIXED)
-        names = {p.name(i) for i in range(n)}
-        self.assertEqual(len(names), n)
-        self.assertGreater(n, 5000)
+        for g, seq in a.NAME_SEQUENCE.items():
+            self.assertEqual(len(set(seq)), len(seq))
+            self.assertGreater(len(seq), 2000)
+        self.assertFalse(set(a.NAME_SEQUENCE["M"]) & set(a.NAME_SEQUENCE["F"]))
 
-    def test_組み替えは実在の組と重ならない(self):
-        p = a.Pseudonymizer(b"s")
-        for i in range(len(a.FIGURES), len(a.FIGURES) + 300):
-            (s, _), (g, _) = p.name(i)
-            self.assertNotIn((s, g), a._REAL)
+    def test_使い切るまでは実在の組(self):
+        seq = a.NAME_SEQUENCE["F"]
+        n = len(a._WOMEN)
+        for s, g in seq[:n]:
+            self.assertIn((s[0], g[0]), a._REAL)
+        for s, g in seq[n:n + 300]:
+            self.assertNotIn((s[0], g[0]), a._REAL)
 
     def test_スタッフ名は同じ人に同じ仮名で顧客とは重ならない(self):
         p = a.Pseudonymizer(b"s")
@@ -86,7 +99,7 @@ class PseudoName(unittest.TestCase):
         self.assertEqual(a.STAFF_NAME("-", c), "-")
 
     def test_実在の組は重複がない(self):
-        self.assertEqual(len(a._REAL), len(a.FIGURES))
+        self.assertEqual(len(a._REAL), len(a._MEN) + len(a._WOMEN))
 
 
 class EndToEnd(unittest.TestCase):
@@ -146,7 +159,8 @@ class Staff(unittest.TestCase):
         self.assertEqual(delim, ",")
         s_ = dict(zip(s_rows[0], s_rows[1]))
         r = dict(zip(r_rows[0], r_rows[1]))
-        self.assertEqual(s_["氏名"], "織田 信長")
+        self.assertEqual(s_["氏名"], "北条 政子")
+        self.assertEqual((s_rows[0][-1], s_["性別"]), ("性別", "女"))
         self.assertEqual(r["新規登録者"], s_["氏名"])
         self.assertEqual((s_["ID"], s_["mail address"], s_["ユーザーID"]), ("S00001", "staff0001@example.com", "staff0001"))
         self.assertEqual(s_["TEL"], "080-0000-0001")
