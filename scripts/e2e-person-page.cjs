@@ -456,10 +456,18 @@ async function patterns(page, dlg) {
     .first()
     .waitFor({ timeout: 5000 })
     .catch(() => {});
+  // 足した直後に保存の側で回を作らない。ただし繰り返しの保存は自動の組み（ADR-0072・D376）を頼み、これが「今日〜翌月末」の
+  // 担当を付けた回を保存する。組み終わる速さは端末の速さで変わる（保存の直後に読むか、組んだあとに読むか）ので、
+  // どちらでも成り立つ形で確かめる：保存した回は、自動の組みの範囲（翌月末まで）の中で担当が付いたものだけ（範囲の外は計算のまま）
+  const rangeTo = new Date(Date.UTC(Number(TODAY.slice(0, 4)), Number(TODAY.slice(5, 7)) + 1, 0))
+    .toISOString()
+    .slice(0, 10);
+  const savedOf = d.visits.filter((v) => v.pattern?.id === added?.id);
   check(
     (await page.locator(`[data-testid="pcal-visit"][data-visit$="_${added?.id}"]`).count()) > 0 &&
-      !d.visits.some((v) => v.pattern?.id === added?.id),
+      savedOf.every((v) => v.staffId !== null && v.date <= rangeTo),
     '足した繰り返しの回がカレンダーに出る（回は保存しない）',
+    JSON.stringify(savedOf.map((v) => `${v.date} ${v.staffId}`)),
   );
   // 直す：時刻を変えて保存 → 確認→ 受ける
   const row = page.locator(`[data-testid="pattern-row"][data-pattern="${added.id}"]`);
