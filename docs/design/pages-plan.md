@@ -20,11 +20,11 @@
 
 #### 並び（PRD D63）
 
-1. 見出し（`PageHeader`。[pages-common.md](pages-common.md) の「画面の見出しとボタンの3段」）：題名・1行の説明。すぐ下にナビの行（`ScheduleNav`。PRD D347。ADR-0060）：「今日」・‹ 日付（`.date-switch select`）›・［月｜週｜日］・右に状態の印・メールで送る・主ボタン「確定（伝えた）」（確定済みの日は枠のボタンにして主ボタンを置かない。PRD D238）
+1. 見出し（`PageHeader`。[pages-common.md](pages-common.md) の「画面の見出しとボタンの3段」）：題名・1行の説明。すぐ下にナビの行（`ScheduleNav`。PRD D347。ADR-0060）：「今日」・‹ 日付（`.date-switch select`）›・［月｜週｜日］・右に状態の印（「確定（伝えた）」・「予定をメールで送る」は操作の行へ移した。下の 6。PRD D392）
 2. 進み具合の帯は出さない（月の予定だけ。PRD D332）。日の状態は見出しの状態の印と下の1行のまとめ
-3. 1行のまとめ：訪問 N件・入らない N・守れない条件 N・移動 N分・点数 N点（`plan-oneline-score`・`plan-score`。点数に用語の説明「点数」（`Term k="score"`。PRD D307）。title「「〈名前〉」の重みで付けた点数」。点数の文字は地の色で、入らない・必須の違反があるときだけ `.is-alert` で要対応の赤。PRD D266）・点数の理由（`plan-reason`）・次の一手（`reason-next`。理由のすぐ後ろ、同じ行。PRD D237）・「詳しく」。入らない・守れない条件の数（1件以上）は押すと吹き出しの一覧（`components/PlanIssueCount`・`plan-dropped`・`plan-hard`。行の「見る」`-look`・「開く」`-open`・関連の画面 `-link`（`lib/hardLinks`）。入らないの下に「担当なしの列へ」`plan-dropped-none`。PRD D345）
-4. 操作の行（下の 6。日・週・月で同じ位置＝状態の1行のすぐ下。PRD D344。ADR-0058）と、開いていれば使い方の説明（`plan-help`）
-5. 担当ごとの1日（`DayLines`。下）。操作の行が間に入るので、1行のまとめとはつなげず別のカード（PRD D237 のつなげ方は D344 でやめた）
+3. 「詳しく ▾」（`day-details`。下の「「詳しく ▾」と操作の行」。操作の行のすぐ下。閉じて始まる）の中の1行のまとめ：訪問 N件・入らない N・守れない条件 N・移動 N分・点数 N点（`plan-oneline-score`・`plan-score`。点数に用語の説明「点数」（`Term k="score"`。PRD D307）。title「「〈名前〉」の重みで付けた点数」。点数の文字は地の色で、入らない・必須の違反があるときだけ `.is-alert` で要対応の赤。PRD D266）・点数の理由（`plan-reason`）・次の一手（`reason-next`。理由のすぐ後ろ、同じ行。PRD D237）。入らない・守れない条件の数（1件以上）は押すと吹き出しの一覧（`components/PlanIssueCount`・`plan-dropped`・`plan-hard`。行の「見る」`-look`・「開く」`-open`・関連の画面 `-link`（`lib/hardLinks`）。入らないの下に「担当なしの列へ」`plan-dropped-none`。PRD D345）
+4. 操作の行（下の 6。日・週・月で同じ位置＝状態の1行のすぐ下。PRD D344。ADR-0058）と、開いていれば使い方の説明（`plan-help`）。そのすぐ下に「詳しく ▾」（上の 3）
+5. 担当ごとの1日（`DayLines`。下）：「詳しく ▾」の中で1行のまとめのあとに並べる（入は先頭に要対応の訪問の帯 `band-care`）。
 5b. あるときだけの帯（ドラッグ中には増減しない）：問題を作れない・採点できない・範囲の提案の帯（担当を組むの画面で組んだ提案 `data-kind="range"`。[pages-common.md](pages-common.md) の「予定の共通の部品」）・入らない訪問（`band-unassigned`・「見る」）・欠勤の振り直し（`band-reassign`・「差の欄へ」）・休み（`band-leave`）・拘束超え（`band-over-span`）
 6. 見出しの右（ナビの行の右）：状態の印（「確定済み」「まだ伝えていない」「未連絡の変更あり N件」「変更あり N件」。確定の段階を出すときは次の確定していない日へ）。「予定をメールで送る」（`day-mail`。`mail` が入のとき）と主ボタン「確定（伝えた）」（`adopt`）は操作の行へ移した（PRD D392）。操作の行（`ScheduleToolbar zoom="day"`・`plan-toolbar`。日・週・月で同じ作り。PRD D327・D392。「AI で組む ▾」は無い（AI で組むのは担当を組むの画面。ADR-0063））：入＝主「予定を入れる」（`plan-visit-add`。〈利用者さん〉がいなければ `aria-disabled` と title に理由）＋「確定（伝えた）」（`adopt`。確定済みの日は枠）、切＝主「予定を入れる」＋「欠勤・キャンセルを登録」（`sudden-open`）。「その他 ▾」（`MenuButton`・`plan-more`）：元に戻す・やり直す（`more-undo`・`more-redo`）・入は欠勤・キャンセルを登録（`sudden-open`）・表示［時間軸｜順番｜一覧］（`plan-view-*`。スマホは日ごとのリスト・順番・一覧と、予定を入れる（`plan-visit-add`））・使い方（`plan-more-help`。開いていれば「使い方を閉じる」）・予定をメールで送る（`day-mail`）・空き状況。欠勤の振り直しの案B の計算中の進み具合と止める（回数とバーは `PlanProgressText` が外の入れ物 `lib/valueStore` から `components/valueStore` の `useValueStore` で読み、画面全体は描き直さない。PRD D249）。「使い方」は操作の行の下に説明 `plan-help` を開きフォーカスを移す（「使い方を閉じる」）
 7. 欠勤の差の欄（本体のすぐ上。[pages-plan-absence.md](pages-plan-absence.md)）

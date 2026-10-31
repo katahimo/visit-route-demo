@@ -98,9 +98,26 @@ async function fromHome(page) {
   await planDays(page, { cache: true });
   // 月の予定の「その他 ▾」の「欠勤・キャンセルを登録」（操作の行・メニュー・ホームには無い。PRD D390・D392）
   await goTo(page, '月');
+  // メニュー項目は href を持たないので、遷移の途中の URL（history の pushState・replaceState）を記録して `?date=今日&do=absence` を経由したことを確かめる
+  await page.evaluate(() => {
+    window.__urls = [];
+    for (const m of ['pushState', 'replaceState']) {
+      const orig = history[m];
+      history[m] = function (...args) {
+        if (typeof args[2] === 'string') window.__urls.push(args[2]);
+        return orig.apply(this, args);
+      };
+    }
+  });
   await pressTool(page, '欠勤', { where: 'more' });
   await panel(page).waitFor({ timeout: 20000 });
   await settle(page, 300);
+  const urls = await page.evaluate(() => window.__urls);
+  check(
+    urls.some((u) => u.includes(`/plan?date=${TODAY}&do=absence`)),
+    '月の予定の「欠勤・キャンセルを登録」は ?date=今日&do=absence を経由して開く',
+    urls,
+  );
   check(
     (await page.locator('[data-testid="sched-nav"] select').inputValue()) === TODAY,
     '月の予定の「欠勤・キャンセルを登録」は今日の日の予定で欄を開く',

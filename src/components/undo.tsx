@@ -84,7 +84,7 @@ export const undoFocusTarget = (): HTMLElement | null =>
 export const focusUndo = (): number => requestAnimationFrame(() => undoFocusTarget()?.focus());
 
 /**
- * 操作の行の「元に戻す」「やり直す」（人の予定表・担当を組むの画面。PRD D327・D329）。PRD D327・D329）。戻せないときも押せる所に残し（フォーカスを落とさない）、
+ * 操作の行の「元に戻す」「やり直す」（人の予定表・担当を組むの画面。PRD D327・D329）。戻せないときも押せる所に残し（フォーカスを落とさない）、
  * 理由は title。戻す手の名前を title に出す
  */
 export function UndoButtons({ redoShown = true }: { redoShown?: boolean }) {

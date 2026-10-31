@@ -80,7 +80,7 @@ export function WeekNavActions({ flow }: { flow: Pick<WeekPrepFlow, 'next' | 'ne
 }
 
 /** 1行の状態（PRD D332。進み具合の帯は月の予定だけ）。今日以降に訪問の無い週は出さない */
-export function WeekStatusLine({ prep }: { prep: WeekPrep }) {
+function WeekStatusLine({ prep }: { prep: WeekPrep }) {
   const confirmStep = useConfirmStep();
   if (prep.futureDays === 0) return null;
   return (

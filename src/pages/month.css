@@ -1,8 +1,4 @@
 /* 月間カレンダー（#/month。ADR-0012） */
-.month-nav {
-  flex-wrap: wrap;
-  gap: 8px;
-}
 .month-title {
   margin: 0 4px;
   font-size: 1.2rem;
