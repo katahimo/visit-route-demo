@@ -32,7 +32,7 @@ async function waitPlan(page) {
 }
 /** データを初期状態に戻して今日の日の画面を開く */
 async function freshPlan(page) {
-  await page.goto(`${BASE}#/home`);
+  await page.goto(`${BASE}#/data`);
   await page.evaluate((k) => localStorage.removeItem(k), STORAGE_KEY);
   await page.goto(`${BASE}#/plan?date=${TODAY}`);
   await page.reload();
@@ -417,7 +417,7 @@ async function toastWhileOpen(page, w) {
 
 // ---- 訪問の詳細の欄（長い。〈利用者さん〉の画面の予定の回から開く。PRD D309） ----
 async function visitPanel(page, w) {
-  await page.goto(`${BASE}#/home`);
+  await page.goto(`${BASE}#/data`);
   await page.evaluate((k) => localStorage.removeItem(k), STORAGE_KEY);
   await open(page, '/clients/c1', '[data-testid="pcal-visit"]');
   const item = page.locator(`[data-testid="pcal-visit"]:not([data-state="cancelled"]):not([data-state="sameDay"])`);

@@ -73,7 +73,7 @@ export function autoTargets(
   });
 }
 
-/** ホームの取りこぼし：range の担当なし・ピンなし・伝えていない・今日以降の訪問すべて（休み・利用中でない人の訪問は除く） */
+/** 日の取りこぼし（要対応の帯・その他 ▾ の組む）：range の担当なし・ピンなし・伝えていない・今日以降の訪問すべて（休み・利用中でない人の訪問は除く） */
 export function unassignedTargets(data: TargetData, today: string, range: DateRange): AutoTarget[] {
   return collect(data, today, range, () => true);
 }
@@ -91,7 +91,7 @@ export function stillTargets(data: TargetData, targets: readonly AutoTarget[], t
   return out;
 }
 
-/** 対象の訪問の件数（ホームの「担当なし N件」） */
+/** 対象の訪問の件数（「担当なしの訪問を組む N件」） */
 export const targetCount = (targets: readonly AutoTarget[]): number => targets.reduce((n, t) => n + t.ids.length, 0);
 
 /** 1日の問題（組み始めたときの訪問・解く問題・問題に入った対象の ID） */

@@ -61,7 +61,6 @@ export function paletteKindLabel(kind: PaletteKind, terms: Pick<Terms, 'client' 
  * （月間・週間・予定・日の画面・稼働時間・稼働の見込み。PRD D230。ADR-0034）
  */
 const SCREEN_WORDS: Record<string, readonly string[]> = {
-  '/home': ['ほーむ', 'きょうやること', '今日やること'],
   '/month': ['つき', 'げつ', 'かれんだー', 'つきのよてい', '月間', 'げっかん', '月の画面'],
   '/week': ['しゅう', 'しゅうのよてい', 'じかんじく', '週間', 'しゅうかん'],
   '/plan': ['ひ', 'にち', 'ひのよてい', 'わりあて', '予定', '日の画面', 'きょう'],

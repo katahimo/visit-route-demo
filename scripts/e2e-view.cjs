@@ -183,7 +183,7 @@ async function clients(page, dlg) {
     dlg.messages,
   );
   dlg.messages.length = 0;
-  await clickMenu(page, 'ホーム');
+  await clickMenu(page, '予定');
   await settle(page);
   check(
     dlg.messages.length === 1 && /移りますか/.test(dlg.messages[0]) && hashOf(page).startsWith('#/clients/c1'),

@@ -33,9 +33,9 @@ async function open(page, hash, ready = '[data-testid="arrange-start"]') {
   await page.locator(ready).first().waitFor({ timeout: 30000 });
   await settle(page, 300);
 }
-/** 保存したデータを書き換える（ホームはデータを書かないので、ホームで書き換えてから読み直す） */
+/** 保存したデータを書き換える（データの画面は開くだけではデータを書かないので、そこで書き換えてから読み直す） */
 async function editData(page, fn, arg) {
-  await page.goto(`${BASE}#/home`);
+  await page.goto(`${BASE}#/data`);
   await page.reload();
   await page.locator('h1').waitFor();
   await page.evaluate(fn, arg);
@@ -386,10 +386,14 @@ async function basisRedo(page) {
     '基本情報を直すと担当を組むに「変わりました」の知らせ',
   );
   const badge = await page
-    .locator('.side-nav [data-key="arrange:assign"] .nav-badge')
+    .locator('.side-nav [data-key="arrange"] .nav-badge')
     .innerText()
     .catch(() => '');
-  check(badge.includes('変更'), 'メニューの担当を組むの印は「変更」（担当なしの日数より先）', badge);
+  check(
+    badge.includes('変更'),
+    'メニューの「組む」の印は「変更」（担当なしの日数より先。印は組むの1つ。PRD D390）',
+    badge,
+  );
   await page.getByTestId('arrange-basis-redo').click();
   await waitBand(page);
   check(

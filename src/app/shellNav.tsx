@@ -12,7 +12,6 @@ import {
   HeartHandshake,
   House,
   Layers,
-  ListTodo,
   type LucideIcon,
   Route as RouteIcon,
   Settings,
@@ -34,7 +33,6 @@ type NavItem = MenuItem;
 
 /** メニューの項目のアイコン */
 export const NAV_ICONS: Record<NavIcon, LucideIcon> = {
-  home: ListTodo,
   month: CalendarRange,
   week: CalendarClock,
   day: CalendarDays,

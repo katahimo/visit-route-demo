@@ -6,6 +6,7 @@ import { BatchBand } from '../components/batchBand';
 import { IS_MAC } from '../components/CommandPalette';
 import { useDay } from '../components/day';
 import { FullscreenButton } from '../components/FullscreenButton';
+import type { Features } from '../contracts/features';
 import { dateText } from '../lib/dateText';
 import {
   bottomTabs,
@@ -88,7 +89,7 @@ export function AppHeader({
 /** スマホだけ：よく使うタブ（ホーム・予定・欠勤。エキスパート機能が切ならメニューの4つ）と「探す」「メニュー」（PRD D336・D383。印刷では出さない） */
 export function BottomTabs({
   groups,
-  simple,
+  features,
   pathname,
   paletteOpen,
   openPalette,
@@ -98,8 +99,8 @@ export function BottomTabs({
   openMenu,
 }: {
   groups: readonly NavSection<MenuItem>[];
-  /** エキスパート機能が切（メニューの4つを並べる。PRD D383） */
-  simple: boolean;
+  /** 機能の入り切り（下のタブの項目が変わる。PRD D383・D390） */
+  features: Features;
   pathname: string;
   paletteOpen: boolean;
   openPalette: () => void;
@@ -110,7 +111,7 @@ export function BottomTabs({
 }) {
   return (
     <nav className="bottom-tabs" aria-label="よく使う画面" data-testid="bottom-tabs">
-      {bottomTabs(groups, simple).map((item) => {
+      {bottomTabs(groups, features).map((item) => {
         const { key, to, icon } = item;
         const Icon = NAV_ICONS[icon];
         // 「予定」は月・週・日の予定で印（PRD D273）。欠勤は操作なので印を付けない

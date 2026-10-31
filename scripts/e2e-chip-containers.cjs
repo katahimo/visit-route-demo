@@ -58,7 +58,7 @@ async function waitStored(page, pred, timeout = 8000) {
 }
 /** 初期データで開き直す。mutate があれば初期データを書き換えて（別のタブで書き換えたのと同じ）読み直す */
 async function fresh(page, hash, ready, mutate = null, arg = null) {
-  await page.goto(`${BASE}#/home`);
+  await page.goto(`${BASE}#/data`);
   await page.locator('h1').waitFor();
   await page.evaluate((k) => localStorage.removeItem(k), STORAGE_KEY);
   await page.reload();
@@ -860,7 +860,7 @@ async function monthCells(page) {
 
 // ---- 月：一覧の行のドラッグ・「別の日へ」・確定した日の確認 ----
 async function monthMove(page, { confirms }) {
-  await fresh(page, '/home', 'h1');
+  await fresh(page, '/data', 'h1');
   const d0 = await stored(page);
   // 保存した訪問が2件以上ある今日より後の日（同じ月）と、移す先（同じ月の今日より後の別の日）
   const byDay = new Map();
@@ -1031,7 +1031,7 @@ async function monthMove(page, { confirms }) {
 // ---- 印が3段（l・s・m）で同じ ----
 async function sameMarks(page) {
   // 今日より後の保存した訪問を1件ピンにし、その〈利用者さん〉の担当できる人をほかの1人に限る（限✗・要対応）
-  const fx = await fresh(page, '/home', 'h1', ({ k, today, week }) => {
+  const fx = await fresh(page, '/data', 'h1', ({ k, today, week }) => {
     const d = JSON.parse(localStorage.getItem(k));
     const v = d.visits.find((x) => x.date > today && week.includes(x.date) && x.staffId && !x.cancelled);
     if (!v) return null;

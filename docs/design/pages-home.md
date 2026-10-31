@@ -1,62 +1,21 @@
-# ホーム（今日やること）と予定に共通の進み具合の帯
+# 予定に共通の進み具合の帯・日の状態の共通フック（ホームは無くした）
 
-> この画面のファイル：`src/pages/HomePage.tsx`（`home.css`）・`useHomeTasks.ts`・`homeParts.tsx`・`src/components/progressBand.tsx`（`progressBand.css`）・`src/lib/home.ts`・`src/lib/progressBand.ts`・`src/lib/dayStatuses.ts`・`src/components/useDayStatuses.ts`。関連 ADR：0025（追記を含む）・0038・0044・0062。関連 PRD：D141〜D145・D247・D255・D263（ホーム）・D151〜D155（進み具合の帯）・D161（条件が変わった）。
+> この画面のファイル：`src/components/progressBand.tsx`（`progressBand.css`）・`src/lib/progressBand.ts`・`src/lib/dayStatuses.ts`・`src/components/useDayStatuses.ts`。関連 ADR：0025（追記を含む）・0038・0044・0062。関連 PRD：D151〜D155（進み具合の帯）・D390・D391（ホームを無くした）・D161（条件が変わった）。
 > 版2（ADR-0053）：日の状態は まだ伝えていない／確定済み／未連絡の変更あり、要対応は訪問ごとの検査。「案を作る」は「担当を AI で組む」
 
-### ホーム（`#/home`。PRD D141〜D145）
+### ホームは無くした（PRD D390・D391。ADR-0074 段1）
 
-起動（`#/`）・知らない URL の行き先。`?id=` などのクエリはそのまま。データは書き換えない。印刷では出さない。
-
-**エキスパート機能が入のときだけ**（PRD D383。ADR-0073）。切のときはホームを無くし、`#/home`・起動・知らない URL は予定の画面（`homePath(features)`＝月か週）へ移す（`Navigate replace`。`App.tsx`）。ホームの「今日やること」の代わりは予定（月・週・日）の上の要対応の帯（担当なし・重なり・休みの人。[pages-nav.md](pages-nav.md) の「エキスパート機能が切のときのメニュー・ホーム・要対応の帯」。`lib/attentionBand`）で、ホームにあった「担当なし N件」の［組む］は予定の「その他 ▾」の「担当なしの訪問を組む」（`useSimpleMoreItems`）へ移した。以下のカードの説明は入のときのもの。
-
-#### `lib/home.ts`（純粋関数。テストあり）
-
-- `HOME_NEXT_MONTH_FROM_DAY`（15。PRD D255。事業所の設定にはしない）
-- `homeMonths(today)`：今月。今日が15日以降なら来月も
-- `homeDays(today)`：今日から見る月の末日まで
-- `homeEntries(today, terms, features)`（いつでもの入口）
-- `homeTasks({ today, statuses, months, todayStaff, data, features })`：カード `HomeTask`＝種類（`standard`／`attention`／`today`／`confirm`／`create`）・色（`warn`／`todo`／`info`）・題名・内訳・移る先 `to`・日の予定へ移るときの日付 `date`。`ready` は info だけのとき。切った機能のカードは出さない
-
-並びは作業の順（PRD D263。ADR-0044）：組み方の標準（登録していないときだけ）→ 要対応（全部の月）→ 月ごとに「担当を AI で組む → 確定していない日」（今月 → 来月）→ 今日。
-
-| 並び | カード | 移る先 |
-|---|---|---|
-| 0 | はじめに組み方の標準を決める（`hasStandard(data)` が偽でエキスパート機能が入のときだけ（切なら `/standard` が使えず出ない）。todo。内訳「考え方ごとの案をくらべて標準の週を決めます。これからは標準の週で並び、埋まらない所はその考え方で組みます」。PRD D354・D359） | `/standard` |
-| 1 | 要対応（月ごと。`attentionList`＝要対応の訪問のある日・未連絡の変更のある日・拘束超。月の要対応・帯と同じ数。内訳「要対応の訪問がある日 N日・未連絡の変更がある日 N日」） | 1日だけなら `/plan`＋その日、2日以上なら `/month?ym=…&do=attention` |
-| 2 | N月の担当なしの訪問を組む（月ごと。担当なしの訪問がある・伝えていない日が2日以上。内訳「担当なしの訪問がある日 N日」） | `/arrange?ym=…`（予定を組むの担当を組む。ADR-0063） |
-| 3 | 確定していない日（エキスパート機能が入のときだけ。切では出さず、今日のカードの状態も「変更あり」のときだけ添える。ADR-0073・PRD D382。2 と同じ月のすぐ後。訪問があって確定済みでない日。`monthProgress` の `unconfirmed` と同じ日・同じ並び。内訳「まだ伝えていない N日・未連絡の変更あり N日。見直して伝えたら「確定」」） | 1日だけなら `/plan`＋その日、2日以上なら `/month?ym=…&do=unconfirmed` |
-| 4 | 今日の予定（題名に「（まだ伝えていない）」「（確定済み）」「（未連絡の変更あり）」、内訳「訪問 N件・担当 N人・要対応 N件」。要対応があれば warn） | `/plan`（今日） |
-
-#### `pages/HomePage.tsx`（`home.css`）
-
-画面は組み立てだけ。次にすること・いつでもの入口の計算は同じディレクトリの `useHomeTasks.ts`（今日の担当の人数は `lib/home` の `routedStaffCount`）、カード（`TaskCard`・`EntryCard`）・今日の訪問の欄（`HomeVisits`）・「訪問を追加」（`AddVisitItem`）は `homeParts.tsx`。
-
-- 日の状態：`components/useDayModel` の `useCompileInput(data)`（compile が読むデータだけ。今日の問題は compile しない。`useDayModel` も中で使う）と `useDayStatuses`
-- `homeTasks` のカードを並べる。カードは全体が `Link`（`date` があれば押したときに `setDate`）
-- 先頭の1枚（知らせだけ（`info`）でなければ）は「まずこれ」（PRD D263）：`li.is-lead` で格子の幅いっぱい（`grid-column: 1 / -1`）、カードは `.is-lead`（主ボタンの塗り `--primary`・白い文字・下の影。ホームの主ボタンはこの1つ）、題名の上に札「まずこれ」（`home-lead`。読み上げも題名の前）、`data-lead`。先頭が要対応（`is-warn`）なら左の縁を要対応の赤で太くし、札「要対応」（`home-lead-warn`）も添える。ほかのカードは今のまま
-- 何も無ければ「今日の準備はできています」（`ready`）
-- 「今日の訪問」（`home-visits`。PRD D304）：`lib/visitLists` の `dayVisitRows(data, 今日, 今の時刻, 5)`（取り消し・休みを除き、担当なし → これからの近い順）の行 `home-visit`（時刻・〈利用者さん〉・担当（印）か「担当なし（入らない）」「案なし」。担当なし・案なしは左の縁を赤）。押すと訪問の詳細の欄（閉じるとフォーカスは行）。残りは「あと N件（日の予定で見る）」（`home-visits-rest`）。下に「これからの入らない訪問（要対応）」（`home-unassigned`。`unassignedVisits(data, 明日, 31日後)` の5件、残りは件数だけ）。主ボタンは増やさない。印刷で出さない
-- 下に「いつでも」の入口：欠勤・キャンセルを登録（`/plan?date=今日&do=absence`）・空き状況・〈利用者さん〉一覧・〈スタッフ〉一覧・「訪問を追加」（`home-visit-add`。ボタンで訪問の詳細の欄の新規（今日）。600px 以下と〈利用者さん〉が0人なら出さない）
-- 狭い画面（860px 以下。`components/useMedia` の `NARROW_QUERY`。App のメニューの切り替えと同じ定数）では欠勤・キャンセルの入口を見出しのすぐ下（「次にすること」の上。`home-quick`）に常に置き、「いつでも」から外す（同じ `home-absence`）。見た目はほかの入口と同じカード（`is-entry`。赤い縁は付けない）で、先頭に置くことで目立たせ、アイコンだけ朱（`.is-first`）。切っていれば出さない（PRD D247・ADR-0038）
-- カードは `auto-fill` の格子（390px で1列）
-
-#### 月の予定の `?do=`
-
-ホームのカードの行き先の `?do=` は月の予定が1回だけ行い、URL から消す（replace。戻るで繰り返さない）。中身は [pages-month.md](pages-month.md) の「`?do=`」。
-
-#### 確かめ
-
-`scripts/e2e-home.cjs`：起動・知らない URL・`?id=`、カードの並び（作業の順）・先頭の「まずこれ」・同じ月の「担当なしの訪問がある日 N日」は組むカードだけ・今日のカード・「N月の担当を AI で組む」で月の欄・確定していない日の数・まとめて確定・次の確定していない日へ・訪問の無い人の欠勤は要対応にしない・いつでもの入口・何も無いデータ・スマホ・印刷（AGENTS.md の e2e の説明）
+`#/home`・起動（`#/`）・知らない URL は予定の画面（`homePath(features)`＝月か週。入切とも）へ移す（`Navigate replace`。`App.tsx`）。ホームの「今日やること」の代わりは予定の上の要対応の帯（担当なし・重なり・休みの人、入は 組み方の標準が無い・基本情報が変わった・未確定 N日。[pages-nav.md](pages-nav.md) の「要対応の帯」）と「その他 ▾」。ホームの部品（`pages/HomePage`・`homeParts`・`useHomeTasks`・`home.css`・`lib/home`）は消した（月の後半の日 15 は `lib/scheduleMode` の `LATE_MONTH_FROM_DAY`）。
 
 ### 日の状態の共通フック（`components/useDayStatuses.ts`。計算と日ごとの覚えは `lib/dayStatuses.ts` の `createDayStatusMemo`）
 
-- 月の予定の「日の問題と状態」を切り出したフック。月の予定・ホーム・進み具合の帯・週の準備・要対応で共通（数え方が食い違わない）
+- 月の予定の「日の問題と状態」を切り出したフック。月の予定・進み具合の帯・週の準備・要対応・要対応の帯で共通（数え方が食い違わない）
 - 点数の基準の条件で compile・採点し、訪問ごとの検査（`visitIssues`）・伝えた状態（`toldStateOf`）・拘束が上限を超える人を `dayStatus` に渡す
 - 日ごとの覚えはモジュールの `MEMO`（日付ごとに最近3件・400日まで。点数の基準の条件は JSON で比べる）で、画面を移っても使う
 
 ### 予定に共通の進み具合の帯（PRD D151〜D155）
 
-月・週・日の見出しの下に置く。同じ月なら同じ数（ホームの確定していない日とも同じ）。印刷では出さない。
+月・週・日の見出しの下に置く。同じ月なら同じ数（要対応の帯の「未確定 N日」とは見る日の範囲が違う）。印刷では出さない。
 
 #### `lib/progressBand.ts`（純粋関数。テストあり）
 

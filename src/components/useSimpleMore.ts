@@ -1,13 +1,13 @@
-// 予定の「その他 ▾」に足す項目（エキスパート機能が切のとき。PRD D383）：メニューから外した空き状況と、ホームの無くなった
-// 担当なしの訪問の［組む］（ADR-0072 第2段。今日〜翌月末の担当なしを、いまの条件で自動で組む）。入のときは足さない
+// 予定の「その他 ▾」に足す項目（PRD D383・D390）：メニューから外した空き状況（入切とも）と、切のとき、ホームの無くなった
+// 担当なしの訪問の［組む］（ADR-0072 第2段。今日〜翌月末の担当なしを、いまの条件で自動で組む。入は「担当を組む」の画面で組む）
 import { CalendarSearch, Sparkles } from 'lucide-react';
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { jstDate } from '../domain/time';
 import { autoRange, targetCount, unassignedTargets } from '../lib/autoArrange';
 import { autoArrange, requestUnassignedArrange } from '../lib/autoArrangeBatch';
+import { exceptionsOnly } from '../lib/exceptionView';
 import { confirmLeave } from '../lib/leaveGuard';
-import { isSimpleMenu } from '../lib/nav';
 import { type SimpleMoreKind, simpleMoreKinds } from '../lib/simpleMore';
 import { useDemoData } from '../store';
 import type { MenuItem } from './MenuButton';
@@ -24,7 +24,7 @@ export function useSimpleMore(): SimpleMore {
   const navigate = useNavigate();
   const running = useValueStore(autoArrange.run) !== null;
   const features = data.org.features;
-  const simple = isSimpleMenu(features);
+  const simple = exceptionsOnly(features);
   const today = jstDate(Date.now());
   // 担当なしの訪問の数（今日〜翌月末）
   const unassigned = useMemo(

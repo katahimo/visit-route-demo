@@ -41,9 +41,9 @@ async function openPlan(page) {
   await page.getByTestId('plan-progress').waitFor({ state: 'detached', timeout: 60000 });
   await settle(page, 300);
 }
-/** 保存したデータを書き換える（ホームはデータを書かないので、ホームで書き換えてから読み直す） */
+/** 保存したデータを書き換える（データの画面は開くだけではデータを書かないので、そこで書き換えてから読み直す） */
 async function editData(page, fn, arg) {
-  await page.goto(`${BASE}#/home`);
+  await page.goto(`${BASE}#/data`);
   await page.reload();
   await page.locator('h1').waitFor();
   await page.evaluate(fn, arg);
@@ -327,9 +327,9 @@ async function moreMenus(page) {
       shown.includes('元に戻す') &&
       shown.includes('訪問を追加') &&
       shown.includes('使い方') &&
-      !shown.includes('その他') &&
+      shown.includes('その他') &&
       !shown.includes('メールで送る'),
-    '日の予定：操作の行は 欠勤・元に戻す・表示・訪問を追加・使い方（AI で組む ▾・その他 ▾ は無い）',
+    '日の予定：操作の行は 欠勤・元に戻す・表示・訪問を追加・使い方・その他 ▾（AI で組む ▾ は無い。その他 ▾ は空き状況だけ。PRD D390）',
     shown,
   );
   // 操作の行は状態の1行（今の担当）のすぐ下（週・月と同じ位置。PRD D344）
@@ -437,12 +437,13 @@ async function moreMenus(page) {
     .locator('[role="menuitem"] .menu-item-label')
     .allInnerTexts();
   check(
-    mItems.length === 4 &&
+    mItems.length === 5 &&
       /^表示を選ぶ/.test(mItems[0]) &&
       mItems[1] === '印刷' &&
       mItems[2] === '勤務の見込み' &&
-      mItems[3] === 'マスの見方の説明',
-    '月の予定の「その他 ▾」：表示を選ぶ・印刷・勤務の見込み・マスの見方の説明',
+      mItems[3] === 'マスの見方の説明' &&
+      mItems[4] === '空き状況',
+    '月の予定の「その他 ▾」：表示を選ぶ・印刷・勤務の見込み・マスの見方の説明・空き状況（PRD D390）',
     mItems,
   );
   await page.getByTestId('month-more-help').click();

@@ -1,5 +1,5 @@
 // 急な欠勤・当日キャンセルを目立つ入口から登録して振り直すこと（PRD D167〜D172。ADR-0025・ADR-0011・ADR-0015）を本物のブラウザで確かめる：
-// ホームの「欠勤・キャンセルを登録」で今日の日の予定の「欠勤・キャンセル」の欄が1段目で開き `?do=`・`?date=` が URL から消える、
+// 月の予定の「欠勤・キャンセルを登録」で今日の日の予定の「欠勤・キャンセル」の欄が1段目で開き `?do=`・`?date=` が URL から消える、
 // 段階の表示（aria-current="step"）と段階ごとのフォーカス（段階の見出し）、〈スタッフ〉が休む → 人と時間帯 → 影響（入らなくなる訪問 N件）→
 // 主ボタンは「登録して振り直す（おすすめ）」の1つ・ほかのやり方は文字のボタン（PRD D264）→ 案A で振り直す → 4段目のまとめ・担当が移る訪問の一覧（PRD D265）と案A・案B（案B を作って反映する）→ この割当で確定（独自の確認ダイアログ）→
 // 5段目の連絡（人ごとの文・［文をコピー］・メール・［連絡した］の数。PRD D243〜D246）→ 終わる → 確定済み、
@@ -15,7 +15,7 @@ const { answerConfirms } = require('./lib/confirmDialog.cjs');
 const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, settle, hashOf, stored, runSteps } = require('./lib/env.cjs');
 const { planDays } = require('./lib/plan.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
-const { pressTool } = require('./lib/ui.cjs');
+const { goTo, pressTool } = require('./lib/ui.cjs');
 
 /** 訪問の無い日を作るのに使う、今日の次の日 */
 const NEXT = new Date(Date.parse(`${TODAY}T00:00:00Z`) + 86400000).toISOString().slice(0, 10);
@@ -89,17 +89,23 @@ async function busiestStaff(page) {
   });
 }
 
-// ---- ホームから開く → 〈スタッフ〉の欠勤 → 案A → 案B を選ぶ → 確定 ----
+// ---- 月の予定から開く → 〈スタッフ〉の欠勤 → 案A → 案B を選ぶ → 確定 ----
 async function fromHome(page) {
-  await page.goto(`${BASE}#/home`);
+  await page.goto(`${BASE}#/data`);
   await page.evaluate((k) => localStorage.removeItem(k), STORAGE_KEY);
   await page.reload();
   // 初期データは今日からの日を繰り返しの担当のままにするので、保存した担当の入った訪問を用意する（のちの段（recommend-b）も使う）
   await planDays(page, { cache: true });
-  await page.getByTestId('home-absence').waitFor();
-  const href = await page.getByTestId('home-absence').getAttribute('href');
-  check(href?.includes(`/plan?date=${TODAY}&do=absence`), 'ホームのカードの行き先が ?date=今日&do=absence', href);
-  await page.getByTestId('home-absence').click();
+  // 月の予定の操作の行の「欠勤・キャンセルを登録」（メニュー・ホームには無い。PRD D390）
+  await goTo(page, '月');
+  await page.getByTestId('sudden-open').waitFor();
+  const href = await page.getByTestId('sudden-open').getAttribute('href');
+  check(
+    href?.includes(`/plan?date=${TODAY}&do=absence`),
+    '月の予定の「欠勤・キャンセルを登録」の行き先が ?date=今日&do=absence',
+    href,
+  );
+  await page.getByTestId('sudden-open').click();
   await panel(page).waitFor({ timeout: 20000 });
   await settle(page, 300);
   check(
@@ -395,7 +401,7 @@ async function reopenFocus(page, best) {
 
 // ---- 伝えた日の5段目：手で変えた訪問も連絡の一覧に出る（PR #80 のレビュー）。欠勤の振り直しも「元に戻す」で欠勤ごと戻る ----
 async function toldContacts(page) {
-  await page.goto(`${BASE}#/home`);
+  await page.goto(`${BASE}#/data`);
   await page.evaluate((k) => localStorage.removeItem(k), STORAGE_KEY);
   // 初期データから組むので、from-home の結果の写し（scripts/lib/plan.cjs）
   await planDays(page, { cache: true });
@@ -443,7 +449,7 @@ async function toldContacts(page) {
   await panel(page).waitFor({ state: 'detached' });
 
   // 欠勤を登録して振り直す → 「元に戻す」で欠勤も振り直しも戻る
-  await page.goto(`${BASE}#/home`);
+  await page.goto(`${BASE}#/data`);
   await page.evaluate((k) => localStorage.removeItem(k), STORAGE_KEY);
   await openPlan(page);
   const before = await stored(page);
@@ -567,7 +573,7 @@ async function fromHeader(page, best) {
 // ---- 訪問の無い日：欠勤だけ登録できる ----
 async function noPlanDay(page) {
   // 次の日の訪問を消して訪問の無い日にする（稼働する人は残る）
-  await page.goto(`${BASE}#/home`);
+  await page.goto(`${BASE}#/data`);
   await page.evaluate(
     ([k, day]) => {
       const d = JSON.parse(localStorage.getItem(k));
@@ -620,7 +626,7 @@ async function noPlanDay(page) {
  * 「案A だけで振り直す」は文字のボタン
  */
 async function recommendB(page) {
-  await page.goto(`${BASE}#/home`);
+  await page.goto(`${BASE}#/data`);
   const staffId = await page.evaluate(
     ([k, day]) => {
       const d = JSON.parse(localStorage.getItem(k));
@@ -796,7 +802,7 @@ async function pickDate(page, date) {
 
 // ---- 「振り直す前に戻す」は別の日の振り直しのあとでは近道で戻さない・欠勤を取り消した知らせから戻す（PR #81 のレビュー） ----
 async function revertCases(page, st) {
-  await page.goto(`${BASE}#/home`);
+  await page.goto(`${BASE}#/data`);
   await page.evaluate((k) => localStorage.removeItem(k), STORAGE_KEY);
   await openPlan(page);
   const day2 = await page

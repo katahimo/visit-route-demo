@@ -5,9 +5,9 @@
 // 自分のデータ（空のデータ＋3段の登録の案内：上に「1/3」・①②は「CSV・Excel を読み込む」（名簿の欄）と「1人ずつ入れる」（追加の画面）・③は予定へ・
 // 空のデータで月・週・日・一覧・設定などが壊れない）・印「all」（scripts/lib/startFeatures.cjs）があれば2問を出さず今の初期データ＋すべて入・
 // 設定の「最初の設定をやり直す」（確認の文は元に戻す Ctrl+Z の対象外・先に書き出す案内 → 2問へ戻る → 答えでデータを作り直す・控えが残る）、
-// 案内ツアー（データの画面の「案内をもう一度見る」から開く：role="dialog"・aria-modal・見出しと本文・1 / 3・最初のフォーカスは「次へ」・
+// 案内ツアー（データの画面の「案内をもう一度見る」から開く：role="dialog"・aria-modal・見出しと本文・1 / 2・最初のフォーカスは「次へ」・
 // 裏の inert とスクロールのロック・「戻る」は最初の枚で押せない・Tab と Shift+Tab が中で回る・開いている間は Ctrl+K でパレットを開かない・
-// 3枚（ホーム・予定・欠勤。PRD D277）・予定の枚は3段の説明・最後の枚は主ボタン「今日の予定を開く」・「閉じる」（とばすは出さない。PRD D226）・
+// 2枚（予定・欠勤。ホームは無い。PRD D277・D390）・予定の枚は3段の説明・最後の枚は主ボタン「今日の予定を開く」・「閉じる」（とばすは出さない。PRD D226）・
 // Esc と「とばす」・閉じるとフォーカスが「案内をもう一度見る」へ・「今日の予定を開く」で今日の日の画面・390px で収まる・印刷で出さない）、
 // データの画面のファイル選択（すべて同じ部品・日本語のボタン「ファイルを選ぶ」と未選択の文・ブラウザ標準の input は見えない・
 // input はボタンと同じ大きさ・入力欄の名前（何を読み込むか＋ファイルを選ぶ）・Tab で届きフォーカスの枠・Space で選ぶ画面・控え（JSON）を選ぶと確認と
@@ -181,7 +181,8 @@ async function firstRun(b) {
   // 印「all」（e2e の前準備）があれば2問を出さず、今までの初期データ＋すべて入で始める
   const a = await newPage(b, { human: true, start: 'all' });
   await a.page.goto(`${BASE}#/home`);
-  await a.page.getByTestId('home-tasks').waitFor({ timeout: 30000 });
+  await a.page.getByTestId('sched-nav').waitFor({ timeout: 30000 });
+  check(/^#\/month/.test(hashOf(a.page)), '印「all」：#/home は予定（月）へ移る', hashOf(a.page));
   const ad = await stored2(a.page);
   check(
     (await a.page.getByTestId('first-run').count()) === 0 &&
@@ -325,7 +326,6 @@ async function firstRunOwn(b) {
     ['/month', '月の予定'],
     ['/week', '週の予定'],
     [`/plan?date=${TODAY}`, '日の予定'],
-    ['/home', 'ホーム'],
     ['/clients', '利用者さんの一覧'],
     ['/staff', 'スタッフの一覧'],
     ['/settings', '管理者設定'],
@@ -463,7 +463,7 @@ async function openTourFromData(page) {
 
 async function tourDialog(b) {
   const { ctx, page } = await newPage(b, { human: false });
-  await open(page, '/', '[data-testid="home-tasks"]');
+  await open(page, '/', '[data-testid="sched-nav"]');
   await settle(page, 500);
   check((await tour(page).count()) === 0, 'ツアーは自動で出ない（初回の2問に置き換えた）');
   await openTourFromData(page);
@@ -475,11 +475,11 @@ async function tourDialog(b) {
     body: document.getElementById(el.getAttribute('aria-describedby'))?.textContent,
   }));
   check(
-    attrs.role === 'dialog' && attrs.modal === 'true' && /今日やること/.test(attrs.title) && attrs.body.length > 10,
+    attrs.role === 'dialog' && attrs.modal === 'true' && /予定を組んで/.test(attrs.title) && attrs.body.length > 10,
     'ツアー：開くと出る（role=dialog・aria-modal・見出し・本文）',
     attrs,
   );
-  check((await page.getByTestId('tour-count').innerText()).includes('1 / 3'), 'ツアー：1 / 3');
+  check((await page.getByTestId('tour-count').innerText()).includes('1 / 2'), 'ツアー：1 / 2');
   check(
     (await page.getByTestId('tour-start').count()) === 0,
     'ツアー：「どこまで使いますか」は無い（最初の2問に置き換えた）',
@@ -515,28 +515,30 @@ async function tourDialog(b) {
   check((await page.getByTestId('cmdk-wrap').count()) === 0, 'ツアー：開いている間は Ctrl+K で探す画面を開かない');
   // 次へ → 戻る
   await page.getByTestId('tour-next').click();
-  check((await page.getByTestId('tour-count').innerText()).includes('2 / 3'), 'ツアー：次へで 2 / 3');
-  check((await tour(page).getAttribute('data-step')) === 'plan', 'ツアー：2枚目は予定（月・週・日）');
+  check((await page.getByTestId('tour-count').innerText()).includes('2 / 2'), 'ツアー：次へで 2 / 2');
+  check((await tour(page).getAttribute('data-step')) === 'absence', 'ツアー：2枚目は欠勤・キャンセル');
   await page.getByTestId('tour-back').click();
-  check((await page.getByTestId('tour-count').innerText()).includes('1 / 3'), 'ツアー：戻るで 1 / 3');
+  check((await page.getByTestId('tour-count').innerText()).includes('1 / 2'), 'ツアー：戻るで 1 / 2');
+  check((await tour(page).getAttribute('data-step')) === 'plan', 'ツアー：1枚目は予定（ホームの枚は無い）');
   check(
     (await activeTestId(page)) === 'tour-next',
     'ツアー：最初の枚へ戻って「戻る」が押せなくなるとフォーカスは「次へ」',
   );
   const keys = [];
-  for (let i = 0; i < 2; i++) {
+  for (let i = 0; i < 1; i++) {
     keys.push(await tour(page).getAttribute('data-step'));
-    if (i === 1) {
+    if (i === 0) {
       // 予定の枚：3段の説明（PRD D226。組むのは「予定を組む」。ADR-0063）と［月｜週｜日］の切り替え
       const points = await page.getByTestId('tour-points').locator('li').allInnerTexts();
       check(
         (await page.getByTestId('tour-title').innerText()) === '予定を組んで、直して、確定します' &&
           (await page.getByTestId('tour-body').innerText()).includes('［月｜週｜日］') &&
-          // 印「all」（すべて入。エキスパート機能も入）なので、組むのはメニューの「予定を組む」（ADR-0072）
-          (await page.getByTestId('tour-body').innerText()).includes('「予定を組む」') &&
+          // 印「all」（すべて入。エキスパート機能も入）なので、組むのはメニューの「組む」で、帯の種類も案内する（ADR-0072・ADR-0074）
+          (await page.getByTestId('tour-body').innerText()).includes('「組む」で組みます') &&
+          (await page.getByTestId('tour-body').innerText()).includes('赤い帯') &&
           points.length === 3 &&
           /^組む（AI）：/.test(points[0]) &&
-          points[0].includes('メニューの「予定を組む」') &&
+          points[0].includes('メニューの「組む」の「担当を組む」') &&
           /^ピン：/.test(points[1]) &&
           /^確定（伝えた）：/.test(points[2]),
         'ツアー：予定の枚は題名「予定を組んで、直して、確定します」・［月｜週｜日］と3段（組む（AI）→ ピン → 確定（伝えた））の説明',
@@ -555,8 +557,8 @@ async function tourDialog(b) {
   }
   keys.push(await tour(page).getAttribute('data-step'));
   check(
-    JSON.stringify(keys) === JSON.stringify(['home', 'plan', 'absence']),
-    'ツアー：3枚（ホーム・予定・欠勤・キャンセル）。条件・探す（Ctrl+K）の枚は無い',
+    JSON.stringify(keys) === JSON.stringify(['plan', 'absence']),
+    'ツアー：2枚（予定・欠勤・キャンセル。ホームの枚は無い）。条件・探す（Ctrl+K）の枚は無い',
     keys,
   );
   const lastBtns = await page.locator('[data-testid="tour"] .tour-actions button').evaluateAll((els) =>
@@ -607,7 +609,7 @@ async function tourDialog(b) {
 async function tourToday(b) {
   const { ctx, page } = await newPage(b, { human: false });
   await openTourFromData(page);
-  for (let i = 0; i < 2; i++) await page.getByTestId('tour-next').click();
+  await page.getByTestId('tour-next').click();
   check(
     (await tour(page).getAttribute('data-step')) === 'absence',
     '「今日の予定を開く」：最後の枚（欠勤・キャンセル）まで進む',
@@ -642,7 +644,7 @@ async function tourToday(b) {
 async function tourMobilePrint(b) {
   const { ctx, page } = await newPage(b, { human: false, width: 390, height: 844 });
   await openTourFromData(page);
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 2; i++) {
     const box = await tour(page).boundingBox();
     const btns = await page
       .locator('[data-testid="tour"] button')
@@ -661,8 +663,8 @@ async function tourMobilePrint(b) {
       { box, sw },
     );
     if (i === 0) await page.screenshot({ path: path.join(OUT_DIR, 'tour-390.png') });
-    if (i === 2) await page.screenshot({ path: path.join(OUT_DIR, 'tour-last-390.png') });
-    if (i < 2) await page.getByTestId('tour-next').click();
+    if (i === 1) await page.screenshot({ path: path.join(OUT_DIR, 'tour-last-390.png') });
+    if (i < 1) await page.getByTestId('tour-next').click();
   }
   await page.emulateMedia({ media: 'print' });
   check(!(await visible(tour(page))), '印刷ではツアーを出さない');
@@ -1084,7 +1086,7 @@ async function dataProtect(b) {
   // 別のタブで変わったら知らせる
   const other = await ctx.newPage();
   await other.clock.setFixedTime(NOW);
-  await other.goto(`${BASE}#/home`);
+  await other.goto(`${BASE}#/data`);
   await other.locator('h1').waitFor();
   await other.evaluate((k) => {
     const d = JSON.parse(localStorage.getItem(k));
@@ -1146,7 +1148,7 @@ async function brokenData(b) {
 async function backupRemind(b) {
   // 確定した日があり、2週間以上書き出していなければ起動時に1回トースト（1日1回）
   const { ctx, page } = await newPage(b, { human: false });
-  await open(page, '/home', 'h1');
+  await open(page, '/data', 'h1');
   // 今日の訪問（保存した訪問は空なので、計算した繰り返しの回）
   const first = visitsIn(
     await page.evaluate((k) => JSON.parse(localStorage.getItem(k)), STORAGE_KEY),

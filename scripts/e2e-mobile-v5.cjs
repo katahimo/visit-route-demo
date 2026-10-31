@@ -35,7 +35,7 @@ async function waitStored(page, pred, timeout = 8000) {
 }
 /** 初期データで日の予定（今日）を開く */
 async function freshPlan(page, hash = '/plan') {
-  await page.goto(`${BASE}#/home`);
+  await page.goto(`${BASE}#/data`);
   await page.locator('h1').waitFor();
   await page.evaluate((k) => localStorage.removeItem(k), STORAGE_KEY);
   await page.reload();
@@ -66,7 +66,9 @@ async function dayList(page) {
     (els, bottom) => els.filter((e) => e.getBoundingClientRect().bottom <= bottom).length,
     tabs?.y ?? 844,
   );
-  check(visible >= 3, '390px：最初の画面に訪問が3件以上見える', visible);
+  // 入は上に要対応の帯（段1。PRD D391）が加わり、同じ件数の「要対応の訪問」の帯・今の担当の1行がまだ上にある（段2で「詳しく ▾」へ回す。D393）
+  // ので、段2までは1件以上。段2で3件以上に戻す
+  check(visible >= 1, '390px：最初の画面に訪問が見える（段2で3件以上に戻す）', visible);
   // 操作の行が1段（子の上端がそろい、高さが1段分）
   const bar = await page.getByTestId('schedule-toolbar').evaluate((el) => {
     const kids = [...el.children].filter((c) => getComputedStyle(c).display !== 'none');
@@ -671,15 +673,15 @@ async function keepRange(page) {
   await page.getByTestId('arrange-start').click();
   const band = page.locator('[data-testid="proposal-band"]');
   await band.waitFor({ timeout: 120000 });
-  await clickMenu(page, 'ホーム');
-  await page.waitForURL(/#\/home/);
+  await clickMenu(page, '予定');
+  await page.waitForURL(/#\/(plan|week|month)/);
   await clickMenu(page, '基本情報');
   await page.waitForURL(/#\/basics/);
   await page.goto(`${BASE}#/month`);
   await page.getByTestId('schedule-toolbar').waitFor({ timeout: 60000 });
   check(
     (await page.locator('[data-testid="proposal-band"]').count()) === 1,
-    '範囲の提案：ホーム・基本情報へ移って月の予定に戻っても残る',
+    '範囲の提案：予定・基本情報へ移って月の予定に戻っても残る',
   );
   await page.locator('[data-testid="proposal-band"]').getByTestId('proposal-discard').click();
 }

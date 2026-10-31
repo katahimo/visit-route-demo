@@ -418,7 +418,7 @@ async function patterns(page, dlg) {
   // 入力があるまま離れようとすると確かめる（断れば留まる）
   dlg.answer = false;
   dlg.messages.length = 0;
-  await clickMenu(page, 'ホーム');
+  await clickMenu(page, '予定');
   await settle(page);
   check(
     dlg.messages.length === 1 && hashOf(page).startsWith('#/clients/c1') && (await form.count()) === 1,

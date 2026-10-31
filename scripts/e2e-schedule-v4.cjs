@@ -46,7 +46,7 @@ async function openView(page, hash) {
 }
 // ---- メニュー（子の項目）・基本情報のタブ・パレット ----
 async function menu(page) {
-  await page.goto(`${BASE}#/home`);
+  await page.goto(`${BASE}#/data`);
   await page.locator('h1').waitFor();
   await settle(page, 300);
   // 最上位5項目の並びと名前・グループの見出しが無いことは e2e-nav の menu が確かめる
@@ -57,10 +57,10 @@ async function menu(page) {
   check(
     JSON.stringify(kids) ===
       JSON.stringify({
-        schedule: ['today', 'month-view', 'absence'],
-        arrange: ['arrange:basics', 'arrange:clients', 'arrange:staff', 'arrange:standard', 'arrange:assign'],
+        schedule: [],
+        arrange: ['arrange:basics', 'arrange:standard', 'arrange:assign'],
       }) && (await page.locator('.side-nav [data-key="people"]').count()) === 0,
-    '予定の子は今日の予定・◯月の予定・欠勤・キャンセル、予定を組むの子は基本情報・組み方の標準・担当を組む（ADR-0067）。メニューに「人」は無い',
+    '予定に子は無く、組むの子は基本情報・組み方の標準・担当を組む（ADR-0067・ADR-0074）。メニューに「人」は無い',
     kids,
   );
   await shot(page, 'menu-1400');
@@ -86,16 +86,16 @@ async function menu(page) {
   check(
     JSON.stringify(await current(page)) === JSON.stringify(['arrange:basics']) &&
       (await parentHasCurrent(page, 'arrange')),
-    '予定と相性ではメニューの予定を組むの子「基本情報」が今の画面（親の「予定を組む」は has-current）',
+    '予定と相性ではメニューの組むの子「基本情報」が今の画面（親の「組む」は has-current）',
     await current(page),
   );
   await tabs.locator('[data-tab="clients"]').click();
   await page.waitForURL(/#\/clients$/);
   // URL が変わってからメニューの印が描き直るまで待つ（基本情報 → 利用者さん一覧に印が移る）
-  await until(async () => JSON.stringify(await current(page)) === '["arrange:clients"]', 5000, 100).catch(() => {});
+  await until(async () => JSON.stringify(await current(page)) === '["clients"]', 5000, 100).catch(() => {});
   check(
-    JSON.stringify(await current(page)) === JSON.stringify(['arrange:clients']),
-    '〈利用者さん〉一覧はメニューの子「利用者さん一覧」が今の画面（ADR-0067 追記）',
+    JSON.stringify(await current(page)) === JSON.stringify(['clients']),
+    '〈利用者さん〉一覧はメニューの上の段の項目「利用者さん」が今の画面（PRD D390）',
     await current(page),
   );
   check(
@@ -120,13 +120,13 @@ async function menu(page) {
   check(
     JSON.stringify(await current(page)) === JSON.stringify(['arrange:basics']) &&
       (await parentHasCurrent(page, 'arrange')),
-    '勤務の見込みでもメニューの子「基本情報」が今の画面（親の「予定を組む」は has-current）',
+    '勤務の見込みでもメニューの子「基本情報」が今の画面（親の「組む」は has-current）',
     await current(page),
   );
   await page.goto(`${BASE}#/compat`);
   await page.getByTestId('people-tabs').waitFor();
-  await clickMenu(page, 'ホーム');
-  await page.waitForURL(/#\/home/);
+  await clickMenu(page, '予定');
+  await page.waitForURL(/#\/plan/);
   const basicsHref = await page.locator('.side-nav [data-key="arrange:basics"]').getAttribute('href');
   check(/#\/basics$/.test(basicsHref ?? ''), 'メニューの「基本情報」は予定と相性（#/basics）を開く', basicsHref);
   // パレット：案を比べるは出ない（担当を組むの画面から開く）
@@ -161,11 +161,8 @@ async function zoom(page) {
       `${zoomName}：欠勤・キャンセルを登録 → 元に戻す の並び（AI で組む ▾ は無い）`,
       order,
     );
-    // その他 ▾ は項目の多い月だけ（日・週は項目が少ないのでたたまない。PRD D344）
-    check(
-      (await bar.locator('[data-testid$="-more"]').count()) === (zoomName === 'month' ? 1 : 0),
-      `${zoomName}：その他 ▾ は${zoomName === 'month' ? 'ある' : '無い'}`,
-    );
+    // その他 ▾ は空き状況を入れるので日・週・月のどれにもある（PRD D344・D390）
+    check((await bar.locator('[data-testid$="-more"]').count()) === 1, `${zoomName}：その他 ▾ がある（空き状況）`);
     check(
       (await page.getByTestId('progress-band').count()) === (zoomName === 'month' ? 1 : 0),
       `${zoomName}：進み具合の帯は月だけ`,
@@ -192,7 +189,7 @@ async function zoom(page) {
 // ---- 範囲の提案（週）と全体の元に戻す ----
 async function scope(page) {
   // 今日以降の担当を外す（繰り返しの担当も）：「この週」の提案で担当が変わる訪問を出す
-  await page.goto(`${BASE}#/home`);
+  await page.goto(`${BASE}#/data`);
   await page.locator('h1').waitFor();
   await page.evaluate(
     ([k, today]) => {
@@ -291,7 +288,7 @@ async function scope(page) {
 
 /** 初期データに戻す（次の段のため） */
 async function resetData(page) {
-  await page.goto(`${BASE}#/home`);
+  await page.goto(`${BASE}#/data`);
   await page.locator('h1').waitFor();
   await page.evaluate((k) => localStorage.removeItem(k), STORAGE_KEY);
   await page.reload();
@@ -450,7 +447,7 @@ async function tidyUndo(page) {
 // ---- 390px：メニューの引き出し・操作の行・複数選択の帯 ----
 async function narrow(page) {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto(`${BASE}#/home`);
+  await page.goto(`${BASE}#/data`);
   await page.locator('h1').waitFor();
   await page.getByTestId('menu-btn').click();
   const drawer = page.locator('[role="dialog"][aria-modal="true"]');
@@ -507,7 +504,7 @@ const steps = sharedPage({
       native.push(`${d.type()}: ${d.message()}`);
       d.dismiss();
     });
-    await s.page.goto(`${BASE}#/home`);
+    await s.page.goto(`${BASE}#/data`);
     await s.page.evaluate((k) => localStorage.removeItem(k), STORAGE_KEY);
     await s.page.reload();
     return { ...s, native };

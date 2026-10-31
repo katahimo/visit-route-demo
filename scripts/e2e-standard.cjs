@@ -54,7 +54,7 @@ const steps = sharedPage({
       'open-and-tabs',
       async (page) => {
         // 初期データ（標準を登録していない）
-        await page.goto(`${BASE}#/home`);
+        await page.goto(`${BASE}#/data`);
         await page.evaluate((k) => localStorage.removeItem(k), STORAGE_KEY);
         await page.goto(`${BASE}#/standard`);
         await page.reload();
@@ -338,7 +338,7 @@ const steps = sharedPage({
       'keep-across-pages',
       async (page) => {
         const before = await diffCount(page);
-        await page.goto(`${BASE}#/home`);
+        await page.goto(`${BASE}#/data`);
         await page.locator('h1').first().waitFor();
         await settle(page, 300);
         await page.goto(`${BASE}#/standard`);

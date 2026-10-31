@@ -1,6 +1,6 @@
 // 機能の入り切り（PRD D210〜D213・D216。ADR-0028。design.md §4 features）の表と、入り切りの判定・ひな形を決める純粋関数。
 // 機能の名前・説明・グループ・依存・その機能の URL・切ると隠れるもの・ひな形の入り切りはここの1か所。
-// メニュー（lib/nav）・ルート（app/App）・パレット（lib/commandPalette）・ホーム（lib/home）・ツアー（lib/tour）・
+// メニュー（lib/nav）・ルート（app/App）・パレット（lib/commandPalette）・ツアー（lib/tour）・
 // 行き先（lib/links）はここから引く。データは書き換えない（入り切りを書くのは画面の update(fn)）
 import type { DemoData } from '../contracts/data';
 import type { Pattern, Terms } from '../contracts/documents';
@@ -32,7 +32,7 @@ export type FeatureDef = {
 };
 
 /**
- * 機能の表（22。ADR-0028 の「機能の一覧」）。土台（ホーム・月の予定・週の予定・日の予定・〈利用者さん〉一覧・〈スタッフ〉一覧・
+ * 機能の表（22。ADR-0028 の「機能の一覧」）。土台（月の予定・週の予定・日の予定・〈利用者さん〉一覧・〈スタッフ〉一覧・
  * 勤務時間（シフト）・訪問の種類・データ・管理者設定）は表に入れず、切れない
  */
 export const FEATURES: readonly FeatureDef[] = [
@@ -81,11 +81,11 @@ export const FEATURES: readonly FeatureDef[] = [
     id: 'expert',
     label: 'エキスパート機能（組み方の標準・案を比べる・条件の重み）',
     description:
-      '予定を組む（4段・担当を組む）・組み方の標準・案を比べる・条件の重みの入口を出します。切ると、入れた人・希望日時から組むふだんの道だけになります',
+      '「組む」（4段・担当を組む）・組み方の標準・案を比べる・条件の重みの入口を出します。切ると、入れた人・希望日時から組むふだんの道だけになります',
     group: 'AI の条件',
     paths: ['/standard'],
     hides:
-      'メニューの「予定を組む」・組み方の標準・案を比べる・条件の重みの入口（切るとメニューは 予定・〈利用者さん〉・〈スタッフ〉・設定 の4つになりホームは無くなる。担当を組むは基準のプリセットで組む）',
+      'メニューの「組む」・組み方の標準・案を比べる・条件の重みの入口（切るとメニューは 予定・〈利用者さん〉・〈スタッフ〉・設定 の4つになり、予定の上の帯の未確定・組み直し・標準が無いも出ない。担当を組むは基準のプリセットで組む）',
   },
   {
     id: 'compare',
@@ -283,7 +283,7 @@ export function isHrefOn(features: Features, href: string): boolean {
   return id === null || isOn(features, id);
 }
 
-/** 切った機能の URL からホームへ移したときに、ルートの state に載せるもの（ホームの上の知らせ。PRD D213） */
+/** 切った機能の URL から起動する画面（予定）へ移したときに、ルートの state に載せるもの（その画面の上の知らせ。PRD D213） */
 export type FeatureOffState = { featureOff: FeatureId };
 
 /** ルートの state が FeatureOffState か（知らない値・古い履歴の state は違う） */

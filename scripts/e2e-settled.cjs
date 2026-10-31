@@ -31,7 +31,7 @@ const sheet = (page) => page.getByTestId('contact-sheet');
 
 /** 初期データに戻して開く（初めて開いたときの入り切りは「基本」＝エキスパート機能は切） */
 async function fresh(page, hash, ready) {
-  await page.goto(`${BASE}#/home`);
+  await page.goto(`${BASE}#/data`);
   await page.evaluate((k) => localStorage.removeItem(k), STORAGE_KEY);
   await page.goto(`${BASE}#${hash}`);
   await page.reload();

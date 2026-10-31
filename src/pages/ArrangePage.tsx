@@ -19,6 +19,7 @@ import { useValueStore } from '../components/valueStore';
 import { jstDate } from '../domain/time';
 import { needsStandard, rangeCounts, scopeOf } from '../lib/arrange';
 import { mdText, monthLabel } from '../lib/dateText';
+import { arrangeWords } from '../lib/exceptionView';
 import { type BatchMode, batchTargets } from '../lib/month';
 import { type BatchSource, monthBatch, weekLabel } from '../lib/monthBatch';
 import { hasStandard } from '../lib/standard';
@@ -99,7 +100,7 @@ export default function ArrangePage() {
         nav={<ArrangeSteps current="arrange" />}
         icon={Sparkles}
         title="担当を組む"
-        lead="範囲を選んで AI で担当を組み、提案を見て反映します。予定（月・週・日）では手で直します"
+        lead={arrangeWords(!expert).lead}
         actions={
           needStandard || !expert ? undefined : (
             <Link
