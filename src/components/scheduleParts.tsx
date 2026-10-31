@@ -97,7 +97,6 @@ export function ScheduleToolbar({
           ),
           item: {
             key: 'sudden',
-            group: '操作',
             label: '欠勤・キャンセルを登録',
             icon: UserRoundX,
             disabled: absence.disabled,
@@ -119,7 +118,6 @@ export function ScheduleToolbar({
           ),
           item: {
             key: 'sudden',
-            group: '操作',
             label: '欠勤・キャンセルを登録',
             icon: UserRoundX,
             onSelect: () => navigate(absenceHref(absence.date < today ? today : absence.date)),
