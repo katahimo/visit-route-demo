@@ -55,6 +55,7 @@ const {
   applyTemplate,
   writeFeaturesInOtherTab,
 } = require('./lib/features.cjs');
+const { clickMenu, reveal } = require('./lib/ui.cjs');
 
 // ---- すべて入（初期データ）：メニューと管理者設定の画面 ----
 async function allOn(page) {
@@ -74,7 +75,7 @@ async function allOn(page) {
     await storedFeatures(page),
   );
 
-  await page.locator('.side-nav [data-key="settings"]').click();
+  await clickMenu(page, '設定');
   await page.getByTestId('settings-tabs').waitFor();
   await page.getByTestId('settings-tabs').getByRole('link', { name: '管理者設定' }).click();
   await page.waitForURL(/#\/settings/);
@@ -548,7 +549,7 @@ async function deadEnds(page, dlg, ctx) {
 
   // 日の画面：稼働の見込みを切ると拘束の上限の帯ごと出さない（その2。リンク・ボタンも無い）
   await open(page, `/plan?date=${second}`, '.date-switch select');
-  await page.getByTestId('plan-summary').waitFor({ timeout: 60000 });
+  await reveal(page, 'plan-summary', { timeout: 60000 });
   await settle(page, 500);
   check(
     (await page.getByTestId('band-over-span').count()) === 0 &&

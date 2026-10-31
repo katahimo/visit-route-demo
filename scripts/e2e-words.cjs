@@ -19,6 +19,7 @@ const { skipTour } = require('./lib/tourSeen.cjs');
 const { BASE, OUT_DIR, NOW, TODAY, STORAGE_KEY, check, settle, hashOf, runSteps } = require('./lib/env.cjs');
 const { planDays } = require('./lib/plan.cjs');
 const { sharedPage, openPage, guard } = require('./lib/steps.cjs');
+const { goTo, pressTool } = require('./lib/ui.cjs');
 
 const YM = TODAY.slice(0, 7);
 const MONTH = Number(YM.slice(5, 7));
@@ -34,12 +35,7 @@ function addDays(d, n) {
  * 画面を新しく開く（e2e-home と同じ。about:blank を挟み、同じ文書の中で hash を移したときに読み直す前の `?do=` の処理で
  * 消えるのを避ける）。wait の要素が出るまで待つ
  */
-async function open(page, hash, wait) {
-  await page.goto('about:blank');
-  await page.goto(`${BASE}#${hash}`);
-  await page.locator(wait).first().waitFor({ timeout: 60000 });
-  await settle(page, 300);
-}
+const open = (page, hash, wait) => goTo(page, hash, { ready: wait, timeout: 60000, h1: false, settleMs: 300 });
 /** 初期データに戻す（ホームはデータを書かないので、ホームで消してから読み直す） */
 async function resetData(page) {
   await open(page, '/home', 'h1');
@@ -369,8 +365,7 @@ async function legend(page) {
     (await page.getByTestId('month-load-type').count()) === 0,
     '月：表示の選択（混み具合）ははじめ「その他 ▾」にたたむ',
   );
-  await page.getByTestId('month-more').click();
-  await page.getByTestId('month-more-pickers').click();
+  await pressTool(page, 'month-more-pickers', { where: 'more' });
   await page.getByTestId('month-load-type').waitFor();
   check(
     await page.getByTestId('month-focus').evaluate((el) => document.activeElement === el),

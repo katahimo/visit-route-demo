@@ -22,6 +22,7 @@ const {
   settle,
 } = require('./lib/env.cjs');
 const { sharedPage } = require('./lib/steps.cjs');
+const { pressTool } = require('./lib/ui.cjs');
 
 const PERF_MS = perfMs('PERF_MS_DETAILS', 100);
 const pop = (page) => page.getByTestId('person-pop');
@@ -103,8 +104,7 @@ async function link(page, btn, where, to) {
 /** 月の予定の表示の選択を出す（「その他 ▾」の「表示を選ぶ」。PRD D278） */
 async function openMonthPickers(page) {
   await open(page, '/month', '[data-testid="month-more"]');
-  await page.getByTestId('month-more').click();
-  await page.getByTestId('month-more-pickers').click();
+  await pressTool(page, 'month-more-pickers', { where: 'more' });
   await page.getByTestId('month-focus').waitFor();
 }
 

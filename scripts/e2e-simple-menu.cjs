@@ -39,6 +39,7 @@ const {
 const { sharedPage } = require('./lib/steps.cjs');
 const { skipTour } = require('./lib/tourSeen.cjs');
 const { answerIfAsked } = require('./lib/firstRun.cjs');
+const { pressTool } = require('./lib/ui.cjs');
 
 const data = (page) => page.evaluate((k) => JSON.parse(localStorage.getItem(k)), STORAGE_KEY);
 const hash = (page) => new URL(page.url()).hash;
@@ -436,8 +437,7 @@ async function exceptions(page) {
       const band = (await page.locator('.tl-band-btn').first().innerText()).trim().split('\n');
       check(band.length <= 2, '日：帯は時刻と名前だけ', band);
       // 順番の表示：札は時刻・名前の1行
-      await page.getByTestId('plan-more').click();
-      await page.getByTestId('plan-view-order').click();
+      await pressTool(page, 'plan-view-order', { where: 'more' });
       await settle(page, 600);
       const dir = await page
         .locator('.route-item.is-oneline .route-btn')
@@ -446,21 +446,18 @@ async function exceptions(page) {
       check(dir === 'row', '日：順番の札は時刻・名前が1行（横並び）', dir);
       check((await page.locator('.leg-btn').count()) === 0, '日：順番の表示に移動・待ちの分数を出さない');
       await shot(page, 'simple-plan-order-1366');
-      await page.getByTestId('plan-more').click();
-      await page.getByTestId('plan-view-timeline').click();
+      await pressTool(page, 'plan-view-timeline', { where: 'more' });
     }
     if (to === '/week') check(!BANNED.test(await page.getByTestId('week-details').innerText()), '週：詳しくに禁句なし');
   }
   // 日の「一覧で見る」：ピン・条件に合わないの札と禁句が出ない
   await open1(page, '/plan');
-  await page.getByTestId('plan-more').click();
-  await page.getByTestId('plan-view-list').click();
+  await pressTool(page, 'plan-view-list', { where: 'more' });
   await settle(page, 600);
   check((await page.locator('.chip-pin, .chip-red').count()) === 0, '日（一覧）：ピン・条件に合わないの札を出さない');
   const listBody = await page.locator('main, .content').first().innerText();
   check(!BANNED.test(listBody), '日（一覧）：禁句が出ない', listBody.match(BANNED)?.[0]);
-  await page.getByTestId('plan-more').click();
-  await page.getByTestId('plan-view-timeline').click();
+  await pressTool(page, 'plan-view-timeline', { where: 'more' });
   // 訪問の札の詳細の「理由」は「詳しく」の中
   await page.locator('.tl-band-btn').first().click();
   await settle(page, 300);

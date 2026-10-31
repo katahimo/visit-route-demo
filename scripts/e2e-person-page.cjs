@@ -30,6 +30,7 @@ const {
   withTimeout,
 } = require('./lib/env.cjs');
 const { pagePerStep } = require('./lib/steps.cjs');
+const { clickMenu, goTo } = require('./lib/ui.cjs');
 
 const shot = (page, name) => page.screenshot({ path: path.join(OUT_DIR, `${name}.png`) });
 const panel = (page) => page.getByTestId('visit-panel');
@@ -57,12 +58,8 @@ const weekStart = (d) => addDays(d, -((new Date(`${d}T00:00:00Z`).getUTCDay() + 
 const PX = 0.8;
 const DAY_START = 7 * 60;
 
-async function open(page, hash, ready) {
-  await page.goto('about:blank');
-  await page.goto(`${BASE}#${hash}`);
-  await page.locator(ready).first().waitFor({ timeout: 30000 });
-  await settle(page, 400);
-}
+// 画面を新しく開く（共通の手 goTo。待つ長さ・見出し・落ち着くまでの待ちはこの画面の e2e の既定）
+const open = (page, hash, ready) => goTo(page, hash, { ready: ready, timeout: 30000, h1: false, settleMs: 400 });
 
 /** c1 の、今日より後の繰り返しの回（今週の中。無ければ来週）と、そのとき開く週の基準の日 */
 async function futureSeries(page, clientId = 'c1') {
@@ -421,7 +418,7 @@ async function patterns(page, dlg) {
   // 入力があるまま離れようとすると確かめる（断れば留まる）
   dlg.answer = false;
   dlg.messages.length = 0;
-  await page.locator('.side-nav').getByRole('link', { name: 'ホーム' }).click();
+  await clickMenu(page, 'ホーム');
   await settle(page);
   check(
     dlg.messages.length === 1 && hashOf(page).startsWith('#/clients/c1') && (await form.count()) === 1,
