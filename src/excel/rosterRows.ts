@@ -116,6 +116,8 @@ export interface RosterCtx {
   cols: PersonCols;
   /** いまある ID（新しい ID と重ならないように。ほかの種類のデータの ID と同じ ID で足さない） */
   used: Set<string>;
+  /** セルが空なら今の値のままにする列（ほかのソフトの形で読むとき。ADR-0075。名簿の形は空） */
+  keepBlank: ReadonlySet<string>;
 }
 
 /** 行の ID・名前と、突き合わせた今のデータの人の ID（無ければ新しい人） */
@@ -125,9 +127,13 @@ interface Match {
   curId: string | undefined;
 }
 
-/** 列があれば読み、無ければ今の値（新しい人は既定値） */
-function pick<T>(ctx: RosterCtx, h: string, read: () => T, keep: T): T {
-  return ctx.sheet.has(h) ? read() : keep;
+/**
+ * 列があれば読み、無ければ今の値（新しい人は既定値）。ほかのソフトの形で「空なら今のまま」とした列（ctx.keepBlank）は、
+ * セルが空なら今の値のまま（アプリで入れた位置・住所などを、元のファイルの空の欄で消さない。ADR-0075）
+ */
+function pick<T>(ctx: RosterCtx, r: Row, h: string, read: () => T, keep: T): T {
+  if (!ctx.sheet.has(h)) return keep;
+  return ctx.keepBlank.has(h) && r.text(h) === '' ? keep : read();
 }
 
 /**
@@ -138,6 +144,7 @@ export function openRoster(
   book: ExcelJS.Workbook,
   base: DemoData,
   kind: RosterKind,
+  keepBlank: readonly string[] = [],
 ): { ctx: RosterCtx; rows: Row[] } | ImportError {
   const terms = base.org.terms;
   const term = kind === 'staff' ? terms.staff : terms.client;
@@ -168,7 +175,10 @@ export function openRoster(
   if (errors.any) return errors.toError();
   const rows = sheet.rows();
   if (rows.length === 0) return { code: 'INVALID_ARGUMENT', message: sheetMsg(name, `${term}の行がありません`) };
-  return { ctx: { base, kind, terms, term, sheet, errors, nameCol, cols, used: usedIds(base) }, rows };
+  return {
+    ctx: { base, kind, terms, term, sheet, errors, nameCol, cols, used: usedIds(base), keepBlank: new Set(keepBlank) },
+    rows,
+  };
 }
 
 /** 行の ID と、今のデータの人の突き合わせ（ID → 名前の順）。同じ人を2行が指せば止める */
@@ -220,6 +230,7 @@ export function readStaffRows(ctx: RosterCtx, rows: Row[], match: (r: Row) => Ma
     const cur = m.curId === undefined ? undefined : curOf.get(m.curId);
     const travelMode = pick(
       ctx,
+      r,
       C.travelMode,
       () => {
         const t = r.required(C.travelMode);
@@ -232,6 +243,7 @@ export function readStaffRows(ctx: RosterCtx, rows: Row[], match: (r: Row) => Ma
     );
     const workDays = pick(
       ctx,
+      r,
       C.workDays,
       () => {
         const v = parseWorkDays(r.text(C.workDays));
@@ -240,29 +252,31 @@ export function readStaffRows(ctx: RosterCtx, rows: Row[], match: (r: Row) => Ma
       },
       cur?.workDays ?? [1, 2, 3, 4, 5],
     );
-    const shiftStart = pick(ctx, C.shiftStart, () => r.time(C.shiftStart) ?? '09:00', cur?.shiftStart ?? '09:00');
-    const shiftEnd = pick(ctx, C.shiftEnd, () => r.time(C.shiftEnd) ?? '18:00', cur?.shiftEnd ?? '18:00');
+    const shiftStart = pick(ctx, r, C.shiftStart, () => r.time(C.shiftStart) ?? '09:00', cur?.shiftStart ?? '09:00');
+    const shiftEnd = pick(ctx, r, C.shiftEnd, () => r.time(C.shiftEnd) ?? '18:00', cur?.shiftEnd ?? '18:00');
     // 新しい人の「利用中」が空なら利用中にする（名簿だけ。全体の読み込みは空＝休止のまま）
     const active = pick(
       ctx,
+      r,
       C.active,
       () => (!cur && r.text(C.active) === '' ? true : r.yes(C.active)),
       cur?.active ?? true,
     );
     const home = {
-      address: pick(ctx, C.address, () => r.optional(C.address, 200), cur?.home.address ?? ''),
-      lat: pick(ctx, C.lat, () => r.num(C.lat, { min: -90, max: 90 }) ?? null, cur?.home.lat ?? null),
-      lng: pick(ctx, C.lng, () => r.num(C.lng, { min: -180, max: 180 }) ?? null, cur?.home.lng ?? null),
+      address: pick(ctx, r, C.address, () => r.optional(C.address, 200), cur?.home.address ?? ''),
+      lat: pick(ctx, r, C.lat, () => r.num(C.lat, { min: -90, max: 90 }) ?? null, cur?.home.lat ?? null),
+      lng: pick(ctx, r, C.lng, () => r.num(C.lng, { min: -180, max: 180 }) ?? null, cur?.home.lng ?? null),
     };
     const lastDay = pick(
       ctx,
+      r,
       STAFF_LAST_DAY_COL,
       () => (r.text(STAFF_LAST_DAY_COL) === '' ? null : r.date(STAFF_LAST_DAY_COL)),
       cur?.lastDay ?? null,
     );
-    const email = pick(ctx, STAFF_EMAIL_COL, () => readEmail(r, STAFF_EMAIL_COL) ?? '', cur?.email ?? '');
+    const email = pick(ctx, r, STAFF_EMAIL_COL, () => readEmail(r, STAFF_EMAIL_COL) ?? '', cur?.email ?? '');
     // アイコン（ADR-0050）：列が無ければ今の値のまま
-    const icon = pick(ctx, STAFF_ICON_COL, () => readStaffIcon(r, STAFF_ICON_COL) ?? '', cur?.icon ?? '');
+    const icon = pick(ctx, r, STAFF_ICON_COL, () => readStaffIcon(r, STAFF_ICON_COL) ?? '', cur?.icon ?? '');
     const p = mergePerson(r, ctx.cols, cur);
     const person: Staff = {
       ...(cur ?? {}),
@@ -332,6 +346,7 @@ export function readClientRows(ctx: RosterCtx, rows: Row[], match: (r: Row) => M
     const cur = m.curId === undefined ? undefined : curOf.get(m.curId);
     const color = pick(
       ctx,
+      r,
       C.color,
       () => {
         const v = r.num(C.color, { int: true, min: 1, max: 8, required: true });
@@ -340,25 +355,27 @@ export function readClientRows(ctx: RosterCtx, rows: Row[], match: (r: Row) => M
       cur?.color ?? (base.clients.length + added) % 8,
     );
     if (!cur) added++;
-    const active = pick(ctx, C.active, () => r.yes(C.active), cur?.active ?? true);
-    const tentative = pick(ctx, CLIENT_TENTATIVE_COL, () => r.yes(CLIENT_TENTATIVE_COL), cur?.tentative ?? false);
+    const active = pick(ctx, r, C.active, () => r.yes(C.active), cur?.active ?? true);
+    const tentative = pick(ctx, r, CLIENT_TENTATIVE_COL, () => r.yes(CLIENT_TENTATIVE_COL), cur?.tentative ?? false);
     const stage = readStage(ctx, r, cur, { active, tentative });
     const place = {
-      address: pick(ctx, C.address, () => r.optional(C.address, 200), cur?.place.address ?? ''),
-      lat: pick(ctx, C.lat, () => r.num(C.lat, { min: -90, max: 90 }) ?? null, cur?.place.lat ?? null),
-      lng: pick(ctx, C.lng, () => r.num(C.lng, { min: -180, max: 180 }) ?? null, cur?.place.lng ?? null),
-      postalCode: pick(ctx, CLIENT_POSTAL_COL, () => readPostal(r) ?? '', cur?.place.postalCode ?? ''),
+      address: pick(ctx, r, C.address, () => r.optional(C.address, 200), cur?.place.address ?? ''),
+      lat: pick(ctx, r, C.lat, () => r.num(C.lat, { min: -90, max: 90 }) ?? null, cur?.place.lat ?? null),
+      lng: pick(ctx, r, C.lng, () => r.num(C.lng, { min: -180, max: 180 }) ?? null, cur?.place.lng ?? null),
+      postalCode: pick(ctx, r, CLIENT_POSTAL_COL, () => readPostal(r) ?? '', cur?.place.postalCode ?? ''),
     };
     const allowedStaffIds = pick(
       ctx,
+      r,
       CLIENT_ALLOWED_COL,
       () => readAllowedStaff(ctx, r, cur, staffByKey),
       cur?.allowedStaffIds ?? [],
     );
     const text = (h: string, max: number, keep: string | undefined) =>
-      pick(ctx, h, () => r.optional(h, max), keep ?? '');
+      pick(ctx, r, h, () => r.optional(h, max), keep ?? '');
     const referrerEmail = pick(
       ctx,
+      r,
       CLIENT_STAGE_COLS.referrerEmail,
       () => readEmail(r, CLIENT_STAGE_COLS.referrerEmail) ?? '',
       cur?.referrer.email ?? '',

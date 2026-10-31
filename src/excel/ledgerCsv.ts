@@ -1,6 +1,16 @@
 // 顧客台帳の形（ADR-0073。PRD D386・D387）：介護ソフトの顧客台帳の CSV（利用者名・利用者カナ・住所・電話・請求・口座・利用者状態など29列）を、
 // 〈利用者さん〉の名簿の列（表示名・よみ・郵便番号・住所・メモ・段階）の表に写す。名簿のブックと同じ読み方（rosterRows）に渡すための純粋関数
 import { normalizeKana } from '../lib/search';
+import {
+  cellOf,
+  clip,
+  columnMessage,
+  columnsOf,
+  isBlankRow,
+  colKey as key,
+  type RosterTable,
+  skippedColumns,
+} from './csvColumns';
 import { CLIENT_COLS, CLIENT_KANA_COL, CLIENT_POSTAL_COL, CLIENT_STAGE_COLS } from './layout';
 
 /** 顧客台帳の列名（読む列） */
@@ -35,12 +45,6 @@ const MAX = { name: 50, kana: 50, address: 200, note: 500 } as const;
 /** 利用中の印（これ以外の状態は終了） */
 const IN_USE = '利用中';
 
-/** 顧客台帳を読んだ結果：名簿の列の表と、読まなかった列の名前 */
-export interface LedgerTable {
-  rows: string[][];
-  skipped: string[];
-}
-
 /** 名簿の列名 → 顧客台帳の列名（エラー文の『列名』を、利用者が手元で見ている台帳の列名で出す） */
 const LEDGER_NAME_OF: Record<string, string> = {
   [CLIENT_COLS.name]: LEDGER.name,
@@ -52,22 +56,7 @@ const LEDGER_NAME_OF: Record<string, string> = {
 };
 
 /** 読み込みのエラー文の『列名』を台帳の列名に直す（顧客台帳の形で読んだときだけ使う） */
-export const ledgerErrorMessage = (message: string): string =>
-  message.replace(/『([^』]+)』/g, (m, h: string) => (LEDGER_NAME_OF[h] ? `『${LEDGER_NAME_OF[h]}』` : m));
-
-/** 比べるための列名（前後の空白・BOM・全角半角を同一視） */
-const key = (s: string) => s.normalize('NFKC').replace(/^﻿/, '').trim();
-
-/** UTF-16 の長さが max に収まるように、文字（コードポイント）の途中で切らずに前から切る */
-export function clip(s: string, max: number): string {
-  if (s.length <= max) return s;
-  let out = '';
-  for (const ch of s) {
-    if (out.length + ch.length > max) break;
-    out += ch;
-  }
-  return out;
-}
+export const ledgerErrorMessage = columnMessage(LEDGER_NAME_OF);
 
 /** 1行目の列名が顧客台帳の形か */
 export function isLedgerHeader(header: readonly string[]): boolean {
@@ -90,20 +79,12 @@ export function phoneLine(phone: string, mobile: string): string {
  * - 状態：利用中＝利用中、ほか（空を含む）＝終了
  * - 名前・よみ・住所・備考は上限に収める。請求・口座・生年月日・性別・続柄・顧客番号など、読まない列は skipped に名前を挙げる（データに残さない）
  */
-export function ledgerToRoster(table: readonly (readonly string[])[]): LedgerTable | null {
+export function ledgerToRoster(table: readonly (readonly string[])[]): RosterTable | null {
   const header = table[0];
   if (!header || !isLedgerHeader(header)) return null;
-  const at = new Map<string, number>();
-  header.forEach((h, i) => {
-    if (!at.has(key(h))) at.set(key(h), i);
-  });
-  const read = new Set<string>(Object.values(LEDGER));
+  const at = columnsOf(header);
   const body = table.slice(1);
-  const skipped = header
-    .map((raw, i) => ({ h: key(raw), i }))
-    // 列名が空でも値がある列は「（列名なし・N列目）」として挙げる
-    .filter(({ h, i }) => (h === '' ? body.some((r) => (r[i] ?? '').trim() !== '') : !(read.has(h) && at.get(h) === i)))
-    .map(({ h, i }) => (h === '' ? `（列名なし・${i + 1}列目）` : h));
+  const skipped = skippedColumns(header, body, Object.values(LEDGER));
   const out: string[][] = [
     [
       CLIENT_COLS.name,
@@ -116,14 +97,11 @@ export function ledgerToRoster(table: readonly (readonly string[])[]): LedgerTab
   ];
   for (const r of body) {
     // 空行は空のまま残す（名簿の読み込みが飛ばす。エラーの行番号を元のファイルと合わせる）
-    if (r.every((c) => c.trim() === '')) {
+    if (isBlankRow(r)) {
       out.push(['', '', '', '', '', '']);
       continue;
     }
-    const v = (h: string) => {
-      const i = at.get(h);
-      return i === undefined ? '' : (r[i] ?? '').trim();
-    };
+    const v = cellOf(at, r);
     const address = [LEDGER.prefecture, LEDGER.city, LEDGER.town, LEDGER.building].map(v).join('');
     const note = [phoneLine(v(LEDGER.phone), v(LEDGER.mobile)), v(LEDGER.note)].filter((x) => x !== '').join('\n');
     out.push([

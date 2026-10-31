@@ -47,7 +47,10 @@ RosterKind = 'client' | 'staff'; RosterMode = 'merge' /* 既定 */ | 'replace' /
 RosterImportResult = { data /* migrate 済み */, added /* 行の順。「名前（終了）」など */, updated, unchanged: number,
   retired, allowedRemoved /* 休止で担当できる人から外れる〈利用者さん〉 */, allowedEmptied /* 限らないに戻る */,
   lastDaySet, activeBefore /* 外せる人の数 */, source /* ADR-0068 */,
-  ledger /* 顧客台帳の形で読んだときだけ { skippedColumns: string[] }。ほかは null（ADR-0073） */ }
+  otherForm /* ほかのソフトの形で読んだときだけ OtherFormRead。名簿の形・.xlsx は null（ADR-0073・ADR-0075） */ }
+OtherFormRead = { label /* 形の名前。例「顧客台帳」「予約システムの顧客」 */, skippedColumns: string[] /* 読まなかった列 */ }
+BookingImportResult = { data /* migrate 済み */, added, updated, unchanged, cancelledSkipped /* まだ入れていない取り消し済みの予約 */: number,
+  unmatched /* 入れなかった予約「名前（N件）」 */, badRows /* 「N行目：理由」 */, source, otherForm: OtherFormRead /* ADR-0075 */ }
 ```
 
 - その日の割当は訪問から決まる（`lib/dayPlan` の `dayRoutes`：計算に入れる訪問を担当ごとに組んだ開始の順。担当なしは `unassignedOf`）。AI の提案・ドラッグ・担当の変更・振り直し・月や週の AI で組むは `writeRoutes` で担当と開始を訪問に書く
