@@ -8,6 +8,7 @@
 const path = require('node:path');
 const { BASE, OUT_DIR, check, runSteps, settle } = require('./lib/env.cjs');
 const { sharedPage } = require('./lib/steps.cjs');
+const { pressTool } = require('./lib/ui.cjs');
 
 const GAS_URL = 'https://script.google.com/macros/s/AKfyFAKE_e2e/exec';
 const TOKEN = 'e2e-token';
@@ -42,8 +43,8 @@ const toastHas = (page, text) => page.locator('.toast', { hasText: text });
 
 async function openDayMail(page) {
   await page.goto(`${BASE}#/plan`);
-  await page.getByTestId('day-mail').waitFor({ timeout: 30000 });
-  await page.getByTestId('day-mail').click();
+  await page.getByTestId('plan-more').waitFor({ timeout: 30000 });
+  await pressTool(page, 'day-mail', { where: 'more' });
   await page.getByTestId('day-mail-panel').waitFor();
   await settle(page, 200);
 }

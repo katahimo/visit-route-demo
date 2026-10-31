@@ -7,22 +7,12 @@ import { PageHeader } from '../components/ui';
 import { useExceptionsOnly } from '../components/useFeature';
 import { useIntro } from '../components/useIntro';
 import { KeyMoveBand } from '../components/visitKeys';
-import { detailItems, isFolded } from '../lib/exceptionView';
 import { toldHref } from '../lib/links';
 import './plan.css';
 import './schedule.css';
 import { PlanBands } from './planBands';
 import { PlanHelp } from './planHeader';
-import {
-  NotInProblemCard,
-  PlanDayLines,
-  PlanDetails,
-  PlanDocks,
-  PlanMain,
-  PlanNavRow,
-  PlanOneLineBlock,
-  PlanPanels,
-} from './planLayout';
+import { NotInProblemCard, PlanDetails, PlanDocks, PlanMain, PlanNavRow, PlanPanels } from './planLayout';
 import { PlanToolbar } from './planToolbar';
 import { usePlanPage } from './usePlanPage';
 
@@ -39,9 +29,8 @@ export default function PlanPage() {
   const { date, d, v, f, nav, flow, confirm } = p;
   const { hasPlan, terms } = d;
   const navigate = useNavigate();
-  /** エキスパート機能が切のときは例外だけ見せる（PRD D384）：今の担当の1行・担当ごとの1日は「詳しく」へ、要対応の件数の内訳の帯は出さない（上の帯が知らせる） */
+  /** 今の担当の1行・担当ごとの1日は入切とも「詳しく」へ。要対応の訪問の件数の帯は、切は出さず（上の帯が知らせる）入は「詳しく」の中（PRD D384・D393） */
   const only = useExceptionsOnly();
-  const folded = detailItems('day', only);
   const lead = useIntro(
     'day',
     f.confirmStep
@@ -64,10 +53,9 @@ export default function PlanPage() {
           </div>
         )}
 
-        {!isFolded(folded, 'oneLine') && <PlanOneLineBlock p={p} />}
         <PlanToolbar p={p} />
-        {/* 切は「詳しく」へ畳む（今の担当の1行・担当ごとの1日。PRD D384） */}
-        {only && <PlanDetails p={p} />}
+        {/* 「詳しく」へ畳む（今の担当の1行・担当ごとの1日・入は要対応の訪問の帯。PRD D384・D393） */}
+        <PlanDetails p={p} />
         {/* 使い方は操作の行のすぐ下に開く */}
         {v.helpOpen && (
           <PlanHelp
@@ -78,13 +66,10 @@ export default function PlanPage() {
             onClose={() => v.setHelpOpen(false)}
           />
         )}
-        {/* 担当ごとの1日（PRD D84）。訪問のある日だけ。狭い幅では畳む */}
-        {!isFolded(folded, 'dayLines') && <PlanDayLines p={p} />}
 
         {/* あるときだけの帯（PRD D63）。ドラッグ中には増減しない（移したあとに変わる） */}
         <PlanBands
           errors={{ problem: d.problemError, run: flow.error, score: (hasPlan && d.curScore?.error) || null }}
-          care={{ count: hasPlan && !only ? d.careCount : 0, parts: d.careParts, unassigned: d.unassigned.length }}
           toldCount={d.toldState === 'changed' ? d.toldCount : null}
           reassign={hasPlan && flow.info ? { unplaced: flow.diff?.unplaced.length ?? 0, left: flow.left.length } : null}
           leave={{ count: d.m.leaveVisits.length, names: d.leaveNames }}
@@ -95,7 +80,6 @@ export default function PlanPage() {
           date={date}
           staffName={d.staffName}
           on={{
-            goNone: nav.goToNone,
             openTold: () => confirm.setToldOpen(true),
             goBar: flow.goToBar,
             showList: () => v.setView('list'),

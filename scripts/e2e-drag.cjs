@@ -24,6 +24,7 @@ const {
   runSteps,
   settle,
 } = require('./lib/env.cjs');
+const { pressTool } = require('./lib/ui.cjs');
 const { sharedPage } = require('./lib/steps.cjs');
 
 /** 動かし先が見つからないときは、null のまま進まず分かる言葉で止める */
@@ -207,7 +208,7 @@ async function weekClients(page) {
 async function planMove(page, view, name) {
   await page.locator('.tl-band[draggable="true"], .route-col [draggable="true"]').first().waitFor({ timeout: 30000 });
   if (view === 'order') {
-    await page.getByRole('button', { name: '順番', exact: true }).click();
+    await pressTool(page, 'plan-view-order', { where: 'more' });
     await settle(page, 500);
   }
   const srcSel =

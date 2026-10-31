@@ -1,5 +1,5 @@
 // 日の予定の上の段（PRD D63・D345・D346）：上のナビの行の確定の印とボタン、「今の担当」の1行のまとめ、使い方
-import { ChevronRight, CircleCheck, Mail, TriangleAlert } from 'lucide-react';
+import { ChevronRight, CircleCheck, TriangleAlert } from 'lucide-react';
 import type { RefObject } from 'react';
 import { type IssueRow, PlanIssueCount } from '../components/PlanIssueCount';
 import { Term } from '../components/Term';
@@ -11,32 +11,24 @@ import type { ScoreReason } from '../lib/scoreReason';
 import { CHANGED_WORD, headerToldChip } from '../lib/settledView';
 import { HARD_NOTE, NextUnconfirmed, ScoreNextStep, ScoreReasonText } from './planParts';
 
-/** 上のナビの行の右：伝えた状態の印・予定をメールで送る・確定（伝えた） */
+/** 上のナビの行の右：伝えた状態の印（確定のボタンは操作の行。AdoptButton） */
 export function PlanConfirmActions({
   toldState,
   toldCount,
   date,
-  mailOn,
   confirmStep,
-  running,
   onPickDate,
   onOpenTold,
-  onMail,
-  onAdopt,
 }: {
   toldState: ToldState;
   /** 未連絡の変更の件数 */
   toldCount: number;
   date: string;
-  mailOn: boolean;
-  /** 確定（伝えた）の段階を出すか（expert 入）。切なら確定のボタン・「確定済み」「まだ伝えていない」の印・次の確定していない日へは出さず、「変更あり」だけ（ADR-0073） */
+  /** 確定（伝えた）の段階を出すか（expert 入）。切なら「確定済み」「まだ伝えていない」の印・次の確定していない日へは出さず、「変更あり」だけ（ADR-0073） */
   confirmStep: boolean;
-  running: boolean;
   /** 次の確定していない日へ（PRD D224） */
   onPickDate: (date: string) => void;
   onOpenTold: () => void;
-  onMail: () => void;
-  onAdopt: () => void;
 }) {
   const chip = headerToldChip(toldState, confirmStep);
   return (
@@ -67,28 +59,34 @@ export function PlanConfirmActions({
           <Term k="unconfirmed">まだ伝えていない</Term>
         </span>
       ) : null}
-      {/* 担当ごとの予定をメールアプリで開く（PRD D92・D306。ADR-0017）。毎日送るので見出しの主ボタンの隣に枠のボタンで置く */}
-      {mailOn && (
-        <button type="button" className="btn" onClick={onMail} data-testid="day-mail">
-          <WithIcon icon={Mail}>
-            <span className="m-sr">予定をメールで送る</span>
-          </WithIcon>
-        </button>
-      )}
-      {/* 主ボタン（塗り）は「確定」だけ。確定済みの日は枠にして主ボタンを置かない（PRD D238）。expert 切は出さない（自動で決まる） */}
-      {confirmStep && (
-        <button
-          type="button"
-          className={toldState === 'told' ? 'btn' : 'btn btn-primary'}
-          disabled={!!running || toldState === 'told'}
-          onClick={onAdopt}
-          data-testid="adopt"
-          title="今の担当と時刻を〈スタッフ〉に伝えたら押します"
-        >
-          <WithIcon icon={CircleCheck}>{toldState === 'changed' ? '確定し直す（伝えた）' : '確定（伝えた）'}</WithIcon>
-        </button>
-      )}
     </>
+  );
+}
+
+/**
+ * 主ボタン（塗り）の「確定（伝えた）」（PRD D238・D402）。操作の行の2つ目（入）。確定済みの日は枠にして主ボタンを置かない。
+ * expert 切は出さない（自動で決まる）。担当ごとの予定をメールで送るのは「その他 ▾」（PRD D92・D306）
+ */
+export function AdoptButton({
+  toldState,
+  running,
+  onAdopt,
+}: {
+  toldState: ToldState;
+  running: boolean;
+  onAdopt: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={toldState === 'told' ? 'btn' : 'btn btn-primary'}
+      disabled={!!running || toldState === 'told'}
+      onClick={onAdopt}
+      data-testid="adopt"
+      title="今の担当と時刻を〈スタッフ〉に伝えたら押します"
+    >
+      <WithIcon icon={CircleCheck}>{toldState === 'changed' ? '確定し直す（伝えた）' : '確定（伝えた）'}</WithIcon>
+    </button>
   );
 }
 

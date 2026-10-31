@@ -111,13 +111,7 @@ export default function MonthPage() {
 
   return (
     <div className="stack">
-      <MonthTopBars
-        nav={nav}
-        band={month.band}
-        onBandOp={aside.onBandOp}
-        absence={on.sudden ? { date } : null}
-        moreItems={more.items}
-      />
+      <MonthTopBars nav={nav} absence={on.sudden ? { date } : null} moreItems={more.items} />
 
       <MonthDetails
         ym={ym}
@@ -135,7 +129,6 @@ export default function MonthPage() {
         off={off}
         panels={panels}
         batch={batch}
-        summary={month.summary}
         load={{ value: loadType, onChange: setLoadType }}
         requestedOn={on.requested}
         pickersShown={more.pickersShown}

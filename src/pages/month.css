@@ -1,8 +1,4 @@
 /* 月間カレンダー（#/month。ADR-0012） */
-.month-nav {
-  flex-wrap: wrap;
-  gap: 8px;
-}
 .month-title {
   margin: 0 4px;
   font-size: 1.2rem;
@@ -519,10 +515,6 @@
 .month-list-today {
   margin-bottom: 8px;
 }
-.month-layout button {
-  display: inline-flex;
-  align-items: center;
-}
 .month-list {
   list-style: none;
   margin: 0;
@@ -780,7 +772,6 @@
 }
 @media print {
   .month-legend-open,
-  .month-layout,
   .month-list-today {
     display: none;
   }

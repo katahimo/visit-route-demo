@@ -2,13 +2,13 @@ import { ClipboardList, Plus } from 'lucide-react';
 import { createContext, type ReactNode, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import type { DemoData } from '../contracts/data';
 import { jstDate } from '../domain/time';
-import { addVisitLabel } from '../lib/exceptionView';
+import { ADD_VISIT_LABEL } from '../lib/exceptionView';
 import { typeOf } from '../lib/patternText';
 import { scopeTexts, type VisitDraft, visitInfo } from '../lib/visitDraft';
 import { useDemoData } from '../store';
 import { FieldError } from './FieldError';
 import { SidePanel } from './ui';
-import { useExceptionsOnly, useFeature } from './useFeature';
+import { useFeature } from './useFeature';
 import { COMPACT_QUERY, useMedia } from './useMedia';
 import {
   useOpenDay,
@@ -119,7 +119,6 @@ function VisitPanel({
   /** スマホの下から出る欄で開いている操作（大きな4つのボタンの「担当を替える」「取り消す」。PRD D334） */
   const [act, setAct] = useState<VisitAct>(null);
   const mapsOn = useFeature('mapsLink');
-  const only = useExceptionsOnly();
   const savedRef = useRef<string | null>(null);
   const client = data.clients.find((c) => c.id === (v?.clientId ?? draft.clientId));
   const staffById = useMemo(() => new Map(data.staff.map((s) => [s.id, s])), [data.staff]);
@@ -163,7 +162,7 @@ function VisitPanel({
   return (
     <SidePanel
       icon={isNew ? Plus : ClipboardList}
-      title={isNew ? addVisitLabel(only) : '訪問の詳細'}
+      title={isNew ? ADD_VISIT_LABEL : '訪問の詳細'}
       narrow
       onClose={onClose}
       onSubmit={save}

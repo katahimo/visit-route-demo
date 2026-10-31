@@ -6,6 +6,7 @@ import { type CalItem, type CalView, calDates, clientCalItems, itemsByDate, staf
 import { canSelectVisit } from '../lib/visitSelect';
 import { canMoveVisit } from '../lib/week';
 import { useDemoData } from '../store';
+import { focusUndo } from './undo';
 import { useInsertNotice } from './useInsertNotice';
 import { COMPACT_QUERY, useMedia } from './useMedia';
 import { usePcalGhost } from './usePcalGhost';
@@ -127,8 +128,7 @@ export function usePersonCalendar({ kind, personId, view, anchor, onChange, high
     move: editable,
     onOpen: openById,
     onMoved: onKeyMoved,
-    onCancelled: () =>
-      requestAnimationFrame(() => document.querySelector<HTMLElement>('[data-testid="undo-btn"]')?.focus()),
+    onCancelled: focusUndo,
   });
   const itemProps = useVisitItem({
     selection: multi,

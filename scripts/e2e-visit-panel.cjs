@@ -15,7 +15,7 @@ const { answerConfirms } = require('./lib/confirmDialog.cjs');
 const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, hashOf, runSteps, settle, until } = require('./lib/env.cjs');
 const { findVisit } = require('./lib/visits.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
-const { goTo, navUsr, watchNavUsr } = require('./lib/ui.cjs');
+const { goTo, navUsr, pressTool, watchNavUsr } = require('./lib/ui.cjs');
 
 const shot = (page, name) => page.screenshot({ path: path.join(OUT_DIR, `${name}.png`) });
 const panel = (page) => page.getByTestId('visit-panel');
@@ -201,7 +201,7 @@ async function scopes(page) {
   const { v } = s;
   const go = async (scope, minutes) => {
     await open(page, `/plan?date=${v.date}`, '[data-testid="confirm-state"]');
-    await page.getByRole('button', { name: '一覧', exact: true }).click();
+    await pressTool(page, 'plan-view-list', { where: 'more' });
     await page.locator(`[data-testid="visit-row-open"][data-visit="${v.id}"]`).click();
     await panel(page).waitFor();
     const p = panel(page);
@@ -312,7 +312,7 @@ async function sameEverywhere(page) {
   await closed(page);
   // 日の予定の一覧の行
   await open(page, `/plan?date=${s.v.date}`, '[data-testid="confirm-state"]');
-  await page.getByRole('button', { name: '一覧', exact: true }).click();
+  await pressTool(page, 'plan-view-list', { where: 'more' });
   check((await page.locator('[aria-label$="を編集"]').count()) === 0, '一覧の行に鉛筆（編集）を出さない');
   await page.locator(`[data-testid="visit-row-open"][data-visit="${s.v.id}"]`).click();
   await panel(page).waitFor();

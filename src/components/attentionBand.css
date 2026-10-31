@@ -7,7 +7,7 @@
   gap: 8px;
   width: 100%;
   margin: 0;
-  padding: 8px 8px 8px 16px;
+  padding: 4px 8px 4px 16px;
   font-weight: 700;
   color: var(--danger);
   background: color-mix(in srgb, var(--danger) 9%, white);

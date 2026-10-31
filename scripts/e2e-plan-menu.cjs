@@ -14,7 +14,7 @@ const path = require('node:path');
 const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, settle, stored, runSteps } = require('./lib/env.cjs');
 const { planDays } = require('./lib/plan.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
-const { pressTool } = require('./lib/ui.cjs');
+const { closeMore, openMore, pressTool, toolCount, undoState } = require('./lib/ui.cjs');
 
 /** 保存（少し遅れて書く）が条件を満たすまで待つ（満たさなければ時間切れで続ける） */
 async function waitStored(page, pred, arg, timeout = 5000) {
@@ -228,8 +228,7 @@ async function reassignMenu(page) {
     'トースト「〈名前〉さんへ移しました」と「元に戻す」',
     toastText,
   );
-  const undoBtn = page.getByTestId('undo-btn');
-  check((await undoBtn.getAttribute('aria-disabled')) !== 'true', '操作の行の「元に戻す」：移したあとは押せる');
+  check(!(await undoState(page)).disabled, '操作の行の「その他 ▾」の「元に戻す」：移したあとは押せる');
   await page.screenshot({ path: path.join(OUT_DIR, 'reassign-moved.png') });
   // トーストの「元に戻す」で、担当・ピンが移す前に戻る
   await toastUndo.click();
@@ -239,10 +238,7 @@ async function reassignMenu(page) {
   check(true, '戻すと知らせ「元に戻しました」');
   const f2 = await activeInfo(page);
   check(!f2.body && f2.visit === vid, 'トーストの「元に戻す」のあと：フォーカスは body に落ちず、戻した訪問へ', f2);
-  check(
-    (await undoBtn.getAttribute('aria-disabled')) === 'true',
-    '戻したあとは（ほかに戻せる手が無いので）「元に戻す」を押せない',
-  );
+  check((await undoState(page)).disabled, '戻したあとは（ほかに戻せる手が無いので）「元に戻す」を押せない');
 
   // 「担当なしにする」→ 確定の確認に要対応の件数 → 取り消す → 操作の行の「元に戻す」
   const pick = page.locator(`.tl-band[data-visit="${vid}"] .tl-band-btn`);
@@ -264,15 +260,18 @@ async function reassignMenu(page) {
   await page.getByTestId('confirm-cancel').click();
   await dialog(page).waitFor({ state: 'detached' });
   await page.screenshot({ path: path.join(OUT_DIR, 'reassign-none.png') });
-  check((await undoBtn.getAttribute('aria-disabled')) !== 'true', '確定を取り消しても「元に戻す」は押せる');
-  await undoBtn.focus();
+  check(!(await undoState(page)).disabled, '確定を取り消しても「元に戻す」は押せる');
+  // 「その他 ▾」をキーボードで開き、「元に戻す」を Enter で選ぶ
+  await page.getByTestId('plan-more').focus();
+  await page.keyboard.press('Enter');
+  await page.getByTestId('more-undo').focus();
   await page.keyboard.press('Enter');
   await waitStored(page, (d, b) => JSON.stringify(d.visits) === b, beforeKey);
   check(
     visitsKey(await stored(page)) === beforeKey,
-    '操作の行の「元に戻す」（キーボード）：担当なしから元の担当へ戻る',
+    '「その他 ▾」の「元に戻す」（キーボード）：担当なしから元の担当へ戻る',
   );
-  check((await focusedId(page)) === 'undo-btn', '戻したあともフォーカスは「元に戻す」に残る');
+  check((await focusedId(page)) === 'plan-more', '戻したあともフォーカスは操作の行の「その他 ▾」に戻る');
 }
 
 async function mobile(page) {
@@ -316,39 +315,52 @@ async function mobile(page) {
 async function moreMenus(page) {
   const focusedId = () => page.evaluate(() => document.activeElement?.getAttribute('data-testid') ?? '');
   await openPlan(page);
-  // 日の予定：見せるのは欠勤・キャンセルを登録・元に戻す・表示・訪問を追加・使い方（その他 ▾ はスマホだけ。PRD D344。AI で組む ▾ は無い。ADR-0063）
+  // 日の予定：操作の行に見せるのは「予定を入れる」と「確定（伝えた）」の2つと「その他 ▾」だけ（PRD D402。AI で組む ▾ は無い。ADR-0063）
   const shown = await page
     .getByTestId('schedule-toolbar')
     .locator('button:visible')
     .evaluateAll((els) => els.map((el) => el.textContent.trim()));
   check(
-    shown.includes('欠勤・キャンセルを登録') &&
-      !shown.includes('AI で組む') &&
-      shown.includes('元に戻す') &&
-      shown.includes('訪問を追加') &&
-      shown.includes('使い方') &&
-      !shown.includes('その他') &&
-      !shown.includes('メールで送る'),
-    '日の予定：操作の行は 欠勤・元に戻す・表示・訪問を追加・使い方（AI で組む ▾ は無い。空き状況・担当なしの訪問を組むを外したので「その他 ▾」も出ない。PRD D400・D403）',
+    JSON.stringify(shown) === JSON.stringify(['予定を入れる', '確定（伝えた）', 'その他']),
+    '日の予定：操作の行は 予定を入れる・確定（伝えた）・その他 ▾（欠勤・元に戻す・表示・使い方・メールは「その他 ▾」の中。AI で組む ▾ は無い）',
     shown,
+  );
+  const inMore = await (async () => {
+    const list = await openMore(page);
+    const t = (await list.getByRole('menuitem').allInnerTexts()).join(' / ');
+    await closeMore(page);
+    return t;
+  })();
+  check(
+    ['欠勤・キャンセルを登録', '元に戻す', '使い方', '予定をメールで送る'].every((x) => inMore.includes(x)) &&
+      !inMore.includes('空き状況') &&
+      /で見る|時間軸/.test(inMore),
+    '日の予定：「その他 ▾」に 欠勤・元に戻す・表示の切り替え・使い方・メール（空き状況はメニュー。PRD D401）',
+    inMore,
   );
   // 操作の行は状態の1行（今の担当）のすぐ下（週・月と同じ位置。PRD D344）
   const order = await page.evaluate(() => {
-    const sum = document.querySelector('[data-testid="plan-summary"]');
+    const details = document.querySelector('[data-testid="day-details"]');
     const bar = document.querySelector('[data-testid="schedule-toolbar"]');
-    return !!sum && !!bar && sum.nextElementSibling === bar;
+    return (
+      !!details &&
+      !!bar &&
+      bar.nextElementSibling === details &&
+      !!details.querySelector('[data-testid="plan-summary"]')
+    );
   });
-  check(order, '日の予定：操作の行は「今の担当」の1行のすぐ下');
-  // 予定をメールで送るはナビの行の主ボタンの隣（毎日送るので見つけやすく。PRD D306・D347）
-  const headMail = page.locator('[data-testid="sched-nav"] [data-testid="day-mail"]');
+  check(order, '日の予定：操作の行のすぐ下に「詳しく ▾」（「今の担当」の1行はその中。PRD D393）');
+  // 予定をメールで送るは操作の行の「その他 ▾」の中（PRD D306・D402）。ナビの行には出さない
   check(
-    (await headMail.count()) === 1 && (await headMail.innerText()).includes('予定をメールで送る'),
-    '日の予定：ナビの行に「予定をメールで送る」（枠のボタン）',
+    (await page.locator('[data-testid="sched-nav"] [data-testid="day-mail"]').count()) === 0 &&
+      (await toolCount(page, 'day-mail')) === 1,
+    '日の予定：「予定をメールで送る」は操作の行の「その他 ▾」の中の1つ',
   );
   check(
-    (await page.locator('.btn-primary:visible').count()) === 1 &&
-      (await page.locator('[data-testid="sched-nav"] [data-testid="adopt"]').count()) === 1,
-    '日の予定：主ボタンはナビの行の「確定（伝えた）」の1つ',
+    (await page.locator('.btn-primary:visible').count()) === 2 &&
+      (await page.locator('[data-testid="schedule-toolbar"] .btn-primary:visible').count()) === 2 &&
+      (await page.locator('[data-testid="schedule-toolbar"] [data-testid="adopt"]').count()) === 1,
+    '日の予定：主ボタンは操作の行の「予定を入れる」と「確定（伝えた）」の2つ（多くて2つ）',
   );
   const addBtn = page.getByTestId('plan-visit-add');
   await addBtn.focus();
@@ -364,16 +376,16 @@ async function moreMenus(page) {
   await form.waitFor({ state: 'detached' });
   check(
     (await focusedId()) === 'plan-visit-add',
-    '訪問の入力を閉じるとフォーカスは「訪問を追加」へ戻る',
+    '訪問の入力を閉じるとフォーカスは「予定を入れる」へ戻る',
     await focusedId(),
   );
   // 使い方：操作の行の下に開き、フォーカスを移す
-  await page.getByTestId('plan-help-btn').click();
+  await pressTool(page, '使い方', { where: 'more' });
   const help = page.getByTestId('plan-help');
   await help.waitFor();
   check(
     (await focusedId()) === 'plan-help' && (await help.innerText()).includes('ピン'),
-    '「使い方」で操作の行の下に説明が開き、フォーカスが移る',
+    '「その他 ▾」の「使い方」で操作の行の下に説明が開き、フォーカスが移る',
   );
   await help.getByRole('button', { name: '使い方を閉じる' }).click();
   await help.waitFor({ state: 'detached' });
@@ -437,12 +449,16 @@ async function moreMenus(page) {
     .locator('[role="menuitem"] .menu-item-label')
     .allInnerTexts();
   check(
-    mItems.length === 4 &&
-      /^表示を選ぶ/.test(mItems[0]) &&
-      mItems[1] === '印刷' &&
-      mItems[2] === '勤務の見込み' &&
-      mItems[3] === 'マスの見方の説明',
-    '月の予定の「その他 ▾」：表示を選ぶ・印刷・勤務の見込み・マスの見方の説明（空き状況はメニュー。PRD D400）',
+    mItems.length === 8 &&
+      mItems[0] === 'カレンダーで見る' &&
+      mItems[1] === '日ごとの一覧で見る' &&
+      /^表示を選ぶ/.test(mItems[2]) &&
+      mItems[3] === '印刷' &&
+      mItems[4] === '勤務の見込み' &&
+      mItems[5] === 'マスの見方の説明' &&
+      mItems[6] === '元に戻す' &&
+      mItems[7] === '欠勤・キャンセルを登録',
+    '月の予定の「その他 ▾」：見せ方の切り替え・表示を選ぶ・印刷・勤務の見込み・マスの見方の説明・元に戻す・欠勤・キャンセルを登録（空き状況はメニュー。PRD D402・D401）',
     mItems,
   );
   await page.getByTestId('month-more-help').click();

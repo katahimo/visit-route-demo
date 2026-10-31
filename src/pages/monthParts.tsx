@@ -22,34 +22,7 @@ import type { OffNote } from './useMonthOff';
 
 const STATE_ORDER: DayStatus['state'][] = ['none', 'told', 'changed'];
 
-/** カレンダーと日ごとの一覧の切り替え（PRD D189。600px 以下ははじめ一覧。URL の ?layout=） */
-export function MonthLayoutSwitch({ layout, onPick }: { layout: MonthLayout; onPick: (next: MonthLayout) => void }) {
-  return (
-    <fieldset className="segmented seg-sm month-layout" aria-label="月の見せ方" data-testid="month-layout">
-      {(
-        [
-          ['calendar', 'カレンダー', LayoutGrid],
-          ['list', '日ごとの一覧', List],
-        ] as const
-      ).map(([k, label, Icon]) => (
-        <button
-          key={k}
-          type="button"
-          className={layout === k ? 'is-on' : undefined}
-          aria-pressed={layout === k}
-          onClick={() => onPick(k)}
-          data-layout={k}
-        >
-          <WithIcon icon={Icon} size={14}>
-            <span className="tb-label">{label}</span>
-          </WithIcon>
-        </button>
-      ))}
-    </fieldset>
-  );
-}
-
-/** 見せ方の切り替えを「その他 ▾」の項目で（エキスパート機能が切のとき。操作の行のボタンを2つまでにするため。PRD D384） */
+/** カレンダーと日ごとの一覧の切り替えを「その他 ▾」の項目で（操作の行のボタンを2つまでにするため。PRD D189・D384・D402。600px 以下ははじめ一覧。URL の ?layout=） */
 export function monthLayoutItems(layout: MonthLayout, onPick: (next: MonthLayout) => void): MenuItem[] {
   return (
     [

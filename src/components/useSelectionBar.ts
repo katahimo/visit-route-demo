@@ -8,6 +8,7 @@ import { findVisit } from '../patterns';
 import { useDemoData } from '../store';
 import { useConfirm } from './ConfirmDialog';
 import { useToast } from './Toast';
+import { focusUndo } from './undo';
 import { COMPACT_QUERY, useMedia } from './useMedia';
 
 type Edit = (d: DemoData) => { data: DemoData; done: number; failed: { why: string }[] };
@@ -71,7 +72,7 @@ export function useSelectionBar(ids: readonly string[], dates: readonly string[]
     // 1件も移せなければ選んだまま（選び直さなくてよい）。移したら帯が消えるので、フォーカスは「元に戻す」へ
     if (done === 0) return;
     onClear();
-    requestAnimationFrame(() => document.querySelector<HTMLElement>('[data-testid="undo-btn"]')?.focus());
+    focusUndo();
   };
 
   /** 「取り消す」：確かめてから選んだ訪問を取り消す */

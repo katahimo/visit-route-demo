@@ -15,7 +15,7 @@ const path = require('node:path');
 const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, settle, stored, until, runSteps } = require('./lib/env.cjs');
 const { markStandard } = require('./lib/standard.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
-const { clickMenu, pressTool } = require('./lib/ui.cjs');
+const { clickMenu, pressTool, toolCount, undoState } = require('./lib/ui.cjs');
 
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
 const shot = (page, name) => page.screenshot({ path: path.join(OUT_DIR, `${name}.png`) });
@@ -66,9 +66,8 @@ async function dayList(page) {
     (els, bottom) => els.filter((e) => e.getBoundingClientRect().bottom <= bottom).length,
     tabs?.y ?? 844,
   );
-  // 入は上に要対応の帯（段1。PRD D404）が加わり、同じ件数の「要対応の訪問」の帯・今の担当の1行がまだ上にある（段2で「詳しく ▾」へ回す。D393）
-  // ので、段2までは1件以上。段2で3件以上に戻す
-  check(visible >= 1, '390px：最初の画面に訪問が見える（段2で3件以上に戻す）', visible);
+  // 上に要対応の帯（段1。PRD D404）があっても、同じ件数の帯・今の担当の1行は「詳しく ▾」の中（段2。D393）なので3件以上見える
+  check(visible >= 3, '390px：最初の画面に訪問が3件以上見える', visible);
   // 操作の行が1段（子の上端がそろい、高さが1段分）
   const bar = await page.getByTestId('schedule-toolbar').evaluate((el) => {
     const kids = [...el.children].filter((c) => getComputedStyle(c).display !== 'none');
@@ -77,10 +76,12 @@ async function dayList(page) {
   });
   check(bar.h <= 56 && bar.spread <= 4, '390px：操作の行は1段', bar);
   check(
-    (await page.getByTestId('sudden-open').getAttribute('class'))?.includes('btn') &&
-      /欠勤・キャンセルを登録/.test((await page.getByTestId('sudden-open').textContent()) ?? ''),
-    '390px：操作の行のアイコンのボタンにも名前（読み上げ）が残る',
+    (await page.getByTestId('adopt').getAttribute('class'))?.includes('btn') &&
+      /確定/.test((await page.getByTestId('adopt').textContent()) ?? '') &&
+      /^その他/.test((await page.getByTestId('plan-more').innerText()).trim()),
+    '390px：操作の行の「確定（伝えた）」（主）と「その他 ▾」にも名前（読み上げ）が残る',
   );
+  check((await toolCount(page, 'sudden-open')) === 1, '390px：欠勤・キャンセルを登録は「その他 ▾」の中にある');
   check((await page.locator('.plan-view-toggle').count()) === 0, '390px：表示の切り替えのボタンは操作の行に無い');
   await page.getByTestId('plan-more').click();
   check(
@@ -224,7 +225,7 @@ async function sheet(page) {
   check(ok, '下から出る欄で担当を替えて保存（担当が変わりピン）', { vid, to });
   await panel(page).waitFor({ state: 'detached' });
   // 元に戻す（操作の行）
-  await pressTool(page, '元に戻す', { where: 'row' });
+  await pressTool(page, '元に戻す', { where: 'more' });
   const back = await waitStored(page, (d) => visitsKey(d) === visitsKey(before));
   check(back, '操作の行の「元に戻す」で担当が戻る');
   // 取り消す
@@ -291,7 +292,7 @@ async function multi(page) {
   await page.getByTestId('confirm-ok').click();
   const done = await waitStored(page, (d) => !!visitOf(d, ida)?.cancelled && !!visitOf(d, idb)?.cancelled);
   check(done, 'まとめて取り消す（確認のあと2件）');
-  await pressTool(page, '元に戻す', { where: 'row' });
+  await pressTool(page, '元に戻す', { where: 'more' });
   const back = await waitStored(page, (d) => visitsKey(d) === visitsKey(before));
   check(back, '「元に戻す」で2件の取り消しが1手で戻る');
   // 「選ぶ」で入る・抜ける
@@ -380,10 +381,7 @@ async function keyboard(page) {
     '動いた先を読み上げる',
     status,
   );
-  check(
-    /訪問を15分後へ/.test((await page.getByTestId('undo-btn').getAttribute('title')) ?? ''),
-    '全体の元に戻すの1手（手の名前「訪問を15分後へ」）',
-  );
+  check(/訪問を15分後へ/.test((await undoState(page)).text), '全体の元に戻すの1手（手の名前「訪問を15分後へ」）');
   check(
     (await page.getByTestId('key-move-band').count()) === 1,
     '繰り返しの回は範囲の小さな帯（これ以降も・すべての回も）',
@@ -402,11 +400,7 @@ async function keyboard(page) {
   await page.getByTestId('key-scope-following').click();
   const split = await waitStored(page, (d) => d.patterns.length > patternsBefore);
   check(split, '「これ以降も」：繰り返しを分けて、これ以降の回も動かす');
-  check(
-    /（これ以降）/.test((await page.getByTestId('undo-btn').getAttribute('title')) ?? ''),
-    '「これ以降も」の手の名前',
-    await page.getByTestId('undo-btn').getAttribute('title'),
-  );
+  check(/（これ以降）/.test((await undoState(page)).text), '「これ以降も」の手の名前', (await undoState(page)).text);
   check((await page.getByTestId('key-move-band').count()) === 0, '範囲を選ぶと帯は消える');
   await page.locator('h1').click();
   await page.keyboard.press(`${MOD}+z`);
@@ -445,10 +439,7 @@ async function keyboard(page) {
         ),
         'Shift+→ のあともフォーカスは帯（移った列）',
       );
-      check(
-        /担当を.+さんへ/.test((await page.getByTestId('undo-btn').getAttribute('title')) ?? ''),
-        '手の名前「担当を〇〇さんへ」',
-      );
+      check(/担当を.+さんへ/.test((await undoState(page)).text), '手の名前「担当を〇〇さんへ」');
     }
   }
   // → で次の日（その日へ移る）
@@ -481,12 +472,12 @@ async function keyboard(page) {
   check(del, '確認のあと取り消す');
   await settle(page, 300);
   check(
-    (await page.evaluate(() => document.activeElement?.dataset.testid)) === 'undo-btn',
-    '取り消したらフォーカスは「元に戻す」',
+    (await page.evaluate(() => document.activeElement?.dataset.testid)) === 'plan-more',
+    '取り消したらフォーカスは操作の行の「その他 ▾」（元に戻すの入口）',
   );
   // Ctrl+Z で全部戻る
   for (let i = 0; i < 4; i++) {
-    if ((await page.getByTestId('undo-btn').getAttribute('aria-disabled')) === 'true') break;
+    if ((await undoState(page)).disabled) break;
     await page.keyboard.press(`${MOD}+z`);
     await settle(page, 200);
   }

@@ -18,12 +18,13 @@
 #### 並び
 
 1. 見出し：`lead`「一月の担当を見て、担当なしや要対応を手で直し、確定します」。すぐ下にナビの行（`ScheduleNav`。PRD D347）：「今日」・‹ 月を選ぶ欄（`month-title`）›・［月｜週｜日］
-2. 進み具合の帯 `ProgressBand`（見出しの下。予定の3画面で月だけ。PRD D332。次の一手は主ボタン、`onOp` で要対応・確定していない日は画面の中の右の欄を開き、「担当を AI で組む」は担当を組むの画面 `/arrange?ym=` へ移る。ADR-0063）
-3. 操作の行（`ScheduleToolbar zoom="month"`。日・週・月で同じ並び。PRD D327。AI で組むのは担当を組む。ADR-0063。[pages-common.md](pages-common.md) の「予定の共通の部品」）：欠勤・キャンセルを登録（`sudden-open`。選んでいる日（今日より前なら今日）の日の予定で欄を開くリンク）・元に戻す・やり直す・見せ方の切り替え `month-layout`（`fieldset.segmented`・`aria-label="月の見せ方"`・`aria-pressed`・ボタンの `data-layout`。印刷では出さない）・「その他 ▾」（`MenuButton`・`month-more`）
+2. 進み具合の帯 `ProgressBand`（予定の3画面で月だけ。PRD D332）は「詳しく ▾」（`month-details`。下の5）の中へ畳む（PRD D393）。次の一手のボタンは主ボタンにせず、`onOp` で要対応・確定していない日は画面の中の右の欄を開き、「担当を AI で組む」は担当を組むの画面 `/arrange?ym=` へ移る（ADR-0063）。見出しの下には要対応の帯 `AttentionBand`（PRD D400・D404）
+3. 操作の行（`ScheduleToolbar zoom="month"`。日・週・月で同じ作り。PRD D327・D402。AI で組むのは担当を組む。ADR-0063。[pages-common.md](pages-common.md) の「予定の共通の部品」）：入＝主「予定を入れる」（`toolbar-add-plan`）＋「担当を組む」（`toolbar-assign`。`/arrange?ym=`）、切＝主「予定を入れる」＋欠勤・キャンセルを登録（`sudden-open`。選んでいる日（今日より前なら今日）の日の予定で欄を開くリンク）。「その他 ▾」（`MenuButton`・`month-more`）：見せ方の切り替え（`month-layout-calendar`・`month-layout-list`）・元に戻す／やり直す・入は欠勤・キャンセルを登録・下の5の項目・空き状況
 4. 範囲の提案の帯（`RangeProposalBand`。担当を組むの画面で組んだ提案）
 5. 操作の欄 `month-head`（PRD D278。ADR-0045）：
    - 操作の行の「その他 ▾」の項目：「表示を選ぶ（〈スタッフ〉・〈利用者さん〉・混み具合）」（`month-more-pickers`。開いていれば「表示の選択をたたむ」、選んでいる間・休みの入力中は押せず理由「表示を「全体」・混み具合を「すべて」に戻すと、たためます」）・「印刷」（`month-print`。選んでいる〈スタッフ〉があれば `&staff=`。`monthPrint` が入のとき）・「勤務の見込み」（`month-workload`。`/workload?ym=`。`workload` が入のとき）・「マスの見方の説明」（`month-more-help`。開いていれば「…を閉じる」）。印刷・勤務の見込みには1行の説明
-   - 要約 `month-summary`：「月全体：入らない N件（・当日キャンセル N件）」（月全体。今日より前の日も数える。帯と同じ言葉の「訪問」「案のある日」は出さない）
+   - 「詳しく ▾」（`DetailsFold`・`month-details`。入切とも閉じて始まり、開け閉めは月の画面として端末に覚える＝鍵 `details:month`。入は見出しの1行に「担当 a/b日・確定 c/d日」＝`lib/detailsHeading` の `monthHeading`）の中：進み具合の帯・要約 `month-summary`・凡例 `month-legend`
+   - 要約 `month-summary`：「月全体：入らない N件（・当日キャンセル N件）」（月全体。今日より前の日も数える。帯と同じ言葉の「訪問」「案のある日」は出さない）。「詳しく ▾」の中
    - 表示の選択の段 `month-pickers`（「表示を選ぶ」で開くか、〈スタッフ〉・〈利用者さん〉・混み具合を選んでいる間・休みの入力中に出す。「表示を選ぶ」で開いたら `month-focus` へフォーカス。段の中で選び直したら（全体に戻しても）出したまま。保存しない）：
      - 表示の選択 `month-focus`（「表示」：全体／〈スタッフ〉（optgroup）／〈利用者さん〉（名前・よみで探す））。〈利用者さん〉なら `ClientPicker`（1人。`month-client-picker`。近道：この月・〈スタッフ〉が担当する人・最近選んだ人・仮押さえの人（`tentativeShortcut`））
      - 〈スタッフ〉を選んでいれば「休みを入れる」（`month-off-toggle`。下の「希望休」）

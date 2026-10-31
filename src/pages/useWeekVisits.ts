@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { focusUndo } from '../components/undo';
 import { useInsertNotice } from '../components/useInsertNotice';
 import { useOpenVisit } from '../components/VisitPanel';
 import { focusVisitItem, useVisitKeys, visitItemOf } from '../components/visitKeys';
@@ -9,10 +10,6 @@ import { allowedStaffOf } from '../lib/week';
 import { findVisit } from '../patterns';
 import type { WeekModel } from './useWeekModel';
 import type { WeekNav } from './useWeekNav';
-
-/** 取り消したあと、フォーカスを「元に戻す」へ */
-const focusUndo = () =>
-  requestAnimationFrame(() => document.querySelector<HTMLElement>('[data-testid="undo-btn"]')?.focus());
 
 /**
  * 週の予定の訪問の動かし方：訪問の詳細の欄（PRD D301）・ドラッグ（PRD D341。lib/visitDrop）・キーボード（時間軸 PRD D333・

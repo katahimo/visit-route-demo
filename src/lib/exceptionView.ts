@@ -1,6 +1,6 @@
 // 例外だけ見せる（エキスパート機能が切のとき。PRD D384。ADR-0073）の決まり：何を目立たせるか・何を「詳しく」へ畳むか・
 // 操作の行のどのボタンを残すか・画面の上の説明の文と出し分け。画面（月・週・日）はここを読み、切／入の判定を画面ごとに持たない。
-// 入のときは今の画面のまま（何も畳まず、ボタンも今のまま）。データは書き換えない
+// 入も同じ骨組み（操作の行・「詳しく」・説明1行）を使い、入の差（2つ目のボタン・「詳しく」の見出しの数・日の要対応の帯）だけを足す。データは書き換えない
 import type { Features } from '../contracts/features';
 import { isOn } from './features';
 
@@ -12,12 +12,15 @@ export type ScheduleZoom = 'day' | 'week' | 'month';
 
 // ---- 操作の行 ----
 
-/** 操作の行に出せるボタン：訪問を追加（日だけ）・予定を入れる（週・月）・欠勤・キャンセルを登録 */
-export type MainTool = 'add' | 'plan' | 'absence';
+/**
+ * 操作の行に出せるボタン：予定を入れる（週・月）・訪問の欄を開く「予定を入れる」（日）・
+ * 欠勤・キャンセルを登録（切）・担当を組む（入。担当を組むの画面へ）・確定（伝えた）（入の日）
+ */
+export type MainTool = 'add' | 'plan' | 'absence' | 'assign' | 'confirm';
 
 /**
- * 主ボタンにする候補（先に使えるもの）。日は「訪問を追加」（切の言葉は「予定を入れる」。その日に足す。スマホは出さないので主ボタンは無い）、
- * 週・月は「予定を入れる」（試作の主ボタン。〈利用者さん〉・日時を選ぶ引き出し）。
+ * 主ボタンにする候補（先に使えるもの）。日は「予定を入れる」（その日の訪問の欄を開く。スマホは出さないので、切は主ボタン無し・入は「確定（伝えた）」）、
+ * 週・月は「予定を入れる」（〈利用者さん〉・日時を選ぶ引き出し）。
  * 「担当なしの訪問を組む」は操作の行に置かず、上の要対応の帯の従のボタン「担当なしを組む」（PRD D402・D403。ADR-0077）
  */
 const PRIMARY: Record<ScheduleZoom, readonly MainTool[]> = {
@@ -26,32 +29,48 @@ const PRIMARY: Record<ScheduleZoom, readonly MainTool[]> = {
   month: ['plan'],
 };
 
-/** 主ボタンのほかに並べるボタン（1つだけ）：欠勤・キャンセルを登録（当日の変更の入口。ほかに入口が無い） */
+/** 入の主ボタン：日はスマホで「予定を入れる」を出さないとき「確定（伝えた）」が主ボタンになる（PRD D402） */
+const PRIMARY_EXPERT: Record<ScheduleZoom, readonly MainTool[]> = {
+  day: ['add', 'confirm'],
+  week: ['plan'],
+  month: ['plan'],
+};
+
+/** 主ボタンのほかに並べるボタン（1つだけ）。切は欠勤・キャンセルを登録（当日の変更の入口。ほかに入口が無い） */
 const SECOND: readonly MainTool[] = ['absence'];
 
-/**
- * 日の主ボタン「訪問を追加」の言葉と、開いた新規の訪問の欄の見出し：切は月・週の主ボタンとそろえて「予定を入れる」（中身の欄は同じ。PRD D402）、
- * 入は「訪問を追加」のまま
- */
-export const addVisitLabel = (only: boolean): string => (only ? '予定を入れる' : '訪問を追加');
+/** 入の2つ目：月・週は「担当を組む」（AI で組む入の要の操作）、日は「確定（伝えた）」。欠勤・キャンセルは「その他 ▾」（PRD D402） */
+const SECOND_EXPERT: Record<ScheduleZoom, readonly MainTool[]> = {
+  day: ['confirm'],
+  week: ['assign'],
+  month: ['assign'],
+};
+
+/** 日の主ボタンの言葉と、開いた新規の訪問の欄の見出し（入切とも「予定を入れる」。中の欄は同じ。PRD D402） */
+export const ADD_VISIT_LABEL = '予定を入れる';
 
 /**
- * 操作の行に残すボタン（切のとき）：主ボタン1つ＋最大1つ。ほかの操作（元に戻す・やり直す・表示の切り替え・使い方・
- * メールで送る・印刷など）は「その他 ▾」へ。avail は今その画面で使えるか（スマホの日は追加を出さない、など）
+ * 操作の行に残すボタン：主ボタン1つ＋最大1つ。ほかの操作（元に戻す・やり直す・表示の切り替え・使い方・
+ * メールで送る・印刷など、入はさらに欠勤・キャンセル）は「その他 ▾」へ。avail は今その画面で使えるか（スマホの日は予定を入れるを出さない、など）。
+ * 入と切の差はここ1か所（expert＝エキスパート機能が入）
  */
 export function mainTools(
   zoom: ScheduleZoom,
   avail: Readonly<Record<MainTool, boolean>>,
+  expert = false,
 ): { primary: MainTool | null; second: MainTool | null } {
-  const primary = PRIMARY[zoom].find((t) => avail[t]) ?? null;
-  const second = SECOND.find((t) => t !== primary && avail[t]) ?? null;
+  const primary = (expert ? PRIMARY_EXPERT : PRIMARY)[zoom].find((t) => avail[t]) ?? null;
+  const second = (expert ? SECOND_EXPERT[zoom] : SECOND).find((t) => t !== primary && avail[t]) ?? null;
   return { primary, second };
 }
 
 // ---- 「詳しく」 ----
 
-/** 「詳しく」へ畳むもの：進み具合の帯・月全体の件数・凡例・1行の状態・今の担当の1行（点数・理由・移動）・担当ごとの1日 */
-export type DetailItem = 'progress' | 'summary' | 'legend' | 'status' | 'oneLine' | 'dayLines';
+/**
+ * 「詳しく」へ畳むもの：進み具合の帯・月全体の件数・凡例・1行の状態・今の担当の1行（点数・理由・移動）・担当ごとの1日・
+ * 日の要対応の訪問の件数の帯（入だけ。切は上の要対応の帯が知らせる）
+ */
+export type DetailItem = 'progress' | 'summary' | 'legend' | 'status' | 'oneLine' | 'dayLines' | 'care';
 
 const DETAILS: Record<ScheduleZoom, readonly DetailItem[]> = {
   month: ['progress', 'summary', 'legend'],
@@ -59,8 +78,9 @@ const DETAILS: Record<ScheduleZoom, readonly DetailItem[]> = {
   day: ['oneLine', 'dayLines'],
 };
 
-/** 「詳しく」に入れるもの（入のときは空＝今の画面のまま、すべてそのまま出す） */
-export const detailItems = (zoom: ScheduleZoom, only: boolean): readonly DetailItem[] => (only ? DETAILS[zoom] : []);
+/** 「詳しく」に入れるもの（入切とも畳む。入はさらに日の要対応の訪問の帯を入れる。PRD D393） */
+export const detailItems = (zoom: ScheduleZoom, only: boolean): readonly DetailItem[] =>
+  zoom === 'day' && !only ? [...DETAILS.day, 'care'] : DETAILS[zoom];
 
 /**
  * 「詳しく」に今入れるもの：畳む項目のうち、いま中身があるもの（present で渡す。省略は無し）。空なら「詳しく」を出さない
@@ -73,9 +93,6 @@ export function foldedParts(
 ): DetailItem[] {
   return detailItems(zoom, only).filter((i) => present[i] === true);
 }
-
-/** その部品を「詳しく」へ畳むか */
-export const isFolded = (items: readonly DetailItem[], item: DetailItem): boolean => items.includes(item);
 
 /** 「詳しく」の見出し */
 export const DETAILS_LABEL = '詳しく';
@@ -94,7 +111,7 @@ export const showUnplacedReasons = (only: boolean): boolean => !only;
 /** 画面の上の説明を持つ画面：予定の月・週・日と、〈利用者さん〉・〈スタッフ〉の一覧 */
 export type IntroScreen = ScheduleZoom | 'clients' | 'staff';
 
-/** 画面の上の説明（見出しの下の1行）。切は確定の段階の言葉を使わない1行（月・週・日。一覧は simpleText を渡す） */
+/** 画面の上の説明（見出しの下の1行）。入は expertText（入の言葉）、切は確定の段階の言葉を使わない1行（月・週・日。一覧は simpleText を渡す） */
 export function introText(zoom: IntroScreen, only: boolean, expertText: string, simpleText?: string): string {
   if (!only) return expertText;
   if (zoom === 'clients' || zoom === 'staff') return simpleText ?? expertText;
@@ -109,9 +126,9 @@ export function introText(zoom: IntroScreen, only: boolean, expertText: string, 
 /** 説明を閉じたかを覚える鍵（store/navOpen の「開け閉め」に流用：開＝出している・閉＝閉じた。画面ごと） */
 export const introKey = (zoom: IntroScreen): string => `intro:${zoom}`;
 
-/** 説明を出すか：入は今のまま出す。切は初回だけ（閉じたら覚えて、読み直しても出さない） */
-export const introShown = (stored: Readonly<Record<string, boolean>>, zoom: IntroScreen, only: boolean): boolean =>
-  !only || stored[introKey(zoom)] !== false;
+/** 説明を出すか：入切とも初回だけ（閉じたら覚えて、読み直しても出さない。PRD D384・D402） */
+export const introShown = (stored: Readonly<Record<string, boolean>>, zoom: IntroScreen): boolean =>
+  stored[introKey(zoom)] !== false;
 
 // ---- 言葉 ----
 

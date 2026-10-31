@@ -6,13 +6,14 @@ import type { MenuItem } from '../components/MenuButton';
 import { ScheduleNav } from '../components/ScheduleNav';
 import { RangeProposalBand, ScheduleToolbar, SelectionBar } from '../components/scheduleParts';
 import { PageHeader } from '../components/ui';
-import { useExceptionsOnly, useFeature } from '../components/useFeature';
+import { useFeature } from '../components/useFeature';
 import { useIntro } from '../components/useIntro';
 import { KeyMoveBand } from '../components/visitKeys';
 import { addDays } from '../domain/time';
 import { periodEmptyGuide } from '../lib/emptyGuide';
-import { detailItems, isFolded } from '../lib/exceptionView';
+import { bandHref } from '../lib/progressBand';
 import { timelineBandFilter, timelineNoneText, visitDaysOf } from '../lib/weekScreen';
+import { ymOf } from '../lib/ym';
 import { WeekMailPanel } from './mailPanels';
 import { useWeekClients } from './useWeekClients';
 import { useWeekModel } from './useWeekModel';
@@ -20,7 +21,7 @@ import { useWeekNav } from './useWeekNav';
 import { useWeekPrep } from './useWeekPrep';
 import { useWeekTodayScroll } from './useWeekTodayScroll';
 import { useWeekVisits } from './useWeekVisits';
-import { WeekDetails, WeekHead, WeekNavActions, WeekNotice, WeekStatusLine } from './weekParts';
+import { WeekDetails, WeekHead, WeekNavActions, WeekNotice } from './weekParts';
 import { ClientWeekCard, StaffWeekCard, type WeekTableCtx } from './weekTables';
 import { WeekTimeline } from './weekTimeline';
 import './week.css';
@@ -48,22 +49,18 @@ export default function WeekPage() {
   /** 週の予定をメールで送る欄（PRD D93。ADR-0017） */
   const [mailOpen, setMailOpen] = useState(false);
   const mailOn = useFeature('mail');
-  /** ナビの行のメールで送る（組むのモードでは出さない。PRD D348） */
-  /** エキスパート機能が切のときは例外だけ見せる（PRD D384）：メールで送るは「その他 ▾」へ、1行の状態・凡例は「詳しく」へ */
-  const only = useExceptionsOnly();
-  const mailBtn = mailOn && !only;
-  const moreItems: MenuItem[] =
-    only && mailOn
-      ? [
-          {
-            key: 'mail',
-            label: '予定をメールで送る',
-            icon: Mail,
-            onSelect: () => setMailOpen(true),
-            testId: 'week-mail',
-          },
-        ]
-      : [];
+  /** メールで送るは「その他 ▾」へ、1行の状態・凡例は「詳しく」へ（入切とも。PRD D402・D393） */
+  const moreItems: MenuItem[] = mailOn
+    ? [
+        {
+          key: 'mail',
+          label: '予定をメールで送る',
+          icon: Mail,
+          onSelect: () => setMailOpen(true),
+          testId: 'week-mail',
+        },
+      ]
+    : [];
   const lead = useIntro('week', `この週の担当を見て、日時をドラッグでずらし、${terms.staff}に伝えたら確定します`);
   const { timelineRef, tableScrollRef, clientScrollRef } = useWeekTodayScroll(nav);
   // ---- この週の準備（PRD D280・D282。ADR-0046・ADR-0053）：担当なしを組む → 確定 → 済み の主ボタン1つ ----
@@ -96,7 +93,7 @@ export default function WeekPage() {
   return (
     <div className="stack week-page">
       <PageHeader icon={CalendarClock} title="週の予定" lead={lead} />
-      {/* 上のナビの行（日・週・月で同じ。PRD D347。ADR-0060）。週送り・今日・［月｜週｜日］・メールで送る・確定 */}
+      {/* 上のナビの行（日・週・月で同じ。PRD D347。ADR-0060）。週送り・今日・［月｜週｜日］・確定 */}
       <ScheduleNav
         current="week"
         today={{ onClick: () => goWeek(today), disabled: dates.includes(today) }}
@@ -109,19 +106,18 @@ export default function WeekPage() {
           onChange: (d) => goWeek(d),
           testId: 'week-title',
         }}
-        actions={
-          next.kind === 'none' && !mailBtn ? undefined : (
-            <WeekNavActions mailBtn={mailBtn} onMail={() => setMailOpen(true)} flow={prepFlow} />
-          )
-        }
+        actions={next.kind === 'none' ? undefined : <WeekNavActions flow={prepFlow} />}
       />
-      {/* 要対応の帯（入切とも。PRD D400・D403・D404） */}
+      {/* 要対応の帯（入切とも。PRD D400・D403・D404）。1行の状態（PRD D332）は「詳しく」の中 */}
       <AttentionBand />
-      {/* 1行の状態（PRD D332。進み具合の帯は月の予定だけ） */}
-      {!isFolded(detailItems('week', only), 'status') && <WeekStatusLine prep={prep} />}
-      {/* 操作の行（日・週・月で同じ並び。PRD D327）。メールで送るは見出しのボタンなので、エキスパート機能が入のときは「その他 ▾」を出さない（PRD D344・D346）。担当なしを組むは要対応の帯、空き状況はメニュー（PRD D400・D403） */}
-      <ScheduleToolbar zoom="week" absence={suddenOn ? { date: anchor } : null} moreItems={moreItems} />
-      {/* 切のときの「詳しく」は操作の行のすぐ下（日・月と同じ位置。PRD D384） */}
+      {/* 操作の行（日・週・月で同じ作り。PRD D327・D402）。メールで送るは「その他 ▾」。担当なしを組むは要対応の帯、空き状況はメニュー（PRD D403・D400） */}
+      <ScheduleToolbar
+        zoom="week"
+        absence={suddenOn ? { date: anchor } : null}
+        assignHref={bandHref(ymOf(anchor), 'batch')}
+        moreItems={moreItems}
+      />
+      {/* 「詳しく」は操作の行のすぐ下（日・月と同じ位置。PRD D384・D393） */}
       <WeekDetails prep={prep} model={model} by={by} tab={tab} />
       {/* 担当を組むの画面で組んだ範囲の提案（日・週・月で同じ帯。PRD D328） */}
       <RangeProposalBand />

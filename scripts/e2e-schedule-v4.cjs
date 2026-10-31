@@ -15,7 +15,7 @@ const path = require('node:path');
 const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, settle, stored, until, runSteps } = require('./lib/env.cjs');
 const { markStandard } = require('./lib/standard.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
-const { clickMenu, pressTool } = require('./lib/ui.cjs');
+const { clickMenu, closeMore, openMore, pressTool, undoState } = require('./lib/ui.cjs');
 
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
 const shot = (page, name) => page.screenshot({ path: path.join(OUT_DIR, `${name}.png`) });
@@ -154,18 +154,39 @@ async function zoom(page) {
     const order = await bar.evaluate((el) =>
       [...el.querySelectorAll('[data-testid]')]
         .map((x) => x.getAttribute('data-testid'))
-        .filter((id) => ['sudden-open', 'plan-menu', 'undo-btn'].includes(id)),
+        .filter((id) =>
+          [
+            'toolbar-add-plan',
+            'plan-visit-add',
+            'toolbar-assign',
+            'adopt',
+            'sudden-open',
+            'undo-btn',
+            'plan-menu',
+          ].includes(id),
+        ),
     );
+    // 入の操作の行は主「予定を入れる」＋（月・週は「担当を組む」、日は「確定（伝えた）」）の2つと「その他 ▾」（PRD D402）
+    const want = {
+      day: ['plan-visit-add', 'adopt'],
+      week: ['toolbar-add-plan', 'toolbar-assign'],
+      month: ['toolbar-add-plan', 'toolbar-assign'],
+    }[zoomName];
     check(
-      JSON.stringify(order) === JSON.stringify(['sudden-open', 'undo-btn']),
-      `${zoomName}：欠勤・キャンセルを登録 → 元に戻す の並び（AI で組む ▾ は無い）`,
+      JSON.stringify(order) === JSON.stringify(want),
+      `${zoomName}：操作の行は ${want.join(' → ')} の2つだけ（欠勤・元に戻すは行に無く、AI で組む ▾ も無い）`,
       order,
     );
-    // その他 ▾ は空き状況・担当なしの訪問を組むを外したので、月（表示を選ぶ・印刷など）にだけある（日・週は項目が無く出ない。PRD D344・D400・D403）
+    // 欠勤・キャンセルを登録・元に戻すは「その他 ▾」の中
+    const moreList = await openMore(page);
     check(
-      (await bar.locator('[data-testid$="-more"]').count()) === (zoomName === 'month' ? 1 : 0),
-      `${zoomName}：その他 ▾ は月だけにある（空き状況・担当なしの訪問を組むは無い）`,
+      (await moreList.getByTestId('sudden-open').count()) === 1 &&
+        (await moreList.getByTestId('more-undo').count()) === 1,
+      `${zoomName}：「その他 ▾」に 欠勤・キャンセルを登録 と 元に戻す がある`,
     );
+    await closeMore(page);
+    // その他 ▾ は欠勤・元に戻すを入れるので日・週・月のどれにもある（空き状況はメニュー。PRD D344・D400）
+    check((await bar.locator('[data-testid$="-more"]').count()) === 1, `${zoomName}：その他 ▾ がある`);
     check(
       (await page.getByTestId('progress-band').count()) === (zoomName === 'month' ? 1 : 0),
       `${zoomName}：進み具合の帯は月だけ`,
@@ -175,7 +196,7 @@ async function zoom(page) {
   }
   // 週・月の「欠勤・キャンセルを登録」は日の予定の欄を開く
   await openView(page, '/week');
-  await pressTool(page, '欠勤', { where: 'row' });
+  await pressTool(page, '欠勤', { where: 'more' });
   await page.waitForURL(/#\/plan/);
   await page
     .getByTestId('sudden-kind-staff')
@@ -273,8 +294,8 @@ async function scope(page) {
   check(applied, '「反映する」で訪問に担当・開始を書く');
   check((await page.getByTestId('proposal-band').count()) === 0, '反映したら提案の帯は消える');
   const afterApply = await stored(page);
-  const undoTitle = await page.getByTestId('undo-btn').getAttribute('title');
-  check(/AI の提案を反映/.test(undoTitle ?? ''), '操作の行の「元に戻す」の title に手の名前', undoTitle);
+  const undoTitle = (await undoState(page)).text;
+  check(/AI の提案を反映/.test(undoTitle), '「その他 ▾」の「元に戻す」に手の名前', undoTitle);
   // Ctrl+Z で戻す（本文にフォーカス）
   await page.locator('h1').click();
   await page.keyboard.press(`${MOD}+z`);
@@ -399,7 +420,7 @@ async function multi(page) {
     (await stored(page)).clients.find((c) => c.id === renamed)?.displayName === '別のタブで変えた名前',
     '週：確認の間の別のタブの変更を、取り消しが上書きしない',
   );
-  await pressTool(page, '元に戻す', { where: 'row' });
+  await pressTool(page, '元に戻す', { where: 'more' });
   const restored = await waitStored(page, (d) => !wids.some((id) => d.visits.some((v) => v.id === id && v.cancelled)));
   check(restored, '操作の行の「元に戻す」で取り消しを戻す');
 }

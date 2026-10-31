@@ -169,7 +169,7 @@ async function menu(page) {
     await current(),
   );
   check((await page.locator('h1').innerText()).trim() === '提案を比べる', '比較の見出しは「提案を比べる」');
-  await open(page, '/plan', '[data-testid="sudden-open"]');
+  await open(page, '/plan', '[data-testid="plan-more"]');
   check((await page.getByTestId('mode-switch').count()) === 0, '日の予定に予定のモードの切り替えは無い（ADR-0063）');
   // 組むを畳むと印は親の「組む」へ（開き直すと子へ戻る）
   await open(page, '/arrange', 'h1');
@@ -354,7 +354,7 @@ async function menu(page) {
   await pressTool(page, 'month-workload', { where: 'more' });
   await page.locator('h1').filter({ hasText: '勤務の見込み' }).waitFor();
   check(hashOf(page).startsWith('#/workload'), '月の予定の「その他 ▾」の「勤務の見込み」で勤務の見込み', hashOf(page));
-  await open(page, '/plan', '[data-testid="sudden-open"]');
+  await open(page, '/plan', '[data-testid="plan-more"]');
   check((await page.getByTestId('plan-menu').count()) === 0, '日の予定に「AI で組む ▾」は無い（ADR-0063）');
   await open(page, `/arrange?ym=${TODAY.slice(0, 7)}`, '[data-testid="arrange-compare-open"]');
   const cmpDate = await page.getByTestId('arrange-compare-date').inputValue();
@@ -367,7 +367,7 @@ async function menu(page) {
   );
   // 欠勤・キャンセル：予定の操作の行から今日の日の画面で欄が開き、?do=・?date= は消える（メニューには無い）
   await open(page, '/week');
-  await pressTool(page, '欠勤', { where: 'row' });
+  await pressTool(page, '欠勤', { where: 'more' });
   await page.getByTestId('sudden-panel').waitFor({ timeout: 15000 });
   const h = hashOf(page);
   check(

@@ -101,6 +101,16 @@
   color: var(--sub);
 }
 
+/* 「詳しく ▾」の中（月。PRD D393）：外枠が既にあるので、帯の枠・横の余白は外して幅を取る（390px で1行に収める） */
+.details-fold-body .progress-band {
+  padding-left: 0;
+  padding-right: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: none;
+}
+
 /* 狭い画面（390px）：1行に収める。訪問・この日・「日」「件」を省き、ボタンは短い文 */
 @media (max-width: 600px) {
   .progress-band {
@@ -139,6 +149,14 @@
     left: 10px;
     right: 10px;
     bottom: 2px;
+  }
+  .details-fold-body .progress-band {
+    padding-left: 0;
+    padding-right: 0;
+  }
+  .details-fold-body .pb-bar {
+    left: 0;
+    right: 0;
   }
 }
 
