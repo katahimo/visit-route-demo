@@ -1,10 +1,10 @@
 // 人を複数選ぶチップ（週間の時間軸の〈スタッフ〉・〈利用者さん〉。PRD D56・D57・D136）。
 // 選んでいる人は aria-pressed と ✓ の印で示す（色だけに頼らない）。強調（ドラッグ中の担当できる人）は太い枠と「可」の文字
-import { type ReactNode, useLayoutEffect, useRef, useState } from 'react';
-import { foldHidden } from '../lib/fold';
+import type { ReactNode } from 'react';
 import type { PersonKind } from '../lib/personPopover';
 import { PersonInfo } from './PersonPopover';
 import './pickChips.css';
+import { type ChipFold, useChipFold } from './useChipFold';
 
 export type PickPerson = {
   id: string;
@@ -53,7 +53,7 @@ export function PickChips({
    * 畳む（週間の時間軸の〈利用者さん〉。PRD D140）：畳んでいるときは、上から rows 行に入る人と選んでいる人だけを出し、
    * 残りは「あと N人」のボタンで開く。開いているかは呼ぶ側が持つ（open・onOpenChange）。渡さなければ畳まない
    */
-  fold?: { rows: number; open: boolean; onOpenChange: (open: boolean) => void };
+  fold?: ChipFold;
   testId?: string;
 }) {
   const on = selected === null ? null : new Set(selected);
@@ -63,36 +63,7 @@ export function PickChips({
     onChange(next.length === people.length ? null : next);
   };
   // ---- 畳む（fold）：全員を並べて位置を測り、rows 行に入らない人（選んでいる人を除く）を描く前に外す ----
-  const rootRef = useRef<HTMLFieldSetElement>(null);
-  const [width, setWidth] = useState(0);
-  const folding = !!fold;
-  useLayoutEffect(() => {
-    const el = rootRef.current;
-    if (!folding || !el) return;
-    setWidth(Math.round(el.clientWidth));
-    const ro = new ResizeObserver(() => setWidth(Math.round(el.clientWidth)));
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [folding]);
-  /** 測り直す鍵：幅・人・選んでいるか・見出しが変われば測り直す（ドラッグ中の強調では変えない） */
-  const foldKey = fold ? `${width}|${label}|${people.map((p) => `${p.id}:${isOn(p.id) ? 1 : 0}`).join(',')}` : null;
-  /** 畳んだとき隠す人（開いているあいだも測っておき、「畳む」を出すかに使う） */
-  const [hiddenFor, setHiddenFor] = useState<{ key: string; ids: Set<string> } | null>(null);
-  const measured = foldKey !== null && hiddenFor?.key === foldKey ? hiddenFor.ids : null;
-  const hidden = fold && !fold.open ? measured : null;
-  useLayoutEffect(() => {
-    const root = rootRef.current;
-    // 測るのは全員を並べているとき（開いている、または畳んでいてまだ測っていない）
-    if (foldKey === null || measured !== null || !root || !fold) return;
-    const items = [...root.querySelectorAll<HTMLElement>('[data-fold-item]')].map((el) => ({
-      id: el.dataset.foldItem ?? '',
-      top: el.getBoundingClientRect().top,
-    }));
-    const first = root.querySelector('legend')?.getBoundingClientRect().top;
-    const keep = new Set(people.filter((p) => isOn(p.id)).map((p) => p.id));
-    const ids = foldHidden(items, keep, fold.rows, first);
-    setHiddenFor({ key: foldKey, ids });
-  });
+  const { rootRef, measured, hidden } = useChipFold(fold, label, people, isOn);
   const shown = hidden ? people.filter((p) => !hidden.has(p.id)) : people;
   return (
     <fieldset ref={rootRef} className="pick-chips" data-testid={testId}>
