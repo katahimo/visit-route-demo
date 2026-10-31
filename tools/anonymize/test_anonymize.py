@@ -75,6 +75,16 @@ class PseudoName(unittest.TestCase):
             (s, _), (g, _) = p.name(i)
             self.assertNotIn((s, g), a._REAL)
 
+    def test_スタッフ名は同じ人に同じ仮名で顧客とは重ならない(self):
+        p = a.Pseudonymizer(b"s")
+        c = a.RowCtx(p, p.person("顧客"), None, {}, 1)
+        s1 = a.STAFF_NAME("山田花子", c)
+        self.assertEqual(s1, a.STAFF_NAME("山田花子", c))
+        self.assertNotEqual(s1, a.STAFF_NAME("鈴木一郎", c))
+        self.assertNotEqual(s1, a.FULL_NAME("顧客", c))
+        self.assertEqual(a.STAFF_NAME("", c), "")
+        self.assertEqual(a.STAFF_NAME("-", c), "-")
+
     def test_実在の組は重複がない(self):
         self.assertEqual(len(a._REAL), len(a.FIGURES))
 
@@ -113,6 +123,36 @@ class EndToEnd(unittest.TestCase):
         self.assertEqual((c["パスワード"], c["顧客メモ"], r["シンプルアンケート"]), ("", "", ""))
         self.assertEqual((c["性別"], r["予約日"]), ("男性", "2026/10/01"))
         self.assertEqual((c["姓"], c["名"]), ("織田", "信長"))
+
+
+class Staff(unittest.TestCase):
+    def test_カンマ区切りのスタッフ表を匿名化し予約の新規登録者と同じ仮名にする(self):
+        staff_header = list(a.STAFF_RULES)
+        st = {h: "" for h in staff_header} | {
+            "ID": "S022", "氏名": "くろまめ", "TEL": "0221234567", "mail address": "kuro@example.org",
+            "緯度・経度": "38.2564, 140.8761", "退職日": "2026.3.31", "ユーザーID": "kuromame",
+            "パスワード(暗号化)": "f6b7", "管理者": "1", "LW_ID": "cu.1@x",
+            "都度更新ユーザ識別(SessionToken)": "tok", "識別符号期限(SessionExpiry)": "2026/02/04 22:10:20",
+        }
+        res_header = list(a.RESERVATION_RULES)
+        res = {h: "" for h in res_header} | {"予約番号": "A-1", "新規登録者": "くろまめ"}
+        with tempfile.TemporaryDirectory() as d:
+            dp = Path(d)
+            (dp / "s.csv").write_text(",".join(staff_header) + "\n" + ",".join(f'"{v}"' for v in st.values()) + "\n", encoding="utf-8")
+            (dp / "r.tsv").write_text("\t".join(res_header) + "\n" + "\t".join(res.values()) + "\n", encoding="utf-8-sig")
+            a.main(["--staff", str(dp / "s.csv"), "--reservations", str(dp / "r.tsv"), "--out-dir", str(dp / "out")])
+            s_rows, _, delim = a.read_table(dp / "out" / "s.anon.csv")
+            r_rows, _ = a.read_tsv(dp / "out" / "r.anon.tsv")
+        self.assertEqual(delim, ",")
+        s_ = dict(zip(s_rows[0], s_rows[1]))
+        r = dict(zip(r_rows[0], r_rows[1]))
+        self.assertEqual(s_["氏名"], "織田 信長")
+        self.assertEqual(r["新規登録者"], s_["氏名"])
+        self.assertEqual((s_["ID"], s_["mail address"], s_["ユーザーID"]), ("S00001", "staff0001@example.com", "staff0001"))
+        self.assertEqual(s_["TEL"], "080-0000-0001")
+        for col in ("パスワード(暗号化)", "LW_ID", "都度更新ユーザ識別(SessionToken)", "識別符号期限(SessionExpiry)"):
+            self.assertEqual(s_[col], "")
+        self.assertEqual((s_["管理者"], s_["退職日"]), ("1", "2026.3.31"))
 
 
 if __name__ == "__main__":

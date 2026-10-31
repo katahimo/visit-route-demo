@@ -3,7 +3,7 @@
 
 使い方:
   python3 -I tools/anonymize/anonymize.py \
-      --customers data/顧客.tsv --reservations data/予約.tsv --out-dir out/
+      --customers data/顧客.tsv --reservations data/予約.tsv --staff data/スタッフ.csv --out-dir out/
 
 - 2つのファイルを1回で処理する（同じ人に同じ仮名・仮IDを振るため）。片方だけでもよい
 - 文字コードは UTF-8（BOM 付き可）・UTF-16（BOM 付き）・cp932 を自動で判定し、同じ文字コードで書き出す
@@ -240,6 +240,9 @@ MEI = _person_part(lambda n: n[1][0])
 SEI_KANA = _person_part(lambda n: n[0][1])
 MEI_KANA = _person_part(lambda n: n[1][1])
 CUSTOMER_ID = _id("customer", "C")
+# スタッフ名：顧客と同じ表から振るので顧客の仮名と重ならない。同じスタッフには同じ仮名。「-」は担当なしの印なので残す
+STAFF_NAME = _nonempty(lambda v, c: v if v.strip() in ("-", "－", "ー") else
+                       "{} {}".format(*(x[0] for x in c.p.name(c.p.person("staff:" + v)))))
 
 RESERVATION_RULES: dict[str, Rule] = {
     "予約番号": _id("reservation", "R"),
@@ -253,13 +256,31 @@ RESERVATION_RULES: dict[str, Rule] = {
     "オプション": keep,
     "状況": keep,
     "シンプルアンケート": blank,  # 自由記述
-    "新規登録者": keep,
+    "新規登録者": STAFF_NAME,  # スタッフの名前
     "氏名": FULL_NAME,
     "会員番号": CUSTOMER_ID,
     "住所": _address,
     "住所2[適用開始日YYYY/MM/DD]": keep,
     "住所2[適用終了日YYYY/MM/DD]": keep,
     "住所2": _address,
+}
+
+STAFF_RULES: dict[str, Rule] = {
+    "ID": _id("staff", "S"),
+    "氏名": STAFF_NAME,
+    "住所": blank,
+    "TEL": _nonempty(lambda v, c: f"080-0000-{(c.person or 0) + 1:04d}"),
+    "mail address": _nonempty(lambda v, c: f"staff{(c.person or 0) + 1:04d}@example.com"),
+    "緯度・経度": _latlng,
+    "入社日": keep,
+    "退職日": keep,
+    "ユーザーID": _nonempty(lambda v, c: f"staff{(c.person or 0) + 1:04d}"),
+    "パスワード(暗号化)": blank,
+    "管理者": keep,
+    "LW_ID": blank,  # 外部サービスの ID
+    "GoogleChatID": blank,
+    "都度更新ユーザ識別(SessionToken)": blank,
+    "識別符号期限(SessionExpiry)": blank,
 }
 
 CUSTOMER_RULES: dict[str, Rule] = {
@@ -300,6 +321,12 @@ CUSTOMER_RULES: dict[str, Rule] = {
 
 
 def read_tsv(path: Path) -> tuple[list[list[str]], str]:
+    rows, enc, _ = read_table(path)
+    return rows, enc
+
+
+def read_table(path: Path) -> tuple[list[list[str]], str, str]:
+    """(行, 文字コード, 区切り文字)。区切りは見出し行のタブとカンマの多いほう（スタッフ表はカンマ区切り）"""
     raw = path.read_bytes()
     # UTF-16 は BOM があるときだけ（BOM なしの cp932 を誤判定しない）
     encs = ("utf-16", "utf-8-sig", "cp932") if raw[:2] in (b"\xff\xfe", b"\xfe\xff") else ("utf-8-sig", "cp932")
@@ -311,21 +338,25 @@ def read_tsv(path: Path) -> tuple[list[list[str]], str]:
             continue
     else:
         raise SystemExit(f"{path}: 文字コードを読めない（UTF-8・UTF-16（BOM 付き）・cp932 以外）")
-    rows = list(csv.reader(text.splitlines(keepends=True), delimiter="\t"))
+    first = text.lstrip("﻿").split("\n", 1)[0]
+    delim = "," if first.count(",") > first.count("\t") else "\t"
+    rows = list(csv.reader(text.splitlines(keepends=True), delimiter=delim))
     # 元が BOM 付き UTF-8 なら BOM 付きで書き戻す（Excel で文字化けさせない）
-    return rows, ("utf-8-sig" if raw.startswith(b"\xef\xbb\xbf") or enc == "utf-8-sig" else enc)
+    return rows, ("utf-8-sig" if raw.startswith(b"\xef\xbb\xbf") or enc == "utf-8-sig" else enc), delim
 
 
-def write_tsv(path: Path, rows: list[list[str]], enc: str) -> None:
+def write_tsv(path: Path, rows: list[list[str]], enc: str, delim: str = "\t") -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding=enc, errors="replace", newline="") as f:
-        csv.writer(f, delimiter="\t", lineterminator="\r\n").writerows(rows)
+        csv.writer(f, delimiter=delim, lineterminator="\r\n").writerows(rows)
 
 
 def _person_key(header: list[str], row: list[str], kind: str) -> str:
     def get(col: str) -> str:
         return row[header.index(col)] if col in header and header.index(col) < len(row) else ""
 
+    if kind == "staff":
+        return "staff:" + get("氏名") if get("氏名").strip() else ""
     if kind == "customers":
         return get("姓") + get("名") or "id:" + get("顧客ID")
     return get("氏名") or "id:" + get("会員番号")
@@ -344,7 +375,7 @@ def anonymize_rows(
         if not any(cell.strip() for cell in row):
             continue
         key = _person_key(header, row, kind)
-        person = p.person(key) if _norm_key(key) not in ("", "id:") else None
+        person = p.person(key) if _norm_key(key) not in ("", "id:", "staff:") else None
         ctx = RowCtx(p, person, args, stats, i)
         new = []
         for col, cell in zip(header, row):
@@ -357,9 +388,10 @@ def anonymize_rows(
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description="予約情報・顧客情報（タブ区切り）を匿名化する")
+    ap = argparse.ArgumentParser(description="予約情報・顧客情報（タブ区切り）・スタッフ情報（カンマ区切り）を匿名化する")
     ap.add_argument("--customers", type=Path, help="顧客情報のファイル")
     ap.add_argument("--reservations", type=Path, help="予約情報のファイル")
+    ap.add_argument("--staff", type=Path, help="スタッフ情報のファイル（予約の新規登録者と同じ人に同じ仮名を振る）")
     ap.add_argument("--out-dir", type=Path, required=True)
     ap.add_argument("--address-level", choices=["chome", "town", "city"], default="chome",
                     help="住所をどこまで残すか（既定 chome＝○丁目まで）")
@@ -372,22 +404,23 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--keep-unknown", action="store_true", help="表にない列を残す（既定は空にする）")
     ap.add_argument("--mapping-out", type=Path, help="対応表（元の値を含む）を書く先")
     args = ap.parse_args(argv)
-    if not args.customers and not args.reservations:
-        ap.error("--customers か --reservations のどちらかが要る")
+    if not (args.customers or args.reservations or args.staff):
+        ap.error("--customers・--reservations・--staff のどれかが要る")
     if args.coords == "round":
         args.jitter_m = 0
 
     p = Pseudonymizer(salt=(args.salt or "visit-route-demo").encode())
     report = {}
-    # 顧客を先に読んで人の番号を振り、予約の氏名と合わせる
-    for kind, path, rules in (("customers", args.customers, CUSTOMER_RULES),
+    # スタッフ・顧客を先に読んで人の番号を振り、予約の新規登録者・氏名と合わせる
+    for kind, path, rules in (("staff", args.staff, STAFF_RULES),
+                              ("customers", args.customers, CUSTOMER_RULES),
                               ("reservations", args.reservations, RESERVATION_RULES)):
         if not path:
             continue
-        rows, enc = read_tsv(path)
+        rows, enc, delim = read_table(path)
         out, stats = anonymize_rows(rows, rules, kind, p, args)
         dest = args.out_dir / f"{path.stem}.anon{path.suffix or '.tsv'}"
-        write_tsv(dest, out, enc)
+        write_tsv(dest, out, enc, delim)
         report[str(path)] = {"出力": str(dest), "文字コード": enc, **stats}
 
     print(json.dumps(report, ensure_ascii=False, indent=2), file=sys.stderr)
