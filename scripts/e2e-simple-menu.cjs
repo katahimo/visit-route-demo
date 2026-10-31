@@ -191,10 +191,9 @@ async function band(page) {
   check(/^#\/plan/.test(hash(page)), '帯の［見に行く ›］を押すと日の予定へ移る', hash(page));
   const id = (await navUsr(page))?.visitId ?? null;
   check(!!id, '行き先の訪問の ID を渡している', id);
-  check(
-    (await page.evaluate(() => history.state?.usr ?? null)) === null,
-    '受けた state は履歴から消す（戻る・読み直しで開き直さない）',
-  );
+  // 日の予定が並びを出して受け取ったあとに消す（読み込みが遅いと少し後）
+  const cleared = await until(async () => (await page.evaluate(() => history.state?.usr ?? null)) === null, 30000);
+  check(!!cleared, '受けた state は履歴から消す（戻る・読み直しで開き直さない）');
   const el = page.locator(`[data-visit="${id}"]`).first();
   await el.waitFor({ timeout: 30000 });
   // 巻くのは滑らかに動く（動きを減らす設定でなければ）ので、止まるまで待つ
