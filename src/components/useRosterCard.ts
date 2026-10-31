@@ -11,7 +11,8 @@ import { useToast } from './Toast';
 import { useFeature } from './useFeature';
 import { useRosterImport } from './useRosterImport';
 
-export function useRosterCard(kind: RosterKind) {
+/** onImported は名簿が入ったと見届けたときに呼ぶ（PRD D399） */
+export function useRosterCard(kind: RosterKind, onImported?: () => void) {
   const { data } = useDemoData();
   const toast = useToast();
   const offboardOn = useFeature('offboard');
@@ -19,7 +20,7 @@ export function useRosterCard(kind: RosterKind) {
   const [busy, setBusy] = useState(false);
   /** 名簿の読み込み方（PRD D104）：追加・更新（既定）か総入れ替え */
   const [rosterMode, setRosterMode] = useState<RosterMode>('merge');
-  const loadRoster = useRosterImport({ rosterMode, offboardOn, setError });
+  const loadRoster = useRosterImport({ rosterMode, offboardOn, setError, onImported });
   const term = kind === 'staff' ? data.org.terms.staff : data.org.terms.client;
 
   /** 名簿を Excel のブックか CSV（BOM 付きの UTF-8）で書き出す。名簿だけの書き出しは「最後に書き出した日」に数えない */

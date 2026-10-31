@@ -113,7 +113,7 @@ PoC本体は「性別希望」と「NG」しか持たず、相性は登録のみ
 | 欠勤・キャンセル | [prd/absence.md](prd/absence.md) | D26〜D29 D31 D32 D34 D35 D74 D167〜D172 D203 D244〜D246 D264 D265 |
 | 空き状況・問い合わせ | [prd/vacancy.md](prd/vacancy.md) | D45〜D47 D67 D79 D184〜D187 D204 D258 |
 | 人と決まり・人の画面・相性・退職 | [prd/people.md](prd/people.md) | D5 D6 D8 D36 D37 D61 D65 D66 D68 D71〜D73 D109〜D117 D122〜D126 D198〜D200 D202 D205〜D208 D285 D295 D296 D298〜D300 D308〜D313 D370 |
-| 住所・地図・メール・道順 | [prd/contact.md](prd/contact.md) | D86〜D101 D118〜D121 D366〜D369 |
+| 住所・地図・メール・道順 | [prd/contact.md](prd/contact.md) | D86〜D101 D118〜D121 D366〜D369 D399 |
 | データ・Excel・フォーム・機能の入り切り | [prd/data.md](prd/data.md) | D1〜D3 D15 D23 D33 D44 D103〜D107 D191 D209〜D216 D227 D248〜D251 D253 D254 D276 D365 D371 |
 | メニュー・スマホ・確認・用語 | [prd/navigation.md](prd/navigation.md) | D59 D132 D133 D135 D146〜D150 D174〜D176 D179〜D183 D190 D192〜D197 D220〜D222 D230 D231 D236 D238〜D241 D252 D267 D268 D270 D272 D273 D275 D277 D284 D307 D333〜D335 D337 D338 |
 | 最初の2問・決まった予定・情報量・顧客台帳 | [prd/simple.md](prd/simple.md) | D379〜D398 |
