@@ -92,7 +92,7 @@ export function useDayModel(date: string) {
 
 /**
  * compile が読むデータだけを取り出す（伝えた内容・プリセットの更新では変わらない）。
- * その日の問題を compile しないので、日を選ばない画面（ホーム。PRD D141）はこれだけを使う
+ * その日の問題を compile しないので、日を選ばない画面（要対応の帯など）はこれだけを使う
  */
 export function useCompileInput(data: DemoData): CompileInput {
   return useMemo(

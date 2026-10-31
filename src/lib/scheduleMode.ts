@@ -23,7 +23,7 @@ export const isLateMonth = (today: string): boolean => Number(today.slice(8, 10)
 export const planYm = (today: string): string => (isLateMonth(today) ? nextYm(today) : ymOf(today));
 
 /**
- * その月の、担当なしの訪問がある日（今日以降・まだ伝えていない日）の数。ホームの「N月の担当を AI で組む」と同じ日の数え方
+ * その月の、担当なしの訪問がある日（今日以降・まだ伝えていない日）の数。メニューの「組む」の印の数え方
  * （担当が null の訪問。取り消し・〈利用者さん〉の休みの回は数えない）。compile しないので軽い
  */
 export function unassignedDayCount(

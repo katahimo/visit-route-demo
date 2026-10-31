@@ -18,7 +18,16 @@ const day = (date: string, issues: Record<string, IssueKind[]> = {}): DayStatus 
 });
 
 const TODAY = '2026-10-21';
-const ZERO = { unassigned: 0, overlap: 0, off: 0, noStandard: 0, rebuild: 0, unconfirmed: 0 };
+const ZERO = {
+  unassigned: 0,
+  overlap: 0,
+  off: 0,
+  notAllowed: 0,
+  overSpan: 0,
+  noStandard: 0,
+  rebuild: 0,
+  unconfirmed: 0,
+};
 
 describe('attentionBand（要対応の帯。PRD D383・D391）', () => {
   it('何も無ければ null（帯を出さない）', () => {
@@ -113,6 +122,28 @@ describe('attentionBand の入だけの種類（エキスパート機能が入�
     expect(changed?.text).toBe('基本情報が変わった（組み直す）');
     expect(changed?.go).toEqual({ to: '/arrange?ym=2026-11' });
     expect(attentionBand([], TODAY, undefined, open)).toBeNull();
+  });
+  it('条件に合わない（必須の違反の訪問）・拘束超（日）は入だけ数え、切（渡さない）は数えない。ホームの要対応が知らせていたもの', () => {
+    const told1 = {
+      ...told(TODAY),
+      ...day(TODAY, { a: ['notAllowed'], b: ['notAllowed', 'late'] }),
+      state: 'told' as const,
+    };
+    const span = { ...told('2026-10-23'), overSpan: ['s1'] };
+    const b = attentionBand([told1, span], TODAY, undefined, open);
+    // b は重なりに数える。a だけが条件に合わない
+    expect(b?.counts).toEqual({ ...ZERO, overlap: 1, notAllowed: 1, overSpan: 1 });
+    expect(b?.text).toBe('重なり 1件・条件に合わない 1件・拘束超 1日');
+    expect(attentionBand([told1, span], TODAY)?.text).toBe('重なり 1件');
+    // 押した先：訪問の種類が先。条件に合わないだけなら最初のその訪問、拘束超だけならその日の日の予定
+    expect(
+      attentionBand([{ ...told1, issues: new Map([['a', told1.issues.get('a')!]]) }], TODAY, undefined, open)?.go,
+    ).toEqual({
+      to: '/plan',
+      date: TODAY,
+      visitId: 'a',
+    });
+    expect(attentionBand([span], TODAY, undefined, open)?.go).toEqual({ to: '/plan', date: '2026-10-23' });
   });
   it('切った機能の種類は出さない（組み方の標準・担当を組むの URL が切れていれば）', () => {
     const off = { ...open, hasStandard: false, isOn: () => false };

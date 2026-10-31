@@ -341,7 +341,7 @@ export function AchievementList({ list: all, rules, terms }: { list: RuleAchieve
 
 /**
  * 確定した日の見出しの「次の確定していない日へ（10/23）」（PRD D224）。その日より後・今日以降で、訪問があって確定済みでない日
- * （月の右の欄・ホームの「確定していない日」と同じ数え方。lib/useDayStatuses）のうち最初の日を選ぶ。見る範囲はその日の月と翌月。
+ * （月の右の欄・要対応の帯の「未確定 N日」と同じ数え方。lib/useDayStatuses）のうち最初の日を選ぶ。見る範囲はその日の月と翌月。
  * 数えるのは描画の後（useDeferredValue。確定の操作を待たせない）。無ければ出さない
  */
 export function NextUnconfirmed({ date, onPick }: { date: string; onPick: (date: string) => void }) {

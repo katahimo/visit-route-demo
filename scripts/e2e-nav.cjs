@@ -860,7 +860,7 @@ async function scheduleTab(page) {
   check(JSON.stringify(await active()) === '["利用者さん"]', '「利用者さん」のタブに印');
   await tab('予定').click();
   await page.locator('h1').filter({ hasText: '週の予定' }).waitFor({ timeout: 10000 });
-  check(true, '「予定」のタブ：最後に開いた表示（週の予定）を開く');
+  check(hashOf(page).startsWith('#/week'), '「予定」のタブ：最後に開いた表示（週の予定）を開く', hashOf(page));
   // 欠勤・キャンセルは下のタブに無い
   check(
     (await page.getByTestId('bottom-tab').filter({ hasText: '欠勤' }).count()) === 0,

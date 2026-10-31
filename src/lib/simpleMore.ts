@@ -3,7 +3,7 @@ import type { Features } from '../contracts/features';
 import { exceptionsOnly } from './exceptionView';
 import { isHrefOn } from './features';
 
-/** 足す項目の種類：担当なしの訪問を組む（ホームの［組む］の代わり。切のとき）・空き状況（メニューから外した。入切とも） */
+/** 足す項目の種類：担当なしの訪問を組む（切のとき）・空き状況（メニューから外した。入切とも） */
 export type SimpleMoreKind = 'auto-arrange' | 'vacancy';
 
 /**

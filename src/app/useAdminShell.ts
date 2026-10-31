@@ -31,7 +31,7 @@ function rememberView(pathname: string): LastViews {
 
 /**
  * メニューの並びと画面の一覧（PRD D178〜D180・D230〜D232・D273・D275。ADR-0027・0034）。
- * ホーム／予定／当日・問い合わせ／人／AI の条件／設定。ルートの URL は変えない。
+ * 予定・〈利用者さん〉・〈スタッフ〉・組む（入のとき）・設定。ホームは無い。ルートの URL は変えない。
  * 当日・問い合わせの「欠勤・キャンセルを登録」は今日の日の予定の欄を開く操作（今の画面の印は付けない）
  */
 export function useShellNav(data: DemoData, pathname: string) {

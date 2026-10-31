@@ -109,9 +109,9 @@
 
 予定はいつも手で直せる（AI で組むのは予定を組む）。この部品は組む月の決まりとメニューの件数だけを持つ純粋関数（テストあり）。データは書き換えない。
 
-- `nextYm(today)`・`isLateMonth(today)`（`HOME_NEXT_MONTH_FROM_DAY` 日以降。PRD D255）・`planYm(today)`：組む月（月の後半は来月、前半は今月）。`planLabel(today)`：メニューの子の名前「◯月の予定」
+- `nextYm(today)`・`isLateMonth(today)`（`LATE_MONTH_FROM_DAY`＝15 日以降。PRD D255）・`planYm(today)`：組む月（月の後半は来月、前半は今月）
 - `unassignedDayCount(data, ym, today)`：その月の、担当なしの訪問がある日（今日以降・まだ伝えていない日）の数（取り消し・〈利用者さん〉の休みの回は数えない。compile しないので軽い）
-- `menuBadges(data, today)`：メニューの件数の印 `{ planUnassignedDays, todayUntold }`（担当を組むの「N日」・今日の予定の「未確定」）
+- `menuBadges(data, today)`：メニューの件数の印 `{ planUnassignedDays, hasStandard }`（「組む」の「N日」。今日の「未確定」の印は帯の「未確定 N日」へ移した）
 
 ### 訪問の札の共通の部品（`lib/visitLook.ts`・`visitSelect.ts`・`visitDrop.ts`・`components/visitParts.tsx`・`visitParts.css`。PRD D339〜D342。ADR-0056・ADR-0057）
 
@@ -206,7 +206,7 @@
 - 置き場所：入力・欄の情報・範囲の文（`VisitDraft`・`draftOf`〜`scopeTexts`）は `visitDraft`、担当の候補・割り当て（`staffChoices`・`staffPickError`・`assignOnDays`）は `visitStaff`、一覧は `visitLists`、書く操作・`endPatternOp`・`toldDaysChanged` は `visitOps`
 - 読む：`draftOf`・`newDraft`・`timeChanged`・`visitInfo`（繰り返しの文・この回の変更・いつもの担当・休み・変えられるか）・`occurrenceChanges`・`scopeTexts`（「M/D 以降の〈曜日〉曜の回」・ほかの曜日の有無・そのままにする回）・`staffChoices(data, visitId, draft)`（欄の日時でその日の問題を日の予定と同じ作り方で作り、「担当を変える ▾」と同じ `lib/reassignMenu` の `reassignChoices`。出す人は `workingStaff`（稼働時間帯がある・列に訪問がある）と今の担当）・`staffPickError`（保存の前に今の入力で選んだ担当を見直す）
 - 書く：`applyVisitEdit(data, { visitId, draft, staff, scope }, today, ids, now)`（今ある訪問の〈利用者さん〉は変えない。新規・この回だけ＝`savedVisit`・これ以降＝`moveFollowing`（開いた回を欄の日付へ。over で所要・種類・時間の約束・幅・いつもの担当）・すべて＝今日以降で最初の、この回だけ変えていない・取り消していない同じ曜日の回から、元の日から欄の日付までの差で。メモだけならこの回だけ。担当は、この回だけならその日の担当の並びに入れてピン（`assignOnDays`。担当なしは外す）、これ以降・すべては分けた繰り返しの担当にする（範囲の回は見るときにその担当で出る））・`cancelVisitOp`・`uncancelVisitOp`（ほかに変えた所が無ければ edited も外す）・`restoreOccurrenceOp`
-- 一覧：`unassignedVisits(data, today, until)`（担当なしの訪問）・`dayVisitRows(data, date, nowHm, limit)`（取り消し・休みを除き、担当なし → これからの近い順 → 済んだ時刻の順）・`clientVisitsIn(data, clientId, from, to)`（取り消しも）・`staffVisitsIn(data, staffId, from, to)`（訪問の担当がその人。取り消しは出さない。〈スタッフ〉の画面の予定）
+- 一覧：`clientVisitsIn(data, clientId, from, to)`（取り消しも）・`staffVisitsIn(data, staffId, from, to)`（訪問の担当がその人。取り消しは出さない。〈スタッフ〉の画面の予定）
 - 繰り返し：`endPatternOp(data, patternId, last, today)`（終了日を入れ、last より後で今日以降の、この回だけ変えていない・取り消していない回を消す。消す件数と確定した日の数。〈利用者さん〉の画面の「終わらせる」）
 
 ### 名前から開く詳細（ADR-0022。PRD D122〜D126・D205〜D209）

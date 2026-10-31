@@ -206,14 +206,31 @@ async function checkTemplate(page, t) {
   const label = TEMPLATE_LABEL[t];
   const expert = on.includes('expert');
   await openHome(page, on);
+  // 起動の画面（予定）の入口：欠勤・キャンセルを登録は sudden、「その他 ▾」の空き状況は vacancy に合う（ホームの入口の代わり。PRD D390）
+  await settle(page, 300);
+  check(
+    (await page.getByTestId('sudden-open').count()) === (on.includes('sudden') ? 1 : 0),
+    `${label}：起動の画面の「欠勤・キャンセルを登録」は欠勤・キャンセルの入り切りに合う`,
+  );
+  const more = page.locator('[data-testid$="-more"]');
+  if ((await more.count()) > 0) await more.first().click();
+  check(
+    (await page.getByTestId('more-vacancy').count()) === (on.includes('vacancy') ? 1 : 0),
+    `${label}：起動の画面の「その他 ▾」の空き状況は空き状況の入り切りに合う`,
+  );
+  await page.keyboard.press('Escape');
   const m = await menu(page);
-  check(same(m.labels, menuFor(on)), `${label}：メニューの最上位の項目（空き状況の入り切りだけで変わる）`, m.labels);
+  check(
+    same(m.labels, menuFor(on)),
+    `${label}：メニューの最上位の項目（エキスパート機能の入り切りだけで変わる。空き状況・欠勤では変わらない）`,
+    m.labels,
+  );
   check(
     same(m.schedule, scheduleKidsFor(on)) &&
       same(m.arrange, arrangeKidsFor(t)) &&
       same(m.people, peopleKidsFor(t)) &&
       same(m.settings, settingsKidsFor(t)),
-    `${label}：メニューの子の項目（組むだけ：基本情報・組み方の標準・担当を組む。予定・設定に子は無いじ）`,
+    `${label}：メニューの子の項目（組むだけ：基本情報・組み方の標準・担当を組む。予定・設定に子は無い）`,
     m,
   );
   const tabs = await page.getByTestId('bottom-tab').allInnerTexts();

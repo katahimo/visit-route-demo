@@ -9,14 +9,19 @@ import type { DayStatus } from './month';
 /** 帯に数える訪問の種類：担当なし・重なり（時間が前の訪問と重なる・間に合わない）・休みの人（休みの人に割り当てた訪問） */
 export type VisitBandKind = 'unassigned' | 'overlap' | 'off';
 
-/** 帯に数える種類。訪問のほか、入だけの種類：組み方の標準が無い・基本情報が変わった（組み直す）・未確定の日（確定（伝えた）がまだ。PRD D382） */
-export type BandKind = VisitBandKind | 'noStandard' | 'rebuild' | 'unconfirmed';
+/**
+ * 帯に数える種類。訪問のほか、入だけの種類：条件に合わない（必須の違反。訪問）・拘束超（日）・組み方の標準が無い・
+ * 基本情報が変わった（組み直す）・未確定の日（確定（伝えた）がまだ。PRD D382）。条件に合わない・拘束超はホームの要対応が知らせていたもの
+ */
+export type BandKind = VisitBandKind | 'notAllowed' | 'overSpan' | 'noStandard' | 'rebuild' | 'unconfirmed';
 
 /** 帯に出す種類の並びと名前（文の並び・押した先を選ぶ順。入だけの3つは訪問の種類のあと） */
 export const BAND_KINDS: readonly { kind: BandKind; label: string; unit: string }[] = [
   { kind: 'unassigned', label: '担当なし', unit: '件' },
   { kind: 'overlap', label: '重なり', unit: '件' },
   { kind: 'off', label: '休みの人', unit: '件' },
+  { kind: 'notAllowed', label: '条件に合わない', unit: '件' },
+  { kind: 'overSpan', label: '拘束超', unit: '日' },
   { kind: 'noStandard', label: '組み方の標準が無い', unit: '' },
   { kind: 'rebuild', label: '基本情報が変わった（組み直す）', unit: '' },
   { kind: 'unconfirmed', label: '未確定', unit: '日' },
@@ -102,18 +107,30 @@ export function attentionBand(
     unassigned: 0,
     overlap: 0,
     off: 0,
+    notAllowed: 0,
+    overSpan: 0,
     noStandard: 0,
     rebuild: 0,
     unconfirmed: 0,
   };
   let first: (BandGo & { start: number }) | null = null;
+  let firstNa: BandGo | null = null;
+  const overSpan: string[] = [];
   const days = statuses.filter((s) => s.date >= today).sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
   const unconfirmed: string[] = [];
   for (const s of days) {
     if (expert && s.count > 0 && s.state !== 'told') unconfirmed.push(s.date);
+    if (expert && s.overSpan.length > 0) overSpan.push(s.date);
     for (const [visitId, issues] of s.issues) {
       const kind = PRIORITY.find((k) => issues.some((x) => BAND_OF[x.kind] === k));
-      if (!kind) continue;
+      if (!kind) {
+        // 条件に合わないだけの訪問（入だけ数える）
+        if (expert && issues.some((x) => x.kind === 'notAllowed')) {
+          counts.notAllowed++;
+          firstNa ??= { to: '/plan', date: s.date, visitId };
+        }
+        continue;
+      }
       counts[kind]++;
       const start = startOf(visitId) ?? Number.POSITIVE_INFINITY;
       // 日付順に回すので、同じ日の中でだけ開始の早いほうに替える（同じなら先に当たったまま）
@@ -122,6 +139,7 @@ export function attentionBand(
     }
   }
   counts.unconfirmed = unconfirmed.length;
+  counts.overSpan = overSpan.length;
   if (expert) {
     counts.noStandard = !expert.hasStandard && expert.isOn('/standard') ? 1 : 0;
     counts.rebuild = expert.hasStandard && expert.basisChanged && expert.isOn('/arrange') ? 1 : 0;
@@ -132,6 +150,8 @@ export function attentionBand(
     unassigned: first,
     overlap: first,
     off: first,
+    notAllowed: firstNa,
+    overSpan: overSpan[0] === undefined ? null : { to: '/plan', date: overSpan[0] },
     noStandard: { to: '/standard' },
     rebuild: { to: `/arrange?ym=${expert?.planYm ?? ''}` },
     unconfirmed: unconfirmedGo(unconfirmed),

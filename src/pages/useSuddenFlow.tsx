@@ -1,4 +1,4 @@
-// 日の予定の「欠勤・キャンセル」の欄（PRD D167〜D172・D243〜D246）の状態と処理：開け閉め・ホームなどの入口（?do=absence）・
+// 日の予定の「欠勤・キャンセル」の欄（PRD D167〜D172・D243〜D246）の状態と処理：開け閉め・パレットや週・月の操作の行などの入口（?do=absence）・
 // 欠勤だけ登録・欠勤の取り消し・欄からの訪問の取り消し・5段目の連絡の差。振り直しは useReassignFlow
 import { type ComponentProps, type RefObject, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -33,7 +33,7 @@ type SuddenCancel = {
 };
 
 /**
- * 「欠勤・キャンセル」の欄の開け閉め（null：閉じている）。日の画面の入口・ホーム（`?do=absence`）からは1段目、
+ * 「欠勤・キャンセル」の欄の開け閉め（null：閉じている）。日の画面の入口・パレット・週・月の操作の行（`?do=absence`）からは1段目、
  * 列の見出しの「この人の欠勤を登録」「欠勤を直す」からはその人を選んだ2段目で開く。日付を変えたら閉じる
  */
 export function useSuddenState(date: string) {
@@ -60,7 +60,7 @@ export function useSuddenState(date: string) {
 type SuddenState = ReturnType<typeof useSuddenState>;
 
 /**
- * ホームの「急な欠勤・キャンセルを登録」（?date=今日&do=absence。PRD D172）：その日を選び、「欠勤・キャンセル」の欄を1段目で開き、
+ * パレット・週・月の操作の行の「欠勤・キャンセルを登録」（?date=…&do=absence。PRD D172）：その日を選び、「欠勤・キャンセル」の欄を1段目で開き、
  * URL から ?date= と ?do= を消す（1回だけ。戻るで繰り返さない）。稼働時間の右の欄から（PRD D203）は `&staff=` の人の欠勤（2段目）
  */
 export function useSuddenEntry(x: {
