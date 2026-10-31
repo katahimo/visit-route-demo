@@ -365,7 +365,7 @@ async function legend(page) {
     (await page.getByTestId('month-load-type').count()) === 0,
     '月：表示の選択（混み具合）ははじめ「その他 ▾」にたたむ',
   );
-  await pressTool(page, 'month-more-pickers');
+  await pressTool(page, 'month-more-pickers', { where: 'more' });
   await page.getByTestId('month-load-type').waitFor();
   check(
     await page.getByTestId('month-focus').evaluate((el) => document.activeElement === el),

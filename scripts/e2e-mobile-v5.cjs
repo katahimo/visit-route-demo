@@ -222,7 +222,7 @@ async function sheet(page) {
   check(ok, '下から出る欄で担当を替えて保存（担当が変わりピン）', { vid, to });
   await panel(page).waitFor({ state: 'detached' });
   // 元に戻す（操作の行）
-  await pressTool(page, '元に戻す');
+  await pressTool(page, '元に戻す', { where: 'row' });
   const back = await waitStored(page, (d) => visitsKey(d) === visitsKey(before));
   check(back, '操作の行の「元に戻す」で担当が戻る');
   // 取り消す
@@ -289,7 +289,7 @@ async function multi(page) {
   await page.getByTestId('confirm-ok').click();
   const done = await waitStored(page, (d) => !!visitOf(d, ida)?.cancelled && !!visitOf(d, idb)?.cancelled);
   check(done, 'まとめて取り消す（確認のあと2件）');
-  await pressTool(page, '元に戻す');
+  await pressTool(page, '元に戻す', { where: 'row' });
   const back = await waitStored(page, (d) => visitsKey(d) === visitsKey(before));
   check(back, '「元に戻す」で2件の取り消しが1手で戻る');
   // 「選ぶ」で入る・抜ける

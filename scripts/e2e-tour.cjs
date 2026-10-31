@@ -901,7 +901,7 @@ async function monthList(b) {
   for (const ym of [YM, nextYm]) {
     await open(page, `/month?ym=${ym}`, '[data-testid="month-list"]');
     // 表示の選択は「その他 ▾」の「表示を選ぶ」で開く（PRD D278）
-    await pressTool(page, 'month-more-pickers');
+    await pressTool(page, 'month-more-pickers', { where: 'more' });
     await page.getByTestId('month-focus').waitFor();
     const staffOpts = await page
       .locator('[data-testid="month-focus"] option')

@@ -350,7 +350,7 @@ async function menu(page) {
   await page.locator('h1').filter({ hasText: '勤務の見込み' }).waitFor();
   check(hashOf(page).startsWith('#/workload'), '勤務時間（シフト）の「勤務の見込み」で勤務の見込み', hashOf(page));
   await open(page, '/month', '[data-testid="month-more"]');
-  await pressTool(page, 'month-workload');
+  await pressTool(page, 'month-workload', { where: 'more' });
   await page.locator('h1').filter({ hasText: '勤務の見込み' }).waitFor();
   check(hashOf(page).startsWith('#/workload'), '月の予定の「その他 ▾」の「勤務の見込み」で勤務の見込み', hashOf(page));
   await open(page, '/plan', '[data-testid="sudden-open"]');

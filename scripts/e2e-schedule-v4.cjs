@@ -175,7 +175,7 @@ async function zoom(page) {
   }
   // 週・月の「欠勤・キャンセルを登録」は日の予定の欄を開く
   await openView(page, '/week');
-  await pressTool(page, '欠勤');
+  await pressTool(page, '欠勤', { where: 'row' });
   await page.waitForURL(/#\/plan/);
   await page
     .getByTestId('sudden-kind-staff')
@@ -399,7 +399,7 @@ async function multi(page) {
     (await stored(page)).clients.find((c) => c.id === renamed)?.displayName === '別のタブで変えた名前',
     '週：確認の間の別のタブの変更を、取り消しが上書きしない',
   );
-  await pressTool(page, '元に戻す');
+  await pressTool(page, '元に戻す', { where: 'row' });
   const restored = await waitStored(page, (d) => !wids.some((id) => d.visits.some((v) => v.id === id && v.cancelled)));
   check(restored, '操作の行の「元に戻す」で取り消しを戻す');
 }
@@ -467,7 +467,7 @@ async function narrow(page) {
   }
   await openView(page, '/plan');
   // 390px の既定は日ごとのリスト（ADR-0055）。順番のカードは「その他 ▾」の「表示」から
-  await pressTool(page, 'plan-view-order');
+  await pressTool(page, 'plan-view-order', { where: 'more' });
   const cards = page.locator('.route-item .route-btn');
   await cards.first().waitFor({ timeout: 30000 });
   await cards.nth(0).click({ modifiers: ['Shift'] });

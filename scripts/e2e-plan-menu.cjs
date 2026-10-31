@@ -283,7 +283,7 @@ async function mobile(page) {
   check(scrollW <= 390, '390px：横にはみ出さない', scrollW);
   // 担当を変える（PRD D217）：390px の既定は日ごとのリスト（ADR-0055）。「その他 ▾」の「表示」で順番にすると、
   // カードを押すと詳細に出て、押して開ける・収まる
-  await pressTool(page, 'plan-view-order');
+  await pressTool(page, 'plan-view-order', { where: 'more' });
   await page.locator('.route-col:not(.route-col-none) .route-btn').first().click();
   await reBtn(page).waitFor({ timeout: 5000 });
   await reBtn(page).scrollIntoViewIfNeeded();
@@ -448,7 +448,7 @@ async function moreMenus(page) {
   await page.getByTestId('month-more-help').click();
   await page.getByTestId('month-help').waitFor();
   check((await focusedId()) === 'month-help', '「マスの見方の説明」で説明が開き、フォーカスが移る');
-  await pressTool(page, 'month-more-pickers');
+  await pressTool(page, 'month-more-pickers', { where: 'more' });
   await page.getByTestId('month-focus').waitFor();
   check((await focusedId()) === 'month-focus', '「表示を選ぶ」で表示の選択が開き、フォーカスは表示の欄');
   const sid = await page.getByTestId('month-focus').locator('option[value^="staff:"]').first().getAttribute('value');

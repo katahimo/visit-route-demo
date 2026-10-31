@@ -14,10 +14,10 @@ e2e の書き方（段階2。ADR-0041）：スクリプトは段（`[名前, 関
 
 エキスパート機能が入の画面は、段1〜5 でメニュー・ホーム・操作の行・「詳しく ▾」が切の作りに寄っていく。画面の位置（どのボタンがどこにあるか）を e2e の中に直に書かず、次の手を使う。位置が変わったら `ui.cjs` の表（`SCREENS`・`MENU_KEYS`・`TOOLS`）だけを直す。
 
-- `goTo(page, 行き先, { ready, timeout, h1, settleMs })`：URL で画面へ行く（about:blank を挟む）。行き先は名前（`月`・`週`・`日`・`利用者さん`・`スタッフ`・`設定`・`基本情報`・`組む`・`空き状況`・`欠勤` ほか。表は `SCREENS`）か `/path?query`。メニューやホームのカードを押して移る代わり。各スクリプトの `open(page, hash, ready)` はこれの薄い包み（待つ長さ・落ち着くまでの待ちの既定だけがスクリプトごとに違う）
+- `goTo(page, 行き先, { ready, timeout, h1, settleMs })`：URL で画面へ行く（about:blank を挟む）。行き先は名前（`月`・`週`・`日`・`利用者さん`・`スタッフ`・`設定`・`基本情報`・`組む`・`空き状況`・`欠勤` ほか。表は `SCREENS`）か `/path?query`。メニューやホームのカードを押して移る代わり。各スクリプトの `open(page, hash, ready)` の多く（e2e-nav・mobile・dialog・links・panel-foot・person-page・view・visit-panel・words・tour・home と `lib/features.cjs`）はこれの薄い包み（待つ長さ・落ち着くまでの待ちの既定だけがスクリプトごとに違う）。`goTo` を使わない `open`（e2e-progress・details・week・arrange・features など読み直す形のもの）と、画面ごとの `open1`（e2e-simple-menu）・`openView`（e2e-schedule-v4）・`openPlan`・`freshPlan`（e2e-absence・details2・plan-menu・words・mobile-v5・panel-foot・visit-panel）は、それぞれの待ちがあるので自前のまま
 - `clickMenu(page, 行き先, scope)`：左のメニューの項目を名前で押す（畳んだ親の中なら開いてから。`MENU_KEYS` に候補の key を前から並べる。`ホーム` は無ければ予定を押す）。メニューを押して移ることそのものを確かめるときだけ使い、ただ移りたいなら `goTo`
-- `pressTool(page, 操作)`：操作の行のボタンを名前で押す。行に出ていても「その他 ▾」の中でも押せる（`元に戻す`・`欠勤`・`勤務の見込み`・`印刷`・`担当なしを組む`・`訪問を追加`・`予定を入れる` ほか。表は `TOOLS`。表に無い名前は testid として行→「その他 ▾」の順に探す。例 `pressTool(page, 'plan-view-order')`）。`hasTool` は「どちらかにあるか」、`openMore` は「その他 ▾」を開いて中の一覧を返す
-- `openDetails(page, testId)`・`openAllDetails(page)`・`reveal(page, testId)`：「詳しく ▾」を開く（無い・もう開いているなら何もしない）／要素が見えるまで待つ（畳んだ「詳しく ▾」の中なら開いてから）。畳んだ中の点数・移動・凡例などを読む前に `reveal` を呼ぶ
+- `pressTool(page, 操作, { where })`：操作の行のボタンを名前で押す。既定は行に出ていても「その他 ▾」の中でも押せる。`where: 'row'`（行にあるときだけ）・`where: 'more'`（「その他 ▾」の中だけ）は、位置そのものを確かめる所に付ける（`元に戻す`・`欠勤`・`勤務の見込み`・`印刷`・`担当なしを組む`・`訪問を追加`・`予定を入れる` ほか。表は `TOOLS`。表に無い名前は testid として行→「その他 ▾」の順に探す。例 `pressTool(page, 'plan-view-order')`）。`openMore` は「その他 ▾」を開いて中の一覧を返し、`closeMore` は閉じる
+- `openDetails(page, testId)`・`reveal(page, testId)`：「詳しく ▾」を開く（無い・もう開いているなら何もしない）／要素が見えるまで待つ（その要素を含む畳んだ「詳しく ▾」だけ開いてから）。畳んだ中の点数・移動・凡例などを読む前に `reveal` を呼ぶ
 - 使い分け：その画面そのものの作り（メニューの並び・操作の行の中身・「詳しく ▾」の開け閉め）を確かめる e2e は、位置を直に見てよい（段で直す）。ほかの確かめのために「移る・押す・開く」だけの所は共通の手を使う
 
 ## 環境変数

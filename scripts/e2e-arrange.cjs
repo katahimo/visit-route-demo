@@ -235,7 +235,7 @@ async function runApply(page) {
     '反映すると範囲の担当なしが減る',
   );
   // 全体の「元に戻す」で1手戻る
-  await pressTool(page, '元に戻す');
+  await pressTool(page, '元に戻す', { where: 'row' });
   await page.waitForFunction(
     ({ k, d }) => !JSON.parse(localStorage.getItem(k)).visits.some((v) => v.date === d && v.staffId),
     { k: STORAGE_KEY, d: TODAY },
