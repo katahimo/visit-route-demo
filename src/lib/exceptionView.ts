@@ -13,23 +13,23 @@ export type ScheduleZoom = 'day' | 'week' | 'month';
 // ---- 操作の行 ----
 
 /**
- * 操作の行に出せるボタン：予定を入れる（週・月）・訪問の欄を開く「予定を入れる」（日）・担当なしの訪問を組む（切）・
+ * 操作の行に出せるボタン：予定を入れる（週・月）・訪問の欄を開く「予定を入れる」（日）・
  * 欠勤・キャンセルを登録（切）・担当を組む（入。担当を組むの画面へ）・確定（伝えた）（入の日）
  */
-export type MainTool = 'add' | 'plan' | 'arrange' | 'absence' | 'assign' | 'confirm';
+export type MainTool = 'add' | 'plan' | 'absence' | 'assign' | 'confirm';
 
 /**
- * 主ボタンにする候補（先に使えるもの）。日は「予定を入れる」（その日の訪問の欄を開く。スマホは出さないので、切は「担当なしの訪問を組む」・入は「確定（伝えた）」）、
+ * 主ボタンにする候補（先に使えるもの）。日は「予定を入れる」（その日の訪問の欄を開く。スマホは出さないので、切は主ボタン無し・入は「確定（伝えた）」）、
  * 週・月は「予定を入れる」（〈利用者さん〉・日時を選ぶ引き出し）。
- * 「担当なしの訪問を組む」は週・月では「その他 ▾」へ回す（担当なしは上の要対応の帯から見に行けて、入れた分は自動で組むので、いつも要る操作ではない。PRD D392）
+ * 「担当なしの訪問を組む」は操作の行に置かず、上の要対応の帯の従のボタン「担当なしを組む」（PRD D402・D403。ADR-0077）
  */
 const PRIMARY: Record<ScheduleZoom, readonly MainTool[]> = {
-  day: ['add', 'arrange'],
+  day: ['add'],
   week: ['plan'],
   month: ['plan'],
 };
 
-/** 入の主ボタン：日はスマホで「予定を入れる」を出さないとき「確定（伝えた）」が主ボタンになる（PRD D392） */
+/** 入の主ボタン：日はスマホで「予定を入れる」を出さないとき「確定（伝えた）」が主ボタンになる（PRD D402） */
 const PRIMARY_EXPERT: Record<ScheduleZoom, readonly MainTool[]> = {
   day: ['add', 'confirm'],
   week: ['plan'],
@@ -39,19 +39,19 @@ const PRIMARY_EXPERT: Record<ScheduleZoom, readonly MainTool[]> = {
 /** 主ボタンのほかに並べるボタン（1つだけ）。切は欠勤・キャンセルを登録（当日の変更の入口。ほかに入口が無い） */
 const SECOND: readonly MainTool[] = ['absence'];
 
-/** 入の2つ目：月・週は「担当を組む」（AI で組む入の要の操作）、日は「確定（伝えた）」。欠勤・キャンセルは「その他 ▾」（PRD D392） */
+/** 入の2つ目：月・週は「担当を組む」（AI で組む入の要の操作）、日は「確定（伝えた）」。欠勤・キャンセルは「その他 ▾」（PRD D402） */
 const SECOND_EXPERT: Record<ScheduleZoom, readonly MainTool[]> = {
   day: ['confirm'],
   week: ['assign'],
   month: ['assign'],
 };
 
-/** 日の主ボタンの言葉と、開いた新規の訪問の欄の見出し（入切とも「予定を入れる」。中の欄は同じ。PRD D392） */
+/** 日の主ボタンの言葉と、開いた新規の訪問の欄の見出し（入切とも「予定を入れる」。中の欄は同じ。PRD D402） */
 export const ADD_VISIT_LABEL = '予定を入れる';
 
 /**
- * 操作の行に残すボタン：主ボタン1つ＋最大1つ。ほかの操作（切は担当なしの訪問を組む・元に戻す・やり直す・表示の切り替え・使い方・
- * メールで送る・空き状況・印刷など、入はさらに欠勤・キャンセル）は「その他 ▾」へ。avail は今その画面で使えるか（担当なしが無ければ組むは出さない、など）。
+ * 操作の行に残すボタン：主ボタン1つ＋最大1つ。ほかの操作（元に戻す・やり直す・表示の切り替え・使い方・
+ * メールで送る・印刷など、入はさらに欠勤・キャンセル）は「その他 ▾」へ。avail は今その画面で使えるか（スマホの日は予定を入れるを出さない、など）。
  * 入と切の差はここ1か所（expert＝エキスパート機能が入）
  */
 export function mainTools(
@@ -126,7 +126,7 @@ export function introText(zoom: IntroScreen, only: boolean, expertText: string, 
 /** 説明を閉じたかを覚える鍵（store/navOpen の「開け閉め」に流用：開＝出している・閉＝閉じた。画面ごと） */
 export const introKey = (zoom: IntroScreen): string => `intro:${zoom}`;
 
-/** 説明を出すか：入切とも初回だけ（閉じたら覚えて、読み直しても出さない。PRD D384・D392） */
+/** 説明を出すか：入切とも初回だけ（閉じたら覚えて、読み直しても出さない。PRD D384・D402） */
 export const introShown = (stored: Readonly<Record<string, boolean>>, zoom: IntroScreen): boolean =>
   stored[introKey(zoom)] !== false;
 

@@ -22,7 +22,7 @@ import type { OffNote } from './useMonthOff';
 
 const STATE_ORDER: DayStatus['state'][] = ['none', 'told', 'changed'];
 
-/** カレンダーと日ごとの一覧の切り替えを「その他 ▾」の項目で（操作の行のボタンを2つまでにするため。PRD D189・D384・D392。600px 以下ははじめ一覧。URL の ?layout=） */
+/** カレンダーと日ごとの一覧の切り替えを「その他 ▾」の項目で（操作の行のボタンを2つまでにするため。PRD D189・D384・D402。600px 以下ははじめ一覧。URL の ?layout=） */
 export function monthLayoutItems(layout: MonthLayout, onPick: (next: MonthLayout) => void): MenuItem[] {
   return (
     [

@@ -15,13 +15,20 @@ export function usePendingImport(setError: Dispatch<SetStateAction<string | null
   const toast = useToast();
   const latest = useRef(data);
   latest.current = data;
-  const pending = useRef<{ base: DemoData; next: DemoData; done: string; keep: PreviousKeep } | null>(null);
+  const pending = useRef<{
+    base: DemoData;
+    next: DemoData;
+    done: string;
+    keep: PreviousKeep;
+    onDone?: () => void;
+  } | null>(null);
   useEffect(() => {
     const p = pending.current;
     if (!p) return;
     if (data === p.next) {
       pending.current = null;
       toast(p.done);
+      p.onDone?.();
     } else if (data !== p.base) {
       pending.current = null;
       // 入らなかったので、残した控えは前の世代に戻す
@@ -37,10 +44,16 @@ export function usePendingImport(setError: Dispatch<SetStateAction<string | null
     toast,
     /** base を読んだあとに、データが別のところで変わったか */
     changedSince: (base: DemoData) => latest.current !== base,
-    /** 控えを残して next を入れる（done は控えの結果から知らせの文を作る） */
-    commit: (x: { base: DemoData; next: DemoData; label: string; done: (keep: PreviousKeep) => string }) => {
+    /** 控えを残して next を入れる（done は控えの結果から知らせの文を作る。onDone は入ったと見届けたときに呼ぶ） */
+    commit: (x: {
+      base: DemoData;
+      next: DemoData;
+      label: string;
+      done: (keep: PreviousKeep) => string;
+      onDone?: () => void;
+    }) => {
       const keep = keepPrevious(x.label);
-      pending.current = { base: x.base, next: x.next, done: x.done(keep), keep };
+      pending.current = { base: x.base, next: x.next, done: x.done(keep), keep, onDone: x.onDone };
       update((d) => (d === x.base ? x.next : d), x.label, { tell: false });
     },
   };

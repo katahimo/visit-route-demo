@@ -307,13 +307,15 @@ describe('menuSections（ひな形ごとの項目。PRD D213・D275）', () => {
   const labels = (f: Features) => menuSections(terms, TODAY, f).flatMap((g) => g.items.map((i) => i.label));
   const titles = (f: Features) => menuSections(terms, TODAY, f).map((g) => g.title ?? null);
   const screens = (f: Features) => screenSections(terms, f).flatMap((g) => g.items.map((i) => i.label));
-  it('すべて：5項目（{} と同じ。人の項目は上の段、基本情報は組むの子。PRD D390。ADR-0067・ADR-0074）', () => {
+  it('すべて：6項目（{} と同じ。人の項目は上の段、基本情報は組むの子。PRD D401。ADR-0067・ADR-0074・ADR-0078）', () => {
     expect(labels(applyTemplate('all'))).toEqual(labels({}));
-    expect(labels({})).toHaveLength(5);
+    expect(labels({})).toHaveLength(6);
   });
-  it('エキスパート機能が切のメニューは 予定・〈利用者さん〉・〈スタッフ〉・設定 の4つ、入は「組む」が増えて5つ（ホームは無い。PRD D383・D390。ADR-0073・ADR-0074）', () => {
-    expect(labels({ expert: false })).toEqual(['予定', '利用者さん', 'スタッフ', '設定']);
-    expect(labels({})).toEqual(['予定', '利用者さん', 'スタッフ', '組む', '設定']);
+  it('エキスパート機能が切のメニューは 予定・空き状況・〈利用者さん〉・〈スタッフ〉・設定 の5つ、入は「組む」が増えて6つ（ホームは無い。PRD D400・D401。ADR-0073・ADR-0074・ADR-0078）', () => {
+    expect(labels({ expert: false })).toEqual(['予定', '空き状況', '利用者さん', 'スタッフ', '設定']);
+    expect(labels({})).toEqual(['予定', '空き状況', '利用者さん', 'スタッフ', '組む', '設定']);
+    // 空き状況を切れば出さない（PRD D213）
+    expect(labels({ expert: false, vacancy: false })).toEqual(['予定', '利用者さん', 'スタッフ', '設定']);
   });
   it('「組む」の子は機能の入り切りで変わらない項目だけ（基本情報・組み方の標準・担当を組む）。欠勤・空き状況を切っても子は同じ', () => {
     const kids = (f: Features) =>
@@ -324,9 +326,9 @@ describe('menuSections（ひな形ごとの項目。PRD D213・D275）', () => {
     expect(kids({})).toEqual(['arrange:basics', 'arrange:standard', 'arrange:assign']);
     expect(kids({ sudden: false, vacancy: false })).toEqual(['arrange:basics', 'arrange:standard', 'arrange:assign']);
   });
-  it('基本は4項目（エキスパート機能が切）。画面の一覧は勤務の見込み・条件の重み・特性の項目が無い（案を比べるはいつも無い）', () => {
-    // 基本はエキスパート機能が切：メニューは4つ・ホームは無い。組み方の標準は出ず、担当を組むだけ残る（空き状況は予定のグループ）
-    expect(labels(applyTemplate('basic'))).toEqual(['予定', '利用者さん', 'スタッフ', '設定']);
+  it('基本は5項目（エキスパート機能が切）。画面の一覧は勤務の見込み・条件の重み・特性の項目が無い（案を比べるはいつも無い）', () => {
+    // 基本はエキスパート機能が切：メニューは5つ・ホームは無い。組み方の標準は出ず、担当を組むだけ残る（パレットの空き状況は予定のグループ）
+    expect(labels(applyTemplate('basic'))).toEqual(['予定', '空き状況', '利用者さん', 'スタッフ', '設定']);
     expect(screens(applyTemplate('basic'))).toEqual([
       '月の予定',
       '週の予定',
@@ -366,7 +368,7 @@ describe('menuSections（ひな形ごとの項目。PRD D213・D275）', () => {
     expect(screens({ compat: false })).not.toContain('相性');
     expect(screens({})).toContain('相性');
   });
-  it('下のタブは 予定・〈利用者さん〉・〈スタッフ〉・組む。空き状況・欠勤を切っても変わらない（PRD D336・D390）', () => {
+  it('下のタブは 予定・〈利用者さん〉・〈スタッフ〉・組む。空き状況・欠勤を切っても変わらない（PRD D336・D401。ADR-0078）', () => {
     const keys = (f: Features) => bottomTabs(menuSections(terms, TODAY, f), f).map((t) => t.key);
     expect(keys({})).toEqual(['schedule', 'clients', 'staff', 'arrange']);
     expect(keys({ vacancy: false, sudden: false })).toEqual(['schedule', 'clients', 'staff', 'arrange']);

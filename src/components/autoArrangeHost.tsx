@@ -11,7 +11,7 @@ import './batchBand.css';
 export const AUTO_BAND_DELAY_MS = 600;
 
 /**
- * 自動の組み（lib/autoArrangeBatch。ADR-0072 第2段）に store の data と update をつなぎ、終わったら知らせる（PRD D374）。
+ * 自動の組み（lib/autoArrangeBatch。ADR-0072 第2段）に store の data と update をつなぎ、終わったら知らせる（PRD D405）。
  * App の直下に1つ。外れると計算を捨てる。データを丸ごと差し替えたら（読み込み・初期状態に戻す・直前の状態に戻す・別のタブの変更）
  * 待たせている依頼ごと捨てる（古いデータから作った結果を新しいデータに書かない）。
  * 終わったら「N件の担当を組みました」と［元に戻す］（書いたのが1手なので全体の履歴の1手戻す）。提案の帯は出さない

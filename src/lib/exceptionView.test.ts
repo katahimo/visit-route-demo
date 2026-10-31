@@ -14,7 +14,7 @@ import {
   showLegs,
 } from './exceptionView';
 
-const all = { add: true, plan: true, arrange: true, absence: true, assign: true, confirm: true };
+const all = { add: true, plan: true, absence: true, assign: true, confirm: true };
 
 describe('exceptionsOnly', () => {
   it('エキスパート機能が切のときだけ（無い ID は入）', () => {
@@ -31,21 +31,19 @@ describe('ADD_VISIT_LABEL（日の主ボタンと新規の欄の見出し）', (
 });
 
 describe('mainTools（操作の行は主ボタン1つ＋最大1つ）', () => {
-  it('日は 訪問を追加（主）＋欠勤・キャンセル。予定を入れる・組むは出さない（組むは「その他 ▾」）', () => {
+  it('日は 予定を入れる（主）＋欠勤・キャンセル（担当なしを組むは要対応の帯。PRD D403）', () => {
     expect(mainTools('day', all)).toEqual({ primary: 'add', second: 'absence' });
   });
-  it('日でスマホ（追加できない）は 担当なしを組む（主）＋欠勤・キャンセル', () => {
-    expect(mainTools('day', { ...all, add: false })).toEqual({ primary: 'arrange', second: 'absence' });
+  it('日でスマホ（追加できない）は主ボタン無し＋欠勤・キャンセル', () => {
+    expect(mainTools('day', { ...all, add: false })).toEqual({ primary: null, second: 'absence' });
   });
-  it('週・月は 予定を入れる（主）＋欠勤・キャンセル。担当なしを組むは担当なしの有無によらず「その他 ▾」へ', () => {
-    for (const z of ['week', 'month'] as const) {
+  it('週・月は 予定を入れる（主）＋欠勤・キャンセル', () => {
+    for (const z of ['week', 'month'] as const)
       expect(mainTools(z, all)).toEqual({ primary: 'plan', second: 'absence' });
-      expect(mainTools(z, { ...all, arrange: false })).toEqual({ primary: 'plan', second: 'absence' });
-    }
   });
   it('欠勤・キャンセルを切っていれば出さない。何も無ければ両方 null', () => {
     expect(mainTools('month', { ...all, absence: false })).toEqual({ primary: 'plan', second: null });
-    expect(mainTools('week', { ...all, add: false, plan: false, arrange: false, absence: false })).toEqual({
+    expect(mainTools('week', { ...all, add: false, plan: false, absence: false })).toEqual({
       primary: null,
       second: null,
     });

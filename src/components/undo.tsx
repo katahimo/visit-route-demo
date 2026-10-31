@@ -74,7 +74,7 @@ export function HistoryKeys(): ReactNode {
 
 /**
  * 「元に戻す」へフォーカスを返す先：「元に戻す」のボタン（人の予定表・組むの画面）、無ければ予定の操作の行の「その他 ▾」
- * （予定の月・週・日は「元に戻す」を「その他 ▾」の項目にしたため。PRD D392）
+ * （予定の月・週・日は「元に戻す」を「その他 ▾」の項目にしたため。PRD D402）
  */
 export const undoFocusTarget = (): HTMLElement | null =>
   document.querySelector<HTMLElement>('[data-testid="undo-btn"]') ??

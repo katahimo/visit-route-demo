@@ -60,7 +60,7 @@ export default function ArrangePage() {
 
   /** 考え方：いつも点数の基準（替えるのは組み方の標準の案をくらべる（と寄り道の条件の重み）。ADR-0065・ADR-0066） */
   const basisName = scorePresetOf(data.presets, data.scorePresetId)?.name ?? '今の重み';
-  /** 組み方の標準がまだ無い（範囲にかかわらず AI で組まない。PRD D356。門はエキスパート機能が入のときだけ。D377） */
+  /** 組み方の標準がまだ無い（範囲にかかわらず AI で組まない。PRD D356。門はエキスパート機能が入のときだけ。D406） */
   const needStandard = needsStandard(expert, hasStandard(data));
 
   /** 基本情報が最後に組んだあとに変わった（ADR-0067） */

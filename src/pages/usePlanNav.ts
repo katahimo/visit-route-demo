@@ -14,6 +14,8 @@ import type { PlanView } from './usePlanView';
 
 /** 画面を移るときの state（週の帯・要対応の帯から開く訪問）から訪問の ID */
 const visitIdOf = (state: unknown): string | null => (state as { visitId?: string } | null)?.visitId ?? null;
+/** 要対応の帯の「見に行く」から来たか（担当なしの訪問は選べないので欄を開く。PRD D403） */
+const fromBandOf = (state: unknown): boolean => (state as { band?: boolean } | null)?.band === true;
 
 /** 予定の画面の地図・選択で使うルートの集まりのキー（今の担当の並びは1つだけ） */
 export const PLAN_SET = 'plan';
@@ -208,6 +210,7 @@ export function usePlanNav(x: { date: string; setDate: (d: string) => void; d: P
   useUrlEntry(date, setDate, d, go.goToNone);
   /** 週間の帯・要対応の帯から開いたときに選ぶ訪問（並びが出たら1回だけ選んで見える所へ） */
   const wantVisit = useRef<string | null>(visitIdOf(location.state));
+  const wantOpen = useRef(fromBandOf(location.state));
   const [wantTick, setWantTick] = useState(0);
   // 日の予定を開いたまま移ってきたとき（要対応の帯を日の予定で押したとき）も受ける（開いたときの state は初期値で読む）
   const seenKey = useRef(location.key);
@@ -215,6 +218,7 @@ export function usePlanNav(x: { date: string; setDate: (d: string) => void; d: P
     if (seenKey.current === location.key) return;
     seenKey.current = location.key;
     wantVisit.current = visitIdOf(location.state);
+    wantOpen.current = fromBandOf(location.state);
     setWantTick((n) => n + 1);
   }, [location.key, location.state]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: 並びが出たとき・新しく頼まれたときに1回だけ
@@ -223,8 +227,21 @@ export function usePlanNav(x: { date: string; setDate: (d: string) => void; d: P
     // 日付を移した直後は前の日の並び：その訪問がこの日にあるときだけ受ける
     if (!id || !d.hasPlan || !d.visitById.has(id)) return;
     wantVisit.current = null;
+    const band = wantOpen.current;
+    wantOpen.current = false;
+    // 受けた state は履歴から消す（戻る・読み直しで欄をもう一度開かない。React Router の今の location はそのまま）
+    if ((window.history.state as { usr?: unknown } | null)?.usr)
+      window.history.replaceState({ ...window.history.state, usr: null }, '');
+    const sid = d.owner.get(id);
+    if (band) {
+      // 要対応の帯から（PRD D403）：担当のある訪問はその人の列で選んで巻く（選んだままなら絞り直してフォーカス。一覧なら時間軸へ）、
+      // 担当なしの訪問は担当の列に無く選べないので欄（受けられる人）を開く（同じ日を見ていても画面が変わる）
+      if (sid) go.goToStaff(sid, id);
+      else openVisit(id);
+      return;
+    }
     const x = { id, set: PLAN_SET };
-    if (d.owner.has(id) && !sel.isPicked(x)) sel.togglePick(x);
+    if (sid && !sel.isPicked(x)) sel.togglePick(x);
     requestAnimationFrame(() =>
       document.querySelector(`[data-visit="${CSS.escape(id)}"]`)?.scrollIntoView({ block: 'center' }),
     );

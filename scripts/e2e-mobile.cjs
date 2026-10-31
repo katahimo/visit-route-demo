@@ -2,7 +2,7 @@
 // 上の帯（ロゴと今の画面の名前・日付の切り替え。「探す」は下のタブ。〈利用者さん〉一覧と〈スタッフ〉一覧を見分ける。PRD D179・D336）、
 // 引き出し（下のタブの「メニュー」で開く。role="dialog"・aria-modal・名前、ボタンの aria-expanded・aria-controls、グループの見出し付きの縦並び、
 // 画面を選ぶ・外を押す・Esc で閉じてフォーカスが「メニュー」へ、Tab・Shift+Tab が中で回る、開いているあいだ裏を巻かない）、
-// 下のタブ（予定・〈利用者さん〉・〈スタッフ〉・組む・探す・メニュー（PRD D336・D390）、active と aria-current、月・週・日では「予定」（比較は組むの続きなので「組む」）、本文の最後がタブに隠れない）、
+// 下のタブ（予定・〈利用者さん〉・〈スタッフ〉・組む・探す・メニュー（PRD D336・D401）、active と aria-current、月・週・日では「予定」（比較は組むの続きなので「組む」）、本文の最後がタブに隠れない）、
 // 浮いている部品（地図の MapDock・欠勤の振り直しの ReassignDock・トースト）がタブに重ならない、
 // 本物の地図のボタンと本物のトースト（PRD D190。ボタンはタブのすぐ上・トーストが出ても互いに隠れない・本文の下を空ける・safe-area）、印刷で上の帯・下のタブ・引き出しを出さない、
 // 広い画面（1400px）では今の左のメニューのままで、上の帯の部品・下のタブを出さない。
@@ -40,7 +40,7 @@ async function header(page) {
   const name2 = await page.getByTestId('screen-name').innerText();
   check(
     name === '利用者さん' && name2 === 'スタッフ',
-    '上の帯：〈利用者さん〉と〈スタッフ〉を見分ける（呼び名そのまま。PRD D390）',
+    '上の帯：〈利用者さん〉と〈スタッフ〉を見分ける（呼び名そのまま。PRD D401）',
     {
       name,
       name2,
@@ -107,17 +107,17 @@ async function drawerOpenClose(page) {
   );
   const titles = await d.locator('.nav-group-title').allInnerTexts();
   check(titles.length === 0, '引き出し：見出しの無い1つの並び', titles);
-  // 最上位は5項目（予定・〈利用者さん〉・〈スタッフ〉・組む・設定。ADR-0074）。開いている親の子の項目も含めて、全部の項目を縦に並べる
+  // 最上位は6項目（予定・空き状況・〈利用者さん〉・〈スタッフ〉・組む・設定。ADR-0074・ADR-0078）。開いている親の子の項目も含めて、全部の項目を縦に並べる
   const top = await d.locator(TOP_LINKS).evaluateAll((els) => els.map((el) => el.dataset.key));
   const links = d.locator('.nav-link');
   const n = await links.count();
   const boxes = [];
   for (let i = 0; i < n; i++) boxes.push(await links.nth(i).boundingBox());
   check(
-    JSON.stringify(top) === JSON.stringify(['schedule', 'clients', 'staff', 'arrange', 'settings']) &&
+    JSON.stringify(top) === JSON.stringify(['schedule', 'vacancy', 'clients', 'staff', 'arrange', 'settings']) &&
       n > top.length &&
       boxes.every((b, i) => i === 0 || b.y > boxes[i - 1].y),
-    '引き出し：最上位5項目のメニューと開いた子の項目を縦に並べる',
+    '引き出し：最上位6項目のメニュー（空き状況を含む）と開いた子の項目を縦に並べる',
     { top, n },
   );
   await settle(page, 400); // 出てくる動きが終わるまで
@@ -209,7 +209,7 @@ async function bottom(page) {
   const labels = (await t.locator('.bottom-tab').allInnerTexts()).map((x) => x.trim());
   check(
     JSON.stringify(labels) === JSON.stringify(['予定', '利用者さん', 'スタッフ', '組む', '探す', 'メニュー']),
-    '下のタブ：予定・〈利用者さん〉・〈スタッフ〉・組む・探す・メニュー（PRD D336・D390）',
+    '下のタブ：予定・〈利用者さん〉・〈スタッフ〉・組む・探す・メニュー（PRD D336・D401）',
     labels,
   );
   const tb = await t.boundingBox();
@@ -251,7 +251,11 @@ async function bottom(page) {
     await active(),
   );
   await open(page, '/vacancy', '[data-testid="bottom-tabs"]');
-  check(JSON.stringify(await active()) === '["予定"]', '下のタブ：空き状況は「予定」が active', await active());
+  check(
+    (await active()).length === 0,
+    '下のタブ：空き状況はメニューの項目で下のタブには無い（どれも active にしない。下のタブは変えない。PRD D400）',
+    await active(),
+  );
   await open(page, '/types', '[data-testid="bottom-tabs"]');
   check((await active()).length === 0, '下のタブ：タブに無い画面（設定）ではどれも active にしない');
   // 「メニュー」のボタンもタブと同じ大きさで並ぶ
@@ -890,9 +894,9 @@ async function wide(page) {
   check(nav.width === 232 && nav.height === 1000, '広い画面：左のメニューは今のまま（幅232px・縦いっぱい）', nav);
   check(
     (await page.locator('.side-nav .nav-group-title').count()) === 0 &&
-      (await page.locator(`.side-nav :is(${TOP_LINKS})`).count()) === 5 &&
+      (await page.locator(`.side-nav :is(${TOP_LINKS})`).count()) === 6 &&
       (await page.locator('.app-header').boundingBox()).height === 72,
-    '広い画面：最上位5項目のメニュー・上の帯の高さ 72px',
+    '広い画面：最上位6項目のメニュー・上の帯の高さ 72px',
   );
   const pad = await page.evaluate(() => getComputedStyle(document.querySelector('.app-main')).paddingBottom);
   check(pad === '48px', '広い画面：本文の下の余白は今のまま', pad);

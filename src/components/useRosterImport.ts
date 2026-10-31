@@ -10,13 +10,17 @@ import { canKeepPrevious } from '../store';
 import { useConfirm } from './ConfirmDialog';
 import { IMPORT_CHANGED_TEXT, usePendingImport } from './usePendingImport';
 
-/** offboardOn は退職・担当替えの機能（ADR-0028 の offboard）が入か（切っていれば最終勤務日の欄を指さない） */
+/**
+ * offboardOn は退職・担当替えの機能（ADR-0028 の offboard）が入か（切っていれば最終勤務日の欄を指さない）。
+ * onImported は名簿が入ったと見届けたときに呼ぶ（〈利用者さん〉一覧の「位置の無い N人を地図に置く」の導線。PRD D399）
+ */
 export function useRosterImport(x: {
   rosterMode: RosterMode;
   offboardOn: boolean;
   setError: Dispatch<SetStateAction<string | null>>;
+  onImported?: () => void;
 }) {
-  const { rosterMode, offboardOn, setError } = x;
+  const { rosterMode, offboardOn, setError, onImported } = x;
   const { data, toast, changedSince, commit } = usePendingImport(setError);
   const confirmDialog = useConfirm();
 
@@ -63,6 +67,7 @@ export function useRosterImport(x: {
       next: r.data,
       label: `${term}の名簿の${how}`,
       done: (keep) => rosterDoneText({ term, staffTerm: terms.staff, hasLastDay, keep }),
+      onDone: onImported,
     });
   };
 }

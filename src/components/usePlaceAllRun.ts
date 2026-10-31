@@ -1,14 +1,16 @@
-// 位置の無い〈利用者さん〉をまとめて地図に置く処理（PRD D89・D90・D329。ADR-0016）：1人ずつ順に外部の検索を呼び（lib/placeAll）、
-// 置けた人は1人ごとに store の update(fn) で書く。止める・画面を離れたら止めて知らせも出さない
-import { useEffect, useRef, useState } from 'react';
-import { useToast } from '../components/Toast';
+// 位置の無い〈利用者さん〉をまとめて地図に置く処理（PRD D89・D90・D329・D399。ADR-0016・ADR-0076）：対象を数え（lib/placeAll）、
+// 1人ずつ順に外部の検索を呼び、置けた人は1人ごとに store の update(fn) で書く。止める・画面を離れたら止めて知らせも出さない。
+// 一覧の画面が持ち、まとめて置く欄（PlaceAllPanel）と名簿を読み込んだあとの導線の両方に渡す
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Client } from '../contracts/documents';
 import { lookupPostalCode, searchAddress } from '../lib/geocode';
-import { type PlaceAllResult, placeAll, sleep, withFoundPlace } from '../lib/placeAll';
+import { type PlaceAllResult, placeAll, placeAllTargets, sleep, withFoundPlace } from '../lib/placeAll';
 import { useDemoData } from '../store';
+import { useToast } from './Toast';
 
-export function usePlaceAllRun(targets: Client[]) {
+export function usePlaceAllRun(clients: Client[]) {
   const { update } = useDemoData();
+  const { targets, skipped } = useMemo(() => placeAllTargets(clients), [clients]);
   const toast = useToast();
   const [running, setRunning] = useState(false);
   /** 今回の対象の数（押したときの） */
@@ -69,5 +71,7 @@ export function usePlaceAllRun(targets: Client[]) {
   /** 止める（今の1人の検索を取り消す） */
   const stop = () => ctrl.current?.abort();
 
-  return { running, total, results, stopped, run, stop };
+  return { targets, skipped, running, total, results, stopped, run, stop };
 }
+
+export type PlaceAllRun = ReturnType<typeof usePlaceAllRun>;

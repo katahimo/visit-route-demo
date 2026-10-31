@@ -21,6 +21,21 @@ export function placeAllTargets(clients: Client[]): { targets: Client[]; skipped
   return { targets: pool.filter(can), skipped: pool.filter((c) => !can(c)) };
 }
 
+/**
+ * 名簿を読み込んだあとの導線（PRD D399。ADR-0076）のボタンの文言。出さないときは null：
+ * 名簿が入った後（asked）で、郵便番号・住所の検索が入（geocodeOn）、まとめて置いている最中でなく、
+ * まとめて置く対象（placeAllTargets の targets。数え方は D89 と同じ）が1人以上いるときだけ出す
+ */
+export function placeAllLead(x: {
+  asked: boolean;
+  geocodeOn: boolean;
+  running: boolean;
+  targets: number;
+}): string | null {
+  if (!x.asked || !x.geocodeOn || x.running || x.targets <= 0) return null;
+  return `位置の無い${x.targets}人を地図に置く`;
+}
+
 /** 探したときの住所・郵便番号（書くときに、いまの値と違えば書かない） */
 export type PlaceAllFrom = { address: string; postalCode: string };
 
@@ -56,6 +71,13 @@ export type PlaceAllOptions = {
   signal?: AbortSignal;
   onResult: (r: PlaceAllResult) => void;
 };
+
+/**
+ * 住所から位置が見つからなかった人がいるか（PRD D399）。いれば結果に「市区町村の名前が無い住所は見つからないことがある」の1行を足す
+ */
+export function hasAddressNotFound(results: PlaceAllResult[]): boolean {
+  return results.some((r) => !r.ok && r.step === 'address' && r.reason === 'notFound');
+}
 
 /** 待つ。signal で止めたらすぐ戻る */
 export function sleep(ms: number, signal?: AbortSignal): Promise<void> {

@@ -44,7 +44,7 @@ export default function PlanPage() {
       <div className="plan-page stack">
         <PageHeader icon={CalendarDays} title="日の予定" lead={lead} />
         <PlanNavRow p={p} />
-        {/* 要対応の帯（PRD D383・D391） */}
+        {/* 要対応の帯（入切とも。PRD D400・D403・D404） */}
         <AttentionBand />
         {/* 進み具合の帯は月の予定だけ（PRD D332）。日は見出しの状態の印と「今の担当」の1行 */}
         {d.m.clients.length === 0 && (

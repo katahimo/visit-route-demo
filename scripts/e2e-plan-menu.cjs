@@ -315,7 +315,7 @@ async function mobile(page) {
 async function moreMenus(page) {
   const focusedId = () => page.evaluate(() => document.activeElement?.getAttribute('data-testid') ?? '');
   await openPlan(page);
-  // 日の予定：操作の行に見せるのは「予定を入れる」と「確定（伝えた）」の2つと「その他 ▾」だけ（PRD D392。AI で組む ▾ は無い。ADR-0063）
+  // 日の予定：操作の行に見せるのは「予定を入れる」と「確定（伝えた）」の2つと「その他 ▾」だけ（PRD D402。AI で組む ▾ は無い。ADR-0063）
   const shown = await page
     .getByTestId('schedule-toolbar')
     .locator('button:visible')
@@ -332,10 +332,10 @@ async function moreMenus(page) {
     return t;
   })();
   check(
-    ['欠勤・キャンセルを登録', '元に戻す', '使い方', '予定をメールで送る', '空き状況'].every((x) =>
-      inMore.includes(x),
-    ) && /で見る|時間軸/.test(inMore),
-    '日の予定：「その他 ▾」に 欠勤・元に戻す・表示の切り替え・使い方・メール・空き状況',
+    ['欠勤・キャンセルを登録', '元に戻す', '使い方', '予定をメールで送る'].every((x) => inMore.includes(x)) &&
+      !inMore.includes('空き状況') &&
+      /で見る|時間軸/.test(inMore),
+    '日の予定：「その他 ▾」に 欠勤・元に戻す・表示の切り替え・使い方・メール（空き状況はメニュー。PRD D401）',
     inMore,
   );
   // 操作の行は状態の1行（今の担当）のすぐ下（週・月と同じ位置。PRD D344）
@@ -350,7 +350,7 @@ async function moreMenus(page) {
     );
   });
   check(order, '日の予定：操作の行のすぐ下に「詳しく ▾」（「今の担当」の1行はその中。PRD D393）');
-  // 予定をメールで送るは操作の行の「その他 ▾」の中（PRD D306・D392）。ナビの行には出さない
+  // 予定をメールで送るは操作の行の「その他 ▾」の中（PRD D306・D402）。ナビの行には出さない
   check(
     (await page.locator('[data-testid="sched-nav"] [data-testid="day-mail"]').count()) === 0 &&
       (await toolCount(page, 'day-mail')) === 1,
@@ -449,7 +449,7 @@ async function moreMenus(page) {
     .locator('[role="menuitem"] .menu-item-label')
     .allInnerTexts();
   check(
-    mItems.length === 9 &&
+    mItems.length === 8 &&
       mItems[0] === 'カレンダーで見る' &&
       mItems[1] === '日ごとの一覧で見る' &&
       /^表示を選ぶ/.test(mItems[2]) &&
@@ -457,9 +457,8 @@ async function moreMenus(page) {
       mItems[4] === '勤務の見込み' &&
       mItems[5] === 'マスの見方の説明' &&
       mItems[6] === '元に戻す' &&
-      mItems[7] === '欠勤・キャンセルを登録' &&
-      mItems[8] === '空き状況',
-    '月の予定の「その他 ▾」：見せ方の切り替え・表示を選ぶ・印刷・勤務の見込み・マスの見方の説明・元に戻す・欠勤・キャンセルを登録・空き状況（PRD D392）',
+      mItems[7] === '欠勤・キャンセルを登録',
+    '月の予定の「その他 ▾」：見せ方の切り替え・表示を選ぶ・印刷・勤務の見込み・マスの見方の説明・元に戻す・欠勤・キャンセルを登録（空き状況はメニュー。PRD D402・D401）',
     mItems,
   );
   await page.getByTestId('month-more-help').click();

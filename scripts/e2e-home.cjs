@@ -1,4 +1,4 @@
-// ホームは無い・要対応の帯（PRD D390・D391。ADR-0074 段1）を本物のブラウザで確かめる（エキスパート機能が入）：
+// ホームは無い・要対応の帯（PRD D401・D404。ADR-0074 段1）を本物のブラウザで確かめる（エキスパート機能が入）：
 // 起動（#/・#/home・知らない URL）で予定の画面（繰り返しを使うなら月）へ移りホームの画面は出ない・ほかの画面の URL（人の画面など）と
 // 古い #/schedule は今までどおり、予定の上の帯（担当なし・重なり・休みの人のほか 組み方の標準が無い・基本情報が変わった（組み直す）・
 // 未確定 N日。文の並び・数・押した先（並びの先頭の種類：標準が無い→組み方の標準、組み直し→担当を組む、未確定は1日だけならその日の日の予定・
@@ -6,7 +6,7 @@
 // 初期データ（版2。保存した訪問は空で、今日からの日は繰り返しの担当のまま・まだ伝えていない）、月の画面の ?do=attention・?do=unconfirmed で右の欄、
 // 月の「問題の無い日をまとめて確定」（PRD D223。N日・確認に日付と残す日・確定済みになり帯の未確定が減る・担当が休みの訪問のある日は外れ確認に日付が出る・
 // 未連絡の変更のある日は外れる・0日なら押せず理由）、確定した日の「次の確定していない日へ」（PRD D224）、
-// 訪問の無い人の欠勤は要対応に数えない、メニュー（1400px）の5つにホームが無い・「その他 ▾」に空き状況、
+// 訪問の無い人の欠勤は要対応に数えない、メニュー（1400px）の6つにホームが無い・空き状況がメニューの項目（PRD D400。ADR-0078）、
 // スマホ（390×844）で下のタブ（予定・〈利用者さん〉・〈スタッフ〉・組む・探す・メニュー）・横にはみ出さない。
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-home.cjs
@@ -16,7 +16,7 @@ const path = require('node:path');
 const { answerConfirms } = require('./lib/confirmDialog.cjs');
 const { BASE, OUT_DIR, NOW, TODAY, STORAGE_KEY, check, hashOf, runSteps, settle, until } = require('./lib/env.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
-const { goTo, pressTool, reveal } = require('./lib/ui.cjs');
+const { clickMenu, goTo, pressTool, reveal } = require('./lib/ui.cjs');
 const { visitsIn } = require('./lib/visits.cjs');
 
 const YM = TODAY.slice(0, 7);
@@ -85,7 +85,7 @@ async function bandShown(page, ms = 8000) {
   return !!(await until(async () => (await page.getByTestId('attention-band').count()) > 0, ms));
 }
 
-/** 起動・ホーム・知らない URL は予定の画面へ（ホームの画面は出ない。PRD D390） */
+/** 起動・ホーム・知らない URL は予定の画面へ（ホームの画面は出ない。PRD D401） */
 async function start(page) {
   await reset(page);
   await open(page, '/');
@@ -122,7 +122,7 @@ const emptyData = (data) => {
 };
 
 /**
- * 帯の種類と押した先（PRD D391）。初期データ：担当なし（訪問）が先頭で、そこから日の予定でその訪問へ。
+ * 帯の種類と押した先（PRD D404）。初期データ：担当なし（訪問）が先頭で、そこから日の予定でその訪問へ。
  * 訪問を空にすると「組み方の標準が無い」だけになり、押すと組み方の標準へ。標準を登録すると帯は消える。
  * 組み直しの知らせ（基本情報が最後に組んだあとに変わった）は標準があるときだけで、押すと担当を組む。
  * 未確定は日数で数え、1日だけならその日の日の予定、2日以上なら月の右の欄
@@ -156,21 +156,21 @@ async function band(page) {
     check(await bandShown(page, 30000), `${to}：要対応の帯が出る`);
   }
   await page.screenshot({ path: path.join(OUT_DIR, 'band-first-1366.png') });
-  // 押す → 日の予定でその訪問（担当なし）を選ぶ
+  // ［見に行く ›］を押す → 日の予定でその訪問（重なり・休みの人があればそれ、無ければ担当なし）へ（PRD D403）
   await open(page, `/month?ym=${YM}`);
   await page.getByTestId('attention-band').waitFor({ timeout: 30000 });
   await until(async () => /担当なし \d+件/.test((await bandText(page)) ?? ''), 60000);
-  await page.getByTestId('attention-band').click();
+  await page.getByTestId('attention-band-go').click();
   await page.waitForURL(/#\/plan/);
   await page.getByTestId('confirm-state').waitFor({ timeout: 60000 });
-  check(/^#\/plan/.test(hashOf(page)), '帯を押す（先頭が担当なし）と日の予定へ', hashOf(page));
+  check(/^#\/plan/.test(hashOf(page)), '帯の［見に行く ›］を押すと日の予定へ', hashOf(page));
 
   // 訪問が無く標準も無い：「組み方の標準が無い」だけ → 組み方の標準へ
   await editInOtherTab(page, emptyData);
   await open(page, `/month?ym=${YM}`);
   check(await bandShown(page, 30000), '訪問が無くても標準が無ければ帯が出る');
   check((await bandText(page)) === '組み方の標準が無い', '帯は「組み方の標準が無い」だけ', await bandText(page));
-  await page.getByTestId('attention-band').click();
+  await page.getByTestId('attention-band-go').click();
   await page.waitForURL(/#\/standard/);
   check(hashOf(page) === '#/standard', '「組み方の標準が無い」を押すと組み方の標準へ', hashOf(page));
 
@@ -192,7 +192,7 @@ async function band(page) {
     '帯は「基本情報が変わった（組み直す）」だけ',
     await bandText(page),
   );
-  await page.getByTestId('attention-band').click();
+  await page.getByTestId('attention-band-go').click();
   await page.waitForURL(/#\/arrange/);
   check(/^#\/arrange\?ym=\d{4}-\d{2}$/.test(hashOf(page)), '押すと担当を組む（組む月）へ', hashOf(page));
   // 標準が無い間は組み直しを知らせない（PRD D363）
@@ -557,7 +557,7 @@ async function monthDo(page) {
   await bandShown(page, 30000);
   const only = await until(async () => (await bandText(page)) === '未確定 2日', 60000);
   check(!!only, '帯は「未確定 2日」だけ（要対応は無い）', await bandText(page));
-  await page.getByTestId('attention-band').click();
+  await page.getByTestId('attention-band-go').click();
   await page.getByTestId('month-unconfirmed').waitFor({ timeout: 30000 });
   check(
     hashOf(page) === `#/month?ym=${days[0].slice(0, 7)}` &&
@@ -570,7 +570,7 @@ async function monthDo(page) {
   });
   await open(page, `/month?ym=${days[0].slice(0, 7)}`);
   await until(async () => (await bandText(page)) === '未確定 1日', 60000);
-  await page.getByTestId('attention-band').click();
+  await page.getByTestId('attention-band-go').click();
   await page.waitForURL(/#\/plan/);
   await page.getByTestId('confirm-state').waitFor({ timeout: 60000 });
   check(
@@ -580,7 +580,7 @@ async function monthDo(page) {
   );
 }
 
-/** メニュー（1400px）：5つにホームが無い。「その他 ▾」に空き状況、欠勤・キャンセルは操作の行から */
+/** メニュー（1400px）：6つにホームが無い。空き状況はメニューの項目（予定の次）、欠勤・キャンセルは操作の行から */
 async function wide(page) {
   await reset(page);
   await page.setViewportSize({ width: 1400, height: 1000 });
@@ -595,13 +595,15 @@ async function wide(page) {
     (await page.locator('.side-nav [aria-current="page"]').first().innerText()).trim() === '予定',
     '広い画面：月の予定では「予定」に印',
   );
-  await pressTool(page, '空き状況', { where: 'more' });
+  check(labels[1].trim() === '空き状況', '広い画面：メニューの2番目は「空き状況」', labels);
+  await clickMenu(page, '空き状況');
   await page.waitForURL(/#\/vacancy/);
-  check(hashOf(page) === '#/vacancy', '予定の「その他 ▾」の「空き状況」で空き状況へ', hashOf(page));
-  check(
-    (await page.locator('.side-nav [aria-current="page"]').first().innerText()).trim() === '予定',
-    '空き状況の画面では「予定」に印',
-  );
+  check(hashOf(page) === '#/vacancy', 'メニューの「空き状況」で空き状況へ', hashOf(page));
+  // 空き状況は別のチャンク：画面が出て印が移るまで待つ（URL が変わった直後は前の画面の印のことがある）
+  const curOf = async () =>
+    (await page.locator('.side-nav [aria-current="page"]').allInnerTexts()).map((s) => s.trim());
+  await until(async () => (await curOf())[0] === '空き状況', 30000);
+  check((await curOf())[0] === '空き状況', '空き状況の画面では「空き状況」に印', await curOf());
   await open(page, `/month?ym=${YM}`);
   await pressTool(page, '欠勤', { where: 'more' });
   await page.waitForURL(/#\/plan/);
