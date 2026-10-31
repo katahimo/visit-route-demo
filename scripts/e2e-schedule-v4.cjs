@@ -92,8 +92,10 @@ async function menu(page) {
   // 基本情報のタブの「相性」は人のタブの画面へ移り、段は出ず、メニューの印は〈利用者さん〉（来た側の既定）
   await tabs.locator('[data-tab="compat"]').click();
   await page.waitForURL(/#\/compat/);
-  // 相性は別のチャンク：読み終わって見出しが替わるまで待つ（前の画面のタブを読まない）
-  await page.locator('h1').filter({ hasText: '相性' }).waitFor({ timeout: 30000 });
+  // 相性は別のチャンク：人のタブが出て前の画面（見出し「予定と相性」・段）が消えるまで待つ。
+  // 見出しの「相性」は「予定と相性」にも当たるので、見出しでは待たない
+  await page.getByTestId('people-tabs').waitFor({ timeout: 30000 });
+  await until(async () => (await page.getByTestId('arrange-steps').count()) === 0, 5000, 100).catch(() => {});
   check(
     (await page.getByTestId('people-tabs').locator('[aria-current="page"]').getAttribute('data-tab')) === 'compat' &&
       (await page.getByTestId('people-tabs').getAttribute('aria-label')) === '利用者さんの画面の切り替え' &&
