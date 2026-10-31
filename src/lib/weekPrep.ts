@@ -55,7 +55,11 @@ export function weekNext(x: WeekNextInput): WeekNext {
   const rest = x.bulk.problem.length + x.bulk.changed.length;
   if (rest > 0) {
     const why =
-      x.bulk.problem.length > 0 ? '要対応の日は日の予定で確かめて確定' : '未連絡の変更の日は日の予定で確かめて確定';
+      x.bulk.problem.length > 0 && x.bulk.changed.length > 0
+        ? '要対応・未連絡の変更の日は日の予定で確かめて確定'
+        : x.bulk.problem.length > 0
+          ? '要対応の日は日の予定で確かめて確定'
+          : '未連絡の変更の日は日の予定で確かめて確定';
     return { kind: 'rest', label: `未確定 ${rest}日`, short: `未確定 ${rest}日`, why };
   }
   return { kind: 'done', label: '確定済み', short: '確定済み', why: null };

@@ -278,14 +278,15 @@ async function back(page) {
   check((await page.getByTestId('week-client-chips-message').count()) === 1, '上限の文の枠は空でも残る');
 }
 
-/** 畳む・あと N人：選んでいる人はいつも見え、開いた状態は週を送っても表との行き来でも残る */
-async function fold(page, w, h) {
-  await page.setViewportSize({ width: w, height: h });
-  await open(page, '/week?by=client');
-  const more = page.getByTestId('week-client-chips-more');
-  // 「あと N人」は畳みの計測のあとに出る。遅い環境で出なかったときは、あとで原因を読めるよう幅・行・チップの数を記録する
-  await more.waitFor({ timeout: 30000 }).catch(async () => {
-    const diag = await page.getByTestId('week-client-chips').evaluate((root) => ({
+/** 「あと N人」が出ないときの記録：幅・チップ数・行の位置・書体の状態・aria-expanded・「あと N人」の数 */
+async function diagnoseMore(page, where) {
+  if ((await page.getByTestId('week-client-chips').count()) === 0) {
+    console.log(`  ${where} チップの欄（week-client-chips）が無い ${urlOf(page)}`);
+    return;
+  }
+  const diag = await page.getByTestId('week-client-chips').evaluate((root) => {
+    const more = root.querySelectorAll('[data-testid="week-client-chips-more"]');
+    return {
       width: root.clientWidth,
       chips: root.querySelectorAll('[data-fold-item]').length,
       tops: [
@@ -294,8 +295,22 @@ async function fold(page, w, h) {
         ),
       ],
       fonts: document.fonts?.status,
-    }));
-    console.log(`  ${w}px：「あと N人」が出ない ${JSON.stringify(diag)}`);
+      expanded: more[0]?.getAttribute('aria-expanded') ?? null,
+      more: more.length,
+    };
+  });
+  console.log(`  ${where} ${JSON.stringify(diag)}`);
+}
+
+/** 畳む・あと N人：選んでいる人はいつも見え、開いた状態は週を送っても表との行き来でも残る */
+async function fold(page, w, h) {
+  await page.setViewportSize({ width: w, height: h });
+  await open(page, '/week?by=client');
+  const more = page.getByTestId('week-client-chips-more');
+  // 「あと N人」は畳みの計測のあとに出る。出なかったときは、あとで原因を読めるよう幅・行・チップの数などを記録して止める（2倍待たない）
+  await more.waitFor({ timeout: 30000 }).catch(async (e) => {
+    await diagnoseMore(page, `${w}px：「あと N人」が出ない（開いたとき）`);
+    throw e;
   });
   const shown = await allIds(page);
   const pressed = await pressedIds(page);
@@ -326,9 +341,14 @@ async function fold(page, w, h) {
   );
   await page.getByLabel('次の週').click();
   await settle(page, 400);
+  // 表に切り替わった（押した印が付いた）あとで時間軸を押す。描き直す前に押すと、画面はまだ時間軸のままなので押しが無視される（CPU を絞ると再現）
   await page.getByTestId('tab-clients').click();
+  await page.locator('[data-testid="tab-clients"][aria-pressed="true"]').waitFor();
   await page.getByTestId('by-client').click();
+  await page.locator('[data-testid="by-client"][aria-pressed="true"]').waitFor();
   await settle(page, 300);
+  if ((await more.count()) === 0)
+    await diagnoseMore(page, `${w}px：週を送って表と行き来したあと、「あと N人」が消えた`);
   check((await more.getAttribute('aria-expanded')) === 'true', `${w}px：開いた状態は週を送っても表と行き来しても残る`);
   const gridTop = () => page.getByTestId('week-grid').evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
   const grid = { y: await gridTop() };

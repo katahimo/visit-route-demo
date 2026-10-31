@@ -145,7 +145,7 @@ URL を書くときは履歴を増やさない `replace`（表示の切り替え
 #### `components/PickChips.tsx`
 
 - 人のチップ（複数選ぶ）。`bulk`（既定 true。「全員・全解除」を出すか）・`detailKind`（名前の i。[pages-common.md](pages-common.md)）・`actions`（見出しの後ろ、「全員」「全解除」の位置に置く小さなボタン）・`fold`
-- `fold`（`{ rows, open, onOpenChange }`）：全員を並べて各項目（`data-fold-item`）の上端を測り（`useLayoutEffect`。描く前）、`lib/fold` の `foldHidden(items, keep, rows, firstTop)`（純粋関数。テストあり。上端で行を分け、見出しの行も1行目に数える）で rows 行に入らない人のうち選んでいない人を外す。測り直すのは幅（`ResizeObserver`）・人・選んでいるか・見出しが変わったときだけ（ドラッグ中の強調では変えない）。開いているあいだも測っておく。外す人がいれば最後に「あと N人」（`aria-expanded`）
+- `fold`（`{ rows, open, onOpenChange }`）：全員を並べて各項目（`data-fold-item`）の上端を測り（`useLayoutEffect`。描く前）、`lib/fold` の `foldHidden(items, keep, rows, firstTop)`（純粋関数。テストあり。上端で行を分け、見出しの行も1行目に数える）で rows 行に入らない人のうち選んでいない人を外す。計測は `components/useChipFold.ts`（`PickChips` から呼ぶフック）。測り直す鍵は `lib/fold` の `chipFoldKey`：幅・中身の高さ・書体の読み込み（`loadingdone`）・見出し・チップの表示（id・名前・色・印の有無・バッジ・選んでいるか）。幅と高さは `ResizeObserver` で見る。高さは全員を並べているときだけ採る（`nextFullHeight`。畳んだ高さで測り直すと回り続けるため）。ドラッグ中の強調では測り直さない。開いているあいだも測っておく。外す人がいれば最後に「あと N人」（`aria-expanded`）
 - `QualificationBadges`
 - 〈利用者さん〉の担当できる人でも使う（`bulk={false}`）
 
