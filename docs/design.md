@@ -337,7 +337,7 @@ flowchart LR
 ### excel（Excel との変換。ADR-0006・ADR-0020・ADR-0068）
 - 責務：`DemoData` ⇔ Excel のブック（§5「Excel のブックの形」）と、〈利用者さん〉・〈スタッフ〉の名簿（Excel・CSV）の変換。書き出しは見出し・列幅・プルダウン付き。読み込みは名前を ID に直し、シート・行・列付きの日本語のエラーを返す。データは書き換えない
 - 持つデータ（持ち主）：なし
-- 提供するAPI：`exportWorkbook(data)`・`importWorkbook(buf, base)`（`base` からは版・基準日・機能の入り切り・伝えた内容（`snapshots`）・振り直しの情報（`reassigns`）など Excel に無いものだけ。最後に `migrate`。画面が件数を見せて `replace`）、`exportRosterWorkbook(data, kind)`（1シート。シート名 `personSheetNames`）・`exportRosterCsv(data, kind)`（同じ列の CSV。BOM 付きの UTF-8。同期）・`importRoster(buf, base, kind, mode)`（.xlsx か CSV を中身で見分け、CSV は文字コードを見分けて名簿のシート1枚のブックに写してから同じ読み方。結果の `source` に形と文字コード。〈利用者さん〉は列名が顧客台帳の形（利用者名・利用者カナ・…・利用者状態・備考。ADR-0073・PRD D386・D387）なら `excel/ledgerCsv` の `ledgerToRoster` で名簿の列（表示名・よみ・郵便番号・住所・メモ・段階）に写してから同じ読み方。結果の `ledger` に読まなかった列 `skippedColumns`。名簿の形・.xlsx は `ledger: null`）・`rosterSummary`・`rosterWarning`（総入れ替えで今の人の半分を超えて外すときの注意。無ければ null）。どれも非同期
+- 提供するAPI：`exportWorkbook(data)`・`importWorkbook(buf, base)`（`base` からは版・基準日・機能の入り切り・伝えた内容（`snapshots`）・振り直しの情報（`reassigns`）など Excel に無いものだけ。最後に `migrate`。画面が件数を見せて `replace`）、`exportRosterWorkbook(data, kind)`（1シート。シート名 `personSheetNames`）・`exportRosterCsv(data, kind)`（同じ列の CSV。BOM 付きの UTF-8。同期）・`importRoster(buf, base, kind, mode)`（.xlsx か CSV を中身で見分け、CSV は文字コードを見分けて名簿のシート1枚のブックに写してから同じ読み方。結果の `source` に形と文字コード。列名がほかのソフトの形（`excel/rosterForms` の `ROSTER_FORMS`：顧客台帳 ADR-0073・PRD D386・D387、予約システムのスタッフ・顧客 ADR-0075・PRD D396・D397）なら、その形の `toRoster` で名簿の列に写してから同じ読み方。結果の `otherForm` に形の名前 `label` と読まなかった列 `skippedColumns`。名簿の形・.xlsx は `otherForm: null`。退職日で休止を決めるため `importRoster` の5つ目の引数に今日）・`importBookings(buf, base)`（予約の CSV → 単発の訪問。`bookingForms` の `BOOKING_FORMS` で形を見分け、どの形も `Booking` に写してから共通で〈利用者さん〉と名前で突き合わせ、ID `bk-〈形のID〉-〈予約番号〉` の訪問を足す・直す。同期。ADR-0075・PRD D398）・`rosterSummary`・`rosterWarning`（総入れ替えで今の人の半分を超えて外すときの注意。無ければ null）。どれも非同期
 - 名簿の読み込み：
   - 全体のブックもそのシートだけ読む。必須の列は名前（表示名）だけ。無い列は今の値（新しい人は既定値）
   - 同じ人は ID（今に無ければその ID で足す。使えない・ブック内で重なる・ほかの ID は止める）、空なら名前（`nameKey`。全角半角・空白を同一視）。2行が同じ人・当てたあとの名前の重なりは止める
@@ -346,7 +346,7 @@ flowchart LR
   - 総入れ替え：ブックに無い〈利用者さん〉は `withStage(c, 'ended')`、〈スタッフ〉は休止。既に終了・休止の人は数えない。人の行が無いブックは止める
   - 件数は repair 後の人を今の人と比べる。訪問・伝えた内容・繰り返し・相性・稼働時間・欠勤・休みはそのまま。画面は確認中にデータが変われば入れず、`lastDaySet` があれば振り直しを促す
 - 依存するもの：ExcelJS（動的 import）、contracts、store（`migrate`）、matching、lib/clientStage・lib/csv（文字コードの見分け・CSV の読み書き）
-- 配置：`src/excel/`（名簿は `importRoster.ts`、名簿の CSV は `rosterCsv.ts`、顧客台帳の形の読み替えは `ledgerCsv.ts`、読み取りの部品は `importBook.ts`）
+- 配置：`src/excel/`（名簿は `importRoster.ts`、名簿の CSV は `rosterCsv.ts`、ほかのソフトの名簿の形の一覧は `rosterForms.ts`（形ごとの読み替えは顧客台帳 `ledgerCsv.ts`・予約システム `reserveCsv.ts`。ADR-0075）、予約の CSV → 訪問は `importBookings.ts`（形の一覧 `bookingForms.ts`・予約システム `reserveBookings.ts`）、形の共通の部品は `csvColumns.ts`、読み取りの部品は `importBook.ts`）
 - 完了の条件：
   - [ ] 書き出し → 読み込みで同じ（ID・並びも。テスト）。ID の空の行は追加、消した行は消える
   - [ ] §5「止めるもの」はシート名・行番号付きで止め、データはそのまま。古いブックは既定で読める（テスト）

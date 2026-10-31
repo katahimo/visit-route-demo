@@ -142,7 +142,7 @@ describe('顧客台帳を名簿として読み込む', () => {
 
   const check = (r: RosterImportResult) => {
     expect(r.added).toEqual(['山田 花子', '鈴木 太郎（終了）']);
-    expect(r.ledger?.skippedColumns).toHaveLength(18);
+    expect(r.otherForm?.skippedColumns).toHaveLength(18);
     const [h, t] = r.data.clients.slice(-2);
     expect(h).toMatchObject({
       displayName: '山田 花子',
@@ -193,7 +193,7 @@ describe('顧客台帳を名簿として読み込む', () => {
 
   it('名簿の形は今までどおり（ledger は null）。〈スタッフ〉は台帳として読まない', async () => {
     const r = rok(await importRoster(utf8('表示名,メモ\r\n新しい人,あ\r\n'), base(), 'client', 'merge'));
-    expect(r.ledger).toBeNull();
+    expect(r.otherForm).toBeNull();
     const bad = await importRoster(utf8(toCsv(table)), base(), 'staff', 'merge');
     expect('code' in bad).toBe(true);
   });

@@ -1,6 +1,13 @@
 // データの画面（PRD D227・D103〜D107・D209。ADR-0006・0020・0032）の文と判定の純粋関数。
 // 確認の本文・知らせの文・呼び方の入力の判定・Excel・名簿（Excel・CSV。ADR-0068）のファイル名を組み立てる。データの書き換えは画面が store で行う
-import type { DemoData, LedgerRead, RosterImportResult, RosterKind, RosterMode, RosterSource } from '../contracts/data';
+import type {
+  DemoData,
+  OtherFormRead,
+  RosterImportResult,
+  RosterKind,
+  RosterMode,
+  RosterSource,
+} from '../contracts/data';
 import type { TidyPreview } from './tidy';
 import { sizeText, tidyMonthLabel } from './tidy';
 
@@ -57,8 +64,8 @@ export const rosterFileName = (kind: RosterKind, format: RosterSource['format'],
 const rosterSourceText = (s: RosterSource): string =>
   s.format === 'xlsx' ? 'Excel のブックとして読みました。' : `CSV（文字コード ${s.encoding}）として読みました。`;
 
-/** 顧客台帳の形で読まなかった列の文（確認の本文に出す。ADR-0073） */
-export const ledgerSkippedText = (l: LedgerRead): string =>
+/** ほかのソフトの形で読まなかった列の文（確認の本文に出す。ADR-0073・ADR-0075） */
+export const otherFormSkippedText = (l: OtherFormRead): string =>
   l.skippedColumns.length === 0 ? '読まなかった列：なし' : `読まなかった列：${l.skippedColumns.join('・')}`;
 
 /** 名簿の読み込みで、足す・直す・終了／休止にする人がいるか */
@@ -76,14 +83,14 @@ export function rosterConfirmBody(x: {
   how: string;
   summary: string;
   source: RosterSource;
-  /** 顧客台帳の形で読んだときの結果（読まなかった列を出す。ADR-0073）。名簿の形は null */
-  ledger?: LedgerRead | null;
+  /** ほかのソフトの形で読んだときの結果（形の名前と読まなかった列を出す。ADR-0073・ADR-0075）。名簿の形は null */
+  otherForm?: OtherFormRead | null;
   keep: KeepState;
 }): string {
   return [
     ...(x.warning ? [x.warning, ''] : []),
-    `「${x.fileName}」の${x.term}の名簿を読み込みます（${x.how}）。${rosterSourceText(x.source)}${x.ledger ? '顧客台帳の形として読みました。' : ''}`,
-    ...(x.ledger ? [ledgerSkippedText(x.ledger)] : []),
+    `「${x.fileName}」の${x.term}の名簿を読み込みます（${x.how}）。${rosterSourceText(x.source)}${x.otherForm ? `${x.otherForm.label}の形として読みました。` : ''}`,
+    ...(x.otherForm ? [otherFormSkippedText(x.otherForm)] : []),
     x.summary,
     '訪問の担当・確定（伝えた内容）・訪問はそのままです。',
     // 名簿は一覧の画面から読むので、戻す場所はデータの画面

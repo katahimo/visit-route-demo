@@ -4,6 +4,7 @@
 // 入ったかは次の描画で data を見て決める（入らなければ成功と言わず、残した控えを前の世代に戻す）
 import { type Dispatch, type SetStateAction, useEffect, useRef } from 'react';
 import type { DemoData, RosterKind, RosterMode } from '../contracts/data';
+import { jstDate } from '../domain/time';
 import { rosterConfirmBody, rosterDoneText, rosterHasChanges, rosterHowText } from '../lib/dataScreen';
 import { canKeepPrevious, type PreviousKeep, useDemoData } from '../store';
 import { useConfirm } from './ConfirmDialog';
@@ -48,7 +49,7 @@ export function useRosterImport(x: {
   return async (file: File, kind: RosterKind) => {
     const base = data;
     const { importRoster, rosterSummary, rosterWarning } = await import('../excel');
-    const r = await importRoster(await file.arrayBuffer(), base, kind, rosterMode);
+    const r = await importRoster(await file.arrayBuffer(), base, kind, rosterMode, jstDate(Date.now()));
     if ('code' in r) {
       setError(`読み込めませんでした（いまのデータはそのままです）\n${r.message}`);
       return;
@@ -74,7 +75,7 @@ export function useRosterImport(x: {
         how,
         summary: rosterSummary(r, kind, terms),
         source: r.source,
-        ledger: r.ledger,
+        otherForm: r.otherForm,
         keep: canKeepPrevious(),
       }),
       confirmLabel: '名簿を読み込む',
