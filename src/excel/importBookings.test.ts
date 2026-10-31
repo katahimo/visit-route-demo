@@ -1,4 +1,4 @@
-// 予約の CSV → 単発の訪問（ADR-0075。PRD D398）：予約の形の見分け・時刻の読み方・〈利用者さん〉との突き合わせ・読み直し。値は架空
+// 予約の CSV → 単発の訪問（ADR-0075。PRD D408）：予約の形の見分け・時刻の読み方・〈利用者さん〉との突き合わせ・読み直し。値は架空
 import { describe, expect, it } from 'vitest';
 import type { BookingImportResult, DemoData, ImportError } from '../contracts/data';
 import { BOOKING_FORMS, readBookingForm } from './bookingForms';

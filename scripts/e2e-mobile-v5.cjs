@@ -66,7 +66,7 @@ async function dayList(page) {
     (els, bottom) => els.filter((e) => e.getBoundingClientRect().bottom <= bottom).length,
     tabs?.y ?? 844,
   );
-  // 上に要対応の帯（段1。PRD D391）があっても、同じ件数の帯・今の担当の1行は「詳しく ▾」の中（段2。D393）なので3件以上見える
+  // 上に要対応の帯（段1。PRD D404）があっても、同じ件数の帯・今の担当の1行は「詳しく ▾」の中（段2。D393）なので3件以上見える
   check(visible >= 3, '390px：最初の画面に訪問が3件以上見える', visible);
   // 操作の行が1段（子の上端がそろい、高さが1段分）
   const bar = await page.getByTestId('schedule-toolbar').evaluate((el) => {

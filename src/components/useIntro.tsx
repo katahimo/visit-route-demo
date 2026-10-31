@@ -1,5 +1,5 @@
 // 画面の上の説明（見出しの下の1行）：入切とも初回だけ出し、閉じたら端末に覚えて出さない
-// （PRD D384・D392。覚えるのは store/navOpen の開け閉めの鍵 intro:<画面>。判定は lib/exceptionView）
+// （PRD D384・D402。覚えるのは store/navOpen の開け閉めの鍵 intro:<画面>。判定は lib/exceptionView）
 import { X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useSyncExternalStore } from 'react';

@@ -47,7 +47,7 @@ export function rememberedSide(pathname: string, remembered: PeopleSide | undefi
 
 /**
  * メニューの〈利用者さん〉・〈スタッフ〉が受け持つ画面（今の画面の印。相性は覚えた側）。
- * 予定と相性（/basics）は、切では〈利用者さん〉（withBasics）、入では「組む」の基本情報（PRD D390・D394）
+ * 予定と相性（/basics）は、切では〈利用者さん〉（withBasics）、入では「組む」の基本情報（PRD D401・D394）
  */
 export function peopleMatch(side: PeopleSide, remembered: PeopleSide | undefined, withBasics: boolean): string[] {
   const compat = (remembered ?? 'clients') === side ? ['/compat'] : [];

@@ -1,4 +1,4 @@
-// 自動の組み（lib/autoArrange。ADR-0072 第2段）を回す入れ物：欄の保存・予定の「その他 ▾」の［担当なしの訪問を組む］の依頼を順に待たせ（キュー）、
+// 自動の組み（lib/autoArrange。ADR-0072 第2段）を回す入れ物：欄の保存・要対応の帯の［担当なしを組む］の依頼を順に待たせ（キュー）、
 // 1つの依頼＝範囲の日を Worker で1日ずつ解き、終わったら store の update 1回（1手）で担当を書く。
 // 画面は依頼を出すだけで、計算はモジュールの入れ物で続ける（ほかの画面へ移っても止めない）。提案は出さず即反映する（元に戻すは全体の履歴）。
 //
@@ -39,7 +39,7 @@ export type AutoJob = {
   /**
    * 依頼を出した操作の前のデータと、保存で計算した次のデータ。保存の直後は画面が描き直されるまで store の data が古い（since のまま）ので、
    * そのあいだは after を読む（保存は update((d) => d === since ? after : …) で、描かれたデータは after と同じ参照）。
-   * 無ければ（予定の「その他 ▾」の［担当なしの訪問を組む］）store の data を読む
+   * 無ければ（要対応の帯の［担当なしを組む］）store の data を読む
    */
   since: DemoData | null;
   after: DemoData | null;
@@ -262,7 +262,7 @@ export function createAutoArrange(solve: Solve = runSolve): AutoArrange {
 export const autoArrange: AutoArrange = createAutoArrange();
 
 /**
- * 保存の前後で増えた・日時が変わった担当なしの訪問を自動で組む依頼を出す（欄の保存。PRD D375）。
+ * 保存の前後で増えた・日時が変わった担当なしの訪問を自動で組む依頼を出す（欄の保存。PRD D407）。
  * before・after は保存の前のデータと、保存で計算した次のデータ（store の data を後で読まない。保存は after をそのまま store に入れる）。依頼を出したら true
  */
 export function requestAutoArrange(a: {
@@ -283,7 +283,7 @@ export function requestAutoArrange(a: {
   });
 }
 
-/** 今の担当なしの訪問（今日〜翌月末）を自動で組む依頼を出す（予定の「その他 ▾」の［担当なしの訪問を組む］。繰り返しの担当は書かない）。依頼を出したら true */
+/** 今の担当なしの訪問（今日〜翌月末）を自動で組む依頼を出す（要対応の帯の［担当なしを組む］。繰り返しの担当は書かない）。依頼を出したら true */
 export function requestUnassignedArrange(data: DemoData, today: string): boolean {
   const range = autoRange(today);
   const targets = unassignedTargets(data, today, range);

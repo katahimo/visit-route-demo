@@ -2,7 +2,7 @@
 // その一覧の人だけを Excel のブックか CSV に書き出し、直したものを読み込む（CSV の文字コードは見分ける）。
 // 全体のブック（すべてのシート）はデータの画面に残す。状態と処理は useRosterCard
 import { FileSpreadsheet, FileText, RotateCcw, Sheet, X } from 'lucide-react';
-import { useId } from 'react';
+import { type ReactNode, useId } from 'react';
 import type { RosterKind } from '../contracts/data';
 import { EXCEL_STALE_TEXT } from '../lib/dataScreen';
 import { reloadPage } from '../lib/reloadPage';
@@ -34,20 +34,26 @@ export function RosterButton({ open, onToggle, controls }: { open: boolean; onTo
 
 /**
  * 名簿の欄。id は見出しのボタンの aria-controls が指す。閉じても消さずに隠す（読み込みの途中で閉じても、
- * 入ったかの見届け（トースト・控えを戻す）が続くように）
+ * 入ったかの見届け（トースト・控えを戻す）が続くように）。
+ * onImported は名簿が入ったと見届けたときに呼ぶ。children は読み込みのすぐ下に出す（〈利用者さん〉一覧の
+ * 「位置の無い N人を地図に置く」。PRD D399）
  */
 export function RosterCard({
   kind,
   id,
   open,
   onClose,
+  onImported,
+  children,
 }: {
   kind: RosterKind;
   id: string;
   open: boolean;
   onClose: () => void;
+  onImported?: () => void;
+  children?: ReactNode;
 }) {
-  const roster = useRosterCard(kind);
+  const roster = useRosterCard(kind, onImported);
   const titleId = useId();
   const { term } = roster;
   return (
@@ -122,6 +128,7 @@ export function RosterCard({
           <WithIcon icon={RotateCcw}>画面を読み直す</WithIcon>
         </button>
       )}
+      {children}
     </section>
   );
 }

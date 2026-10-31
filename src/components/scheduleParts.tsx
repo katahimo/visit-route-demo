@@ -23,7 +23,6 @@ import { WithIcon } from './ui';
 import { saveAppliedBasis } from './useArrangeBasis';
 import { useExceptionsOnly } from './useFeature';
 import { useSelectionBar } from './useSelectionBar';
-import { useSimpleMore } from './useSimpleMore';
 import { useValueStore } from './valueStore';
 import './scheduleParts.css';
 
@@ -45,7 +44,7 @@ export async function confirmDropProposal(confirmDialog: ReturnType<typeof useCo
 // ---- 操作の行 ----
 
 /**
- * 予定の操作の行（日・週・月で同じ作り。PRD D327・D384・D392）：主ボタン1つ＋ボタン1つ＋その他 ▾（SimpleToolbar。何を残すかは lib/exceptionView の mainTools）。
+ * 予定の操作の行（日・週・月で同じ作り。PRD D327・D384・D402）：主ボタン1つ＋ボタン1つ＋その他 ▾（SimpleToolbar。何を残すかは lib/exceptionView の mainTools）。
  * 欠勤・キャンセルは日の予定では欄を開き（onAbsence）、週・月ではその日の日の予定で欄を開く（リンク）。切は操作の行のボタン、入は「その他 ▾」の項目。
  * absence が null なら出さない。表示の切り替え・元に戻す・使い方・メールで送るなどは moreItems と履歴の項目として「その他 ▾」へ
  */
@@ -75,8 +74,7 @@ export function ScheduleToolbar({
   const today = jstDate(Date.now());
   const expert = !useExceptionsOnly();
   const navigate = useNavigate();
-  // 空き状況と担当なしの［組む］（切のみ）を足す（PRD D383）
-  const more = useSimpleMore();
+  // 担当なしを組むは要対応の帯、空き状況はメニュー（PRD D403・D400）
   const tool: AbsenceTool | null =
     absence &&
     ('onClick' in absence
@@ -134,7 +132,6 @@ export function ScheduleToolbar({
       assignHref={expert ? assignHref : null}
       confirm={expert ? confirm : null}
       moreItems={moreItems}
-      more={more}
       after={after}
     />
   );

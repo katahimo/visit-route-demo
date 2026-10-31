@@ -1,4 +1,4 @@
-// 予約の CSV → 今のデータに訪問（単発）として入れる（ADR-0075。PRD D398）。形の見分けは bookingForms、ここはどの形でも共通の処理：
+// 予約の CSV → 今のデータに訪問（単発）として入れる（ADR-0075。PRD D408）。形の見分けは bookingForms、ここはどの形でも共通の処理：
 // 文字コードを見分けて読み、〈利用者さん〉と名前で突き合わせ、予約番号から決まる ID の訪問を足す・直す。
 // データは書き換えない（ADR-0006）：新しい DemoData と件数を返し、画面が確かめてから store の update で入れる。最後は store の migrate を通す
 import type { BookingImportResult, DemoData, ImportError } from '../contracts/data';

@@ -70,11 +70,11 @@ export function MonthTopBars({
           testId: 'month-title',
         }}
       />
-      {/* 要対応の帯（PRD D383・D391） */}
+      {/* 要対応の帯（入切とも。PRD D400・D403・D404） */}
       <AttentionBand />
       {/* 進み具合の帯（PRD D151〜D155）は「詳しく」の中（MonthDetails。主ボタンは操作の行の「予定を入れる」。PRD D384・D393）。担当なしの次の一手は担当を組むの画面へ（ADR-0063）。
         畳んだ中を開かずに行ける「担当を組む」は操作の行（入） */}
-      {/* 操作の行（日・週・月で同じ作り。PRD D327・D392）。カレンダーと日ごとの一覧の切り替え（PRD D189。600px 以下ははじめ一覧。URL の ?layout=）・
+      {/* 操作の行（日・週・月で同じ作り。PRD D327・D402）。カレンダーと日ごとの一覧の切り替え（PRD D189。600px 以下ははじめ一覧。URL の ?layout=）・
         月送り・今月のほかのときどき使う操作は「その他 ▾」（PRD D278） */}
       <ScheduleToolbar
         zoom="month"

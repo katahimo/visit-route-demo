@@ -49,7 +49,7 @@ export default function WeekPage() {
   /** 週の予定をメールで送る欄（PRD D93。ADR-0017） */
   const [mailOpen, setMailOpen] = useState(false);
   const mailOn = useFeature('mail');
-  /** メールで送るは「その他 ▾」へ、1行の状態・凡例は「詳しく」へ（入切とも。PRD D392・D393） */
+  /** メールで送るは「その他 ▾」へ、1行の状態・凡例は「詳しく」へ（入切とも。PRD D402・D393） */
   const moreItems: MenuItem[] = mailOn
     ? [
         {
@@ -108,9 +108,9 @@ export default function WeekPage() {
         }}
         actions={next.kind === 'none' ? undefined : <WeekNavActions flow={prepFlow} />}
       />
-      {/* 要対応の帯（PRD D383・D391）。1行の状態（PRD D332）は「詳しく」の中 */}
+      {/* 要対応の帯（入切とも。PRD D400・D403・D404）。1行の状態（PRD D332）は「詳しく」の中 */}
       <AttentionBand />
-      {/* 操作の行（日・週・月で同じ作り。PRD D327・D392）。メールで送る・空き状況は「その他 ▾」。切のときだけ ScheduleToolbar が担当なしの訪問を組むを足す（PRD D383） */}
+      {/* 操作の行（日・週・月で同じ作り。PRD D327・D402）。メールで送るは「その他 ▾」。担当なしを組むは要対応の帯、空き状況はメニュー（PRD D403・D400） */}
       <ScheduleToolbar
         zoom="week"
         absence={suddenOn ? { date: anchor } : null}

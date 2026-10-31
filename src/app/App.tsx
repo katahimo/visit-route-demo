@@ -65,7 +65,7 @@ export default function App() {
     : dates.includes(data.baseDate)
       ? data.baseDate
       : (dates[0] ?? data.baseDate);
-  // 切った機能の URL（ブックマーク・古いリンク・`?do=`）は予定の画面（ホームは無い。homePath。PRD D213・D383・D390。ADR-0028）へ移し、
+  // 切った機能の URL（ブックマーク・古いリンク・`?do=`）は予定の画面（ホームは無い。homePath。PRD D213・D400・D401。ADR-0028）へ移し、
   // その上で知らせる。
   // 管理者設定と土台の画面は表に無いので移さない（戻れなくならない）
   const { pathname, search } = useLocation();
@@ -83,7 +83,7 @@ export default function App() {
         <HistoryKeys />
         {/* 範囲の AI で組む（担当を組む）の計算を画面の外で続ける（PRD D256・D257。ADR-0042）：store につなぎ、終わったら知らせる */}
         <MonthBatchHost />
-        {/* 自動の組み（欄の保存・予定の「その他 ▾」の［担当なしの訪問を組む］。ADR-0072 第2段）：同じく画面の外で続け、終わったら知らせて［元に戻す］ */}
+        {/* 自動の組み（欄の保存・要対応の帯の［担当なしを組む］。ADR-0072 第2段）：同じく画面の外で続け、終わったら知らせて［元に戻す］ */}
         <AutoArrangeHost />
         {/* 訪問の詳細の欄（PRD D301〜D304。ADR-0051）：どの画面・コマンドパレットからでも開ける。欄は画面全体で1つ */}
         <VisitPanelProvider>
@@ -97,7 +97,7 @@ export default function App() {
               <Route element={<AdminShell />}>
                 {/* 日の予定は #/plan。古いリンクの #/schedule はそこへ */}
                 <Route path="/schedule" element={<Navigate to="/plan" replace />} />
-                {/* ホームは無い（PRD D383・D390。ADR-0073・ADR-0074）：古い #/home・起動したとき（#/・知らない URL）は予定の画面へ */}
+                {/* ホームは無い（PRD D400・D401。ADR-0073・ADR-0074）：古い #/home・起動したとき（#/・知らない URL）は予定の画面へ */}
                 <Route path="/home" element={<Navigate to={home} replace />} />
                 <Route path="/plan" element={<PlanPage />} />
                 <Route path="/month" element={<MonthPage />} />

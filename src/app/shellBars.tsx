@@ -41,7 +41,7 @@ export function AppHeader({
     <header ref={headerRef} className="app-header">
       {/* 範囲の AI で組む（担当を組む）の進み具合と［止める］（PRD D256。ほかの画面へ移っても続く。月の予定では画面の中に出す） */}
       <BatchBand />
-      {/* 欄の保存・予定の「その他 ▾」の［担当なしの訪問を組む］の自動の組みの進み具合（長引いたときだけ。ADR-0072） */}
+      {/* 欄の保存・要対応の帯の［担当なしを組む］の自動の組みの進み具合（長引いたときだけ。ADR-0072） */}
       <AutoArrangeBand />
       {/* スマホだけ：ロゴと今の画面の名前（PRD D132。広い画面では出さない。「メニュー」は下のタブ。PRD D336） */}
       <div className="m-head-title">
@@ -86,7 +86,7 @@ export function AppHeader({
   );
 }
 
-/** スマホだけ：よく使うタブ（入は 予定・〈利用者さん〉・〈スタッフ〉・組む、切は 予定・〈利用者さん〉・〈スタッフ〉・設定）と「探す」「メニュー」（PRD D336・D383・D390。印刷では出さない） */
+/** スマホだけ：よく使うタブ（入は 予定・〈利用者さん〉・〈スタッフ〉・組む、切は 予定・〈利用者さん〉・〈スタッフ〉・設定）と「探す」「メニュー」（PRD D336・D400・D401。印刷では出さない） */
 export function BottomTabs({
   groups,
   features,
@@ -99,7 +99,7 @@ export function BottomTabs({
   openMenu,
 }: {
   groups: readonly NavSection<MenuItem>[];
-  /** 機能の入り切り（下のタブの項目が変わる。PRD D383・D390） */
+  /** 機能の入り切り（下のタブの項目が変わる。PRD D400・D401） */
   features: Features;
   pathname: string;
   paletteOpen: boolean;

@@ -1,4 +1,4 @@
-// 予約の CSV の読み込みの文（ADR-0075。PRD D398）
+// 予約の CSV の読み込みの文（ADR-0075。PRD D408）
 import { describe, expect, it } from 'vitest';
 import type { BookingImportResult, DemoData } from '../contracts/data';
 import {
@@ -57,9 +57,7 @@ describe('予約の読み込みの文', () => {
     expect(bookingDoneText(result(), { expert: true }, keep)).toBe(
       '予約を読み込みました（追加 2件・更新 1件）。担当は「担当を組む」で組めます',
     );
-    expect(bookingDoneText(result(), { expert: false }, keep)).toContain(
-      '予定の「その他 ▾」の「担当なしの訪問を組む」',
-    );
+    expect(bookingDoneText(result(), { expert: false }, keep)).toContain('予定の上の要対応の帯の「担当なしを組む」');
     expect(bookingDoneText(result(), { expert: true }, { kept: false, why: '容量が足りません' })).toContain(
       '（容量が足りません）',
     );

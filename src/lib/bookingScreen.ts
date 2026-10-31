@@ -1,4 +1,4 @@
-// 予約の CSV の読み込み（ADR-0075。PRD D398）の文と判定の純粋関数。確認の本文・知らせの文を組み立てる。データの書き換えは画面が store で行う
+// 予約の CSV の読み込み（ADR-0075。PRD D408）の文と判定の純粋関数。確認の本文・知らせの文を組み立てる。データの書き換えは画面が store で行う
 import type { BookingImportResult } from '../contracts/data';
 import type { Features } from '../contracts/features';
 import { keepNote, keptSuffix, otherFormSkippedText } from './dataScreen';
@@ -51,9 +51,9 @@ export function bookingConfirmBody(x: {
   ].join('\n');
 }
 
-/** 担当の組み方の案内（エキスパート機能が入なら「担当を組む」、切なら予定の「その他 ▾」の「担当なしの訪問を組む」。ADR-0072） */
+/** 担当の組み方の案内（エキスパート機能が入なら「担当を組む」、切なら予定の上の要対応の帯の「担当なしを組む」。ADR-0072・ADR-0077） */
 const arrangeHint = (features: Features): string =>
-  isOn(features, 'expert') ? '「担当を組む」' : '予定の「その他 ▾」の「担当なしの訪問を組む」';
+  isOn(features, 'expert') ? '「担当を組む」' : '予定の上の要対応の帯の「担当なしを組む」';
 
 /** 読み込んだあとの知らせ */
 export const bookingDoneText = (

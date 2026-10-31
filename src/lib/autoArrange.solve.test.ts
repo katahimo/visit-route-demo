@@ -57,7 +57,7 @@ function dayOf(d: DemoData, date: string): AutoDay {
 }
 const staffOf = (d: DemoData, id: string) => findVisit(d, id)?.staffId ?? null;
 
-describe('applyAutoArrange（反映。D373・D374）', () => {
+describe('applyAutoArrange（反映。D373・D405）', () => {
   const d = expertOn(withNew(unassigned()));
   const dates = [0, 1, 2].map((i) => addDays(TODAY, i));
 
@@ -76,7 +76,7 @@ describe('applyAutoArrange（反映。D373・D374）', () => {
     }
     expect(r.written).toBe(3);
     expect(findVisit(r.data, `${dates[0]}_pn`)!.pinned).toBe(false);
-    // 単発・予定の「その他 ▾」の［担当なしの訪問を組む］（writeUsual: false）は繰り返しの担当に書かない
+    // 単発・要対応の帯の［担当なしを組む］（writeUsual: false）は繰り返しの担当に書かない
     expect(r.data.patterns.find((p) => p.id === 'pn')!.usualStaffId).toBeNull();
   });
 
@@ -161,7 +161,7 @@ describe('繰り返しの担当（D376）', () => {
     expect(keep.data.patterns.find((p) => p.id === 'pn')!.usualStaffId).toBe(b);
   });
 
-  it('writeUsual が偽（単発・予定の「その他 ▾」の［担当なしの訪問を組む］）なら書かない', () => {
+  it('writeUsual が偽（単発・要対応の帯の［担当なしを組む］）なら書かない', () => {
     const main = staffIds(solved[0]!)[0]!;
     const r = applyAutoArrange(d, [{ ...solved[0]!, routes: { [main]: [`${dates[0]}_pn`] } }], {
       writeUsual: false,

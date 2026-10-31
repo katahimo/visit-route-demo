@@ -391,7 +391,7 @@ async function basisRedo(page) {
     .catch(() => '');
   check(
     badge.includes('変更'),
-    'メニューの「組む」の印は「変更」（担当なしの日数より先。印は組むの1つ。PRD D390）',
+    'メニューの「組む」の印は「変更」（担当なしの日数より先。印は組むの1つ。PRD D401）',
     badge,
   );
   await page.getByTestId('arrange-basis-redo').click();

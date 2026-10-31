@@ -71,7 +71,7 @@ async function insideEntries(page, dlg, ctx) {
       (await page.locator('.absence-btn').count()) > 0 === on('sudden'),
       `${label}：列の見出しの「この人の欠勤を登録」`,
     );
-    // 予定をメールで送るは操作の行の「その他 ▾」の中（PRD D306・D392）
+    // 予定をメールで送るは操作の行の「その他 ▾」の中（PRD D306・D402）
     check(
       (await toolCount(page, 'day-mail')) === (on('mail') ? 1 : 0),
       `${label}：日の予定の「その他 ▾」の「予定をメールで送る」`,

@@ -38,10 +38,12 @@ const SCREENS = {
 
 /**
  * 行き先の名前 → 左のメニューの項目（data-key）の候補。前にあるものから探す（メニューの作りが変わったらここだけ直す。
- * 空き状況・欠勤はメニューに無く、予定の「その他 ▾」・操作の行から（pressTool））
+ * 欠勤はメニューに無く、予定の操作の行から（pressTool）。空き状況は予定の次の項目（PRD D400。ADR-0078）。
+ * 担当なしを組むは予定の上の要対応の帯の attention-band-arrange（PRD D403））
  */
 const MENU_KEYS = {
   予定: ['schedule'],
+  空き状況: ['vacancy'],
   利用者さん: ['clients'],
   スタッフ: ['staff'],
   設定: ['settings'],
@@ -132,12 +134,10 @@ const TOOLS = {
   勤務の見込み: { id: 'month-workload', text: /勤務の見込み/ },
   印刷: { id: 'month-print', text: /印刷/ },
   表示を選ぶ: { text: /表示/ },
-  空き状況: { id: 'more-vacancy', text: /空き状況/ },
-  担当なしを組む: { id: 'toolbar-arrange', text: /担当なしの訪問を組む/ },
   // 日の主ボタン（plan-visit-add）の言葉は入切とも「予定を入れる」（段2）。月・週の主ボタンは toolbar-add-plan（引き出し）
   訪問を追加: { id: 'plan-visit-add', text: /予定を入れる/ },
   予定を入れる: { id: 'toolbar-add-plan', text: /予定を入れる/ },
-  // 入の操作の行の2つ目：月・週は「担当を組む」（担当を組むの画面へ）、日は「確定（伝えた）」（段2。D392）
+  // 入の操作の行の2つ目：月・週は「担当を組む」（担当を組むの画面へ）、日は「確定（伝えた）」（段2。D402）
   担当を組む: { id: 'toolbar-assign', text: /担当を組む/ },
   確定: { id: 'adopt', text: /確定/ },
   使い方: { id: 'plan-more-help', text: /使い方/ },
@@ -281,8 +281,32 @@ async function accessibleInfo(page, locator) {
   }
 }
 
+/**
+ * 画面を移るときに渡した state（React Router の history.state.usr）を覚える。日の予定は受けた要対応の帯の state を履歴から消す
+ * （戻る・読み直しで欄を開き直さない。PRD D403）ので、移った直後の history.state では読めない。押す前に呼び、移ったあと navUsr で読む
+ */
+async function watchNavUsr(page) {
+  await page.evaluate(() => {
+    window.__navUsr = null;
+    if (window.__navUsrWatched) return;
+    window.__navUsrWatched = true;
+    for (const name of ['pushState', 'replaceState']) {
+      const orig = history[name].bind(history);
+      history[name] = (state, ...rest) => {
+        if (state?.usr) window.__navUsr = state.usr;
+        return orig(state, ...rest);
+      };
+    }
+  });
+}
+
+/** watchNavUsr のあとに移ったときの state（無ければ null） */
+const navUsr = (page) => page.evaluate(() => window.__navUsr ?? null);
+
 module.exports = {
   accessibleInfo,
+  watchNavUsr,
+  navUsr,
   SCREENS,
   MENU_KEYS,
   TOOLS,

@@ -114,7 +114,7 @@ async function menu(page) {
   check(
     JSON.stringify(await current(page)) === JSON.stringify(['clients']) &&
       (await page.getByTestId('arrange-steps').count()) === 0,
-    '〈利用者さん〉一覧はメニューの上の段の項目「利用者さん」が今の画面（PRD D390）で、予定を組むの段は出ない',
+    '〈利用者さん〉一覧はメニューの上の段の項目「利用者さん」が今の画面（PRD D401）で、予定を組むの段は出ない',
     await current(page),
   );
   check(
@@ -178,7 +178,7 @@ async function zoom(page) {
           ].includes(id),
         ),
     );
-    // 入の操作の行は主「予定を入れる」＋（月・週は「担当を組む」、日は「確定（伝えた）」）の2つと「その他 ▾」（PRD D392）
+    // 入の操作の行は主「予定を入れる」＋（月・週は「担当を組む」、日は「確定（伝えた）」）の2つと「その他 ▾」（PRD D402）
     const want = {
       day: ['plan-visit-add', 'adopt'],
       week: ['toolbar-add-plan', 'toolbar-assign'],
@@ -197,8 +197,8 @@ async function zoom(page) {
       `${zoomName}：「その他 ▾」に 欠勤・キャンセルを登録 と 元に戻す がある`,
     );
     await closeMore(page);
-    // その他 ▾ は空き状況を入れるので日・週・月のどれにもある（PRD D344・D390）
-    check((await bar.locator('[data-testid$="-more"]').count()) === 1, `${zoomName}：その他 ▾ がある（空き状況）`);
+    // その他 ▾ は欠勤・元に戻すを入れるので日・週・月のどれにもある（空き状況はメニュー。PRD D344・D400）
+    check((await bar.locator('[data-testid$="-more"]').count()) === 1, `${zoomName}：その他 ▾ がある`);
     check(
       (await page.getByTestId('progress-band').count()) === (zoomName === 'month' ? 1 : 0),
       `${zoomName}：進み具合の帯は月だけ`,

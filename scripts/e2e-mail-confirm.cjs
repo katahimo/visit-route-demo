@@ -130,7 +130,7 @@ const steps = sharedPage({
         check(
           (await page.locator('[data-testid="sched-nav"] [data-testid="week-mail"]').count()) === 0 &&
             (await toolCount(page, 'week-mail')) === 1,
-          '週の予定：「予定をメールで送る」は操作の行の「その他 ▾」の中の1つだけ（ナビの行・表の上には無い。PRD D392）',
+          '週の予定：「予定をメールで送る」は操作の行の「その他 ▾」の中の1つだけ（ナビの行・表の上には無い。PRD D402）',
         );
         await pressTool(page, 'week-mail', { where: 'more' });
         const rows = page.getByTestId('week-mail-rows');

@@ -34,7 +34,7 @@ const VIEW_TEST_ID: Record<WeekView, string> = {
 };
 
 /**
- * ナビの行の右（PRD D280・D346）：この週の主ボタン（確定 → 済み）。担当ごとの週の予定をメールで送るのは「その他 ▾」（PRD D93・D392）
+ * ナビの行の右（PRD D280・D346）：この週の主ボタン（確定 → 済み）。担当ごとの週の予定をメールで送るのは「その他 ▾」（PRD D93・D402）
  */
 export function WeekNavActions({ flow }: { flow: Pick<WeekPrepFlow, 'next' | 'nextRef' | 'whyId' | 'confirmWeek'> }) {
   const { next, nextRef, whyId } = flow;

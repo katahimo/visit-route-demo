@@ -7,7 +7,7 @@
 // 設定の「最初の設定をやり直す」（確認の文は元に戻す Ctrl+Z の対象外・先に書き出す案内 → 2問へ戻る → 答えでデータを作り直す・控えが残る）、
 // 案内ツアー（データの画面の「案内をもう一度見る」から開く：role="dialog"・aria-modal・見出しと本文・1 / 2・最初のフォーカスは「次へ」・
 // 裏の inert とスクロールのロック・「戻る」は最初の枚で押せない・Tab と Shift+Tab が中で回る・開いている間は Ctrl+K でパレットを開かない・
-// 2枚（予定・欠勤。ホームは無い。PRD D277・D390）・予定の枚は3段の説明・最後の枚は主ボタン「今日の予定を開く」・「閉じる」（とばすは出さない。PRD D226）・
+// 2枚（予定・欠勤。ホームは無い。PRD D277・D401）・予定の枚は3段の説明・最後の枚は主ボタン「今日の予定を開く」・「閉じる」（とばすは出さない。PRD D226）・
 // Esc と「とばす」・閉じるとフォーカスが「案内をもう一度見る」へ・「今日の予定を開く」で今日の日の画面・390px で収まる・印刷で出さない）、
 // データの画面のファイル選択（すべて同じ部品・日本語のボタン「ファイルを選ぶ」と未選択の文・ブラウザ標準の input は見えない・
 // input はボタンと同じ大きさ・入力欄の名前（何を読み込むか＋ファイルを選ぶ）・Tab で届きフォーカスの枠・Space で選ぶ画面・控え（JSON）を選ぶと確認と
@@ -813,7 +813,7 @@ async function monthList(b) {
     (await page.getByTestId('month-grid').count()) === 0,
     '390px：はじめは日ごとの一覧（カレンダーの表を出さない）',
   );
-  // 見せ方の切り替えは操作の行の「その他 ▾」の中（PRD D392）。今の見せ方に aria-current
+  // 見せ方の切り替えは操作の行の「その他 ▾」の中（PRD D402）。今の見せ方に aria-current
   const layoutList = await openMore(page);
   const pressed = await layoutList
     .locator('[data-testid^="month-layout-"]')
@@ -858,7 +858,7 @@ async function monthList(b) {
   const v2 = await inView(today);
   const focused = await today.evaluate((el) => document.activeElement === el);
   check(v2.ok && focused, '「今日へ」で今日の行へ巻いてフォーカス', { ...v2, focused });
-  // 切り替えは操作の行のボタンにせず「その他 ▾」の中（操作の行は主ボタン1つ＋1つ。PRD D392）
+  // 切り替えは操作の行のボタンにせず「その他 ▾」の中（操作の行は主ボタン1つ＋1つ。PRD D402）
   check((await page.getByTestId('month-layout').count()) === 0, '切り替えのボタンは操作の行に無い');
   // 行の読み上げ：日付・件数・状態
   const label = await today.getAttribute('aria-label');

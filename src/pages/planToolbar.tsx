@@ -1,4 +1,4 @@
-// 日の予定の操作の行（日・週・月で同じ作り・同じ位置。PRD D327・D392）：予定を入れる（主）・確定（伝えた）（入）／
+// 日の予定の操作の行（日・週・月で同じ作り・同じ位置。PRD D327・D402）：予定を入れる（主）・確定（伝えた）（入）／
 // その他 ▾（欠勤・キャンセル（入）・元に戻す・表示の切り替え・使い方・メールで送る）と、計算中の進み具合（PRD D249）
 import { Info, Mail, Plus, Square } from 'lucide-react';
 import type { MenuItem } from '../components/MenuButton';
@@ -46,7 +46,7 @@ const viewItem = (k: string, text: string, i: number, current: boolean, onSelect
 });
 
 /**
- * 操作の行の「その他 ▾」の項目（入切とも。PRD D392）：スマホは 予定を入れる・日ごとのリスト／順番／一覧、パソコン・タブレットは 時間軸／順番／一覧
+ * 操作の行の「その他 ▾」の項目（入切とも。PRD D402）：スマホは 予定を入れる・日ごとのリスト／順番／一覧、パソコン・タブレットは 時間軸／順番／一覧
  * （訪問のある日だけ）、使い方、予定をメールで送る（訪問のある日・未連絡の変更のある日）
  */
 function moreItemsOf(p: PlanCtx, addWhy: string | false): MenuItem[] {
@@ -77,7 +77,7 @@ function moreItemsOf(p: PlanCtx, addWhy: string | false): MenuItem[] {
           } satisfies MenuItem,
         ]
       : []),
-    // 表示の切り替えを「その他 ▾」に入れる（操作の行のボタンを2つまでにするため。PRD D334・D384・D392）
+    // 表示の切り替えを「その他 ▾」に入れる（操作の行のボタンを2つまでにするため。PRD D334・D384・D402）
     ...(compact
       ? (
           [

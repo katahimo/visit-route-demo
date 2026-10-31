@@ -96,7 +96,7 @@ async function fromHome(page) {
   await page.reload();
   // 初期データは今日からの日を繰り返しの担当のままにするので、保存した担当の入った訪問を用意する（のちの段（recommend-b）も使う）
   await planDays(page, { cache: true });
-  // 月の予定の「その他 ▾」の「欠勤・キャンセルを登録」（操作の行・メニュー・ホームには無い。PRD D390・D392）
+  // 月の予定の「その他 ▾」の「欠勤・キャンセルを登録」（操作の行・メニュー・ホームには無い。PRD D401・D402）
   await goTo(page, '月');
   // メニュー項目は href を持たないので、遷移の途中の URL（history の pushState・replaceState）を記録して `?date=今日&do=absence` を経由したことを確かめる
   await page.evaluate(() => {
