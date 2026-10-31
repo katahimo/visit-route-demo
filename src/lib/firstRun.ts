@@ -24,7 +24,7 @@ export type FirstRunAnswer = { start: FirstRunStart; booking: FirstRunBooking };
 export type FirstRunChoice<T extends string> = { value: T; label: string; description: string };
 
 /** 画面の見出し・問い・主ボタン（主ボタンは1つ） */
-export const FIRST_RUN_TITLE = '最初に2つだけ教えてください';
+export const FIRST_RUN_TITLE = '最初の設定';
 export const FIRST_RUN_SUBMIT = 'はじめる';
 /** やり直しのときだけ出す従のボタン（今のデータのまま戻る） */
 export const FIRST_RUN_CANCEL = 'やめる';
