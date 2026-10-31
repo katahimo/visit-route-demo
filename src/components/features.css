@@ -195,3 +195,25 @@
   flex-direction: column;
   gap: 4px;
 }
+
+/* 説明1行＋ⓘ（スイッチの行・メールの予約送信。PRD D395）：ⓘ は説明の下の行に置く（幅が広くても狭くても同じ。
+   開いても ⓘ は動かず、中身がその下に出る） */
+.feature-desc-line {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.feature-desc-line .hint-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* 「最初の設定をやり直す」の注意（データが消える。畳まずに出す） */
+.restart-warn {
+  margin: 0;
+  color: var(--warn-ink);
+  font-weight: 700;
+  font-size: 0.9rem;
+}

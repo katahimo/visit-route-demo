@@ -12,6 +12,7 @@
 //   toolCount(page, testId)     … 行と「その他 ▾」の中を合わせた、その testid の数（出る・出ないを位置によらず確かめる）
 //   undoState(page)             … 「元に戻す」の状態（押せるか・説明）を「その他 ▾」を開いて読む
 //   openScreenDetails(page)     … 画面の「詳しく ▾」（月・週・日）を開く（開いて読む e2e が着いたあとに呼ぶ）
+//   accessibleInfo(page, locator) … AX ツリーでの名前と説明を読む（CDP。aria-describedby の textContent 集めでは見逃す文を確かめる）
 //   reveal(page, testId)        … 要素が見えるまで（「詳しく ▾」を開いてでも）待つ。中を読む前に呼ぶ
 // 段2：入の操作の行は「予定を入れる」＋「担当を組む」（月・週）／＋「確定（伝えた）」（日）の2つと「その他 ▾」。
 // 欠勤・キャンセル・元に戻す・表示の切り替え・使い方・メールで送る・印刷などは「その他 ▾」の中（where: 'more'）。
@@ -262,6 +263,25 @@ async function reveal(page, testId, { timeout = 60000 } = {}) {
 }
 
 /**
+ * ブラウザの AX ツリー（読み上げが使うもの）での名前と説明を読む（CDP の Accessibility.getPartialAXTree）。
+ * aria-describedby が指す要素の textContent を集めるやり方は、閉じた <details> の中のように読み上げに入らない文を見逃す
+ */
+async function accessibleInfo(page, locator) {
+  await locator.evaluate((el) => el.setAttribute('data-ax-probe', '1'));
+  const cdp = await page.context().newCDPSession(page);
+  try {
+    const { root } = await cdp.send('DOM.getDocument', { depth: 0 });
+    const { nodeId } = await cdp.send('DOM.querySelector', { nodeId: root.nodeId, selector: '[data-ax-probe="1"]' });
+    const { nodes } = await cdp.send('Accessibility.getPartialAXTree', { nodeId, fetchRelatives: false });
+    const n = nodes[0];
+    return { name: n.name?.value ?? '', description: n.description?.value ?? '' };
+  } finally {
+    await locator.evaluate((el) => el.removeAttribute('data-ax-probe'));
+    await cdp.detach();
+  }
+}
+
+/**
  * 画面を移るときに渡した state（React Router の history.state.usr）を覚える。日の予定は受けた要対応の帯の state を履歴から消す
  * （戻る・読み直しで欄を開き直さない。PRD D403）ので、移った直後の history.state では読めない。押す前に呼び、移ったあと navUsr で読む
  */
@@ -284,6 +304,7 @@ async function watchNavUsr(page) {
 const navUsr = (page) => page.evaluate(() => window.__navUsr ?? null);
 
 module.exports = {
+  accessibleInfo,
   watchNavUsr,
   navUsr,
   SCREENS,

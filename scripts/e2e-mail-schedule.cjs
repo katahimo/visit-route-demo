@@ -8,7 +8,7 @@
 const path = require('node:path');
 const { BASE, OUT_DIR, check, runSteps, settle } = require('./lib/env.cjs');
 const { sharedPage } = require('./lib/steps.cjs');
-const { pressTool } = require('./lib/ui.cjs');
+const { openDetails, pressTool } = require('./lib/ui.cjs');
 
 const GAS_URL = 'https://script.google.com/macros/s/AKfyFAKE_e2e/exec';
 const TOKEN = 'e2e-token';
@@ -68,7 +68,43 @@ const steps = sharedPage({
         await page.goto(`${BASE}#/settings`);
         const card = page.getByTestId('mail-schedule-settings');
         await card.waitFor({ timeout: 30000 });
+        // 手順は畳んで始める（PRD D395。開閉は覚えない）：閉じていると見えず、見出しの横に手順の数。開くと4つの手順
+        const fold = page.getByTestId('mail-schedule-steps-fold');
+        check(
+          (await fold.getAttribute('open')) === null &&
+            !(await page.getByTestId('mail-schedule-template').isVisible()) &&
+            (await page.getByTestId('mail-schedule-steps-fold-heading').innerText()).includes('手順 4つ'),
+          '予約送信の手順は閉じて始める（見出しに手順の数）',
+        );
+        check(
+          (await card.locator('.feature-desc-line .sub').first().innerText()).includes(
+            '前日の決めた時刻に自動で送ります',
+          ) && !(await page.getByTestId('mail-schedule-notes').isVisible()),
+          '予約送信の説明は1行（詳しい説明は ⓘ の中）',
+        );
+        const noteSummary = card.locator('details.hint > summary');
+        check(
+          (await noteSummary.innerText()).trim() === '説明' &&
+            (await noteSummary.getAttribute('aria-label')) === 'メールの予約送信の説明',
+          'ⓘ のラベルは「説明」（読み上げは「メールの予約送信の説明」）',
+        );
+        await noteSummary.click();
+        const notes = (await page.getByTestId('mail-schedule-notes').innerText()).replace(/\s+/g, '');
+        check(
+          notes.includes('分ほど遅れることがあります') &&
+            notes.includes('Googleのアカウント（スプレッドシート）を通ります') &&
+            notes.includes('「メールを作る」でメールアプリから送れます'),
+          'ⓘ を開くと、遅れる分数・Google を通ること・「メールを作る」で送れることが読める',
+          notes,
+        );
+        await noteSummary.click();
+        await openDetails(page, 'mail-schedule-steps-fold');
         check((await page.getByTestId('mail-schedule-template').count()) === 1, 'ひな型のコピーの行がある');
+        check(
+          (await page.getByTestId('mail-schedule-template').isVisible()) &&
+            (await fold.locator('ol > li').count()) === 4,
+          '手順を開くとひな型のコピーを含む4つの手順が見える',
+        );
         await page.getByTestId('mail-schedule-save').click();
         check((await card.locator('[aria-invalid="true"]').count()) >= 2, '空のまま保存すると URL・合言葉に誤り');
         await page.getByTestId('mail-schedule-url').fill('https://example.com/exec');

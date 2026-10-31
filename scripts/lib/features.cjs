@@ -1,7 +1,7 @@
 // e2e の共通：機能の入り切り（e2e-features.cjs・e2e-features2.cjs。PRD D210〜D216。ADR-0028）の
 // 機能の ID・ひな形ごとの入る機能・メニューと画面の名前・画面を開く・メニューとパレットを読む・ひな形を適用する部品
 const { BASE, TODAY, STORAGE_KEY, settle } = require('./env.cjs');
-const { goTo } = require('./ui.cjs');
+const { goTo, openDetails } = require('./ui.cjs');
 
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
@@ -235,6 +235,8 @@ async function paletteSearch(page, text) {
 /** 管理者設定でひな形を適用する（確認に答える） */
 async function applyTemplate(page, dlg, id, answer = true) {
   await open(page, '/settings', '[data-testid="feature-templates"]');
+  // ひな形の5つは畳んである（PRD D395）。開いてから押す
+  await openDetails(page, 'feature-templates-fold');
   dlg.messages.length = 0;
   dlg.answer = answer;
   await page.locator(`[data-template="${id}"] [data-testid="feature-template-apply"]`).click();
