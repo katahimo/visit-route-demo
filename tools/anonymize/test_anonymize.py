@@ -57,6 +57,28 @@ class BlurLatLng(unittest.TestCase):
         self.assertEqual(a.blur_latlng("不明", "jitter", 200, b"s", "k"), "")
 
 
+class PseudoName(unittest.TestCase):
+    def test_歴史上の人物から順に振る(self):
+        p = a.Pseudonymizer(b"s")
+        self.assertEqual(p.name(0), (("織田", "オダ"), ("信長", "ノブナガ")))
+
+    def test_使い切っても重ならない(self):
+        p = a.Pseudonymizer(b"s")
+        n = len(a.FIGURES) + len(a._MIXED)
+        names = {p.name(i) for i in range(n)}
+        self.assertEqual(len(names), n)
+        self.assertGreater(n, 5000)
+
+    def test_組み替えは実在の組と重ならない(self):
+        p = a.Pseudonymizer(b"s")
+        for i in range(len(a.FIGURES), len(a.FIGURES) + 300):
+            (s, _), (g, _) = p.name(i)
+            self.assertNotIn((s, g), a._REAL)
+
+    def test_実在の組は重複がない(self):
+        self.assertEqual(len(a._REAL), len(a.FIGURES))
+
+
 class EndToEnd(unittest.TestCase):
     def test_顧客と予約で同じ人に同じ仮名とIDを振る(self):
         cust_header = list(a.CUSTOMER_RULES)
@@ -90,7 +112,7 @@ class EndToEnd(unittest.TestCase):
         self.assertEqual(c["電話番号※必須項目"], "090-0000-0001")
         self.assertEqual((c["パスワード"], c["顧客メモ"], r["シンプルアンケート"]), ("", "", ""))
         self.assertEqual((c["性別"], r["予約日"]), ("男性", "2026/10/01"))
-        self.assertNotIn("架空", c["姓"] + r["氏名"])
+        self.assertEqual((c["姓"], c["名"]), ("織田", "信長"))
 
 
 if __name__ == "__main__":
