@@ -2,7 +2,7 @@ import { HeartHandshake } from 'lucide-react';
 import { useCallback, useId, useState } from 'react';
 import { DetailPopover } from '../components/DetailPopover';
 import { ClientDetail, StaffDetail } from '../components/personDetail';
-import { BasicsNav } from '../components/SettingsTabs';
+import { PeopleTabs } from '../components/SettingsTabs';
 import { PageHeader } from '../components/ui';
 import { EMPTY_FILTER, sameFilter } from '../lib/clientFilter';
 import { cycleCompat } from '../lib/compatLevel';
@@ -54,7 +54,7 @@ export default function CompatPage() {
   return (
     <div className="stack">
       <PageHeader
-        nav={<BasicsNav />}
+        nav={<PeopleTabs />}
         icon={HeartHandshake}
         title="相性"
         lead="セルを押すと ◎ → ○ → 空 → △ → × と変わります"

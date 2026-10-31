@@ -5,15 +5,15 @@
 
 ### 〈スタッフ〉一覧（`#/staff`）
 
-- 見出し「〈スタッフ〉一覧」。題名の下に基本情報のタブ（`BasicsNav`。上に予定を組むの段（1 基本情報が今の段）。[pages.md](pages.md)・[pages-basics.md](pages-basics.md)。PRD D326・D362。ADR-0067）。右に主ボタン「〈スタッフ〉を追加」（`staff-add`。`#/staff/new` へのリンク）。名前の前は〈スタッフ〉の印（`StaffMark` の md。[pages.md](pages.md) の「〈スタッフ〉の印」）
+- 見出し「〈スタッフ〉」。題名の下に人のタブ（`PeopleTabs`。PRD D326・D394）。右に主ボタン「〈スタッフ〉を追加」（`staff-add`。`#/staff/new` へのリンク）。名前の前は〈スタッフ〉の印（`StaffMark` の md。[pages.md](pages.md) の「〈スタッフ〉の印」）
 - 一覧の行（`staff-row`）はどこを押してもその人の画面（`#/staff/:id`。行の中のボタン・リンク・文字の選択は除く。PRD D308）。右端の「〈名前〉を開く」（`Eye`・`staff-open`）とスマホ画面へのリンク。`?id=` はその人の画面へ移る
 - 見出しの右に「Excel・CSV」（`roster-toggle`）。押すと名簿の欄（[pages-clients.md](pages-clients.md)「名簿の欄」。`kind="staff"`）
 - 一覧の上に「最終勤務日のある〈スタッフ〉」のカード（`leaving-card`。振り直しが残っているか。「担当の振り直しを開く」`leaving-open`）。名簿の読み込みで最終勤務日が入った人もここに出る（トーストでこの欄を指す。PRD D209）
 - 一覧の状態に「最終 M/D」（`staff-lastday`）
-- 狭い画面（600px 以下。PRD D220）：一覧の表（`narrow-staff`）は1人を1枚のカードに（[pages.md](pages.md) の「狭い画面の表」）。1行目に名前と状態（休止中・最終 M/D）、続けて「勤務」・「特性」・「〈利用者さん〉に求めること」・「自宅の位置」、開く・スマホ画面は右下
+- 狭い画面（600px 以下。PRD D220）：一覧の表（`narrow-staff`）は1人を1枚のカードに（[pages.md](pages.md) の「狭い画面の表」）。1行目に名前と状態（休止中・最終 M/D）、続けて「勤務日」・「勤務時間」（くわしい列を入れたときはさらに「特性」・「〈利用者さん〉に求めること」・「自宅の位置」）、開く・スマホ画面は右下
 
-- エキスパート機能が切のとき、題名の下は基本情報のタブでなく小さいタブ 一覧・勤務（勤務時間（シフト）・勤務の見込み）・相性（`PeopleTabs`。`lib/peopleTabs`。PRD D389）。
-- エキスパート機能が切のとき（PRD D385。ADR-0073。判定は `lib/peopleView`）：一覧の列は 名前・勤務日（`staff-days`）・勤務時間（`staff-hours`）の3列と右端の「開く」「スマホ画面」だけ（特性・求めること・自宅の位置・状態の列は出さない。状態の列が無いので休止中だけ名前のそばに印。入は状態の列に出すので名前のそばには出さない＝`staffNameNote`）。基本情報のタブでなく小さいタブ（`PeopleTabs`。PRD D389）を出し、見出しの下の説明は名前・勤務日・勤務時間の1行を初回だけ（`useIntro('staff')`。`peopleIntro`）
+- 題名は「〈スタッフ〉」（メニューの名前と同じ。「一覧」を付けない。PRD D230）、その下は入切とも小さいタブ 一覧・勤務（勤務時間（シフト）・勤務の見込み）・相性（`PeopleTabs`。`lib/peopleTabs`。PRD D394。予定を組むの4段・基本情報のタブは出さない）。
+- 一覧の列（PRD D385・D394。ADR-0073・ADR-0074 段3。判定は `lib/peopleView` の `staffColumns(detailed)`）：入切とも 名前・勤務日（`staff-days`）・勤務時間（`staff-hours`）の3列と右端の「開く」「スマホ画面」で始める（状態の列が無い間は休止中だけ名前のそばに印＝`staffNameNote`）。**エキスパート機能が入のときだけ**、表の上に「くわしい列」のチェック（`people-columns-toggle`。`components/DetailColumns`）を出し、入れると 特性・求めること・自宅の位置・状態の列を足す（休止中は状態の列に出すので名前のそばには出さない）。入れたかは一覧ごとに端末に覚える（`store/navOpen` の鍵 `columns:staff`）。切は切り替えを出さず、見出しの下の説明は名前・勤務日・勤務時間の1行を初回だけ（`useIntro('staff')`。`peopleIntro`。入は入の文）
 
 ### 〈スタッフ〉の画面（`#/staff/:staffId`。`pages/StaffPersonPage`。PRD D308〜D312。ADR-0052）
 
@@ -61,7 +61,7 @@
 
 ### 勤務時間（シフト）（`#/availability`）
 
-- 題名の下に基本情報のタブ（`BasicsNav`。PRD D326・D362。ADR-0067）。〈スタッフ〉×日の稼働時間帯。セルの時間帯の文は上書き・基本のまま。保存は `availability-save`
+- 題名の下に人のタブ（`PeopleTabs`。勤務に印。PRD D326・D394）。〈スタッフ〉×日の稼働時間帯。セルの時間帯の文は上書き・基本のまま。保存は `availability-save`
 - 見出しの右に「勤務の見込み」（枠のボタンの `Link`・`avail-workload`・`/workload?ym=選んでいる日付の月`。`workload` が入のとき。主ボタンにしない。PRD D275）
 - 欠勤のある日のセルに「欠勤」の印（「欠勤（終日）」「欠勤 9:00〜12:00」。メモは title。`avail-absence`）
 - 右の欄（勤務時間（シフト）の欄）：同じ欠勤の文と、`Link`（`availability-absence-link`。`suddenHref(日付, 人)`。`setDate` しない）。その日に働く日（`availabilityOf` の slots があり `retiredWhy` が無い＝`pickedWorks`）だけ出す。欠勤があれば「この日の欠勤を直す・取り消す」、無ければ「この日の欠勤を登録する」＋「（日の予定の「欠勤・キャンセル」で開く）」。休みの日・最終勤務日の後（`availability-retired`）は出さない。知らない人・その日に働かない人の `staff=` は日の予定で1段目
@@ -70,7 +70,7 @@
 
 ### 勤務の見込み（`#/workload?ym=&staff=`。ADR-0015）
 
-- 入口（メニューには出さない。題名の下の基本情報のタブは勤務時間（シフト）に印。PRD D275・D326・D362）：勤務時間（シフト）の見出しの「勤務の見込み」・月の予定の「その他 ▾」の「勤務の見込み」・日の予定の拘束超えの帯・月の要対応（`workloadHref`）・パレット。メニューの今の画面の印は予定を組むの子「基本情報」
+- 入口（メニューには出さない。題名の下の人のタブは勤務に印。PRD D275・D326・D394）：勤務時間（シフト）の見出しの「勤務の見込み」・月の予定の「その他 ▾」の「勤務の見込み」・日の予定の拘束超えの帯・月の要対応（`workloadHref`）・パレット。メニューの今の画面の印は〈スタッフ〉
 - `lib/workload` の `workMonth`・`workTotals`・`workloadTsv`、画面のための計算は `lib/workloadView`（`pickedDaysOf`・`workAxis`・`statTitle`・`spanNum` など）
 - 見出し（`work-title`）・「表をコピー」（`work-copy`。タブ区切りの表）・要約（`work-summary`）。主ボタンは無し
 - 事業所の設定（`org`）をこの画面で直す：交通費の単価（`work-fare`。0 にすると交通費の列が消える）・拘束の上限（`work-limit`。`Term` `span`＝出勤〜退勤（拘束））

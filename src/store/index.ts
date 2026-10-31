@@ -4,7 +4,7 @@
 export { ARRANGE_BASIS_KEY, arrangeBasisMemory } from './arrangeBasis';
 export { BACKUP_LAST_KEY, BACKUP_REMINDED_KEY, backupMemory, type ExportKind, type LastExport } from './backup';
 export { MAIL_SCHEDULE_KEY, type MailScheduleState, mailScheduleMemory } from './mailSchedule';
-export { detailsOpenKey, navOpenMemory } from './navOpen';
+export { columnsOpenKey, detailsOpenKey, navOpenMemory } from './navOpen';
 export * from './persist';
 export { DemoDataProvider, type UpdateOptions, useDemoData } from './react';
 export { repair } from './repair';

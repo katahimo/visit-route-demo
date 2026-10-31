@@ -813,7 +813,7 @@ async function monthList(b) {
     (await page.getByTestId('month-grid').count()) === 0,
     '390px：はじめは日ごとの一覧（カレンダーの表を出さない）',
   );
-  // 見せ方の切り替えは操作の行の「その他 ▾」の中（PRD D392）。今の見せ方に aria-current
+  // 見せ方の切り替えは操作の行の「その他 ▾」の中（PRD D402）。今の見せ方に aria-current
   const layoutList = await openMore(page);
   const pressed = await layoutList
     .locator('[data-testid^="month-layout-"]')
@@ -858,7 +858,7 @@ async function monthList(b) {
   const v2 = await inView(today);
   const focused = await today.evaluate((el) => document.activeElement === el);
   check(v2.ok && focused, '「今日へ」で今日の行へ巻いてフォーカス', { ...v2, focused });
-  // 切り替えは操作の行のボタンにせず「その他 ▾」の中（操作の行は主ボタン1つ＋1つ。PRD D392）
+  // 切り替えは操作の行のボタンにせず「その他 ▾」の中（操作の行は主ボタン1つ＋1つ。PRD D402）
   check((await page.getByTestId('month-layout').count()) === 0, '切り替えのボタンは操作の行に無い');
   // 行の読み上げ：日付・件数・状態
   const label = await today.getAttribute('aria-label');

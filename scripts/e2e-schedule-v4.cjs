@@ -1,6 +1,6 @@
 // 見直しの4段目（ADR-0054。PRD D326〜D332）を本物のブラウザで確かめる：
 // メニューの子の項目（予定・予定を組む。PRD D349・D361。ADR-0067。最上位5項目の並びは e2e-nav）と
-// 基本情報のタブ（予定と相性・〈利用者さん〉・〈スタッフ〉・相性・勤務時間（シフト）。勤務の見込みは勤務時間（シフト）の印）、パレットに案を比べるが出ない、
+// 基本情報のタブ（予定と相性・相性・勤務時間（シフト）。〈利用者さん〉・〈スタッフ〉は人のタブ。PRD D394）、パレットに案を比べるが出ない、
 // 日・週・月の切り替えで同じ操作の行（欠勤・キャンセルを登録／元に戻す／（月だけ）その他 ▾。「AI で組む ▾」は無い）、
 // 担当を組むの画面で週を組んだ範囲の提案の帯（反映するまで訪問は変わらない・週・日の予定にも出る・「反映する」で1回の update・
 // Ctrl+Z で戻る・Ctrl+Shift+Z でやり直す）、
@@ -70,8 +70,8 @@ async function menu(page) {
   await tabs.waitFor();
   const tabNames = await tabs.locator('a').evaluateAll((els) => els.map((e) => e.textContent.trim()));
   check(
-    JSON.stringify(tabNames) === JSON.stringify(['予定と相性', '利用者さん', 'スタッフ', '相性', '勤務時間（シフト）']),
-    '基本情報のタブは5つ（先頭が予定と相性）',
+    JSON.stringify(tabNames) === JSON.stringify(['予定と相性', '相性', '勤務時間（シフト）']),
+    '基本情報のタブは3つ（先頭が予定と相性。〈利用者さん〉・〈スタッフ〉は人のタブの画面。PRD D394）',
     tabNames,
   );
   check(
@@ -89,38 +89,50 @@ async function menu(page) {
     '予定と相性ではメニューの組むの子「基本情報」が今の画面（親の「組む」は has-current）',
     await current(page),
   );
-  await tabs.locator('[data-tab="clients"]').click();
-  await page.waitForURL(/#\/clients$/);
-  // URL が変わってからメニューの印が描き直るまで待つ（基本情報 → 利用者さん一覧に印が移る）
+  // 基本情報のタブの「相性」は人のタブの画面へ移り、段は出ず、メニューの印は〈利用者さん〉（来た側の既定）
+  await tabs.locator('[data-tab="compat"]').click();
+  await page.waitForURL(/#\/compat/);
+  // 相性は別のチャンク：人のタブが出て前の画面（見出し「予定と相性」・段）が消えるまで待つ。
+  // 見出しの「相性」は「予定と相性」にも当たるので、見出しでは待たない
+  await page.getByTestId('people-tabs').waitFor({ timeout: 30000 });
+  await until(async () => (await page.getByTestId('arrange-steps').count()) === 0, 5000, 100).catch(() => {});
+  check(
+    (await page.getByTestId('people-tabs').locator('[aria-current="page"]').getAttribute('data-tab')) === 'compat' &&
+      (await page.getByTestId('people-tabs').getAttribute('aria-label')) === '利用者さんの画面の切り替え' &&
+      (await page.getByTestId('arrange-steps').count()) === 0,
+    '相性は人のタブ（一覧・相性）の画面で、予定を組むの段は出ない（組む画面だけ。PRD D394）',
+  );
   await until(async () => JSON.stringify(await current(page)) === '["clients"]', 5000, 100).catch(() => {});
   check(
     JSON.stringify(await current(page)) === JSON.stringify(['clients']),
-    '〈利用者さん〉一覧はメニューの上の段の項目「利用者さん」が今の画面（PRD D401）',
+    '相性は来た側（既定は〈利用者さん〉）の項目が今の画面（組むの子ではない）',
+    await current(page),
+  );
+  await page.getByTestId('people-tabs').locator('[data-tab="clients"]').click();
+  await page.waitForURL(/#\/clients$/);
+  await until(async () => JSON.stringify(await current(page)) === '["clients"]', 5000, 100).catch(() => {});
+  check(
+    JSON.stringify(await current(page)) === JSON.stringify(['clients']) &&
+      (await page.getByTestId('arrange-steps').count()) === 0,
+    '〈利用者さん〉一覧はメニューの上の段の項目「利用者さん」が今の画面（PRD D401）で、予定を組むの段は出ない',
     await current(page),
   );
   check(
     (await page.getByTestId('to-compat').count()) === 0,
     '一覧の見出しの「相性の表」の文字ボタンは無い（タブで開く）',
   );
-  await tabs.locator('[data-tab="compat"]').click();
-  await page.waitForURL(/#\/compat/);
-  // 相性は別のチャンク：読み終わって見出しが替わるまで待つ（前の画面のタブを読まない）
-  await page.locator('h1').filter({ hasText: '相性' }).waitFor({ timeout: 30000 });
-  check(
-    (await page.getByTestId('people-tabs').locator('[aria-current="page"]').getAttribute('data-tab')) === 'compat',
-    'タブで相性へ移り、相性のタブに印',
-  );
   await page.goto(`${BASE}#/workload`);
   await page.getByTestId('people-tabs').waitFor();
   check(
     (await page.getByTestId('people-tabs').locator('[aria-current="page"]').getAttribute('data-tab')) ===
       'availability',
-    '勤務の見込みは勤務時間（シフト）のタブに印',
+    '勤務の見込みは勤務のタブ（勤務時間（シフト））に印',
   );
+  await until(async () => JSON.stringify(await current(page)) === '["staff"]', 5000, 100).catch(() => {});
   check(
-    JSON.stringify(await current(page)) === JSON.stringify(['arrange:basics']) &&
-      (await parentHasCurrent(page, 'arrange')),
-    '勤務の見込みでもメニューの子「基本情報」が今の画面（親の「組む」は has-current）',
+    JSON.stringify(await current(page)) === JSON.stringify(['staff']) &&
+      (await page.getByTestId('arrange-steps').count()) === 0,
+    '勤務の見込みではメニューの〈スタッフ〉が今の画面（組むの子「基本情報」ではない）で、予定を組むの段は出ない',
     await current(page),
   );
   await page.goto(`${BASE}#/compat`);

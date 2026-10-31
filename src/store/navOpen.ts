@@ -66,5 +66,11 @@ export function createNavOpenMemory(getStorage: () => KeyStore | null) {
  */
 export const detailsOpenKey = (screen: 'month' | 'week' | 'day'): string => `details:${screen}`;
 
+/**
+ * 〈利用者さん〉・〈スタッフ〉の一覧の「くわしい列」の切り替えの鍵（エキスパート機能が入のとき。PRD D394）。一覧ごとに端末に覚える。
+ * 値が true なら専門の列を出す（無ければ出さない）。ほかの鍵（nav 項目の key・intro:・details:）と重ならない
+ */
+export const columnsOpenKey = (list: 'clients' | 'staff'): string => `columns:${list}`;
+
 /** 画面全体で1つ（このブラウザの localStorage） */
 export const navOpenMemory = createNavOpenMemory(() => globalThis.localStorage ?? null);
