@@ -19,6 +19,7 @@ const path = require('node:path');
 const { answerConfirms } = require('./lib/confirmDialog.cjs');
 const { BASE, OUT_DIR, NOW, TODAY, STORAGE_KEY, check, hashOf, runSteps, settle } = require('./lib/env.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
+const { goTo } = require('./lib/ui.cjs');
 
 const YM = TODAY.slice(0, 7);
 
@@ -57,12 +58,8 @@ const dayLabel = (d) =>
  * 画面を新しく開く。同じ文書の中で hash を移すと、読み直す前に `?do=` が処理されて消えることがあるので、
  * いったん about:blank に移ってから開く（読み直しはしない）。固定の秒数で待たず、目印と見出しの文が出るのを待つ
  */
-async function open(page, hash, ready = '[data-testid="home-tasks"]') {
-  await page.goto('about:blank');
-  await page.goto(`${BASE}#${hash}`);
-  await page.locator(ready).first().waitFor({ timeout: 30000 });
-  await page.locator('h1').filter({ hasText: /\S/ }).first().waitFor({ timeout: 30000 });
-}
+const open = (page, hash, ready = '[data-testid="home-tasks"]') =>
+  goTo(page, hash, { ready: ready, timeout: 30000, h1: true, settleMs: 0 });
 /** 文が出るまで待つ（出なければ時間切れで続け、呼ぶ側の check で落とす） */
 async function waitText(locator, text, timeout = 10000) {
   await locator

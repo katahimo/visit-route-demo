@@ -14,6 +14,7 @@ const path = require('node:path');
 const { skipTour } = require('./lib/tourSeen.cjs');
 const { BASE, OUT_DIR, NOW, STORAGE_KEY, check, settle, stored, runSteps } = require('./lib/env.cjs');
 const { pagePerStep } = require('./lib/steps.cjs');
+const { goTo } = require('./lib/ui.cjs');
 
 const dialog = (page) => page.getByTestId('confirm-dialog');
 /** いまフォーカスのある要素の data-testid・読み上げ名 */
@@ -23,14 +24,8 @@ const focused = (page) =>
     return el ? `${el.getAttribute('data-testid') ?? ''}|${el.getAttribute('aria-label') ?? el.textContent ?? ''}` : '';
   });
 
-async function open(page, hash, ready) {
-  // 同じ文書の中で hash を移してから読み直すと、読み直す前に `?id=` が処理されて URL から消えることがあるので、
-  // about:blank を挟んで開く（e2e-home と同じ）
-  await page.goto('about:blank');
-  await page.goto(`${BASE}#${hash}`);
-  await page.locator(ready).first().waitFor({ timeout: 30000 });
-  await settle(page, 400);
-}
+// 画面を新しく開く（共通の手 goTo。待つ長さ・見出し・落ち着くまでの待ちはこの画面の e2e の既定）
+const open = (page, hash, ready) => goTo(page, hash, { ready: ready, timeout: 30000, h1: false, settleMs: 400 });
 
 /** 出ているダイアログの形（ARIA・フォーカス・裏の inert とスクロールのロック・中央） */
 async function shape(page, where) {

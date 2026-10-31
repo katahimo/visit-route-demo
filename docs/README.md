@@ -116,6 +116,7 @@ AI・人が「何を知りたいときに、どのファイルを読むか」を
 | [0071](adr/0071-cloudflare-workers-hosting.md) | 公開先を GitHub Pages から Cloudflare Workers（静的アセット）に移す（GitHub Actions＋wrangler。リポジトリを非公開にできる） |
 | [0072](adr/0072-auto-arrange-on-input-expert-features.md) | 希望日時を入れたら入れた分だけ自動で組み（即反映・元に戻す）、組み方の標準・案比べ・条件の重み・予定を組むをエキスパート機能（`expert`）にする。ベビーシッター型は単発のみのひな形 |
 | [0073](adr/0073-first-run-two-questions-auto-settle-less-on-screen.md) | 最初の2問（デモ／自分のデータ × 単発／定期）で始め、組んだ予定は1か月先まで決まった扱い、メニュー4つ・ホーム統合・例外だけ見せる。顧客台帳の CSV を読む |
+| [0074](adr/0074-expert-on-screens-built-on-expert-off.md) | エキスパート機能が入の画面も切の作りを土台にする（メニュー5つ・ホームは帯へ・主ボタン・「詳しく ▾」は閉じて数を出す。段0〜5。e2e の共通の手を先に） |
 
 ## 文書の保ち方
 

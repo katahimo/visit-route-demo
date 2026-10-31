@@ -16,19 +16,14 @@ const { skipTour } = require('./lib/tourSeen.cjs');
 const { answerConfirms } = require('./lib/confirmDialog.cjs');
 const { launch, BASE, OUT_DIR, NOW, TODAY, STORAGE_KEY, check, settle, runSteps } = require('./lib/env.cjs');
 const { guard, closeContext, firstLine } = require('./lib/steps.cjs');
+const { goTo, pressTool } = require('./lib/ui.cjs');
 
 const drawer = (page) => page.locator('.drawer');
 const sudden = (page) => page.getByTestId('sudden-panel');
 const shot = (page, name) => page.screenshot({ path: path.join(OUT_DIR, `${name}.png`) });
 
-async function open(page, hash, ready) {
-  // 同じ文書の中で hash を移してから読み直すと、読み直す前に `?id=` が処理されて URL から消えることがあるので、
-  // about:blank を挟んで開く（e2e-home と同じ）
-  await page.goto('about:blank');
-  await page.goto(`${BASE}#${hash}`);
-  await page.locator(ready).first().waitFor({ timeout: 60000 });
-  await settle(page, 400);
-}
+// 画面を新しく開く（共通の手 goTo。待つ長さ・見出し・落ち着くまでの待ちはこの画面の e2e の既定）
+const open = (page, hash, ready) => goTo(page, hash, { ready: ready, timeout: 60000, h1: false, settleMs: 400 });
 /** 今の担当が出て計算が終わるまで待つ */
 async function waitPlan(page) {
   await page.getByTestId('confirm-state').waitFor({ state: 'attached', timeout: 60000 });
@@ -246,7 +241,7 @@ async function expectMobileRow(page, label) {
 // ---- 欠勤・キャンセルの欄の各段階 ----
 async function suddenSteps(page, w) {
   await freshPlan(page);
-  await page.getByTestId('sudden-open').click();
+  await pressTool(page, '欠勤', { where: 'row' });
   await sudden(page).waitFor();
   await settle(page, 300);
   const m1 = await expectShort(page, `${w}・欠勤・キャンセル 1段目`);
@@ -320,7 +315,7 @@ async function suddenSteps(page, w) {
     check(false, `${w}・差の欄に「連絡の一覧」がある`);
   }
   // 当日キャンセルの3段目
-  await page.getByTestId('sudden-open').click();
+  await pressTool(page, '欠勤', { where: 'row' });
   await sudden(page).waitFor();
   await page.getByTestId('sudden-kind-client').click();
   await settle(page);

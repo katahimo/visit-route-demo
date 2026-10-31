@@ -1,6 +1,7 @@
 // e2e の共通：機能の入り切り（e2e-features.cjs・e2e-features2.cjs。PRD D210〜D216。ADR-0028）の
 // 機能の ID・ひな形ごとの入る機能・メニューと画面の名前・画面を開く・メニューとパレットを読む・ひな形を適用する部品
 const { BASE, TODAY, STORAGE_KEY, settle } = require('./env.cjs');
+const { goTo } = require('./ui.cjs');
 
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
@@ -145,13 +146,8 @@ const ROUTES = [
   { hash: `/plan?date=${TODAY}&do=absence`, feature: 'sudden' },
 ];
 
-/** 画面を新しく開く（about:blank を挟み、`?do=` を読み直す前に消さない） */
-async function open(page, hash, ready = 'h1') {
-  await page.goto('about:blank');
-  await page.goto(`${BASE}#${hash}`);
-  await page.locator(ready).first().waitFor({ timeout: 30000 });
-  await page.locator('h1').filter({ hasText: /\S/ }).first().waitFor({ timeout: 30000 });
-}
+/** 画面を新しく開く（共通の手 goTo） */
+const open = (page, hash, ready = 'h1') => goTo(page, hash, { ready });
 /** 保存したデータの入り切り */
 const storedFeatures = (page) =>
   page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}').org?.features ?? null, STORAGE_KEY);

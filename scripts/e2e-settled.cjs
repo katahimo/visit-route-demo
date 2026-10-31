@@ -17,6 +17,7 @@ const { sharedPage } = require('./lib/steps.cjs');
 const { skipTour } = require('./lib/tourSeen.cjs');
 const { answerIfAsked } = require('./lib/firstRun.cjs');
 const { answerConfirms } = require('./lib/confirmDialog.cjs');
+const { pressTool } = require('./lib/ui.cjs');
 
 const data = (page) => page.evaluate((k) => JSON.parse(localStorage.getItem(k)), STORAGE_KEY);
 const dataWhen = async (page, ok) =>
@@ -153,8 +154,7 @@ async function changed(page) {
   check((await sheet(page).count()) === 0, '「連絡した」のあと連絡の一覧は閉じる');
   // 元に戻す（今の確定と同じ扱い）：伝えた記録が前に戻り、変更ありが戻る
   // 元に戻すは「その他 ▾」の中（エキスパート機能が切。PRD D384）
-  await page.getByTestId('plan-more').click();
-  await page.getByTestId('more-undo').click();
+  await pressTool(page, 'more-undo', { where: 'more' });
   const undone = await dataWhen(page, (x) => x.snapshots[TODAY].at === before.at);
   check(undone.snapshots[TODAY].at === before.at, '操作の行の［元に戻す］で「連絡した」の前に戻る');
   await page.locator('[data-told-date]').first().waitFor({ timeout: 10000 });

@@ -15,6 +15,7 @@ const { answerConfirms } = require('./lib/confirmDialog.cjs');
 const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, settle, hashOf, stored, runSteps } = require('./lib/env.cjs');
 const { planDays } = require('./lib/plan.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
+const { pressTool } = require('./lib/ui.cjs');
 
 /** 訪問の無い日を作るのに使う、今日の次の日 */
 const NEXT = new Date(Date.parse(`${TODAY}T00:00:00Z`) + 86400000).toISOString().slice(0, 10);
@@ -335,7 +336,7 @@ async function reopenFocus(page, best) {
         (sel, skip) => [...sel.options].map((o) => o.value).filter((v) => v && !skip.includes(v)),
         [best.value],
       );
-  await page.getByTestId('sudden-open').click();
+  await pressTool(page, '欠勤', { where: 'row' });
   await panel(page).waitFor();
   await page.getByTestId('sudden-kind-staff').click();
   const list = await others();
@@ -364,7 +365,7 @@ async function reopenFocus(page, best) {
   } else {
     check(false, '差の欄：「担当が変わった訪問を見る」がある（振り直しで担当が変わった訪問がある）');
   }
-  await page.getByTestId('sudden-open').click();
+  await pressTool(page, '欠勤', { where: 'row' });
   await panel(page).waitFor();
   await page.getByTestId('sudden-kind-staff').click();
   await page.getByTestId('sudden-staff').selectOption(list[1]);
@@ -379,7 +380,7 @@ async function reopenFocus(page, best) {
     await focused(page),
   );
   // 1段目で種類を変えたら、前に選んだ人・訪問を消す
-  await page.getByTestId('sudden-open').click();
+  await pressTool(page, '欠勤', { where: 'row' });
   await panel(page).waitFor();
   await page.getByTestId('sudden-kind-staff').click();
   await page.getByTestId('sudden-staff').selectOption(list[2] ?? list[0]);
@@ -420,7 +421,7 @@ async function toldContacts(page) {
   await other.close();
   await openPlan(page);
   // キャンセルを別の訪問で登録 → 5段目の連絡の一覧に、手で替えた人あての行も出る
-  await page.getByTestId('sudden-open').click();
+  await pressTool(page, '欠勤', { where: 'row' });
   await panel(page).waitFor();
   await page.getByTestId('sudden-kind-client').click();
   const pick = await page
@@ -446,7 +447,7 @@ async function toldContacts(page) {
   await page.evaluate((k) => localStorage.removeItem(k), STORAGE_KEY);
   await openPlan(page);
   const before = await stored(page);
-  await page.getByTestId('sudden-open').click();
+  await pressTool(page, '欠勤', { where: 'row' });
   await panel(page).waitFor();
   await page.getByTestId('sudden-kind-staff').click();
   const best = await busiestStaff(page);
@@ -458,7 +459,7 @@ async function toldContacts(page) {
   await page.keyboard.press('Escape');
   await panel(page).waitFor({ state: 'detached' });
   // 欠勤の登録と振り直しは別の手（全体の元に戻す。PRD D329）：1回目で振り直す前（欠勤は残る）、2回目で欠勤も戻る
-  await page.getByTestId('undo-btn').click();
+  await pressTool(page, '元に戻す', { where: 'row' });
   const mid = await waitStored(page, (d) => !d.reassigns?.[TODAY] && d.absences.length === before.absences.length + 1);
   check(
     !mid.reassigns?.[TODAY] &&
@@ -467,7 +468,7 @@ async function toldContacts(page) {
     '「登録して振り直す」のあとの「元に戻す」1回で振り直す前の担当に戻る（欠勤は残る）',
     { absences: mid.absences.length, reassign: !!mid.reassigns?.[TODAY] },
   );
-  await page.getByTestId('undo-btn').click();
+  await pressTool(page, '元に戻す', { where: 'row' });
   const back = await waitStored(page, (d) => !d.reassigns?.[TODAY] && d.absences.length === before.absences.length);
   check(
     !back.reassigns?.[TODAY] &&
@@ -481,7 +482,7 @@ async function toldContacts(page) {
 // ---- 当日キャンセル ----
 async function sameDayCancel(page) {
   await openPlan(page);
-  await page.getByTestId('sudden-open').click();
+  await pressTool(page, '欠勤', { where: 'row' });
   await panel(page).waitFor();
   await page.getByTestId('sudden-kind-client').click();
   await settle(page);
@@ -555,7 +556,7 @@ async function fromHeader(page, best) {
   const d = await waitStored(page, (x) => !x.absences.some((a) => a.staffId === best.value && a.date === TODAY));
   check(!d.absences.some((a) => a.staffId === best.value && a.date === TODAY), '確かめて欠勤を取り消す');
   // Esc：1段目で開いて閉じる（データは変わらない）
-  await page.getByTestId('sudden-open').click();
+  await pressTool(page, '欠勤', { where: 'row' });
   await panel(page).waitFor();
   const before = JSON.stringify((await stored(page)).absences);
   await page.keyboard.press('Escape');
@@ -686,7 +687,7 @@ async function mobile(page) {
   const b = await page.getByTestId('sudden-open').boundingBox();
   check(b && b.x >= 0 && b.x + b.width <= 390, '390px：入口のボタンが画面に収まる', b);
   // 下のタブの並び（ホーム・予定・欠勤・探す・メニュー。PRD D336）は e2e-mobile の bottom が確かめる
-  await page.getByTestId('sudden-open').click();
+  await pressTool(page, '欠勤', { where: 'row' });
   await panel(page).waitFor();
   await page.getByTestId('sudden-kind-staff').click();
   const best = await busiestStaff(page);
@@ -759,8 +760,7 @@ async function headerLabel(page) {
     await openPlan(page);
     // 390px の既定は日ごとのリスト（ADR-0055）。列の見出しは「その他 ▾」の「表示」で順番にして見る
     if (w <= 600) {
-      await page.getByTestId('plan-more').click();
-      await page.getByTestId('plan-view-order').click();
+      await pressTool(page, 'plan-view-order', { where: 'more' });
       await page.locator('.absence-btn').first().waitFor();
     }
     const got = await measure();
@@ -775,7 +775,7 @@ async function headerLabel(page) {
 
 /** その日の日の予定で、いちばん訪問の多い人の欠勤を登録して振り直す（欄を閉じる） */
 async function reassignHere(page) {
-  await page.getByTestId('sudden-open').click();
+  await pressTool(page, '欠勤', { where: 'row' });
   await panel(page).waitFor();
   await page.getByTestId('sudden-kind-staff').click();
   const who = await busiestStaff(page);

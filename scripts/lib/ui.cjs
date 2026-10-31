@@ -1,0 +1,212 @@
+// e2e の共通：画面へ行く・メニューを押す・操作の行のボタンを押す・「詳しく ▾」を開く（ADR-0074 段0）。
+// エキスパート機能が入の画面は、段1〜5 でメニュー・ホーム・操作の行・「詳しく ▾」が切（ADR-0073 段(4)）の作りに寄っていく。
+// そのたびに各 e2e の中を直さないよう、「どこにあるか」を知る所をこのファイルの1か所にする：
+//   goTo(page, 行き先)          … URL で画面へ行く（メニューやホームのカードを押す代わり。名前でも `/path?query` でもよい）
+//   clickMenu(page, 行き先)     … 左のメニューの項目を名前（行き先の名前）で押す（畳んだ親の中なら開いてから押す）
+//   pressTool(page, 操作, { where }) … 操作の行のボタンを名前で押す（既定は行に出ていても「その他 ▾」の中でも押せる。
+//                                  where: 'row' は行にあるときだけ、'more' は「その他 ▾」の中だけ。位置を確かめるときに付ける）
+//   openMore(page)              … 「その他 ▾」を開いて、中の一覧（locator）を返す
+//   openDetails(page, testId)   … 「詳しく ▾」を開く（無い・もう開いているなら何もしない）
+//   closeMore(page)             … 開いている「その他 ▾」を閉じる
+//   reveal(page, testId)        … 要素が見えるまで（「詳しく ▾」を開いてでも）待つ。中を読む前に呼ぶ
+// 行き先・操作の名前は下の表に足す（画面が変わったら表だけ直す）。
+const { BASE, settle } = require('./env.cjs');
+
+/** 行き先の名前 → URL（`#` の後ろ）。表に無い名前は URL（`/` で始まる）としてそのまま使う */
+const SCREENS = {
+  ホーム: '/home',
+  月: '/month',
+  週: '/week',
+  日: '/plan',
+  利用者さん: '/clients',
+  スタッフ: '/staff',
+  設定: '/settings',
+  基本情報: '/basics',
+  組む: '/arrange',
+  担当を組む: '/arrange',
+  組み方の標準: '/standard',
+  空き状況: '/vacancy',
+  欠勤: '/plan?do=absence',
+};
+
+/**
+ * 行き先の名前 → 左のメニューの項目（data-key）の候補。前にあるものから探す（段1でホームが無くなる・「組む」が1項目になる
+ * など、メニューの作りが変わったらここだけ直す。`home` は無ければ予定を代わりに押す）
+ */
+const MENU_KEYS = {
+  ホーム: ['home', 'schedule'],
+  予定: ['schedule'],
+  利用者さん: ['clients'],
+  スタッフ: ['staff'],
+  設定: ['settings'],
+  基本情報: ['arrange:basics'],
+  組む: ['arrange:assign', 'arrange'],
+  担当を組む: ['arrange:assign'],
+  組み方の標準: ['arrange:standard'],
+  空き状況: ['vacancy'],
+  欠勤: ['absence'],
+};
+
+/**
+ * 画面へ行く（about:blank を挟み、`?do=`・`?id=` を読み直す前に消さない）。行き先は名前（SCREENS）か `/path?query`。
+ * ready は待つ要素（既定は見出し）、timeout は待つ長さ、h1 は見出しの文字が出るまで待つか、settleMs は着いたあと落ち着くまで待つ長さ
+ */
+async function goTo(page, dest, { ready = 'h1', timeout = 30000, h1 = true, settleMs = 0 } = {}) {
+  const hash = Object.hasOwn(SCREENS, dest) ? SCREENS[dest] : dest;
+  await page.goto('about:blank');
+  await page.goto(`${BASE}#${hash}`);
+  await page.locator(ready).first().waitFor({ timeout });
+  if (h1) await page.locator('h1').filter({ hasText: /\S/ }).first().waitFor({ timeout });
+  if (settleMs > 0) await settle(page, settleMs);
+}
+
+/** 左のメニューの項目を押す。`scope` は広い画面なら `.side-nav`、スマホは開いた引き出し */
+async function clickMenu(page, dest, scope = '.side-nav') {
+  const keys = Object.hasOwn(MENU_KEYS, dest) ? MENU_KEYS[dest] : undefined;
+  if (!keys)
+    throw new Error(`clickMenu：メニューの名前に無い行き先「${dest}」（scripts/lib/ui.cjs の MENU_KEYS に足す）`);
+  const side = page.locator(scope);
+  await side.getByTestId('nav-link').first().waitFor({ timeout: 15000 });
+  for (const key of keys) {
+    // 子の項目の key は `親:名前` の形のこともあるので、末尾が合うものも見る
+    const link = side.locator(`[data-testid="nav-link"]:is([data-key="${key}"], [data-key$=":${key}"])`).first();
+    if ((await link.count()) === 0) continue;
+    if (!(await link.isVisible())) {
+      // 畳んだ親の中：目当ての項目の親の ▾ だけ開く
+      await side
+        .locator('.nav-parent', { has: link })
+        .getByTestId('nav-toggle')
+        .and(side.locator('[aria-expanded="false"]'))
+        .click();
+    }
+    await link.click();
+    return key;
+  }
+  throw new Error(`clickMenu：メニューに「${dest}」が無い（試した key：${keys.join('・')}）`);
+}
+
+/** 「その他 ▾」のボタンの testid（月・週・日） */
+const MORE_IDS = ['month-more', 'week-more', 'plan-more'];
+
+/** いま出ている「その他 ▾」のボタンの testid（無ければ null）。画面が出るまで少し待つ（行のボタンか「その他 ▾」が出たら見る） */
+async function moreId(page) {
+  await page
+    .locator('[data-testid="schedule-toolbar"], [data-testid$="-more"]')
+    .first()
+    .waitFor({ timeout: 10000 })
+    .catch(() => {});
+  for (const id of MORE_IDS) if (await page.getByTestId(id).isVisible()) return id;
+  return null;
+}
+
+/** 「その他 ▾」を開き、中の一覧（locator）を返す。開いているならそのまま */
+async function openMore(page) {
+  const id = await moreId(page);
+  if (!id) throw new Error('openMore：「その他 ▾」が出ていない');
+  const btn = page.getByTestId(id);
+  if ((await btn.getAttribute('aria-expanded')) !== 'true') await btn.click();
+  const list = page.getByTestId(`${id}-list`);
+  await list.waitFor({ timeout: 10000 });
+  return list;
+}
+
+/** 開いている「その他 ▾」を閉じる（ボタンをもう一度押す。閉じているなら何もしない） */
+async function closeMore(page) {
+  const id = await moreId(page);
+  if (!id) return;
+  const btn = page.getByTestId(id);
+  if ((await btn.getAttribute('aria-expanded')) === 'true') await btn.click();
+}
+
+/**
+ * 操作の名前 → 行に出ているときのボタン（id）・「その他 ▾」の中の項目（menuId・text）。
+ * 表に無い名前は testid として扱う（行に出ていれば押す。なければ「その他 ▾」の中の同じ testid の項目）
+ */
+const TOOLS = {
+  元に戻す: { id: 'undo-btn', menuId: 'more-undo' },
+  欠勤: { id: 'sudden-open', text: /欠勤・キャンセル/ },
+  勤務の見込み: { id: 'month-workload', text: /勤務の見込み/ },
+  印刷: { id: 'month-print', text: /印刷/ },
+  表示を選ぶ: { text: /表示/ },
+  空き状況: { text: /空き状況/ },
+  担当なしを組む: { id: 'toolbar-arrange', text: /担当なしの訪問を組む/ },
+  // 日の主ボタン（plan-visit-add）の言葉は、切では「予定を入れる」（PR #140）、入は今は「訪問を追加」
+  訪問を追加: { id: 'plan-visit-add', text: /訪問を追加|予定を入れる/ },
+  予定を入れる: { id: 'toolbar-add-plan', text: /予定を入れる/ },
+};
+
+/**
+ * 操作を探す。where：'any'（既定）＝行に出ているボタン、無ければ「その他 ▾」の中の項目／'row'＝行にあるときだけ／'more'＝「その他 ▾」の中だけ。
+ * 見つからなければ null（「その他 ▾」を開いて探したときは、見つからなければ閉じる）
+ */
+async function findTool(page, name, where = 'any') {
+  const t = Object.hasOwn(TOOLS, name) ? TOOLS[name] : { id: name };
+  if (where !== 'more' && t.id) {
+    // 開いていない「その他 ▾」の中の項目は描かれないので、見えていれば行のボタン
+    await moreId(page);
+    const direct = page.getByTestId(t.id).first();
+    if ((await direct.count()) > 0 && (await direct.isVisible())) return direct;
+  }
+  if (where === 'row' || (await moreId(page)) === null) return null;
+  const list = await openMore(page);
+  const item = t.menuId
+    ? list.getByTestId(t.menuId)
+    : t.id && (await list.getByTestId(t.id).count()) > 0
+      ? list.getByTestId(t.id)
+      : t.text
+        ? list.getByRole('menuitem', { name: t.text })
+        : null;
+  if (item && (await item.count()) > 0) return item.first();
+  await closeMore(page);
+  return null;
+}
+
+/** 操作の行のボタンを名前で押す（where は findTool と同じ。位置を確かめる所は 'row'・'more' を付ける） */
+async function pressTool(page, name, { where = 'any' } = {}) {
+  const item = await findTool(page, name, where);
+  if (!item) {
+    const at = { any: '行にも「その他 ▾」の中にも', row: '行に', more: '「その他 ▾」の中に' }[where];
+    throw new Error(`pressTool：操作「${name}」が${at}無い`);
+  }
+  await item.click();
+}
+
+/** 「詳しく ▾」を開く（testId の無い・もう開いている場合は何もしない）。開いたら true */
+async function openDetails(page, testId = 'day-details') {
+  const fold = page.getByTestId(testId);
+  if ((await fold.count()) === 0 || (await fold.getAttribute('open')) !== null) return false;
+  await page.getByTestId(`${testId}-summary`).click();
+  return true;
+}
+
+/**
+ * 要素が見えるまで待つ。畳んだ「詳しく ▾」の中にあって見えないときは、その要素を含む閉じた「詳しく ▾」だけを開いてから待つ
+ * （中の点数・移動・凡例などを読む前に呼ぶ。もとから見えるなら何も開かない）
+ */
+async function reveal(page, testId, { timeout = 60000 } = {}) {
+  const el = page.getByTestId(testId).first();
+  await el.waitFor({ state: 'attached', timeout });
+  if (!(await el.isVisible())) {
+    for (const s of await el
+      .locator('xpath=ancestor::details[contains(@class,"details-fold") and not(@open)]/summary')
+      .all())
+      await s.click();
+  }
+  await el.waitFor({ state: 'visible', timeout: 10000 });
+  return el;
+}
+
+module.exports = {
+  SCREENS,
+  MENU_KEYS,
+  TOOLS,
+  goTo,
+  clickMenu,
+  moreId,
+  openMore,
+  findTool,
+  closeMore,
+  pressTool,
+  openDetails,
+  reveal,
+};

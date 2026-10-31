@@ -15,6 +15,7 @@ const { answerConfirms } = require('./lib/confirmDialog.cjs');
 const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, hashOf, runSteps, settle, until } = require('./lib/env.cjs');
 const { findVisit } = require('./lib/visits.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
+const { goTo } = require('./lib/ui.cjs');
 
 const shot = (page, name) => page.screenshot({ path: path.join(OUT_DIR, `${name}.png`) });
 const panel = (page) => page.getByTestId('visit-panel');
@@ -74,12 +75,8 @@ function addDays(d, n) {
 const hhmm = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 const toMin = (s) => Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5));
 
-async function open(page, hash, ready) {
-  await page.goto('about:blank');
-  await page.goto(`${BASE}#${hash}`);
-  await page.locator(ready).first().waitFor({ timeout: 60000 });
-  await settle(page, 400);
-}
+// 画面を新しく開く（共通の手 goTo。待つ長さ・見出し・落ち着くまでの待ちはこの画面の e2e の既定）
+const open = (page, hash, ready) => goTo(page, hash, { ready: ready, timeout: 60000, h1: false, settleMs: 400 });
 /** 初期データに戻して、今日の日の予定（今の担当が出て計算が終わるまで） */
 async function freshPlan(page, date = TODAY) {
   await page.goto(`${BASE}#/home`);
