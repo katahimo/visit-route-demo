@@ -1,9 +1,9 @@
 // 予定の操作の行（エキスパート機能が切のとき。PRD D384。ADR-0073）：主ボタン1つ＋ボタン1つまで、ほかは「その他 ▾」へ。
-// どのボタンを残すかは lib/exceptionView の mainTools。日は「訪問を追加」が主ボタン（スマホは出さず「担当なしの訪問を組む」）、
+// どのボタンを残すかは lib/exceptionView の mainTools。日は「訪問を追加」（言葉は「予定を入れる」。addVisitLabel）が主ボタン（スマホは出さず「担当なしの訪問を組む」）、
 // 週・月は「予定を入れる」が主ボタン（引き出しは AddPlanPanel。PRD D388）。もう1つは「欠勤・キャンセルを登録」。担当なしの訪問を組むは週・月では「その他 ▾」
 import { Plus, Sparkles } from 'lucide-react';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
-import { mainTools, type ScheduleZoom } from '../lib/exceptionView';
+import { addVisitLabel, mainTools, type ScheduleZoom } from '../lib/exceptionView';
 import { AddPlanPanel } from './AddPlanPanel';
 import { MenuButton, type MenuItem } from './MenuButton';
 import { WithIcon } from './ui';
@@ -65,7 +65,7 @@ export function SimpleToolbar({
       {primary === 'add' && add && (
         <button
           type="button"
-          className="btn btn-primary"
+          className="btn btn-primary tb-keep-label"
           onClick={() => {
             if (add.why === false) add.onClick();
           }}
@@ -74,7 +74,7 @@ export function SimpleToolbar({
           data-testid="plan-visit-add"
         >
           <WithIcon icon={Plus}>
-            <span className="tb-label">訪問を追加</span>
+            <span className="tb-label">{addVisitLabel(true)}</span>
           </WithIcon>
         </button>
       )}

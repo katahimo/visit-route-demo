@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  addVisitLabel,
   detailItems,
   exceptionsOnly,
   foldedParts,
@@ -20,6 +21,13 @@ describe('exceptionsOnly', () => {
     expect(exceptionsOnly({ expert: false })).toBe(true);
     expect(exceptionsOnly({ expert: true })).toBe(false);
     expect(exceptionsOnly({})).toBe(false);
+  });
+});
+
+describe('addVisitLabel（日の主ボタンと新規の欄の見出し）', () => {
+  it('切は月・週の主ボタンとそろえて「予定を入れる」、入は「訪問を追加」', () => {
+    expect(addVisitLabel(true)).toBe('予定を入れる');
+    expect(addVisitLabel(false)).toBe('訪問を追加');
   });
 });
 

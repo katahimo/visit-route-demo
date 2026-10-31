@@ -111,7 +111,8 @@ const TOOLS = {
   表示を選ぶ: { text: /表示/ },
   空き状況: { text: /空き状況/ },
   担当なしを組む: { id: 'toolbar-arrange', text: /担当なしの訪問を組む/ },
-  訪問を追加: { id: 'plan-visit-add', text: /訪問を追加/ },
+  // 日の主ボタン（plan-visit-add）の言葉は、切では「予定を入れる」（PR #140）、入は今は「訪問を追加」
+  訪問を追加: { id: 'plan-visit-add', text: /訪問を追加|予定を入れる/ },
   予定を入れる: { id: 'toolbar-add-plan', text: /予定を入れる/ },
 };
 

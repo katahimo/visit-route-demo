@@ -229,7 +229,7 @@ async function more(page) {
   await page.goto('about:blank');
   await page.goto(`${BASE}#/month`);
   await page.locator(NAV_READY).waitFor({ timeout: 60000 });
-  // 月・週は主ボタンが「予定を入れる」（PRD D388）で、「担当なしの訪問を組む N件」は「その他 ▾」の中。日は主ボタンが訪問を追加なので「その他 ▾」にある
+  // 月・週は主ボタンが「予定を入れる」（PRD D388）で、「担当なしの訪問を組む N件」は「その他 ▾」の中。日は主ボタン「予定を入れる」（中身は訪問の欄）なので「その他 ▾」にある
   check((await page.getByTestId('toolbar-arrange').count()) === 0, '月：操作の行に「担当なしの訪問を組む」は出さない');
   await page.getByTestId('month-more').click();
   await page.getByTestId('more-auto-arrange').waitFor({ timeout: 10000 });
@@ -348,6 +348,23 @@ async function open1(page, to) {
   await settle(page, 800);
 }
 
+/** 日の主ボタンを押すと新規の訪問の欄が開き、その見出しも主ボタンと同じ言葉（切は「予定を入れる」・入は「訪問を追加」。PRD D388） */
+async function dayAddOpens(page, label) {
+  const btn = page.getByTestId('plan-visit-add');
+  check((await btn.innerText()).trim() === label, `日の主ボタンの文字は「${label}」`);
+  await btn.click();
+  const panel = page.getByTestId('visit-panel');
+  await panel.waitFor({ timeout: 10000 });
+  check((await panel.getAttribute('data-new')) === 'true', `「${label}」で新規の訪問の欄（中身は今のまま）`);
+  check(
+    (await page.getByRole('dialog').getByRole('heading', { level: 2 }).first().innerText()).trim() === label,
+    `欄の見出しも「${label}」`,
+  );
+  await shot(page, `simple-day-add-${label === '予定を入れる' ? 'off' : 'on'}-${page.viewportSize().width}`);
+  await page.keyboard.press('Escape');
+  await panel.waitFor({ state: 'detached', timeout: 10000 }).catch(() => {});
+}
+
 /** 5b 例外だけ見せる：操作の行・「詳しく」・札・言葉（月・週・日） */
 async function exceptions(page) {
   await page.setViewportSize({ width: 1366, height: 768 });
@@ -361,7 +378,7 @@ async function exceptions(page) {
       ['band-next', 'band-plans', 'month-summary', 'month-legend-fold'],
     ],
     ['/week', 'week', /予定を入れる/, 'week-details', ['week-status']],
-    ['/plan', 'plan', /訪問を追加/, 'day-details', ['plan-summary', 'plan-score']],
+    ['/plan', 'plan', /^予定を入れる$/, 'day-details', ['plan-summary', 'plan-score']],
   ]) {
     await open1(page, to);
     const btns = await toolbarButtons(page);
@@ -396,6 +413,7 @@ async function exceptions(page) {
       );
     check(!BANNED.test(menu.join(' ')), `${to}：「その他 ▾」に禁句が出ない`, menu);
     if (to === '/month') await shot(page, 'simple-month-more-1366');
+    if (to === '/plan') await dayAddOpens(page, '予定を入れる');
     await closeMore(page, zoom);
     // 禁句：開く前の画面全体
     const body = await page.locator('main, .content').first().innerText();
@@ -542,6 +560,7 @@ async function mobileExceptions(page) {
     check(btns.length <= 2, `${to}（390px）：操作の行のボタンは2つまで`, btns);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
     check(!overflow, `${to}（390px）：横にはみ出さない`);
+    await shot(page, `simple-${zoom}-toolbar-390`);
     await page.getByTestId(`${zoom}-more`).click();
     await settle(page, 300);
     await shot(page, `simple-${zoom}-more-390`);
@@ -567,6 +586,9 @@ async function expertSame(page) {
   check((await page.getByTestId('progress-band').count()) === 1, '入：月の進み具合の帯は上にある');
   check((await page.getByTestId('month-details').count()) === 0, '入：「詳しく」は出ない');
   check((await page.getByTestId('undo-btn').count()) === 1, '入：元に戻すは操作の行にある');
+  await open1(page, '/plan');
+  await dayAddOpens(page, '訪問を追加');
+  await open1(page, '/month');
   check((await page.getByTestId('page-intro').count()) === 0, '入：説明に閉じるボタンは無い（今のまま）');
   check((await page.locator('.page-lead').count()) === 1, '入：説明は今のまま出る');
   // 入の一覧：旧の列・基本情報のタブは今のまま、休止中は状態の列だけに出る（名前のそばに二重に出さない）
