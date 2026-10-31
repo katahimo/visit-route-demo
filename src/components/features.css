@@ -195,3 +195,16 @@
   flex-direction: column;
   gap: 4px;
 }
+
+/* 説明1行＋ⓘ（スイッチの行・メールの予約送信。PRD D395）：ⓘ は説明のすぐ後ろ。開くと下に全幅で出る */
+.feature-desc-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+}
+.feature-desc-line .hint-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}

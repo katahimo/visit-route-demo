@@ -1,11 +1,12 @@
 // 管理者設定の「メールの予約送信」（PRD D366・D369。ADR-0069）：事業所の Google のスプレッドシート（GAS 付き）のひな型をコピーする
 // リンクと手順、GAS の URL・合言葉・送る時刻の欄、「接続を試す」。設定はこの端末だけに残す（データの書き出し・読み込みに入らない）
 import { CalendarClock, ExternalLink, PlugZap, Save, Trash2 } from 'lucide-react';
-import { type FormEvent, useEffect, useId, useState } from 'react';
+import { type FormEvent, type ReactNode, useEffect, useId, useState } from 'react';
 import { useConfirm } from '../components/ConfirmDialog';
+import { DetailsFold } from '../components/DetailsFold';
 import { FieldError, invalidAttrs } from '../components/FieldError';
 import { useToast } from '../components/Toast';
-import { WithIcon } from '../components/ui';
+import { Hint, WithIcon } from '../components/ui';
 import { useMailSchedule } from '../components/useMailSchedule';
 import {
   EMPTY_SETTINGS,
@@ -16,6 +17,7 @@ import {
   normalizeSettings,
   settingsErrors,
 } from '../lib/mailSchedule';
+import { mailStepsHeading } from '../lib/settingsView';
 
 export function MailScheduleSettingsCard() {
   const ms = useMailSchedule();
@@ -73,12 +75,16 @@ export function MailScheduleSettingsCard() {
         メールの予約送信（Google）
         {ms.ready && <span className="feature-badge">つないでいます</span>}
       </h2>
-      <p className="sub">
-        日の予定のメールを、確定するときにまとめて事業所の Google のアカウントに預け、前日の決めた時刻に自動で送ります
-        （{GAS_TRIGGER_MINUTES}分ほど遅れることがあります）。予定・住所はその Google
-        のアカウント（スプレッドシート）を通ります。 Google
-        を使わないときは、今までどおり「メールを作る」でメールアプリから送れます。
-      </p>
+      <div className="feature-desc-line">
+        <span className="sub">日の予定のメールを、確定するときに Google に預け、前日の決めた時刻に自動で送ります</span>
+        <Hint label="詳しい説明" ariaLabel="メールの予約送信の詳しい説明">
+          <span data-testid="mail-schedule-notes">
+            送るまでに{GAS_TRIGGER_MINUTES}分ほど遅れることがあります。予定・住所は事業所の Google
+            のアカウント（スプレッドシート）を通ります。Google を使わないときは、今までどおり「メールを作る」で
+            メールアプリから送れます。
+          </span>
+        </Hint>
+      </div>
       <MailScheduleSteps />
       <form className="stack" onSubmit={save} noValidate>
         <label className="stack" style={{ gap: 4 }}>
@@ -155,33 +161,55 @@ export function MailScheduleSettingsCard() {
   );
 }
 
-/** ひな型をコピーしてつなぐまでの手順（ひな型のリンクが無ければその旨） */
+/** ひな型をコピーしてつなぐまでの手順（畳んで始める。開閉は覚えない。PRD D395。ひな型のリンクが無ければその旨） */
 function MailScheduleSteps() {
+  const steps: { key: string; body: ReactNode }[] = [
+    {
+      key: 'copy',
+      body: (
+        <>
+          {GAS_TEMPLATE_URL ? (
+            <a href={GAS_TEMPLATE_URL} target="_blank" rel="noopener noreferrer" data-testid="mail-schedule-template">
+              <WithIcon icon={ExternalLink} size={14}>
+                ひな型のスプレッドシートをコピー
+              </WithIcon>
+            </a>
+          ) : (
+            <span data-testid="mail-schedule-template">
+              ひな型のスプレッドシートをコピー（コピー用のリンクはまだ用意されていません。提供元に聞いてください）
+            </span>
+          )}
+          します。事業所の共用の Google のアカウントで開いてください。
+        </>
+      ),
+    },
+    {
+      key: 'init',
+      body: (
+        <>
+          コピーしたシートのメニュー「訪問予定 › 初期設定」を押し、許可します（「確認されていません」と出たら「詳細 ›
+          移動」）。
+        </>
+      ),
+    },
+    {
+      key: 'deploy',
+      body: (
+        <>
+          Apps Script の「デプロイ › 新しいデプロイ ›
+          ウェブアプリ」で、実行するユーザーを「自分」、アクセスできるユーザーを「全員」にします。
+        </>
+      ),
+    },
+    { key: 'paste', body: <>出た URL（…/exec）と、シートの「設定」の合言葉を下に貼り、「接続を試す」→「保存」。</> },
+  ];
   return (
-    <ol className="mail-schedule-steps">
-      <li>
-        {GAS_TEMPLATE_URL ? (
-          <a href={GAS_TEMPLATE_URL} target="_blank" rel="noopener noreferrer" data-testid="mail-schedule-template">
-            <WithIcon icon={ExternalLink} size={14}>
-              ひな型のスプレッドシートをコピー
-            </WithIcon>
-          </a>
-        ) : (
-          <span data-testid="mail-schedule-template">
-            ひな型のスプレッドシートをコピー（コピー用のリンクはまだ用意されていません。提供元に聞いてください）
-          </span>
-        )}
-        します。事業所の共用の Google のアカウントで開いてください。
-      </li>
-      <li>
-        コピーしたシートのメニュー「訪問予定 › 初期設定」を押し、許可します（「確認されていません」と出たら「詳細 ›
-        移動」）。
-      </li>
-      <li>
-        Apps Script の「デプロイ › 新しいデプロイ ›
-        ウェブアプリ」で、実行するユーザーを「自分」、アクセスできるユーザーを「全員」にします。
-      </li>
-      <li>出た URL（…/exec）と、シートの「設定」の合言葉を下に貼り、「接続を試す」→「保存」。</li>
-    </ol>
+    <DetailsFold testId="mail-schedule-steps-fold" heading={mailStepsHeading(steps.length)}>
+      <ol className="mail-schedule-steps">
+        {steps.map((step) => (
+          <li key={step.key}>{step.body}</li>
+        ))}
+      </ol>
+    </DetailsFold>
   );
 }

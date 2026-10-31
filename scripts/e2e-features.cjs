@@ -54,7 +54,7 @@ const {
   applyTemplate,
   writeFeaturesInOtherTab,
 } = require('./lib/features.cjs');
-const { clickMenu, reveal, toolCount } = require('./lib/ui.cjs');
+const { clickMenu, openDetails, reveal, toolCount } = require('./lib/ui.cjs');
 
 // ---- すべて入（初期データ）：メニューと管理者設定の画面 ----
 async function allOn(page) {
@@ -96,6 +96,44 @@ async function allOn(page) {
       (await page.getByTestId('settings-tabs').locator('[aria-current="page"]').innerText()).trim() === '管理者設定',
     '管理者設定：メニューの今の画面の印は「設定」（子は無い）、設定のタブは「管理者設定」',
   );
+  // 設定の見せ方（PRD D395。ADR-0074 段4）：ひな形は今のものの名前だけ出して畳み、スイッチの行は名前と1行の説明（隠れるものは ⓘ）
+  check(
+    (await page.getByTestId('feature-template-current').innerText()).trim() === 'すべて',
+    'ひな形：見出しの横に今のひな形の名前だけ出す',
+  );
+  check(
+    (await page.getByTestId('feature-templates-fold').getAttribute('open')) === null &&
+      !(await page.getByTestId('feature-template').first().isVisible()),
+    'ひな形の5つは閉じて始める（「詳しく ▾」の中）',
+  );
+  await openDetails(page, 'feature-templates-fold');
+  check(await page.getByTestId('feature-template').first().isVisible(), 'ひな形の「詳しく ▾」を開くと5つが見える');
+  const vacRow = page.locator('[data-feature="vacancy"]');
+  const rowText = await vacRow.innerText();
+  check(
+    rowText.includes('空き') &&
+      !rowText.includes('切ると隠れるもの') &&
+      (await vacRow.locator('details.hint').count()) === 1,
+    'スイッチの行は名前と1行の説明（切ると隠れるものは ⓘ の中）',
+    rowText,
+  );
+  const lines = (await vacRow.locator('.feature-text').evaluate((el) => el.getBoundingClientRect().height)) < 80;
+  check(lines, 'スイッチの行は短い（説明1行＋ⓘ）');
+  await vacRow.locator('details.hint > summary').click();
+  check(
+    (await vacRow.innerText()).includes('切ると隠れるもの：'),
+    'ⓘ を開くと「切ると隠れるもの」が出る（情報は消えていない）',
+  );
+  await vacRow.locator('details.hint > summary').click();
+  const noticeRow = page.locator('[data-feature="vacancyNotice"]');
+  const closedText = await noticeRow.innerText();
+  await noticeRow.locator('details.hint > summary').click();
+  check(
+    !closedText.includes('入っているときに使えます') &&
+      (await noticeRow.locator('.hint-body').innerText()).includes('「空き状況」が入っているときに使えます'),
+    '依存の注記（依存先が入）は ⓘ の中',
+  );
+  await noticeRow.locator('details.hint > summary').click();
   const tmpl = await page.getByTestId('feature-template').evaluateAll((els) => els.map((el) => el.dataset.template));
   check(same(tmpl, ['oneOff', 'basic', 'laborContract', 'monthlyField', 'all']), 'ひな形の5つの並び', tmpl);
   const now = await page
@@ -149,6 +187,10 @@ async function switches(page) {
   );
   const reason = await page.locator('[data-feature="vacancyNotice"] .feature-req').innerText();
   check(reason === '「空き状況」を入れると使えます', '押せない理由', reason);
+  check(
+    (await page.locator('[data-feature="vacancyNotice"] .feature-text > .feature-req').isVisible()) === true,
+    '押せない理由は行に出す（ⓘ を開かなくても読める）',
+  );
   // aria-disabled（フォーカスは残す）なので、押すと何もしないことを確かめる
   await notice.click({ force: true });
   await settle(page, 300);
@@ -293,6 +335,8 @@ async function checkTemplate(page, t) {
       .evaluateAll((els) => els.map((el) => el.dataset.template)),
   );
   check(same(s, [t]), `${label}：管理者設定の「いまの設定」`, s);
+  const shownName = (await page.getByTestId('feature-template-current').innerText()).trim();
+  check(shownName === TEMPLATE_LABEL[t], `${label}：見出しの横に今のひな形の名前`, shownName);
   const stabs = (await page.getByTestId('settings-tabs').locator('a').allInnerTexts()).map((x) => x.trim());
   check(same(stabs, settingsTabsFor(t)), `${label}：設定のタブ`, stabs);
   // スイッチの並びは機能のグループ順（lib/features の FEATURE_GROUPS）なので、行の data-feature で ID に引き反映する
@@ -398,6 +442,11 @@ async function mobile(page, dlg) {
   await page.emulateMedia({ media: 'screen' });
   await page.setViewportSize({ width: 1400, height: 1000 });
   await open(page, '/settings', '[data-testid="feature-templates"]');
+  await openDetails(page, 'feature-templates-fold');
+  check(
+    await page.getByTestId('feature-template-apply').first().isVisible(),
+    '印刷の前：ひな形を開くと「適用」が見える',
+  );
   await page.emulateMedia({ media: 'print' });
   check(!(await page.getByTestId('feature-template-apply').first().isVisible()), '印刷：ひな形の「適用」を出さない');
   await page.emulateMedia({ media: 'screen' });
