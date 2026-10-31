@@ -1,9 +1,9 @@
 // 予約システムの予約の形（ADR-0075。PRD D398）：予約番号・予約日・予約時（「AM枠 10:00～12:00」など）・所要時間(分)・メニュー名・状況・氏名 … を
 // 予約の1件（Booking）に写す純粋関数。新規登録者（予約を入れた人）は担当ではないので読まない（担当は組むときに決める）
+import { hhmmToMinutes } from '../domain/time';
 import type { Booking, BookingTable } from './booking';
-import { cellOf, columnsOf, hasColumns, isBlankRow, skippedColumns } from './csvColumns';
-import { clip } from './ledgerCsv';
-import { ymdOf } from './reserveCsv';
+import { cellOf, clip, columnsOf, hasColumns, isBlankRow, skippedColumns } from './csvColumns';
+import { parseDateText } from './text';
 
 /** 予約の CSV の列名（読む列） */
 const COL = {
@@ -25,18 +25,23 @@ const NOTE_MAX = 200;
 export const isReserveBookingHeader = (header: readonly string[]): boolean =>
   hasColumns(columnsOf(header), [COL.ref, COL.date, COL.time, COL.name]);
 
-const toMin = (h: string, m: string) => Number(h) * 60 + Number(m);
-const hhmm = (min: number) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+/** 1日の分（訪問は日をまたがない） */
+const DAY_MINUTES = 24 * 60;
 
 /** 「AM枠 10:00～12:00」「9:30〜17:00」→ 開始（HH:mm）と、終わりまでの分（無ければ null）。読めなければ null */
 export function parseTimeRange(text: string): { start: string; minutes: number | null } | null {
-  const m = /(\d{1,2}):(\d{2})(?:\s*[～〜~\-－]\s*(\d{1,2}):(\d{2}))?/.exec(text.normalize('NFKC').replace(/～/g, '~'));
+  const m = /(\d{1,2}):(\d{2})(?:\s*[~-]\s*(\d{1,2}):(\d{2}))?/.exec(text.normalize('NFKC').replace(/[～〜]/g, '~'));
   if (!m) return null;
   const [, h1 = '', m1 = '', h2, m2] = m;
-  const s = toMin(h1, m1);
-  if (Number(h1) > 23 || Number(m1) > 59) return null;
-  const e = h2 !== undefined && m2 !== undefined ? toMin(h2, m2) : null;
-  return { start: hhmm(s), minutes: e !== null && e > s ? e - s : null };
+  const hm = (h: string, mm: string) => (Number(h) <= 23 && Number(mm) <= 59 ? `${h.padStart(2, '0')}:${mm}` : null);
+  const start = hm(h1, m1);
+  if (!start) return null;
+  if (h2 === undefined || m2 === undefined) return { start, minutes: null };
+  const end = hm(h2, m2);
+  if (!end) return null;
+  const s = hhmmToMinutes(start);
+  const e = hhmmToMinutes(end);
+  return { start, minutes: e > s ? e - s : null };
 }
 
 /** 取り消しの状況か（「キャンセル」「取消」を含む） */
@@ -46,15 +51,16 @@ const isCancelled = (status: string) => /キャンセル|取消|取り消/.test(
 function readRow(v: (h: string) => string, row: number): Booking | string {
   const ref = v(COL.ref);
   if (ref === '') return '予約番号がありません';
-  const date = ymdOf(v(COL.date));
+  const date = parseDateText(v(COL.date));
   if (!date) return `予約日「${v(COL.date)}」が日付として読めません`;
   const range = parseTimeRange(v(COL.time));
   if (!range) return `予約時「${v(COL.time)}」から開始の時刻が読めません`;
   const given = Number(v(COL.minutes).normalize('NFKC'));
   const minutes = v(COL.minutes) !== '' && Number.isInteger(given) && given > 0 ? given : range.minutes;
-  if (minutes === null) return '所要時間が読めません';
+  if (minutes === null) return '所要時間が読めません（終わりが開始より前なら、日をまたぐ予約は入れられません）';
   if (minutes < MINUTES.min || minutes > MINUTES.max)
     return `所要時間 ${minutes}分は ${MINUTES.min}〜${MINUTES.max}分にしてください`;
+  if (hhmmToMinutes(range.start) + minutes > DAY_MINUTES) return '日をまたぐ予約は入れられません';
   const clientName = v(COL.name);
   if (clientName === '') return '氏名がありません';
   return {

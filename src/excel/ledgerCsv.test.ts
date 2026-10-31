@@ -3,9 +3,10 @@ import { describe, expect, it } from 'vitest';
 import type { ImportError, RosterImportResult } from '../contracts/data';
 import { toCsv } from '../lib/csv';
 import { legacyEncoder } from '../lib/csv.testkit';
+import { clip } from './csvColumns';
 import { base } from './excel.testkit';
 import { importRoster } from './index';
-import { clip, isLedgerHeader, ledgerToRoster, phoneLine } from './ledgerCsv';
+import { isLedgerHeader, ledgerToRoster, phoneLine } from './ledgerCsv';
 
 const HEAD =
   '利用者名,利用者カナ,利用者生年月日,性別,郵便番号,都道府県,市区町村,町名以下,建物名,利用者電話番号,利用者携帯電話番号,請求方法,請求送付先,請求先氏名,続柄,請求先郵便番号,請求先都道府県,請求先市区町村,請求先町名以下,請求先建物名,請求先電話番号,顧客番号,銀行番号,支店番号,口座種別,口座番号,口座名義名カナ,利用者状態,備考'.split(

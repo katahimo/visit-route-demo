@@ -181,6 +181,8 @@ export type BookingImportResult = {
   updated: number;
   /** 変わらなかった訪問の数 */
   unchanged: number;
+  /** まだ入れていない取り消し済みの予約で、足さなかった数 */
+  cancelledSkipped: number;
   /** 名前が〈利用者さん〉に無い・同じ名前が2人いて入れなかった予約（「名前（N件）」。名簿を先に読み込む） */
   unmatched: string[];
   /** 読めなかった行（「N行目：理由」） */

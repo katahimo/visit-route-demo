@@ -2,8 +2,16 @@
 // 新しいソフト（別の会社）の CSV を読むときは、形ごとのファイル（ledgerCsv・reserveCsv のように列名と写し方を書く）を作り、
 // ここの ROSTER_FORMS に1行足す。読み方（rosterRows）・画面・確認の文は変えなくてよい
 import type { RosterKind } from '../contracts/data';
-import { ledgerErrorMessage, ledgerToRoster, type RosterTable } from './ledgerCsv';
-import { reserveClientToRoster, reserveStaffToRoster } from './reserveCsv';
+import type { RosterTable } from './csvColumns';
+import { ledgerErrorMessage, ledgerToRoster } from './ledgerCsv';
+import {
+  RESERVE_CLIENT_KEEP_BLANK,
+  RESERVE_STAFF_KEEP_BLANK,
+  reserveClientErrorMessage,
+  reserveClientToRoster,
+  reserveStaffErrorMessage,
+  reserveStaffToRoster,
+} from './reserveCsv';
 
 /** 形を写すときに渡す値（今日で決まる値＝退職日を過ぎたら休止、など） */
 export interface RosterFormEnv {
@@ -23,6 +31,11 @@ export interface RosterForm {
   toRoster: (table: readonly (readonly string[])[], env: RosterFormEnv) => RosterTable | null;
   /** 読み込みの誤りの文の『列名』を、この形の列名に直す（無ければそのまま） */
   errorMessage?: (message: string) => string;
+  /**
+   * セルが空なら今の値のままにする名簿の列（元のソフトに無い・空のことが多い値を、アプリで入れたあとに読み直しても消さない。
+   * 例：緯度・経度・住所）
+   */
+  keepBlank?: readonly string[];
 }
 
 /** 形の一覧（上から順に見分ける。先に当たった形で読む） */
@@ -34,12 +47,21 @@ export const ROSTER_FORMS: readonly RosterForm[] = [
     toRoster: (t) => ledgerToRoster(t),
     errorMessage: ledgerErrorMessage,
   },
-  { id: 'reserve-client', label: '予約システムの顧客', kind: 'client', toRoster: (t) => reserveClientToRoster(t) },
+  {
+    id: 'reserve-client',
+    label: '予約システムの顧客',
+    kind: 'client',
+    toRoster: (t) => reserveClientToRoster(t),
+    errorMessage: reserveClientErrorMessage,
+    keepBlank: RESERVE_CLIENT_KEEP_BLANK,
+  },
   {
     id: 'reserve-staff',
     label: '予約システムのスタッフ',
     kind: 'staff',
     toRoster: (t, env) => reserveStaffToRoster(t, env.today),
+    errorMessage: reserveStaffErrorMessage,
+    keepBlank: RESERVE_STAFF_KEEP_BLANK,
   },
 ];
 

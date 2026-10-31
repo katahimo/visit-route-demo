@@ -1,6 +1,8 @@
 // 予約の CSV の読み込み（ADR-0075。PRD D398）の文と判定の純粋関数。確認の本文・知らせの文を組み立てる。データの書き換えは画面が store で行う
 import type { BookingImportResult } from '../contracts/data';
+import type { Features } from '../contracts/features';
 import { keepNote, keptSuffix, otherFormSkippedText } from './dataScreen';
+import { isOn } from './features';
 
 type KeepState = { kept: boolean; why: string | null };
 
@@ -37,17 +39,26 @@ export function bookingConfirmBody(x: {
   keep: KeepState;
 }): string {
   const { r } = x;
-  const src = r.source.format === 'csv' ? `CSV（文字コード ${r.source.encoding}）` : 'Excel のブック';
+  const enc = r.source.format === 'csv' ? `（文字コード ${r.source.encoding}）` : '';
   return [
-    `「${x.fileName}」の予約を訪問として読み込みます。${src}・${r.otherForm.label}の形として読みました。`,
+    `「${x.fileName}」の予約を訪問として読み込みます。CSV${enc}・${r.otherForm.label}の形として読みました。`,
     bookingSummary(r),
+    ...(r.cancelledSkipped > 0 ? [`取り消し済みの予約 ${r.cancelledSkipped}件は入れません。`] : []),
     ...bookingProblems(r, x.clientTerm),
     otherFormSkippedText(r.otherForm),
-    '担当は決めません（担当なし。同じ予約番号の訪問は今の担当を残します）。ファイルに無い訪問はそのままです。',
+    '担当は決めません（担当なし）。同じ予約番号の訪問は日付・時刻・所要・メモをファイルに合わせ、担当・ピン・アプリでの取り消しは残します。ファイルに無い訪問はそのままです。',
     keepNote(x.keep),
   ].join('\n');
 }
 
+/** 担当の組み方の案内（エキスパート機能が入なら「担当を組む」、切なら予定の「その他 ▾」の「担当なしの訪問を組む」。ADR-0072） */
+const arrangeHint = (features: Features): string =>
+  isOn(features, 'expert') ? '「担当を組む」' : '予定の「その他 ▾」の「担当なしの訪問を組む」';
+
 /** 読み込んだあとの知らせ */
-export const bookingDoneText = (r: Pick<BookingImportResult, 'added' | 'updated'>, keep: KeepState): string =>
-  `予約を読み込みました（追加 ${r.added}件・更新 ${r.updated}件）。担当は「担当を組む」で組めます${keptSuffix(keep)}`;
+export const bookingDoneText = (
+  r: Pick<BookingImportResult, 'added' | 'updated'>,
+  features: Features,
+  keep: KeepState,
+): string =>
+  `予約を読み込みました（追加 ${r.added}件・更新 ${r.updated}件）。担当は${arrangeHint(features)}で組めます${keptSuffix(keep)}`;

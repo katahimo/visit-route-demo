@@ -10,7 +10,6 @@ import {
   reserveStaffToRoster,
   splitLatLng,
   splitPostal,
-  ymdOf,
 } from './reserveCsv';
 import { ROSTER_FORMS, readRosterForm } from './rosterForms';
 
@@ -31,7 +30,7 @@ const STAFF_TABLE = [
     性別: '女',
   }),
   staffRow({ ID: 'S2', 氏名: '架空 二子', 緯度・経度: '35.2,139.3', 退職日: '2026.3.31' }),
-  staffRow({ ID: 'S3', 氏名: '架空 三子', 退職日: '2026.12.31' }),
+  staffRow({ ID: 'S3', 氏名: '架空 三子', 退職日: '2026年12月31日' }),
   staffRow({ ID: 'S4', 性別: '女' }),
 ];
 
@@ -83,6 +82,7 @@ const CLIENT_TABLE = [
     '会員状況（有効／無効）': '無効',
   }),
   clientRow({ 顧客ID: 'C3', 姓: '架空', 名: '花子', 住所: '1000002 架空市' }),
+  clientRow({ 顧客ID: 'C4', 姓: '架空', 名: '月子' }),
 ];
 
 const rok = (r: RosterImportResult | ImportError): RosterImportResult => {
@@ -116,11 +116,6 @@ describe('小さい変換', () => {
     expect(splitLatLng('')).toEqual({ lat: '', lng: '' });
     expect(splitLatLng('不明')).toEqual({ lat: '', lng: '' });
   });
-  it('日付を YYYY-MM-DD に', () => {
-    expect(ymdOf('2026.3.31')).toBe('2026-03-31');
-    expect(ymdOf('2026/12/05')).toBe('2026-12-05');
-    expect(ymdOf('3月31日')).toBeNull();
-  });
   it('住所の先頭の郵便番号を分ける', () => {
     expect(splitPostal('〒984-0802 架空市')).toEqual({ postal: '9840802', address: '架空市' });
     expect(splitPostal('982-0037 架空市')).toEqual({ postal: '9820037', address: '架空市' });
@@ -147,6 +142,26 @@ describe('スタッフの CSV', () => {
       STAFF_HEAD.filter((h) => !['ID', '氏名', '住所', 'mail address', '緯度・経度', '退職日'].includes(h)),
     );
   });
+  it('辞めた日は年月日の書き方も読む。読めない退職日はそのまま渡し、誤りの文は退職日の列名で出す', async () => {
+    const t = [STAFF_HEAD, staffRow({ ID: 'S1', 氏名: '架空 一子', 退職日: '2026年3月31日' })];
+    expect(reserveStaffToRoster(t, '2026-10-31')?.rows[1]?.slice(5)).toEqual(['×', '2026-03-31']);
+    const bad = [STAFF_HEAD, staffRow({ ID: 'S1', 氏名: '架空 一子', 退職日: '来月' })];
+    const r = await importRoster(csvBuf(bad), base(), 'staff', 'merge', '2026-10-31');
+    expect('code' in r && r.message).toContain('『退職日』');
+  });
+  it('同じ氏名は全員 ID を添えて分け、形の違うメールは読まずに知らせる', () => {
+    const t = [
+      STAFF_HEAD,
+      staffRow({ ID: 'S1', 氏名: '架空 一子', 'mail address': 'not-an-email' }),
+      staffRow({ ID: 'S2', 氏名: '架空　一子' }),
+    ];
+    const out = reserveStaffToRoster(t, '2026-10-31')!;
+    expect(out.rows.slice(1).map((r) => r.slice(0, 2))).toEqual([
+      ['架空 一子（S1）', ''],
+      ['架空　一子（S2）', ''],
+    ]);
+    expect(out.skipped).toContain('mail address（形の違う値 1件）');
+  });
   it('〈スタッフ〉の名簿として読み込める（UTF-16LE・タブ区切り）', async () => {
     const r = rok(await importRoster(utf16Tsv(STAFF_TABLE), base(), 'staff', 'merge', '2026-10-31'));
     expect(r.otherForm?.label).toBe('予約システムのスタッフ');
@@ -167,7 +182,7 @@ describe('顧客の CSV', () => {
     const out = reserveClientToRoster(CLIENT_TABLE)!;
     expect(out.rows[0]).toEqual(['表示名', 'よみ', '郵便番号', '住所', '緯度', '経度', '駐車場', 'メモ', '段階']);
     expect(out.rows[1]).toEqual([
-      '架空 花子',
+      '架空 花子（C1）',
       'かくうはなこ',
       '1000001',
       '架空市架空町1丁目',
@@ -180,19 +195,41 @@ describe('顧客の CSV', () => {
     expect(out.rows[2]?.[0]).toBe('ナナシ タロウ');
     expect(out.rows[2]?.[8]).toBe('終了');
     expect(out.rows[3]?.slice(0, 4)).toEqual(['架空 花子（C3）', '', '1000002', '架空市']);
-    expect(out.skipped).toContain('世帯全員の情報(名前・生年月日・職業/所属・アレルギー・その他共有事項)');
+    expect(out.rows[4]?.[0]).toBe('架空 月子');
+    // 読まなかった列はファイルの表記のまま
+    expect(out.skipped).toContain('世帯全員の情報（名前・生年月日・職業/所属・アレルギー・その他共有事項）');
   });
   it('〈利用者さん〉の名簿として読み込める。読まない値はデータに残さない', async () => {
     const r = rok(await importRoster(csvBuf(CLIENT_TABLE), base(), 'client', 'merge', '2026-10-31'));
     expect(r.otherForm?.label).toBe('予約システムの顧客');
-    expect(r.added).toEqual(['架空 花子', 'ナナシ タロウ（終了）', '架空 花子（C3）']);
-    const c = r.data.clients.find((x) => x.displayName === '架空 花子');
+    expect(r.added).toEqual(['架空 花子（C1）', 'ナナシ タロウ（終了）', '架空 花子（C3）', '架空 月子']);
+    const c = r.data.clients.find((x) => x.displayName === '架空 花子（C1）');
     expect(c).toMatchObject({
       kana: 'かくうはなこ',
       parkingNote: 'コインパーキング　3番',
       place: { lat: 35.5, lng: 139.5, postalCode: '1000001' },
     });
     expect(JSON.stringify(r.data)).not.toContain('卵アレルギー');
+  });
+  it('並びが変わっても同じ人に当たり、空の欄はアプリで入れた値を消さない', async () => {
+    const first = rok(await importRoster(csvBuf(CLIENT_TABLE), base(), 'client', 'merge', '2026-10-31')).data;
+    const placed = {
+      ...first,
+      clients: first.clients.map((c) =>
+        c.displayName === '架空 月子'
+          ? { ...c, place: { ...c.place, address: '架空市3丁目', lat: 35.7, lng: 139.7 } }
+          : c,
+      ),
+    };
+    const [head, ...rows] = CLIENT_TABLE;
+    const again = rok(await importRoster(csvBuf([head!, ...rows.reverse()]), placed, 'client', 'merge', '2026-10-31'));
+    expect(again.added).toEqual([]);
+    expect(again.updated).toEqual([]);
+    expect(again.data.clients.find((c) => c.displayName === '架空 月子')?.place).toMatchObject({
+      address: '架空市3丁目',
+      lat: 35.7,
+      lng: 139.7,
+    });
   });
 });
 

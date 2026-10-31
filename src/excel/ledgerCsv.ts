@@ -1,7 +1,16 @@
 // 顧客台帳の形（ADR-0073。PRD D386・D387）：介護ソフトの顧客台帳の CSV（利用者名・利用者カナ・住所・電話・請求・口座・利用者状態など29列）を、
 // 〈利用者さん〉の名簿の列（表示名・よみ・郵便番号・住所・メモ・段階）の表に写す。名簿のブックと同じ読み方（rosterRows）に渡すための純粋関数
 import { normalizeKana } from '../lib/search';
-import { cellOf, columnsOf, isBlankRow, colKey as key, skippedColumns } from './csvColumns';
+import {
+  cellOf,
+  clip,
+  columnMessage,
+  columnsOf,
+  isBlankRow,
+  colKey as key,
+  type RosterTable,
+  skippedColumns,
+} from './csvColumns';
 import { CLIENT_COLS, CLIENT_KANA_COL, CLIENT_POSTAL_COL, CLIENT_STAGE_COLS } from './layout';
 
 /** 顧客台帳の列名（読む列） */
@@ -36,12 +45,6 @@ const MAX = { name: 50, kana: 50, address: 200, note: 500 } as const;
 /** 利用中の印（これ以外の状態は終了） */
 const IN_USE = '利用中';
 
-/** ほかのソフトの形を読んだ結果：名簿の列の表と、読まなかった列の名前（rosterForms の形で共通） */
-export interface RosterTable {
-  rows: string[][];
-  skipped: string[];
-}
-
 /** 名簿の列名 → 顧客台帳の列名（エラー文の『列名』を、利用者が手元で見ている台帳の列名で出す） */
 const LEDGER_NAME_OF: Record<string, string> = {
   [CLIENT_COLS.name]: LEDGER.name,
@@ -53,19 +56,7 @@ const LEDGER_NAME_OF: Record<string, string> = {
 };
 
 /** 読み込みのエラー文の『列名』を台帳の列名に直す（顧客台帳の形で読んだときだけ使う） */
-export const ledgerErrorMessage = (message: string): string =>
-  message.replace(/『([^』]+)』/g, (m, h: string) => (LEDGER_NAME_OF[h] ? `『${LEDGER_NAME_OF[h]}』` : m));
-
-/** UTF-16 の長さが max に収まるように、文字（コードポイント）の途中で切らずに前から切る */
-export function clip(s: string, max: number): string {
-  if (s.length <= max) return s;
-  let out = '';
-  for (const ch of s) {
-    if (out.length + ch.length > max) break;
-    out += ch;
-  }
-  return out;
-}
+export const ledgerErrorMessage = columnMessage(LEDGER_NAME_OF);
 
 /** 1行目の列名が顧客台帳の形か */
 export function isLedgerHeader(header: readonly string[]): boolean {

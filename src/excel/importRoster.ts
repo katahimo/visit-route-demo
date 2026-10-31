@@ -152,7 +152,7 @@ function readLoaded(
   mode: RosterMode,
 ): RosterImportResult | ImportError {
   const { book, source, other } = loaded;
-  const opened = openRoster(book, base, kind);
+  const opened = openRoster(book, base, kind, other?.form.keepBlank);
   if ('code' in opened) return opened;
   const { ctx, rows } = opened;
   const match = rosterMatcher(ctx);

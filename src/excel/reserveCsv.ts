@@ -1,10 +1,21 @@
 // 予約システムの形（ADR-0075。PRD D396・D397）：予約システムから書き出したスタッフの CSV（ID・氏名・TEL・mail address・緯度・経度・入社日・退職日 …）と
 // 顧客の CSV（顧客ID・姓・名・姓（カナ）・住所・駐車場・緯度・経度 …）を、〈スタッフ〉・〈利用者さん〉の名簿の列の表に写す。
 // 名簿のブックと同じ読み方（rosterRows）に渡すための純粋関数（顧客台帳の形 ledgerCsv と同じ作り）
-import { nameKey } from '../lib/common';
+import { normalizeEmail } from '../lib/mailto';
 import { normalizePostalCode } from '../lib/postalCode';
 import { normalizeKana } from '../lib/search';
-import { cellOf, colKey, columnsOf, hasColumns, isBlankRow, skippedColumns } from './csvColumns';
+import {
+  cellOf,
+  clip,
+  colKey,
+  columnMessage,
+  columnsOf,
+  distinctNames,
+  hasColumns,
+  isBlankRow,
+  type RosterTable,
+  skippedColumns,
+} from './csvColumns';
 import {
   CLIENT_COLS,
   CLIENT_KANA_COL,
@@ -15,8 +26,8 @@ import {
   STAFF_EMAIL_COL,
   STAFF_LAST_DAY_COL,
 } from './layout';
-import { clip, type RosterTable } from './ledgerCsv';
-import { NO, YES } from './text';
+import { phoneLine } from './ledgerCsv';
+import { NO, parseDateText, YES } from './text';
 
 /** スタッフの CSV の列名（読む列） */
 const STAFF = {
@@ -64,14 +75,6 @@ export function splitLatLng(text: string): { lat: string; lng: string } {
   return m ? { lat: m[1] ?? '', lng: m[2] ?? '' } : { lat: '', lng: '' };
 }
 
-/** 「2026.3.31」「2026/03/31」「2026-3-31」→「2026-03-31」（読めなければ null） */
-export function ymdOf(text: string): string | null {
-  const m = /^(\d{4})[./-](\d{1,2})[./-](\d{1,2})$/.exec(text.normalize('NFKC').trim());
-  if (!m) return null;
-  const [, y, mo, d] = m;
-  return `${y}-${(mo ?? '').padStart(2, '0')}-${(d ?? '').padStart(2, '0')}`;
-}
-
 /** 住所の先頭の郵便番号（「〒984-0802 仙台市…」「982-0037 仙台市…」）を分ける。無ければ郵便番号は空 */
 export function splitPostal(address: string): { postal: string; address: string } {
   const m = /^〒?\s*(\d{3}[-－‐ー]?\d{4})\s*(.*)$/.exec(address.trim());
@@ -79,10 +82,52 @@ export function splitPostal(address: string): { postal: string; address: string 
   return postal && m ? { postal, address: (m[2] ?? '').trim() } : { postal: '', address: address.trim() };
 }
 
+/** 名簿の列名 → スタッフの CSV の列名（誤りの文に使う） */
+export const reserveStaffErrorMessage = columnMessage({
+  [STAFF_COLS.name]: STAFF.name,
+  [STAFF_EMAIL_COL]: STAFF.email,
+  [STAFF_COLS.address]: STAFF.address,
+  [STAFF_COLS.lat]: STAFF.latLng,
+  [STAFF_COLS.lng]: STAFF.latLng,
+  [STAFF_LAST_DAY_COL]: STAFF.lastDay,
+});
+
+/** 名簿の列名 → 顧客の CSV の列名（誤りの文に使う） */
+export const reserveClientErrorMessage = columnMessage({
+  [CLIENT_COLS.name]: `${CLIENT.family}・${CLIENT.given}`,
+  [CLIENT_POSTAL_COL]: CLIENT.address,
+  [CLIENT_COLS.address]: CLIENT.address,
+  [CLIENT_COLS.lat]: CLIENT.latLng,
+  [CLIENT_COLS.lng]: CLIENT.latLng,
+  [CLIENT_COLS.note]: `${CLIENT.phone}・${CLIENT.memo}`,
+});
+
+/** スタッフの CSV で、空なら今の値のままにする名簿の列（アプリで入れた住所・位置・メールを消さない） */
+export const RESERVE_STAFF_KEEP_BLANK: readonly string[] = [
+  STAFF_COLS.address,
+  STAFF_COLS.lat,
+  STAFF_COLS.lng,
+  STAFF_EMAIL_COL,
+];
+
+/** 顧客の CSV で、空なら今の値のままにする名簿の列 */
+export const RESERVE_CLIENT_KEEP_BLANK: readonly string[] = [
+  CLIENT_KANA_COL,
+  CLIENT_POSTAL_COL,
+  CLIENT_COLS.address,
+  CLIENT_COLS.lat,
+  CLIENT_COLS.lng,
+  CLIENT_RULE_COLS.parking,
+  CLIENT_COLS.note,
+];
+
 /**
  * スタッフの CSV（1行目が列名）→〈スタッフ〉の名簿の列の表。形が違えば null。
  * - 氏名が空の行（枠だけの ID）は飛ばす（空行にして行番号を元のファイルと合わせる）
- * - 退職日：最終勤務日にする。today より前に辞めた人は休止（利用中を ×）、ほかは利用中（○）
+ * - 同じ氏名の人は全員「氏名（ID）」にして分ける
+ * - 退職日：最終勤務日にする（2026.3.31・2026/3/31・2026年3月31日）。today より前に辞めた人は休止（×）、ほかは利用中（○）。
+ *   読めない退職日はそのまま渡し、名簿の読み込みが『退職日』の誤りにする
+ * - mail address：形の違う値は読まず、skipped に「mail address（形の違う値 N件）」を挙げる
  * - 緯度・経度：「緯度, 経度」を2つの列に分ける
  * - TEL・入社日・ユーザーID・パスワード・管理者・性別などは読まず、skipped に名前を挙げる（データに残さない）
  */
@@ -91,7 +136,11 @@ export function reserveStaffToRoster(table: readonly (readonly string[])[], toda
   if (!header || !isReserveStaffHeader(header)) return null;
   const at = columnsOf(header);
   const body = table.slice(1);
-  const skipped = skippedColumns(header, body, Object.values(STAFF));
+  const names = distinctNames(
+    body.map((r) => ({ name: cellOf(at, r)(STAFF.name), id: cellOf(at, r)(STAFF.id) })),
+    MAX.name,
+  );
+  let badEmails = 0;
   const out: string[][] = [
     [
       STAFF_COLS.name,
@@ -103,25 +152,22 @@ export function reserveStaffToRoster(table: readonly (readonly string[])[], toda
       STAFF_LAST_DAY_COL,
     ],
   ];
-  for (const r of body) {
+  body.forEach((r, i) => {
     const v = cellOf(at, r);
     if (v(STAFF.name) === '') {
       out.push(['', '', '', '', '', '', '']);
-      continue;
+      return;
     }
     const { lat, lng } = splitLatLng(v(STAFF.latLng));
+    const email = normalizeEmail(v(STAFF.email));
+    if (email === null) badEmails++;
     const last = v(STAFF.lastDay);
-    const lastDay = last === '' ? '' : (ymdOf(last) ?? last);
-    out.push([
-      clip(v(STAFF.name), MAX.name),
-      v(STAFF.email),
-      clip(v(STAFF.address), MAX.address),
-      lat,
-      lng,
-      lastDay !== '' && lastDay < today ? NO : YES,
-      lastDay,
-    ]);
-  }
+    const lastDay = last === '' ? '' : (parseDateText(last) ?? last);
+    const left = /^\d{4}-\d{2}-\d{2}$/.test(lastDay) && lastDay < today;
+    out.push([names[i] ?? '', email ?? '', clip(v(STAFF.address), MAX.address), lat, lng, left ? NO : YES, lastDay]);
+  });
+  const skipped = skippedColumns(header, body, Object.values(STAFF));
+  if (badEmails > 0) skipped.push(`${STAFF.email}（形の違う値 ${badEmails}件）`);
   return { rows: out, skipped };
 }
 
@@ -135,7 +181,7 @@ function clientName(v: (h: string) => string): string {
 
 /**
  * 顧客の CSV（1行目が列名）→〈利用者さん〉の名簿の列の表。形が違えば null。
- * - 表示名：姓＋名（空ならカナ、それも空なら顧客ID）。同じ名前が2行目以降にあれば「名前（顧客ID）」にして分ける
+ * - 表示名：姓＋名（空ならカナ、それも空なら顧客ID）。同じ名前の人は全員「名前（顧客ID）」にして分ける（ファイルの並びに左右されない）
  * - よみ：姓（カナ）＋名（カナ）をひらがなにし、空白を詰める（normalizeKana）
  * - 住所：先頭の郵便番号（〒 付きも）は郵便番号の列へ分ける
  * - 緯度・経度：「緯度, 経度」を2つの列に分ける
@@ -149,7 +195,12 @@ export function reserveClientToRoster(table: readonly (readonly string[])[]): Ro
   if (!header || !isReserveClientHeader(header)) return null;
   const at = columnsOf(header);
   const body = table.slice(1);
-  const skipped = skippedColumns(header, body, Object.values(CLIENT));
+  const names = distinctNames(
+    body.map((r) =>
+      isBlankRow(r) ? { name: '', id: '' } : { name: clientName(cellOf(at, r)), id: cellOf(at, r)(CLIENT.id) },
+    ),
+    MAX.name,
+  );
   const out: string[][] = [
     [
       CLIENT_COLS.name,
@@ -163,23 +214,18 @@ export function reserveClientToRoster(table: readonly (readonly string[])[]): Ro
       CLIENT_STAGE_COLS.stage,
     ],
   ];
-  const seen = new Set<string>();
-  for (const r of body) {
+  body.forEach((r, i) => {
     if (isBlankRow(r)) {
       out.push(['', '', '', '', '', '', '', '', '']);
-      continue;
+      return;
     }
     const v = cellOf(at, r);
-    let name = clip(clientName(v), MAX.name);
-    if (seen.has(nameKey(name)) && v(CLIENT.id) !== '') name = clip(`${name}（${v(CLIENT.id)}）`, MAX.name);
-    seen.add(nameKey(name));
     const { postal, address } = splitPostal(v(CLIENT.address));
     const { lat, lng } = splitLatLng(v(CLIENT.latLng));
     const parking = [v(CLIENT.parking), v(CLIENT.parkingDetail)].filter((x) => x !== '').join('　');
-    const phone = v(CLIENT.phone);
-    const note = [phone === '' ? '' : `電話 ${phone}`, v(CLIENT.memo)].filter((x) => x !== '').join('\n');
+    const note = [phoneLine(v(CLIENT.phone), ''), v(CLIENT.memo)].filter((x) => x !== '').join('\n');
     out.push([
-      name,
+      names[i] ?? '',
       clip(normalizeKana(`${v(CLIENT.familyKana)}${v(CLIENT.givenKana)}`), MAX.kana),
       postal,
       clip(address, MAX.address),
@@ -189,6 +235,6 @@ export function reserveClientToRoster(table: readonly (readonly string[])[]): Ro
       clip(note, MAX.note),
       v(CLIENT.status) === '無効' ? '終了' : '利用中',
     ]);
-  }
-  return { rows: out, skipped };
+  });
+  return { rows: out, skipped: skippedColumns(header, body, Object.values(CLIENT)) };
 }

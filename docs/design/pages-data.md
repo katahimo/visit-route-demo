@@ -34,7 +34,7 @@
 #### Excel（ADR-0006・ADR-0068）
 
 - 欄 `section.data-excel`（data-testid `excel-card`・`aria-labelledby` は見出し）。`excel` を切っていれば欄ごと出さない（控えは残す）
-- 予約の CSV の欄 `BookingCard`（`pages/dataBookings.tsx`・data-testid `booking-card`。ADR-0075・PRD D398）：Excel の欄の次。`excel` を切っていれば出さない。`FilePick`（`booking-file`・caption「読み込む予約の CSV」・.csv・.tsv・.txt）で選ぶと `useBookingImport` が `importBookings` で読み、確認（題「予約を読み込みますか？」・本文 `lib/bookingScreen` の `bookingConfirmBody`：形と文字コード・件数・入れなかった予約・読めなかった行・読まなかった列・担当なし・控えの文。主ボタン「予約を読み込む」）のあとに1世代の控えを残して入れる。足す・直す訪問が無ければ確認を出さず、欄の誤りの欄に「入れる予約はありませんでした」と入れなかった予約を出す
+- 予約の CSV の欄 `BookingCard`（`pages/dataBookings.tsx`・data-testid `booking-card`。ADR-0075・PRD D398）：Excel の欄の次。`excel` を切っていれば出さない。`FilePick`（`booking-file`・caption「読み込む予約の CSV」・.csv・.tsv・.txt）で選ぶと `useBookingImport` が `importBookings` で読み、確認（題「予約を読み込みますか？」・本文 `lib/bookingScreen` の `bookingConfirmBody`：形と文字コード・件数・足さない取り消し済みの予約・入れなかった予約・読めなかった行・読まなかった列・担当なし（担当・ピン・アプリでの取り消しは残す）・控えの文。主ボタン「予約を読み込む」）のあとに1世代の控えを残して入れる（`usePendingImport`。名簿と同じ）。知らせは担当の組み方を、エキスパート機能が入なら「担当を組む」、切なら予定の「その他 ▾」の「担当なしの訪問を組む」で案内する。足す・直す訪問が無ければ確認を出さず、入れなかった予約・読めなかった行があれば欄の誤りの欄に「入れる予約はありませんでした」と一緒に出し、無ければ「予約に変更はありませんでした」の知らせ。読み込みの部品を読めなかった（新しい版の公開）ときは Excel の欄と同じ「画面を読み直す」の文
 - 全体のブックだけ：〈スタッフ〉・〈利用者さん〉・項目・条件・相性・稼働時間・訪問のシートごとの一覧。読み込むといまのデータがその内容に置き換わる（訪問の担当もブックのとおり。伝えた内容・振り直し・組み方の標準の記録はブックに無いので今のものを残し、変わった所は「未連絡の変更」になる）。説明の最後に、丸ごとの控え・移すときは JSON と書く。書き方はブックの「使い方」のシート
   - 別の事業所のブック：ブックの事業所名がいまと違えば（`lib/dataScreen` の `otherOrgOf`。事業所に ID は無いので名前で見る）、確認の題名を「別の事業所の…」にし、本文で両方の名前と、いまの確定・振り直し・組み方の標準の記録を消すことを書く（`workbookConfirmBody`）。OK なら `withoutOrgState` で外してから置き換える
 - 名簿（〈利用者さん〉・〈スタッフ〉の一覧だけ。Excel・CSV）は各一覧の名簿の欄（[pages-clients.md](pages-clients.md)「名簿の欄」）。欄の中に一覧へのリンク（`excel-roster-note`）

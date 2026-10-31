@@ -22,7 +22,9 @@
   あとは今の名簿の読み方（`rosterRows`）で読む。顧客台帳（`ledgerCsv`）もここに載せた
 - 予約：`excel/bookingForms.ts` の `BOOKING_FORMS`（id・label・`toBookings`）。`toBookings` は CSV の表を `Booking`（予約番号・日付・開始・所要・名前・取り消し・メモ）に写す。
   `importBookings` が共通で〈利用者さん〉と名前で突き合わせ、ID `bk-〈形のID〉-〈予約番号〉` の単発の訪問（時刻固定・担当なし）を足す・直す
-- 列名の比べ方・読まなかった列は `excel/csvColumns.ts` に共通の部品として置く
+- 列名の比べ方・読まなかった列・同じ名前の分け方（`distinctNames`：同じ名前は全員「名前（ID）」）・誤りの文の列名の直し（`columnMessage`）・`clip`・`RosterTable` は `excel/csvColumns.ts` に共通の部品として置く
+- 元のソフトで空のことが多い欄（緯度・経度・住所・メールなど）は、形ごとに `keepBlank` で「空なら今の値のまま」にし、アプリで入れた値を読み直しで消さない
+- 同じ名前の顧客は全員に顧客IDを添える（2人目だけに添えると、ファイルの並びが変わったときに人が入れ替わる）。予約の名前がこの分けた人に当たるときは、どの人か分からないので入れない
 - 契約：`RosterImportResult.ledger` を `otherForm: OtherFormRead | null`（形の名前 `label` と `skippedColumns`）に一般化。`BookingImportResult` を足す
 - 新規登録者は担当にしない（担当は「担当を組む」で決める）。同じ予約番号の訪問は読み直すと直し、担当・ピンは残す
 

@@ -7,7 +7,7 @@ import { reserveToBookings } from './reserveBookings';
 
 /** ほかのソフトの予約の形 */
 export interface BookingForm {
-  /** 形の ID（訪問の ID の頭に使う。英小文字・数字・ハイフン。重ねない） */
+  /** 形の ID（訪問の ID の頭に使う。英小文字・数字・ハイフンで16文字まで（訪問の ID を100文字に収める。テストで確かめる）。重ねない） */
   id: string;
   /** 確認の文に出す形の名前 */
   label: string;

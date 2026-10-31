@@ -28,6 +28,10 @@ describe('予約時の読み方', () => {
     expect(parseTimeRange('14:00')).toEqual({ start: '14:00', minutes: null });
     expect(parseTimeRange('終日')).toBeNull();
     expect(parseTimeRange('25:00～26:00')).toBeNull();
+    // 終わりの分も確かめる
+    expect(parseTimeRange('10:00-12:99')).toBeNull();
+    // 終わりが開始より前（日をまたぐ）なら分は無い
+    expect(parseTimeRange('23:00～01:00')).toEqual({ start: '23:00', minutes: null });
   });
 });
 
@@ -83,6 +87,21 @@ describe('予約の形', () => {
     expect(readBookingForm([['名前', '日付']])).toBeNull();
     const ids = BOOKING_FORMS.map((f) => f.id);
     expect(new Set(ids).size).toBe(ids.length);
+    // 訪問の ID（bk-〈形〉-〈予約番号80文字まで〉）が100文字に収まる
+    for (const id of ids) expect(id).toMatch(/^[a-z0-9-]{1,16}$/);
+    expect(bookingVisitId({ id: 'a'.repeat(16) }, 'R'.repeat(200)).length).toBeLessThanOrEqual(100);
+  });
+  it('日をまたぐ予約・ありえない日付は読めない行にする', () => {
+    const t = reserveToBookings([
+      HEAD,
+      row({ 予約番号: 'R1', 予約日: '2026/11/03', 予約時: '23:00', '所要時間(分)': '180', 氏名: '架空 花子' }),
+      row({ 予約番号: 'R2', 予約日: '2026/02/30', 予約時: '10:00～11:00', 氏名: '架空 花子' }),
+    ])!;
+    expect(t.bookings).toEqual([]);
+    expect(t.badRows).toEqual([
+      '2行目：日をまたぐ予約は入れられません',
+      '3行目：予約日「2026/02/30」が日付として読めません',
+    ]);
   });
 });
 
@@ -150,6 +169,43 @@ describe('予約を訪問として読み込む', () => {
       start: null,
       earliestStart: '14:00',
     });
+  });
+
+  it('名簿で「名前（顧客ID）」に分けた同じ名前の人がいれば入れない（どの人か分からない）', () => {
+    const d = withClients();
+    const split: DemoData = {
+      ...d,
+      clients: d.clients.map((c, i) =>
+        i === 0 ? { ...c, displayName: '架空 花子（C1）' } : i === 1 ? { ...c, displayName: '架空 花子（C2）' } : c,
+      ),
+    };
+    const r = ok(importBookings(buf(table.slice(0, 2)), split));
+    expect(r.added).toBe(0);
+    expect(r.unmatched).toEqual(['架空花子（同じ名前が2人以上）（1件）']);
+    // 1人だけ分けた名前（例「架空 花子（母）」）には当てない
+    const one: DemoData = {
+      ...d,
+      clients: d.clients.map((c, i) => (i === 0 ? { ...c, displayName: '架空 花子（母）' } : c)),
+    };
+    expect(ok(importBookings(buf(table.slice(0, 2)), one)).added).toBe(1);
+  });
+
+  it('まだ入れていない取り消し済みの予約は足さず、アプリで取り消した訪問は読み直しても取り消しのまま', () => {
+    const cancelled = [
+      HEAD,
+      row({ 予約番号: 'R9', 予約日: '2026/11/03', 予約時: '13:00～15:00', 状況: 'キャンセル', 氏名: '架空 花子' }),
+    ];
+    const r = ok(importBookings(buf(cancelled), withClients()));
+    expect(r).toMatchObject({ added: 0, cancelledSkipped: 1 });
+    const first = ok(importBookings(buf(table), withClients())).data;
+    const id = bookingVisitId({ id: 'reserve' }, 'R1');
+    const sameDay: DemoData = {
+      ...first,
+      visits: first.visits.map((v) => (v.id === id ? { ...v, cancelled: true, cancelKind: 'sameDay' as const } : v)),
+    };
+    const again = ok(importBookings(buf(table), sameDay));
+    expect(again.unchanged).toBe(1);
+    expect(again.data.visits.find((v) => v.id === id)).toMatchObject({ cancelled: true, cancelKind: 'sameDay' });
   });
 
   it('同じ名前の〈利用者さん〉が2人なら入れない', () => {

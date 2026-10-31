@@ -14,6 +14,7 @@ const result = (over: Partial<BookingImportResult> = {}): BookingImportResult =>
   added: 2,
   updated: 1,
   unchanged: 3,
+  cancelledSkipped: 0,
   unmatched: [],
   badRows: [],
   source: { format: 'csv', encoding: 'UTF-16LE' },
@@ -45,13 +46,22 @@ describe('予約の読み込みの文', () => {
     );
     expect(body).toContain('読まなかった列：支払金額');
     expect(body).toContain('担当は決めません');
+    expect(body).not.toContain('取り消し済みの予約');
+    expect(
+      bookingConfirmBody({ fileName: 'a.csv', r: result({ cancelledSkipped: 2 }), clientTerm: 'お客様', keep }),
+    ).toContain('取り消し済みの予約 2件は入れません。');
     expect(body).toContain('直前の状態に戻す');
   });
 
   it('知らせ（控えを残せなければ理由を添える）', () => {
-    expect(bookingDoneText(result(), keep)).toBe(
+    expect(bookingDoneText(result(), { expert: true }, keep)).toBe(
       '予約を読み込みました（追加 2件・更新 1件）。担当は「担当を組む」で組めます',
     );
-    expect(bookingDoneText(result(), { kept: false, why: '容量が足りません' })).toContain('（容量が足りません）');
+    expect(bookingDoneText(result(), { expert: false }, keep)).toContain(
+      '予定の「その他 ▾」の「担当なしの訪問を組む」',
+    );
+    expect(bookingDoneText(result(), { expert: true }, { kept: false, why: '容量が足りません' })).toContain(
+      '（容量が足りません）',
+    );
   });
 });

@@ -7,23 +7,33 @@ import { nameKey } from '../lib/common';
 import { decodeText, parseCsv } from '../lib/csv';
 import { isImportError, migrate } from '../store/persist';
 import type { Booking } from './booking';
-import { type BookingForm, readBookingForm } from './bookingForms';
-import { clip } from './ledgerCsv';
+import { BOOKING_FORMS, type BookingForm, readBookingForm } from './bookingForms';
+import { clip } from './csvColumns';
 import { MAX_FILE_BYTES } from './reader';
 import { same } from './rosterRows';
 
 /** 予約から作る訪問の ID（形の ID と予約番号。読み直すと同じ訪問を直す） */
 export const bookingVisitId = (form: Pick<BookingForm, 'id'>, ref: string) => `bk-${form.id}-${clip(ref, 80)}`;
 
-/** 名前 → 〈利用者さん〉（終了でない人を先に見る。同じ名前が2人以上なら 'many'） */
-function clientFinder(clients: readonly Client[]): (name: string) => Client | 'many' | null {
-  const by = new Map<string, Client[]>();
+/** 名前の比べ方のキーから、末尾の「（…）」を除いたもの（同じ名前を分けた「名前（顧客ID）」の元の名前。nameKey で括弧は半角） */
+const baseKey = (k: string) => k.replace(/\([^()]*\)$/, '');
+
+/**
+ * 名前 → 〈利用者さん〉（終了でない人を先に見る）。同じ名前の人と、名簿の読み込みで「名前（顧客ID）」に分けた人を合わせて
+ * 2人以上なら 'many'（どの人の予約か分からないので入れない）
+ */
+export function clientFinder(clients: readonly Client[]): (name: string) => Client | 'many' | null {
+  const exact = new Map<string, Client[]>();
+  const split = new Map<string, Client[]>();
+  const add = (m: Map<string, Client[]>, k: string, c: Client) => m.set(k, [...(m.get(k) ?? []), c]);
   for (const c of clients) {
     const k = nameKey(c.displayName);
-    by.set(k, [...(by.get(k) ?? []), c]);
+    add(exact, k, c);
+    if (baseKey(k) !== k) add(split, baseKey(k), c);
   }
   return (name) => {
-    const all = by.get(nameKey(name)) ?? [];
+    const k = nameKey(name);
+    const all = [...(exact.get(k) ?? []), ...(split.get(k) ?? [])];
     const live = all.filter((c) => c.stage !== 'ended');
     const xs = live.length > 0 ? live : all;
     if (xs.length === 0) return null;
@@ -31,7 +41,10 @@ function clientFinder(clients: readonly Client[]): (name: string) => Client | 'm
   };
 }
 
-/** 予約 → 訪問（今の訪問があれば担当・ピン・種類を残し、日付と時刻が変わらなければ組んだ開始も残す） */
+/**
+ * 予約 → 訪問（今の訪問があれば担当・ピン・種類を残し、日付と時刻が変わらなければ組んだ開始も残す。
+ * アプリで取り消した訪問（当日キャンセルなど）は、ファイルが取り消していなくても取り消しのまま）
+ */
 export function bookingToVisit(b: Booking, id: string, clientId: string, cur: Visit | undefined): Visit {
   const sameSlot = cur !== undefined && cur.date === b.date && cur.earliestStart === b.start;
   return {
@@ -45,11 +58,11 @@ export function bookingToVisit(b: Booking, id: string, clientId: string, cur: Vi
     staffId: cur?.staffId ?? null,
     start: sameSlot ? (cur?.start ?? null) : null,
     pinned: cur?.pinned ?? false,
-    cancelled: b.cancelled,
+    cancelled: b.cancelled || (cur?.cancelled ?? false),
     note: b.note,
     typeId: cur?.typeId ?? null,
     pattern: null,
-    cancelKind: b.cancelled ? (cur?.cancelKind ?? null) : null,
+    cancelKind: cur?.cancelled ? cur.cancelKind : null,
   };
 }
 
@@ -64,7 +77,7 @@ function countNames(names: readonly string[]): string[] {
  * 予約の CSV → 訪問を入れた結果。形が分からない・読めなければ ImportError（何も変えない）。
  * - 〈利用者さん〉は名前（全角半角・空白を同一視）で突き合わせる。いない・同じ名前が2人の予約は入れず unmatched に挙げる
  * - 担当は決めない（担当なし）。今ある訪問（同じ予約番号）の担当・ピンは残す
- * - ファイルに無い訪問は消さない
+ * - ファイルに無い訪問は消さない。まだ入れていない取り消し済みの予約は足さない（cancelledSkipped に数える）
  */
 export function importBookings(buf: ArrayBuffer, base: DemoData): BookingImportResult | ImportError {
   if (buf.byteLength > MAX_FILE_BYTES)
@@ -77,7 +90,7 @@ export function importBookings(buf: ArrayBuffer, base: DemoData): BookingImportR
   if (!hit)
     return {
       code: 'INVALID_ARGUMENT',
-      message: '予約の CSV の形が分かりませんでした（1行目の列名を確かめてください。読める形：予約システムの予約）',
+      message: `予約の CSV の形が分かりませんでした（1行目の列名を確かめてください。読める形：${BOOKING_FORMS.map((f) => f.label).join('・')}）`,
     };
   const { form, table } = hit;
   const find = clientFinder(base.clients);
@@ -89,6 +102,7 @@ export function importBookings(buf: ArrayBuffer, base: DemoData): BookingImportR
   let added = 0;
   let updated = 0;
   let unchanged = 0;
+  let cancelledSkipped = 0;
   for (const b of table.bookings) {
     const id = bookingVisitId(form, b.ref);
     const before = seen.get(id);
@@ -103,6 +117,11 @@ export function importBookings(buf: ArrayBuffer, base: DemoData): BookingImportR
       continue;
     }
     const cur = curOf.get(id);
+    // まだ入れていない予約が取り消し済みなら、取り消しの訪問を足さない
+    if (!cur && b.cancelled) {
+      cancelledSkipped++;
+      continue;
+    }
     const v = bookingToVisit(b, id, c.id, cur);
     if (!cur) added++;
     else if (same(v, cur)) unchanged++;
@@ -120,6 +139,7 @@ export function importBookings(buf: ArrayBuffer, base: DemoData): BookingImportR
     added,
     updated,
     unchanged,
+    cancelledSkipped,
     unmatched: countNames(unmatched),
     badRows,
     source: { format: 'csv', encoding },
