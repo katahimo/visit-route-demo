@@ -598,10 +598,11 @@ async function wide(page) {
   await clickMenu(page, '空き状況');
   await page.waitForURL(/#\/vacancy/);
   check(hashOf(page) === '#/vacancy', 'メニューの「空き状況」で空き状況へ', hashOf(page));
-  check(
-    (await page.locator('.side-nav [aria-current="page"]').first().innerText()).trim() === '空き状況',
-    '空き状況の画面では「空き状況」に印',
-  );
+  // 空き状況は別のチャンク：画面が出て印が移るまで待つ（URL が変わった直後は前の画面の印のことがある）
+  const curOf = async () =>
+    (await page.locator('.side-nav [aria-current="page"]').allInnerTexts()).map((s) => s.trim());
+  await until(async () => (await curOf())[0] === '空き状況', 30000);
+  check((await curOf())[0] === '空き状況', '空き状況の画面では「空き状況」に印', await curOf());
   await open(page, `/month?ym=${YM}`);
   await pressTool(page, '欠勤', { where: 'row' });
   await page.waitForURL(/#\/plan/);
