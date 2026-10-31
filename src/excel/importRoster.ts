@@ -3,10 +3,10 @@
 // 訪問（担当）・伝えた内容・パターン・相性などは base のまま（その人を指すものも残す）。最後は store の migrate（repair）を通す
 import type { DemoData, ImportError, RosterImportResult, RosterKind, RosterMode } from '../contracts/data';
 import type { Client, Staff, Terms } from '../contracts/documents';
+import { jstDate } from '../domain/time';
 import { STAGE_LABELS, withStage } from '../lib/clientStage';
 import { nameKey } from '../lib/common';
 import { isImportError, migrate } from '../store/persist';
-import { ledgerErrorMessage } from './ledgerCsv';
 import { type LoadedRoster, loadRosterBook } from './rosterCsv';
 import {
   openRoster,
@@ -134,12 +134,14 @@ export async function importRoster(
   base: DemoData,
   kind: RosterKind,
   mode: RosterMode,
+  today: string = jstDate(Date.now()),
 ): Promise<RosterImportResult | ImportError> {
-  const loaded = await loadRosterBook(buf, base, kind);
+  const loaded = await loadRosterBook(buf, base, kind, { today });
   if ('code' in loaded) return loaded;
   const r = readLoaded(loaded, base, kind, mode);
-  // 顧客台帳の形で読んだときは、誤りの文の列名も台帳の列名で出す（ADR-0073）
-  return 'code' in r && loaded.ledger ? { ...r, message: ledgerErrorMessage(r.message) } : r;
+  // ほかのソフトの形で読んだときは、誤りの文の列名もその形の列名で出す（ADR-0073・ADR-0075）
+  const fix = loaded.other?.form.errorMessage;
+  return 'code' in r && fix ? { ...r, message: fix(r.message) } : r;
 }
 
 /** 開いた名簿のブック → 今のデータに当てた結果（importRoster の本体） */
@@ -149,8 +151,8 @@ function readLoaded(
   kind: RosterKind,
   mode: RosterMode,
 ): RosterImportResult | ImportError {
-  const { book, source, ledger } = loaded;
-  const opened = openRoster(book, base, kind);
+  const { book, source, other } = loaded;
+  const opened = openRoster(book, base, kind, other?.form.keepBlank);
   if ('code' in opened) return opened;
   const { ctx, rows } = opened;
   const match = rosterMatcher(ctx);
@@ -191,7 +193,7 @@ function readLoaded(
     lastDaySet,
     activeBefore,
     source,
-    ledger,
+    otherForm: other ? { label: other.form.label, skippedColumns: other.skipped } : null,
   };
 }
 

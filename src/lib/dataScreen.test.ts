@@ -4,7 +4,7 @@ import {
   excelFileName,
   keepNote,
   keptSuffix,
-  ledgerSkippedText,
+  otherFormSkippedText,
   otherOrgOf,
   rosterConfirmBody,
   rosterDoneText,
@@ -117,7 +117,7 @@ describe('名簿の読み込みの文', () => {
       how: '追加・更新',
       summary: '追加 1人',
       source: { format: 'csv', encoding: 'UTF-8' },
-      ledger: { skippedColumns: ['請求方法', '口座番号'] },
+      otherForm: { label: '顧客台帳', skippedColumns: ['請求方法', '口座番号'] },
       keep: { kept: true, why: null },
     });
     expect(body.split('\n').slice(0, 3)).toEqual([
@@ -125,7 +125,7 @@ describe('名簿の読み込みの文', () => {
       '読まなかった列：請求方法・口座番号',
       '追加 1人',
     ]);
-    expect(ledgerSkippedText({ skippedColumns: [] })).toBe('読まなかった列：なし');
+    expect(otherFormSkippedText({ label: '顧客台帳', skippedColumns: [] })).toBe('読まなかった列：なし');
   });
   it('読み込んだあとの知らせ：最終勤務日の入った人がいれば添え、控えを残せなければ理由', () => {
     const keep = { kept: true, why: null };

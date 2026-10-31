@@ -690,7 +690,11 @@ async function filePick(b) {
     all: document.querySelectorAll('input[type="file"]').length,
     pick: document.querySelectorAll('.file-pick input[type="file"]').length,
   }));
-  check(counts.all === 2 && counts.pick === 2, 'ファイル選択は控え（JSON）と Excel の2つで、どちらも同じ部品', counts);
+  check(
+    counts.all === 3 && counts.pick === 3,
+    'ファイル選択は控え（JSON）・Excel・予約の CSV（ADR-0075）の3つで、どれも同じ部品',
+    counts,
+  );
   const shape = await page.evaluate(() =>
     [...document.querySelectorAll('.file-pick')].map((el) => {
       const input = el.querySelector('input[type="file"]');
@@ -731,6 +735,7 @@ async function filePick(b) {
     shape[0],
   );
   check(/読み込む Excel/.test(shape[1].label), 'Excel の入力欄の名前', shape[1].label);
+  check(/読み込む予約の CSV/.test(shape[2].label), '予約の CSV の入力欄の名前', shape[2].label);
   check(
     (await page.getByRole('button', { name: '読み込む控え（JSON） ファイルを選ぶ', exact: true }).count()) === 1,
     '読み上げの木で入力欄が名前付きのボタン（「読み込む控え（JSON） ファイルを選ぶ」）',
