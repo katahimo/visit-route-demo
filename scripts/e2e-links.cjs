@@ -13,6 +13,7 @@ const { answerConfirms } = require('./lib/confirmDialog.cjs');
 const { BASE, OUT_DIR, NOW, TODAY, STORAGE_KEY, check, settle, hashOf, stored, runSteps } = require('./lib/env.cjs');
 const { planDays } = require('./lib/plan.cjs');
 const { pagePerStep } = require('./lib/steps.cjs');
+const { goTo } = require('./lib/ui.cjs');
 
 /** 「10/21」の形（月の要対応の日付の文） */
 const md = (d) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
@@ -22,12 +23,7 @@ const dayOf = (page) => page.locator('.date-switch select').inputValue();
 /**
  * 画面を新しく開く（e2e-home と同じ：同じ文書の中で hash を移すと `?do=` が先に処理されることがあるので、about:blank を挟む）
  */
-async function open(page, hash, ready) {
-  await page.goto('about:blank');
-  await page.goto(`${BASE}#${hash}`);
-  await page.locator(ready).first().waitFor({ timeout: 30000 });
-  await settle(page, 300);
-}
+const open = (page, hash, ready) => goTo(page, hash, { ready: ready, timeout: 30000, h1: false, settleMs: 300 });
 /** 日の画面が開いてその日を選んでいる（移ったあと） */
 async function onPlan(page, date) {
   await page.waitForURL(/#\/plan/, { timeout: 10000 });

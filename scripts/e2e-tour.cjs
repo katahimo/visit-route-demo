@@ -43,6 +43,7 @@ const {
 } = require('./lib/env.cjs');
 const { guard } = require('./lib/steps.cjs');
 const { visitsIn } = require('./lib/visits.cjs');
+const { goTo, pressTool } = require('./lib/ui.cjs');
 
 const YM = TODAY.slice(0, 7);
 
@@ -80,11 +81,8 @@ async function newPage(b, { human, width = 1400, height = 1000, start }) {
   return { ctx, page };
 }
 
-async function open(page, hash, ready) {
-  await page.goto('about:blank');
-  await page.goto(`${BASE}#${hash}`);
-  await page.locator(ready).first().waitFor({ timeout: 30000 });
-}
+// 画面を新しく開く（共通の手 goTo。待つ長さ・見出し・落ち着くまでの待ちはこの画面の e2e の既定）
+const open = (page, hash, ready) => goTo(page, hash, { ready: ready, timeout: 30000, h1: false, settleMs: 0 });
 
 // ---- 最初の2問（PRD D379〜D381。ADR-0073）----
 const askingPage = (b, opts = {}) => newPage(b, { human: true, ...opts });
@@ -903,8 +901,7 @@ async function monthList(b) {
   for (const ym of [YM, nextYm]) {
     await open(page, `/month?ym=${ym}`, '[data-testid="month-list"]');
     // 表示の選択は「その他 ▾」の「表示を選ぶ」で開く（PRD D278）
-    await page.getByTestId('month-more').click();
-    await page.getByTestId('month-more-pickers').click();
+    await pressTool(page, 'month-more-pickers');
     await page.getByTestId('month-focus').waitFor();
     const staffOpts = await page
       .locator('[data-testid="month-focus"] option')

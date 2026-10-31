@@ -15,6 +15,7 @@ const { answerConfirms } = require('./lib/confirmDialog.cjs');
 const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, hashOf, runSteps, settle, until } = require('./lib/env.cjs');
 const { markStandard } = require('./lib/standard.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
+const { pressTool } = require('./lib/ui.cjs');
 
 const YM = TODAY.slice(0, 7);
 /** 日付の曜日（0＝日曜。JST の日付として） */
@@ -234,7 +235,7 @@ async function runApply(page) {
     '反映すると範囲の担当なしが減る',
   );
   // 全体の「元に戻す」で1手戻る
-  await page.getByTestId('undo-btn').click();
+  await pressTool(page, '元に戻す');
   await page.waitForFunction(
     ({ k, d }) => !JSON.parse(localStorage.getItem(k)).visits.some((v) => v.date === d && v.staffId),
     { k: STORAGE_KEY, d: TODAY },

@@ -16,7 +16,6 @@
 const path = require('node:path');
 const { answerConfirms } = require('./lib/confirmDialog.cjs');
 const {
-  BASE,
   OUT_DIR,
   TODAY,
   STORAGE_KEY,
@@ -31,6 +30,7 @@ const {
 } = require('./lib/env.cjs');
 const { markStandard } = require('./lib/standard.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
+const { clickMenu, goTo, pressTool } = require('./lib/ui.cjs');
 
 const PERF_MS = perfMs('PERF_MS_NAV', 100);
 /** 「要対応」を打ったとき、いちばん長く画面が止まる時間の上限（検査は1日ずつ間を空ける。PRD D337） */
@@ -41,13 +41,8 @@ const input = (page) => page.getByTestId('cmdk-input');
 const options = (page) => page.getByTestId('cmdk-option');
 const rootInert = (page) => page.evaluate(() => document.getElementById('root').inert);
 
-/** 画面を新しく開く（about:blank を挟み、`?do=`・`?id=` を読み直す前に消さない） */
-async function open(page, hash, ready = 'h1') {
-  await page.goto('about:blank');
-  await page.goto(`${BASE}#${hash}`);
-  await page.locator(ready).first().waitFor({ timeout: 30000 });
-  await page.locator('h1').filter({ hasText: /\S/ }).first().waitFor({ timeout: 30000 });
-}
+// 画面を新しく開く（共通の手 goTo。待つ長さ・見出し・落ち着くまでの待ちはこの画面の e2e の既定）
+const open = (page, hash, ready = 'h1') => goTo(page, hash, { ready: ready, timeout: 30000, h1: true, settleMs: 0 });
 /** パレットの今の候補（名前・種類・選んでいるか） */
 async function listed(page) {
   return options(page).evaluateAll((els) =>
@@ -355,8 +350,7 @@ async function menu(page) {
   await page.locator('h1').filter({ hasText: '勤務の見込み' }).waitFor();
   check(hashOf(page).startsWith('#/workload'), '勤務時間（シフト）の「勤務の見込み」で勤務の見込み', hashOf(page));
   await open(page, '/month', '[data-testid="month-more"]');
-  await page.getByTestId('month-more').click();
-  await page.getByTestId('month-workload').click();
+  await pressTool(page, 'month-workload');
   await page.locator('h1').filter({ hasText: '勤務の見込み' }).waitFor();
   check(hashOf(page).startsWith('#/workload'), '月の予定の「その他 ▾」の「勤務の見込み」で勤務の見込み', hashOf(page));
   await open(page, '/plan', '[data-testid="sudden-open"]');
@@ -372,7 +366,7 @@ async function menu(page) {
   );
   // 欠勤・キャンセル：今日の日の画面で欄が開き、?do=・?date= は消える
   await open(page, '/week');
-  await side.getByTestId('nav-link').filter({ hasText: '欠勤・キャンセル' }).click();
+  await clickMenu(page, '欠勤');
   await page.getByTestId('sudden-panel').waitFor({ timeout: 15000 });
   const h = hashOf(page);
   check(

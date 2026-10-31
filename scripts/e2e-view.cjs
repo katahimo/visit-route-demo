@@ -31,6 +31,7 @@ const {
   runSteps,
 } = require('./lib/env.cjs');
 const { pagePerStep } = require('./lib/steps.cjs');
+const { clickMenu, goTo } = require('./lib/ui.cjs');
 
 /** その人の画面（全画面）の外枠 */
 const view = (page) => page.getByTestId('person-view');
@@ -50,13 +51,8 @@ const goHash = (page, hash) =>
     location.hash = h;
   }, hash);
 
-async function open(page, hash, ready) {
-  // 同じ文書の中で hash を移してから読み直すと、読み直す前に `?id=` が処理されることがあるので、about:blank を挟んで開く
-  await page.goto('about:blank');
-  await page.goto(`${BASE}#${hash}`);
-  await page.locator(ready).first().waitFor({ timeout: 30000 });
-  await settle(page, 400);
-}
+// 画面を新しく開く（共通の手 goTo。待つ長さ・見出し・落ち着くまでの待ちはこの画面の e2e の既定）
+const open = (page, hash, ready) => goTo(page, hash, { ready: ready, timeout: 30000, h1: false, settleMs: 400 });
 async function goTab(page, key) {
   await tab(page, key).click();
   await settle(page, 300);
@@ -187,7 +183,7 @@ async function clients(page, dlg) {
     dlg.messages,
   );
   dlg.messages.length = 0;
-  await page.locator('.side-nav').getByRole('link', { name: 'ホーム' }).click();
+  await clickMenu(page, 'ホーム');
   await settle(page);
   check(
     dlg.messages.length === 1 && /移りますか/.test(dlg.messages[0]) && hashOf(page).startsWith('#/clients/c1'),

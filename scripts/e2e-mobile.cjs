@@ -15,8 +15,9 @@
 // 終了コード：全部通れば 0、通らないものがあれば 1。ページのエラー（pageerror）も失敗に数える
 const path = require('node:path');
 const { skipTour } = require('./lib/tourSeen.cjs');
-const { BASE, OUT_DIR, NOW, STORAGE_KEY, check, isFocused, runSteps, settle } = require('./lib/env.cjs');
+const { OUT_DIR, NOW, STORAGE_KEY, check, isFocused, runSteps, settle } = require('./lib/env.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
+const { goTo } = require('./lib/ui.cjs');
 
 const drawer = (page) => page.getByTestId('nav-drawer');
 /** メニューの最上位の項目（子の無い項目と、畳める親の行の項目。PRD D349） */
@@ -29,14 +30,8 @@ const visible = (loc) => loc.isVisible().catch(() => false);
 const overlaps = (a, b) =>
   a.x < b.x + b.width - 1 && b.x < a.x + a.width - 1 && a.y < b.y + b.height - 1 && b.y < a.y + a.height - 1;
 
-async function open(page, hash, ready) {
-  // 同じ文書の中で hash を移してから読み直すと、読み直す前に `?id=` が処理されて URL から消えることがあるので、
-  // about:blank を挟んで開く（e2e-home と同じ）
-  await page.goto('about:blank');
-  await page.goto(`${BASE}#${hash}`);
-  await page.locator(ready).first().waitFor({ timeout: 30000 });
-  await settle(page, 400);
-}
+// 画面を新しく開く（共通の手 goTo。待つ長さ・見出し・落ち着くまでの待ちはこの画面の e2e の既定）
+const open = (page, hash, ready) => goTo(page, hash, { ready: ready, timeout: 30000, h1: false, settleMs: 400 });
 
 async function header(page) {
   await open(page, '/clients', '[data-testid="screen-name"]');

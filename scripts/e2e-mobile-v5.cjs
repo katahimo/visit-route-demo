@@ -15,6 +15,7 @@ const path = require('node:path');
 const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, settle, stored, until, runSteps } = require('./lib/env.cjs');
 const { markStandard } = require('./lib/standard.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
+const { clickMenu, pressTool } = require('./lib/ui.cjs');
 
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
 const shot = (page, name) => page.screenshot({ path: path.join(OUT_DIR, `${name}.png`) });
@@ -221,7 +222,7 @@ async function sheet(page) {
   check(ok, '下から出る欄で担当を替えて保存（担当が変わりピン）', { vid, to });
   await panel(page).waitFor({ state: 'detached' });
   // 元に戻す（操作の行）
-  await page.getByTestId('undo-btn').click();
+  await pressTool(page, '元に戻す');
   const back = await waitStored(page, (d) => visitsKey(d) === visitsKey(before));
   check(back, '操作の行の「元に戻す」で担当が戻る');
   // 取り消す
@@ -288,7 +289,7 @@ async function multi(page) {
   await page.getByTestId('confirm-ok').click();
   const done = await waitStored(page, (d) => !!visitOf(d, ida)?.cancelled && !!visitOf(d, idb)?.cancelled);
   check(done, 'まとめて取り消す（確認のあと2件）');
-  await page.getByTestId('undo-btn').click();
+  await pressTool(page, '元に戻す');
   const back = await waitStored(page, (d) => visitsKey(d) === visitsKey(before));
   check(back, '「元に戻す」で2件の取り消しが1手で戻る');
   // 「選ぶ」で入る・抜ける
@@ -670,9 +671,9 @@ async function keepRange(page) {
   await page.getByTestId('arrange-start').click();
   const band = page.locator('[data-testid="proposal-band"]');
   await band.waitFor({ timeout: 120000 });
-  await page.locator('.side-nav [data-testid="nav-link"]', { hasText: 'ホーム' }).click();
+  await clickMenu(page, 'ホーム');
   await page.waitForURL(/#\/home/);
-  await page.locator('.side-nav [data-testid="nav-link"]', { hasText: '基本情報' }).click();
+  await clickMenu(page, '基本情報');
   await page.waitForURL(/#\/basics/);
   await page.goto(`${BASE}#/month`);
   await page.getByTestId('schedule-toolbar').waitFor({ timeout: 60000 });

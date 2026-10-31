@@ -15,6 +15,7 @@ const { answerConfirms } = require('./lib/confirmDialog.cjs');
 const { BASE, OUT_DIR, NOW, TODAY, STORAGE_KEY, check, settle, urlOf, stored, runSteps } = require('./lib/env.cjs');
 const { planDays } = require('./lib/plan.cjs');
 const { pagePerStep } = require('./lib/steps.cjs');
+const { pressTool } = require('./lib/ui.cjs');
 
 /** 最終勤務日に入れる日（今日の30日後） */
 const LAST_DAY = new Date(Date.parse(`${TODAY}T00:00:00Z`) + 30 * 86400000).toISOString().slice(0, 10);
@@ -210,8 +211,7 @@ async function day(page) {
   await page.setViewportSize({ width: 390, height: 844 });
   await openPlan(page);
   // 390px の既定は日ごとのリスト（ADR-0055）。入らなかった訪問のカードは「その他 ▾」の「表示」で順番にして見る
-  await page.getByTestId('plan-more').click();
-  await page.getByTestId('plan-view-order').click();
+  await pressTool(page, 'plan-view-order');
   await page.locator('.route-col-none .candidate-box button', { hasText: '受けられる人' }).first().click();
   await page.getByTestId('candidate-list').waitFor({ timeout: 10000 });
   const list = page.getByTestId('candidate-list');

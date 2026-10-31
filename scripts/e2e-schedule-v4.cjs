@@ -15,6 +15,7 @@ const path = require('node:path');
 const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, settle, stored, until, runSteps } = require('./lib/env.cjs');
 const { markStandard } = require('./lib/standard.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
+const { clickMenu, pressTool } = require('./lib/ui.cjs');
 
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
 const shot = (page, name) => page.screenshot({ path: path.join(OUT_DIR, `${name}.png`) });
@@ -63,7 +64,7 @@ async function menu(page) {
     kids,
   );
   await shot(page, 'menu-1400');
-  await page.locator('.side-nav [data-key="arrange:basics"]').click();
+  await clickMenu(page, '基本情報');
   await page.waitForURL(/#\/basics$/);
   const tabs = page.getByTestId('people-tabs');
   await tabs.waitFor();
@@ -124,7 +125,7 @@ async function menu(page) {
   );
   await page.goto(`${BASE}#/compat`);
   await page.getByTestId('people-tabs').waitFor();
-  await page.locator('.side-nav [data-key="home"]').click();
+  await clickMenu(page, 'ホーム');
   await page.waitForURL(/#\/home/);
   const basicsHref = await page.locator('.side-nav [data-key="arrange:basics"]').getAttribute('href');
   check(/#\/basics$/.test(basicsHref ?? ''), 'メニューの「基本情報」は予定と相性（#/basics）を開く', basicsHref);
@@ -174,7 +175,7 @@ async function zoom(page) {
   }
   // 週・月の「欠勤・キャンセルを登録」は日の予定の欄を開く
   await openView(page, '/week');
-  await page.getByTestId('sudden-open').click();
+  await pressTool(page, '欠勤');
   await page.waitForURL(/#\/plan/);
   await page
     .getByTestId('sudden-kind-staff')
@@ -398,7 +399,7 @@ async function multi(page) {
     (await stored(page)).clients.find((c) => c.id === renamed)?.displayName === '別のタブで変えた名前',
     '週：確認の間の別のタブの変更を、取り消しが上書きしない',
   );
-  await page.getByTestId('undo-btn').click();
+  await pressTool(page, '元に戻す');
   const restored = await waitStored(page, (d) => !wids.some((id) => d.visits.some((v) => v.id === id && v.cancelled)));
   check(restored, '操作の行の「元に戻す」で取り消しを戻す');
 }
@@ -466,8 +467,7 @@ async function narrow(page) {
   }
   await openView(page, '/plan');
   // 390px の既定は日ごとのリスト（ADR-0055）。順番のカードは「その他 ▾」の「表示」から
-  await page.getByTestId('plan-more').click();
-  await page.getByTestId('plan-view-order').click();
+  await pressTool(page, 'plan-view-order');
   const cards = page.locator('.route-item .route-btn');
   await cards.first().waitFor({ timeout: 30000 });
   await cards.nth(0).click({ modifiers: ['Shift'] });
