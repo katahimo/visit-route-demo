@@ -24,28 +24,10 @@ export const SCHEDULE_GROUP = '予定';
 /** メニューの「予定」が受け持つ画面（月・週・日の予定と、その日の案を比べる。PRD D273） */
 export const SCHEDULE_PATHS: readonly string[] = ['/month', '/week', '/plan'];
 /**
- * 基本情報の画面（ADR-0067）：予定と相性の表・〈利用者さん〉・〈スタッフ〉・相性・勤務時間（シフト）・勤務の見込み
- * （〈利用者さん〉・〈スタッフ〉の画面も一覧に当てる。activeNavPath）。予定を組むの 1 の段
+ * メニューの「組む」が受け持つ画面（ADR-0063・ADR-0065〜ADR-0067・ADR-0074）：基本情報（予定と相性。相性・勤務時間（シフト）・
+ * 勤務の見込みは人のタブの画面で〈利用者さん〉・〈スタッフ〉の項目に印を付ける。PRD D394）・条件の重み・組み方の標準・担当を組む・案を比べる
  */
-export const BASICS_PATHS: readonly string[] = [
-  '/basics',
-  '/clients',
-  '/staff',
-  '/compat',
-  '/availability',
-  '/workload',
-];
-/**
- * メニューの「組む」が受け持つ画面（ADR-0063・ADR-0065〜ADR-0067・ADR-0074）：基本情報（〈利用者さん〉・〈スタッフ〉の一覧は
- * メニューの上の段の項目なので除く）・条件の重み・組み方の標準・担当を組む・案を比べる
- */
-export const ARRANGE_PATHS: readonly string[] = [
-  ...BASICS_PATHS.filter((p) => p !== '/clients' && p !== '/staff'),
-  '/rules',
-  '/standard',
-  '/arrange',
-  '/compare',
-];
+export const ARRANGE_PATHS: readonly string[] = ['/basics', '/rules', '/standard', '/arrange', '/compare'];
 /** 予定を組むの段（ADR-0067）：基本情報・組み方の標準の2段（同じ画面で1段ずつ出す）・担当を組む */
 export type ArrangeStepKey = 'basics' | 'proposals' | 'register' | 'arrange';
 /** 予定を組むの段の並び（作業の順。ADR-0067）。to は段の画面。条件の重みは段に入れない（組み方の標準の 2 からの寄り道） */
@@ -93,25 +75,21 @@ export const settingsTabs = (features: Features): { to: string; label: string }[
   SETTINGS_TABS.filter((t) => isHrefOn(features, t.to));
 
 /**
- * 基本情報のタブ（並び。ADR-0067。ADR-0054 の人のタブを予定を組むの 1 へ移した）。メニューは予定を組むの子「基本情報」1項目で、
- * 画面の上のタブで切り替える（設定のタブと同じ形）。勤務の見込みは勤務時間（シフト）の続き（タブは勤務時間（シフト）に印）
+ * 基本情報（予定と相性）のタブ（並び。ADR-0067・ADR-0074 段3）。メニューは「組む」の子「基本情報」1項目で、画面の上のタブで切り替える
+ * （設定のタブと同じ形）。〈利用者さん〉・〈スタッフ〉は人のタブの画面（lib/peopleTabs）なので入れない。勤務の見込みは勤務時間（シフト）の続き
+ * （タブは勤務時間（シフト）に印）
  */
-export const BASICS_TABS: readonly { to: string; label: 'client' | 'staff' | string; match?: readonly string[] }[] = [
+export const BASICS_TABS: readonly { to: string; label: string; match?: readonly string[] }[] = [
   { to: '/basics', label: '予定と相性' },
-  { to: '/clients', label: 'client' },
-  { to: '/staff', label: 'staff' },
   { to: '/compat', label: '相性' },
   { to: '/availability', label: '勤務時間（シフト）', match: ['/availability', '/workload'] },
 ];
 
-/** 切っていない基本情報のタブ（名前は呼び方から。〈利用者さん〉・〈スタッフ〉は「一覧」を付けない） */
-export const basicsTabs = (
-  terms: Pick<Terms, 'client' | 'staff'>,
-  features: Features,
-): { to: string; label: string; match: readonly string[] }[] =>
+/** 切っていない基本情報のタブ */
+export const basicsTabs = (features: Features): { to: string; label: string; match: readonly string[] }[] =>
   BASICS_TABS.filter((t) => isHrefOn(features, t.to)).map((t) => ({
     to: t.to,
-    label: t.label === 'client' ? terms.client : t.label === 'staff' ? terms.staff : t.label,
+    label: t.label,
     match: t.match ?? [t.to],
   }));
 
@@ -281,7 +259,7 @@ function arrangeMenuItem(features: Features, today: string, badges: MenuBadges):
       to: '/basics',
       label: '基本情報',
       icon: 'people',
-      match: BASICS_PATHS.filter((p) => p !== '/clients' && p !== '/staff'),
+      match: ['/basics'],
     },
     ...(badges.hasStandard
       ? []
@@ -330,8 +308,8 @@ function arrangeBadge(badges: MenuBadges): MenuItem['badge'] {
  * 子の項目を持つのは入の「組む」だけ（基本情報・組み方の標準（標準が無いときだけ）・担当を組む。作業の順。条件の重みは組み方の標準の寄り道。
  * ADR-0066・ADR-0067）。件数の印も「組む」の1つ（badges）。担当を組む（#/arrange）は切では予定の「その他 ▾」などから開き、メニューには出さない。
  * 今の画面の印：予定は月・週・日・空き状況（切はさらに比較・担当を組む）、〈利用者さん〉は一覧（切はさらに予定と相性）、
- * 〈スタッフ〉は一覧（切はさらに勤務時間（シフト）・勤務の見込み）、相性は切では最後に開いた側（lib/peopleTabs。PRD D389）、
- * 入では「組む」の基本情報に付く。設定は設定のタブ（親を押すと最後に開いたタブ）。
+ * 〈スタッフ〉は一覧・勤務時間（シフト）・勤務の見込み、相性は最後に開いた側（入切とも。lib/peopleTabs。PRD D394）、
+ * 入の予定と相性は「組む」の基本情報に付く。設定は設定のタブ（親を押すと最後に開いたタブ）。
  * 案を比べるは担当を組むから開く（メニュー・パレットには出さない）。下のタブは短い名前（short）も使う。today は今日。
  * features で切った機能の項目は出さない（lib/features の表から引く）
  */
@@ -349,7 +327,7 @@ export function menuSections(
     label,
     short: label,
     icon: side,
-    match: expert ? [`/${side}`] : peopleMatch(side, last.people),
+    match: peopleMatch(side, last.people, !expert),
   });
   const items: MenuItem[] = [
     {
@@ -377,11 +355,11 @@ export function menuSections(
 }
 
 /**
- * 画面の一覧（PRD D182・D230・D273・D275・D331）：コマンドパレットの「画面」と上の帯の画面の名前はここから引く（案を比べるは出さない）。
- * メニューでタブにまとめた画面（月・週・日の予定・基本情報のタブ・勤務の見込み・設定のタブ）も1つずつ持つ。
+ * 画面の一覧（PRD D182・D230・D273・D275・D331・D394）：コマンドパレットの「画面」と上の帯の画面の名前はここから引く（案を比べるは出さない）。
+ * メニューでタブにまとめた画面（月・週・日の予定・人のタブ・勤務の見込み・設定のタブ）も1つずつ持つ。
  * 予定（月の予定・週の予定・日の予定・空き状況。切のときは担当を組むもここ。ホームは無い。PRD D383・D390）／
- * 〈利用者さん〉・〈スタッフ〉（入のとき。呼び名そのまま）／基本情報（入のとき：予定と相性・相性・勤務時間（シフト）・勤務の見込み。ADR-0067）／
- * 組む（入のとき：条件の重み・組み方の標準・担当を組む）／切のときは 予定と相性・〈利用者さん〉・〈スタッフ〉・相性・勤務を区分なしの1グループに並べる／
+ * 人（区分の名前は付けない。〈利用者さん〉・〈スタッフ〉は呼び名そのまま・相性・勤務時間（シフト）・勤務の見込み。切はさらに先頭に予定と相性）／
+ * 組む（入のとき：予定と相性（基本情報）・条件の重み・組み方の標準・担当を組む）／
  * 設定（訪問の種類・特性の項目・管理者設定・データ）。
  * 項目名は画面の見出しと同じ。切った機能の画面は出さない
  */
@@ -410,15 +388,13 @@ export function screenSections(terms: Pick<Terms, 'client' | 'staff'>, features:
         vacancyScreen,
       ],
     },
-    // 入：〈利用者さん〉・〈スタッフ〉は呼び名そのままの項目（メニューの上の段の項目。PRD D390）、基本情報（予定と相性・相性・勤務）は区分の名前つき。
-    // 切：区分の名前は付けず、1つのグループに並べる（上の帯は項目名だけ。PRD D383・D385）
-    ...(expert
-      ? [{ items: [clientsScreen, staffScreen] }, { title: '基本情報', items: [basicsScreen, ...workScreens] }]
-      : [{ items: [basicsScreen, clientsScreen, staffScreen, ...workScreens] }]),
+    // 人：区分の名前は付けず、1つのグループに並べる（上の帯は項目名だけ。PRD D383・D385・D394）。予定と相性は切だけここ、入は「組む」の1段目
+    { items: [...(expert ? [] : [basicsScreen]), clientsScreen, staffScreen, ...workScreens] },
     {
       title: '組む',
       items: expert
         ? [
+            basicsScreen,
             { key: 'rules', to: '/rules', label: '条件の重み', icon: 'rules' },
             { key: 'standard', to: '/standard', label: '組み方の標準', icon: 'standard' },
             arrangeScreen,

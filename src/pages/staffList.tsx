@@ -1,12 +1,12 @@
 // 〈スタッフ〉一覧の部品（PRD D71・D220・D308。ADR-0015）：最終勤務日のある人の枠と、一覧の1行（狭い画面ではカード）
-import { CalendarX, Clock, Eye, MapPin, Smartphone, UserRoundCog } from 'lucide-react';
+import { CalendarX, Eye, MapPin, Smartphone, UserRoundCog } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { CondChips, TraitChips } from '../components/conditions';
 import { StaffMark } from '../components/StaffMark';
 import { WithIcon } from '../components/ui';
 import type { Staff } from '../contracts/documents';
 import type { Item } from '../contracts/rules';
-import { hasLocation, WEEKDAY_LABELS } from '../lib/common';
+import { hasLocation } from '../lib/common';
 import { mdText } from '../lib/dateText';
 import { narrowRole } from '../lib/narrowRoles';
 import { type StaffCol, shiftText, staffNameNote, workDaysText } from '../lib/peopleView';
@@ -65,7 +65,6 @@ const COL_LABEL: Record<StaffCol, (clientTerm: string) => string> = {
   name: () => '名前',
   days: () => '勤務日',
   hours: () => '勤務時間',
-  work: () => '勤務',
   traits: () => '特性',
   requires: (client) => `${client}に求めること`,
   home: () => '自宅の位置',
@@ -109,7 +108,7 @@ function StaffCell({
           <span className="with-staff-mark">
             <StaffMark staff={s} size="md" />
             {s.name}
-            {/* 切は状態の列を出さないので、例外の休止中だけ名前のそばに残す */}
+            {/* 状態の列を出さないときは、例外の休止中だけ名前のそばに残す */}
             {staffNameNote(s, cols) && <span className="chip">{staffNameNote(s, cols)}</span>}
           </span>
         </td>
@@ -124,14 +123,6 @@ function StaffCell({
       return (
         <td {...narrowRole.cell} className="nowrap" data-label="勤務時間" data-testid="staff-hours">
           {shiftText(s)}
-        </td>
-      );
-    case 'work':
-      return (
-        <td {...narrowRole.cell} className="nowrap" data-label="勤務">
-          <WithIcon icon={Clock} size={14}>
-            {s.workDays.map((d) => WEEKDAY_LABELS[d]).join('')} {s.shiftStart}〜{s.shiftEnd}
-          </WithIcon>
         </td>
       );
     case 'traits':
@@ -192,7 +183,7 @@ export function StaffRow({
   onOpen,
 }: {
   s: Staff;
-  /** 出す列（切は名前・勤務日・勤務時間。lib/peopleView） */
+  /** 出す列（名前・勤務日・勤務時間の3列と、くわしい列。lib/peopleView） */
   cols: readonly StaffCol[];
   clientTerm: string;
   /** 〈スタッフ〉の項目（特性のチップ） */

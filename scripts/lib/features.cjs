@@ -66,9 +66,9 @@ const MENU_NO_EXPERT = ['予定', '利用者さん', 'スタッフ', '設定'];
 const ARRANGE_KIDS = ['arrange:basics', 'arrange:standard', 'arrange:assign'];
 /** 組み方の標準を登録したあとの組むの子（基本情報・担当を組む。標準の組み直しは担当を組むの見出しの［標準の組み方を変える］から） */
 const ARRANGE_KIDS_WITH_STANDARD = ['arrange:basics', 'arrange:assign'];
-/** 基本情報のタブ（人のタブ。先頭に「予定と相性」。相性はどのひな形でも入。ADR-0067） */
-const PEOPLE_KIDS = ['予定と相性', '利用者さん', 'スタッフ', '相性', '勤務時間（シフト）'];
-/** エキスパート機能が入の画面の一覧（パレットの画面。ホームは無い。〈利用者さん〉・〈スタッフ〉は呼び名そのまま、基本情報は区分。PRD D273・D275・D390） */
+/** 基本情報（予定と相性）のタブ（入のとき。〈利用者さん〉・〈スタッフ〉は人のタブの画面なので入れない。相性はどのひな形でも入。ADR-0067・ADR-0074 段3） */
+const BASICS_TABS = ['予定と相性', '相性', '勤務時間（シフト）'];
+/** エキスパート機能が入の画面の一覧（パレットの画面。ホームは無い。人の1グループ（〈利用者さん〉・〈スタッフ〉は呼び名そのまま・相性・勤務）と、組むの先頭に予定と相性。PRD D273・D275・D390・D394） */
 const EXPERT_SCREENS = [
   '月の予定',
   '週の予定',
@@ -76,10 +76,10 @@ const EXPERT_SCREENS = [
   '空き状況',
   '利用者さん',
   'スタッフ',
-  '予定と相性',
   '相性',
   '勤務時間（シフト）',
   '勤務の見込み',
+  '予定と相性',
   '条件の重み',
   '組み方の標準',
   '担当を組む',
@@ -191,12 +191,12 @@ async function basicsTabs(page) {
   await open(page, '/basics', '[data-testid="people-tabs"]');
   return (await page.getByTestId('people-tabs').locator('a').allInnerTexts()).map((x) => x.trim());
 }
-/** 〈利用者さん〉・〈スタッフ〉の小さいタブ（エキスパート機能が切のとき。to の一覧を開いて読む。タブの名前の並び。PRD D389） */
+/** 〈利用者さん〉・〈スタッフ〉の小さいタブ（入切とも。to の一覧を開いて読む。タブの名前の並び。PRD D394） */
 async function peopleTabs(page, to) {
   await open(page, to, '[data-testid="people-tabs"]');
   return (await page.getByTestId('people-tabs').locator('a').allInnerTexts()).map((x) => x.trim());
 }
-/** 小さいタブ（切）：〈利用者さん〉＝一覧・相性、〈スタッフ〉＝一覧・勤務・相性（相性はどのひな形でも入。勤務時間（シフト）は土台） */
+/** 小さいタブ（入切とも）：〈利用者さん〉＝一覧・相性、〈スタッフ〉＝一覧・勤務・相性（相性はどのひな形でも入。勤務時間（シフト）は土台） */
 const CLIENT_TABS = ['一覧', '相性'];
 const STAFF_TABS = ['一覧', '勤務', '相性'];
 /** パレットの候補（打つ前＝操作と画面） */
@@ -263,7 +263,7 @@ module.exports = {
   ARRANGE_KIDS_WITH_STANDARD,
   arrangeKidsFor,
   peopleKidsFor,
-  PEOPLE_KIDS,
+  BASICS_TABS,
   ALL_SCREENS,
   EXPERT_SCREENS,
   HIDDEN,

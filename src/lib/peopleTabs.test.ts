@@ -47,9 +47,11 @@ describe('どちらの側か', () => {
     expect(rememberedSide('/month', 'staff')).toBe('staff');
   });
   it('メニューの印：相性は覚えた側の1つにだけ付く', () => {
-    expect(peopleMatch('clients', undefined)).toEqual(['/clients', '/basics', '/compat']);
-    expect(peopleMatch('staff', undefined)).toEqual(['/staff', '/availability', '/workload']);
-    expect(peopleMatch('staff', 'staff')).toEqual(['/staff', '/availability', '/workload', '/compat']);
-    expect(peopleMatch('clients', 'staff')).toEqual(['/clients', '/basics']);
+    expect(peopleMatch('clients', undefined, true)).toEqual(['/clients', '/basics', '/compat']);
+    expect(peopleMatch('staff', undefined, true)).toEqual(['/staff', '/availability', '/workload']);
+    expect(peopleMatch('staff', 'staff', true)).toEqual(['/staff', '/availability', '/workload', '/compat']);
+    expect(peopleMatch('clients', 'staff', true)).toEqual(['/clients', '/basics']);
+    // 入は予定と相性を「組む」の基本情報に付けるので〈利用者さん〉に含めない
+    expect(peopleMatch('clients', undefined, false)).toEqual(['/clients', '/compat']);
   });
 });

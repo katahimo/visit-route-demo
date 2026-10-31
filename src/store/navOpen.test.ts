@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { STORAGE_KEY } from '../contracts/data';
-import { createNavOpenMemory, detailsOpenKey, NAV_OPEN_KEY } from './navOpen';
+import { columnsOpenKey, createNavOpenMemory, detailsOpenKey, NAV_OPEN_KEY } from './navOpen';
 
 const fake = (init: Record<string, string> = {}) => {
   const m = new Map<string, string>(Object.entries(init));
@@ -85,5 +85,18 @@ describe('detailsOpenKey（「詳しく ▾」の開け閉めの鍵）', () => {
     const again = createNavOpenMemory(() => ls).read();
     expect(again[detailsOpenKey('week')]).toBe(true);
     expect(again[detailsOpenKey('month')]).toBeUndefined();
+  });
+});
+
+describe('columnsOpenKey（一覧の「くわしい列」の鍵）', () => {
+  it('一覧ごとに別の鍵（ほかの鍵と重ならない）。出したことを覚えて読み直しても出したまま', () => {
+    const { ls } = fake();
+    const nav = createNavOpenMemory(() => ls);
+    const keys = [columnsOpenKey('clients'), columnsOpenKey('staff'), detailsOpenKey('day'), 'intro:clients'];
+    expect(new Set(keys).size).toBe(4);
+    nav.write(columnsOpenKey('staff'), true);
+    const again = createNavOpenMemory(() => ls).read();
+    expect(again[columnsOpenKey('staff')]).toBe(true);
+    expect(again[columnsOpenKey('clients')]).toBeUndefined();
   });
 });

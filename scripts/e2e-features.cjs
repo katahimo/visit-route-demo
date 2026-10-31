@@ -32,7 +32,7 @@ const {
   ARRANGE_KIDS,
   arrangeKidsFor,
   peopleKidsFor,
-  PEOPLE_KIDS,
+  BASICS_TABS,
   screensFor,
   settingsTabsFor,
   settingsKidsFor,
@@ -236,25 +236,21 @@ async function checkTemplate(page, t) {
   const tabs = await page.getByTestId('bottom-tab').allInnerTexts();
   check(same(tabs, tabsFor(on)), `${label}：下のタブ`, tabs);
   if (expert) {
+    // 基本情報（予定と相性）のタブ：予定と相性・相性・勤務時間（シフト）。〈利用者さん〉・〈スタッフ〉は人のタブの画面（PRD D394）
     const bt = await basicsTabs(page);
-    check(
-      same(bt, PEOPLE_KIDS),
-      `${label}：基本情報のタブ（予定と相性・利用者さん・スタッフ・相性・勤務時間（シフト））`,
-      bt,
-    );
-  } else {
-    // エキスパート機能が切：基本情報のタブでなく〈利用者さん〉・〈スタッフ〉の小さいタブ（予定と相性は出さない。PRD D389）
-    const ct = await peopleTabs(page, '/clients');
-    const st = await peopleTabs(page, '/staff');
-    check(
-      same(ct, CLIENT_TABS) && same(st, STAFF_TABS),
-      `${label}：小さいタブ（利用者さん＝一覧・相性、スタッフ＝一覧・勤務・相性）`,
-      {
-        ct,
-        st,
-      },
-    );
+    check(same(bt, BASICS_TABS), `${label}：基本情報のタブ（予定と相性・相性・勤務時間（シフト））`, bt);
   }
+  // 〈利用者さん〉・〈スタッフ〉の小さいタブは入切とも同じ（予定と相性は出さない。PRD D394）
+  const ct = await peopleTabs(page, '/clients');
+  const st = await peopleTabs(page, '/staff');
+  check(
+    same(ct, CLIENT_TABS) && same(st, STAFF_TABS),
+    `${label}：小さいタブ（利用者さん＝一覧・相性、スタッフ＝一覧・勤務・相性）`,
+    {
+      ct,
+      st,
+    },
+  );
   await openHome(page, on);
   const pal = await paletteItems(page);
   check(same(pal.screens, screensFor(t)), `${label}：パレットの画面`, pal.screens);

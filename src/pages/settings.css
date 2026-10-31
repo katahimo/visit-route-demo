@@ -742,3 +742,17 @@
   }
 }
 
+/* 一覧の表の上の「くわしい列」の切り替え（入のとき。PRD D394） */
+.people-columns-bar {
+  justify-content: flex-end;
+}
+
+/* くわしい列を入れても住所・いつもの予定が細く折れ返らないように（狭い画面はカードなので当てない） */
+@media (min-width: 601px) {
+  .people-table td[data-label='住所'] {
+    min-width: 15em;
+  }
+  .people-table td[data-label='いつもの予定'] {
+    min-width: 9em;
+  }
+}

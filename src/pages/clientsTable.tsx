@@ -14,16 +14,16 @@ import { colorOf, initialOf } from '../lib/colors';
 import { hasLocation } from '../lib/common';
 import { narrowRole } from '../lib/narrowRoles';
 import { addressLine, type ClientCol, clientColumns, clientNameNote, usualPlanText } from '../lib/peopleView';
-import { formatPostalCode } from '../lib/postalCode';
 import { shouldOpenRow } from '../lib/rowOpen';
 import { orDash } from '../lib/viewMode';
 
 /** どの行でも同じもの */
 type RowContext = {
   data: DemoData;
-  /** 出す列（切は名前・住所・いつもの予定の3列。lib/peopleView） */
+  /** 出す列（名前・住所・いつもの予定の3列と、くわしい列。lib/peopleView） */
   cols: readonly ClientCol[];
-  only: boolean;
+  /** くわしい列を出しているか（名前の下によみ・紹介元を添える） */
+  detailed: boolean;
   stageOn: boolean;
   allowedOn: boolean;
   clientItems: Item[];
@@ -53,7 +53,7 @@ export function ClientsTable({
   usualMap,
   stageOn,
   allowedOn,
-  only,
+  detailed,
   onOpen,
 }: {
   shown: Client[];
@@ -64,18 +64,18 @@ export function ClientsTable({
   usualMap: ReadonlyMap<string, string>;
   stageOn: boolean;
   allowedOn: boolean;
-  /** エキスパート機能が切か（切は3列だけ。PRD D385） */
-  only: boolean;
+  /** くわしい列を出しているか（入で切り替えを入れたとき。PRD D394） */
+  detailed: boolean;
   /** 行を押したとき（その人の画面へ） */
   onOpen: (c: Client) => void;
 }) {
   const terms = data.org.terms;
   const staffName = (id: string | null) => (id ? (staff.find((s) => s.id === id)?.name ?? '（不明）') : '');
-  const cols = clientColumns(only);
+  const cols = clientColumns(detailed);
   const ctx: RowContext = {
     data,
     cols,
-    only,
+    detailed,
     stageOn,
     allowedOn,
     clientItems: data.items.filter((i) => i.target === 'client'),
@@ -150,9 +150,8 @@ function ClientsRow({ c, ctx }: { c: Client; ctx: RowContext }) {
   );
 }
 
-/** 名前のセル（色の丸・名前・仮の印。入はよみ・住所・紹介元も添える） */
+/** 名前のセル（色の丸・名前・仮の印。くわしい列を出しているときはよみ・紹介元も添える） */
 function NameCell({ c, ctx }: { c: Client; ctx: RowContext }) {
-  const simple = ctx.only;
   return (
     <td {...narrowRole.cell} className="narrow-title" data-label="名前">
       <span className="row person-name">
@@ -163,19 +162,15 @@ function NameCell({ c, ctx }: { c: Client; ctx: RowContext }) {
           <span className="row" style={{ gap: 6 }}>
             {c.displayName}
             {c.tentative && <TentativeMark />}
-            {/* 切は状態の列を出さないので、例外の休み中は名前のそばに残す */}
+            {/* 状態の列を出さないときは、例外の休み中を名前のそばに残す */}
             {clientNameNote(!!leaveOn(ctx.data.clientLeaves, c.id, ctx.today), ctx.cols) && (
               <span className="chip chip-warn">休み中</span>
             )}
           </span>
-          {!simple && c.kana && <small className="person-sub">{c.kana}</small>}
-          {!simple && (c.place.address || c.place.postalCode) && (
-            <small className="person-sub">
-              {c.place.postalCode && `〒${formatPostalCode(c.place.postalCode)} `}
-              {c.place.address}
-            </small>
+          {ctx.detailed && c.kana && <small className="person-sub">{c.kana}</small>}
+          {ctx.stageOn && ctx.detailed && c.referrer.name && (
+            <small className="person-sub">紹介元：{c.referrer.name}</small>
           )}
-          {ctx.stageOn && !simple && c.referrer.name && <small className="person-sub">紹介元：{c.referrer.name}</small>}
         </span>
       </span>
     </td>

@@ -90,10 +90,10 @@ describe('候補', () => {
       '空き状況',
       '利用者さん',
       'スタッフ',
-      '予定と相性',
       '相性',
       '勤務時間（シフト）',
       '勤務の見込み',
+      '予定と相性',
       '条件の重み',
       '組み方の標準',
       '担当を組む',
@@ -103,7 +103,8 @@ describe('候補', () => {
       'データ',
     ]);
     expect(s.find((x) => x.to === '/clients')!.hint).toBe('');
-    expect(s.find((x) => x.to === '/availability')!.hint).toBe('基本情報');
+    expect(s.find((x) => x.to === '/availability')!.hint).toBe('');
+    expect(s.find((x) => x.to === '/basics')!.hint).toBe('組む');
     expect(s.find((x) => x.to === '/data')!.hint).toBe('設定');
     expect(s.find((x) => x.to === '/plan')!.hint).toBe('予定');
     expect(s.find((x) => x.to === '/vacancy')!.hint).toBe('予定');
