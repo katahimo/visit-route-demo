@@ -5,3 +5,5 @@ __pycache__/
 .claude/worktrees/
 test-results/
 playwright-report/
+tools/anonymize/data/
+tools/anonymize/out/
