@@ -9,12 +9,12 @@ import './intro.css';
 import { IconButton } from './ui';
 import { useExceptionsOnly } from './useFeature';
 
-/** 見出しの下に出す説明（出さないときは undefined）。expertText は入の文（simpleText は切の一覧の文。月・週・日の切の文は lib/exceptionView が持つ） */
-export function useIntro(zoom: IntroScreen, expertText: string, simpleText?: string): ReactNode {
+/** 見出しの下に出す説明（出さないときは undefined）。expertText は入の文（exceptionText は切の一覧の文。月・週・日の切の文は lib/exceptionView が持つ） */
+export function useIntro(zoom: IntroScreen, expertText: string, exceptionText?: string): ReactNode {
   const only = useExceptionsOnly();
   const stored = useSyncExternalStore(navOpenMemory.subscribe, navOpenMemory.read, navOpenMemory.cached);
   if (!introShown(stored, zoom)) return undefined;
-  const text = introText(zoom, only, expertText, simpleText);
+  const text = introText(zoom, only, expertText, exceptionText);
   return (
     <span className="page-lead-row" data-testid="page-intro">
       <span className="page-intro-text" title={text}>

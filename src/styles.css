@@ -393,11 +393,6 @@ tbody tr:hover td {
   border-left: 3px dotted var(--line);
   margin-left: 20px;
 }
-.grid2 {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 16px;
-}
 .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -1878,17 +1873,6 @@ label.check input {
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
-}
-/* スマホ（600px 以下）では読み上げだけに残す文字（アイコンのボタンの名前。PRD D334） */
-@media (max-width: 600px) {
-  .m-sr {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-  }
 }
 .trait-chips {
   display: flex;

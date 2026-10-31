@@ -45,7 +45,7 @@ export type CellGuideInput = {
 
 /** 要対応の内訳の文（入は4種類、切は帯の3種類） */
 const CARE_KINDS = '担当なし・担当が休み・条件に合わない・時間に間に合わない';
-const CARE_KINDS_SIMPLE = '担当なし・重なり・休みの人';
+const CARE_KINDS_NO_CONFIRM = '担当なし・重なり・休みの人';
 
 /**
  * マスの読み方の行（出ている印の順。出ていない印は書かない）。例「休 2＝休む〈スタッフ〉の人数（希＝希望休の人数）」
@@ -53,14 +53,16 @@ const CARE_KINDS_SIMPLE = '担当なし・重なり・休みの人';
  */
 export function cellGuide(x: CellGuideInput): string[] {
   const out: string[] = [];
-  const simple = x.confirmStep === false;
+  const noConfirm = x.confirmStep === false;
   if (x.stateText) out.push(`背景の色＝日の状態（${x.stateText}）`);
   else out.push('白い背景＝訪問の無い日');
   if (x.care)
-    out.push(`${x.attention ? '赤い枠' : '赤い点・赤い枠'}＝要対応（${simple ? CARE_KINDS_SIMPLE : CARE_KINDS}）`);
+    out.push(
+      `${x.attention ? '赤い枠' : '赤い点・赤い枠'}＝要対応（${noConfirm ? CARE_KINDS_NO_CONFIRM : CARE_KINDS}）`,
+    );
   if (x.attention)
     out.push(
-      simple
+      noConfirm
         ? '赤い「要対応 N」の札＝要対応の件数（右の「要対応」の欄の行の数。担当なし・重なり・休みの人・変更あり）'
         : '赤い「要対応 N」の札＝要対応の件数（右の「要対応」の欄の行の数。要対応の訪問・未連絡の変更・拘束超）',
     );
@@ -78,11 +80,11 @@ export function cellGuide(x: CellGuideInput): string[] {
   if (x.issues) out.push('「担当が休み N」など＝担当を確かめる訪問の件数（日の予定で直す）');
   if (x.changed)
     out.push(
-      simple
+      noConfirm
         ? '「変更あり N」＝決まったあとに担当・時刻が変わった訪問の件数（押すと連絡の一覧）'
         : '「未連絡 N」＝確定（伝えた）あとに担当・時刻が変わった訪問の件数（連絡の一覧で確かめる）',
     );
-  if (x.overSpan && !simple) out.push('「拘束超 N」＝出勤〜退勤（拘束）が上限を超える人数');
+  if (x.overSpan && !noConfirm) out.push('「拘束超 N」＝出勤〜退勤（拘束）が上限を超える人数');
   if (x.loadBar === 'load') out.push(`下の3段の棒＝30分ごとの空きの人数（高いほど空きが少ない。${barRowsText()}）`);
   else if (x.loadBar === 'noPlan') out.push('棒が無い＝この日は空きを数えられない');
   if (x.focus === 'staff')

@@ -18,7 +18,7 @@ export type AbsenceTool = { node: ReactNode; item: MenuItem };
 /** 日の「予定を入れる」（押せない理由があれば why。スマホは null＝ボタンにしない） */
 export type AddTool = { onClick: () => void; why: string | false };
 
-export function SimpleToolbar({
+export function ToolbarRow({
   zoom,
   className,
   expert,

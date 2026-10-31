@@ -14,13 +14,13 @@ export type BandArrange = { count: number; running: boolean; run: () => void };
 export function useBandArrange(): BandArrange | null {
   const { data } = useDemoData();
   const running = useValueStore(autoArrange.run) !== null;
-  const simple = exceptionsOnly(data.org.features);
+  const exceptionOnly = exceptionsOnly(data.org.features);
   const today = jstDate(Date.now());
   const count = useMemo(
-    () => (simple ? targetCount(unassignedTargets(data, today, autoRange(today))) : 0),
-    [simple, data, today],
+    () => (exceptionOnly ? targetCount(unassignedTargets(data, today, autoRange(today))) : 0),
+    [exceptionOnly, data, today],
   );
-  if (!simple || (count === 0 && !running)) return null;
+  if (!exceptionOnly || (count === 0 && !running)) return null;
   return {
     count,
     running,

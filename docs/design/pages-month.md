@@ -1,7 +1,7 @@
 # 月の予定と月の印刷
 
 > この画面のファイル：`src/pages/MonthPage.tsx`（`month.css`。画面は組み立てだけ。状態と処理は同じディレクトリの `useMonthNav`・`useMonthFocus`・`useMonthDays`・`useMonthFocusDays`・`useMonthOff`・`useMonthAside`・`useMonthBatch`・`useMonthMenu`（`useMonthPanels`・`monthMore`）・`useMonthDayList`・`useMonthVisitRows`・`useMonthListRows`、見た目は `monthSections.tsx`（区画）・`monthParts.tsx`（見出しの欄・凡例）・`monthGrid.tsx`（カレンダーの表・日ごとの一覧）・`monthCell.tsx`（日のマス `DayCell`）・`monthCellTip.tsx`（`MonthCellTip`）・`monthAside.tsx`（右の欄・下から出る欄）、計算は `src/lib/monthCell.ts`（マスの読み上げ・吹き出しの文 `dayCellText`）・`monthView.ts`（表示の選択・日ごとの集計・一覧の行など））・`MonthPrintPage.tsx`（`monthPrint.css`）、`src/lib/month.ts`・`monthList.ts`・`monthGuide.ts`・`monthPrint.ts`・`requestedOff.ts`・`dayStatuses.ts`・`confirmDay.ts`、`src/components/useDayStatuses.ts`・`useBulkConfirm.ts`（まとめて確定。週と共通）・`visitParts.tsx`（マスの選ぶ・その日の回の一覧の行・ドラッグ）・`scheduleParts.tsx`（選択の帯の「別の日へ」）。関連 ADR：0012（追記を含む）・0013・0014・0015・0025 追記・0031・0032・0042・0056・0057。関連 PRD：D36〜D44・D53〜D55・D65・D69・D70・D151〜D154・D176・D189〜D192・D201〜D204・D223・D228・D256・D257・D313・D339〜D343。
-> 3段のバー・混み具合の塗りは [pages-bars.md](pages-bars.md)、進み具合の帯は [pages-home.md](pages-home.md)、帯の印・選ぶ・キー・1行1訪問の行 `VisitRow`・ドラッグの落とし先の判定の共通の部品は [pages-common.md](pages-common.md) の「訪問の札の共通の部品」。
+> 3段のバー・混み具合の塗りは [pages-bars.md](pages-bars.md)、進み具合の帯は [pages-progress.md](pages-progress.md)、帯の印・選ぶ・キー・1行1訪問の行 `VisitRow`・ドラッグの落とし先の判定の共通の部品は [pages-common.md](pages-common.md) の「訪問の札の共通の部品」。
 > 版2（ADR-0053）：担当は訪問に持ち、日の状態は「まだ伝えていない／確定済み／未連絡の変更あり」、要対応は訪問ごとの検査。「案なし・案あり・未作成・条件が変わった・欠勤あり（対応済み）」は無い
 
 ### 月の予定（`#/month`）
@@ -117,7 +117,7 @@
 エキスパート機能（`expert`）が切のとき（既定。ADR-0073・PRD D382）は確定の段階を出さない（`lib/settledView` の `showConfirmStep`）：進み具合の帯の「確定 N/N日」と次の一手の「確定していない日を見る」（`bandNext` の `confirmStep`）・右の欄の「確定していない日」とまとめて確定（`?do=unconfirmed` は要対応へ）・マスの鍵と「まだ伝えていない」「確定済み」の色・文（`shownDayState`・`dayStateText`。日の状態は「変更あり」だけ見せる）は出さない。決まったあとの変更は訪問の「変更あり」の印と、マスの鉛筆の印（どちらも押すとその日の日の予定の連絡の一覧。マスのクリックの中で印を見分けて `/plan?date=…&do=told` へ移る）。例外だけ見せる（PRD D384）：進み具合の帯・月全体の件数（「月全体：担当なし N件」）・凡例は上の画面に出さず「詳しく ▾」（`month-details`。閉じて始まる）の中へ。操作の行は主「予定を入れる」＋「欠勤・キャンセルを登録」（担当なしを組むは要対応の帯。PRD D402・D403）で、見せ方（カレンダー／日ごとの一覧）・元に戻す・表示を選ぶ・印刷などは「その他 ▾」。説明は1行で初回だけ（閉じたら覚える）。要対応は帯と同じ分け方（担当なし・重なり・休みの人。`lib/attentionBand` の `exceptionStatus`。`useMonthDays` が日の状態を絞る）で数え、日のマスの赤枠・「要対応 N」・「条件に合わない」の旗・拘束超の札、右の欄の要対応の行・進み具合の数もそれにそろう（拘束超の行は出さない）。右の欄の内訳（括弧）は「詳しく」の中、未連絡の変更は「変更あり」と言う。マスの種類・混み具合のバーと▶■の印は変えない（凡例は「詳しく」の中）。以下は入のときの定め
 
 - 確定していない日（`progress.unconfirmed`＝今日以降の訪問があって確定済みでない日）：
-  - 上に「問題の無い日をまとめて確定（N日）」（`month-confirm-bulk`・`data-count`。PRD D223。主ボタンにしない（月の主ボタンは帯の次の一手））。確定していない日が0日なら出さない
+  - 上に「問題の無い日をまとめて確定（N日）」（`month-confirm-bulk`・`data-count`。PRD D223。主ボタンにしない（主ボタンは操作の行の「予定を入れる」））。確定していない日が0日なら出さない
   - 対象は `lib/confirmDay` の `bulkConfirmTargets(unconfirmed, statusOf, attention)`（日の状態は `useDayStatuses` のもの）：まだ伝えていない日で、要対応の訪問が無く（`care` が0）、要対応（第3引数の `attentionList`。未連絡の変更は除く）に出ない日。残すのは問題のある日（`problem`）・未連絡の変更のある日（`changed`。日の予定の連絡の一覧で確かめて確定し直す）
   - 0日なら押せず、下に理由 `month-confirm-why`（aria-describedby。`bulkConfirmWhy`：問題のある日がある／未連絡の変更のある日がある／確定していない日は無い）。あれば下に対象の決まりの1行（`month-confirm-note`）。組んでいる間（担当を AI で組む）は押せない。印刷では出さない
   - 押すと独自の確認（`bulkConfirmDialog`）：見出し「問題の無い N日を確定しますか？」、本文に日付（`datesText`：「10/22（水）・10/23（木）… 計 N日」。7日を超えたら先頭6日と「…」）・担当が書き換わる旨・「問題のある M日は残します（要対応で確認）：日付」・「前に確定した割当と違う M日も残します（日の予定で確定し直します）。」・「案の無い M日も残します。」、ボタン「N日を確定する」
