@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  addressCellText,
   addressLine,
   clientColumns,
   clientFolded,
@@ -88,6 +89,15 @@ describe('短い文', () => {
     expect(addressLine({ address: '東京都千代田区1-1', postalCode: '1000001' })).toBe('東京都千代田区1-1');
     expect(addressLine({ address: '', postalCode: '1000001' })).toBe('〒100-0001');
     expect(addressLine({ address: '', postalCode: '' })).toBe('');
+  });
+  it('一覧の住所の列：入は〒郵便番号を添え、切は住所だけ（無ければ郵便番号）', () => {
+    const both = { address: '東京都千代田区1-1', postalCode: '1000001' };
+    expect(addressCellText(both, true)).toBe('〒100-0001 東京都千代田区1-1');
+    expect(addressCellText(both, false)).toBe('東京都千代田区1-1');
+    expect(addressCellText({ address: '', postalCode: '1000001' }, true)).toBe('〒100-0001');
+    expect(addressCellText({ address: '東京都千代田区1-1', postalCode: '' }, true)).toBe('東京都千代田区1-1');
+    expect(addressCellText({ address: '', postalCode: '1000001' }, false)).toBe('〒100-0001');
+    expect(addressCellText({ address: '', postalCode: '' }, true)).toBe('');
   });
   it('勤務日は曜日の順、勤務時間は始〜終', () => {
     expect(workDaysText({ workDays: [5, 1, 3] })).toBe('月水金');

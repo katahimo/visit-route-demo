@@ -721,7 +721,7 @@ const columnsMemory = (page, list) =>
   page.evaluate(([k, l]) => JSON.parse(localStorage.getItem(k) ?? '{}')[`columns:${l}`] ?? null, [INTRO_KEY, list]);
 
 /** 入の一覧：3列で始め、「くわしい列」の切り替えで専門の列が足され、覚えて読み直しても同じ（一覧ごと。PRD D394） */
-async function expertList(page, w, { to, list, table, row, simple, extra, heading }) {
+async function expertList(page, w, { to, list, table, row, simple, extra, heading, postal }) {
   await openPage(page, to);
   await page.locator(row).first().waitFor({ timeout: 60000 });
   check(
@@ -741,7 +741,7 @@ async function expertList(page, w, { to, list, table, row, simple, extra, headin
     `入 ${list}（${w}）：行のセルは3列＋開く`,
   );
   check(
-    !/状態」の印/.test(await page.locator('main, .content').first().innerText()),
+    !/状態」の印/.test(await page.locator('main, .content').first().textContent()),
     `入 ${list}（${w}）：状態の列が無い間は「状態」の印の説明を出さない`,
   );
   check(
@@ -749,6 +749,21 @@ async function expertList(page, w, { to, list, table, row, simple, extra, headin
       (await page.getByTestId('arrange-steps').count()) === 0,
     `入 ${list}（${w}）：基本情報のタブ・予定を組むの段は出さない`,
   );
+  if (postal) {
+    // 住所の列に〒郵便番号を添える（データに郵便番号のある人がいるとき）
+    const withPostal = await page.evaluate(
+      ([k]) => JSON.parse(localStorage.getItem(k)).clients.filter((c) => c.place.postalCode).length,
+      [STORAGE_KEY],
+    );
+    if (withPostal > 0) {
+      const addr = await texts(page.locator(`[data-testid="${postal}"]`));
+      check(
+        addr.some((t) => /〒\d{3}-\d{4}/.test(t)),
+        `入 ${list}（${w}）：住所の列に〒郵便番号が出る`,
+        addr.slice(0, 3),
+      );
+    }
+  }
   await shot(page, `expert-${list}-list-${page.viewportSize().width}`);
   // 入れると専門の列が足され、覚える
   await toggle.check();
@@ -806,6 +821,11 @@ async function expertPeople(page) {
       simple: ['名前', '勤務日', '勤務時間'],
       extra: ['特性', `${terms.client}に求めること`, '自宅の位置', '状態'],
     });
+    // 一覧ごとに覚える：〈スタッフ〉を入れても〈利用者さん〉は入っていない
+    check(
+      (await columnsMemory(page, 'staff')) === true && (await columnsMemory(page, 'clients')) !== true,
+      `入（${w}）：〈スタッフ〉の覚えは〈利用者さん〉とは別（〈利用者さん〉は覚えが無い）`,
+    );
     // 休止中：状態の列が無い間は名前のそばに、くわしい列を入れると状態の列だけに（二重に出さない）
     const row = page.getByTestId('staff-row').filter({ hasText: offName }).first();
     check((await row.getByText('休止中').count()) === 1, `入 staff（${w}）：休止中は1つだけ（状態の列に）`);
@@ -820,14 +840,13 @@ async function expertPeople(page) {
       row: '[data-testid="client-row"]',
       heading: terms.client,
       simple: ['名前', '住所', 'いつもの予定'],
+      postal: 'client-address',
       extra: ['位置', '特性', `${terms.staff}に求めること`, 'いつもの担当', '状態'],
     });
     check(
       /状態」の印/.test(await page.locator('main, .content').first().textContent()),
       `入 clients（${w}）：くわしい列を入れると「状態」の印の説明を出す（狭い画面は畳んだ絞り込みの中）`,
     );
-    // 一覧ごとに覚える：〈スタッフ〉を入れても〈利用者さん〉は別
-    check((await columnsMemory(page, 'staff')) === true, `入（${w}）：〈スタッフ〉の覚えは〈利用者さん〉とは別`);
     // タブ：切と同じ（〈スタッフ〉＝一覧・勤務・相性、〈利用者さん〉＝一覧・相性）。移った先にも同じタブ・メニューの印
     for (const [to, names, side] of [
       ['/staff', ['一覧', '勤務', '相性'], terms.staff],

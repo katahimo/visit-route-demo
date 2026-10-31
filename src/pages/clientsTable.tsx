@@ -13,7 +13,7 @@ import { STAGE_LABELS } from '../lib/clientStage';
 import { colorOf, initialOf } from '../lib/colors';
 import { hasLocation } from '../lib/common';
 import { narrowRole } from '../lib/narrowRoles';
-import { addressLine, type ClientCol, clientColumns, clientNameNote, usualPlanText } from '../lib/peopleView';
+import { addressCellText, type ClientCol, clientColumns, clientNameNote, usualPlanText } from '../lib/peopleView';
 import { shouldOpenRow } from '../lib/rowOpen';
 import { orDash } from '../lib/viewMode';
 
@@ -24,6 +24,8 @@ type RowContext = {
   cols: readonly ClientCol[];
   /** くわしい列を出しているか（名前の下によみ・紹介元を添える） */
   detailed: boolean;
+  /** 入か（住所の列に〒郵便番号を添える） */
+  expert: boolean;
   stageOn: boolean;
   allowedOn: boolean;
   clientItems: Item[];
@@ -54,6 +56,7 @@ export function ClientsTable({
   stageOn,
   allowedOn,
   detailed,
+  expert,
   onOpen,
 }: {
   shown: Client[];
@@ -66,6 +69,8 @@ export function ClientsTable({
   allowedOn: boolean;
   /** くわしい列を出しているか（入で切り替えを入れたとき。PRD D394） */
   detailed: boolean;
+  /** エキスパート機能が入か（住所の列に〒郵便番号を添える） */
+  expert: boolean;
   /** 行を押したとき（その人の画面へ） */
   onOpen: (c: Client) => void;
 }) {
@@ -76,6 +81,7 @@ export function ClientsTable({
     data,
     cols,
     detailed,
+    expert,
     stageOn,
     allowedOn,
     clientItems: data.items.filter((i) => i.target === 'client'),
@@ -230,7 +236,7 @@ function ClientCell({ col, c, ctx }: { col: ClientCol; c: Client; ctx: RowContex
     case 'address':
       return (
         <td {...narrowRole.cell} data-label="住所" data-testid="client-address">
-          {orDash(addressLine(c.place))}
+          {orDash(addressCellText(c.place, ctx.expert))}
         </td>
       );
     case 'plan':

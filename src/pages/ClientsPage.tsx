@@ -30,7 +30,7 @@ export default function ClientsPage() {
   const allowedOn = useFeature('allowedStaff');
   const geocodeOn = useFeature('geocode');
   // 一覧の列は名前・住所・いつもの予定の3列。入は表の上の「くわしい列」で専門の列を足せる（PRD D385・D394）
-  const { detailed } = useDetailColumns('clients');
+  const { available: expert, detailed } = useDetailColumns('clients');
   // 名簿の欄（Excel・CSV。ADR-0068）。Excel の入出力を切っていれば出さない（ADR-0028 の excel）
   const excelOn = useFeature('excel');
   const [rosterOpen, setRosterOpen] = useState(false);
@@ -134,6 +134,7 @@ export default function ClientsPage() {
           stageOn={stageOn}
           allowedOn={allowedOn}
           detailed={detailed}
+          expert={expert}
           onOpen={openPerson}
         />
       </div>

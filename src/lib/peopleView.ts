@@ -89,6 +89,15 @@ export function addressLine(place: Pick<ClientPlace, 'address' | 'postalCode'>):
   return place.postalCode ? `〒${formatPostalCode(place.postalCode)}` : '';
 }
 
+/**
+ * 一覧の「住所」の列の文：入は「〒郵便番号 住所」（どちらかだけならその一方）、切は addressLine（main の切と同じ。切は〒を添えない）
+ */
+export function addressCellText(place: Pick<ClientPlace, 'address' | 'postalCode'>, expert: boolean): string {
+  if (!expert) return addressLine(place);
+  const postal = place.postalCode ? `〒${formatPostalCode(place.postalCode)}` : '';
+  return [postal, place.address].filter(Boolean).join(' ');
+}
+
 /** 勤務日の文（例「月火水木金」） */
 export const workDaysText = (s: Pick<Staff, 'workDays'>): string =>
   [...s.workDays]
