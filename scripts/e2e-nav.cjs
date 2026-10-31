@@ -1033,7 +1033,11 @@ async function screen1366(page) {
   await page.evaluate(() => {
     location.hash = '#/clients';
   });
-  await page.locator('h1').filter({ hasText: /利用者さん/ }).first().waitFor();
+  await page
+    .locator('h1')
+    .filter({ hasText: /利用者さん/ })
+    .first()
+    .waitFor();
   await settle(page, 200);
   const kept = await page.locator('.app-shell').getAttribute('data-date');
   await page.evaluate(() => {
