@@ -43,7 +43,7 @@ const {
 } = require('./lib/env.cjs');
 const { guard } = require('./lib/steps.cjs');
 const { visitsIn } = require('./lib/visits.cjs');
-const { goTo, pressTool } = require('./lib/ui.cjs');
+const { closeMore, goTo, openMore, pressTool } = require('./lib/ui.cjs');
 
 const YM = TODAY.slice(0, 7);
 
@@ -807,16 +807,21 @@ async function filePick(b) {
 // ---- 月の画面の日ごとの一覧 ----
 async function monthList(b) {
   const { ctx, page } = await newPage(b, { human: false, width: 390, height: 844 });
-  await open(page, `/month?ym=${YM}`, '[data-testid="month-layout"]');
+  await open(page, `/month?ym=${YM}`, '[data-testid="month-more"]');
   await page.locator('[data-testid="month-list-day"]').first().waitFor({ timeout: 30000 });
   check(
     (await page.getByTestId('month-grid').count()) === 0,
     '390px：はじめは日ごとの一覧（カレンダーの表を出さない）',
   );
-  const pressed = await page
-    .locator('[data-testid="month-layout"] button')
-    .evaluateAll((els) => els.map((e) => `${e.dataset.layout}:${e.getAttribute('aria-pressed')}`));
-  check(pressed.join(',') === 'calendar:false,list:true', '切り替えの aria-pressed', pressed);
+  // 見せ方の切り替えは操作の行の「その他 ▾」の中（PRD D392）。今の見せ方に aria-current
+  const layoutList = await openMore(page);
+  const pressed = await layoutList
+    .locator('[data-testid^="month-layout-"]')
+    .evaluateAll((els) =>
+      els.map((e) => `${e.dataset.testid.replace('month-layout-', '')}:${e.getAttribute('aria-current') === 'true'}`),
+    );
+  check(pressed.join(',') === 'calendar:false,list:true', '切り替えの aria-current（その他 ▾ の中）', pressed);
+  await closeMore(page);
   const rows = page.getByTestId('month-list-day');
   const n = await rows.count();
   const last = new Date(Date.UTC(Number(YM.slice(0, 4)), Number(YM.slice(5, 7)), 0)).getUTCDate();
@@ -853,13 +858,8 @@ async function monthList(b) {
   const v2 = await inView(today);
   const focused = await today.evaluate((el) => document.activeElement === el);
   check(v2.ok && focused, '「今日へ」で今日の行へ巻いてフォーカス', { ...v2, focused });
-  // 切り替えは操作の欄（月の見出しのカード）より上
-  // 2つの位置は同じ瞬間に測る（巻く動きの途中に別々に測ると、間に巻いた分だけずれる）
-  const pos = await page.evaluate(() => ({
-    layout: document.querySelector('[data-testid="month-layout"]').getBoundingClientRect().y,
-    head: document.querySelector('.month-head').getBoundingClientRect().y,
-  }));
-  check(pos.layout < pos.head, '切り替えは操作の欄より上', pos);
+  // 切り替えは操作の行のボタンにせず「その他 ▾」の中（操作の行は主ボタン1つ＋1つ。PRD D392）
+  check((await page.getByTestId('month-layout').count()) === 0, '切り替えのボタンは操作の行に無い');
   // 行の読み上げ：日付・件数・状態
   const label = await today.getAttribute('aria-label');
   check(
@@ -871,13 +871,13 @@ async function monthList(b) {
   );
   await page.screenshot({ path: path.join(OUT_DIR, 'month-list-390.png') });
   // カレンダーへ切り替え：URL に ?layout=calendar、読み直しても同じ
-  await page.locator('[data-testid="month-layout"] button[data-layout="calendar"]').click();
+  await pressTool(page, 'month-layout-calendar', { where: 'more' });
   await page.getByTestId('month-grid').waitFor();
   check(/layout=calendar/.test(hashOf(page)), 'カレンダーへ切り替えると URL に ?layout=calendar', hashOf(page));
   await page.reload();
   await page.getByTestId('month-grid').waitFor({ timeout: 30000 });
   check((await page.getByTestId('month-list').count()) === 0, '読み直してもカレンダーのまま');
-  await page.locator('[data-testid="month-layout"] button[data-layout="list"]').click();
+  await pressTool(page, 'month-layout-list', { where: 'more' });
   await page.getByTestId('month-list').waitFor();
   check(/layout=list/.test(hashOf(page)), '一覧へ戻すと URL に ?layout=list（押したら幅の既定でも書く）', hashOf(page));
   // 行を押すとその日の訪問の下から出る欄（スマホ。PRD D343）、欄の「この日の日の予定を開く」でその日の日の画面
@@ -952,9 +952,9 @@ async function monthList(b) {
     (await page.getByTestId('month-list').count()) === 0 && (await page.locator('.mprint table').count()) > 0,
     '月の印刷の画面は今のまま（一覧にしない）',
   );
-  await open(page, `/month?ym=${YM}`, '[data-testid="month-layout"]');
+  await open(page, `/month?ym=${YM}`, '[data-testid="month-more"]');
   await page.emulateMedia({ media: 'print' });
-  check(!(await visible(page.getByTestId('month-layout'))), '印刷では切り替えを出さない');
+  check(!(await visible(page.getByTestId('month-more'))), '印刷では切り替え（その他 ▾）を出さない');
   await page.emulateMedia({ media: 'screen' });
   await ctx.close();
 }

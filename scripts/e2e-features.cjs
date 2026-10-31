@@ -54,7 +54,7 @@ const {
   applyTemplate,
   writeFeaturesInOtherTab,
 } = require('./lib/features.cjs');
-const { clickMenu, reveal } = require('./lib/ui.cjs');
+const { clickMenu, reveal, toolCount } = require('./lib/ui.cjs');
 
 // ---- すべて入（初期データ）：メニューと管理者設定の画面 ----
 async function allOn(page) {
@@ -209,7 +209,7 @@ async function checkTemplate(page, t) {
   // 起動の画面（予定）の入口：欠勤・キャンセルを登録は sudden、「その他 ▾」の空き状況は vacancy に合う（ホームの入口の代わり。PRD D390）
   await settle(page, 300);
   check(
-    (await page.getByTestId('sudden-open').count()) === (on.includes('sudden') ? 1 : 0),
+    (await toolCount(page, 'sudden-open')) === (on.includes('sudden') ? 1 : 0),
     `${label}：起動の画面の「欠勤・キャンセルを登録」は欠勤・キャンセルの入り切りに合う`,
   );
   const more = page.locator('[data-testid$="-more"]');

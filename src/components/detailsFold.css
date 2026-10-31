@@ -22,3 +22,8 @@
 .details-fold-body {
   padding-bottom: 10px;
 }
+.details-fold-heading {
+  margin-left: 12px;
+  font-weight: 400;
+  color: var(--ink);
+}

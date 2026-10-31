@@ -15,6 +15,7 @@ const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, runSteps, settle } = require('
 const { markStandard } = require('./lib/standard.cjs');
 const { planDays } = require('./lib/plan.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
+const { toolCount } = require('./lib/ui.cjs');
 const {
   same,
   TEMPLATE_ON,
@@ -62,13 +63,19 @@ async function insideEntries(page, dlg, ctx) {
     await open(page, `/plan?date=${TODAY}`, '.date-switch select');
     await page.getByTestId('plan-summary').waitFor({ state: 'attached', timeout: 60000 });
     await settle(page, 500);
-    check((await count('sudden-open')) === (on('sudden') ? 1 : 0), `${label}：日の予定の「欠勤・キャンセルを登録」`);
+    check(
+      (await toolCount(page, 'sudden-open')) === (on('sudden') ? 1 : 0),
+      `${label}：日の予定の「欠勤・キャンセルを登録」`,
+    );
     check(
       (await page.locator('.absence-btn').count()) > 0 === on('sudden'),
       `${label}：列の見出しの「この人の欠勤を登録」`,
     );
-    // 予定をメールで送るは見出しの主ボタンの隣（PRD D306）
-    check((await count('day-mail')) === (on('mail') ? 1 : 0), `${label}：日の予定の見出しの「予定をメールで送る」`);
+    // 予定をメールで送るは操作の行の「その他 ▾」の中（PRD D306・D392）
+    check(
+      (await toolCount(page, 'day-mail')) === (on('mail') ? 1 : 0),
+      `${label}：日の予定の「その他 ▾」の「予定をメールで送る」`,
+    );
     if (!on('rules')) check((await count('plan-reason')) === 0, `${label}：点数の横の理由を出さない`);
     check((await count('plan-menu')) === 0, `${label}：日の予定に「AI で組む ▾」は無い`);
     // 担当を組む（週の範囲）：AI で組む・考え方（点数の基準。選ぶ欄は無い）・案を比べる（ADR-0063・ADR-0065）

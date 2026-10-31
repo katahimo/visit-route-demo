@@ -105,6 +105,19 @@
   max-width: 100%;
   white-space: normal;
 }
+/* 担当なしの札ごとの「理由 N ▾」（入。閉じて始める） */
+.unplaced-reasons-fold > summary {
+  cursor: pointer;
+  list-style: none;
+  font-size: 0.8rem;
+  color: var(--sub);
+}
+.unplaced-reasons-fold > summary::-webkit-details-marker {
+  display: none;
+}
+.unplaced-reasons-fold[open] > summary {
+  margin-bottom: 4px;
+}
 /* 拘束が上限を超える人の1人ぶん（狭い画面でも名前・拘束・リンクを同じ行に） */
 .over-span-item {
   display: inline-block;
@@ -707,17 +720,7 @@ p.plan-band.error {
   }
 }
 
-/* 表示の切り替え（時間軸／順番／一覧。PRD D58・D63）。狭い幅・印刷では時間軸の代わりに順番なので、時間軸のボタンを出さない */
-@media (max-width: 900px) {
-  .plan-view-toggle .plan-view-timeline {
-    display: none;
-  }
-  .plan-view-toggle .plan-view-timeline + button {
-    border-left: 0;
-  }
-}
 @media print {
-  .plan-view-toggle,
   .plan-toolbar .menu-wrap {
     display: none;
   }

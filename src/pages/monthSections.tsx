@@ -10,12 +10,13 @@ import { type BandModel, ProgressBand } from '../components/progressBand';
 import { ScheduleNav } from '../components/ScheduleNav';
 import { RangeProposalBand, ScheduleToolbar, SelectionBar } from '../components/scheduleParts';
 import { PageHeader } from '../components/ui';
-import { useExceptionsOnly } from '../components/useFeature';
+import { useConfirmStep, useExceptionsOnly } from '../components/useFeature';
 import { useIntro } from '../components/useIntro';
 import { KeyMoveBand } from '../components/visitKeys';
 import type { DemoData } from '../contracts/data';
-import { detailItems, foldedParts, isFolded } from '../lib/exceptionView';
-import type { BandOp } from '../lib/progressBand';
+import { monthHeading } from '../lib/detailsHeading';
+import { foldedParts } from '../lib/exceptionView';
+import { type BandOp, bandHref } from '../lib/progressBand';
 import { addMonths, ymOf } from '../lib/ym';
 import {
   DayVisits,
@@ -26,15 +27,7 @@ import {
   MonthUnconfirmed,
 } from './monthAside';
 import { MonthGrid, MonthList } from './monthGrid';
-import {
-  MonthBatchProgress,
-  MonthHelp,
-  MonthLayoutSwitch,
-  MonthLegend,
-  MonthOffBar,
-  MonthPickers,
-  monthLayoutItems,
-} from './monthParts';
+import { MonthBatchProgress, MonthHelp, MonthLegend, MonthOffBar, MonthPickers, monthLayoutItems } from './monthParts';
 import type { MonthAside } from './useMonthAside';
 import type { MonthBatchState } from './useMonthBatch';
 import { focusCellEl, type MonthDayList } from './useMonthDayList';
@@ -47,24 +40,18 @@ import type { MonthNav } from './useMonthNav';
 import type { MonthOff } from './useMonthOff';
 import type { MonthVisitRows } from './useMonthVisitRows';
 
-/** 画面の上：見出し・上のナビの行・進み具合の帯・操作の行（見せ方の切り替え）・範囲の提案の帯 */
+/** 画面の上：見出し・上のナビの行・要対応の帯・操作の行・範囲の提案の帯（進み具合の帯は「詳しく」の中） */
 export function MonthTopBars({
   nav,
-  band,
-  onBandOp,
   absence,
   moreItems,
 }: {
   nav: Pick<MonthNav, 'ym' | 'today' | 'layout' | 'monthOptions' | 'goMonth' | 'pickLayout'>;
-  band: BandModel;
-  onBandOp: (op: BandOp) => void;
   /** 「欠勤」の入口（欠勤・キャンセルを切っていれば null） */
   absence: { date: string } | null;
   moreItems: MenuItem[];
 }) {
   const { ym, today } = nav;
-  const only = useExceptionsOnly();
-  const folded = detailItems('month', only);
   const lead = useIntro('month', '一月の担当を見て、担当なしや要対応を手で直し、確定します');
   return (
     <>
@@ -83,20 +70,18 @@ export function MonthTopBars({
           testId: 'month-title',
         }}
       />
-      {/* 要対応の帯（エキスパート機能が切のときだけ。PRD D383） */}
+      {/* 要対応の帯（PRD D383・D391） */}
       <AttentionBand />
-      {/* 進み具合の帯（PRD D151〜D155）。担当なしの次の一手は担当を組むの画面へ（ADR-0063） */}
-      {/* 切のときは進み具合を「詳しく」へ畳む（MonthDetails。主ボタンは操作の行の1つだけ。PRD D384） */}
-      {!isFolded(folded, 'progress') && <ProgressBand ym={ym} model={band} primary onOp={onBandOp} />}
-      {/* 操作の行（日・週・月で同じ並び。PRD D327）。月送り・今月のほかのときどき使う操作は「その他 ▾」（PRD D278） */}
+      {/* 進み具合の帯（PRD D151〜D155）は「詳しく」の中（MonthDetails。主ボタンは操作の行の「予定を入れる」。PRD D384・D393）。担当なしの次の一手は担当を組むの画面へ（ADR-0063）。
+        畳んだ中を開かずに行ける「担当を組む」は操作の行（入） */}
+      {/* 操作の行（日・週・月で同じ作り。PRD D327・D392）。カレンダーと日ごとの一覧の切り替え（PRD D189。600px 以下ははじめ一覧。URL の ?layout=）・
+        月送り・今月のほかのときどき使う操作は「その他 ▾」（PRD D278） */}
       <ScheduleToolbar
         zoom="month"
         absence={absence}
-        moreItems={only ? [...monthLayoutItems(nav.layout, nav.pickLayout), ...moreItems] : moreItems}
-      >
-        {/* カレンダーと日ごとの一覧の切り替え（PRD D189。600px 以下ははじめ一覧。URL の ?layout=。操作の欄より上） */}
-        <MonthLayoutSwitch layout={nav.layout} onPick={nav.pickLayout} />
-      </ScheduleToolbar>
+        assignHref={bandHref(ym, 'batch')}
+        moreItems={[...monthLayoutItems(nav.layout, nav.pickLayout), ...moreItems]}
+      />
       {/* 担当を組むの画面で組んだ範囲の提案（日・週・月で同じ帯。PRD D328） */}
       <RangeProposalBand />
     </>
@@ -104,8 +89,8 @@ export function MonthTopBars({
 }
 
 /**
- * 「詳しく」（エキスパート機能が切のときだけ。畳んでおく。PRD D384）：進み具合の帯・月全体の件数・凡例。
- * 入のときは今の画面のとおり（進み具合は上の帯、件数と凡例は見出しの欄）なので何も出さない
+ * 「詳しく」（入切とも。畳んでおく。開け閉めは端末に覚える。PRD D384・D393）：進み具合の帯・月全体の件数・凡例。
+ * 入は見出しの1行に「担当 a/b日・確定 c/d日」を出す
  */
 export function MonthDetails({
   ym,
@@ -120,10 +105,16 @@ export function MonthDetails({
   summary: MonthDays['summary'];
   legendBar: 'load' | 'staff' | null;
 }) {
-  const parts = foldedParts('month', useExceptionsOnly(), { progress: true, summary: true, legend: true });
+  const only = useExceptionsOnly();
+  const confirmStep = useConfirmStep();
+  const parts = foldedParts('month', only, { progress: true, summary: true, legend: true });
   if (parts.length === 0) return null;
   return (
-    <DetailsFold testId="month-details">
+    <DetailsFold
+      testId="month-details"
+      screen="month"
+      heading={only ? undefined : monthHeading(band.progress, confirmStep)}
+    >
       {parts.includes('progress') && <ProgressBand ym={ym} model={band} onOp={onBandOp} />}
       {parts.includes('summary') && <MonthSummaryLine summary={summary} />}
       {parts.includes('legend') && <MonthLegend bar={legendBar} />}
@@ -144,7 +135,7 @@ function MonthSummaryLine({ summary }: { summary: MonthDays['summary'] }) {
 export const legendBarOf = (kind: MonthFocusState['focus']['kind']): 'load' | 'staff' | null =>
   kind === 'all' ? 'load' : kind === 'staff' ? 'staff' : null;
 
-/** 見出しの欄：月全体の要約・表示の選択の段・説明・「休みを入れる」の帯・凡例・範囲の AI で組む（担当を組む）の進み具合・止まった理由 */
+/** 見出しの欄：表示の選択の段・説明・「休みを入れる」の帯・範囲の AI で組む（担当を組む）の進み具合・止まった理由（月全体の件数・凡例は「詳しく」の中） */
 export function MonthHeadCard({
   data,
   nav,
@@ -153,7 +144,6 @@ export function MonthHeadCard({
   off,
   panels,
   batch,
-  summary,
   load,
   requestedOn,
   pickersShown,
@@ -166,7 +156,6 @@ export function MonthHeadCard({
   off: MonthOff;
   panels: MonthPanels;
   batch: MonthBatchState;
-  summary: MonthDays['summary'];
   load: { value: string | null; onChange: (typeId: string | null) => void };
   requestedOn: boolean;
   pickersShown: boolean;
@@ -174,26 +163,11 @@ export function MonthHeadCard({
 }) {
   const terms = data.org.terms;
   const { focus } = fs;
-  const folded = detailItems('month', useExceptionsOnly());
-  const summaryFolded = isFolded(folded, 'summary');
-  // 切は件数の行・凡例を「詳しく」へ畳むので、ほかに出すものが無ければ欄ごと出さない
-  if (
-    summaryFolded &&
-    !pickersShown &&
-    !noVisitsWhy &&
-    !panels.helpOpen &&
-    off.offStaffId === null &&
-    !batch.batch &&
-    !batch.error
-  )
+  // 件数の行・凡例は「詳しく」の中（MonthDetails）なので、ほかに出すものが無ければ欄ごと出さない
+  if (!pickersShown && !noVisitsWhy && !panels.helpOpen && off.offStaffId === null && !batch.batch && !batch.error)
     return null;
   return (
     <div className="card stack month-head">
-      {!summaryFolded && (
-        <div className="row month-nav">
-          <MonthSummaryLine summary={summary} />
-        </div>
-      )}
       {pickersShown && (
         <MonthPickers
           selectRef={panels.focusSelectRef}
@@ -230,7 +204,6 @@ export function MonthHeadCard({
       {off.offStaffId !== null && (
         <MonthOffBar name={fs.focusName} offDays={fd.offDates.length} note={off.offNote} onOpenDay={nav.openDay} />
       )}
-      {!isFolded(folded, 'legend') && <MonthLegend bar={legendBarOf(focus.kind)} />}
       {batch.batch && <MonthBatchProgress batch={batch.batch} current={batch.current} onStop={batch.stop} />}
       <FieldError>{batch.error}</FieldError>
     </div>

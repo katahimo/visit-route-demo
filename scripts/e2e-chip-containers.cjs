@@ -26,6 +26,7 @@ const {
 const { planDays } = require('./lib/plan.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
 const { answerConfirms } = require('./lib/confirmDialog.cjs');
+const { undoState } = require('./lib/ui.cjs');
 
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
 const WD = '日月火水木金土';
@@ -399,10 +400,7 @@ async function weekKeys(page) {
   check(movedDay, '週の表：札で → で次の日（データの日付が1日後・時刻はそのまま）', v0);
   await settle(page, 300);
   check((await focusedVisit(page)) === id, '週の表：→ で動かしたあともフォーカスは札');
-  check(
-    /訪問を次の日へ/.test((await page.getByTestId('undo-btn').getAttribute('title')) ?? ''),
-    '週の表：→ は全体の元に戻すの1手（手の名前）',
-  );
+  check(/訪問を次の日へ/.test((await undoState(page)).text), '週の表：→ は全体の元に戻すの1手（手の名前）');
   await page.locator('h1').click();
   await page.keyboard.press(`${MOD}+z`);
   check(
@@ -754,7 +752,7 @@ async function weekClientKeys(page) {
     { from: v0.staffId, to: v1.staffId, order },
   );
   check(
-    /担当を.+さんへ/.test((await page.getByTestId('undo-btn').getAttribute('title')) ?? ''),
+    /担当を.+さんへ/.test((await undoState(page)).text),
     '〈利用者さん〉の表：↓ は全体の元に戻すの1手（担当を〜さんへ）',
   );
   await settle(page, 300);
@@ -941,12 +939,12 @@ async function monthMove(page, { confirms }) {
   );
   check(moved, '月の移す：「移す」で2件の日付が移る（時刻はそのまま）', { to, two });
   await settle(page, 300);
-  const title = (await page.getByTestId('undo-btn').getAttribute('title')) ?? '';
-  check(title.includes(`${dateText(to)}へ移しました`), '月の移す：手の名前は「M/D（曜）へ移しました」', title);
   check(
-    await until(() => page.evaluate(() => document.activeElement?.dataset?.testid === 'undo-btn'), 3000),
-    '月の移す：移したあとフォーカスは「元に戻す」',
+    await until(() => page.evaluate(() => document.activeElement?.dataset?.testid === 'month-more'), 3000),
+    '月の移す：移したあとフォーカスは操作の行の「その他 ▾」（元に戻すの入口）',
   );
+  const title = (await undoState(page)).text;
+  check(title.includes(`${dateText(to)}へ移しました`), '月の移す：手の名前は「M/D（曜）へ移しました」', title);
   await page.locator('h1').click();
   await page.keyboard.press(`${MOD}+z`);
   check(

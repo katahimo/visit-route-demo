@@ -1,6 +1,6 @@
 // 月の予定の進み具合の帯（PRD D151〜D155・D332。ADR-0025・ADR-0053・ADR-0054。週・日には出さない）を本物のブラウザで確かめる：
-// 月の帯（data-ym・数字が要対応の帯の未確定の日と同じ。今月＋翌月）、月の画面の「担当を AI で組む」の主ボタンは帯の1か所
-// （見出しのボタン・今月の準備は無い。帯の次の一手が主ボタン）で、押すと担当を組むの画面（#/arrange?ym=。ADR-0063）、
+// 月の帯（data-ym・数字が要対応の帯の未確定の日と同じ。今月＋翌月。「詳しく ▾」の中。PRD D393）、月の画面の「担当を AI で組む」は帯の1か所
+// （見出しのボタン・今月の準備は無い。帯の次の一手は主ボタンにせず、主ボタンは操作の行の「予定を入れる」で2つ目が「担当を組む」。PRD D392）で、押すと担当を組むの画面（#/arrange?ym=。ADR-0063）、
 // 帯の数字で月の画面の欄が開く（URL を変えない）、古い `?do=batch` は担当を組むの画面へ移す、
 // 週・日からの `?do=`（確定していない日・要対応）で月の画面の欄が開き ?do= が消える、来月も担当なしの日が多ければ「担当を AI で組む」、
 // 日の予定で確定すると状態の印が確定済み・月の帯の確定 +1、週・日に進み具合の帯は無い（週は1行の状態）、
@@ -16,6 +16,7 @@ const { answerConfirms } = require('./lib/confirmDialog.cjs');
 const { BASE, OUT_DIR, TODAY, STORAGE_KEY, perfMs, check, hashOf, runSteps, settle, until } = require('./lib/env.cjs');
 const { markStandard } = require('./lib/standard.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
+const { openDetails, openScreenDetails } = require('./lib/ui.cjs');
 
 const PERF_MS = perfMs('PERF_MS_PROGRESS', 3000);
 const YM = TODAY.slice(0, 7);
@@ -27,8 +28,10 @@ function nextYm(ym) {
 const NEXT_YM = nextYm(YM);
 const monthNo = (ym) => Number(ym.slice(5, 7));
 
-/** 帯が数え終わる（data-ym が付く）まで待つ */
+/** 帯が数え終わる（data-ym が付く）まで待つ。帯は「詳しく ▾」の中（PRD D393）なので、閉じていれば開いて見えるまで待つ */
 async function bandReady(page, timeout = 30000) {
+  await page.locator('[data-testid="progress-band"][data-ym]').waitFor({ state: 'attached', timeout });
+  await openDetails(page, 'month-details');
   await page.locator('[data-testid="progress-band"][data-ym]').waitFor({ timeout });
 }
 async function open(page, hash, ready) {
@@ -131,8 +134,15 @@ async function monthEntry(page) {
   check(entries === 1, '月：「担当を AI で組む」の入口は1か所', entries);
   const next = page.getByTestId('band-next');
   check(
-    (await next.getAttribute('data-kind')) === 'batch' && /btn-primary/.test((await next.getAttribute('class')) ?? ''),
-    '月：担当なしの日があるので次の一手は「担当を AI で組む」（主ボタン）',
+    (await next.getAttribute('data-kind')) === 'batch' && !/btn-primary/.test((await next.getAttribute('class')) ?? ''),
+    '月：担当なしの日があるので「詳しく ▾」の中の次の一手は「担当を AI で組む」（主ボタンにしない。主ボタンは操作の行の「予定を入れる」）',
+  );
+  const assign = page.getByTestId('toolbar-assign');
+  check(
+    (await assign.count()) === 1 &&
+      (await assign.getAttribute('href'))?.endsWith(`/arrange?ym=${YM}`) &&
+      !/btn-primary/.test((await assign.getAttribute('class')) ?? ''),
+    '月：操作の行の2つ目は「担当を組む」（担当を組むの画面のその月へ）',
   );
   await page.screenshot({ path: path.join(OUT_DIR, 'month-band.png') });
   await next.click();
@@ -322,6 +332,7 @@ async function dayConfirm(page) {
   const confirmMs = Date.now() - t0;
   check(confirmMs < 1500, '日：確定の操作が待たされない', `${confirmMs}ms`);
   await open(page, `/week?d=${TODAY}`, '[data-testid="week-title"]');
+  await openScreenDetails(page);
   check(
     (await page.getByTestId('progress-band').count()) === 0 && (await page.getByTestId('week-status').count()) === 1,
     '週：進み具合の帯は無く、1行の状態',
@@ -446,7 +457,7 @@ async function mobile(page) {
   await page.setViewportSize({ width: 390, height: 844 });
   for (const [hash, ready, name] of [
     // 390px の月ははじめ日ごとの一覧（PRD D189）。カレンダーと一覧のどちらでもある切り替えを待つ
-    [`/month?ym=${YM}`, '[data-testid="month-layout"]', 'month'],
+    [`/month?ym=${YM}`, '[data-testid="month-more"]', 'month'],
   ]) {
     await page.goto(`${BASE}#${hash}`);
     await page.reload();
