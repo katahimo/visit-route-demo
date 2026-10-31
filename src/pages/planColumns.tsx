@@ -215,22 +215,29 @@ export function noneCol(p: PlanCtx) {
             {/* 〈利用者さん〉の名前はカード（押すと選ぶ・ドラッグ）の中なので、詳細は外の i から開く（PRD D205） */}
             <div className="row unplaced-reasons" style={{ flexWrap: 'wrap', gap: 4 }}>
               {client && <PersonInfo kind="client" id={client.id} name={client.displayName} testId="unplaced-info" />}
-              {/* 理由の札は符号の無い言葉（PRD D229。内部の値は title にだけ）。
+              {/* 理由の札は符号の無い言葉（PRD D229。内部の値は title にだけ）。札ごとに「理由 N ▾」で開く（入。PRD D393）。
                 担当なしの理由の一覧なので、（担当にできない）は付けない（札の名前が理由そのもの。title に残る） */}
-              {(showUnplacedReasons(only) ? reasons : []).map((r) => {
-                const f = reasonFace(r);
-                return (
-                  <span
-                    key={`${r.ruleId}:${r.label}`}
-                    className="chip chip-warn"
-                    title={f.title}
-                    data-testid="unplaced-reason"
-                  >
-                    {f.text}
-                    {f.note && f.note !== '担当にできない' && `（${f.note}）`}
-                  </span>
-                );
-              })}
+              {showUnplacedReasons(only) && reasons.length > 0 && (
+                <details className="unplaced-reasons-fold" data-testid="unplaced-reasons-fold">
+                  <summary data-testid="unplaced-reasons-toggle">理由 {reasons.length} ▾</summary>
+                  <div className="row" style={{ flexWrap: 'wrap', gap: 4 }}>
+                    {reasons.map((r) => {
+                      const f = reasonFace(r);
+                      return (
+                        <span
+                          key={`${r.ruleId}:${r.label}`}
+                          className="chip chip-warn"
+                          title={f.title}
+                          data-testid="unplaced-reason"
+                        >
+                          {f.text}
+                          {f.note && f.note !== '担当にできない' && `（${f.note}）`}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </details>
+              )}
             </div>
             {problem && reassignMarks.unplaced.has(id) && (
               <CandidateBox

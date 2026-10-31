@@ -2,6 +2,7 @@
 // 週間の帯から開いた訪問・時間軸の帯のキーボード（PRD D201・D204・D217・D301・D333・D345）
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
+import { focusUndo, undoFocusTarget } from '../components/undo';
 import type { useRouteSelection } from '../components/useRouteSelection';
 import { useOpenVisit } from '../components/VisitPanel';
 import { useVisitKeys } from '../components/visitKeys';
@@ -49,7 +50,7 @@ export function focusAfterMove(visitId: string, staffId: string | null) {
       document.querySelector<HTMLElement>(
         `.route-item[data-visit="${v}"] .route-btn, .tl-band[data-visit="${v}"] .tl-band-btn`,
       ) ??
-      document.querySelector<HTMLElement>('[data-testid="undo-btn"]') ??
+      undoFocusTarget() ??
       (staffId ? colHeadOf(staffId) : null);
     target?.focus();
   });
@@ -241,8 +242,7 @@ export function usePlanNav(x: { date: string; setDate: (d: string) => void; d: P
     staffOrder: () => d.columns,
     onOpen: (id) => openVisit(id),
     onMoved: onKeyMoved,
-    onCancelled: () =>
-      requestAnimationFrame(() => document.querySelector<HTMLElement>('[data-testid="undo-btn"]')?.focus()),
+    onCancelled: focusUndo,
   });
   return { ...go, openVisit, visitKeys, onKeyMoved };
 }

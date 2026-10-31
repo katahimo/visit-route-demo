@@ -1,4 +1,4 @@
-import { Check, Lock, Mail, RefreshCw, Sparkles, TriangleAlert, X } from 'lucide-react';
+import { Check, Lock, RefreshCw, Sparkles, TriangleAlert, X } from 'lucide-react';
 import { ClientFilter } from '../components/ClientFilter';
 import { ClientPicker } from '../components/ClientPicker';
 import { DetailsFold } from '../components/DetailsFold';
@@ -11,7 +11,8 @@ import { TypeDot } from '../components/visitType';
 import type { Terms } from '../contracts/documents';
 import { WEEK_TABLE_FILTER } from '../lib/clientFilter';
 import { mdText } from '../lib/dateText';
-import { detailItems, foldedParts, isFolded, showUnfitLegend } from '../lib/exceptionView';
+import { weekHeading } from '../lib/detailsHeading';
+import { foldedParts, showUnfitLegend } from '../lib/exceptionView';
 import { TIMELINE_CLIENT_MAX } from '../lib/timelineClients';
 import { SNAP_MINUTES, staffWithQualification } from '../lib/week';
 import { type WeekPrep, weekStatusText } from '../lib/weekPrep';
@@ -33,28 +34,12 @@ const VIEW_TEST_ID: Record<WeekView, string> = {
 };
 
 /**
- * ナビの行の右（PRD D93・D280・D346）：担当ごとの週の予定をメールアプリで開くボタン（日の予定と同じく見出しの主ボタンの隣の
- * 枠のボタン。どの表示でも出す。メールを切っていれば出さない。ADR-0028）と、この週の主ボタン（確定 → 済み）
+ * ナビの行の右（PRD D280・D346）：この週の主ボタン（確定 → 済み）。担当ごとの週の予定をメールで送るのは「その他 ▾」（PRD D93・D392）
  */
-export function WeekNavActions({
-  mailBtn,
-  onMail,
-  flow,
-}: {
-  mailBtn: boolean;
-  onMail: () => void;
-  flow: Pick<WeekPrepFlow, 'next' | 'nextRef' | 'whyId' | 'confirmWeek'>;
-}) {
+export function WeekNavActions({ flow }: { flow: Pick<WeekPrepFlow, 'next' | 'nextRef' | 'whyId' | 'confirmWeek'> }) {
   const { next, nextRef, whyId } = flow;
   return (
     <>
-      {mailBtn && (
-        <button type="button" className="btn" onClick={onMail} data-testid="week-mail">
-          <WithIcon icon={Mail}>
-            <span className="m-sr">予定をメールで送る</span>
-          </WithIcon>
-        </button>
-      )}
       {next.kind !== 'none' && (
         <div className="week-next" ref={nextRef} tabIndex={-1} data-testid="week-next" data-kind={next.kind}>
           {next.kind === 'confirm' ? (
@@ -106,8 +91,8 @@ export function WeekStatusLine({ prep }: { prep: WeekPrep }) {
 }
 
 /**
- * 「詳しく」（エキスパート機能が切のときだけ。畳んでおく。PRD D384）：この週の1行の状態・時間軸の凡例と使い方。
- * 入のときは今の画面のとおり（1行の状態は上、凡例は上の欄）なので何も出さない
+ * 「詳しく」（入切とも。畳んでおく。開け閉めは端末に覚える。PRD D384・D393）：この週の1行の状態・時間軸の凡例と使い方。
+ * 入は見出しの1行に「未確定 N日・要対応 M件」を出す
  */
 export function WeekDetails({
   prep,
@@ -121,10 +106,15 @@ export function WeekDetails({
   tab: WeekNav['tab'];
 }) {
   const only = useExceptionsOnly();
+  const confirmStep = useConfirmStep();
   const parts = foldedParts('week', only, { status: prep.futureDays > 0, legend: tab === 'timeline' });
   if (parts.length === 0) return null;
   return (
-    <DetailsFold testId="week-details">
+    <DetailsFold
+      testId="week-details"
+      screen="week"
+      heading={only ? undefined : weekHeading(prep.futureDays, prep.line, confirmStep)}
+    >
       {parts.includes('status') && <WeekStatusLine prep={prep} />}
       {parts.includes('legend') && <TimelineTools model={model} by={by} />}
     </DetailsFold>
@@ -309,7 +299,6 @@ export function WeekHead({
 }) {
   const { data, terms, clients, activeStaff } = model;
   const { tab, by, view } = nav;
-  const only = useExceptionsOnly();
   const clientTimeline = tab === 'timeline' && by === 'client';
   return (
     <div className="card stack week-head">
@@ -329,7 +318,6 @@ export function WeekHead({
           ))}
         </fieldset>
       </div>
-      {tab === 'timeline' && !isFolded(detailItems('week', only), 'legend') && <TimelineTools model={model} by={by} />}
       {tab === 'timeline' && by === 'staff' && <StaffPick model={model} nav={nav} allowedNow={allowedNow} />}
       {clientTimeline && <ClientPick people={people} terms={terms} model={model} />}
       {/* 〈利用者さん〉×曜日の表の絞り込み（PRD D108〜D112。変わるのは押したときだけで、ドラッグ中に高さを変えない） */}

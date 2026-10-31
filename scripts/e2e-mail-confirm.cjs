@@ -2,13 +2,14 @@
 // 日の予定の「予定をメールで送る」の欄で、送れる人（アドレスがあり、長すぎない）全員分の「メールを作る」を押すと、その日が確定（伝えた）になる。
 // 作った人に「作成済み」、欄に「メールを作った人 N/M人」。知らせの「元に戻す」で確定が戻る。欄の「確定（伝えた）にする」は確認を出して確定する。
 // 区間ごとの道順のリンクは、長さの目安 2000字の端末でも訪問4件までは本文に残る（区間を外す前に、決まりごと・全行程・住所を外す）。
-// 週の予定の「予定をメールで送る」は見出し（日と同じ場所）にあり、時間軸の表示でも出る。週のメールに「まだ確定していません」を日ごとに書かない。
+// 週の予定の「予定をメールで送る」は日と同じく操作の行の「その他 ▾」の中にあり、時間軸の表示でも出る。週のメールに「まだ確定していません」を日ごとに書かない。
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-mail-confirm.cjs
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）
 const path = require('node:path');
 const { BASE, OUT_DIR, TODAY, check, runSteps, settle } = require('./lib/env.cjs');
 const { sharedPage } = require('./lib/steps.cjs');
+const { pressTool, toolCount } = require('./lib/ui.cjs');
 
 /** メールを作るボタン（a 要素）の本文（mailto の body） */
 async function bodies(page) {
@@ -20,7 +21,7 @@ async function bodies(page) {
 async function openDay(page) {
   await page.goto(`${BASE}#/plan`);
   await page.reload();
-  await page.getByTestId('day-mail').waitFor({ timeout: 30000 });
+  await page.getByTestId('plan-more').waitFor({ timeout: 30000 });
   await settle(page, 300);
 }
 
@@ -34,7 +35,7 @@ const steps = sharedPage({
           (await page.getByTestId('confirm-state').innerText()).includes('まだ伝えていない'),
           `日の予定（${TODAY}）ははじめ まだ伝えていない`,
         );
-        await page.getByTestId('day-mail').click();
+        await pressTool(page, 'day-mail', { where: 'more' });
         const panel = page.getByTestId('day-mail-panel');
         await panel.waitFor();
         const progress = page.getByTestId('day-mail-progress');
@@ -125,14 +126,13 @@ const steps = sharedPage({
       async (page) => {
         await page.goto(`${BASE}#/week`);
         await page.reload();
-        const btn = page.locator('[data-testid="sched-nav"] [data-testid="week-mail"]');
-        await btn.waitFor({ timeout: 30000 });
-        check((await btn.count()) === 1, '週の予定：ナビの行に「予定をメールで送る」（日と同じ場所。PRD D347）');
+        await page.getByTestId('week-more').waitFor({ timeout: 30000 });
         check(
-          (await page.locator('[data-testid="week-mail"]').count()) === 1,
-          '週の予定：メールのボタンはナビの行の1つだけ（表の上には無い）',
+          (await page.locator('[data-testid="sched-nav"] [data-testid="week-mail"]').count()) === 0 &&
+            (await toolCount(page, 'week-mail')) === 1,
+          '週の予定：「予定をメールで送る」は操作の行の「その他 ▾」の中の1つだけ（ナビの行・表の上には無い。PRD D392）',
         );
-        await btn.click();
+        await pressTool(page, 'week-mail', { where: 'more' });
         const rows = page.getByTestId('week-mail-rows');
         await rows.waitFor();
         const body = await rows

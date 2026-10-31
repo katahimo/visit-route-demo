@@ -9,7 +9,13 @@
 //   openMore(page)              … 「その他 ▾」を開いて、中の一覧（locator）を返す
 //   openDetails(page, testId)   … 「詳しく ▾」を開く（無い・もう開いているなら何もしない）
 //   closeMore(page)             … 開いている「その他 ▾」を閉じる
+//   toolCount(page, testId)     … 行と「その他 ▾」の中を合わせた、その testid の数（出る・出ないを位置によらず確かめる）
+//   undoState(page)             … 「元に戻す」の状態（押せるか・説明）を「その他 ▾」を開いて読む
+//   openScreenDetails(page)     … 画面の「詳しく ▾」（月・週・日）を開く（開いて読む e2e が着いたあとに呼ぶ）
 //   reveal(page, testId)        … 要素が見えるまで（「詳しく ▾」を開いてでも）待つ。中を読む前に呼ぶ
+// 段2：入の操作の行は「予定を入れる」＋「担当を組む」（月・週）／＋「確定（伝えた）」（日）の2つと「その他 ▾」。
+// 欠勤・キャンセル・元に戻す・表示の切り替え・使い方・メールで送る・印刷などは「その他 ▾」の中（where: 'more'）。
+// 畳んだ「詳しく ▾」は画面ごとに開け閉めを端末に覚える（開いて読み直すと開いたまま）。reveal・openDetails は開いてから読む
 // 行き先・操作の名前は下の表に足す（画面が変わったら表だけ直す）。
 const { BASE, settle } = require('./env.cjs');
 
@@ -127,9 +133,14 @@ const TOOLS = {
   表示を選ぶ: { text: /表示/ },
   空き状況: { id: 'more-vacancy', text: /空き状況/ },
   担当なしを組む: { id: 'toolbar-arrange', text: /担当なしの訪問を組む/ },
-  // 日の主ボタン（plan-visit-add）の言葉は、切では「予定を入れる」（PR #140）、入は今は「訪問を追加」
-  訪問を追加: { id: 'plan-visit-add', text: /訪問を追加|予定を入れる/ },
+  // 日の主ボタン（plan-visit-add）の言葉は入切とも「予定を入れる」（段2）。月・週の主ボタンは toolbar-add-plan（引き出し）
+  訪問を追加: { id: 'plan-visit-add', text: /予定を入れる/ },
   予定を入れる: { id: 'toolbar-add-plan', text: /予定を入れる/ },
+  // 入の操作の行の2つ目：月・週は「担当を組む」（担当を組むの画面へ）、日は「確定（伝えた）」（段2。D392）
+  担当を組む: { id: 'toolbar-assign', text: /担当を組む/ },
+  確定: { id: 'adopt', text: /確定/ },
+  使い方: { id: 'plan-more-help', text: /使い方/ },
+  メールで送る: { text: /予定をメールで送る/ },
 };
 
 /**
@@ -168,12 +179,69 @@ async function pressTool(page, name, { where = 'any' } = {}) {
   await item.click();
 }
 
+/**
+ * 操作の行のボタン・「その他 ▾」の項目のうち、その testid の要素の数（行に出ているもの＋「その他 ▾」の中のもの。開いて数え、閉じる）。
+ * 入り切りで「出る・出ない」を確かめる所で、位置（行か「その他 ▾」か）によらず数える
+ */
+async function toolCount(page, testId) {
+  await moreId(page);
+  const inRow = await page.getByTestId(testId).count();
+  if ((await moreId(page)) === null) return inRow;
+  const list = await openMore(page);
+  const inMore = await list.getByTestId(testId).count();
+  await closeMore(page);
+  return inRow + inMore;
+}
+
+/**
+ * 「元に戻す」の今の状態（操作の行の「その他 ▾」の項目。段2）：disabled＝戻せる手が無い、text＝項目の名前と説明（「「手の名前」を戻します」）。
+ * 「その他 ▾」を開いて読み、閉じる（押さない）。人の予定表・担当を組むの画面は「元に戻す」のボタンの title を読む
+ */
+async function undoState(page) {
+  // 人の予定表・担当を組むの画面は「元に戻す」が操作の行のボタンのまま（title に手の名前）
+  const btn = page.getByTestId('undo-btn');
+  if ((await btn.count()) > 0)
+    return {
+      disabled: (await btn.getAttribute('aria-disabled')) === 'true',
+      text: (await btn.getAttribute('title')) ?? '',
+      title: (await btn.getAttribute('title')) ?? '',
+    };
+  // 読むだけなので、いまフォーカスのある要素（札など）へフォーカスを戻す（このあとのキー操作・フォーカスの確かめを乱さない）
+  const prev = await page.evaluateHandle(() => document.activeElement);
+  const list = await openMore(page);
+  const item = list.getByTestId('more-undo');
+  const state = {
+    disabled: (await item.getAttribute('aria-disabled')) === 'true',
+    text: (await item.innerText()).replace(/\s+/g, ' ').trim(),
+    title: (await item.getAttribute('title')) ?? '',
+  };
+  await closeMore(page);
+  await prev.evaluate((el) => {
+    if (el && el !== document.body && el.isConnected) el.focus({ preventScroll: true });
+  });
+  await prev.dispose();
+  return state;
+}
+
 /** 「詳しく ▾」を開く（testId の無い・もう開いている場合は何もしない）。開いたら true */
 async function openDetails(page, testId = 'day-details') {
   const fold = page.getByTestId(testId);
   if ((await fold.count()) === 0 || (await fold.getAttribute('open')) !== null) return false;
   await page.getByTestId(`${testId}-summary`).click();
   return true;
+}
+
+/**
+ * 画面ごとの「詳しく ▾」（月・週・日）を開く（出ていなければ何もしない）。開け閉めは端末に覚える（PRD D393）ので、
+ * 一度開けばその画面は開いて始まる。中の点数・凡例・進み具合を続けて何か所も読む e2e が、画面へ着いたあとに1回呼ぶ
+ */
+async function openScreenDetails(page) {
+  await page
+    .locator('[data-testid="month-details"], [data-testid="week-details"], [data-testid="day-details"]')
+    .first()
+    .waitFor({ state: 'attached', timeout: 3000 })
+    .catch(() => {});
+  for (const id of ['month-details', 'week-details', 'day-details']) await openDetails(page, id);
 }
 
 /**
@@ -205,5 +273,8 @@ module.exports = {
   closeMore,
   pressTool,
   openDetails,
+  openScreenDetails,
   reveal,
+  undoState,
+  toolCount,
 };

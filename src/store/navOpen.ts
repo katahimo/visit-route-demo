@@ -60,5 +60,11 @@ export function createNavOpenMemory(getStorage: () => KeyStore | null) {
   };
 }
 
+/**
+ * 予定の画面ごとの「詳しく ▾」の開け閉めの鍵（月・週・日。入切で同じ。PRD D393）。開いて読み直すと開いたまま。
+ * 値が true なら開く（無ければ閉じて始める）。メニューの項目の鍵（nav 項目の key）とも、説明の鍵（intro:<画面>）とも重ならない
+ */
+export const detailsOpenKey = (screen: 'month' | 'week' | 'day'): string => `details:${screen}`;
+
 /** 画面全体で1つ（このブラウザの localStorage） */
 export const navOpenMemory = createNavOpenMemory(() => globalThis.localStorage ?? null);

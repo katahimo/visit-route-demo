@@ -519,10 +519,6 @@
 .month-list-today {
   margin-bottom: 8px;
 }
-.month-layout button {
-  display: inline-flex;
-  align-items: center;
-}
 .month-list {
   list-style: none;
   margin: 0;
@@ -780,7 +776,6 @@
 }
 @media print {
   .month-legend-open,
-  .month-layout,
   .month-list-today {
     display: none;
   }

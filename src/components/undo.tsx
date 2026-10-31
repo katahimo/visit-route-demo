@@ -73,7 +73,18 @@ export function HistoryKeys(): ReactNode {
 }
 
 /**
- * 操作の行の「元に戻す」「やり直す」（予定の日・週・月で同じ。PRD D327・D329）。戻せないときも押せる所に残し（フォーカスを落とさない）、
+ * 「元に戻す」へフォーカスを返す先：「元に戻す」のボタン（人の予定表・組むの画面）、無ければ予定の操作の行の「その他 ▾」
+ * （予定の月・週・日は「元に戻す」を「その他 ▾」の項目にしたため。PRD D392）
+ */
+export const undoFocusTarget = (): HTMLElement | null =>
+  document.querySelector<HTMLElement>('[data-testid="undo-btn"]') ??
+  document.querySelector<HTMLElement>('.schedule-toolbar [data-testid$="-more"]');
+
+/** 次の描画で undoFocusTarget にフォーカスする（移した・取り消したあと、フォーカスを body に落とさない） */
+export const focusUndo = (): number => requestAnimationFrame(() => undoFocusTarget()?.focus());
+
+/**
+ * 操作の行の「元に戻す」「やり直す」（人の予定表・担当を組むの画面。PRD D327・D329）。PRD D327・D329）。戻せないときも押せる所に残し（フォーカスを落とさない）、
  * 理由は title。戻す手の名前を title に出す
  */
 export function UndoButtons({ redoShown = true }: { redoShown?: boolean }) {

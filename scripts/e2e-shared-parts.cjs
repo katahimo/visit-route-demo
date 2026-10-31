@@ -25,6 +25,7 @@ const {
 const { sharedPage, openPage } = require('./lib/steps.cjs');
 const { planDays } = require('./lib/plan.cjs');
 const { answerConfirms } = require('./lib/confirmDialog.cjs');
+const { undoState } = require('./lib/ui.cjs');
 
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
 const shot = (page, name) => page.screenshot({ path: path.join(OUT_DIR, `${name}.png`) });
@@ -145,10 +146,7 @@ async function selectAndKeys(page, where, sel, ids, { move = true, day = false }
     check(moved, `${where}：→ で次の日（時刻はそのまま・store に書く）`, { date0, start1 });
     await settle(page, 300);
     check((await focusedVisit(page)) === ids[0], `${where}：動かしたあともフォーカスは動かした札`);
-    check(
-      /訪問を次の日へ/.test((await page.getByTestId('undo-btn').getAttribute('title')) ?? ''),
-      `${where}：全体の元に戻すの1手（手の名前）`,
-    );
+    check(/訪問を次の日へ/.test((await undoState(page)).text), `${where}：全体の元に戻すの1手（手の名前）`);
     await page.locator('h1').click();
     await page.keyboard.press(`${MOD}+z`);
     const back = await waitStored(page, (d) => JSON.stringify(d.visits) === JSON.stringify(before.visits));
@@ -162,10 +160,7 @@ async function selectAndKeys(page, where, sel, ids, { move = true, day = false }
     check(moved, `${where}：↓ で15分後（store に書く）`, start0);
     await settle(page, 300);
     check((await focusedVisit(page)) === ids[0], `${where}：動かしたあともフォーカスは動かした帯`);
-    check(
-      /訪問を15分後へ/.test((await page.getByTestId('undo-btn').getAttribute('title')) ?? ''),
-      `${where}：全体の元に戻すの1手（手の名前）`,
-    );
+    check(/訪問を15分後へ/.test((await undoState(page)).text), `${where}：全体の元に戻すの1手（手の名前）`);
     await page.locator('h1').click();
     await page.keyboard.press(`${MOD}+z`);
     const back = await waitStored(page, (d) => JSON.stringify(d.visits) === JSON.stringify(before.visits));

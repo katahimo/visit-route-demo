@@ -1,6 +1,7 @@
 // 月の画面のその日の回の一覧の行（PRD D333・D340・D341。ADR-0051・ADR-0056）：行の中身・押し方・キー・ドラッグ。
 // 右の欄の行はキーで動かし、マスへドラッグできる。スマホの下から出る欄の行は押すと詳細・長押しか「選ぶ」で選ぶ
 import type { RefObject } from 'react';
+import { focusUndo } from '../components/undo';
 import { useVisitKeys, visitItemOf } from '../components/visitKeys';
 import { useVisitDrag, useVisitItem, useVisitLooks, type VisitRowData } from '../components/visitParts';
 import type { DemoData } from '../contracts/data';
@@ -40,8 +41,7 @@ export function useMonthVisitRows(x: {
     staffOrder: () => x.activeStaff.map((s) => s.id),
     onOpen: openPanel,
     onMoved: list.onKeyMoved,
-    onCancelled: () =>
-      requestAnimationFrame(() => document.querySelector<HTMLElement>('[data-testid="undo-btn"]')?.focus()),
+    onCancelled: focusUndo,
   });
   const itemProps = useVisitItem({ selection: multi, onOpen: openPanel, keys: visitKeys });
   /** 下から出る欄の行（押すと欄を閉じて訪問の詳細の欄・長押しか「選ぶ」で選ぶ。キー・ドラッグは無い。ADR-0051 の決定5） */

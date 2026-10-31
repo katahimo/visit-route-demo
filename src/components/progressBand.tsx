@@ -50,13 +50,10 @@ const PART_LABEL_SETTLED: Record<PrepPart['kind'], string> = {
 export const ProgressBand = memo(function ProgressBand({
   ym,
   model,
-  primary = false,
   onOp,
 }: {
   ym: string;
   model: BandModel | null;
-  /** 次の一手を主ボタンにする（月の画面） */
-  primary?: boolean;
   onOp?: (op: BandOp) => void;
 }) {
   const month = monthLabel(ym);
@@ -187,7 +184,7 @@ export const ProgressBand = memo(function ProgressBand({
           <Link
             to={bandHref(ym, next.kind)}
             onClick={click(next.kind)}
-            className={`btn btn-small${primary ? ' btn-primary' : ''}`}
+            className="btn btn-small"
             data-testid="band-next"
             data-kind={next.kind}
             aria-label={`${month}：${next.label}`}

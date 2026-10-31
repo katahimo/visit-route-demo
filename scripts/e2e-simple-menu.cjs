@@ -13,11 +13,11 @@
 //    〈スタッフ〉は名前・勤務日・勤務時間の3列。詳細は〈利用者さん〉＝名前・住所・予定（繰り返し）／〈スタッフ〉＝名前・勤務日・勤務時間を出し、
 //    段階・特性・決まりごと・担当・相性（〈スタッフ〉は自宅・特性・求めること・日ごとの勤務ほか）は「詳しく ▾」の中（閉じていると見えない・開くと見える）。
 //    日の予定の地図はふだん閉じ、「地図」のボタンで開く（1366px・390px）。月のマスの読み方は帯の3種類と「変更あり」に合わせ、条件に合わない・拘束超は言わない、
-// 5f 「予定を入れる」と〈スタッフ〉・〈利用者さん〉のタブ（PRD D388。ADR-0073 第4段）：月・週の主ボタンは「予定を入れる」（操作の行は2つまで・担当なしの訪問を組むは「その他 ▾」）、
+// 5f 「予定を入れる」と〈スタッフ〉・〈利用者さん〉のタブ（PRD D392。ADR-0073 第4段）：月・週の主ボタンは「予定を入れる」（操作の行は2つまで・担当なしの訪問を組むは「その他 ▾」）、
 //    押すと引き出し（定期＝〈利用者さん〉・曜日・くり返し・時刻・所要／単発＝〈利用者さん〉・日付・時刻・所要）で「入れる」→ 予定に出て担当が自動で付く。
 //    〈スタッフ〉の一覧の上のタブ（一覧・勤務・相性）と〈利用者さん〉のタブ（一覧・相性）で行き来でき、メニューの印は〈スタッフ〉／〈利用者さん〉に付き、
 //    相性・勤務の画面に禁句・点数が出ない。1366px・390px。幅は落ちても戻す、
-// 6 エキスパート機能を入にすると メニューは 予定・〈利用者さん〉・〈スタッフ〉・組む・設定 の5つ（子は組むだけ）でホームは無く（#/home は予定へ）、帯に 組み方の標準が無い・未確定 N日 が足される。入では操作の行・説明・進み具合は今のまま（段2〜4 で変える）。
+// 6 エキスパート機能を入にすると メニューは 予定・〈利用者さん〉・〈スタッフ〉・組む・設定 の5つ（子は組むだけ）でホームは無く（#/home は予定へ）、帯に 組み方の標準が無い・未確定 N日 が足される。入の操作の行は2つ＋「その他 ▾」・「詳しく」は閉じて始まり見出しに数・開け閉めは画面ごとに覚える・説明は1行で初回だけ（段2。PRD D392・D393。段3・4 は人の画面・設定）。
 // スクリーンショット：simple-add-*（5f）・simple-clients-1366・simple-staff-1366・simple-plan-map-closed-1366 ほか（5e は simple-people-*・simple-plan-map-*）、simple-month-1366・simple-band-plan-1366・simple-menu-more-1366・simple-week-390・simple-tabs-390・simple-drawer-390
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-simple-menu.cjs
@@ -229,7 +229,7 @@ async function more(page) {
   await page.goto('about:blank');
   await page.goto(`${BASE}#/month`);
   await page.locator(NAV_READY).waitFor({ timeout: 60000 });
-  // 月・週は主ボタンが「予定を入れる」（PRD D388）で、「担当なしの訪問を組む N件」は「その他 ▾」の中。日は主ボタン「予定を入れる」（中身は訪問の欄）なので「その他 ▾」にある
+  // 月・週は主ボタンが「予定を入れる」（PRD D392）で、「担当なしの訪問を組む N件」は「その他 ▾」の中。日は主ボタン「予定を入れる」（中身は訪問の欄）なので「その他 ▾」にある
   check((await page.getByTestId('toolbar-arrange').count()) === 0, '月：操作の行に「担当なしの訪問を組む」は出さない');
   await page.getByTestId('month-more').click();
   await page.getByTestId('more-auto-arrange').waitFor({ timeout: 10000 });
@@ -348,7 +348,7 @@ async function open1(page, to) {
   await settle(page, 800);
 }
 
-/** 日の主ボタンを押すと新規の訪問の欄が開き、その見出しも主ボタンと同じ言葉（切は「予定を入れる」・入は「訪問を追加」。PRD D388） */
+/** 日の主ボタンを押すと新規の訪問の欄が開き、その見出しも主ボタンと同じ言葉（入切とも「予定を入れる」。PRD D392） */
 async function dayAddOpens(page, label) {
   const btn = page.getByTestId('plan-visit-add');
   check((await btn.innerText()).trim() === label, `日の主ボタンの文字は「${label}」`);
@@ -360,7 +360,7 @@ async function dayAddOpens(page, label) {
     (await page.getByRole('dialog').getByRole('heading', { level: 2 }).first().innerText()).trim() === label,
     `欄の見出しも「${label}」`,
   );
-  await shot(page, `simple-day-add-${label === '予定を入れる' ? 'off' : 'on'}-${page.viewportSize().width}`);
+  await shot(page, `simple-day-add-${page.viewportSize().width}`);
   await page.keyboard.press('Escape');
   await panel.waitFor({ state: 'detached', timeout: 10000 }).catch(() => {});
 }
@@ -369,6 +369,8 @@ async function dayAddOpens(page, label) {
 async function exceptions(page) {
   await page.setViewportSize({ width: 1366, height: 768 });
   await fresh(page, '/month', NAV_READY, { start: 'demo' });
+  // 開け閉め・説明の覚えは前の段から持ち越さない（閉じて始まる確かめのため）
+  await page.evaluate((k) => localStorage.removeItem(k), INTRO_KEY);
   for (const [to, zoom, primaryText, detailsId, hidden] of [
     [
       '/month',
@@ -450,6 +452,29 @@ async function exceptions(page) {
     }
     if (to === '/week') check(!BANNED.test(await page.getByTestId('week-details').innerText()), '週：詳しくに禁句なし');
   }
+  // 開け閉めは画面ごとに端末に覚える（切も入と同じ部品）：開いた月・週・日は読み直しても開いたまま、閉じて読み直すと閉じる
+  for (const [to, id] of [
+    ['/month', 'month-details'],
+    ['/week', 'week-details'],
+    ['/plan', 'day-details'],
+  ]) {
+    await open1(page, to);
+    check(
+      await page.getByTestId(id).evaluate((e) => e.open),
+      `${to}：開いた「詳しく」は読み直しても開いたまま（端末に覚える）`,
+    );
+  }
+  await open1(page, '/month');
+  await page.getByTestId('month-details-summary').click();
+  await page.reload();
+  await page.locator(NAV_READY).waitFor({ timeout: 60000 });
+  await settle(page, 600);
+  check(!(await page.getByTestId('month-details').evaluate((e) => e.open)), '/month：閉じて読み直すと閉じたまま');
+  check(
+    (await page.evaluate(() => !!document.querySelector('[data-testid="month-details-heading"]'))) === false,
+    '切：見出しに数を出さない',
+  );
+  await page.getByTestId('month-details-summary').click();
   // 日の「一覧で見る」：ピン・条件に合わないの札と禁句が出ない
   await open1(page, '/plan');
   await pressTool(page, 'plan-view-list', { where: 'more' });
@@ -567,7 +592,9 @@ async function mobileExceptions(page) {
     await page.keyboard.press('Escape');
     const fold = page.locator('[data-testid$="-details"]').first();
     if (await fold.count()) {
-      await page.locator('[data-testid$="-details-summary"]').first().click();
+      // 開け閉めは覚えるので、開いていなければ開く（閉じてしまわない）
+      if (!(await fold.evaluate((e) => e.open)))
+        await page.locator('[data-testid$="-details-summary"]').first().click();
       await settle(page, 300);
       await shot(page, `simple-${zoom}-details-390`);
     }
@@ -575,22 +602,108 @@ async function mobileExceptions(page) {
   await page.setViewportSize({ width: 1366, height: 768 });
 }
 
-/** 6b 入：操作の行・説明・進み具合は今のまま */
+/** 「詳しく」の中身（testid）→ 見出しの数の文の形（入。PRD D393） */
+const EXPERT_HEADING = {
+  'month-details': /^担当 \d+\/\d+日・確定 \d+\/\d+日$/,
+  'day-details': /^点数 \d+・移動 \d+分/,
+};
+
+/** 6b 入（段2。PRD D392・D393）：操作の行は主ボタン＋1つ＋「その他 ▾」、進み具合・件数・今の担当の1行は「詳しく ▾」（閉じて始まり、見出しに数）、説明は1行で初回だけ */
 async function expertSame(page) {
   await page.evaluate((k) => {
     const d = JSON.parse(localStorage.getItem(k));
     d.org.features = { ...d.org.features, expert: true };
     localStorage.setItem(k, JSON.stringify(d));
   }, STORAGE_KEY);
+  await page.evaluate((k) => localStorage.removeItem(k), INTRO_KEY);
+  for (const [to, zoom, want, detailsId, hidden] of [
+    ['/month', 'month', ['予定を入れる', '担当を組む'], 'month-details', 'progress-band'],
+    ['/week', 'week', ['予定を入れる', '担当を組む'], 'week-details', 'week-status'],
+    ['/plan', 'plan', ['予定を入れる', '確定（伝えた）'], 'day-details', 'plan-summary'],
+  ]) {
+    await open1(page, to);
+    const btns = await toolbarButtons(page);
+    check(
+      JSON.stringify(btns.map((b) => b.text)) === JSON.stringify(want),
+      `入 ${to}：操作の行は ${want.join('＋')} の2つ（その他 ▾ を除く）`,
+      btns,
+    );
+    check(btns[0].primary, `入 ${to}：1つ目（予定を入れる）が主ボタン`, btns);
+    check((await page.getByTestId('undo-btn').count()) === 0, `入 ${to}：元に戻すは操作の行に出さない`);
+    check(
+      (await page.getByTestId('plan-help-btn').count()) === 0,
+      `入 ${to}：使い方・表示の切り替えのボタンは行に無い`,
+    );
+    const list = await (async () => {
+      await page.getByTestId(`${zoom}-more`).click();
+      const t = await texts(page.getByRole('menuitem'));
+      await closeMore(page, zoom);
+      return t;
+    })();
+    check(
+      list.some((t) => /^欠勤・キャンセルを登録/.test(t)) && list.some((t) => /^元に戻す/.test(t)),
+      `入 ${to}：「その他 ▾」に 欠勤・キャンセルを登録 と 元に戻す`,
+      list,
+    );
+    const fold = page.getByTestId(detailsId);
+    check((await fold.count()) === 1, `入 ${to}：「詳しく」がある`);
+    check(!(await fold.evaluate((e) => e.open)), `入 ${to}：「詳しく」は初め閉じている`);
+    const target = page.getByTestId(hidden);
+    check(
+      (await target.count()) === 0 || !(await target.first().isVisible()),
+      `入 ${to}：閉じている間は ${hidden} が見えない`,
+    );
+    const heading = (await page.getByTestId(`${detailsId}-heading`).innerText()).trim();
+    const form = EXPERT_HEADING[detailsId];
+    check(!form || form.test(heading), `入 ${to}：「詳しく」の見出しに数（${heading}）`, heading);
+    if (to === '/week') check(/未確定 \d+日/.test(heading), '入 /week：見出しに「未確定 N日」', heading);
+    check(
+      (await page.getByTestId('page-intro').count()) === 1,
+      `入 ${to}：説明は1行で初回だけ出る（閉じるボタンあり）`,
+    );
+  }
+  // 開け閉めは画面ごとに端末に覚える：月を開いて読み直すと開いたまま、週・日は閉じたまま。閉じて読み直すと閉じる
   await open1(page, '/month');
-  check((await page.getByTestId('progress-band').count()) === 1, '入：月の進み具合の帯は上にある');
-  check((await page.getByTestId('month-details').count()) === 0, '入：「詳しく」は出ない');
-  check((await page.getByTestId('undo-btn').count()) === 1, '入：元に戻すは操作の行にある');
+  await page.getByTestId('month-details-summary').click();
+  check(await page.getByTestId('month-details').evaluate((e) => e.open), '入 月：「詳しく」を押すと開く');
+  check(await page.getByTestId('progress-band').first().isVisible(), '入 月：開くと進み具合の帯が見える');
+  await page.reload();
+  await page.locator(NAV_READY).waitFor({ timeout: 60000 });
+  await settle(page, 600);
+  check(
+    await page.getByTestId('month-details').evaluate((e) => e.open),
+    '入 月：読み直しても開いたまま（端末に覚える）',
+  );
+  await open1(page, '/week');
+  check(
+    !(await page.getByTestId('week-details').evaluate((e) => e.open)),
+    '入 週：月を開いても週は閉じたまま（画面ごと）',
+  );
   await open1(page, '/plan');
-  await dayAddOpens(page, '訪問を追加');
+  check(
+    !(await page.getByTestId('day-details').evaluate((e) => e.open)),
+    '入 日：月を開いても日は閉じたまま（画面ごと）',
+  );
   await open1(page, '/month');
-  check((await page.getByTestId('page-intro').count()) === 0, '入：説明に閉じるボタンは無い（今のまま）');
-  check((await page.locator('.page-lead').count()) === 1, '入：説明は今のまま出る');
+  await page.getByTestId('month-details-summary').click();
+  await page.reload();
+  await page.locator(NAV_READY).waitFor({ timeout: 60000 });
+  await settle(page, 600);
+  check(!(await page.getByTestId('month-details').evaluate((e) => e.open)), '入 月：閉じて読み直すと閉じたまま');
+  // 日：開くと今の担当の1行（点数・移動）と要対応の訪問の帯が見える。時間軸の移動の線は残る
+  await open1(page, '/plan');
+  await page.getByTestId('day-details-summary').click();
+  check(await page.getByTestId('plan-summary').isVisible(), '入 日：開くと「今の担当」の1行が見える');
+  check((await page.locator('.tl-leg').count()) > 0, '入 日：時間軸に移動の分数の線が残る');
+  const careBand = page.getByTestId('band-care');
+  check(
+    (await careBand.count()) === 0 || (await careBand.evaluate((e) => !!e.closest('[data-testid="day-details"]'))),
+    '入 日：「要対応の訪問 N件」の帯は「詳しく」の中',
+  );
+  await shot(page, 'simple-day-expert-details-1366');
+  await open1(page, '/plan');
+  await dayAddOpens(page, '予定を入れる');
+  await page.evaluate((k) => localStorage.removeItem(k), INTRO_KEY);
   // 入の一覧：旧の列・基本情報のタブは今のまま、休止中は状態の列だけに出る（名前のそばに二重に出さない）
   const offName = await page.evaluate((k) => {
     const d = JSON.parse(localStorage.getItem(k));
@@ -621,9 +734,6 @@ async function expertSame(page) {
     '入：〈利用者さん〉一覧の列は今のまま',
   );
   await open1(page, '/plan');
-  check((await page.getByTestId('plan-summary').count()) === 1, '入：日の「今の担当」の1行は上にある');
-  check((await page.getByTestId('plan-help-btn').count()) === 1, '入：使い方は操作の行にある');
-  check((await page.locator('.tl-leg').count()) > 0, '入：時間軸に移動の分数の線がある');
 }
 
 /** 6 エキスパート機能を入にすると 予定・〈利用者さん〉・〈スタッフ〉・組む・設定 の5つ。ホームは無く、帯に入だけの種類が足される（PRD D390・D391） */
@@ -1228,7 +1338,7 @@ const steps = sharedPage({
     ['5e 切：人の画面は畳む・地図はボタンで開く・マスの読み方', restoreWidth(people)],
     ['5f 切：「予定を入れる」（定期・単発）・〈スタッフ〉〈利用者さん〉のタブ', restoreWidth(addAndTabs)],
     ['6 入：メニュー5つ・ホームなし・帯の入の種類', expertOn],
-    ['6b 入：操作の行・説明・進み具合は今のまま', expertSame],
+    ['6b 入：操作の行（2つ＋その他）・「詳しく」の見出しの数と開け閉めの覚え・説明1行', expertSame],
   ],
   call: (fn, s) => fn(s.page),
 });

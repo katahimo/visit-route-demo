@@ -16,7 +16,7 @@ const path = require('node:path');
 const { answerConfirms } = require('./lib/confirmDialog.cjs');
 const { BASE, OUT_DIR, NOW, TODAY, STORAGE_KEY, check, hashOf, runSteps, settle, until } = require('./lib/env.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
-const { goTo, pressTool } = require('./lib/ui.cjs');
+const { goTo, pressTool, reveal } = require('./lib/ui.cjs');
 const { visitsIn } = require('./lib/visits.cjs');
 
 const YM = TODAY.slice(0, 7);
@@ -453,7 +453,8 @@ async function seedPlans(page) {
 /** 月の予定の要対応の欄（行の日付と種類・帯の要対応の数・その日のマス） */
 async function monthAttention(page, ym, date) {
   await open(page, `/month?ym=${ym}&layout=calendar&do=attention`, '[data-testid="month-aside"]');
-  await page.getByTestId('progress-band').locator('[data-testid="band-attention"]').waitFor({ timeout: 30000 });
+  // 進み具合の帯は「詳しく ▾」の中（PRD D393）。開いて待つ
+  await reveal(page, 'band-attention', { timeout: 30000 });
   await settle(page, 300);
   const rows = await page
     .locator('[data-testid="month-attention"] .month-attention-btn')
@@ -602,7 +603,7 @@ async function wide(page) {
     '空き状況の画面では「予定」に印',
   );
   await open(page, `/month?ym=${YM}`);
-  await pressTool(page, '欠勤', { where: 'row' });
+  await pressTool(page, '欠勤', { where: 'more' });
   await page.waitForURL(/#\/plan/);
   await page.locator('.date-switch select').waitFor();
   check((await page.locator('.date-switch select').inputValue()) === TODAY, '欠勤・キャンセルを登録 → 今日の日の予定');

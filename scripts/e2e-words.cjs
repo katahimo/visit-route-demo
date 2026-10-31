@@ -19,7 +19,7 @@ const { skipTour } = require('./lib/tourSeen.cjs');
 const { BASE, OUT_DIR, NOW, TODAY, STORAGE_KEY, check, settle, hashOf, runSteps } = require('./lib/env.cjs');
 const { planDays } = require('./lib/plan.cjs');
 const { sharedPage, openPage, guard } = require('./lib/steps.cjs');
-const { goTo, pressTool } = require('./lib/ui.cjs');
+const { goTo, openScreenDetails, pressTool } = require('./lib/ui.cjs');
 
 const YM = TODAY.slice(0, 7);
 const MONTH = Number(YM.slice(5, 7));
@@ -35,7 +35,11 @@ function addDays(d, n) {
  * 画面を新しく開く（e2e-home と同じ。about:blank を挟み、同じ文書の中で hash を移したときに読み直す前の `?do=` の処理で
  * 消えるのを避ける）。wait の要素が出るまで待つ
  */
-const open = (page, hash, wait) => goTo(page, hash, { ready: wait, timeout: 60000, h1: false, settleMs: 300 });
+const open = async (page, hash, wait) => {
+  await goTo(page, hash, { ready: wait, timeout: 60000, h1: false, settleMs: 300 });
+  // 点数・凡例・進み具合は「詳しく ▾」の中（PRD D393）。読む前に開く
+  if (/^\/(month|week|plan)/.test(hash)) await openScreenDetails(page);
+};
 /** 初期データに戻す（データの画面は開くだけではデータを書かないので、そこで消してから読み直す） */
 async function resetData(page) {
   await open(page, '/data', 'h1');
@@ -719,7 +723,7 @@ async function mobile(browser) {
   check(!(await tip.isVisible()), '印刷：用語の説明を出さない');
   await page.emulateMedia({ media: 'screen' });
   // 月：凡例の要約が1行で収まる
-  await open(page, `/month?ym=${YM}`, '[data-testid="month-legend-toggle"]');
+  await open(page, `/month?ym=${YM}`, '[data-testid="month-more"]');
   const lb = await page.getByTestId('month-legend-toggle').boundingBox();
   check(lb && lb.x + lb.width <= 390 && lb.height < 40, '390px：凡例の要約は1行で収まる', lb);
   await page.screenshot({ path: path.join(OUT_DIR, 'mobile-month.png') });
