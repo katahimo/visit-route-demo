@@ -131,7 +131,7 @@ async function menu(page) {
   check(/#\/basics$/.test(basicsHref ?? ''), 'メニューの「基本情報」は予定と相性（#/basics）を開く', basicsHref);
   // パレット：案を比べるは出ない（担当を組むの画面から開く）
   await page.keyboard.press(`${MOD}+k`);
-  const input = page.getByRole('combobox');
+  const input = page.getByTestId('cmdk-input');
   await input.waitFor();
   await input.fill('くらべる');
   await settle(page, 300);
