@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  addressCellText,
   addressLine,
   clientColumns,
   clientFolded,
@@ -8,7 +9,9 @@ import {
   clientTabFor,
   clientTabKeys,
   compatHintLabel,
+  detailColumnsShown,
   editInFold,
+  hasDetailColumns,
   newClientHint,
   newClientLead,
   newClientShowsStage,
@@ -27,13 +30,20 @@ import {
 import { CLIENT_TABS, STAFF_TABS } from './personPage';
 
 describe('一覧の列', () => {
-  it('切は〈利用者さん〉＝名前・住所・いつもの予定、〈スタッフ〉＝名前・勤務日・勤務時間の3列だけ', () => {
-    expect(clientColumns(true)).toEqual(['name', 'address', 'plan']);
-    expect(staffColumns(true)).toEqual(['name', 'days', 'hours']);
+  it('3列：〈利用者さん〉＝名前・住所・いつもの予定、〈スタッフ〉＝名前・勤務日・勤務時間（入切とも始めの列）', () => {
+    expect(clientColumns(false)).toEqual(['name', 'address', 'plan']);
+    expect(staffColumns(false)).toEqual(['name', 'days', 'hours']);
   });
-  it('入は今の列のまま', () => {
-    expect(clientColumns(false)).toEqual(['name', 'place', 'traits', 'requires', 'usual', 'state']);
-    expect(staffColumns(false)).toEqual(['name', 'work', 'traits', 'requires', 'home', 'state']);
+  it('くわしい列を出すと3列に専門の列（位置・特性・求めること・いつもの担当・状態／特性・求めること・自宅の位置・状態）が足される', () => {
+    expect(clientColumns(true)).toEqual(['name', 'address', 'plan', 'place', 'traits', 'requires', 'usual', 'state']);
+    expect(staffColumns(true)).toEqual(['name', 'days', 'hours', 'traits', 'requires', 'home', 'state']);
+  });
+  it('くわしい列を出せるのは入だけ。出すのは入で切り替えを入れているときだけ（切は切り替えを入れていても出さない）', () => {
+    expect(hasDetailColumns(true)).toBe(true);
+    expect(hasDetailColumns(false)).toBe(false);
+    expect(detailColumnsShown(true, true)).toBe(true);
+    expect(detailColumnsShown(true, false)).toBe(false);
+    expect(detailColumnsShown(false, true)).toBe(false);
   });
 });
 
@@ -80,23 +90,32 @@ describe('短い文', () => {
     expect(addressLine({ address: '', postalCode: '1000001' })).toBe('〒100-0001');
     expect(addressLine({ address: '', postalCode: '' })).toBe('');
   });
+  it('一覧の住所の列：入は〒郵便番号を添え、切は住所だけ（無ければ郵便番号）', () => {
+    const both = { address: '東京都千代田区1-1', postalCode: '1000001' };
+    expect(addressCellText(both, true)).toBe('〒100-0001 東京都千代田区1-1');
+    expect(addressCellText(both, false)).toBe('東京都千代田区1-1');
+    expect(addressCellText({ address: '', postalCode: '1000001' }, true)).toBe('〒100-0001');
+    expect(addressCellText({ address: '東京都千代田区1-1', postalCode: '' }, true)).toBe('東京都千代田区1-1');
+    expect(addressCellText({ address: '', postalCode: '1000001' }, false)).toBe('〒100-0001');
+    expect(addressCellText({ address: '', postalCode: '' }, true)).toBe('');
+  });
   it('勤務日は曜日の順、勤務時間は始〜終', () => {
     expect(workDaysText({ workDays: [5, 1, 3] })).toBe('月水金');
     expect(shiftText({ shiftStart: '9:00', shiftEnd: '17:00' })).toBe('9:00〜17:00');
   });
-  it('状態の列が無い（切）ときだけ、休止中・休み中を名前のそばに印。入は列に出すので二重にしない', () => {
-    expect(staffNameNote({ active: true }, staffColumns(true))).toBe('');
-    expect(staffNameNote({ active: false }, staffColumns(true))).toBe('休止中');
-    expect(staffNameNote({ active: false }, staffColumns(false))).toBe('');
-    expect(clientNameNote(true, clientColumns(true))).toBe('休み中');
-    expect(clientNameNote(false, clientColumns(true))).toBe('');
-    expect(clientNameNote(true, clientColumns(false))).toBe('');
+  it('状態の列が無い（3列）ときだけ、休止中・休み中を名前のそばに印。くわしい列は列に出すので二重にしない', () => {
+    expect(staffNameNote({ active: true }, staffColumns(false))).toBe('');
+    expect(staffNameNote({ active: false }, staffColumns(false))).toBe('休止中');
+    expect(staffNameNote({ active: false }, staffColumns(true))).toBe('');
+    expect(clientNameNote(true, clientColumns(false))).toBe('休み中');
+    expect(clientNameNote(false, clientColumns(false))).toBe('');
+    expect(clientNameNote(true, clientColumns(true))).toBe('');
   });
   it('切の説明・新しい人の言い方・節の欄・タブ', () => {
     expect(peopleIntro('clients')).toMatch(/名前・住所・いつもの予定/);
     expect(peopleIntro('staff')).toMatch(/名前・勤務日・勤務時間/);
-    expect(showStageNote(true)).toBe(false);
-    expect(showStageNote(false)).toBe(true);
+    expect(showStageNote(false)).toBe(false);
+    expect(showStageNote(true)).toBe(true);
     expect(newClientShowsStage(true)).toBe(false);
     expect(newClientLead(true, '利用者さん')).not.toMatch(/段階/);
     expect(newClientLead(false, '利用者さん')).toMatch(/段階/);

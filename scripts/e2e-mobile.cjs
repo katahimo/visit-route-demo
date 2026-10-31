@@ -180,7 +180,7 @@ async function drawerOpenClose(page) {
   await d.waitFor({ state: 'detached' });
   await page.waitForURL(/#\/basics/);
   check(
-    (await isFocused(btn)) && /基本情報・予定と相性$/.test(await page.getByTestId('screen-name').innerText()),
+    (await isFocused(btn)) && /組む・予定と相性$/.test(await page.getByTestId('screen-name').innerText()),
     '画面を選ぶと移って閉じ、フォーカスが「メニュー」へ',
   );
   // 今の画面を選んでも閉じるだけ（URL のクエリ＝画面の状態を消さない）。今の画面そのもの（週の予定）を指す「予定」に印がある

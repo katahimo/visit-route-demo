@@ -2,7 +2,7 @@ import { Clock, Timer } from 'lucide-react';
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useDay } from '../components/day';
-import { BasicsNav } from '../components/SettingsTabs';
+import { PeopleTabs } from '../components/SettingsTabs';
 import { PageHeader, WithIcon } from '../components/ui';
 import { useFeature } from '../components/useFeature';
 import { byName } from '../lib/common';
@@ -35,7 +35,7 @@ export default function AvailabilityPage() {
   return (
     <div className="stack">
       <PageHeader
-        nav={<BasicsNav />}
+        nav={<PeopleTabs />}
         icon={Clock}
         title="勤務時間（シフト）"
         lead={`${terms.staff}ごとの働ける時間`}

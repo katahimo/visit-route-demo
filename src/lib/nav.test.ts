@@ -65,11 +65,15 @@ describe('menuSections（入。PRD D390。ADR-0054・0063・0067・0074）', () 
       ['arrange:standard', '組み方の標準', '/standard'],
       ['arrange:assign', '担当を組む', '/arrange?ym=2026-11'],
     ]);
-    // 〈利用者さん〉・〈スタッフ〉の画面の印は上の段の項目。基本情報の印はタブの画面（相性・勤務を含む）
-    for (const p of ['/basics', '/compat', '/availability', '/workload'])
-      expect(isActiveNav(item('arrange:basics'), p)).toBe(true);
-    for (const p of ['/clients', '/clients/c1']) expect(isActiveNav(item('clients'), p)).toBe(true);
-    for (const p of ['/staff', '/staff/s1']) expect(isActiveNav(item('staff'), p)).toBe(true);
+    // 〈利用者さん〉・〈スタッフ〉の画面の印は上の段の項目（相性・勤務は人のタブの画面で、入も切と同じ。PRD D394）。基本情報の印は予定と相性だけ
+    expect(isActiveNav(item('arrange:basics'), '/basics')).toBe(true);
+    for (const p of ['/compat', '/availability', '/workload'])
+      expect(isActiveNav(item('arrange:basics'), p)).toBe(false);
+    for (const p of ['/clients', '/clients/c1', '/compat']) expect(isActiveNav(item('clients'), p)).toBe(true);
+    for (const p of ['/staff', '/staff/s1', '/availability', '/workload'])
+      expect(isActiveNav(item('staff'), p)).toBe(true);
+    expect(isActiveNav(item('clients'), '/basics')).toBe(false);
+    expect(isActiveNav(item('arrange'), '/basics')).toBe(true);
     for (const p of ['/clients', '/staff', '/clients/c1']) expect(isActiveNav(item('arrange'), p)).toBe(false);
     expect(isActiveNav(item('arrange:basics'), '/clients')).toBe(false);
     expect(item('settings').children).toBeUndefined();
@@ -110,16 +114,7 @@ describe('menuSections（入。PRD D390。ADR-0054・0063・0067・0074）', () 
     expect(isActiveNav(item('settings'), '/rules')).toBe(false);
   });
   it('予定を組むの段：基本情報 → 案をくらべる → 標準にする → 担当を組む。標準があれば2段。条件の重みは段・子に入れない（ADR-0067）', () => {
-    expect(ARRANGE_PATHS).toEqual([
-      '/basics',
-      '/compat',
-      '/availability',
-      '/workload',
-      '/rules',
-      '/standard',
-      '/arrange',
-      '/compare',
-    ]);
+    expect(ARRANGE_PATHS).toEqual(['/basics', '/rules', '/standard', '/arrange', '/compare']);
     expect(ARRANGE_STEPS.map((s) => [s.key, s.to, s.label])).toEqual([
       ['basics', '/basics', '基本情報'],
       ['proposals', '/standard', '案をくらべる'],
@@ -152,20 +147,10 @@ describe('menuSections（入。PRD D390。ADR-0054・0063・0067・0074）', () 
     const labels = menuSections(terms, TODAY, {}).flatMap((g) => g.items.map((i) => i.label));
     expect(new Set(labels).size).toBe(labels.length);
   });
-  it('基本情報のタブ：予定と相性・〈利用者さん〉・〈スタッフ〉・相性・勤務時間（シフト）（ADR-0067）', () => {
-    expect(basicsTabs(terms, {}).map((t) => t.label)).toEqual([
-      '予定と相性',
-      '利用者さん',
-      'スタッフ',
-      '相性',
-      '勤務時間（シフト）',
-    ]);
-    expect(basicsTabs(terms, { compat: false }).map((t) => t.to)).toEqual([
-      '/basics',
-      '/clients',
-      '/staff',
-      '/availability',
-    ]);
+  it('基本情報のタブ：予定と相性・相性・勤務時間（シフト）。〈利用者さん〉・〈スタッフ〉は人のタブの画面なので入れない（ADR-0074 段3）', () => {
+    expect(basicsTabs({}).map((t) => t.label)).toEqual(['予定と相性', '相性', '勤務時間（シフト）']);
+    expect(basicsTabs({ compat: false }).map((t) => t.to)).toEqual(['/basics', '/availability']);
+    expect(basicsTabs({}).find((t) => t.to === '/availability')?.match).toEqual(['/availability', '/workload']);
   });
   it('欠勤・キャンセルを登録は今日の日の予定の欄を開く操作（メニューには出さず、予定の操作の行から）', () => {
     expect(absenceHref(TODAY)).toBe('/plan?date=2026-10-21&do=absence');
@@ -209,7 +194,7 @@ describe('isActiveNav（今の画面の印。PRD D273・D275）', () => {
     for (const p of ['/types', '/items', '/settings', '/data']) expect(isActiveNav(item('settings'), p)).toBe(true);
     expect(isActiveNav(item('settings'), '/compat')).toBe(false);
     for (const p of ['/compat', '/availability', '/workload'])
-      expect(isActiveNav(item('arrange:basics'), p)).toBe(true);
+      expect(isActiveNav(item('arrange:basics'), p)).toBe(false);
   });
   it('操作の項目（URL に ?do=）は今の画面にしない', () => {
     expect(isActiveNav({ to: absenceHref(TODAY), label: '欠勤' }, '/plan')).toBe(false);
@@ -231,10 +216,10 @@ describe('navTitleParts（上の帯の名前。画面の一覧から引く）', 
   it('グループの見出し＋項目名で、〈利用者さん〉と〈スタッフ〉の一覧を見分ける', () => {
     expect(navTitleParts(screens, '/clients')).toEqual({ group: null, item: '利用者さん' });
     expect(navTitleParts(screens, '/staff')).toEqual({ group: null, item: 'スタッフ' });
-    expect(navTitleParts(screens, '/availability')).toEqual({ group: '基本情報', item: '勤務時間（シフト）' });
-    expect(navTitleParts(screens, '/compat')).toEqual({ group: '基本情報', item: '相性' });
-    expect(navTitleParts(screens, '/basics')).toEqual({ group: '基本情報', item: '予定と相性' });
-    expect(navTitleParts(screens, '/workload')).toEqual({ group: '基本情報', item: '勤務の見込み' });
+    expect(navTitleParts(screens, '/availability')).toEqual({ group: null, item: '勤務時間（シフト）' });
+    expect(navTitleParts(screens, '/compat')).toEqual({ group: null, item: '相性' });
+    expect(navTitleParts(screens, '/basics')).toEqual({ group: '組む', item: '予定と相性' });
+    expect(navTitleParts(screens, '/workload')).toEqual({ group: null, item: '勤務の見込み' });
     expect(navTitleParts(screens, '/vacancy')).toEqual({ group: null, item: '空き状況' });
   });
   it('予定は項目名だけ（「日の予定」にそろえる。PRD D230・D273）', () => {
@@ -249,6 +234,7 @@ describe('navTitleParts（上の帯の名前。画面の一覧から引く）', 
     expect(navTitleParts(screens, '/standard')).toEqual({ group: '組む', item: '組み方の標準' });
     expect(navTitleParts(screens, '/arrange')).toEqual({ group: '組む', item: '担当を組む' });
     expect(screens.find((g) => g.title === '組む')?.items.map((i) => i.to)).toEqual([
+      '/basics',
       '/rules',
       '/standard',
       '/arrange',
@@ -367,7 +353,7 @@ describe('エキスパート機能が切のメニュー（PRD D383。ADR-0073）
     expect(on('schedule', '/clients')).toBe(false);
     expect(on('clients', '/staff')).toBe(false);
   });
-  it('相性は、どちらのタブから来たかの側（last.people）の項目に印が付く（PRD D389）', () => {
+  it('相性は、どちらのタブから来たかの側（last.people）の項目に印が付く（PRD D394）', () => {
     const staffSide = menuSections(terms, TODAY, off, { people: 'staff' });
     expect(isActiveNav(item('staff', staffSide), '/compat')).toBe(true);
     expect(isActiveNav(item('clients', staffSide), '/compat')).toBe(false);
@@ -422,16 +408,20 @@ describe('エキスパート機能が切のメニュー（PRD D383。ADR-0073）
       '/plan',
       '/vacancy',
     ]);
-    expect(on.find((x) => x.items.some((i) => i.to === '/clients'))?.items.map((i) => i.label)).toEqual([
-      '利用者さん',
-      'スタッフ',
-    ]);
-    expect(on.find((x) => x.title === '基本情報')?.items.map((i) => i.to)).toEqual([
-      '/basics',
+    // 相性・勤務は人のグループ（入切で同じ）。予定と相性は組むの1段目（PRD D394）
+    expect(on.some((x) => x.title === '基本情報')).toBe(false);
+    expect(on.find((x) => x.items.some((i) => i.to === '/clients'))?.items.map((i) => i.to)).toEqual([
+      '/clients',
+      '/staff',
       '/compat',
       '/availability',
       '/workload',
     ]);
-    expect(on.find((x) => x.title === '組む')?.items.map((i) => i.to)).toEqual(['/rules', '/standard', '/arrange']);
+    expect(on.find((x) => x.title === '組む')?.items.map((i) => i.to)).toEqual([
+      '/basics',
+      '/rules',
+      '/standard',
+      '/arrange',
+    ]);
   });
 });

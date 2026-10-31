@@ -224,14 +224,14 @@ async function menu(page) {
     check((await page.locator('h1').innerText()).trim() === h1, `見出しは画面の名前「${h1}」`);
   }
   check(
-    JSON.stringify(await current()) === '["arrange:basics"]' && (await parentOn('arrange')),
-    'aria-current：勤務の見込みは組むの子「基本情報」（親の「組む」は has-current）',
+    JSON.stringify(await current()) === '["staff"]' && !(await parentOn('arrange')),
+    'aria-current：勤務の見込みは上の段の項目「スタッフ」（組むの子ではない。人のタブの画面。PRD D394）',
     await current(),
   );
   check(
     (await page.getByTestId('people-tabs').locator('[aria-current="page"]').getAttribute('data-tab')) ===
       'availability',
-    '勤務の見込みの基本情報のタブは勤務時間（シフト）に印',
+    '勤務の見込みの人のタブは勤務（勤務時間（シフト））に印',
   );
   // 予定は最後に開いた表示を開く（既定は日の予定。PRD D273）。ページを読み直すと既定に戻る
   await open(page, '/data');
@@ -272,11 +272,11 @@ async function menu(page) {
       on,
     );
   }
-  // 相性は設定のタブに無い：基本情報のタブ（ADR-0047・ADR-0054・ADR-0067）。設定のタブは出さず、メニューは組むの子「基本情報」に印
+  // 相性は設定のタブに無い：人のタブ（ADR-0047・ADR-0054・PRD D394）。設定のタブは出さず、メニューは来た側（既定は〈利用者さん〉）に印
   await open(page, '/compat');
   check(
-    JSON.stringify(await current()) === '["arrange:basics"]' && (await parentOn('arrange')),
-    'aria-current：#/compat は組むの子「基本情報」（設定ではない）',
+    JSON.stringify(await current()) === '["clients"]' && !(await parentOn('arrange')),
+    'aria-current：#/compat は人の項目「利用者さん」（来た側の既定。設定でも組むでもない）',
     await current(),
   );
   check((await page.getByTestId('settings-tabs').count()) === 0, '相性の画面に設定のタブを出さない');
@@ -306,11 +306,14 @@ async function menu(page) {
     await current(),
   );
   check(
-    (await page.locator('h1').innerText()).trim() === '利用者さん一覧',
-    '〈利用者さん〉の見出しは「利用者さん一覧」（見出しの名前は段3で整える）',
+    (await page.locator('h1').innerText()).trim() === '利用者さん',
+    '〈利用者さん〉の見出しはメニューの名前と同じ「利用者さん」（「一覧」を付けない。PRD D230・D394）',
   );
   await open(page, '/staff');
-  check((await page.locator('h1').innerText()).trim() === 'スタッフ一覧', '〈スタッフ〉の見出しは「スタッフ一覧」');
+  check(
+    (await page.locator('h1').innerText()).trim() === 'スタッフ',
+    '〈スタッフ〉の見出しはメニューの名前と同じ「スタッフ」',
+  );
   // 相性へは人のタブで（一覧の見出しの「相性の表」の文字ボタンは無くした。ADR-0054）
   for (const h of ['/clients', '/staff']) {
     await open(page, h, '[data-testid="people-tabs"]');
@@ -319,13 +322,18 @@ async function menu(page) {
     await page.getByTestId('compat-table').waitFor();
     check(hashOf(page) === '#/compat', `${h} の人のタブ「相性」で相性の画面へ`, hashOf(page));
   }
+  // 予定を組むの4段は「組む」の画面だけ：人の画面（一覧・相性・勤務・勤務の見込み）には出さない（PRD D394）
+  for (const h of ['/clients', '/staff', '/compat', '/availability', '/workload']) {
+    await open(page, h, '[data-testid="people-tabs"]');
+    check((await page.getByTestId('arrange-steps').count()) === 0, `${h}：予定を組むの4段は出さない（組む画面だけ）`);
+  }
   // 基本情報のタブは先頭に「予定と相性」・aria-label は「基本情報の切り替え」。メニューの「基本情報」は予定と相性（#/basics）を開く
   await open(page, '/basics', '[data-testid="people-tabs"]');
   const btabs = (await page.getByTestId('people-tabs').locator('a').allInnerTexts()).map((x) => x.trim());
   check(
-    JSON.stringify(btabs) === JSON.stringify(['予定と相性', '利用者さん', 'スタッフ', '相性', '勤務時間（シフト）']) &&
+    JSON.stringify(btabs) === JSON.stringify(['予定と相性', '相性', '勤務時間（シフト）']) &&
       (await page.getByTestId('people-tabs').getAttribute('aria-label')) === '基本情報の切り替え',
-    '基本情報のタブ：予定と相性・利用者さん・スタッフ・相性・勤務時間（シフト）（aria-label「基本情報の切り替え」）',
+    '基本情報のタブ：予定と相性・相性・勤務時間（シフト）（〈利用者さん〉・〈スタッフ〉は人のタブ。aria-label「基本情報の切り替え」）',
     btabs,
   );
   check(
@@ -731,8 +739,8 @@ async function mobile(page) {
   for (const [h, name] of [
     ['/plan', '日の予定'],
     ['/month', '月の予定'],
-    ['/basics', '基本情報・予定と相性'],
-    ['/availability', '基本情報・勤務時間（シフト）'],
+    ['/basics', '組む・予定と相性'],
+    ['/availability', '勤務時間（シフト）'],
     ['/rules', '組む・条件の重み'],
   ]) {
     await open(page, h);
@@ -1025,7 +1033,11 @@ async function screen1366(page) {
   await page.evaluate(() => {
     location.hash = '#/clients';
   });
-  await page.locator('h1').filter({ hasText: /一覧/ }).first().waitFor();
+  await page
+    .locator('h1')
+    .filter({ hasText: /利用者さん/ })
+    .first()
+    .waitFor();
   await settle(page, 200);
   const kept = await page.locator('.app-shell').getAttribute('data-date');
   await page.evaluate(() => {
