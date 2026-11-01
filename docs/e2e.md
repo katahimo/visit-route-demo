@@ -17,7 +17,7 @@ AGENTS.md「コマンド」から引く詳細。e2e を走らせる・足す・�
 - 1つの段は最長3分（`E2E_STEP_TIMEOUT_MS`）
 - 保存した担当の入った訪問を用意する `planDays`（`scripts/lib/plan.cjs`。AI で組むので重い）は、初期データから組む所なら `{ cache: true }`（2回目からは結果の写し。包みの中では `E2E_PLAN_CACHE_DIR`＝`test-results/.plan-cache` で分け合う）
 - 落ちた test には trace・動画（perf は取らない）・`-fail-` のスクリーンショット・記録が付く（`npx playwright show-report`・`npx playwright show-trace`）
-- 準備は `scripts/lib/steps.cjs` の `openPage`（sharedPage の準備）・`openContext(browser)`（pagePerStep の段ごとの文脈。地図のタイルを止め、確認は `answerConfirms`）を使う。どちらも案内ツアーを見た扱い・時計を `NOW` に止める・ページのエラーを集める（包みが失敗に数える）。自分で文脈を作るときはすぐ `scripts/lib/tourSeen.cjs` の `skipTour(ctx)` を呼ぶ（e2e-tour は除く）。既定（`start: 'all'`）で印 `vrdemo:features:start` = `all`（`scripts/lib/startFeatures.cjs` の `startAll`）を入れ、最初の2問を出さず今の初期データ＋すべて入で始める。2問を確かめるときは `skipTour(ctx, { start: 'ask' })` か呼ばず、`scripts/lib/firstRun.cjs` の `answerFirstRun`・`answerIfAsked` で答える
+- 準備は `scripts/lib/steps.cjs` の `openPage`（sharedPage の準備）・`openContext(browser)`（pagePerStep の段ごとの文脈。地図のタイルを止め、確認は `answerConfirms`）を使う。どちらも案内ツアーを見た扱い・時計を `NOW` に止める・ページのエラーを集める（包みが失敗に数える）。自分で文脈を作るときはすぐ `scripts/lib/tourSeen.cjs` の `skipTour(ctx)` を呼ぶ（e2e-tour は除く）。既定（`start: 'all'`）で印 `vrdemo:features:start` = `all`（`scripts/lib/startFeatures.cjs` の `startAll`）を入れ、最初の2問を出さず今の初期データ＋すべて入で始める。2問を確かめるときは `skipTour(ctx, { start: 'ask' })` か呼ばず、`scripts/lib/firstRun.cjs` の `answerFirstRun`・`answerIfAsked` で答える。「デモで試す」で答えると、作った直後に担当なしを1回自動で組む（PRD D409。印 `all` では組まない）ので、`answerFirstRun` は組みの終わりの知らせまで待つ（`waitStartArranged`。終わる前に読み直すと組まれない）。初期データの担当なしが要る確かめ（帯の［担当なしを組む］など）は `{ arranged: false }` で知らせの［元に戻す］を押して組む前に戻す
 - 確定の操作を確かめる e2e は「すべて入」（エキスパート入）の前提で書く。「基本」で始めるもの（e2e-tour・e2e-basic-auto・e2e-features・e2e-features2・e2e-simple-menu。2問に答えて始めるのは `scripts/lib/firstRun.cjs` の `openAsked`・`freshAsked`）は確定の印を待たず、日の予定は `plan-summary` を待つ
 - 確認に答えるときは `scripts/lib/confirmDialog.cjs` の `answerConfirms(page)`（出た確認の見出しと本文を記録し `answer` のボタンを押す。ネイティブのダイアログは記録して失敗に、beforeunload だけ受ける。答えずにネイティブのダイアログだけ記録するのは `watchNative(page)`）
 - 保存を待つ `waitStored(page, pred)`・修飾キー `MOD`・スクリーンショット `shot(page, 名前)` は `scripts/lib/env.cjs` にある（スクリプトに写さない）
@@ -79,7 +79,7 @@ AGENTS.md「コマンド」から引く詳細。e2e を走らせる・足す・�
 | `e2e-shared-parts.cjs` | 訪問の札の共通の部品（週の〈利用者さん〉の表・月のマスと一覧・人の予定表で複数選択・キー・`data-marks`・落とし先の判定。週の〈スタッフ〉の表のキーと長押しは e2e-chip-containers） | 1400px・390px |
 | `e2e-simple-menu.cjs` | 「基本」のメニュー5つ・要対応の帯・「予定を入れる」・人のタブ・人の画面の畳み・地図はボタン／入の人の一覧の「くわしい列」 | 1366px・390px |
 | `e2e-standard.cjs` | 組み方の標準（段・案をくらべる・表で直す・標準にする・条件の重みの寄り道） | |
-| `e2e-tour.cjs` | 最初の2問・登録の案内・案内ツアー・ファイル選択・月の日ごとの一覧・データを守る（控え・書き出した日・片づけ・壊れたデータ） | |
+| `e2e-tour.cjs` | 最初の2問（デモは作った直後に1回組む・自分のデータと印「all」は組まない）・登録の案内・案内ツアー・ファイル選択・月の日ごとの一覧・データを守る（控え・書き出した日・片づけ・壊れたデータ） | |
 | `e2e-vacancy-steps.cjs` | 空き状況の段階（いつ・何を → 場所 → 受けられる曜日・時間帯 → 次の一手） | `PERF_MS_VACANCY`（結果が出るまで。既定 5000ms）。住所の検索は偽の応答 |
 | `e2e-view.cjs` | 人の画面の節（読むだけ・「直す → 保存」・捨てる確認・〈スタッフ〉のアイコン） | |
 | `e2e-visit-panel.cjs` | 訪問の詳細の欄（開く所・日時と担当の保存・範囲・取り消し・新規・390px・印刷） | |

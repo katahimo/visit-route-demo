@@ -13,7 +13,8 @@
 //  7 もう一度直すと訪問に「変更あり」の印と日の上の「変更あり N件」のチップ（伝えた記録は書き換えない）。印を押すと連絡の一覧が開き
 //    （札は選ばない）、「連絡した」で今の担当・時刻が伝えた記録になり「変更あり」が消える（操作の行の［元に戻す］で戻る）
 //  8 週の予定の印を押すとその日の日の予定へ移り連絡の一覧が開く（URL の ?do=told・?date= は消える）
-//  9 月の予定：確定の段階（進み具合の帯の「確定」・右の欄の「確定していない日」・まとめて確定）が無い。マスの印からも連絡の一覧へ
+//  9 月の予定：確定の段階（進み具合の帯の「確定」・右の欄の「確定していない日」・まとめて確定）が無い。マスに「変更あり」の印は出さず、
+//   押した日の右の欄の行の印から連絡の一覧へ（PRD D410）
 // 10 エキスパート機能を入にすると確定（伝えた）の操作が出て、自動では伝えない（直しても snapshots は増えない）
 // 11 決まった日に訪問を足すと自動の組みが担当を付け、足した訪問は「変更あり」（伝えた記録は書き換えない）
 //
@@ -27,6 +28,11 @@ const { findVisit, visitsIn } = require('./lib/visits.cjs');
 const { applyTemplate } = require('./lib/features.cjs');
 const { pressTool } = require('./lib/ui.cjs');
 
+/**
+ * 2問の答え：デモ×定期で、作った直後の1回の組み（PRD D409）は知らせの［元に戻す］で戻して始める
+ * （初期データの担当なし・伝えた記録の無い日から、自動の組みと決まった予定を確かめる。最初の組みそのものは e2e-tour）
+ */
+const UNARRANGED = { arranged: false };
 const data = (page) => page.evaluate((k) => JSON.parse(localStorage.getItem(k)), STORAGE_KEY);
 /** 自動の組みは Worker で解いてから書く（並列の実行・遅い環境では数秒かかる）ので、ok(d) が真になるまで最長30秒待って読む */
 const dataWhen = async (page, ok) =>
@@ -56,7 +62,7 @@ const sheet = (page) => page.getByTestId('contact-sheet');
 
 /** 1 単発の訪問を足す → 組まれる → 元に戻す */
 async function single(page) {
-  await freshAsked(page, `/plan?date=${TODAY}`, '[data-testid="sched-nav"]');
+  await freshAsked(page, `/plan?date=${TODAY}`, '[data-testid="sched-nav"]', UNARRANGED);
   const d0 = await data(page);
   check(d0.org.features.expert === false, '前提：初めて開くとエキスパート機能は切', d0.org.features);
   const n0 = d0.visits.length;
@@ -128,7 +134,7 @@ async function bandArrange(page) {
 
 /** 3 〈利用者さん〉の画面で担当なしの繰り返しを足す → 自動で組まれ、繰り返しの担当が書かれる */
 async function pattern(page) {
-  await freshAsked(page, '/clients/c1', '[data-testid="pcal"]');
+  await freshAsked(page, '/clients/c1', '[data-testid="pcal"]', UNARRANGED);
   const d0 = await data(page);
   const p0 = d0.patterns.filter((p) => p.clientId === 'c1').length;
   const staffName = (d, id) => d.staff.find((s) => s.id === id)?.displayName ?? d.staff.find((s) => s.id === id)?.name;
@@ -173,7 +179,7 @@ async function pattern(page) {
 
 /** 4 ひな形「単発のみ」を当てると繰り返しの欄が消える */
 async function oneOff(page, dlg) {
-  await freshAsked(page, '/clients/c1', '[data-testid="pcal"]');
+  await freshAsked(page, '/clients/c1', '[data-testid="pcal"]', UNARRANGED);
   check((await page.getByTestId('patterns-section').count()) === 1, '前提：初めは繰り返しの欄が出る（基本）');
   await applyTemplate(page, dlg, 'oneOff');
   const d = await dataWhen(page, (x) => x.org.features.patterns === false);
@@ -211,7 +217,7 @@ async function moveVisit(page, vid) {
 
 /** 5 切の日の画面：確定の段階（確定のボタン・確定済み・まだ伝えていない）が無い */
 async function plain(page) {
-  await freshAsked(page, `/plan?date=${TODAY}`, '[data-testid="sched-nav"]');
+  await freshAsked(page, `/plan?date=${TODAY}`, '[data-testid="sched-nav"]', UNARRANGED);
   const d = await data(page);
   check(d.org.features.expert === false, '前提：初めて開くとエキスパート機能は切', d.org.features);
   check(!d.snapshots[TODAY], '前提：初期データに今日の伝えた記録は無い', Object.keys(d.snapshots));
@@ -336,13 +342,19 @@ async function month(page) {
   check((await page.getByTestId('band-confirm').count()) === 0, '月の帯に「確定 N/N日」を出さない');
   const next = await page.getByTestId('band-next').getAttribute('data-kind');
   check(next !== 'unconfirmed', '月の帯の次の一手に「確定していない日を見る」を出さない', next);
-  // マスの「変更あり」の印を押すとその日の日の予定の連絡の一覧（マスは選ばず移る）
-  const cellMark = page.locator(`[data-testid="month-day"][data-date="${TODAY}"] [data-told-date]`);
-  await cellMark.waitFor({ timeout: 15000 });
-  await cellMark.click();
+  // マスは例外だけ（PRD D410）：「変更あり」の印はマスに出さず、変更ありの日は「要対応 N」に数える。
+  // マスを押すと右の欄にその日の訪問が出て、行の「変更あり」の印を押すとその日の日の予定の連絡の一覧
+  const cell = page.locator(`[data-testid="month-day"][data-date="${TODAY}"]`);
+  await cell.waitFor({ timeout: 15000 });
+  check((await cell.locator('[data-told-date]').count()) === 0, '月のマスに「変更あり」の印を出さない');
+  check((await cell.getByTestId('month-attn').count()) === 1, '変更ありの日のマスに「要対応 N」の札');
+  await cell.click();
+  const rowMark = page.locator('[data-testid="month-day-visits"] [data-told-date]').first();
+  await rowMark.waitFor({ timeout: 15000 });
+  await rowMark.click();
   await sheet(page).waitFor({ timeout: 15000 });
   const mh = new URL(page.url()).hash;
-  check(/^#\/plan/.test(mh) && !/do=told|date=/.test(mh), '月のマスの印を押すと日の予定へ移り連絡の一覧が開く', mh);
+  check(/^#\/plan/.test(mh) && !/do=told|date=/.test(mh), '右の欄の行の印を押すと日の予定へ移り連絡の一覧が開く', mh);
   await page.goto('about:blank');
   await page.goto(`${BASE}#/month?do=unconfirmed`);
   await page.getByTestId('month-aside').waitFor({ timeout: 60000 });
@@ -362,7 +374,7 @@ async function month(page) {
 
 /** 10 エキスパート機能が入なら確定（伝えた）の操作が出て、自動では伝えない */
 async function expertOn(page) {
-  await freshAsked(page, `/plan?date=${TODAY}`, '[data-testid="sched-nav"]');
+  await freshAsked(page, `/plan?date=${TODAY}`, '[data-testid="sched-nav"]', UNARRANGED);
   await page.evaluate((k) => {
     const d = JSON.parse(localStorage.getItem(k));
     d.org.features = { ...d.org.features, expert: true };
@@ -383,7 +395,7 @@ async function expertOn(page) {
 
 /** 11 決まった日に担当なしの訪問を足すと、自動の組みが担当を付ける（伝えた内容は書き換えず、足した訪問は「変更あり」） */
 async function addToSettled(page) {
-  await freshAsked(page, `/plan?date=${TODAY}`, '[data-testid="sched-nav"]');
+  await freshAsked(page, `/plan?date=${TODAY}`, '[data-testid="sched-nav"]', UNARRANGED);
   await moveVisit(page, await firstVisit(page));
   const d0 = await dataWhen(page, (x) => !!x.snapshots[TODAY]);
   const n0 = d0.visits.length;

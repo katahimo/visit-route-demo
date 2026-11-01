@@ -1,6 +1,7 @@
 import { Loader2 } from 'lucide-react';
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { autoArrange, autoBandText, autoDoneText } from '../lib/autoArrangeBatch';
+import { jstDate } from '../domain/time';
+import { autoArrange, autoBandText, autoDoneText, requestUnassignedArrange } from '../lib/autoArrangeBatch';
 import { useDemoData } from '../store';
 import { useToast } from './Toast';
 import { useUndoAction } from './undo';
@@ -14,10 +15,11 @@ export const AUTO_BAND_DELAY_MS = 600;
  * 自動の組み（lib/autoArrangeBatch。ADR-0072 第2段）に store の data と update をつなぎ、終わったら知らせる（PRD D405）。
  * App の直下に1つ。外れると計算を捨てる。データを丸ごと差し替えたら（読み込み・初期状態に戻す・直前の状態に戻す・別のタブの変更）
  * 待たせている依頼ごと捨てる（古いデータから作った結果を新しいデータに書かない）。
- * 終わったら「N件の担当を組みました」と［元に戻す］（書いたのが1手なので全体の履歴の1手戻す）。提案の帯は出さない
+ * 終わったら「N件の担当を組みました」と［元に戻す］（書いたのが1手なので全体の履歴の1手戻す）。提案の帯は出さない。
+ * デモを作った直後（store の startArrange。PRD D409）は、要対応の帯の［担当なしを組む］と同じ依頼を1回出す
  */
 export function AutoArrangeHost(): ReactNode {
-  const { data, update, replacedCount } = useDemoData();
+  const { data, update, replacedCount, startArrange, takeStartArrange } = useDemoData();
   const latest = useRef(data);
   // 描いたデータを計算が読む（組んでいる間の編集も次の日から入れる）
   useLayoutEffect(() => {
@@ -33,6 +35,14 @@ export function AutoArrangeHost(): ReactNode {
     lastReplaced.current = replacedCount;
     autoArrange.abort();
   }, [replacedCount]);
+  // デモを作った直後の1回（差し替えで捨てたあと、描いた新しいデータで依頼する。同じ印で二度出さない）
+  const taken = useRef<object | null>(null);
+  useEffect(() => {
+    if (!startArrange || taken.current === startArrange) return;
+    taken.current = startArrange;
+    takeStartArrange(startArrange);
+    requestUnassignedArrange(latest.current, jstDate(Date.now()));
+  }, [startArrange, takeStartArrange]);
   const toast = useToast();
   const undo = useUndoAction();
   const done = useValueStore(autoArrange.done);
