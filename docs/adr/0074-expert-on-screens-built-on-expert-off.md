@@ -1,7 +1,7 @@
 # ADR-0074：エキスパート機能が入の画面も切の作りを土台にする
 
 - 日付：2026-10-31
-- 状態：採用（メニューの空き状況は ADR-0078、担当なしを組む入口は ADR-0077）
+- 状態：採用・段0〜5 実装済み（メニューの空き状況は ADR-0078、担当なしを組む入口は ADR-0077）
 - 関連：ADR-0029・0041・0053・0067・0072・0073
 
 ## 背景
@@ -19,7 +19,7 @@
 - ツアーは 予定・欠勤 の2枚
 
 ### 予定の操作の行と「詳しく ▾」
-- 操作の行は切の `SimpleToolbar` を入にも使い、差は `lib/exceptionView` の `mainTools(zoom, avail, expert)` の1か所。月・週＝主「予定を入れる」（`AddPlanPanel`）＋「担当を組む」、日＝主「予定を入れる」＋「確定（伝えた）」（`AdoptButton`）。スマホの日は確定が主
+- 操作の行は切の `ToolbarRow` を入にも使い、差は `lib/exceptionView` の `mainTools(zoom, avail, expert)` の1か所。月・週＝主「予定を入れる」（`AddPlanPanel`）＋「担当を組む」、日＝主「予定を入れる」＋「確定（伝えた）」（`AdoptButton`）。スマホの日は確定が主
 - 「その他 ▾」の入の中身：欠勤・キャンセルを登録・元に戻す／やり直す・表示の切り替え・使い方・メールで送る（週・日）・印刷・勤務の見込み
 - 「詳しく ▾」は `components/DetailsFold`。閉じて始め、開け閉めは月・週・日ごとに端末に覚える（`store/navOpen` の `details:<画面>`）。入は見出しの1行に数（`lib/detailsHeading`）：月＝担当・確定の日数、週＝未確定・要対応、日＝点数・移動・入らない・守れない条件
 - 畳むもの：月＝進み具合の帯・件数・凡例、週＝状態の1行・凡例、日＝今の担当の1行・担当ごとの1日・要対応の訪問の帯
@@ -41,6 +41,12 @@
 
 ### e2e
 - 共通の手 `scripts/lib/ui.cjs`（画面へ行く・メニューを押す・操作の行のボタン・「その他 ▾」・「詳しく ▾」）。画面が変わっても表の1か所を直す。位置は `pressTool` の `where: 'row'`・`'more'`
+
+### 後片付け（段5。新しい D番号は無い）
+- 使われない CSS（`.month-prep*`・`.grid2`・`.m-sr`・`.person-view-list`）を消した。入だけの古い部品は段1〜4 で消えていて、`check:code` の基準は空のまま
+- 名前を今の役割に合わせた：`SimpleToolbar`（`components/simpleToolbar`）→ `ToolbarRow`（`components/toolbarRow`）、`simpleText` → `exceptionText`、`useBandArrange` の `simple` → `exceptionOnly`、`lib/monthGuide` の `simple` → `noConfirm`、`docs/design/pages-home.md` → `pages-progress.md`
+- 週のナビの行の状態（`week-next-status`）は「未確定 N日」「確定済み」だけ、理由（`week-next-why`）は1行。詳しい数は「詳しく ▾」と要対応の帯にある
+- 畳みの計測（`components/useChipFold.ts`）の測り直しの鍵を `lib/fold` の `chipFoldKey`・`nextFullHeight` に置いた（幅・中身の高さ・書体・チップの表示）。e2e-week の fold の段は、押した印が付くのを待ってから次を押し、失敗時は aria-expanded と「あと N人」の数を記録する（CPU を4〜8倍絞ると、表を押した直後に時間軸を押して `goView` が押しを捨てる競合を再現した。CI の失敗と同じ原因かは未確認）
 
 ## 捨てた案
 入の画面を個別に削る（二つの画面が残る）・表示の密さを別の切り替えにする（組み合わせが倍）・ホームを残す・入は「詳しく」を既定で開く（縦の長さが戻る）。

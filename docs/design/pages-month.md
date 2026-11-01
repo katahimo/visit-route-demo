@@ -1,7 +1,7 @@
 # 月の予定と月の印刷
 
 > この画面のファイル：`src/pages/MonthPage.tsx`（`month.css`。組み立てだけ。状態と処理は `useMonthNav`・`useMonthFocus`・`useMonthDays`・`useMonthFocusDays`・`useMonthOff`・`useMonthAside`・`useMonthBatch`・`useMonthMenu`（`useMonthPanels`・`monthMore`）・`useMonthDayList`・`useMonthVisitRows`・`useMonthListRows`、見た目は `monthSections.tsx`（区画）・`monthParts.tsx`（見出しの欄・凡例）・`monthGrid.tsx`（カレンダーの表・日ごとの一覧）・`monthCell.tsx`（`DayCell`）・`monthCellTip.tsx`（`MonthCellTip`）・`monthAside.tsx`（右の欄・下から出る欄）、計算は `src/lib/monthCell.ts`（`dayCellText`）・`monthView.ts`（表示の選択・日ごとの集計・一覧の行））・`MonthPrintPage.tsx`（`monthPrint.css`）、`src/lib/month.ts`・`monthList.ts`・`monthGuide.ts`・`monthPrint.ts`・`monthRest.ts`・`requestedOff.ts`・`dayStatuses.ts`・`confirmDay.ts`・`settledView.ts`・`attentionBand.ts`、`src/components/useDayStatuses.ts`・`useBulkConfirm.ts`（週と共通）・`visitParts.tsx`（マスの選ぶ・その日の回の一覧の行・ドラッグ）・`scheduleParts.tsx`（選択の帯の「別の日へ」）。関連 ADR：0012〜0015・0031・0032・0042・0051〜0053・0056・0057・0063・0073・0074。関連 PRD：D36〜D44・D53〜D55・D65・D69・D70・D151〜D154・D176・D189〜D192・D201〜D204・D223・D228・D256・D257・D278・D295・D313・D321・D332・D334・D339〜D343・D347・D382・D384・D393・D400〜D404。
-> 3段のバー・混み具合の塗りは [pages-bars.md](pages-bars.md)、進み具合の帯は [pages-home.md](pages-home.md)、操作の行・訪問の札・選ぶ・キー・`VisitRow`・落とし先の判定は [pages-common.md](pages-common.md)。
+> 3段のバー・混み具合の塗りは [pages-bars.md](pages-bars.md)、進み具合の帯は [pages-progress.md](pages-progress.md)、操作の行・訪問の札・選ぶ・キー・`VisitRow`・落とし先の判定は [pages-common.md](pages-common.md)。
 > 担当は訪問に持ち、日の状態は「まだ伝えていない／確定済み／未連絡の変更あり」、要対応は訪問ごとの検査。
 
 ### 月の予定（`#/month`）
@@ -118,7 +118,7 @@
 #### 右の欄（要対応・確定していない日。入のとき）
 
 - 確定していない日（`progress.unconfirmed`＝今日以降の訪問があって確定済みでない日）：
-  - 上に「問題の無い日をまとめて確定（N日）」（`month-confirm-bulk`・`data-count`。主ボタンにしない）。0日なら出さない
+  - 上に「問題の無い日をまとめて確定（N日）」（`month-confirm-bulk`・`data-count`。主ボタンにしない（主ボタンは操作の行の「予定を入れる」））。0日なら出さない
   - 対象は `lib/confirmDay` の `bulkConfirmTargets(unconfirmed, statusOf, attention)`：まだ伝えていない日で、`care` が0で、`attentionList`（未連絡の変更は除く）に出ない日。残すのは問題のある日（`problem`）・未連絡の変更のある日（`changed`）
   - 押せなければ理由 `month-confirm-why`（aria-describedby。`bulkConfirmWhy`：問題のある日がある／未連絡の変更のある日がある／確定していない日は無い）。対象の決まりの1行（`month-confirm-note`）。組んでいる間は押せない。印刷では出さない
   - 押すと確認（`bulkConfirmDialog`）：「問題の無い N日を確定しますか？」、本文に日付（`datesText`：「10/22（水）・10/23（木）… 計 N日」。7日を超えたら先頭6日と「…」）・担当が書き換わる旨・「問題のある M日は残します（要対応で確認）：日付」・「前に確定した割当と違う M日も残します（日の予定で確定し直します）。」・「案の無い M日も残します。」、ボタン「N日を確定する」

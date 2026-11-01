@@ -387,7 +387,7 @@ flowchart LR
   - 月のマスの「このマスの読み方」は帯の3種類と「変更あり」に合わせ、条件に合わない・拘束超の説明を出さない（`lib/monthGuide` の `confirmStep`）
   - 日の予定の地図：切はページに地図のカード（`plan-map`）を置かず、「地図」のボタン（`components/MapDock` の `map-dock-fab`。`target` が null）をいつも出す。入はカードを置き、画面の外のときだけ浮かせる
 - 「詳しく ▾」（`components/DetailsFold`。入切とも）：閉じて始まり、開け閉めは月・週・日の画面ごとに端末に覚える（`store/navOpen` の `detailsOpenKey`）。月＝進み具合の帯・月全体の件数・凡例、週＝1行の状態・時間軸の凡例と使い方、日＝今の担当の1行（点数・理由・移動）と担当ごとの1日。入は日の要対応の訪問の帯も中に入れ、見出しの1行に数（`lib/detailsHeading`。月＝担当 a/b日・確定 c/d日、週＝未確定 N日・要対応 M件、日＝点数・移動・入らない・守れない条件）
-- 操作の行（入切とも）：主ボタン1つ＋ボタン1つまで、ほかは「その他 ▾」（`components/simpleToolbar`。`mainTools(zoom, avail, expert)`）。入＝月・週は「予定を入れる」＋「担当を組む」、日は「予定を入れる」＋「確定（伝えた）」。切＝「予定を入れる」＋「欠勤・キャンセルを登録」（スマホの日は追加を出さず主ボタンなし）。担当なしを組むのは要対応の帯の［担当なしを組む］（`components/useBandArrange`。切で、今日〜翌月末の組める担当なしが1件以上のときだけ。押すと `requestUnassignedArrange`）。詳細は [design/pages-common.md](design/pages-common.md) の「予定の共通の部品」
+- 操作の行（入切とも）：主ボタン1つ＋ボタン1つまで、ほかは「その他 ▾」（`components/toolbarRow`。`mainTools(zoom, avail, expert)`）。入＝月・週は「予定を入れる」＋「担当を組む」、日は「予定を入れる」＋「確定（伝えた）」。切＝「予定を入れる」＋「欠勤・キャンセルを登録」（スマホの日は追加を出さず主ボタンなし）。担当なしを組むのは要対応の帯の［担当なしを組む］（`components/useBandArrange`。切で、今日〜翌月末の組める担当なしが1件以上のときだけ。押すと `requestUnassignedArrange`）。詳細は [design/pages-common.md](design/pages-common.md) の「予定の共通の部品」
 - 画面の上の説明は入切とも1行・初回だけ（`components/useIntro`。閉じたら `store/navOpen` の鍵 `intro:month`・`intro:week`・`intro:day` に覚える）。範囲の案の帯・使い方は 標準・提案・反映・ピン・プリセット の言葉を使わない（`proposalWords`）
 - 「予定を入れる」（入切とも）：月・週の主ボタン（`toolbar-add-plan`。スマホも文字を残す）が引き出し `components/AddPlanPanel`（`add-plan`。`SidePanel`。スマホは下から出る）を開く。〈利用者さん〉（利用中の人）と、定期（機能 `patterns` が入）＝曜日・くり返し・時刻・所要、単発（切）＝日付・時刻・所要。入れ方・初めの値・知らせの文は `lib/addPlan`（`addPlanKind`・`addPlanPatternForm`・`addPlanVisitDraft`。テストあり）、状態と保存は `components/useAddPlan`。定期は `components/usePatternAdd`（`parsePatternForm` で確かめて足し、`requestAutoArrange`（`writeUsual`）。`usePatternsFlow` と共通）、単発は `applyVisitEdit` の新しい訪問と `requestAutoArrange`（「元に戻す」付きの知らせ）。担当は選ばず自動の組みで付く。日の予定の主ボタンも同じ言葉で、開くのは訪問の欄（`VisitPanel`）
 - 人の画面（判定は `lib/peopleView`：`clientColumns`・`staffColumns`＝一覧の列、`clientFolded`・`staffFolded`＝「詳しく ▾」へ畳む欄、`clientTabKeys`・`staffTabKeys`＝出さないタブ、`splitFolded`、`usualPlanText`・`addressLine`・`addressCellText`（入は住所の列に〒郵便番号を添える）・`workDaysText`・`shiftText`）
@@ -406,7 +406,7 @@ flowchart LR
   - 共通事項・ルート一覧・確認ダイアログ・機能の入り切り（画面側）：[design/pages.md](design/pages.md)。メニュー・コマンドパレット：[design/pages-nav.md](design/pages-nav.md)
   - 画面共通の部品（右の欄・訪問の詳細の欄・名前の詳細・用語・ツアー・リンク・メール・道順）：[design/pages-common.md](design/pages-common.md)
   - 3段の時間帯のバー・ひと目で分かる表示：[design/pages-bars.md](design/pages-bars.md)
-  - 進み具合の帯・日の状態：[design/pages-home.md](design/pages-home.md)
+  - 進み具合の帯・日の状態：[design/pages-progress.md](design/pages-progress.md)
   - 日の予定：[design/pages-plan.md](design/pages-plan.md)／欠勤・キャンセル・振り直し・連絡：[design/pages-plan-absence.md](design/pages-plan-absence.md)
   - 月（希望休・まとめて確定・印刷）：[design/pages-month.md](design/pages-month.md)
   - 週：[design/pages-week.md](design/pages-week.md)

@@ -12,16 +12,21 @@ describe('weekNext（週の主ボタン。PRD D280。週の予定では AI で�
       kind: 'confirm',
       label: 'この週の問題の無い日をまとめて確定（2日）',
     });
-    expect(weekNext(base)).toMatchObject({ kind: 'done', label: 'この週は確定済みです' });
+    expect(weekNext(base)).toMatchObject({ kind: 'done', label: '確定済み' });
   });
   it('月の予定で担当を組んでいる間は確定を押せず理由', () => {
     expect(weekNext({ ...base, bulk: bulk({ targets: ['2026-10-22'] }), running: true }).why).toMatch(/確定できません/);
   });
   it('要対応・未連絡の変更の日だけ残る：ボタンなしで日の予定で確定する理由', () => {
     const r = weekNext({ ...base, bulk: bulk({ problem: ['2026-10-22'], changed: ['2026-10-23'] }) });
-    expect(r).toMatchObject({ kind: 'rest', label: '確定していない 2日は日の予定で' });
-    expect(r.why).toMatch(/要対応/);
-    expect(weekNext({ ...base, bulk: bulk({ changed: ['2026-10-23'] }) }).why).toMatch(/連絡の一覧/);
+    expect(r).toMatchObject({ kind: 'rest', label: '未確定 2日' });
+    expect(r.why).toBe('要対応・未連絡の変更の日は日の予定で確かめて確定');
+    expect(weekNext({ ...base, bulk: bulk({ problem: ['2026-10-22'] }) }).why).toBe(
+      '要対応の日は日の予定で確かめて確定',
+    );
+    expect(weekNext({ ...base, bulk: bulk({ changed: ['2026-10-23'] }) }).why).toBe(
+      '未連絡の変更の日は日の予定で確かめて確定',
+    );
   });
   it('今日以降に訪問の無い週はボタンなし', () => {
     expect(weekNext({ ...base, futureDays: 0 }).kind).toBe('none');

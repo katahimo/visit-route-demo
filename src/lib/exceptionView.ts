@@ -111,10 +111,10 @@ export const showUnplacedReasons = (only: boolean): boolean => !only;
 /** 画面の上の説明を持つ画面：予定の月・週・日と、〈利用者さん〉・〈スタッフ〉の一覧 */
 export type IntroScreen = ScheduleZoom | 'clients' | 'staff';
 
-/** 画面の上の説明（見出しの下の1行）。入は expertText（入の言葉）、切は確定の段階の言葉を使わない1行（月・週・日。一覧は simpleText を渡す） */
-export function introText(zoom: IntroScreen, only: boolean, expertText: string, simpleText?: string): string {
+/** 画面の上の説明（見出しの下の1行）。入は expertText（入の言葉）、切は確定の段階の言葉を使わない1行（月・週・日。一覧は exceptionText を渡す） */
+export function introText(zoom: IntroScreen, only: boolean, expertText: string, exceptionText?: string): string {
   if (!only) return expertText;
-  if (zoom === 'clients' || zoom === 'staff') return simpleText ?? expertText;
+  if (zoom === 'clients' || zoom === 'staff') return exceptionText ?? expertText;
   const text: Record<ScheduleZoom, string> = {
     month: '一月の予定です。担当なしや重なりは、日を押して直せます',
     week: 'この週の予定です。訪問をドラッグで動かせます',

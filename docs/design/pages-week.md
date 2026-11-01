@@ -38,10 +38,10 @@ URL は `replace` で書く（表示の切り替えは除く）。
 - 主ボタン `week-next`（`data-kind`）を状態で1つ。`lib/weekPrep.ts` の `weekNext`（純粋関数。テストあり）：
   1. 今日以降に訪問が無い →「この週の今日以降に訪問はありません」（`none`。ボタンなし）
   2. 問題の無い伝えていない日がある →「この週の問題の無い日をまとめて確定（N日）」（`confirm`）
-  3. 問題のある日・未連絡の変更のある日だけ残る →「確定していない N日は日の予定で」（`rest`。ボタンなし。下に理由）
-  4. 何も残っていない →「この週は確定済みです」（`done`。✓）
-  - 担当を組んでいる間（`monthBatch.run` が null でない。`weekNext` の `running`）は 2 を押せず（`aria-disabled`）、理由「担当を組んでいる間は確定できません。終わってから押せます」（`week-next-why`。`useId` で `aria-describedby`）
-  - 600px 以下は短い文（「この週をまとめて確定（N日）」）。印刷では出さない
+  3. 問題のある日・未連絡の変更のある日だけ残る →「未確定 N日」（`rest`。ボタンなし。下に短い理由「要対応の日／未連絡の変更の日は日の予定で確かめて確定」）
+  4. 何も残っていない →「確定済み」（`done`。✓）
+  - 担当を組んでいる間（`monthBatch.run` が null でない。`weekNext` の `running`）は 2 を押せず（`aria-disabled`）、理由「担当を組んでいる間は確定できません」（`week-next-why`。`useId` で `aria-describedby`）
+  - 600px 以下は短い文（確定は「この週をまとめて確定（N日）」。状態の文は同じ）。印刷では出さない
 - 担当を組むのは担当を組むの画面（`/arrange?d=`）。出た提案は範囲の提案の帯で反映
 - 数え方：週の今日以降の日を `useDayStatuses` で数え、`bulkConfirmTargets(unconfirmed, statusOf, attentionList(…))`（月と同じ決まり）に通す
 - 確定（`confirmWeek`）：組んでいる間は何もしない。確認 `bulkConfirmDialog`（月と同じ）。1回の `update`（手の名前「N日をまとめて確定」）で日ごとに `confirmDay`
@@ -145,7 +145,7 @@ URL は `replace` で書く（表示の切り替えは除く）。
 #### `components/PickChips.tsx`
 
 - 人のチップ（複数選ぶ）。`bulk`（既定 true。「全員・全解除」）・`detailKind`（名前の i）・`actions`（「全員」「全解除」の位置に置く小さなボタン）・`fold`
-- `fold`（`{ rows, open, onOpenChange }`）：全員を並べて各項目（`data-fold-item`）の上端を測り（`useLayoutEffect`）、`lib/fold` の `foldHidden(items, keep, rows, firstTop)`（テストあり。見出しの行も1行目に数える）で rows 行に入らない選んでいない人を外す。測り直すのは幅（`ResizeObserver`）・人・選んでいるか・見出しが変わったときだけ。外す人がいれば最後に「あと N人」（`aria-expanded`）
+- `fold`（`{ rows, open, onOpenChange }`）：全員を並べて各項目（`data-fold-item`）の上端を測り（`useLayoutEffect`）、`lib/fold` の `foldHidden(items, keep, rows, firstTop)`（テストあり。見出しの行も1行目に数える）で rows 行に入らない選んでいない人を外す。計測は `components/useChipFold.ts`（`PickChips` から呼ぶ）。測り直す鍵は `lib/fold` の `chipFoldKey`：幅・中身の高さ・書体の読み込み（`loadingdone`）・見出し・チップの表示（id・名前・色・印の有無・バッジ・選んでいるか）。幅と高さは `ResizeObserver` で見て、高さは全員を並べているときだけ採る（`nextFullHeight`。畳んだ高さで測り直すと回り続けるため）。外す人がいれば最後に「あと N人」（`aria-expanded`）
 - `QualificationBadges`
 - 〈利用者さん〉の担当できる人でも使う（`bulk={false}`）
 

@@ -26,7 +26,7 @@
 | [pages-nav.md](design/pages-nav.md) | メニュー・下のタブ・引き出し・要対応の帯・設定のタブ・Ctrl+Z・パレット |
 | [pages-common.md](design/pages-common.md) | 右の欄・予定の共通の部品・訪問の札・訪問の詳細の欄・名前の吹き出し・用語・ツアー・メール・道順 |
 | [pages-bars.md](design/pages-bars.md) | 3段の時間帯のバー |
-| [pages-home.md](design/pages-home.md) | 月の進み具合の帯・日の状態の共通フック |
+| [pages-progress.md](design/pages-progress.md) | 月の進み具合の帯・日の状態の共通フック |
 | [pages-plan.md](design/pages-plan.md) | 日の予定 |
 | [pages-plan-absence.md](design/pages-plan-absence.md) | 欠勤・キャンセル・振り直し・連絡の一覧 |
 | [pages-month.md](design/pages-month.md) | 月の予定・まとめて確定・希望休・印刷 |

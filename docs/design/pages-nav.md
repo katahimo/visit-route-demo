@@ -30,7 +30,7 @@
   - 1行は「要対応 担当なし N件・重なり N件・休みの人 N件・…」（0件の種類は書かない。並びは `BAND_KINDS`）
   - ［見に行く ›］（`attention-band-go`）の先 `go`（`BandGo`＝`{ to, date?, visitId? }`）は並びの先頭の種類：訪問の種類は、重なり・休みの人の訪問があればそのうち、無ければ担当なしのうち、いちばん早い日の開始（`startOf`）がいちばん早い訪問。`setDate(日)` のうえ `navigate('/plan', { state: { visitId, band: true } })`。日の予定の `usePlanNav` が、担当のある訪問は選んで見える所へ巻き、担当なしは `band` のときだけ欄（受けられる人）を開く（日の予定を開いたまま押しても `location.key` で受け直す。履歴は置き換え）。標準が無いは `/standard`、組み直しは `/arrange?ym=<組む月>`、未確定は1日だけならその日の `/plan`・2日以上なら `/month?ym=…&do=unconfirmed`。下書きのある画面からは `confirmLeave` で確かめる
   - ［担当なしを組む］（`attention-band-arrange`。`components/useBandArrange`）：切で、今日〜翌月末の組める担当なし（`targetCount(unassignedTargets(…))`）が1件以上か組んでいる間だけ。`btn btn-small` の従のボタン。押すと `requestUnassignedArrange`、組んでいる間は「組んでいます…」で `aria-disabled`
-- 「予定を入れる」：日の主ボタンも同じ言葉（`ADD_VISIT_LABEL`。開くのは訪問の欄）。月・週は `SimpleToolbar`（`mainTools` の `plan`）から `components/AddPlanPanel` を開く（[design.md](../design.md) の「予定を入れる」）
+- 「予定を入れる」：日の主ボタンも同じ言葉（`ADD_VISIT_LABEL`。開くのは訪問の欄）。月・週は `ToolbarRow`（`mainTools` の `plan`）から `components/AddPlanPanel` を開く（[design.md](../design.md) の「予定を入れる」）
 - 人の小さいタブ：`lib/peopleTabs`（`peopleTabs`・`peopleTabsLabel`・`peopleSideOf`・`rememberedSide`・`peopleMatch`）と `components/SettingsTabs` の `PeopleTabs`（一覧・相性・勤務の画面。`data-testid="people-tabs"`）。相性でどちらから来たかは `components/peopleSide`。予定と相性は別の `BasicsNav`
 - 予定の「その他 ▾」：画面ごとの項目（表示の切り替え・使い方・印刷など）と元に戻す・やり直すだけ
 

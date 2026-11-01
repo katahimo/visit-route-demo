@@ -17,8 +17,8 @@ import type { useConfirm } from './ConfirmDialog';
 import { MenuButton, type MenuItem } from './MenuButton';
 import { ProposalChanges } from './proposalChanges';
 import { StaffMark } from './StaffMark';
-import { type AbsenceTool, type AddTool, SimpleToolbar } from './simpleToolbar';
 import { useToast } from './Toast';
+import { type AbsenceTool, type AddTool, ToolbarRow } from './toolbarRow';
 import { WithIcon } from './ui';
 import { saveAppliedBasis } from './useArrangeBasis';
 import { useExceptionsOnly } from './useFeature';
@@ -44,7 +44,7 @@ export async function confirmDropProposal(confirmDialog: ReturnType<typeof useCo
 // ---- 操作の行 ----
 
 /**
- * 予定の操作の行（日・週・月で同じ作り。PRD D327・D384・D402）：主ボタン1つ＋ボタン1つ＋その他 ▾（SimpleToolbar。何を残すかは lib/exceptionView の mainTools）。
+ * 予定の操作の行（日・週・月で同じ作り。PRD D327・D384・D402）：主ボタン1つ＋ボタン1つ＋その他 ▾（ToolbarRow。何を残すかは lib/exceptionView の mainTools）。
  * 欠勤・キャンセルは日の予定では欄を開き（onAbsence）、週・月ではその日の日の予定で欄を開く（リンク）。切は操作の行のボタン、入は「その他 ▾」の項目。
  * absence が null なら出さない。表示の切り替え・元に戻す・使い方・メールで送るなどは moreItems と履歴の項目として「その他 ▾」へ
  */
@@ -123,7 +123,7 @@ export function ScheduleToolbar({
           },
         });
   return (
-    <SimpleToolbar
+    <ToolbarRow
       zoom={zoom}
       className={className}
       expert={expert}

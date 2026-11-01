@@ -53,7 +53,7 @@
 |---|---|
 | [pages-nav.md](pages-nav.md) | メニュー・`lib/nav.ts`（基本情報のタブ・予定を組むの段）・上の帯と下のタブ・引き出し・予定の切り替え・設定のタブ・コマンドパレット |
 | [pages-common.md](pages-common.md) | 画面共通の部品：右の欄 `SidePanel` と確定のボタンの帯・浮いている部品とトースト・名前から開く詳細（`PersonPopover`）・用語の説明（`Term`）・空の画面（`EmptyNext`）・初回の案内ツアー・行き先のリンク（`lib/links`）・メールと道順のリンク・画面横断の e2e |
-| [pages-home.md](pages-home.md) | 月の予定の進み具合の帯（`ProgressBand`）・`useDayStatuses` |
+| [pages-progress.md](pages-progress.md) | 月の予定の進み具合の帯（`ProgressBand`）・`useDayStatuses` |
 | [pages-plan.md](pages-plan.md) | 日の予定：並び・状態の印と確定（伝えた）・1行のまとめ・手で直す・右の欄（詳しく）・時間軸／順番／一覧・担当ごとの1日・地図・入らなかった訪問・担当を変える ▾・訪問の欄・取り消し・点数の理由・日の予定のメール・道順のリンク |
 | [pages-plan-absence.md](pages-plan-absence.md) | 日の予定の「欠勤・キャンセル」の欄（5段階）・振り直し（案A・案B）・差の欄・左下の帯・連絡の一覧・比較の画面の「欠勤前」 |
 | [pages-month.md](pages-month.md) | 月：カレンダーと日ごとの一覧・日のマスと読み方の吹き出し・マスを押すと右の欄のその日の行（スマホは下から出る欄）・別の日へ・凡例・表示の選択・担当を組んでいる間・希望休・要対応・まとめて確定・月の印刷 |
@@ -201,13 +201,13 @@
 | `personPage.tsx`・`PersonCalendar.tsx`・`personView.tsx` | 人の画面のタブ・節（`EditSection`）・予定のカレンダー・読むときの名前の並び（`PersonNames`・`StaffClientRows`・`ClientCompatRows`） | [pages-clients.md](pages-clients.md) |
 | `ViewSwitch.tsx` | ［月｜週｜日］ | このファイル |
 | `day.tsx` | 選んでいる日付（`DayProvider`・`useDay`。App が渡す） | このファイル |
-| `useDayModel.ts`・`useDayStatuses.ts` | 日のモデル（`useDayModel`・`useCompileInput`）・日ごとの状態（計算は `lib/dayModel`・`lib/dayStatuses`） | [pages-home.md](pages-home.md)・[pages-plan.md](pages-plan.md) |
+| `useDayModel.ts`・`useDayStatuses.ts` | 日のモデル（`useDayModel`・`useCompileInput`）・日ごとの状態（計算は `lib/dayModel`・`lib/dayStatuses`） | [pages-progress.md](pages-progress.md)・[pages-plan.md](pages-plan.md) |
 | `useFeature.ts`・`useMedia.ts`・`useScrollEdge.ts` | 機能の入り切り・狭い画面の判定（`COMPACT_QUERY`・`NARROW_QUERY`）・横に巻く表の端 | このファイル |
 | `useRouteSelection.ts` | 地図で選んだ担当・区間・訪問（遷移は `lib/routeView` の `routeSelect`） | [pages-plan.md](pages-plan.md) |
 | `valueStore.ts`・`dirtyForms.ts`・`lazyComponent.tsx` | 外の入れ物を読む `useValueStore`・編集中の印 `useDirtyMark`・別のチャンクの部品 | このファイル・[pages-data.md](pages-data.md) |
 | `ScheduleNav.tsx` | 予定の上のナビの行 | [pages-common.md](pages-common.md) |
 | `EdgeScroll.tsx` | 横に巻く格子の表の箱（右に続きがある印 `has-more-right`） | このファイル（狭い画面の表） |
-| `progressBand.tsx` | `ProgressBand`・`BandLive` | [pages-home.md](pages-home.md) |
+| `progressBand.tsx` | `ProgressBand`・`BandLive` | [pages-progress.md](pages-progress.md) |
 | `scheduleParts.tsx`・`undo.tsx` | 予定の共通の部品（`ScheduleToolbar`・`RangeProposalBand`・`confirmDropProposal`・`SelectionBar`）・全体の元に戻す（`UndoButtons`・`useUndoAction`・`HistoryKeys`） | [pages-common.md](pages-common.md) |
 | `visitParts.tsx`・`visitKeys.tsx`・`dayList.tsx` | 訪問の札の共通の部品（印 `VisitMarks`・選ぶ `useVisitSelection`・`useVisitItem`・`SelectToggle`・中の札＝1行1訪問の行 `VisitRow`・小の札 `VisitChip`・マスに積む `ChipStack`・ドラッグの `useVisitDrag`・`DropShadow`）・帯をキーで動かす（`useVisitKeys`）・スマホの日ごとのリスト | [pages-common.md](pages-common.md) |
 | `EmptyNext.tsx` | 空の画面の次の一手 | [pages-common.md](pages-common.md) |
@@ -215,7 +215,7 @@
 | `MenuButton.tsx` | キーボードで操作できる `menu`（「その他 ▾」・「担当を変える ▾」・複数選択の「担当を替える」） | [pages-plan.md](pages-plan.md) |
 | `MapDock.tsx`・`RouteMap.tsx`（読み込み中の枠。本体は別のチャンクの `LeafletMap.tsx`）・`routeView.tsx`・`routeTimeline.tsx` | 地図・担当ごとの順番・時間軸 | [pages-plan.md](pages-plan.md) |
 | `dayLines.tsx`・`loadBar.tsx`・`staffBar.tsx`・`workBars.tsx`・`glance.tsx`・`barMarks.css` | 時間帯のバー | [pages-bars.md](pages-bars.md) |
-| `PickChips.tsx` | 人のチップ（`bulk`・`detailKind`・`fold`・`actions`）・`QualificationBadges` | [pages-week.md](pages-week.md) |
+| `PickChips.tsx`・`useChipFold.ts`（畳みの計測） | 人のチップ（`bulk`・`detailKind`・`fold`・`actions`）・`QualificationBadges` | [pages-week.md](pages-week.md) |
 | `ClientPicker.tsx`・`ClientFilter.tsx` | 〈利用者さん〉の検索・絞り込み | [pages-clients.md](pages-clients.md) |
 | `StaffFilter.tsx` | 〈スタッフ〉の列の絞り込み | [pages-compat.md](pages-compat.md) |
 | `placeLookup.tsx` | `AddressField`・`ClientPlaceEditor`・`PlacePin` | [pages-clients.md](pages-clients.md) |
@@ -233,7 +233,7 @@
 |---|---|---|
 | `scheduleMode.ts` | 組む月（月の後半は来月）・担当なしの日の数・メニューの件数 | [pages-common.md](pages-common.md) |
 | `nav.ts`・`commandPalette.ts`・`confirmDialog.ts`・`inertLock.ts`・`scrollLock.ts`・`panelFit.ts`・`personPopover.ts`・`glossary.ts`・`emptyGuide.ts`・`tour.ts`・`firstRun.ts`・`startGuide.ts`・`links.ts`・`features.ts`・`mailto.ts`・`mail.ts`・`mapsLink.ts`・`clipboard.ts` | 画面横断 | このファイル（nav・パレット・確認・ロック・features）・[pages-common.md](pages-common.md)（ほか） |
-| `dayModel.ts`・`dayStatuses.ts`・`progressBand.ts` | 日のモデルの計算（`daySlotsOf`・`ownerMap`）・日の状態の覚え（`createDayStatusMemo`）・帯 | [pages-home.md](pages-home.md)・[pages-plan.md](pages-plan.md) |
+| `dayModel.ts`・`dayStatuses.ts`・`progressBand.ts` | 日のモデルの計算（`daySlotsOf`・`ownerMap`）・日の状態の覚え（`createDayStatusMemo`）・帯 | [pages-progress.md](pages-progress.md)・[pages-plan.md](pages-plan.md) |
 | `absences.ts`・`sudden.ts`・`contacts.ts`・`dayPlan.ts`・`confirmDay.ts`・`scoreReason.ts`・`routeView.ts`・`timeline.ts`・`visitEdit.ts`・`dragStart.ts` | 日の予定 | [pages-plan.md](pages-plan.md)・[pages-plan-absence.md](pages-plan-absence.md) |
 | `month.ts`・`monthList.ts`・`monthGuide.ts`・`monthPrint.ts`・`requestedOff.ts` | 月 | [pages-month.md](pages-month.md) |
 | `week.ts`・`weekOps.ts`・`weekView.ts`・`timelineClients.ts`・`fold.ts` | 週（`weekOps` は動かす・空き時間に入れる操作） | [pages-week.md](pages-week.md) |
