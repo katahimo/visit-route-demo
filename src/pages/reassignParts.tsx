@@ -129,6 +129,21 @@ function AnnealTable({
   );
 }
 
+/** 案B の「変更を減らす」のスライダーと説明（差の欄の案B と「欠勤・キャンセル」の欄の「ほかのやり方」で共通。PRD D265・D414） */
+export function StayWeight({ weight, onWeight }: { weight: number; onWeight: (w: number) => void }) {
+  return (
+    <div className="row anneal-weight" style={{ gap: 8, flexWrap: 'wrap' }}>
+      <span className="sub">変更を減らす</span>
+      <WeightSlider value={weight} onChange={onWeight} label="変更を減らす" />
+      <span className="sub">
+        担当が変わる1件＝移動{r0(weight * 10)}分ぶん・時刻のずれ10分＝移動{r0(weight * 2 * 10) / 10}分ぶん
+        {weight === STAY_WEIGHT_DEFAULT ? '（既定）' : ''}
+      </span>
+      <span className="sub">重みが大きいと案A のままになることがあります（変更の減点が、得より大きいとき）</span>
+    </div>
+  );
+}
+
 /**
  * 案B「少し動かしてよい」の欄（差の欄の中）：「変更を減らす」のスライダー（「詳しく」に畳む。PRD D265）・作る・進み具合・
  * 止める・案A と案B の比較・選ぶ。
@@ -189,15 +204,7 @@ export function AnnealBox({
           詳しく：変更を減らす（{weight.toFixed(1)}
           {weight === STAY_WEIGHT_DEFAULT ? '・既定' : ''}）
         </summary>
-        <div className="row anneal-weight" style={{ gap: 8, flexWrap: 'wrap' }}>
-          <span className="sub">変更を減らす</span>
-          <WeightSlider value={weight} onChange={onWeight} label="変更を減らす" />
-          <span className="sub">
-            担当が変わる1件＝移動{r0(weight * 10)}分ぶん・時刻のずれ10分＝移動{r0(weight * 2 * 10) / 10}分ぶん
-            {weight === STAY_WEIGHT_DEFAULT ? '（既定）' : ''}
-          </span>
-          <span className="sub">重みが大きいと案A のままになることがあります（変更の減点が、得より大きいとき）</span>
-        </div>
+        <StayWeight weight={weight} onWeight={onWeight} />
       </details>
       <div className="row" style={{ gap: 6 }}>
         {running ? (

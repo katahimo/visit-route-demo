@@ -14,7 +14,7 @@ export const UNASSIGNED_DO = 'unassigned';
 
 /**
  * 日の画面で「欠勤・キャンセル」の欄を開く URL（PRD D172・D201・D203）。
- * staffId を渡すと、その人の欠勤（2段目：人と時間帯）で開く（列の見出しの「欠勤を直す」と同じ）
+ * staffId を渡すと、その人を選んで開く（列の見出しの「欠勤を直す」と同じ）
  */
 export function suddenHref(date: string, staffId?: string): string {
   const q = new URLSearchParams({ date, do: SUDDEN_DO });

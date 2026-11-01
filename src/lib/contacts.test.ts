@@ -58,6 +58,7 @@ const list: ContactList = {
     },
   ],
 };
+const RULES = { entryNote: '', keyNote: 'ポストの中', parkingNote: '', cautionNote: '' };
 const EMPTY: ContactList = { staffChanged: [], timeChanged: [], staff: [] };
 
 describe('連絡文（スタッフあて：丁寧語の短文）', () => {
@@ -143,7 +144,7 @@ describe('連絡文（〈利用者さん〉あて：敬語）', () => {
   });
 });
 
-describe('連絡の一覧（5段目の行）', () => {
+describe('連絡の一覧（2段目の行）', () => {
   it('1人に1行：スタッフ（種類の印）→ 〈利用者さん〉', () => {
     const rows = contactRows(list, [], w);
     expect(rows.map((r) => [r.key, r.kinds])).toEqual([
@@ -278,7 +279,7 @@ describe('dayContactWords（日の予定の連絡文の名前・呼び方）', (
       staffWord: 'ヘルパー',
       orgName: 'ほしみ',
       staffName: (id) => `名${id}`,
-      clientById: new Map([['c1', { displayName: '天文台', place: { address: '仙台市', lat: 0, lng: 0 } }]]),
+      clientById: new Map([['c1', { displayName: '天文台', place: { address: '仙台市' }, ...RULES }]]),
       visits: [v('v1'), v('v2', { windowKind: 'fixed', latestStart: '09:00' })],
     });
     expect(w.day).toBe('10月15日（木）');
@@ -294,5 +295,47 @@ describe('dayContactWords（日の予定の連絡文の名前・呼び方）', (
     expect(w.promised?.('v1')).toEqual({ from: 540, to: 570 });
     expect(w.promised?.('v2')).toEqual({ from: 540, to: 540 });
     expect(w.promised?.('x')).toBeNull();
+    // 担当の履歴を渡さなければ初めての印を付けない
+    expect(w.firstNotes).toBeUndefined();
+  });
+  it('初めての訪問先（D415）：過去8週に担当していなければ決まりごとの行、担当していれば null。決まりごとを切れば印だけ', () => {
+    const base = {
+      date: '2026-10-15',
+      staffWord: 'ヘルパー',
+      orgName: 'ほしみ',
+      staffName: (id: string) => id,
+      clientById: new Map([['c1', { displayName: '天文台', place: { address: '仙台市' }, ...RULES }]]),
+      visits: [],
+      served: new Set(['c1\ns1']),
+    };
+    const on = dayContactWords(base);
+    expect(on.firstNotes?.('c1', 's1')).toBeNull();
+    expect(on.firstNotes?.('c1', 's2')).toEqual([{ label: '鍵', text: 'ポストの中' }]);
+    expect(dayContactWords({ ...base, notesOn: false }).firstNotes?.('c1', 's2')).toEqual([]);
+  });
+});
+
+describe('初めての訪問先の連絡文（D415）', () => {
+  const first: ContactWords = {
+    ...w,
+    firstNotes: (clientId, staffId) =>
+      clientId === 'c1' && staffId === 's2'
+        ? [
+            { label: '入り方', text: '裏口から' },
+            { label: '鍵', text: 'ポストの中' },
+          ]
+        : null,
+  };
+  it('「お願いします」の行に「初めての訪問先です。」と、下に決まりごと（入っている項目だけ）', () => {
+    expect(staffMessage(list.staff[1]!, first).split('\n').slice(2, 5)).toEqual([
+      '・14:00 天文台ほしみ様の訪問をお願いします（仙台市青葉区1-1・60分）。初めての訪問先です。',
+      '　入り方：裏口から',
+      '　鍵：ポストの中',
+    ]);
+  });
+  it('一覧の行に印（新しく入る人だけ）。外れる人・〈利用者さん〉あてには付けない', () => {
+    const rows = contactRows(list, [], first);
+    expect(rows.filter((r) => r.first).map((r) => r.key)).toEqual(['staff:s2']);
+    expect(rows.find((r) => r.key === 'client:c1')?.text).not.toContain('ポスト');
   });
 });

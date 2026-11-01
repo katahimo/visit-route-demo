@@ -8,6 +8,7 @@ import { reassign, targetsOf } from '../reassign';
 import { absencesOn, baseOf, saveAbsence, withoutAbsencesOn } from './absences';
 import {
   absenceBaseOf,
+  absencePreviewOf,
   absentStaffOf,
   annealDisabledWhy,
   annealKeyOf,
@@ -80,6 +81,31 @@ describe('planReassign（欠勤を足して振り直す手順）', () => {
   it('担当のある訪問が無い日は元の案が無い', () => {
     const d0 = data({ visits: [fixed('v1', 'c1', '09:00')] });
     expect(hasBase(absenceBaseOf(d0, DATE, ab('a1', 's1')))).toBe(false);
+  });
+});
+
+describe('absencePreviewOf（欄の1段目の見込み。PRD D414）', () => {
+  it('振り直す訪問・案A で入らない件数・担当が移る差を出す（データは書かない）', () => {
+    const d0 = data();
+    const a = ab('a1', 's1');
+    const got = absencePreviewOf(d0, DATE, a);
+    const plan = planReassign(d0, DATE, a);
+    expect(got.hasBase).toBe(true);
+    expect(got.targets).toEqual(plan.targets);
+    expect(got.unplacedA).toBe(plan.result.unplaced.length);
+    const moved = got.diff?.moved.map((m) => [m.visitId, m.from, m.to]) ?? [];
+    expect(moved.map((m) => m[0]).sort()).toEqual(['v1', 'v2']);
+    for (const m of moved) expect(m[1]).toBe('s1');
+    expect(d0.absences).toEqual([]);
+  });
+  it('担当のある訪問が無い日は振り直せない（差は null）', () => {
+    const d0 = data({ visits: [fixed('v1', 'c1', '09:00')] });
+    expect(absencePreviewOf(d0, DATE, ab('a1', 's1'))).toEqual({
+      targets: [],
+      hasBase: false,
+      unplacedA: 0,
+      diff: null,
+    });
   });
 });
 

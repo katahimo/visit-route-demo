@@ -59,6 +59,7 @@ export function StaffViewStop({
   t,
   prev,
   mode,
+  first = false,
 }: {
   v: Visit | undefined;
   c: Client | undefined;
@@ -66,6 +67,8 @@ export function StaffViewStop({
   /** 道順の起点（lib/prevStop） */
   prev: PrevStop | null;
   mode: TravelMode;
+  /** 初めての訪問先（過去8週に担当していない。PRD D415） */
+  first?: boolean;
 }) {
   return (
     <div>
@@ -80,12 +83,14 @@ export function StaffViewStop({
         </span>
         <div className="grow">
           <div className="sv-name">{c?.displayName ?? '（不明）'}さん</div>
+          {/* 初めての訪問先は印と決まりごとを先頭に（PRD D415） */}
+          {first && <VisitRules client={c} first />}
           <div className="sub sv-time">
             <Clock size={14} aria-hidden="true" />
             {t ? `${minutesToHhmm(t.start)}〜${minutesToHhmm(t.end)}` : v?.earliestStart}
           </div>
           {v?.note && <div className="sub">{v.note}</div>}
-          <VisitRules client={c} />
+          {!first && <VisitRules client={c} />}
           <VisitRouteLinks
             to={c?.place}
             toName={c?.displayName ?? '（不明）'}
