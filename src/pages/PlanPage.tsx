@@ -1,6 +1,7 @@
 import { CalendarDays } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AttentionBand } from '../components/attentionBand';
+import { NextMonthCheck } from '../components/nextMonthCheck';
 import { OpenToldContext } from '../components/openTold';
 import { SelectionBar } from '../components/scheduleParts';
 import { PageHeader } from '../components/ui';
@@ -46,6 +47,8 @@ export default function PlanPage() {
         <PlanNavRow p={p} />
         {/* 要対応の帯（入切とも。PRD D400・D403・D404） */}
         <AttentionBand />
+        {/* 来月の確認（切で月の20日以降。PRD D413） */}
+        <NextMonthCheck />
         {/* 進み具合の帯は月の予定だけ（PRD D332）。日は見出しの状態の印と「今の担当」の1行 */}
         {d.m.clients.length === 0 && (
           <div className="card">

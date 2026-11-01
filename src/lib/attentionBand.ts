@@ -41,6 +41,10 @@ const BAND_OF: Record<IssueKind, VisitBandKind | null> = {
 /** 帯に数える種類の検査か（担当なし・重なり・休みの人。条件に合わないは数えない）。訪問の札の目立たせ方（lib/visitLook の exceptionsOnly）も同じ分け方 */
 export const isBandIssue = (kind: IssueKind): boolean => BAND_OF[kind] !== null;
 
+/** 1つの訪問を帯のどの種類に数えるか（担当なし → 休みの人 → 重なり の順で先に当たったもの。条件に合わないだけなら undefined）。来月の確認（lib/nextMonthCheck）も同じ数え方 */
+export const visitBandKind = (issues: readonly VisitIssue[]): VisitBandKind | undefined =>
+  PRIORITY.find((k) => issues.some((x) => BAND_OF[x.kind] === k));
+
 /**
  * 例外だけ見せる（エキスパート機能が切。PRD D384）ときの日の状態：要対応の検査を帯と同じ分け方（担当なし・重なり・休みの人。条件に合わないは除く）に絞り、
  * 要対応の訪問の件数（care）・赤（needsCare）を数え直し、拘束超は見せない（overSpan を空に）。月のマス・右の欄・進み具合・帯の数がそろう。
@@ -127,7 +131,7 @@ export function attentionBand(
     if (expert && s.count > 0 && s.state !== 'told') unconfirmed.push(s.date);
     if (expert && s.overSpan.length > 0) overSpan.push(s.date);
     for (const [visitId, issues] of s.issues) {
-      const kind = PRIORITY.find((k) => issues.some((x) => BAND_OF[x.kind] === k));
+      const kind = visitBandKind(issues);
       if (!kind) {
         // 条件に合わないだけの訪問（入だけ数える）
         if (expert && issues.some((x) => x.kind === 'notAllowed')) {
