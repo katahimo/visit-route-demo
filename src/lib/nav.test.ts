@@ -259,7 +259,7 @@ describe('navTitleParts（上の帯の名前。画面の一覧から引く）', 
   });
 });
 
-describe('bottomTabs（PRD D336・D401）', () => {
+describe('bottomTabs（PRD D336・D400・D401）', () => {
   it('入：予定・〈利用者さん〉・〈スタッフ〉・組むの順に引く（5つ目以降の「探す」「メニュー」は画面のボタン。設定はメニューの中）', () => {
     expect(bottomTabs(groups, {}).map((i) => i.key)).toEqual(['schedule', 'clients', 'staff', 'arrange']);
     expect(bottomTabs(groups, {}).map(tabLabel)).toEqual(['予定', '利用者さん', 'スタッフ', '組む']);
@@ -384,12 +384,19 @@ describe('エキスパート機能が切のメニュー（PRD D400。ADR-0073・
     const items = menuSections(terms, TODAY, { expert: false, vacancy: false }).flatMap((x) => x.items);
     expect(items.map((i) => i.key)).toEqual(['schedule', 'clients', 'staff', 'settings']);
   });
-  it('下のタブはメニューのうち4つ（空き状況は入れない。そのあとに「探す」「メニュー」は画面で足す。ADR-0078）。入は 予定・〈利用者さん〉・〈スタッフ〉・組む', () => {
-    expect(bottomTabs(g, off).map((t) => t.key)).toEqual(['schedule', 'clients', 'staff', 'settings']);
+  it('下のタブは 予定・空き状況・〈利用者さん〉・〈スタッフ〉（そのあとに「探す」「メニュー」は画面で足す。設定は引き出し。ADR-0080）。入は 予定・〈利用者さん〉・〈スタッフ〉・組む', () => {
+    expect(bottomTabs(g, off).map((t) => t.key)).toEqual(['schedule', 'vacancy', 'clients', 'staff']);
     expect(bottomTabs(groups, {}).map((t) => t.key)).toEqual(['schedule', 'clients', 'staff', 'arrange']);
-    expect(bottomTabs(g, off).map(tabLabel)).toEqual(['予定', '利用者さん', 'スタッフ', '設定']);
-    expect(bottomTabKeys(applyTemplate('basic'))).toEqual(['schedule', 'clients', 'staff', 'settings']);
+    expect(bottomTabs(g, off).map(tabLabel)).toEqual(['予定', '空き状況', '利用者さん', 'スタッフ']);
+    expect(bottomTabKeys(applyTemplate('basic'))).toEqual(['schedule', 'vacancy', 'clients', 'staff']);
     expect(bottomTabKeys(applyTemplate('all'))).toEqual(['schedule', 'clients', 'staff', 'arrange']);
+  });
+  it('空き状況を切ると、空き状況の代わりに設定（ADR-0080）。入は空き状況の入切に関わらず同じ', () => {
+    const noVacancy = { expert: false, vacancy: false };
+    const g2 = menuSections(terms, TODAY, noVacancy);
+    expect(bottomTabs(g2, noVacancy).map((t) => t.key)).toEqual(['schedule', 'clients', 'staff', 'settings']);
+    expect(bottomTabs(g2, noVacancy).map(tabLabel)).toEqual(['予定', '利用者さん', 'スタッフ', '設定']);
+    expect(bottomTabKeys({ expert: true, vacancy: false })).toEqual(['schedule', 'clients', 'staff', 'arrange']);
   });
   it('homePath：入切とも予定の画面（繰り返しを使うなら月、使わないなら週。最初に開く画面と同じ）。ホームは無い（PRD D401）', () => {
     expect(homePath({})).toBe('/month');

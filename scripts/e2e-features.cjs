@@ -10,7 +10,7 @@
 // 稼働の見込み・欠勤・キャンセル・月の印刷・提案を比べるを切ると、月の要対応の行・月のボタン・日の画面の拘束の帯・担当を組むの「案を比べる」・
 // 稼働時間の右の欄にそこへ移るリンク・ボタンが無い（日の予定に「AI で組む ▾」は無い。ADR-0063）。
 // 希望休のまとめ入力を切っても月の「担当が休み」の印は出す、欠勤・キャンセルを切ると稼働時間の凡例で登録の場所を出さない。
-// エキスパート機能が切のひな形（単発のみ・基本・労務・契約管理・月次予定・現場共有）は、メニューが5つ（予定・空き状況・〈利用者さん〉・〈スタッフ〉・設定。子なし。下のタブは空き状況を除く4つ＋探す・メニュー）・下のタブは6つ・ホームは無く予定の画面へ移る（ADR-0073。PRD D400。詳しくは e2e-simple-menu）。
+// エキスパート機能が切のひな形（単発のみ・基本・労務・契約管理・月次予定・現場共有）は、メニューが5つ（予定・空き状況・〈利用者さん〉・〈スタッフ〉・設定。子なし。下のタブは 予定・空き状況・〈利用者さん〉・〈スタッフ〉＋探す・メニュー。ADR-0080）・下のタブは6つ・ホームは無く予定の画面へ移る（ADR-0073。PRD D400。詳しくは e2e-simple-menu）。
 // その2（画面の中の入口・相性を切る・切ったまま保存してもデータが残る）は e2e-features2.cjs（並列に走らせるため2本）。
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-features.cjs
@@ -440,8 +440,15 @@ async function mobile(page, dlg) {
   const w2 = await page.evaluate(() => document.documentElement.scrollWidth);
   check(w2 <= 390, '390px：切った機能の知らせが横にはみ出さない', w2);
   const tabs = await page.getByTestId('bottom-tabs').locator('.bottom-tab').allInnerTexts();
-  // 基本はエキスパート機能が切：メニューの4つ（予定・〈利用者さん〉・〈スタッフ〉・設定）と探す・メニュー（ADR-0073）
-  check(tabs.length === 6, '390px：基本は下のタブ6つ（予定・利用者さん・スタッフ・設定・探す・メニュー）', tabs);
+  // 基本はエキスパート機能が切：予定・空き状況・〈利用者さん〉・〈スタッフ〉と探す・メニュー（ADR-0080）
+  check(
+    same(
+      tabs.map((x) => x.trim()),
+      [...tabsFor(TEMPLATE_ON.basic), '探す', 'メニュー'],
+    ),
+    '390px：基本は下のタブ6つ（予定・空き状況・利用者さん・スタッフ・探す・メニュー）',
+    tabs,
+  );
   await page.getByTestId('menu-btn').click();
   const drawer = await menu(page, '.nav-drawer');
   check(
@@ -485,7 +492,7 @@ async function pathVariants(page, dlg, ctx) {
     const hasNotice = (await page.getByTestId('feature-off-notice').count()) === 1;
     check(/^#\/month/.test(hashOf(page)) && hasNotice, `切った機能の ${h} も予定の画面へ移し知らせる`, hashOf(page));
   }
-  // 390px：空き状況を切っても下のタブは6つ（予定・〈利用者さん〉・〈スタッフ〉・組む・探す・メニュー。空き状況は元から下のタブに無い。PRD D336・D401）で、全幅を等分する
+  // 390px：空き状況を切っても下のタブは6つ（予定・〈利用者さん〉・〈スタッフ〉・組む・探す・メニュー。入の下のタブに空き状況は無い。PRD D336・D401）で、全幅を等分する
   await page.setViewportSize({ width: 390, height: 844 });
   await open(page, '/month', '[data-testid="sched-nav"]');
   const boxes = await page

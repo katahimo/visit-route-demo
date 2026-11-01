@@ -5,7 +5,7 @@
 // 3 予定（月・週・日）の上に要対応の帯（担当なし N件…。箱で、右に［担当なしを組む］（従のボタン。押したあとは e2e-basic-auto）と［見に行く ›］。
 //   見に行くは重なり・休みの人の訪問を先に、無ければ担当なし。日の予定で今日を見たまま押しても変わる）。月・週・日のどれにも出る。訪問が無ければ出さない、
 // 4 空き状況はメニューの項目（押すと空き状況・印は「空き状況」）。予定の「その他 ▾」（月・週・日）には空き状況・担当なしの訪問を組むが無い、
-// 5 スマホ（390px）：下のタブは 予定・〈利用者さん〉・〈スタッフ〉・設定＋探す＋メニュー。引き出しは空き状況を足した5つ。帯（［担当なしを組む］・［見に行く ›］）・「その他 ▾」が収まる、
+// 5 スマホ（390px）：下のタブは 予定・空き状況・〈利用者さん〉・〈スタッフ〉＋探す＋メニュー（ADR-0080）。引き出しは設定を足した5つ。帯（［担当なしを組む］・［見に行く ›］）・「その他 ▾」が収まる、
 // 5b 例外だけ見せる（PRD D384）：月・週・日の操作の行は主ボタン1つ＋1つ（＋「その他 ▾」。元に戻す・表示の切り替え・使い方は「その他 ▾」の中）、
 //    点数・理由・件数の内訳・凡例・進み具合は「詳しく」の中（閉じているときは見えない・開くと見える）、移動・待ちの分数の線と担当なしの理由の札は出ない、
 //    訪問の札は時刻・名前の1行（順番の表示）、ピン・資格✗の印は出ない、「標準・提案・反映・ピン・プリセット」の言葉が月・週・日と「その他 ▾」「詳しく」に出ない、
@@ -274,13 +274,13 @@ async function mobile(page) {
   const tabs = page.getByTestId('bottom-tabs');
   const keys = await tabs.locator('[data-tab]').evaluateAll((els) => els.map((e) => e.getAttribute('data-tab')));
   check(
-    JSON.stringify(keys) === JSON.stringify(['schedule', 'clients', 'staff', 'settings', 'search']),
-    '下のタブは 予定・〈利用者さん〉・〈スタッフ〉・設定 と「探す」（空き状況は引き出しだけ。下のタブは変えない）',
+    JSON.stringify(keys) === JSON.stringify(['schedule', 'vacancy', 'clients', 'staff', 'search']),
+    '下のタブは 予定・空き状況・〈利用者さん〉・〈スタッフ〉 と「探す」（設定は引き出しとパレット。ADR-0080）',
     keys,
   );
   const labels = await texts(tabs.locator('[data-tab]'));
   check(
-    JSON.stringify(labels) === JSON.stringify(['予定', terms.client, terms.staff, '設定', '探す']),
+    JSON.stringify(labels) === JSON.stringify(['予定', '空き状況', terms.client, terms.staff, '探す']),
     '下のタブの名前',
     labels,
   );
