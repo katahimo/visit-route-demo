@@ -277,7 +277,7 @@ async function scope(page) {
   );
   await page.goto(`${BASE}#/arrange?d=${TODAY}`);
   await page.getByTestId('arrange-mode-all').check();
-  // 反映していない提案があるまま組み始めようとすると確かめる（残せば提案はそのまま。PR #81 のレビュー）
+  // 反映していない提案があるまま組み始めようとすると確かめる（残せば提案はそのまま）
   await page.getByTestId('arrange-start').click();
   await page.getByTestId('confirm-dialog').waitFor({ timeout: 5000 });
   check(
@@ -413,7 +413,7 @@ async function multi(page) {
   await shot(page, 'multi-week-1400');
   await page.getByTestId('selection-cancel').click();
   await page.getByTestId('confirm-dialog').waitFor();
-  // 確認を待つ間に別のタブで〈利用者さん〉の名前を変える：取り消しはその変更を消さない（PR #81 のレビュー）
+  // 確認を待つ間に別のタブで〈利用者さん〉の名前を変える：取り消しはその変更を消さない
   const other = await page.context().newPage();
   await other.goto(`${BASE}#/data`);
   await other.locator('h1').waitFor();
@@ -437,7 +437,7 @@ async function multi(page) {
   check(restored, '操作の行の「元に戻す」で取り消しを戻す');
 }
 
-// ---- 戻せない操作（古い記録を消す）は履歴に積まず、Ctrl+Z で消した記録が戻らない（PR #81 のレビュー） ----
+// ---- 戻せない操作（古い記録を消す）は履歴に積まず、Ctrl+Z で消した記録が戻らない ----
 async function tidyUndo(page) {
   await resetData(page);
   await openView(page, '/plan');

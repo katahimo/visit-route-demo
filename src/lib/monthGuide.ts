@@ -99,7 +99,7 @@ export function cellGuide(x: CellGuideInput): string[] {
 export type CellTip = { head: string; text: string; lines: readonly string[] };
 
 /**
- * マスの文の置き場（日付 → 文。PR #42 のレビュー）。マスが描いたあとに自分の文を置き（set）、吹き出しは日付で引く（get）。
+ * マスの文の置き場（日付 → 文）。マスが描いたあとに自分の文を置き（set）、吹き出しは日付で引く（get）。
  * 描画中に DOM の data-* を読まないので、休みを切り替えたあとも古い文が残らない。中身が同じなら同じものを返す
  * （useSyncExternalStore の getSnapshot に使える）
  */

@@ -6,8 +6,8 @@
 // 登録は store の update の1回（全体の「元に戻す」で戻せる）
 import { CalendarCheck } from 'lucide-react';
 import { useEffect, useMemo, useRef } from 'react';
-import { ArrangeSteps } from '../components/ArrangeSteps';
 import { useConfirm } from '../components/ConfirmDialog';
+import { ArrangeSteps } from '../components/SettingsTabs';
 import { useToast } from '../components/Toast';
 import { PageHeader } from '../components/ui';
 import { useUndoAction } from '../components/undo';

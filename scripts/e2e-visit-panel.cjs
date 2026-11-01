@@ -498,7 +498,7 @@ async function narrow(page) {
   await page.setViewportSize({ width: 1400, height: 1000 });
 }
 
-/** 日付を変えて候補が変わると、選んでいた担当は「変えない」に戻る（前の日の候補で反映しない。PR #78 のレビュー） */
+/** 日付を変えて候補が変わると、選んでいた担当は「変えない」に戻る（前の日の候補で反映しない） */
 async function pickReset(page) {
   await freshPlan(page);
   await openFromBand(page);

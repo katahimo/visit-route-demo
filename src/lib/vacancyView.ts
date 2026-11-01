@@ -152,7 +152,7 @@ export function noticeLine(periodLabel: string, typeName: string | null, duratio
 
 /**
  * いつ・何をの段階の要約（結果の見出しの下に出す1行。PRD D184）：「種類の指定なし・60分・月水・9:00〜17:00に始める・週1回・10/20から4週」。
- * 所要が正しくないときは所要を、希望の開始の「から」が「まで」より後のときは時間帯を「—」にする（PR #44 のレビュー）
+ * 所要が正しくないときは所要を、希望の開始の「から」が「まで」より後のときは時間帯を「—」にする
  */
 export function whenWhatLine(q: {
   typeName: string | null;

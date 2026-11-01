@@ -28,7 +28,7 @@ export const useTour = () => useContext(Ctx);
 
 /**
  * 案内ツアー（PRD D192・D193。ADR-0025）。管理の画面（AdminShell）で1つ。
- * 初めて開いたときには出さない（最初の2問に置き換えた。PRD D379。ADR-0073）。データの画面の「案内をもう一度見る」だけで開く
+ * 初めて開いたときには出さない（最初の2問が入口。PRD D379。ADR-0073）。データの画面の「案内をもう一度見る」だけで開く
  */
 export function TourProvider({ terms, children }: { terms: Pick<Terms, 'client' | 'staff'>; children: ReactNode }) {
   const [open, setOpen] = useState(false);

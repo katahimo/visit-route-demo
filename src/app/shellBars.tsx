@@ -135,7 +135,7 @@ export function BottomTabs({
           </Link>
         );
       })}
-      {/* 「探す」：コマンドパレットを開く（PRD D336。上の帯から下のタブへ移した。空き状況はメニューと探すから） */}
+      {/* 「探す」：コマンドパレットを開く（PRD D336。空き状況はメニューと探すから） */}
       <button
         type="button"
         className="bottom-tab"
@@ -148,7 +148,7 @@ export function BottomTabs({
         <Search size={20} strokeWidth={2.1} aria-hidden="true" />
         <span>探す</span>
       </button>
-      {/* 「メニュー」：全部の画面の引き出し（PRD D133・D336。上の帯から下のタブの最後へ移した） */}
+      {/* 「メニュー」：全部の画面の引き出し（PRD D133・D336） */}
       <button
         ref={menuBtnRef}
         type="button"

@@ -413,7 +413,7 @@ async function reopenFocus(page, best) {
   await panel(page).waitFor({ state: 'detached' });
 }
 
-// ---- 伝えた日の5段目：手で変えた訪問も連絡の一覧に出る（PR #80 のレビュー）。欠勤の振り直しも「元に戻す」で欠勤ごと戻る ----
+// ---- 伝えた日の5段目：手で変えた訪問も連絡の一覧に出る。欠勤の振り直しも「元に戻す」で欠勤ごと戻る ----
 async function toldContacts(page) {
   await page.goto(`${BASE}#/data`);
   await page.evaluate((k) => localStorage.removeItem(k), STORAGE_KEY);
@@ -814,7 +814,7 @@ async function pickDate(page, date) {
   await waitPlan(page);
 }
 
-// ---- 「振り直す前に戻す」は別の日の振り直しのあとでは近道で戻さない・欠勤を取り消した知らせから戻す（PR #81 のレビュー） ----
+// ---- 「振り直す前に戻す」は別の日の振り直しのあとでは近道で戻さない・欠勤を取り消した知らせから戻す ----
 async function revertCases(page, st) {
   await page.goto(`${BASE}#/data`);
   await page.evaluate((k) => localStorage.removeItem(k), STORAGE_KEY);

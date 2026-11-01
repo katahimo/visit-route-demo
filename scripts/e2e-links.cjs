@@ -306,7 +306,7 @@ async function availability(page) {
       await link.innerText(),
     );
   }
-  // 休みの日のセル（その日に働かない人）にはリンクを出さない（PR #48 のレビュー）
+  // 休みの日のセル（その日に働かない人）にはリンクを出さない
   await open(page, '/availability', '.avail-table');
   const offCell = page.locator(`.avail-table tbody tr td:nth-child(${col + 1}) button.is-off`).first();
   let offId = '';

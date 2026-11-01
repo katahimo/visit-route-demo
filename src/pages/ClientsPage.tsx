@@ -21,7 +21,7 @@ import { useClientsList } from './useClientsList';
 import './settings.css';
 
 /**
- * 〈利用者さん〉一覧（PoC本体 ClientsPage.tsx を写し、性別希望・NG を特性・条件・相性に置き換えた）。
+ * 〈利用者さん〉一覧（PoC本体 ClientsPage.tsx を写したもの。性別希望・NG は特性・条件・相性で持つ）。
  * 行を押すとその人の画面（`#/clients/:id`。ClientPage）へ、「追加」は新しい人の画面（`#/clients/new`）へ（PRD D308）。
  * 「Excel・CSV」で名簿の欄（書き出し・読み込み。ADR-0068）を開く。名簿が入ったら、位置の無い人がいれば欄の中に
  * 「位置の無い N人を地図に置く」（PRD D399。ADR-0076）

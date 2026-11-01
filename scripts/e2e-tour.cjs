@@ -105,7 +105,7 @@ async function firstRun(b) {
   const { ctx, page } = await askingPage(b);
   await page.goto(`${BASE}#/`);
   await page.getByTestId('first-run').waitFor({ timeout: 30000 });
-  check((await tour(page).count()) === 0, '初めて開いたとき：案内ツアーは自動で出ない（最初の2問に置き換えた）');
+  check((await tour(page).count()) === 0, '初めて開いたとき：案内ツアーは自動で出ない（入口は最初の2問）');
   check((await stored2(page)) === null, '2問に答えるまでデータを書かない');
   const text = await page.getByTestId('first-run').innerText();
   check(

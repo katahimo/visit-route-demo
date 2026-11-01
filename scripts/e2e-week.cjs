@@ -194,7 +194,7 @@ async function handoff(page) {
   );
 }
 
-/** 表から「時間軸：スタッフ」へ移っても ?client= を書き、そのあと「時間軸：利用者さん」で引き継がれる（D139。PR #44 のレビュー） */
+/** 表から「時間軸：スタッフ」へ移っても ?client= を書き、そのあと「時間軸：利用者さん」で引き継がれる（D139） */
 async function handoffViaStaff(page) {
   await page.setViewportSize({ width: 1400, height: 1000 });
   await open(page, '/week?view=clients');

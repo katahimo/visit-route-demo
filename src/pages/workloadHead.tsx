@@ -137,7 +137,7 @@ function WorkloadSettingsRow({
           </FieldError>
         </label>
       )}
-      {/* 用語の説明（ボタン）は label の中に置かない（PR #42 のレビュー）。入力欄の名前は aria-labelledby でつなぐ */}
+      {/* 用語の説明（ボタン）は label の中に置かない。入力欄の名前は aria-labelledby でつなぐ */}
       <div className="work-setting">
         <span>
           <Term k="span" testId="term-span" id={`${limitId}-term`} />

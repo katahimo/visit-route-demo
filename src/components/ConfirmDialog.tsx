@@ -15,7 +15,7 @@ import { FOCUSABLE } from './ui';
 import { inertLock, useBodyScrollLock } from './useBodyScrollLock';
 import './confirmDialog.css';
 
-/** 開いてから背景のクリックを無視する時間（ミリ秒。PR #37 のレビュー） */
+/** 開いてから背景のクリックを無視する時間（ミリ秒） */
 const BACKDROP_GUARD_MS = 300;
 
 /**
@@ -218,7 +218,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
     resolve?.(ok);
   }, []);
   // 画面（ルート）が変わったら、待っている確認をすべて取り消しとして答えて閉じる
-  // （「戻る」で移ったあとに確定して、外れた画面の続きがデータを書かないように。PR #37 のレビュー）
+  // （「戻る」で移ったあとに確定して、外れた画面の続きがデータを書かないように）
   const { pathname } = useLocation();
   const lastPath = useRef(pathname);
   useEffect(() => {

@@ -3,9 +3,8 @@ import { overCap } from './cost';
 import { EPS, fitStart } from './index';
 
 /**
- * 浮動小数の誤差の許し EPS は1つ（1e-9）。以前は reassign・vacancy だけ 1e-6 だったが、
- * 時刻の最小の刻みは移動の1秒＝1/60分（約0.0167）で、1e-9 でも 1e-6 でもその刻みよりずっと小さいので、
- * どちらでも判定は変わらない（EPS を 1e-6 にして matching・solver・evaluate・reassign・vacancy・store のテスト259件が通ることも確かめた）
+ * 浮動小数の誤差の許し EPS は1つ（1e-9）。
+ * 時刻の最小の刻みは移動の1秒＝1/60分（約0.0167）で、EPS はその刻みよりずっと小さい。
  */
 describe('EPS', () => {
   it('最小の刻み（1秒＝1/60分）より十分小さい', () => {

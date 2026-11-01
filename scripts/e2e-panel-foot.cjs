@@ -375,7 +375,7 @@ async function otherTabToast(page) {
 
 /**
  * 欄を開いたまま知らせを出す（訪問の詳細の欄を開いたまま、別のタブの変更の知らせ。文だけ）：
- * 390px は見出しに重ならず、知らせの下（欄の中）を押せる。1400px は欄をまたがない（PR #46 のレビュー）
+ * 390px は見出しに重ならず、知らせの下（欄の中）を押せる。1400px は欄をまたがない
  */
 async function toastWhileOpen(page, w) {
   await otherTabToast(page);

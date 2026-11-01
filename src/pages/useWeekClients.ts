@@ -158,7 +158,7 @@ export function useWeekClients(model: WeekModel, nav: WeekNav) {
     if (v === view) return;
     const next: Record<string, string | null> = { ...weekViewParams(v, narrow) };
     // 表から時間軸（〈スタッフ〉・〈利用者さん〉どちらでも）へ移るときに書く（main と同じ。〈スタッフ〉の時間軸から
-    // 〈利用者さん〉に切り替えたときも引き継がれる。PR #44 のレビュー）
+    // 〈利用者さん〉に切り替えたときも引き継がれる）
     if (tab === 'clients' && isTimeline(v)) {
       const known = new Set(weekClients.map((c) => c.id));
       const handoff = handoffFromTable({

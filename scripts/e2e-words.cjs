@@ -226,7 +226,7 @@ async function rename(page) {
   check(/出勤〜退勤（拘束）/.test(lead) && /空き時間（待ち）/.test(lead), '勤務の見込み：見出しの文の言い換え', lead);
   const span = page.getByTestId('term-span');
   check((await span.innerText()) === '出勤〜退勤（拘束）', '勤務の見込み：上限の設定の用語', await span.innerText());
-  // 入力欄の名前（PR #42 のレビュー：用語のボタンを label の中に置かない。aria-labelledby か labels で名前が付く）
+  // 入力欄の名前（用語のボタンを label の中に置かない。aria-labelledby か labels で名前が付く）
   for (const [tid, want] of [
     ['work-limit', /出勤〜退勤（拘束）の上限/],
     ['work-fare', /交通費の単価/],
@@ -434,7 +434,7 @@ async function legend(page) {
   await page.locator('h1').click();
   await settle(page, 150);
   check(!(await tip.isVisible()), 'フォーカスが外れると消える');
-  // 休みを切り替えたら、出ている読み方も新しい文になる（文は日付で引く。PR #42 のレビュー）
+  // 休みを切り替えたら、出ている読み方も新しい文になる（文は日付で引く）
   // 月末に実行すると今月に休みを入れられる日が無いことがあるので、無ければ来月で見る
   const nextYm = (() => {
     const [y, m] = YM.split('-').map(Number);

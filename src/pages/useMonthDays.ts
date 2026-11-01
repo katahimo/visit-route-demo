@@ -70,7 +70,7 @@ export function useMonthDays(data: DemoData, compileInput: CompileInput, ym: str
 
   /**
    * 見出しの下の要約（月全体。今日より前の日も数える）：帯に無いものだけ（入らない訪問・当日キャンセル）。
-   * 訪問・案のある日は帯（今日以降）に出すので、同じ言葉で違う範囲の数を並べない（PR #38 のレビュー。PRD D154）
+   * 訪問・案のある日は帯（今日以降）に出すので、同じ言葉で違う範囲の数を並べない（PRD D154）
    */
   const summary = useMemo(() => monthSummary(days, statuses, visitsByDate), [days, statuses, visitsByDate]);
 

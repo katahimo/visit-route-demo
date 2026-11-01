@@ -97,7 +97,7 @@ async function compare(page) {
   check(n1 === n0 + 1, '「提案を作って比べる」で提案が1つ増え、反映するボタンが出る', { n0, n1 });
   check(visitsKey(await stored(page)) === before, '比較の提案は保存しない（訪問は変わらない）');
   await page.screenshot({ path: path.join(OUT_DIR, 'compare-proposal.png') });
-  // 反映する → トーストの「元に戻す」で反映する前に戻る（日の予定と同じ控え。PR #80 のレビュー）
+  // 反映する → トーストの「元に戻す」で反映する前に戻る（日の予定と同じ控え）
   await page.getByTestId('compare-apply').last().click();
   await page.getByTestId('toast-undo').waitFor({ timeout: 5000 });
   await waitStored(page, (d, b) => JSON.stringify(d.visits) !== b, before);

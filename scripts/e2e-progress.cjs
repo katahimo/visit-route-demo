@@ -170,7 +170,7 @@ async function monthEntry(page) {
   await settle(page, 300);
   const att = await page.getByTestId('month-attention').locator('li').count();
   check(att === nums.attention, '月：帯の要対応＝右の欄の要対応', { band: nums.attention, listed: att });
-  // 見出しの下の要約は月全体で、帯と同じ言葉（訪問・案のある日）を並べない（PR #38 のレビュー）
+  // 見出しの下の要約は月全体で、帯と同じ言葉（訪問・案のある日）を並べない
   const sum = await page.getByTestId('month-summary').innerText();
   check(
     !/訪問|案のある日/.test(sum) && /月全体：担当なし/.test(sum),
@@ -416,7 +416,7 @@ async function perf(page) {
     const bar = Date.now() - t0;
     check(bar < PERF_MS, `${hash}：操作の行が ${PERF_MS}ms 以内に出る`, { bar });
   }
-  // 帯の「担当」から担当を組むの画面へ。既定は「要対応のある日だけ」（組み直しは利用者が選んだときだけ。PR #38 のレビュー）
+  // 帯の「担当」から担当を組むの画面へ。既定は「要対応のある日だけ」（組み直しは利用者が選んだときだけ）
   await open(page, `/month?ym=${YM}`, '[data-testid="month-grid"]');
   await page.getByTestId('band-plans').click();
   await page.waitForURL(/#\/arrange/, { timeout: 10000 });

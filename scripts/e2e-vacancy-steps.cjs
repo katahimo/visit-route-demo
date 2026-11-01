@@ -135,7 +135,7 @@ async function steps(page) {
     '案内文のコピー・紹介元へメールは開いた中（主ボタンにしない）',
   );
   check((await primaries(page.locator('.vacancy-page'))) === 1, '案内文を開いても主ボタンは1つ');
-  // 古い案内文を出さない（PR #44 のレビュー）：開く → 畳む → 条件を変える → 開き直すと、前の文は出さず計算し直してから押せる
+  // 古い案内文を出さない：開く → 畳む → 条件を変える → 開き直すと、前の文は出さず計算し直してから押せる
   const oldText = await page.getByTestId('notice-text').textContent();
   await page.getByTestId('notice-toggle').click();
   await settle(page, 100);
@@ -174,7 +174,7 @@ async function steps(page) {
   check(true, '計算し直したらコピーを押せる');
   await page.getByTestId('vacancy-duration').fill('60');
   await page.getByTestId('notice-toggle').click();
-  // 見出しの並び（PR #44 のレビュー）：段階は h2 で4つ、「開く ▾」は読み上げに入れない
+  // 見出しの並び：段階は h2 で4つ、「開く ▾」は読み上げに入れない
   const hs = await page.evaluate(() => ({
     h2: [...document.querySelectorAll('.vacancy-page .vacancy-stage h2')].map((e) => e.textContent.trim().slice(0, 4)),
     h3: !!document.querySelector('[data-testid="notice-toggle"] h3'),
