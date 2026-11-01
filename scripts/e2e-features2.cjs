@@ -198,7 +198,7 @@ async function insideEntries(page, dlg, ctx) {
     );
     await settle(page, 300);
     check((await count('month-off-toggle')) === (on('requestedOff') ? 1 : 0), `${label}：月の「休みを入れる」`);
-    // 印刷は「その他 ▾」の中（PRD D278）
+    // 印刷は「その他 ▾」の中（PRD D327）
     await page.getByTestId('month-more').click();
     await page.getByTestId('month-more-list').waitFor({ timeout: 5000 });
     check((await count('month-print')) === (on('monthPrint') ? 1 : 0), `${label}：月の「その他 ▾」の印刷`);
