@@ -9,7 +9,7 @@
 //   7 空き状況：郵便番号を打っても計算し直さない・ピンで見出しが切り替わる・ピンがあれば住所を打っても計算し直さない・
 //     郵便番号で住所を差し替えてもピンは残る・仮押さえで postalCode が入る
 //   8 〈スタッフ〉の自宅：郵便番号を保存しない
-//   9 〈利用者さん〉の回帰：data-testid がそろっている・保存で postalCode が入る
+//   9 〈利用者さん〉の欄：data-testid がそろっている・保存で postalCode が入る
 //  10 名簿を読み込んだあとの「位置の無い N人を地図に置く」（PRD D399。ADR-0076）：読み込みだけでは送らない・押すのは1回・
 //     見つからない人は結果に市区町村の1行
 //
@@ -17,10 +17,8 @@
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）
 // 終了コード：全部通れば 0、通らないものがあれば 1。ページのエラー（pageerror）も失敗に数える
 const path = require('node:path');
-const { skipTour } = require('./lib/tourSeen.cjs');
-const { answerConfirms } = require('./lib/confirmDialog.cjs');
-const { BASE, OUT_DIR, NOW, check, stored, runSteps, settle, until: untilTrue } = require('./lib/env.cjs');
-const { pagePerStep } = require('./lib/steps.cjs');
+const { BASE, OUT_DIR, check, stored, runSteps, settle, until: untilTrue } = require('./lib/env.cjs');
+const { openContext, pagePerStep } = require('./lib/steps.cjs');
 
 const ZIP_ONE = {
   status: 200,
@@ -116,7 +114,7 @@ async function openClient(page, id = 'c1') {
 /** 直している節の「取り消し」（変更があれば確認に「捨てる」で答える） */
 const cancelSection = (page) => page.getByTestId('sec-cancel').click();
 
-/** 1・2・3・9：送るもの・正規化・候補・元に戻す・〈利用者さん〉の回帰 */
+/** 1・2・3・9：送るもの・正規化・候補・元に戻す・〈利用者さん〉の欄 */
 async function basics(page, fake) {
   await openClient(page);
   const box = page.getByTestId('client-place');
@@ -542,19 +540,10 @@ async function rosterPlaceAll(page, fake) {
   await page.screenshot({ path: path.join(OUT_DIR, 'roster-place-done.png') });
 }
 
-const errors = [];
 const steps = pagePerStep({
   open: async (browser) => {
-    const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
-    // 初回の案内ツアーを見た扱いにする（PRD D193）
-    await skipTour(ctx);
-    const page = await ctx.newPage();
-    // ページの時計を止める（ほかの e2e と同じ。タイマーは止めないので時間切れの待ちはそのまま）
-    await page.clock.setFixedTime(NOW);
-    page.on('pageerror', (e) => errors.push(String(e)));
-    // 確認は独自のダイアログで受ける（ネイティブのダイアログが出たら失敗。PRD D146）
-    const dlg = await answerConfirms(page);
-    return { ctx, page, dlg, fake: await fakeServices(page) };
+    const s = await openContext(browser);
+    return { ...s, fake: await fakeServices(s.page) };
   },
   call: (fn, s) => fn(s.page, s.fake),
   steps: [basics, failures, races, vacancy, holdNote, staffHome, rosterPlaceAll],
@@ -571,7 +560,6 @@ const steps = pagePerStep({
       `${name}：送り先は郵便番号検索・国土地理院だけ`,
     );
   },
-  end: () => check(errors.length === 0, 'ページのエラーなし', errors.join(' / ')),
 });
 
 module.exports = { steps };

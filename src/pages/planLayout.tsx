@@ -14,7 +14,7 @@ import { jstDate } from '../domain/time';
 import { own } from '../lib/common';
 import { dateText } from '../lib/dateText';
 import { dayHeading } from '../lib/detailsHeading';
-import { foldedParts } from '../lib/exceptionView';
+import { ADD_VISIT_LABEL, foldedParts } from '../lib/exceptionView';
 import { typeOf } from '../lib/patternText';
 import { showContactedButton } from '../lib/settledView';
 import { ReassignBar } from './absenceParts';
@@ -239,7 +239,7 @@ export function PlanMain({ p }: { p: PlanCtx }) {
       <div className="card">
         <Empty icon={CalendarDays}>
           この日の訪問はまだありません。
-          {compact ? 'パソコン・タブレットで足せます。' : '操作の行の「訪問を追加」で足せます。'}繰り返しは
+          {compact ? 'パソコン・タブレットで足せます。' : `操作の行の「${ADD_VISIT_LABEL}」で足せます。`}繰り返しは
           {d.terms.client}の画面で足せます。
         </Empty>
       </div>

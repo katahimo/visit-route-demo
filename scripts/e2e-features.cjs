@@ -9,9 +9,9 @@
 // 末尾の /・大文字の URL（#/vacancy/・#/Vacancy・#/month/print/）も予定の画面へ移す、390px で空き状況を切っても下のタブ6つが全幅を等分、
 // 稼働の見込み・欠勤・キャンセル・月の印刷・提案を比べるを切ると、月の要対応の行・月のボタン・日の画面の拘束の帯・担当を組むの「案を比べる」・
 // 稼働時間の右の欄にそこへ移るリンク・ボタンが無い（日の予定に「AI で組む ▾」は無い。ADR-0063）。
-// レビューの反映：希望休のまとめ入力を切っても月の「担当が休み」の印は出す、欠勤・キャンセルを切ると稼働時間の凡例で登録の場所を出さない。
+// 希望休のまとめ入力を切っても月の「担当が休み」の印は出す、欠勤・キャンセルを切ると稼働時間の凡例で登録の場所を出さない。
 // エキスパート機能が切のひな形（単発のみ・基本・労務・契約管理・月次予定・現場共有）は、メニューが5つ（予定・空き状況・〈利用者さん〉・〈スタッフ〉・設定。子なし。下のタブは空き状況を除く4つ＋探す・メニュー）・下のタブは6つ・ホームは無く予定の画面へ移る（ADR-0073。PRD D400。詳しくは e2e-simple-menu）。
-// その2（画面の中の入口・相性を切る・切ったまま保存してもデータが残る）は e2e-features2.cjs（長いので2本に分けた）。
+// その2（画面の中の入口・相性を切る・切ったまま保存してもデータが残る）は e2e-features2.cjs（並列に走らせるため2本）。
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-features.cjs
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）
@@ -97,7 +97,7 @@ async function allOn(page) {
       (await page.getByTestId('settings-tabs').locator('[aria-current="page"]').innerText()).trim() === '管理者設定',
     '管理者設定：メニューの今の画面の印は「設定」（子は無い）、設定のタブは「管理者設定」',
   );
-  // 設定の見せ方（PRD D395。ADR-0074 段4）：ひな形は今のものの名前だけ出して畳み、スイッチの行は名前と1行の説明（隠れるものは ⓘ）
+  // 設定の見せ方（PRD D395。ADR-0074）：ひな形は今のものの名前だけ出して畳み、スイッチの行は名前と1行の説明（隠れるものは ⓘ）
   check(
     (await page.getByTestId('feature-template-current').innerText()).trim() === 'いま：すべて' &&
       (await page.getByRole('img', { name: '今のひな形：すべて' }).count()) === 1,
@@ -546,7 +546,7 @@ async function deadEnds(page, dlg, ctx) {
   const absent = await other.evaluate(
     ({ k, d }) => {
       const data = JSON.parse(localStorage.getItem(k));
-      // 版2：担当は訪問に持つ。保存したその日の訪問の担当
+      // 担当は訪問に持つ。保存したその日の訪問の担当
       const mine = data.visits.filter((v) => v.date === d && !v.cancelled && v.staffId);
       const staffWith = [...new Set(mine.map((v) => v.staffId))];
       const a = staffWith[0];
@@ -570,7 +570,7 @@ async function deadEnds(page, dlg, ctx) {
   await other.close();
   await settle(page, 300);
 
-  // 月の要対応：休みの人に訪問・拘束の上限の行は、欠勤・キャンセルの欄・稼働の見込みでなく日の画面へ
+  // 月の要対応：担当が休み・拘束の上限の行は、欠勤・キャンセルの欄・稼働の見込みでなく日の画面へ
   await open(page, `/month?ym=${ym}&do=attention`, '[data-testid="month-attention"]');
   await page.locator('.month-attention-btn').first().waitFor({ timeout: 30000 });
   const rows = await page

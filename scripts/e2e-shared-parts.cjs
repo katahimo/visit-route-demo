@@ -1,34 +1,33 @@
 // 訪問の帯の共通の部品（ADR-0056。PRD D339〜D341）を本物のブラウザで確かめる：
-// 週の表（〈スタッフ〉×曜日・〈利用者さん〉×曜日のマスの小さな札。PRD D342）・月のカレンダー（マスのキー・その日の回の一覧）・人の予定表で
+// 週の〈利用者さん〉×曜日の表の札・月のカレンダー（マスのキー・その日の回の一覧）・人の予定表で
 // 複数選択（Ctrl＋クリック・Shift＋Enter・Esc）とキー（↓ 15分（表の札は ↑↓ が隣の担当なので → で次の日）・Enter 欄・Ctrl+Z）が効く、
 // 〈スタッフ〉の画面は日時を動かさない、
 // 帯の見た目（data-marks：要対応・ピン）が3画面と週の時間軸で同じ、ドラッグの落とし先の判定（今日より前の日は置けない・
-// 同じ理由の文・入る日へ落とすと落とした日の欄）が週の表・月・人の予定表で同じ、390px で長押しの選ぶ・2段目の行が日ごとのリストと同じ形。
-// スクリーンショット week-table-1400・week-clients-1400・month-list-1400・person-1400・week-table-390・person-390
+// 同じ理由の文）が週の表・月・人の予定表で同じ、390px で週の表の札を押すと欄・「選ぶ」で選ぶ・
+// 人の予定表の行が日ごとのリストと同じ形。週の〈スタッフ〉×曜日の表の選ぶ・キー・長押しと、マスの1回目・2回目は e2e-chip-containers。
+// スクリーンショット week-clients-1400・month-list-1400・person-1400・week-table-390・person-390
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-shared-parts.cjs
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）
 // 終了コード：全部通れば 0、通らないものがあれば 1。ページのエラー（pageerror）も失敗に数える
-const path = require('node:path');
 const {
   BASE,
-  OUT_DIR,
   TODAY,
   STORAGE_KEY,
   check,
   settle,
   stored,
-  until,
   runSteps,
   withTimeout,
+  waitStored,
+  MOD,
+  shot,
 } = require('./lib/env.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
 const { planDays } = require('./lib/plan.cjs');
 const { answerConfirms } = require('./lib/confirmDialog.cjs');
 const { undoState } = require('./lib/ui.cjs');
 
-const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
-const shot = (page, name) => page.screenshot({ path: path.join(OUT_DIR, `${name}.png`) });
 const visitOf = (d, id) => d?.visits?.find((v) => v.id === id) ?? null;
 const toMin = (hm) => Number(hm.slice(0, 2)) * 60 + Number(hm.slice(3, 5));
 const addDays = (d, n) => {
@@ -40,9 +39,6 @@ const YM = TODAY.slice(0, 7);
 const panel = (page) => page.getByTestId('visit-panel');
 const focusedVisit = (page) => page.evaluate(() => document.activeElement?.dataset?.visit ?? null);
 
-async function waitStored(page, pred, timeout = 8000) {
-  return until(async () => pred(await stored(page)), timeout, 100).catch(() => false);
-}
 /** 初期データで開き直す */
 async function fresh(page, hash, ready) {
   await page.goto(`${BASE}#/data`);
@@ -174,21 +170,9 @@ async function selectAndKeys(page, where, sel, ids, { move = true, day = false }
   }
 }
 
-// ---- 週の〈スタッフ〉×曜日の表 ----
-async function weekTable(page) {
-  await fresh(page, '/week?view=table', '[data-testid="week-tvisit"]');
-  const ids = await futureItems(page, '[data-testid="week-tvisit"]', 2);
-  check(ids.length === 2, '週の表：マスに訪問（今日より後に2件以上）', ids);
-  if (ids.length < 2) return;
-  await shot(page, 'week-table-1400');
-  await selectAndKeys(page, '週の〈スタッフ〉×曜日の表', '[data-testid="week-tvisit"]', ids, { day: true });
-}
-
 // ---- 週の〈利用者さん〉×曜日の表 ----
 async function weekClients(page) {
-  await page.goto(`${BASE}#/week?view=clients`);
-  await page.getByTestId('week-citem').first().waitFor({ timeout: 30000 });
-  await settle(page, 400);
+  await fresh(page, '/week?view=clients', '[data-testid="week-citem"]');
   const ids = await futureItems(page, '[data-testid="week-citem"][draggable="true"]', 2);
   check(ids.length === 2, '週の〈利用者さん〉の表：動かせる帯が2件以上', ids);
   if (ids.length < 2) return;
@@ -271,16 +255,6 @@ async function month(page) {
   await page.keyboard.press('Escape');
   await settle(page, 200);
   check((await list.count()) === 0 && (await focusedDate()) === day, '月：一覧の中の Esc で閉じ、フォーカスはマス');
-  // 押すと1回目はその日の一覧（右の欄）、もう一度押すとその日の日の予定（PRD D343）
-  await cell(day).click();
-  await list.waitFor({ timeout: 5000 });
-  check(
-    (await list.getAttribute('data-date')) === day && new URL(page.url()).hash.startsWith('#/month'),
-    '月：マスを1回押すとその日の一覧（日の予定へは移らない）',
-  );
-  await cell(day).click();
-  await page.waitForURL(/#\/plan/, { timeout: 10000 });
-  check(true, '月：一覧に出している日のマスをもう一度押すとその日の日の予定');
 }
 
 // ---- 人の予定表 ----
@@ -456,7 +430,7 @@ async function dropSame(page) {
   await fresh(page, `/week?view=clients`, '[data-testid="week-citem"]');
   const PAST = '今日より前の日へは動かせません';
   const results = {};
-  // 週の〈利用者さん〉×曜日の表：同じ行の今日より前のマス／今日より後のマス
+  // 週の〈利用者さん〉×曜日の表：同じ行の今日より前のマス
   const pair = await page.evaluate((today) => {
     for (const it of document.querySelectorAll('[data-testid="week-citem"][draggable="true"]')) {
       const td = it.closest('td');
@@ -476,14 +450,8 @@ async function dropSame(page) {
   const citem = page.locator(`[data-testid="week-citem"][data-visit="${pair.id}"]`);
   const ccell = (d) => page.locator(`[data-testid="week-ccell"][data-client="${pair.client}"][data-date="${d}"]`);
   results.weekPast = await dragOver(page, citem, ccell(pair.past));
-  results.weekFut = await dragOver(page, citem, ccell(pair.fut));
-  const weekDate = await panel(page)
-    .getByTestId('vp-date')
-    .inputValue()
-    .catch(() => null);
-  await closePanel(page);
-  // 月：その日の回の一覧の行を今日より前のマス／今日より後のマスへ（ドラッグごとに開き直す。続けてつかむと
-  // 本物のマウスの2回目の dragover が届かないことがあった）
+  // 今日より後のマスへ落とすとその日の欄は e2e-chip-containers の week-clients
+  // 月：その日の回の一覧の行を今日より前のマスへ（今日より後のマスへ落とすとその日の欄は e2e-chip-containers の month-move）
   const openList = async () => {
     await page.goto(`${BASE}#/month?ym=${YM}&layout=calendar`);
     await page.reload();
@@ -495,25 +463,12 @@ async function dropSame(page) {
     return page.locator('[data-testid="month-visit"][draggable="true"]').first();
   };
   const pastDay = `${YM}-01` < TODAY ? `${YM}-01` : null;
-  const futDay = [addDays(pair.fut, 1), addDays(pair.fut, -1)].find((x) => x.slice(0, 7) === YM && x > TODAY);
   if (pastDay)
     results.monthPast = await dragOver(
       page,
       await openList(),
       page.locator(`[data-testid="month-day"][data-date="${pastDay}"]`),
     );
-  if (futDay) {
-    results.monthFut = await dragOver(
-      page,
-      await openList(),
-      page.locator(`[data-testid="month-day"][data-date="${futDay}"]`),
-    );
-    results.monthDate = await panel(page)
-      .getByTestId('vp-date')
-      .inputValue()
-      .catch(() => null);
-    await closePanel(page);
-  }
   // 人の予定表（月）：回を今日より前のマスへ
   await page.goto(`${BASE}#/clients/${pair.client}?cal=month`);
   await page.reload();
@@ -525,21 +480,10 @@ async function dropSame(page) {
   }
   const ng = (r) => !!r && /ng/.test(r.tone) && (r.text ?? '').includes(PAST);
   check(ng(results.weekPast), 'ドラッグ：週の表で今日より前のマスは「置けません」と同じ理由', results.weekPast);
-  check(
-    !!results.weekFut && !/ng/.test(results.weekFut.tone) && weekDate === pair.fut,
-    'ドラッグ：週の表で今日より後のマスは入る影・落とすとその日の欄',
-    { shadow: results.weekFut, weekDate },
-  );
   if (pastDay) {
     check(ng(results.monthPast), 'ドラッグ：月のカレンダーで今日より前のマスは同じ理由', results.monthPast);
     check(ng(results.personPast), 'ドラッグ：人の予定表で今日より前のマスは同じ理由', results.personPast);
   }
-  if (futDay)
-    check(
-      !!results.monthFut && !/ng/.test(results.monthFut.tone) && results.monthDate === futDay,
-      'ドラッグ：月の一覧の行をマスへ落とすとその日の欄',
-      { shadow: results.monthFut, date: results.monthDate },
-    );
   await page.setViewportSize({ width: 1400, height: 1000 });
 }
 
@@ -554,27 +498,7 @@ async function narrow(page) {
   }
   const chip = page.locator(`[data-testid="week-tvisit"][data-visit="${ids[0]}"]`);
   await chip.scrollIntoViewIfNeeded();
-  const b = await chip.boundingBox();
-  // 長押し（500ms）で選ぶ形に入って選ぶ（欄は開かない）
-  await page.mouse.move(b.x + 4, b.y + 4);
-  await page.mouse.down();
-  // 長押しの時間そのものを見るので固定の待ち
-  await page.waitForTimeout(700);
-  await page.mouse.up();
-  await settle(page, 200);
-  check(
-    (await page
-      .getByTestId('selection-count')
-      .innerText()
-      .catch(() => '')) === '1件を選択' &&
-      (await chip.getAttribute('aria-pressed')) === 'true' &&
-      (await panel(page).count()) === 0,
-    '390px：週の表の訪問を長押しすると選ぶ形に入って選ぶ（欄は開かない）',
-  );
-  await page.getByTestId('selection-clear').click();
-  await page.getByTestId('week-select').click();
-  await settle(page, 150);
-  // 選ぶ形を抜けて押すと欄
+  // 押すと欄（長押しで選ぶ形に入ることは e2e-chip-containers の narrow）
   await chip.tap();
   await panel(page)
     .waitFor({ timeout: 3000 })
@@ -630,7 +554,6 @@ const steps = sharedPage({
     return { ...s, confirms };
   },
   steps: [
-    ['week-table', weekTable],
     ['week-clients', weekClients],
     ['month', month],
     ['person', person],

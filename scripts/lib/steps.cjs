@@ -1,14 +1,15 @@
-// e2e の共通：段（steps）の型（ADR-0041。ADR-0029 の段階2）。
+// e2e の共通：段（steps）の型（ADR-0029・ADR-0041）。
 // スクリプトは `module.exports = { steps }`（[段の名前, 関数] の並び）を出し、
 // 単独の実行では `if (require.main === module) runSteps(steps)`、包み（e2e/legacy.spec.ts）では段ごとに test.step で回す。
-// 段の中身（guard の中）で投げたら、今までの try/catch と同じ文の確かめ（NG）とスクリーンショットにして続ける。
+// 段の中身（guard の中）で投げたら、段の名前の確かめ（NG）とスクリーンショットにして続ける。
 // 準備（ブラウザ・文脈を開く）・段ごとの文脈を開く所・後始末で投げたら、そこで止める（test は落ちる。単独なら終了コード1）
 const { launch, NOW, check, failShot, watchErrors, withTimeout } = require('./env.cjs');
 const { skipTour } = require('./tourSeen.cjs');
+const { answerConfirms, watchNative } = require('./confirmDialog.cjs');
 
 /**
  * 1つの段の上限（ミリ秒。E2E_STEP_TIMEOUT_MS で変える）。ページが固まると Playwright の待ちが自分の時間切れでも
- * 戻らないことがあった（e2e-links・CI と同じ設定で1回）。段を時間切れの NG にして次の段へ進む
+ * 戻らないことがあるので、段を時間切れの NG にして次の段へ進む
  */
 const STEP_LIMIT_MS = Number(process.env.E2E_STEP_TIMEOUT_MS || 3 * 60 * 1000);
 
@@ -47,7 +48,7 @@ function guard(fn, { label, info = message, page, shot = label }) {
 const closeContext = (ctx) => (ctx ? withTimeout(ctx.close(), 30 * 1000, '文脈を閉じる').catch(() => {}) : undefined);
 
 /**
- * ブラウザ・文脈・ページを開く（多くのスクリプトの準備）：初回の案内ツアーを見た扱い（PRD D193）・
+ * ブラウザ・文脈・ページを開く（多くのスクリプトの準備）：初回の案内ツアーを見た扱い（PRD D193。start は skipTour へ）・
  * ページの時計を NOW に止める・ページのエラーを集める（env.cjs の pageErrors）
  */
 async function openPage({
@@ -55,14 +56,38 @@ async function openPage({
   context = {},
   clock = true,
   logErrors = true,
+  start = 'all',
 } = {}) {
   const b = await launch();
   const ctx = await b.newContext({ viewport, ...context });
-  await skipTour(ctx);
+  await skipTour(ctx, { start });
   const page = await ctx.newPage();
   if (clock) await page.clock.setFixedTime(NOW);
   watchErrors(page, { log: logErrors });
   return { b, ctx, page };
+}
+
+/** 地図のタイル（国土地理院・OpenStreetMap）は外へ取りに行かない */
+const blockTiles = (ctx) =>
+  ctx.route(/cyberjapandata|tile\.openstreetmap/, (r) => r.fulfill({ status: 204, body: '' }));
+
+/**
+ * pagePerStep の段ごとの文脈とページを開く：案内ツアーを見た扱い・地図のタイルを取りに行かない・ページの時計を NOW に止める・
+ * ページのエラーを pageErrors に集める。確認は独自のダイアログで受け（dlg。answerConfirms）、confirms: false なら
+ * 答えずにネイティブのダイアログだけ記録する（dlg.native）
+ */
+async function openContext(
+  b,
+  { viewport = { width: 1280, height: 900 }, context = {}, clock = true, confirms = true } = {},
+) {
+  const ctx = await b.newContext({ viewport, ...context });
+  await skipTour(ctx);
+  await blockTiles(ctx);
+  const page = await ctx.newPage();
+  if (clock) await page.clock.setFixedTime(NOW);
+  watchErrors(page);
+  const dlg = confirms ? await answerConfirms(page) : { native: watchNative(page) };
+  return { ctx, page, dlg };
 }
 
 /**
@@ -129,4 +154,14 @@ function pagePerStep({ open, steps, label, after, end, call = (fn, s) => fn(s.pa
   ];
 }
 
-module.exports = { guard, closeContext, firstLine, message, openPage, sharedPage, pagePerStep };
+module.exports = {
+  guard,
+  closeContext,
+  firstLine,
+  message,
+  blockTiles,
+  openPage,
+  openContext,
+  sharedPage,
+  pagePerStep,
+};

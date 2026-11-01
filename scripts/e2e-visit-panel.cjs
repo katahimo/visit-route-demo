@@ -3,26 +3,24 @@
 // 担当は今の担当で固定・フォーカスは開いた帯・トーストの「元に戻す」で戻る）、繰り返しの回の範囲（この回だけ／これ以降／すべて）、
 // 取り消しと取り消しをやめる（当日キャンセル）、週の予定の帯・月の予定で〈利用者さん〉を選んだときのリンクの先の回・日の予定の一覧の行から開いても
 // 同じ欄、新しい訪問（日の予定の「その他 ▾」・コマンドパレットの操作）、要対応の帯から日の予定へ移って訪問の欄を開く、
-// コマンドパレットで「名前 日付」から開く（画面は移らない）、390px（見る・取り消す・担当替えができ、日時の変更・追加は出さない・
+// コマンドパレットで「名前 日付」から開く（画面は移らない）、390px（日ごとのリストの行から開く・この回の変更は見えるが戻すは出さない・追加は出さない・
 // 横にはみ出さない）、印刷で出さない。
 // スクリーンショット（OUT_DIR）：plan-band・scope・week・new（1400px）、narrow（390px）。
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-visit-panel.cjs
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）
 // 終了コード：全部通れば 0、通らないものがあれば 1。ページのエラー（pageerror）も失敗に数える
-const path = require('node:path');
 const { answerConfirms } = require('./lib/confirmDialog.cjs');
-const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, hashOf, runSteps, settle, until } = require('./lib/env.cjs');
+const { BASE, TODAY, STORAGE_KEY, check, hashOf, runSteps, settle, until, shot } = require('./lib/env.cjs');
 const { findVisit } = require('./lib/visits.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
 const { goTo, navUsr, pressTool, watchNavUsr } = require('./lib/ui.cjs');
 
-const shot = (page, name) => page.screenshot({ path: path.join(OUT_DIR, `${name}.png`) });
 const panel = (page) => page.getByTestId('visit-panel');
 const data = (page) => page.evaluate((k) => JSON.parse(localStorage.getItem(k)), STORAGE_KEY);
 /**
- * 版2：その日の訪問（保存した訪問と、保存した回の無い繰り返しの計算した回。ADR-0053）。
- * 初期データの繰り返しは毎週なので、毎週の繰り返しだけを計算する（隔週・毎月は見ない簡易版）
+ * その日の訪問（保存した訪問と、保存した回の無い繰り返しの計算した回）。範囲（この回だけ／これ以降／すべて）を
+ * 毎週の繰り返しで確かめるので、毎週の繰り返しだけを計算する（隔週・毎月は lib/visits.cjs の visitsIn）
  */
 function visitsOnDate(d, date) {
   const wd = new Date(`${date}T00:00:00Z`).getUTCDay();
@@ -164,7 +162,7 @@ async function timeAndStaff(page) {
   const d = await dataWhen(page, (x) => x.visits.find((v) => v.id === id)?.earliestStart === hhmm(start));
   const after = d.visits.find((v) => v.id === id);
   check(after.earliestStart === hhmm(start), '保存で時刻が変わる', after.earliestStart);
-  check(after.staffId === sid && after.pinned, '担当は訪問に書いてピン（版2）', { sid, after });
+  check(after.staffId === sid && after.pinned, '担当は訪問に書いてピン', { sid, after });
   const back = await page.evaluate(
     () => document.activeElement?.closest('.tl-band, .route-item')?.dataset.visit ?? document.activeElement?.tagName,
   );
@@ -327,7 +325,7 @@ async function addNew(page) {
   await page.getByTestId('plan-visit-add').click();
   await panel(page).waitFor();
   const p = panel(page);
-  check((await p.getAttribute('data-new')) === 'true', '操作の行の「訪問を追加」で欄の新規の形');
+  check((await p.getAttribute('data-new')) === 'true', '操作の行の「予定を入れる」で欄の新規の形');
   check(
     (await page.evaluate(() => document.activeElement?.getAttribute('data-testid'))) === 'vp-client',
     '新規は最初の欄（〈利用者さん〉）へフォーカス',
@@ -348,7 +346,7 @@ async function addNew(page) {
   );
   check(
     at === 'plan-visit-add' || at === d.visits.at(-1).id,
-    '閉じるとフォーカスは足した訪問（帯・カード・行）か「訪問を追加」',
+    '閉じるとフォーカスは足した訪問（帯・カード・行）か「予定を入れる」',
     at,
   );
 }
@@ -407,13 +405,13 @@ async function palette(page) {
   );
   await page.keyboard.press('Escape');
   await closed(page);
-  // 操作の「訪問を追加」
+  // 操作の「予定を入れる」
   await page.keyboard.press('Control+k');
-  await page.getByTestId('cmdk-input').fill('ほうもんをついか');
+  await page.getByTestId('cmdk-input').fill('よていをいれる');
   await settle(page, 200);
   await page.keyboard.press('Enter');
   await panel(page).waitFor();
-  check((await panel(page).getAttribute('data-new')) === 'true', 'パレットの操作「訪問を追加」で新規の欄');
+  check((await panel(page).getAttribute('data-new')) === 'true', 'パレットの操作「予定を入れる」で新規の欄');
   await page.keyboard.press('Escape');
   await closed(page);
 }
@@ -456,49 +454,30 @@ async function narrow(page) {
   await settle(page, 300);
   const p = panel(page);
   check((await p.getAttribute('data-visit')) === id, '390px：日ごとのリストの行から欄が開く');
-  check((await p.getByTestId('vp-time').count()) === 0, '390px：日時の変更は出さない');
   if (edited)
     check(
       (await p.getByTestId('vp-changes').count()) === 1 && (await p.getByTestId('vp-restore').count()) === 0,
       '390px：この回の変更は見えるが「繰り返しのとおりに戻す」は出さない',
     );
-  // 担当替え・取り消しは大きな4つのボタンから（ADR-0055）
-  await p.getByTestId('vp-big-cancel').click();
-  check((await p.getByTestId('vp-cancel').count()) === 1, '390px：取り消しはできる（「取り消す」のボタンから）');
-  await p.getByTestId('vp-big-staff').click();
-  check((await p.getByTestId('vp-staff').count()) === 1, '390px：担当替えはできる（「担当を替える」のボタンから）');
+  // 大きな4つのボタン・日時の変更を出さない・担当替えと取り消しは e2e-day-ops の sheet
   check(
     (await page.evaluate(() => document.documentElement.scrollWidth)) <= 390 &&
       (await page.locator('.drawer').evaluate((el) => el.scrollWidth <= el.clientWidth + 1)),
     '390px：横にはみ出さない',
   );
   await shot(page, 'narrow');
-  // 担当を替えて保存できる
-  const choice = p.locator('[data-testid="vp-staff-choice"]:not(.is-off)').first();
-  if ((await choice.count()) > 0) {
-    const sid = await choice.getAttribute('data-staff');
-    await choice.locator('input').check();
-    await page.getByTestId('vp-save').click();
-    await closed(page);
-    const d = await dataWhen(page, (x) => x.visits.some((v) => v.id === id && v.staffId === sid && v.pinned));
-    check(
-      d.visits.some((v) => v.id === id && v.staffId === sid && v.pinned),
-      '390px：担当を替えて保存できる（訪問に書いてピン）',
-    );
-  } else {
-    await page.keyboard.press('Escape');
-    await closed(page);
-  }
+  await page.keyboard.press('Escape');
+  await closed(page);
   await page.getByTestId('plan-more').click();
   check(
     (await page.getByTestId('plan-visit-add').getAttribute('aria-disabled')) === 'true',
-    '390px：「訪問を追加」は押せず理由（スマホでは足さない）',
+    '390px：「予定を入れる」は押せず理由（スマホでは足さない）',
   );
   await page.keyboard.press('Escape');
   await page.setViewportSize({ width: 1400, height: 1000 });
 }
 
-/** 日付を変えて候補が変わると、選んでいた担当は「変えない」に戻る（前の日の候補で反映しない。PR #78 のレビュー） */
+/** 日付を変えて候補が変わると、選んでいた担当は「変えない」に戻る（前の日の候補で反映しない） */
 async function pickReset(page) {
   await freshPlan(page);
   await openFromBand(page);

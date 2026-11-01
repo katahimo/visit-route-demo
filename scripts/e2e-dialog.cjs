@@ -11,9 +11,8 @@
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）
 // 終了コード：全部通れば 0、通らないものがあれば 1。ページのエラー（pageerror）も失敗に数える
 const path = require('node:path');
-const { skipTour } = require('./lib/tourSeen.cjs');
-const { BASE, OUT_DIR, NOW, STORAGE_KEY, check, settle, stored, runSteps } = require('./lib/env.cjs');
-const { pagePerStep } = require('./lib/steps.cjs');
+const { BASE, OUT_DIR, STORAGE_KEY, check, settle, stored, runSteps } = require('./lib/env.cjs');
+const { openContext, pagePerStep } = require('./lib/steps.cjs');
 const { goTo } = require('./lib/ui.cjs');
 
 const dialog = (page) => page.getByTestId('confirm-dialog');
@@ -407,7 +406,7 @@ async function dataReset(page) {
   );
 }
 
-// ---- 日の画面の「確定（伝えた）」（#/plan。版2）：取り消しでは未確定のまま、確定で「確定済み」 ----
+// ---- 日の画面の「確定（伝えた）」（#/plan）：取り消しでは未確定のまま、確定で「確定済み」 ----
 async function adopt(page) {
   await open(page, '/plan', '.date-switch select');
   await page.getByTestId('confirm-state').waitFor({ timeout: 60000 });
@@ -491,31 +490,12 @@ async function narrow(page) {
   check((await dialog(page).count()) === 0, '390px：取り消すで閉じる');
 }
 
-const errors = [];
 const steps = pagePerStep({
-  open: async (browser) => {
-    const ctx = await browser.newContext({ viewport: { width: 1400, height: 1000 } });
-    // 初回の案内ツアーを見た扱いにする（PRD D193）
-    await skipTour(ctx);
-    // 地図のタイルは外へ取りに行かない
-    await ctx.route(/cyberjapandata\.gsi\.go\.jp|tile\.openstreetmap\.org/, (r) =>
-      r.fulfill({ status: 204, body: '' }),
-    );
-    const page = await ctx.newPage();
-    await page.clock.setFixedTime(NOW);
-    page.on('pageerror', (e) => errors.push(String(e)));
-    // ブラウザのネイティブのダイアログ（confirm・alert・prompt）が出たら失敗
-    const native = [];
-    page.on('dialog', (d) => {
-      native.push(`${d.type()}: ${d.message()}`);
-      d.dismiss().catch(() => {});
-    });
-    return { ctx, page, native };
-  },
+  // 確認には答えず、ネイティブのダイアログ（confirm・alert・prompt）が出たら失敗
+  open: (browser) => openContext(browser, { viewport: { width: 1400, height: 1000 }, confirms: false }),
   steps: [ruleNames, rules, rulesSave, backWhileAsking, dataReset, adopt, staffDiscard, narrow],
   label: (name) => `${name}：途中で止まった`,
-  after: (name, { native }) => check(native.length === 0, `${name}：ブラウザのダイアログを出さない`, native),
-  end: () => check(errors.length === 0, 'ページのエラーが無い', errors),
+  after: (name, { dlg }) => check(dlg.native.length === 0, `${name}：ブラウザのダイアログを出さない`, dlg.native),
 });
 
 module.exports = { steps };

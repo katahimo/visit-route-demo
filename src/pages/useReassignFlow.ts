@@ -385,7 +385,7 @@ export function useReassignFlow(x: FlowArgs) {
   const revertToBase = async (): Promise<boolean> => {
     if (!problem || !view.info || planRun.busy()) return false;
     // 近道：直前の手がこの日の「欠勤の振り直し」で、その手の前にこの日の振り直しが無く、手のあとに何も変わっていないときだけ
-    // 全体の「元に戻す」で1手戻す（別の日の振り直し・案A/案B の切り替えのあとで誤って戻さない。PR #81 のレビュー）
+    // 全体の「元に戻す」で1手戻す（別の日の振り直し・案A/案B の切り替えのあとで誤って戻さない）
     const last = appHistory.peek();
     if (
       last &&

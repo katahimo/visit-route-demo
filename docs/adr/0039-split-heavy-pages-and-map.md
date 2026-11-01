@@ -2,30 +2,22 @@
 
 - 日付：2026-10-19
 - 状態：採用
-- 関連：PRD D248・D249、ADR-0001（`base: './'`）・ADR-0006（Excel は押したときに読む）
+- 関連：ADR-0006
 
 ## 背景
-本体のチャンクが大きく、ホームを開くだけで日の予定・月の予定・空き状況・比較・相性と地図（Leaflet）まで読んでいた。ホームに地図は出ない。日の予定は計算中、Worker の進み具合（100ms ごと）を画面の state に入れていたため、画面全体を毎回描き直していた。
-制約：GitHub Pages のサブパス・HashRouter・相対パスのまま。ルート・URL は変えない。
-
-## 選択肢
-- 分け方：A 重い画面5つ（日・空き状況・比較・相性・月）を `React.lazy`、地図は `RouteMap` の中で本体を `lazy`／B すべての画面を `lazy`／C `manualChunks` で vendor を分ける
-- 進み具合：A 小さな外の入れ物（`lib/valueStore`）＋ `useSyncExternalStore`／B 進み具合の state を子に閉じる／C `startTransition`
+最初の画面を開くだけで重い画面と地図（Leaflet）まで読み、計算中は進み具合（100ms ごと）で画面全体を描き直していた。HashRouter・相対パスのまま、URL は変えない。
 
 ## 決定
-いずれも A。
+- 重い画面（日・空き状況・比較・相性・月など）を `React.lazy`、地図は `RouteMap` の中で本体を `lazy`（`src/app/lazyPages.tsx`）
+- 画面が出たら残りを `requestIdleCallback` で1つずつ先読み（`PreloadWhenShown`）。直接開いた画面はすぐそのチャンクを読む
+- `Suspense` は本文に1つ。移動は transition で前の画面のまま待つ。地図は指定の高さの枠に出す
+- 読み終わったチャンクは `components/lazyComponent` で直に描く
+- 読めないとき：ErrorBoundary が動的 import の失敗（`lib/chunkLoad`）を見分け、［再読み込み］［もう一度表示する］（`?retry=N`）。自動では読み直さない
+- 進み具合は外の入れ物（`lib/valueStore`＋`useSyncExternalStore`）から、バーと回数の部品だけが読む
 
-- 画面が出たら、残りを先に読む（`PreloadWhenShown`。`requestIdleCallback` で1つずつ。日・月・空き状況・地図・比較・相性の順。まとめて読むとその間の操作を待たせる）。分けた画面を URL で直接開いたときは、起動の処理と並べてその画面のチャンク（地図を出す画面は地図も）をすぐ読み始める
-- `Suspense` は `AdminShell` の本文に1つ。React Router の移動は transition なので表示済みの画面は前のまま待ち、読み込みの表示を挟まない。直接開いたときだけ「画面を読み込んでいます…」。地図は指定の高さの枠に出して跳ねない
-- 読み終わったチャンクは `components/lazyComponent` で `lazy` を通さず直に描く（`lazy` は読み終わっていても最初の描画で一度止まり、画面移動が遅れた）
-- 読めないとき（新しい版の公開で古いチャンクが消えた・通信切れ）：ErrorBoundary が動的 import の失敗（`lib/chunkLoad`）を見分け、「画面を読み込めませんでした」と［再読み込み］［もう一度表示する］を出す。初期状態に戻すボタンは出さない（データは壊れていない）。自動では読み直さない（入力中の欄を失う）。［もう一度表示する］は lazy を作り直し、ブラウザが同じ URL を読み直さないので失敗の URL に `?retry=N` を付ける（URL が分からない Safari は元の import を呼び直す）。地図の本体だけ読めないときは `RouteMap` の中の小さな境界が同じ高さの枠でエラーを出す
-- 進み具合は外の入れ物から、バーと回数の部品だけが読む。画面は計算の始まり・終わりだけ描き直す
+## 捨てた案
+全画面を `lazy`（よく使う画面の待ちが増える）・vendor 分け（初回の量が減らない）・`startTransition`（描き直す量が減らない）。
 
-## 理由とトレードオフ
-- 得るもの：ホームの初回に読む JS が約3割減る。地図のコードと CSS はホーム・週・データなどで読まない。計算中の日の予定の描き直しが 8〜11 回 → 1 回
-- 失うもの：先読みが終わる前に未読の画面へ移ると、読み終わるまで前の画面のまま待つ（待っている印は出さない）。直接開いた画面は本体・画面・地図を順に読む
-- 捨てた案：全画面を `lazy` にすると、よく使う画面の待ちが増える。vendor 分けは初回に読む量が減らない。`startTransition` は描き直す量が減らない。state を子に閉じると、計算を始める画面側から子へ道を通す必要がある
-- 見直す条件：週・〈利用者さん〉など本体に残る画面が重くなったとき（全画面 `lazy`）
-
-## 影響
-- `src/app/lazyPages.tsx`・`components/lazyComponent`・`lib/chunkLoad`・`lib/valueStore`・`components/RouteMap`。docs/design.md §4・docs/design/pages.md「読み込みの分け方」
+## トレードオフ
+- 失うもの：先読みが終わる前に移ると前の画面のまま待つ
+- 見直す条件：本体に残る画面が重くなったとき

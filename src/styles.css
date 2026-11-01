@@ -442,19 +442,6 @@ tbody tr:hover td {
   min-width: 0;
 }
 
-/* ログイン：デモのスタッフを選ぶ */
-.demo-staff {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 8px;
-}
-.demo-staff .btn {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 10px;
-}
-
 /* 稼働時間帯 */
 .slot-row {
   display: flex;
@@ -2129,7 +2116,7 @@ a.icon-btn:hover {
   }
 }
 /*
- * 右の欄が開いている間の知らせ（トースト。PRD D197。PR #46 のレビュー）：下の確定のボタンの帯に重ねない。
+ * 右の欄が開いている間の知らせ（トースト。PRD D197）：下の確定のボタンの帯に重ねない。
  * 置き場所は usePanelToastPlace が html の data-drawer-toast に書く（lib/panelFit.ts の toastPlace）。
  * top＝欄の外が狭い（600px 以下など）：見出しの実際の高さ（--drawer-head-h）のすぐ下。キーボードで欄を見えている所に
  * 合わせているときはその上端（--drawer-top）から。side＝欄の外（幕の側）の真ん中に出し、欄をまたがない
@@ -2258,7 +2245,7 @@ html[data-drawer-toast="side"] body:has(.drawer-wrap) .toast {
     flex-direction: column;
     align-self: stretch;
   }
-  /* 狭い画面の横1行の帯：アイコンを隠し、文とボタンを縦に（flex-basis で横にはみ出さない。PR #42 のレビュー） */
+  /* 狭い画面の横1行の帯：アイコンを隠し、文とボタンを縦に（flex-basis で横にはみ出さない） */
   .empty-next.is-compact {
     flex-direction: column;
     align-items: stretch;

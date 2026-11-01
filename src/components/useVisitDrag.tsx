@@ -1,4 +1,4 @@
-// 訪問のドラッグ（PRD D339〜D341。ADR-0056）：落とし先の判定（lib/visitDrop）と影 DropShadow（visitParts から分けた）
+// 訪問のドラッグ（PRD D339〜D341。ADR-0056）：落とし先の判定（lib/visitDrop）と影 DropShadow
 import { type CSSProperties, type DragEvent, useMemo, useRef, useState } from 'react';
 import { deferredDragStart } from '../lib/dragStart';
 import { type DropTarget, type DropVerdict, dropShadowText, dropTone, dropVerdict } from '../lib/visitDrop';

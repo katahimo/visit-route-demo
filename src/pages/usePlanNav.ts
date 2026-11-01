@@ -200,7 +200,7 @@ export function usePlanNav(x: { date: string; setDate: (d: string) => void; d: P
               `.tl-band[data-visit="${vv}"] .tl-band-btn, .route-item[data-visit="${vv}"] .route-btn, [data-testid="visit-row-open"][data-visit="${vv}"], .day-row[data-visit="${vv}"]`,
             )
           : null;
-        // 新しく足したときは「訪問を追加」のボタンへ（スマホの「その他 ▾」は閉じた一覧の項目の代わりに「その他」のボタンへ）
+        // 新しく足したときは「予定を入れる」のボタンへ（スマホの「その他 ▾」は閉じた一覧の項目の代わりに「その他」のボタンへ）
         return (
           el ??
           (id ? null : document.querySelector<HTMLElement>('[data-testid="plan-visit-add"], [data-testid="plan-more"]'))

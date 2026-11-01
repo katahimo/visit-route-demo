@@ -25,15 +25,21 @@ async function answerConfirms(page, init = {}) {
     };
     new MutationObserver(scan).observe(document, { childList: true, subtree: true });
   });
+  watchNative(page, st.native);
+  return st;
+}
+
+/** ブラウザのネイティブのダイアログを native に記録して閉じる（beforeunload だけは受ける）。native を返す */
+function watchNative(page, native = []) {
   page.on('dialog', (d) => {
     if (d.type() === 'beforeunload') {
       d.accept();
       return;
     }
-    st.native.push(`${d.type()}: ${d.message()}`);
+    native.push(`${d.type()}: ${d.message()}`);
     d.dismiss();
   });
-  return st;
+  return native;
 }
 
-module.exports = { answerConfirms };
+module.exports = { answerConfirms, watchNative };
