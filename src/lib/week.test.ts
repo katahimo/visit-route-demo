@@ -267,7 +267,7 @@ describe('clientWeekTable（利用者さん×曜日）', () => {
   });
   const days = weekDates(DATE).map((date) => weekDay(d, date));
 
-  it('選ばなければ全員（表示名の順。休止中で訪問の無い人は除く）、マスは開始の順・取り消しも印として入る（PRD D83）', () => {
+  it('選ばなければ全員（表示名の順。休止中で訪問の無い人は除く）、マスは開始の順・取り消しも印として入る（PRD D342）', () => {
     const rows = clientWeekTable(d, days, null);
     expect(rows.map((r) => r.clientId)).toEqual(['c1', 'c2']);
     const mon = rows[0]!.cells[0]!;
@@ -287,7 +287,7 @@ describe('clientWeekTable（利用者さん×曜日）', () => {
     expect(clientWeekTable(d, days, []).map((r) => r.clientId)).toEqual(['c1', 'c2']);
   });
 
-  it('印（PRD D83）：当日キャンセル・いつもの担当でない（繰り返しの担当と違う）・担当なし・休み', () => {
+  it('印（PRD D342）：当日キャンセル・いつもの担当でない（繰り返しの担当と違う）・担当なし・休み', () => {
     const p = pattern('p1', [1], { clientId: 'c1', usualStaffId: 's2' });
     const d2 = makeData({
       staff: [staff('s1', 38.26, 140.87), staff('s2', 38.26, 140.871)],

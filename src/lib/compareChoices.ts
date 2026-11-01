@@ -1,4 +1,4 @@
-// 提案を比べる（#/compare。D19・D22・ADR-0005・ADR-0065）の比べる案の一覧と、A・B の選び方・条件の差・担当の並びを作る純粋関数。
+// 提案を比べる（#/compare。D317・D315・ADR-0005・ADR-0065）の比べる案の一覧と、A・B の選び方・条件の差・担当の並びを作る純粋関数。
 // 画面（pages/ComparePage）は store から読んだデータを渡すだけで、案の組み立て・判定はここで行う
 import type { DemoData, ReassignInfo } from '../contracts/data';
 import type { Client, Visit } from '../contracts/documents';

@@ -10,7 +10,7 @@ export function useMonthFocus(
   data: DemoData,
   params: URLSearchParams,
   patchParams: (patch: ParamsPatch) => void,
-  /** 表示の選ぶ欄で選んだとき（段は出したまま。PRD D278） */
+  /** 表示の選ぶ欄で選んだとき（段は出したまま。PRD D327） */
   onPick: () => void,
 ) {
   const activeStaff = useMemo(() => data.staff.filter((s) => s.active).sort(byName), [data.staff]);
@@ -34,7 +34,7 @@ export function useMonthFocus(
   }, [focus.kind]);
   const focusValue = monthFocusValue(clientMode, focus);
   const pickFocus = (value: string) => {
-    // 段の中で選び直しても段は出したまま（全体に戻しても消してフォーカスを落とさない。PRD D278）
+    // 段の中で選び直しても段は出したまま（全体に戻しても消してフォーカスを落とさない。PRD D327）
     onPick();
     setClientMode(value === 'client');
     const patch = monthFocusPatch(value, focus.kind);

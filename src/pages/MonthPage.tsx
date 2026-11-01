@@ -26,7 +26,7 @@ import './month.css';
 import './settings.css';
 
 /**
- * 月間カレンダーと範囲の AI で組む（担当を組む）の進み具合（ADR-0012・ADR-0063。PRD D39〜D43・D53〜D55。design.md §4 pages「月単位の予定」「月間・週間の改定」）。
+ * 月間カレンダーと範囲の AI で組む（担当を組む）の進み具合（ADR-0012・ADR-0063。PRD D39・D40・D42・D321・D328・D53〜D55。design.md §4 pages「月単位の予定」「月間・週間の改定」）。
  * 日のマスは点数を出さず、状態を背景・枠と印で（凡例あり。読み上げには状態の文字）、種類の積み上げバー・休み欠勤の印・
  * 始まる▶終わる■の印・混み具合バー（vacancy の dayLoad）。「表示」で〈スタッフ〉か〈利用者さん〉を1人選ぶと、日のマスと
  * 右の欄がその人のものになる（?staff= ?client=）。選ばないときの右の欄は要対応。押すとその日の予定の画面へ。
@@ -38,7 +38,7 @@ import './settings.css';
 export default function MonthPage() {
   const nav = useMonthNav();
   const { date, today, ym } = nav;
-  /** 予定のモード（PRD D348）：確認では札を動かさない */
+  /** 予定のモード（PRD D355）：確認では札を動かさない */
   const { data, update, compileInput } = useDayModel(date);
   const terms = data.org.terms;
   /** 機能の入・切（印刷・希望休のまとめ入力・勤務の見込み・欠勤。ADR-0028） */
@@ -102,7 +102,7 @@ export default function MonthPage() {
     data,
   });
 
-  // 「その他 ▾」（PRD D278）：表示の選択（〈スタッフ〉・〈利用者さん〉・混み具合）を選んでいる間・休みの入力中は、たたまずに出す
+  // 「その他 ▾」（PRD D327）：表示の選択（〈スタッフ〉・〈利用者さん〉・混み具合）を選んでいる間・休みの入力中は、たたまずに出す
   const more = monthMore({
     panels,
     forced: focus.kind !== 'all' || fs.clientMode || loadType !== null || off.offMode,

@@ -31,7 +31,7 @@ function addDays(d, n) {
   t.setUTCDate(t.getUTCDate() + n);
   return t.toISOString().slice(0, 10);
 }
-/** 初期データに案が入る日（今日から7日。PRD D225） */
+/** 初期データに案が入る日（今日から7日。PRD D322） */
 const SEED_DAYS = Array.from({ length: 7 }, (_, i) => addDays(TODAY, i));
 /**
  * 初期データの担当・まとめて確定を確かめる月：今月に初期データで組んだ日が3日以上あれば今月、無ければ（月末）翌月
@@ -253,7 +253,7 @@ async function bandUnconfirmedLike(p, states) {
 }
 
 /**
- * 初期データの担当（PRD D225）・問題の無い日をまとめて確定（D223）・次の確定していない日へ（D224）。
+ * 初期データの担当（PRD D322）・問題の無い日をまとめて確定（D223）・次の確定していない日へ（D224）。
  * 確認ダイアログを開いたまま見るので、自動で答えない別のページで確かめる（同じ文脈なので localStorage は同じ）
  */
 async function seedPlans(page) {

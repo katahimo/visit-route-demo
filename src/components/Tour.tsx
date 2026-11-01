@@ -35,7 +35,7 @@ export function TourProvider({ terms, children }: { terms: Pick<Terms, 'client' 
   const openTour = useCallback(() => setOpen(true), []);
   const close = useCallback(() => setOpen(false), []);
   const navigate = useNavigate();
-  /** 最後の枚の「今日の予定を開く」：閉じて今日の日の画面へ（PRD D226） */
+  /** 最後の枚の「今日の予定を開く」：閉じて今日の日の画面へ（PRD D323） */
   const openToday = useCallback(() => {
     close();
     // 下書きのある画面（条件の重み）から移るときは確かめる（断れば留まる。PRD D286）
@@ -55,7 +55,7 @@ export function TourProvider({ terms, children }: { terms: Pick<Terms, 'client' 
  * 画面の中央のカード（PRD D192）。確認ダイアログ（ADR-0026）と同じ流儀：body の直下に出し、body のほかの子を inert（inertLock）、
  * 裏を巻かない、Tab は中で回す、Esc は「とばす」と同じ、閉じたら開く前の要素へフォーカスを戻す。
  * 最初のフォーカスは「次へ」。枚が変わってフォーカスが外れたら（最初の枚で「戻る」が押せなくなったとき）「次へ」へ。
- * 最後の枚は「次へ」が「閉じる」になり、主ボタン「今日の予定を開く」を添える（「とばす」は出さない。PRD D226）。
+ * 最後の枚は「次へ」が「閉じる」になり、主ボタン「今日の予定を開く」を添える（「とばす」は出さない。PRD D323）。
  * 最後の枚に入ったらフォーカスは「今日の予定を開く」へ
  */
 function TourDialog({
@@ -76,7 +76,7 @@ function TourDialog({
   const wrapRef = useRef<HTMLDivElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const nextRef = useRef<HTMLButtonElement>(null);
-  /** 最後の枚の主ボタン「今日の予定を開く」（最後の枚に入ったらここへフォーカス。PRD D226） */
+  /** 最後の枚の主ボタン「今日の予定を開く」（最後の枚に入ったらここへフォーカス。PRD D323） */
   const todayRef = useRef<HTMLButtonElement>(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;

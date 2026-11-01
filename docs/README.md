@@ -65,7 +65,7 @@
 | [0016](adr/0016-postal-code-and-address-search.md) | 郵便番号・住所の検索（押したときだけ） |
 | [0017](adr/0017-mail-via-mailto.md) | メールは mailto: |
 | [0018](adr/0018-google-maps-route-links.md) | 道順は Google マップのリンク |
-| [0019](adr/0019-nav-grouped-by-person.md) | 人ごとにまとめる（置き換え） |
+| [0019](adr/0019-nav-grouped-by-person.md) | 人ごとにまとめる（廃止） |
 | [0020](adr/0020-roster-excel-import-export.md) | 名簿で予定を消さずに人を足す・直す |
 | [0021](adr/0021-client-filter-area.md) | 〈利用者さん〉の絞り込み・地区 |
 | [0022](adr/0022-compat-page-details-and-filters.md) | 詳細の吹き出しと相性の絞り込み |
@@ -83,7 +83,7 @@
 | [0035](adr/0035-rules-page-edits-score-basis.md) | 条件の重み＝点数の基準を直す |
 | [0036](adr/0036-page-header-and-button-tiers.md) | 見出しの型・ボタンの3段 |
 | [0037](adr/0037-term-hint-info-icon.md) | 用語の説明は ⓘ |
-| [0038](adr/0038-sudden-contact-step.md) | 欠勤の欄の連絡の段 |
+| [0038](adr/0038-sudden-contact-step.md) | 欠勤の欄の連絡の段（段の数は 0082） |
 | [0039](adr/0039-split-heavy-pages-and-map.md) | 重い画面と地図のチャンク分け |
 | [0041](adr/0041-e2e-steps-soft-checks-web-first-waits.md) | e2e の段・やわらかい確かめ・待ち |
 | [0042](adr/0042-month-batch-outside-page.md) | 範囲の計算を画面の外で |
@@ -105,7 +105,7 @@
 | [0060](adr/0060-schedule-nav-row-same-for-month-week-day.md) | 予定のナビの行 |
 | [0062](adr/0062-standard-week-and-two-modes.md) | 組み方の標準 |
 | [0063](adr/0063-ai-only-in-standard-manual-schedule.md) | AI は「予定を組む」に、予定は手で |
-| [0064](adr/0064-day-three-choices-until-standard.md) | 日の考え方ごとの案（置き換え） |
+| [0064](adr/0064-day-three-choices-until-standard.md) | 日の考え方ごとの案（廃止） |
 | [0065](adr/0065-standard-flow-one-path-rules-under-arrange.md) | 標準を決める道を1本に |
 | [0066](adr/0066-arrange-steps-one-at-a-time-rules-behind-standard.md) | 予定を組むを1段ずつ |
 | [0067](adr/0067-arrange-basics-first-people-under-arrange.md) | 基本情報の段・組み直しの知らせ |
@@ -119,7 +119,7 @@
 | [0075](adr/0075-other-software-csv-forms.md) | ほかのソフトの CSV を形の一覧で |
 | [0076](adr/0076-roster-import-then-place-all.md) | 名簿の読み込み後にまとめて地図に置く |
 | [0077](adr/0077-attention-band-arrange-and-go.md) | 要対応の帯から担当なしを組む |
-| [0078](adr/0078-vacancy-in-menu.md) | 空き状況をメニューに |
+| [0078](adr/0078-vacancy-in-menu.md) | 空き状況をメニューに（下のタブは 0080） |
 | [0079](adr/0079-demo-starts-arranged-month-exceptions-only.md) | デモは組み終えて始め、月のマスは例外だけ |
 | [0080](adr/0080-vacancy-one-question-mobile-tab.md) | 空き状況はチップで聞き答えを先頭に・スマホの下のタブ |
 | [0081](adr/0081-next-month-check.md) | 月の終わりに来月の確認を1行で |

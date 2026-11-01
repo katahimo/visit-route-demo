@@ -20,7 +20,7 @@ const { goTo, pressTool } = require('./lib/ui.cjs');
 
 /** 訪問の無い日を作るのに使う、今日の次の日 */
 const NEXT = new Date(Date.parse(`${TODAY}T00:00:00Z`) + 86400000).toISOString().slice(0, 10);
-/** 案A で入らない見込みの日を作る日（初期データの案がある日。PRD D225） */
+/** 案A で入らない見込みの日を作る日（初期データの案がある日。PRD D322） */
 const DAY3 = new Date(Date.parse(`${TODAY}T00:00:00Z`) + 3 * 86400000).toISOString().slice(0, 10);
 
 /** 保存（少し遅れて書く）が条件を満たすまで待つ（満たさなければ時間切れで続ける） */
@@ -731,7 +731,7 @@ async function mobile(page) {
   await openPlan(page);
   const b = await page.getByTestId('plan-more').boundingBox();
   check(b && b.x >= 0 && b.x + b.width <= 390, '390px：入口の「その他 ▾」が画面に収まる', b);
-  // 下のタブの並び（ホーム・予定・欠勤・探す・メニュー。PRD D336）は e2e-mobile の bottom が確かめる
+  // 下のタブの並び（ホーム・予定・欠勤・探す・メニュー。PRD D401）は e2e-mobile の bottom が確かめる
   await pressTool(page, '欠勤', { where: 'more' });
   await panel(page).waitFor();
   await page.getByTestId('sudden-kind-staff').click();

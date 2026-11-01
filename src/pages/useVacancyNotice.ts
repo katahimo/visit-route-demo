@@ -46,7 +46,7 @@ export function useVacancyNotice(
     [data, noticeType, noticeDuration, requirements, exactPlace, noticeSpan, noticePeriod, terms],
   );
   const [notice, setNotice] = useState<{ text: string; noPlan: string[]; inputs: typeof noticeInputs } | null>(null);
-  /** 案内文の欄を開いているか（畳んでいる間は計算しない。問い合わせの即答の速さを落とさない。PRD D185） */
+  /** 案内文の欄を開いているか（畳んでいる間は計算しない。問い合わせの即答の速さを落とさない。PRD D184） */
   const [noticeOpen, setNoticeOpen] = useState(false);
   /** 条件を変えてから案内文を計算し直すまで（古い文でコピー・メールさせない） */
   const noticeStale = notice === null || notice.inputs !== noticeInputs;

@@ -424,7 +424,7 @@
   }
 }
 
-/* 週の主ボタン（PRD D280。ADR-0046）：作る → 確定 → 済み の1つ。押せない理由は下に見える文で */
+/* 週の主ボタン（PRD D328。ADR-0046）：作る → 確定 → 済み の1つ。押せない理由は下に見える文で */
 .week-next {
   display: flex;
   flex-direction: column;
@@ -468,7 +468,7 @@
     display: inline;
   }
 }
-/* 日の見出しの「未作成」（PRD D282）：0件と分ける。注意の色にはしない（まだ作っていないだけ） */
+/* 日の見出しの「未作成」（PRD D314）：0件と分ける。注意の色にはしない（まだ作っていないだけ） */
 .week-day-unmade {
   border: 1px dashed var(--line-strong);
   border-radius: 4px;

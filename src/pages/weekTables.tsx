@@ -37,7 +37,7 @@ import {
 import type { WeekModel } from './useWeekModel';
 import type { WeekVisits } from './useWeekVisits';
 
-// 週の予定（pages/WeekPage.tsx）の表：〈スタッフ〉×曜日（D51・PRD D342）と〈利用者さん〉×曜日（D56・PRD D83・D342）。
+// 週の予定（pages/WeekPage.tsx）の表：〈スタッフ〉×曜日（D51・PRD D342）と〈利用者さん〉×曜日（D56・PRD D342）。
 // マスに小さな札を3件まで積み、残りは「+N」の一覧（components/visitParts の ChipStack）
 
 /** 表の部品が共通に使うもの（データ・訪問の動かし方・今日・狭い画面か） */

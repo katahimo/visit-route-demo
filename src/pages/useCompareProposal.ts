@@ -1,4 +1,4 @@
-// 提案を比べるの「提案を作る」（PRD D159）：考え方（プリセット）を選び、ピンの訪問はそのままで AI で組む。
+// 提案を比べるの「提案を作る」（PRD D317）：考え方（プリセット）を選び、ピンの訪問はそのままで AI で組む。
 // 作っている提案の進み具合・止める・日付を変えたら止めて捨てる・画面を離れたら止める
 import { useEffect, useRef, useState } from 'react';
 import { useToast } from '../components/Toast';

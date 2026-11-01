@@ -8,7 +8,7 @@
 // 設定の「最初の設定をやり直す」（確認の文は元に戻す Ctrl+Z の対象外・先に書き出す案内 → 2問へ戻る → 答えでデータを作り直す・控えが残る）、
 // 案内ツアー（データの画面の「案内をもう一度見る」から開く：role="dialog"・aria-modal・見出しと本文・1 / 2・最初のフォーカスは「次へ」・
 // 裏の inert とスクロールのロック・「戻る」は最初の枚で押せない・Tab と Shift+Tab が中で回る・開いている間は Ctrl+K でパレットを開かない・
-// 2枚（予定・欠勤。ホームは無い。PRD D277・D401）・予定の枚は3段の説明・最後の枚は主ボタン「今日の予定を開く」・「閉じる」（とばすは出さない。PRD D226）・
+// 2枚（予定・欠勤。ホームは無い。PRD D277・D401）・予定の枚は3段の説明・最後の枚は主ボタン「今日の予定を開く」・「閉じる」（とばすは出さない。PRD D323）・
 // Esc と「とばす」・閉じるとフォーカスが「案内をもう一度見る」へ・「今日の予定を開く」で今日の日の画面・390px で収まる・印刷で出さない）、
 // データの画面のファイル選択（すべて同じ部品・日本語のボタン「ファイルを選ぶ」と未選択の文・ブラウザ標準の input は見えない・
 // input はボタンと同じ大きさ・入力欄の名前（何を読み込むか＋ファイルを選ぶ）・Tab で届きフォーカスの枠・Space で選ぶ画面・控え（JSON）を選ぶと確認と
@@ -576,7 +576,7 @@ async function tourDialog(b) {
   for (let i = 0; i < 1; i++) {
     keys.push(await tour(page).getAttribute('data-step'));
     if (i === 0) {
-      // 予定の枚：3段の説明（PRD D226。組むのは「予定を組む」。ADR-0063）と［月｜週｜日］の切り替え
+      // 予定の枚：3段の説明（PRD D323。組むのは「予定を組む」。ADR-0063）と［月｜週｜日］の切り替え
       const points = await page.getByTestId('tour-points').locator('li').allInnerTexts();
       check(
         (await page.getByTestId('tour-title').innerText()) === '予定を組んで、直して、確定します' &&
@@ -653,7 +653,7 @@ async function tourDialog(b) {
   await ctx.close();
 }
 
-// 最後の枚の「今日の予定を開く」（PRD D226）：閉じて今日の日の画面（選んでいる日付は今日）
+// 最後の枚の「今日の予定を開く」（PRD D323）：閉じて今日の日の画面（選んでいる日付は今日）
 async function tourToday(b) {
   const { ctx, page } = await newPage(b, { human: false });
   await openTourFromData(page);
@@ -679,7 +679,7 @@ async function tourToday(b) {
     '「今日の予定を開く」で閉じ、今日の日の予定（?date= は消える）',
     st,
   );
-  // 初期データに今日の担当がある（PRD D225）ので、そのまま確定の手前まで見える
+  // 初期データに今日の担当がある（PRD D322）ので、そのまま確定の手前まで見える
   // 案内をもう一度見るは印「all」（すべて入＝エキスパート機能が入）で開くので、確定の段階（まだ伝えていない）が出る
   await page.getByTestId('confirm-state').waitFor({ timeout: 30000 });
   check(
@@ -955,7 +955,7 @@ async function monthList(b) {
   let found = false;
   for (const ym of [YM, nextYm]) {
     await open(page, `/month?ym=${ym}`, '[data-testid="month-list"]');
-    // 表示の選択は「その他 ▾」の「表示を選ぶ」で開く（PRD D278）
+    // 表示の選択は「その他 ▾」の「表示を選ぶ」で開く（PRD D327）
     await pressTool(page, 'month-more-pickers', { where: 'more' });
     await page.getByTestId('month-focus').waitFor();
     const staffOpts = await page

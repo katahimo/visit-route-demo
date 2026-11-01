@@ -63,7 +63,7 @@ export function useVisitKeys(opts: {
   staffOrder: (visitId: string) => readonly string[];
   /** 日時を動かす（↑↓←→）か。〈スタッフ〉の画面など動かさない所は false（Shift+←→・Enter・Delete だけ） */
   move?: boolean;
-  /** 動かさない（予定のモード「確認」。PRD D348）：日時・担当を変えるキー（↑↓←→・Shift+←→）を受けない */
+  /** 動かさない（予定のモード「確認」。PRD D355）：日時・担当を変えるキー（↑↓←→・Shift+←→）を受けない */
   readOnly?: boolean;
   /** 札の入れ物（表は ↑↓ で隣の担当の行。PRD D342）。既定は時間軸 */
   layout?: KeyLayout;

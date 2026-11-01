@@ -24,7 +24,7 @@ describe('glossary', () => {
     expect(glossaryText('dropped', terms)).toContain('どのシッターの予定にも');
     expect(glossaryText('terms', terms)).toContain('シッター・お客様');
   });
-  it('予定の組み方の言葉（PRD D242）：名前と、何に効くか・何が変わらないか', () => {
+  it('予定の組み方の言葉（PRD D323）：名前と、何に効くか・何が変わらないか', () => {
     expect(GLOSSARY.confirmed.label).toBe('確定（伝えた）');
     expect(glossaryText('confirmed', terms)).toContain('シッターに伝えた内容');
     expect(GLOSSARY.confirmed.text).toContain('未連絡の変更');

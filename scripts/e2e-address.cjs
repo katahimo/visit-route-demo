@@ -240,7 +240,7 @@ async function failures(page, fake) {
   check(c2.place.address === addr0, '失敗しても store は変えない');
 }
 
-/** 空き状況の「2 場所（任意）」を開く（PRD D185。はじめは畳んで要約の行だけ） */
+/** 空き状況の「2 場所（任意）」を開く（PRD D184。はじめは畳んで要約の行だけ） */
 async function openVacancyPlace(page) {
   const stage = page.getByTestId('vacancy-step-place');
   await stage.waitFor();

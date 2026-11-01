@@ -1,4 +1,4 @@
-/* 予定の上の要対応の帯（PRD D400・D403・D404）：文と［担当なしを組む］（従のボタン）・［見に行く ›］。無ければ出さない */
+/* 予定の上の要対応の帯（PRD D400・D403・D404）：文と［担当なしを組む］（従のボタン）・［見に行く ›］。無ければ出さない。下に来月の確認（PRD D413） */
 .attention-band {
   display: flex;
   align-items: center;
@@ -52,8 +52,45 @@
 .attention-band-arrange {
   white-space: nowrap;
 }
+/* 来月の確認（PRD D413）：要対応の帯の下の1行。急ぎではないので色は地の文。狭い幅では折り返す */
+.next-month-check {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  width: 100%;
+  padding: 2px 8px 2px 16px;
+  color: var(--ink);
+  background: var(--soft);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.next-month-check .band-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.next-month-check .with-icon:has(> .band-text) > svg {
+  flex: none;
+}
+.next-month-check-go {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 4px 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--primary-dark);
+  text-decoration: none;
+  border-radius: 8px;
+}
+.next-month-check-go:hover {
+  background: var(--primary-soft);
+}
 @media print {
-  .attention-band {
+  .attention-band,
+  .next-month-check {
     display: none;
   }
 }

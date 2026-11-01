@@ -1,4 +1,4 @@
-// 日の予定の手直しと確定（PRD D74・D217・D218・D329・D346。ADR-0053）：訪問を担当へ移す・担当なしにする・ピンを外す・
+// 日の予定の手直しと確定（PRD D74・D217・D329・D346。ADR-0053）：訪問を担当へ移す・担当なしにする・ピンを外す・
 // 受けられる人に入れる・訪問を取り消す・確定（伝えた）。どれも全体の「元に戻す」の1手。データを書くのは update（store）だけ
 import { useEffect, useRef, useState } from 'react';
 import { useConfirm } from '../components/ConfirmDialog';
@@ -53,7 +53,7 @@ export function usePlanEdits(x: EditArgs) {
   const { problem, hasPlan, routes, pins, owner, staffName } = d;
   const toast = useToast();
   const confirmDialog = useConfirm();
-  /** トーストの「元に戻す」（全体の履歴を1手戻す。PRD D218・D329） */
+  /** トーストの「元に戻す」（全体の履歴を1手戻す。PRD D329） */
   const undoAction = useUndoAction();
   const historyOps = useHistoryOps();
   /** 担当の並びとピンを訪問に書く（手直し） */

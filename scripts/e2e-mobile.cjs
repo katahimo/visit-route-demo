@@ -1,8 +1,8 @@
-// スマホ（幅860px以下）のメニュー（PRD D132・D133・D135・D336。ADR-0024・0045・0055）を本物のブラウザ（390×844）で確かめる：
-// 上の帯（ロゴと今の画面の名前・日付の切り替え。「探す」は下のタブ。〈利用者さん〉一覧と〈スタッフ〉一覧を見分ける。PRD D179・D336）、
+// スマホ（幅860px以下）のメニュー（PRD D132・D133・D135・D401。ADR-0024・0045・0055）を本物のブラウザ（390×844）で確かめる：
+// 上の帯（ロゴと今の画面の名前・日付の切り替え。「探す」は下のタブ。〈利用者さん〉一覧と〈スタッフ〉一覧を見分ける。PRD D179・D401）、
 // 引き出し（下のタブの「メニュー」で開く。role="dialog"・aria-modal・名前、ボタンの aria-expanded・aria-controls、グループの見出し付きの縦並び、
 // 画面を選ぶ・外を押す・Esc で閉じてフォーカスが「メニュー」へ、Tab・Shift+Tab が中で回る、開いているあいだ裏を巻かない）、
-// 下のタブ（予定・〈利用者さん〉・〈スタッフ〉・組む・探す・メニュー（PRD D336・D401）、active と aria-current、月・週・日では「予定」（比較は組むの続きなので「組む」）、本文の最後がタブに隠れない）、
+// 下のタブ（予定・〈利用者さん〉・〈スタッフ〉・組む・探す・メニュー（PRD D401）、active と aria-current、月・週・日では「予定」（比較は組むの続きなので「組む」）、本文の最後がタブに隠れない）、
 // 浮いている部品（地図の MapDock・欠勤の振り直しの ReassignDock・トースト）がタブに重ならない、
 // 本物の地図のボタンと本物のトースト（PRD D190。ボタンはタブのすぐ上・トーストが出ても互いに隠れない・本文の下を空ける・safe-area）、印刷で上の帯・下のタブ・引き出しを出さない、
 // 広い画面（1400px）では今の左のメニューのままで、上の帯の部品・下のタブを出さない。
@@ -20,7 +20,7 @@ const { sharedPage, openPage } = require('./lib/steps.cjs');
 const { goTo, reveal } = require('./lib/ui.cjs');
 
 const drawer = (page) => page.getByTestId('nav-drawer');
-/** メニューの最上位の項目（子の無い項目と、畳める親の行の項目。PRD D349） */
+/** メニューの最上位の項目（子の無い項目と、畳める親の行の項目。PRD D401） */
 const TOP_LINKS =
   '.nav-groups > .nav-group > .nav-link, .nav-groups > .nav-group > .nav-parent > .nav-parent-row > .nav-link';
 const menuBtn = (page) => page.getByTestId('menu-btn');
@@ -65,11 +65,11 @@ async function header(page) {
     '上の帯とナビの行が画面の幅に収まる（横に巻かない）',
     { hb, nb, db },
   );
-  check(!(await visible(page.getByTestId('cmdk-open'))), '上の帯に「探す」は出さない（下のタブ。PRD D336）');
+  check(!(await visible(page.getByTestId('cmdk-open'))), '上の帯に「探す」は出さない（下のタブ。PRD D401）');
   check(
     (await page.locator('.app-header [data-testid="menu-btn"]').count()) === 0 &&
       (await tabs(page).locator('[data-testid="menu-btn"]').count()) === 1,
-    '「メニュー」は上の帯でなく下のタブの最後（PRD D336）',
+    '「メニュー」は上の帯でなく下のタブの最後（PRD D401）',
   );
   const scrollW = await page.evaluate(() => document.documentElement.scrollWidth);
   check(scrollW <= 390, 'ページが横にはみ出さない', scrollW);
@@ -98,7 +98,7 @@ async function drawerOpenClose(page) {
   check(
     (await page.evaluate(() => document.getElementById('root').inert)) &&
       (await d.locator('h2.nav-group-title').count()) === 0,
-    '引き出し：後ろの画面は inert・グループの見出しは無い（最上位5項目と子の項目。PRD D349）',
+    '引き出し：後ろの画面は inert・グループの見出しは無い（最上位5項目と子の項目。PRD D401）',
   );
   check(
     (await btn.getAttribute('aria-expanded')) === 'true' &&
@@ -209,7 +209,7 @@ async function bottom(page) {
   const labels = (await t.locator('.bottom-tab').allInnerTexts()).map((x) => x.trim());
   check(
     JSON.stringify(labels) === JSON.stringify(['予定', '利用者さん', 'スタッフ', '組む', '探す', 'メニュー']),
-    '下のタブ：予定・〈利用者さん〉・〈スタッフ〉・組む・探す・メニュー（PRD D336・D401）',
+    '下のタブ：予定・〈利用者さん〉・〈スタッフ〉・組む・探す・メニュー（PRD D401）',
     labels,
   );
   const tb = await t.boundingBox();
@@ -320,7 +320,7 @@ async function floating(page) {
   });
   // 本物の地図のボタン：地図のカードが画面の外に出るまで巻いたとき（出れば重ならないかを見る）。
   // 狭い画面の地図のカードは本体の下（ページの終わり）なので、カードの上端が画面の下より下になる所まで巻く
-  // （初期データに今日の案がある（PRD D225）ので、開いた時点で地図のカードまで描かれている。いちばん下へ巻くとカードが見えてボタンは出ない）
+  // （初期データに今日の案がある（PRD D322）ので、開いた時点で地図のカードまで描かれている。いちばん下へ巻くとカードが見えてボタンは出ない）
   await page.locator('.plan-map').first().waitFor({ timeout: 30000 });
   await page.evaluate(() => {
     const card = document.querySelector('.plan-map');

@@ -1,4 +1,4 @@
-// 月の画面の日ごとの数（PRD D53・D59・D151〜D155・D223・D295）：日ごとの訪問・状態・数える案・印・要対応・今月の準備・
+// 月の画面の日ごとの数（PRD D53・D59・D151〜D154・D316・D223・D295）：日ごとの訪問・状態・数える案・印・要対応・今月の準備・
 // 進み具合の帯・まとめて確定の対象。表示の選択（〈スタッフ〉・〈利用者さん〉）に依る数は useMonthFocusDays
 import { useMemo } from 'react';
 import type { BandModel } from '../components/progressBand';
@@ -74,7 +74,7 @@ export function useMonthDays(data: DemoData, compileInput: CompileInput, ym: str
    */
   const summary = useMemo(() => monthSummary(days, statuses, visitsByDate), [days, statuses, visitsByDate]);
 
-  /** 進み具合の帯（PRD D151〜D155）：今月の準備と同じ数え方。週・日の画面の帯と同じもの */
+  /** 進み具合の帯（PRD D151〜D154・D316）：今月の準備と同じ数え方。週・日の画面の帯と同じもの */
   const band = useMemo(
     (): BandModel => ({
       ym,

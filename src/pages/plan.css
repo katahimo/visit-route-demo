@@ -163,7 +163,7 @@ p.plan-band.error {
 .plan-progress progress {
   width: 160px;
 }
-/* 比較の画面の「もう1案作って比べる」（PRD D159）。狭い画面では縦に並べ、ボタンは幅いっぱい */
+/* 比較の画面の「もう1案作って比べる」（PRD D317）。狭い画面では縦に並べ、ボタンは幅いっぱい */
 .compare-another {
   align-items: center;
   text-align: center;
@@ -590,7 +590,7 @@ p.plan-band.error {
     max-width: none;
   }
 }
-/* スマホのメニューの幅（下のタブ（--bottom-tabs-h）の上に出す。PRD D134） */
+/* スマホのメニューの幅（下のタブ（--bottom-tabs-h）の上に出す。PRD D401） */
 @media (max-width: 860px) {
   .reassign-dock {
     left: 8px;

@@ -3,7 +3,7 @@
 // 訪問の詳細の「担当を変える ▾」（PRD D217・D219・D329。ADR-0030）：まとまりと項目（role="menuitem"・説明・今の担当・押せない理由・
 // 「担当なしにする」）、キーボード（Enter で開いて ↓・Enter）で移すと担当が変わりピン、トーストの「元に戻す」で担当・ピンが戻る、
 // 「担当なしにする」のあとの確定の確認の本文の先頭に要対応の件数、操作の行の「元に戻す」（キーボード）、390px で押せて収まる。
-// 操作の行（PRD D278・D279・D344。ADR-0045）：日の予定は予定を入れる・使い方を操作の行に出し（その他 ▾ はスマホだけ。メールで送るは見出し。PRD D306）
+// 操作の行（PRD D327・D344。ADR-0045）：日の予定は予定を入れる・使い方を操作の行に出し（その他 ▾ はスマホだけ。メールで送るは見出し。PRD D306）
 // （キーボードで訪問の入力・閉じるとフォーカスは「予定を入れる」・使い方は下に開いてフォーカス・操作の行は今の担当のすぐ下）、月の予定は表示を選ぶ・印刷・勤務の見込み・マスの見方の説明を
 // たたむ（表示の選択は開くと欄へフォーカス・〈スタッフ〉を選んでいる間はたためない）。
 //
@@ -312,7 +312,7 @@ async function mobile(page) {
   await page.setViewportSize({ width: 1400, height: 1000 });
 }
 
-// ---- 操作の行の「その他 ▾」（PRD D278・D279・D344。ADR-0045）：日の予定（たたまない）と月の予定 ----
+// ---- 操作の行の「その他 ▾」（PRD D327・D344。ADR-0045）：日の予定（たたまない）と月の予定 ----
 async function moreMenus(page) {
   const focusedId = () => page.evaluate(() => document.activeElement?.getAttribute('data-testid') ?? '');
   await openPlan(page);
@@ -480,7 +480,7 @@ async function moreMenus(page) {
   );
   await page.keyboard.press('Escape');
   await page.screenshot({ path: path.join(OUT_DIR, 'month-more.png') });
-  // ?staff= で開いて（段はたたまず出ている）、段の中で〈利用者さん〉・全体へ選び直しても段は出したまま・フォーカスは欄のまま（PRD D278）
+  // ?staff= で開いて（段はたたまず出ている）、段の中で〈利用者さん〉・全体へ選び直しても段は出したまま・フォーカスは欄のまま（PRD D327）
   await page.goto(`${BASE}#/month?staff=${encodeURIComponent(sid.slice('staff:'.length))}`);
   await page.reload();
   const focusSel = page.getByTestId('month-focus');

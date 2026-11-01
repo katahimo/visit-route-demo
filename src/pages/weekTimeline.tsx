@@ -55,7 +55,7 @@ export function WeekTimeline({
         <div className="week-corner" />
         {days.map((day) => {
           const wd = weekday(day.date);
-          /** 担当なしの訪問（PRD D282。版2） */
+          /** 担当なしの訪問（PRD D314。版2） */
           const { unassigned, countText } = dayHeadOf(day);
           return (
             <button

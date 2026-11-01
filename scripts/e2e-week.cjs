@@ -399,7 +399,7 @@ async function nextWeek(page) {
   );
 }
 
-// ---- この週の担当を組む（担当を組むの画面。ADR-0063）・確定（PRD D280。ADR-0046・ADR-0053）：月をまたぐ週で、担当なし → 組む → 確定 → 済み ----
+// ---- この週の担当を組む（担当を組むの画面。ADR-0063）・確定（PRD D328。ADR-0046・ADR-0053）：月をまたぐ週で、担当なし → 組む → 確定 → 済み ----
 const md = (d) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
 const WD = ['日', '月', '火', '水', '木', '金', '土'];
 const dayLabel = (d) => `${md(d)}（${WD[new Date(`${d}T00:00:00Z`).getUTCDay()]}）`;
@@ -884,7 +884,7 @@ const steps = sharedPage({
     // データを書き換えるので後ろに
     ['next-week', nextWeek],
     ['search', search],
-    // この週の担当を AI で組む・確定（PRD D280）。データを書き換えるので最後に
+    // この週の担当を AI で組む・確定（PRD D328）。データを書き換えるので最後に
     ['week-prep', weekPrep],
     ['week-make', weekMake],
     ['week-confirm', weekConfirm],

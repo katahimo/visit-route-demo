@@ -7,7 +7,7 @@ import type { Pattern, Terms } from '../contracts/documents';
 import { FEATURE_IDS, type FeatureId, type Features, isFeatureId } from '../contracts/features';
 import { isRequestedOff } from './requestedOff';
 
-/** 機能のグループ（管理者設定のスイッチの並びと見出し。PRD D232。予定・当日・人・AI の条件の順で、連絡・データは後ろ） */
+/** 機能のグループ（管理者設定のスイッチの並びと見出し。PRD D326。予定・当日・人・AI の条件の順で、連絡・データは後ろ） */
 export const FEATURE_GROUPS = ['予定', '当日・問い合わせ', '人', 'AI の条件', '連絡', 'データ'] as const;
 export type FeatureGroup = (typeof FEATURE_GROUPS)[number];
 

@@ -36,7 +36,7 @@ export function weekOptionsOf(dataDates: readonly string[], start: string): { va
   });
 }
 
-/** 日の見出しの件数（PRD D282）：休み（ADR-0013）のため無しの訪問を除いた件数と、そのうち担当なしの数（版2） */
+/** 日の見出しの件数（PRD D314）：休み（ADR-0013）のため無しの訪問を除いた件数と、そのうち担当なしの数（版2） */
 export function dayHeadOf(day: WeekDay): { unassigned: number; countText: string } {
   const live = day.bands.filter((b) => !b.leave);
   const unassigned = live.filter((b) => b.staffId === null).length;

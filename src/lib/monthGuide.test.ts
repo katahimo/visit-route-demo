@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { type CellGuideInput, cellGuide, createTipStore, monthCellHint } from './monthGuide';
+import { type CellGuideInput, cellGuide, createTipStore, monthCellHint, monthHelpLines } from './monthGuide';
 
 const base: CellGuideInput = {
   focus: 'all',
@@ -86,6 +86,15 @@ describe('cellGuide', () => {
     expect(lines.some((l) => l.startsWith('「休 N」＝休むスタッフの人数'))).toBe(true);
     expect(lines.some((l) => l.startsWith('「今日」'))).toBe(true);
     expect(lines.some((l) => /棒|色の帯|拘束|条件に合わない|確定/.test(l))).toBe(false);
+  });
+  it('マスの見方の説明（PRD D327）：切は切のマスに出ない印（未連絡・混み具合・端の印・凡例）を書かず、入は書く', () => {
+    const off = monthHelpLines('スタッフ', true);
+    expect(off.some((l) => /未連絡|混み具合|◀|凡例/.test(l))).toBe(false);
+    expect(off.some((l) => l.includes('見出しの ⓘ'))).toBe(true);
+    expect(off.some((l) => l.includes('「要対応 N」'))).toBe(true);
+    const on = monthHelpLines('スタッフ', false);
+    expect(on.some((l) => l.startsWith('「未連絡 N」'))).toBe(true);
+    expect(on.some((l) => l.startsWith('混み具合のバー') && l.includes('スタッフの人数'))).toBe(true);
   });
   it('〈スタッフ〉・〈利用者さん〉の表示：全体の印（件数・休 N）は書かず、その表示の棒・印', () => {
     const staff = cellGuide({ ...base, focus: 'staff', count: 3, stateText: 'まだ伝えていない', resting: 2 });
