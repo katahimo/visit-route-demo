@@ -112,7 +112,7 @@
 ### `lib/commandPalette.ts`（純粋関数。テストあり）
 
 - `PaletteItem`：`id`・`kind`（`action|screen|client|staff|visit`）・`label`・`hint`・`to`・`date?`・`visitId?`・`op?`（`'visit-add'`）・`keys`（`lib/search` の `normalizeKana` でそろえた名前・よみ・別名）。`paletteItem` で作る
-- `paletteActions(today, { features })`：欠勤・キャンセルを登録・日の予定（今日）を開く・今月／来月の担当を組む（`/arrange?ym=`）・要対応を見る（`?do=attention`）・確定していない日を見る（`unconfirmed`）・訪問を追加（`op: 'visit-add'`）・問い合わせに答える。切った機能の操作は出さない
+- `paletteActions(today, { features })`：欠勤・キャンセルを登録・日の予定（今日）を開く・今月／来月の担当を組む（`/arrange?ym=`）・要対応を見る（`?do=attention`）・確定していない日を見る（`unconfirmed`）・予定を入れる（`op: 'visit-add'`）・問い合わせに答える。切った機能の操作は出さない
 - `paletteScreens(sections, terms)`：sections は `screenSections`。補足はグループの見出し（見出しも語に入るので「設定」「予定」で引ける）。読み・言い換え `SCREEN_WORDS`、〈利用者さん〉一覧・〈スタッフ〉一覧には呼び方のよみ `TERM_READINGS`（既定の呼び方の漢字だけ）
 - `palettePeople(clients, staff, terms)`：`/clients/:id`・`/staff/:id`。段階・休止中を補足に
 - `filterPalette(items, query, limit=8)`：語に分けて AND、種類の順・先頭一致を前に、人は種類ごと limit まで（`rest`）。空なら操作と画面だけ
@@ -132,5 +132,5 @@
 - 選んでいる候補は見える位置へ（先頭なら scrollTop=0、種類の先頭なら見出しごと）
 - 候補の語は `useMemo`（開いたとき・データが変わったとき）でそろえ、打つたびは `filterPalette` だけ（300人×60人で1文字 100ms 以内）
 - 訪問の索引は打ってから作り、開いている間は使い回す。訪問の補足は担当・「担当なし」・取り消し。「要対応」の `attention` は日の予定と同じ検査（`dayProblemOf` → `routesOf` → `visitIssues`）を候補の日だけ計算し、日ごとに覚える（データが変わったら捨てる）
-- 選ぶと閉じて、訪問（`visitId`）・「訪問を追加」（`op`）は画面を移らずに訪問の詳細の欄（`useOpenVisit`）を開く。ほかは `date` があれば `setDate`、今の画面なら移らない、ほかは `navigate(to)`
+- 選ぶと閉じて、訪問（`visitId`）・「予定を入れる」（`op`）は画面を移らずに訪問の詳細の欄（`useOpenVisit`）を開く。ほかは `date` があれば `setDate`、今の画面なら移らない、ほかは `navigate(to)`
 - z-index 1150（引き出し 1100 とトースト 1200 の間）。印刷で出さない。860px 以下は上に寄せ、下の案内（↑↓ Enter Esc）を隠す

@@ -7,6 +7,7 @@ import { addDays } from '../domain/time';
 import { visitsIn } from '../patterns';
 import { STAGE_LABELS } from './clientStage';
 import { dateText } from './dateText';
+import { ADD_VISIT_LABEL } from './exceptionView';
 import { isHrefOn, isOn } from './features';
 import { absenceHref, isNavAction, type MenuItem, type NavSection } from './nav';
 import { normalizeKana } from './search';
@@ -202,12 +203,12 @@ export function paletteActions(today: string, { features = {} }: { features?: Fe
     paletteItem({
       id: 'action:visit-add',
       kind: 'action',
-      label: '訪問を追加',
+      label: ADD_VISIT_LABEL,
       hint: '訪問の詳細の欄',
       // 選ぶと画面を移らずに欄を開く（to は使わない。機能の表の整合のため日の予定を書く）
       to: '/plan',
       op: 'visit-add',
-      words: ['ほうもんをついか', 'ついか', 'ほうもん', 'たんぱつ'],
+      words: ['よていをいれる', 'ほうもんをついか', 'ついか', 'ほうもん', 'たんぱつ'],
     }),
     paletteItem({
       id: 'action:vacancy',

@@ -327,7 +327,7 @@ async function addNew(page) {
   await page.getByTestId('plan-visit-add').click();
   await panel(page).waitFor();
   const p = panel(page);
-  check((await p.getAttribute('data-new')) === 'true', '操作の行の「訪問を追加」で欄の新規の形');
+  check((await p.getAttribute('data-new')) === 'true', '操作の行の「予定を入れる」で欄の新規の形');
   check(
     (await page.evaluate(() => document.activeElement?.getAttribute('data-testid'))) === 'vp-client',
     '新規は最初の欄（〈利用者さん〉）へフォーカス',
@@ -348,7 +348,7 @@ async function addNew(page) {
   );
   check(
     at === 'plan-visit-add' || at === d.visits.at(-1).id,
-    '閉じるとフォーカスは足した訪問（帯・カード・行）か「訪問を追加」',
+    '閉じるとフォーカスは足した訪問（帯・カード・行）か「予定を入れる」',
     at,
   );
 }
@@ -407,13 +407,13 @@ async function palette(page) {
   );
   await page.keyboard.press('Escape');
   await closed(page);
-  // 操作の「訪問を追加」
+  // 操作の「予定を入れる」
   await page.keyboard.press('Control+k');
-  await page.getByTestId('cmdk-input').fill('ほうもんをついか');
+  await page.getByTestId('cmdk-input').fill('よていをいれる');
   await settle(page, 200);
   await page.keyboard.press('Enter');
   await panel(page).waitFor();
-  check((await panel(page).getAttribute('data-new')) === 'true', 'パレットの操作「訪問を追加」で新規の欄');
+  check((await panel(page).getAttribute('data-new')) === 'true', 'パレットの操作「予定を入れる」で新規の欄');
   await page.keyboard.press('Escape');
   await closed(page);
 }
@@ -492,7 +492,7 @@ async function narrow(page) {
   await page.getByTestId('plan-more').click();
   check(
     (await page.getByTestId('plan-visit-add').getAttribute('aria-disabled')) === 'true',
-    '390px：「訪問を追加」は押せず理由（スマホでは足さない）',
+    '390px：「予定を入れる」は押せず理由（スマホでは足さない）',
   );
   await page.keyboard.press('Escape');
   await page.setViewportSize({ width: 1400, height: 1000 });

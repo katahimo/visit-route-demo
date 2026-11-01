@@ -3,8 +3,8 @@
 // 訪問の詳細の「担当を変える ▾」（PRD D217・D219・D329。ADR-0030）：まとまりと項目（role="menuitem"・説明・今の担当・押せない理由・
 // 「担当なしにする」）、キーボード（Enter で開いて ↓・Enter）で移すと担当が変わりピン、トーストの「元に戻す」で担当・ピンが戻る、
 // 「担当なしにする」のあとの確定の確認の本文の先頭に要対応の件数、操作の行の「元に戻す」（キーボード）、390px で押せて収まる。
-// 操作の行（PRD D278・D279・D344。ADR-0045）：日の予定は訪問を追加・使い方を操作の行に出し（その他 ▾ はスマホだけ。メールで送るは見出し。PRD D306）
-// （キーボードで訪問の入力・閉じるとフォーカスは「訪問を追加」・使い方は下に開いてフォーカス・操作の行は今の担当のすぐ下）、月の予定は表示を選ぶ・印刷・勤務の見込み・マスの見方の説明を
+// 操作の行（PRD D278・D279・D344。ADR-0045）：日の予定は予定を入れる・使い方を操作の行に出し（その他 ▾ はスマホだけ。メールで送るは見出し。PRD D306）
+// （キーボードで訪問の入力・閉じるとフォーカスは「予定を入れる」・使い方は下に開いてフォーカス・操作の行は今の担当のすぐ下）、月の予定は表示を選ぶ・印刷・勤務の見込み・マスの見方の説明を
 // たたむ（表示の選択は開くと欄へフォーカス・〈スタッフ〉を選んでいる間はたためない）。
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-plan-menu.cjs
@@ -370,7 +370,7 @@ async function moreMenus(page) {
   await form.waitFor();
   check(
     (await form.getAttribute('data-new')) === 'true' && (await focusedId()) === 'vp-client',
-    '「訪問を追加」で訪問の詳細の欄（新規）が開き、最初の欄へフォーカス',
+    '「予定を入れる」で訪問の詳細の欄（新規）が開き、最初の欄へフォーカス',
   );
   await page.getByTestId('vp-close').click();
   await form.waitFor({ state: 'detached' });
@@ -391,7 +391,7 @@ async function moreMenus(page) {
   await help.waitFor({ state: 'detached' });
   check(true, '「使い方を閉じる」で閉じる');
 
-  // 〈利用者さん〉が0人なら「訪問を追加」は押せず理由
+  // 〈利用者さん〉が0人なら「予定を入れる」は押せず理由
   await page.evaluate((k) => {
     const d = JSON.parse(localStorage.getItem(k));
     d.clients = [];
@@ -404,13 +404,13 @@ async function moreMenus(page) {
   const add = page.getByTestId('plan-visit-add');
   check(
     (await add.getAttribute('aria-disabled')) === 'true' && /いません/.test((await add.getAttribute('title')) ?? ''),
-    '〈利用者さん〉が0人なら「訪問を追加」は押せず理由',
+    '〈利用者さん〉が0人なら「予定を入れる」は押せず理由',
     await add.getAttribute('title'),
   );
   // aria-disabled（フォーカスは残す）なので、押しても何もしないことを確かめる
   await add.click({ force: true });
   await settle(page, 200);
-  check((await page.getByTestId('visit-panel').count()) === 0, '押せない「訪問を追加」を押しても欄は開かない');
+  check((await page.getByTestId('visit-panel').count()) === 0, '押せない「予定を入れる」を押しても欄は開かない');
   await page.keyboard.press('Escape');
 
   // 月の予定：月送り・今日はナビの行（PRD D347）、操作の欄は その他 ▾ だけ（印刷・勤務の見込み・表示の選択・説明はたたむ）。初期データに戻して開く

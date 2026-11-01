@@ -134,8 +134,7 @@ const TOOLS = {
   勤務の見込み: { id: 'month-workload', text: /勤務の見込み/ },
   印刷: { id: 'month-print', text: /印刷/ },
   表示を選ぶ: { text: /表示/ },
-  // 日の主ボタン（plan-visit-add）の言葉は入切とも「予定を入れる」（段2）。月・週の主ボタンは toolbar-add-plan（引き出し）
-  訪問を追加: { id: 'plan-visit-add', text: /予定を入れる/ },
+  // 月・週の主ボタン（引き出し）。日の主ボタンは plan-visit-add（同じ言葉）
   予定を入れる: { id: 'toolbar-add-plan', text: /予定を入れる/ },
   // 入の操作の行の2つ目：月・週は「担当を組む」（担当を組むの画面へ）、日は「確定（伝えた）」（段2。D402）
   担当を組む: { id: 'toolbar-assign', text: /担当を組む/ },
