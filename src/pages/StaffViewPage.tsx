@@ -11,6 +11,7 @@ import { timesOf } from '../domain/scheduleModel';
 import { colorOf, initialOf } from '../lib/colors';
 import { AI_LINE, attempt, hasLocation, own, r0, TRAVEL_MODE_LABELS } from '../lib/common';
 import { dateText } from '../lib/dateText';
+import { isFirstVisit, servedPairsBefore } from '../lib/firstVisit';
 import { dayStops, tripLinks } from '../lib/mapsLink';
 import { prevStopOf } from '../lib/prevStop';
 import type { MapPoint } from '../lib/routeView';
@@ -38,6 +39,8 @@ export default function StaffViewPage() {
     () => m.visits.filter((v) => v.staffId === staffId && visitById.has(v.id)).map((v) => v.id),
     [m.visits, staffId, visitById],
   );
+  /** 過去8週に担当した組（初めての訪問先に印と決まりごと。PRD D415） */
+  const served = useMemo(() => servedPairsBefore(data, date), [data, date]);
 
   // 時刻：問題があれば移動を入れた時刻（scheduleRoute）、無ければ移動を入れない目安
   const timing = useMemo((): Map<string, StaffViewTiming> => {
@@ -134,6 +137,7 @@ export default function StaffViewPage() {
                     t={timing.get(id)}
                     prev={prevStopOf(data, id)}
                     mode={me.travelMode}
+                    first={!!v && isFirstVisit(served, v.clientId, staffId)}
                   />
                 );
               })}

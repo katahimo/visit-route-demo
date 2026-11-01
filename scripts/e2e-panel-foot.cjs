@@ -5,7 +5,7 @@
 // 帯の下に隠れた入力欄へ Tab で入ると帯の上まで巻く（scroll-padding-bottom）、Tab が中で回る・Esc で閉じて戻る、
 // 390px：2つまでは横に並べ主ボタンが先、3つ以上は主ボタンを1行目に全幅・残りは2つずつ、
 // 下のタブ・safe-area に隠れない、キーボード（visualViewport が縮む）が出ても帯が見える、印刷（連絡の一覧）で帯を出さない。
-// 代表の欄：欠勤・キャンセル（1〜4段目・キャンセルの3段目）、訪問の詳細の欄（〈利用者さん〉の画面の予定の回から）、日の差の欄の「連絡の一覧」。
+// 代表の欄：欠勤・キャンセル（1段目・見込み・2段目・キャンセルの1段目）、訪問の詳細の欄（〈利用者さん〉の画面の予定の回から）、日の差の欄の「連絡の一覧」。
 // 1400×1000 と 390×844 の両方で見る。
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-panel-foot.cjs
@@ -236,7 +236,7 @@ async function expectMobileRow(page, label) {
   );
 }
 
-// ---- 欠勤・キャンセルの欄の各段階 ----
+// ---- 欠勤・キャンセルの欄の各段（1 何が起きたか・2 連絡・確定。PRD D414） ----
 async function suddenSteps(page, w) {
   await freshPlan(page);
   await pressTool(page, '欠勤', { where: 'more' });
@@ -271,26 +271,27 @@ async function suddenSteps(page, w) {
     return b;
   });
   await page.getByTestId('sudden-staff').selectOption(best.value);
-  await settle(page, 300);
-  await expectFits(page, `${w}・〈スタッフ〉が休む 2段目`);
-  if (w === '390') await expectMobileRow(page, `${w}・2段目`);
-  await shot(page, `${w}-sudden-step2`);
-  await page.getByTestId('sudden-next').click();
+  await page.getByTestId('absence-preview').waitFor({ timeout: 30000 });
   await settle(page, 500);
-  await expectFits(page, `${w}・〈スタッフ〉が休む 3段目`);
-  if (w === '390') await expectMobileRow(page, `${w}・3段目（ボタンが3つ以上）`);
-  await shot(page, `${w}-sudden-step3`);
-  // フォーカス：段階の見出しへ（focusKey）。Tab は欄の中で回る
+  await expectFits(page, `${w}・〈スタッフ〉が休む 1段目（見込み）`);
+  if (w === '390') await expectMobileRow(page, `${w}・1段目（見込み）`);
+  await shot(page, `${w}-sudden-step1-plan`);
   const inStep = await page.evaluate(() => !!document.activeElement?.closest('.drawer'));
-  check(inStep, `${w}・段階が進んでもフォーカスは欄の中`);
-  await page.getByTestId('sudden-reassign').click();
+  check(inStep, `${w}・選んでもフォーカスは欄の中`);
+  // 案A で決める（おすすめが案B なら「ほかのやり方」の「案A だけで振り直す」）
+  if ((await page.getByTestId('sudden-recommend').textContent()).includes('案B')) {
+    await page.getByTestId('sudden-alt').locator(':scope > summary').click();
+    await page.getByTestId('sudden-reassign').click();
+  } else {
+    await page.getByTestId('sudden-decide').click();
+  }
   await page.getByTestId('sudden-done').waitFor({ timeout: 15000 });
   await settle(page, 500);
-  await expectFits(page, `${w}・4段目（済んだこと）`);
-  if (w === '390') await expectMobileRow(page, `${w}・4段目`);
-  await shot(page, `${w}-sudden-step4`);
+  await expectFits(page, `${w}・2段目（連絡・確定）`);
+  if (w === '390') await expectMobileRow(page, `${w}・2段目`);
+  await shot(page, `${w}-sudden-step2`);
   // 差の欄の「連絡の一覧」（日の差の欄から開く右の欄）
-  await page.getByTestId('sudden-close').click();
+  await page.keyboard.press('Escape');
   await sudden(page).waitFor({ state: 'detached' });
   await settle(page, 300);
   const contact = page.getByRole('button', { name: /^連絡の一覧/ }).first();
@@ -312,7 +313,7 @@ async function suddenSteps(page, w) {
   } else {
     check(false, `${w}・差の欄に「連絡の一覧」がある`);
   }
-  // 当日キャンセルの3段目
+  // 当日キャンセルの1段目（訪問を選ぶと影響）
   await pressTool(page, '欠勤', { where: 'more' });
   await sudden(page).waitFor();
   await page.getByTestId('sudden-kind-client').click();
@@ -321,13 +322,10 @@ async function suddenSteps(page, w) {
     .getByTestId('sudden-visit')
     .evaluate((sel) => [...sel.options].find((o) => o.value)?.value ?? '');
   await page.getByTestId('sudden-visit').selectOption(first);
-  await settle(page);
-  await expectFits(page, `${w}・キャンセル 2段目`);
-  await page.getByTestId('sudden-next').click();
   await settle(page, 300);
-  await expectFits(page, `${w}・キャンセル 3段目`);
-  if (w === '390') await expectMobileRow(page, `${w}・キャンセル 3段目（ボタン2つ）`);
-  await shot(page, `${w}-cancel-step3`);
+  await expectFits(page, `${w}・キャンセル 1段目（影響）`);
+  if (w === '390') await expectMobileRow(page, `${w}・キャンセル 1段目（ボタン2つ）`);
+  await shot(page, `${w}-cancel-step1`);
   // Esc で閉じて入口へ戻る
   await page.keyboard.press('Escape');
   await sudden(page).waitFor({ state: 'detached' });

@@ -1,12 +1,12 @@
 // 欠勤の振り直しの手順（ADR-0011。版2は ADR-0053）：欠勤を足したデータで compile し、振り直しの元の案から振り直す訪問を出して
-// 振り直す。日の予定の「登録して振り直す」と「欠勤・キャンセル」の欄の見込み（absenceParts の previewOf）で同じ手順を使う。
+// 振り直す。日の予定の「この案で決める」と「欠勤・キャンセル」の欄の見込み（absencePreviewOf）で同じ手順を使う。
 // あわせて、日の予定の振り直しの差の欄・案A／案B の画面のための純粋関数（データは書かない。書くのは lib/absences）
 import type { DemoData, ReassignInfo } from '../contracts/data';
 import type { Absence } from '../contracts/documents';
 import type { Problem } from '../contracts/problem';
 import type { ReassignDiff, ReassignResult, ReassignTarget, Routes } from '../contracts/reassign';
 import { compile } from '../matching';
-import { reassign, targetsOf } from '../reassign';
+import { reassign, reassignDiff, targetsOf } from '../reassign';
 import { absencesOn, baseOf, type ReassignBase, saveAbsence, withoutAbsencesOn } from './absences';
 import { own } from './common';
 
@@ -38,16 +38,47 @@ export const hasBase = (b: Pick<AbsenceBase, 'base'>): boolean =>
  * 振り直す前の時刻（欠勤と重なるか）は、その日の欠勤を除いた問題で出す
  */
 export function reassignFrom(b: AbsenceBase, date: string): Pick<AbsenceReassign, 'targets' | 'result'> {
+  const { targets, result } = reassignWithBefore(b, date);
+  return { targets, result };
+}
+
+/** 手順の後半と、振り直す前の並び（その日の欠勤を除いた問題と元の案。見込みの差に使う） */
+function reassignWithBefore(b: AbsenceBase, date: string) {
   const absent = [...new Set(b.absences.map((a) => a.staffId))];
   const before = { problem: compile(withoutAbsencesOn(b.data, date), date), routes: b.base.routes };
   const targets = targetsOf(b.problem, before, absent);
-  return { targets, result: reassign(b.problem, b.base.routes, targets) };
+  return { before, targets, result: reassign(b.problem, b.base.routes, targets) };
 }
 
 /** 欠勤を足して振り直す（前半と後半。失敗すると投げる。呼ぶ側は attempt で包む） */
 export function planReassign(data: DemoData, date: string, absence: Absence): AbsenceReassign {
   const b = absenceBaseOf(data, date, absence);
   return { ...b, ...reassignFrom(b, date) };
+}
+
+/** 欠勤の見込み（「欠勤・キャンセル」の欄の1段目。PRD D414） */
+export type AbsencePreview = {
+  /** 振り直す訪問 */
+  targets: ReassignTarget[];
+  /** 振り直しの元の案に担当のある訪問があるか（無ければ振り直せない） */
+  hasBase: boolean;
+  /** 案A（空き時間に入れるだけ）で入らない見込みの件数（案B を勧める） */
+  unplacedA: number;
+  /** 案A の差（担当が移る訪問の一覧。D265）。振り直せなければ null */
+  diff: ReassignDiff | null;
+};
+
+/** 欠勤を入れたデータで案A を作り、振り直す訪問と差を出す（データは書かない。失敗すると投げる） */
+export function absencePreviewOf(data: DemoData, date: string, absence: Absence): AbsencePreview {
+  const b = absenceBaseOf(data, date, absence);
+  if (!hasBase(b)) return { targets: [], hasBase: false, unplacedA: 0, diff: null };
+  const { before, targets, result } = reassignWithBefore(b, date);
+  return {
+    targets,
+    hasBase: true,
+    unplacedA: result.unplaced.length,
+    diff: reassignDiff(before, { problem: b.problem, routes: result.routes }),
+  };
 }
 
 /** 担当の並びを問題の〈スタッフ〉の順・問題の訪問だけにそろえる（比べるため。空の列は除く） */

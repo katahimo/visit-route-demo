@@ -1,5 +1,5 @@
-// 「欠勤・キャンセル」の欄（PRD D167〜D172。ADR-0025・ADR-0011・ADR-0015）の段階・選択肢・文を決める純粋関数。
-// 計算（振り直し）は足さない：見込みは absenceParts の previewOf（targetsOf と案A）、振り直しは日の画面の今の仕組みを呼ぶだけ。データは書き換えない
+// 「欠勤・キャンセル」の欄（PRD D167〜D172・D414。ADR-0082）の段・選択肢・文を決める純粋関数。
+// 計算（振り直し）は足さない：見込みは lib/planReassign の absencePreviewOf、振り直しは日の画面の今の仕組みを呼ぶだけ。データは書き換えない
 import type { Absence } from '../contracts/documents';
 import type { ReassignDiff, ReassignTarget } from '../contracts/reassign';
 import { type Slot, slotsText } from '../domain/availability';
@@ -7,29 +7,54 @@ import { absenceError, absenceText } from './absences';
 
 /** 何が起きたか：〈スタッフ〉が休む／〈利用者さん〉がキャンセル */
 export type SuddenKind = 'staff' | 'client';
-/** 段階（1：何が起きたか 2：人・訪問を選ぶ 3：影響の確認と振り直し 4：案を選ぶ 5：連絡して確定。PRD D243・ADR-0053） */
-export type SuddenStep = 1 | 2 | 3 | 4 | 5;
+/** 段（1：何が起きたか（選ぶと見込みとおすすめ）2：連絡・確定。PRD D414） */
+export type SuddenStep = 1 | 2;
+
+/** 段の見出し */
+export const SUDDEN_HEADINGS: Record<SuddenStep, string> = { 1: '何が起きたか', 2: '変更を伝えて確定する' };
 
 /** URL の `?do=` で欄を開く値（「欠勤・キャンセルを登録」の入口。PRD D172） */
 export const SUDDEN_DO = 'absence';
 
-/** 段階の短い名前（欄の上の1行の段階の表示。種類を選ぶ前は〈スタッフ〉の流れの名前で出す） */
-export function suddenSteps(kind: SuddenKind | null): [string, string, string, string, string] {
-  if (kind === 'client') return ['起きたこと', '訪問', '影響', '確認', '連絡・確定'];
-  return ['起きたこと', '休む人', '影響', '選ぶ', '連絡・確定'];
-}
-
-/** 段階の見出し（h3。段階の表示の短い名前と重ねず、その段階ですることを書く） */
-export function suddenHeading(kind: SuddenKind | null, step: SuddenStep, staffWord: string): string {
-  if (step === 1) return '何が起きましたか？';
-  if (step === 5) return '変更を伝えて確定する';
-  if (kind === 'client')
-    return step === 2 ? 'キャンセルの訪問を選ぶ' : step === 3 ? '影響を確かめて取り消す' : '取り消した結果を確かめる';
-  return step === 2 ? `休む${staffWord}と時間帯を選ぶ` : step === 3 ? '影響を確かめて振り直す' : '振り直し方を選ぶ';
-}
-
 /** 欠勤の欄の入力（終日／時間帯・開始・終了（空＝始業から・終業まで）・メモ） */
 export type AbsenceDraft = { allDay: boolean; from: string; to: string; note: string };
+
+/** 欠勤の時間の選び方（終日／午前だけ／午後だけ（境12:00）／時間帯。PRD D26・D414） */
+export type AbsenceTime = 'allDay' | 'am' | 'pm' | 'range';
+
+/** 時間の選び方の名前（並びは選ぶボタンの順） */
+export const ABSENCE_TIMES: readonly { key: AbsenceTime; label: string }[] = [
+  { key: 'allDay', label: '終日' },
+  { key: 'am', label: '午前だけ' },
+  { key: 'pm', label: '午後だけ' },
+  { key: 'range', label: '時間帯' },
+];
+
+/** 入力から今の選び方（午前だけ＝始業から12:00まで・午後だけ＝12:00から終業まで。ほかは時間帯） */
+export function absenceTimeOf(d: AbsenceDraft): AbsenceTime {
+  if (d.allDay) return 'allDay';
+  if (d.from === '' && d.to === '12:00') return 'am';
+  if (d.from === '12:00' && d.to === '') return 'pm';
+  return 'range';
+}
+
+/** 選び方を押したときの入力（時間帯は今の開始・終了を残す。メモは変えない） */
+export function draftOfTime(d: AbsenceDraft, t: AbsenceTime): AbsenceDraft {
+  switch (t) {
+    case 'allDay':
+      return { ...d, allDay: true };
+    case 'am':
+      return { ...d, allDay: false, from: '', to: '12:00' };
+    case 'pm':
+      return { ...d, allDay: false, from: '12:00', to: '' };
+    case 'range':
+      return { ...d, allDay: false };
+    default: {
+      const _: never = t;
+      return _;
+    }
+  }
+}
 
 /** 入力の初期値（登録済みの欠勤があればその値） */
 export function draftOf(existing: Absence | null): AbsenceDraft {
@@ -119,7 +144,7 @@ export function impactText(targets: readonly Pick<ReassignTarget, 'reason'>[]): 
 }
 
 /**
- * 「登録して振り直す」を押せない理由（押せれば null）。入力の誤り → 計算中 → 見込みを出せない → 案が無い の順。
+ * ［この案で決める］を押せない理由（押せれば null）。入力の誤り → 計算中 → 見込みを出せない → 案が無い の順。
  * 案が無い日は欠勤だけ登録できる（PRD D26・D169）
  */
 export function reassignBlocked(i: {
@@ -136,7 +161,7 @@ export function reassignBlocked(i: {
 }
 
 /**
- * 担当のある訪問が無い日の3段目の文。計算中（AI で組んでいる）なら、終わると振り直せると書く
+ * 担当のある訪問が無い日の1段目の文。計算中（AI で組んでいる）なら、終わると振り直せると書く
  */
 export function noPlanText(running: boolean): string {
   return running
@@ -144,7 +169,7 @@ export function noPlanText(running: boolean): string {
     : 'この日はまだ担当のある訪問がありません。欠勤だけ登録できます';
 }
 
-/** 案B を勧めるか（担当のある日で、案A では入らない見込みがある）。勧めるときは主ボタン「登録して振り直す（おすすめ）」で案B も作る（PRD D264） */
+/** 案B を勧めるか（担当のある日で、案A では入らない見込みがある）。勧めるときは主ボタン［この案で決める］で案B も作る（PRD D264） */
 export function recommendAnneal(i: { hasBase: boolean; unplacedA: number }): boolean {
   return i.hasBase && i.unplacedA > 0;
 }
@@ -169,7 +194,7 @@ export function cancelImpact(i: {
   return out;
 }
 
-/** 4段目の確定の文（伝えた状態：none＝まだ伝えていない・told＝伝えた・changed＝伝えたあとに変わった。confirmStep が false なら変更ありの案内だけ） */
+/** 2段目の確定の文（伝えた状態：none＝まだ伝えていない・told＝伝えた・changed＝伝えたあとに変わった。confirmStep が false なら変更ありの案内だけ） */
 export function confirmNote(state: 'none' | 'told' | 'changed', confirmStep = true): string {
   // expert 切（ADR-0073）：確定の段階が無いので、決まったあとの変更（変更あり）のときだけ連絡の一覧への案内を出す
   if (!confirmStep)
