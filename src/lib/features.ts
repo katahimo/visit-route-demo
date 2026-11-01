@@ -59,7 +59,7 @@ export const FEATURES: readonly FeatureDef[] = [
     description: '入院などで{client}が休む期間を入れ、その間は訪問を入れません',
     group: '予定',
     paths: [],
-    hides: '{client}の欄の休み、休みの帯・点、月の要対応の「休みの人に訪問」',
+    hides: '{client}の欄の休み、休みの帯・点',
   },
   {
     id: 'requestedOff',

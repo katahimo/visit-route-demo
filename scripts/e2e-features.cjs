@@ -570,7 +570,7 @@ async function deadEnds(page, dlg, ctx) {
   await other.close();
   await settle(page, 300);
 
-  // 月の要対応：休みの人に訪問・拘束の上限の行は、欠勤・キャンセルの欄・稼働の見込みでなく日の画面へ
+  // 月の要対応：担当が休み・拘束の上限の行は、欠勤・キャンセルの欄・稼働の見込みでなく日の画面へ
   await open(page, `/month?ym=${ym}&do=attention`, '[data-testid="month-attention"]');
   await page.locator('.month-attention-btn').first().waitFor({ timeout: 30000 });
   const rows = await page

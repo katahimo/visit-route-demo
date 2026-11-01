@@ -303,7 +303,7 @@
 - `suddenHref(date, staffId?)`：`/plan?date=…&do=absence`。人があれば `&staff=`
 - `unassignedHref(date)`：`/plan?date=…&do=unassigned`
 - `workloadHref(ym, staffId?)`：`/workload?ym=…&staff=…`
-- `attentionTarget(a, features)`：要対応の1行の `{ to, date, note }`。入らない訪問 → `unassignedHref`、休みの人に訪問 → `suddenHref`、拘束の上限超え → `workloadHref(その日の月, staffIds[0])`、そのほか → `/plan`。note は「（〜で開く）」
+- `attentionTarget(a, features)`：要対応の1行の `{ to, date, note }`。入らない訪問 → `unassignedHref`、担当が休み → `suddenHref`、拘束の上限超え → `workloadHref(その日の月, staffIds[0])`、そのほか → `/plan`。note は「（〜で開く）」
 
 使う所：月の要対応・日の予定の拘束超えの帯・勤務の見込み・勤務時間（シフト）の右の欄・空き状況の右の欄。名前の吹き出しは足さず、主ボタンも足さない。
 
