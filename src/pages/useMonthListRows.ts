@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import type { DemoData } from '../contracts/data';
 import type { Staff } from '../contracts/documents';
+import { exceptionsOnly, monthCellView } from '../lib/exceptionView';
 import type { ClientDay, DayStatus, StaffDay } from '../lib/month';
 import { type MonthLayout, monthListFocusDate } from '../lib/monthList';
 import { type MonthFocus, type MonthListEntry, monthListEntries } from '../lib/monthView';
@@ -57,6 +58,7 @@ export function useMonthListRows(x: {
             offStateOf: (d) => (offStaffId ? offDayState(data, offStaffId, d, today) : undefined),
             attentionByDate,
             confirmStep: showConfirmStep(data.org.features),
+            reasons: monthCellView(exceptionsOnly(data.org.features)).reasons,
           }),
     [layout, days, statuses, staffDays, clientDays, focus, staffById, offStaffId, data, today, attentionByDate],
   );

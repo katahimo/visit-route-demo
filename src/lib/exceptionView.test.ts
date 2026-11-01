@@ -8,7 +8,9 @@ import {
   introKey,
   introShown,
   introText,
+  MONTH_ASIDE_PICK_TEXT,
   mainTools,
+  monthCellView,
   proposalWords,
   reassignWords,
   showLegs,
@@ -73,11 +75,37 @@ describe('foldedParts（詳しく：中身があるものだけ）', () => {
     expect(foldedParts('week', true, { status: true, legend: true })).toEqual(['status', 'legend']);
     expect(foldedParts('week', true, { status: false, legend: true })).toEqual(['legend']);
     expect(foldedParts('week', true, { status: false, legend: false })).toEqual([]);
-    expect(foldedParts('month', true, { progress: true, summary: true, legend: true })).toEqual([
+    expect(foldedParts('month', false, { progress: true, summary: true, legend: true })).toEqual([
       'progress',
       'summary',
       'legend',
     ]);
+    expect(foldedParts('month', true, { progress: true, summary: true, legend: true })).toEqual([
+      'progress',
+      'summary',
+    ]);
+  });
+});
+
+describe('monthCellView（月のマス。PRD D410）', () => {
+  it('切は例外だけ：棒・ほかの印・理由の行・右の要対応の一覧を出さず、読み方は見出しの ⓘ', () => {
+    expect(monthCellView(true)).toEqual({
+      bars: false,
+      otherMarks: false,
+      reasons: false,
+      guide: 'hint',
+      attentionList: false,
+    });
+    expect(MONTH_ASIDE_PICK_TEXT).toBe('日を押すとその日の訪問が出ます');
+  });
+  it('入は今のまま（積み上げ・混み具合・理由・吹き出し・右の要対応の一覧）', () => {
+    expect(monthCellView(false)).toEqual({
+      bars: true,
+      otherMarks: true,
+      reasons: true,
+      guide: 'tip',
+      attentionList: true,
+    });
   });
 });
 
@@ -97,10 +125,12 @@ describe('reassignWords（振り直しの言葉）', () => {
 
 describe('詳しく・説明・言葉', () => {
   it('入切とも画面ごとの部品を畳む。日の要対応の訪問の帯は入だけ', () => {
-    for (const z of ['week', 'month'] as const) expect(detailItems(z, false)).toEqual(detailItems(z, true));
+    expect(detailItems('week', false)).toEqual(detailItems('week', true));
     expect(detailItems('day', false)).toEqual(['oneLine', 'dayLines', 'care']);
     expect(detailItems('day', true)).toEqual(['oneLine', 'dayLines']);
-    expect(detailItems('month', true)).toEqual(['progress', 'summary', 'legend']);
+    // 切の月は凡例を入れない（読み方は見出しの ⓘ。PRD D410）
+    expect(detailItems('month', false)).toEqual(['progress', 'summary', 'legend']);
+    expect(detailItems('month', true)).toEqual(['progress', 'summary']);
     expect(detailItems('week', true)).toEqual(['status', 'legend']);
     expect(showLegs(true)).toBe(false);
     expect(showLegs(false)).toBe(true);

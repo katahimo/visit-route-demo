@@ -7,17 +7,16 @@ import { LoadLegend, LoadRowsSample } from '../components/loadBar';
 import type { MenuItem } from '../components/MenuButton';
 import { StaffLegend } from '../components/staffBar';
 import { Term } from '../components/Term';
-import { WithIcon } from '../components/ui';
-import { useConfirmStep } from '../components/useFeature';
+import { Hint, WithIcon } from '../components/ui';
 import type { Client, Staff, VisitType } from '../contracts/documents';
 import { BAR_ROWS, barEdgeNote, barRangeText, barRowsText, edgeLabel } from '../lib/barRows';
 import { mdText } from '../lib/dateText';
 import type { DayStatus } from '../lib/month';
 import type { BatchRun } from '../lib/monthBatch';
+import { monthCellHint } from '../lib/monthGuide';
 import { DAY_STATE_TEXT, type MonthLayout } from '../lib/monthList';
 import { batchProgressValue, type MonthFocus } from '../lib/monthView';
 import { REQUESTED_OFF_NOTE } from '../lib/requestedOff';
-import { CHANGED_WORD } from '../lib/settledView';
 import type { OffNote } from './useMonthOff';
 
 const STATE_ORDER: DayStatus['state'][] = ['none', 'told', 'changed'];
@@ -290,15 +289,25 @@ export function MonthLegend({ bar }: { bar: 'load' | 'staff' | null }) {
   );
 }
 
-/** 凡例の中身（開いたとき） */
+/** マスの読み方（エキスパート機能が切。見出しの ⓘ。マスに吹き出しは出さない。PRD D410） */
+export function MonthCellHint({ staffTerm }: { staffTerm: string }) {
+  return (
+    <Hint label="マスの読み方">
+      <ul className="hint-list" data-testid="month-cell-hint">
+        {monthCellHint(staffTerm).map((l) => (
+          <li key={l}>{l}</li>
+        ))}
+      </ul>
+    </Hint>
+  );
+}
+
+/** 凡例の中身（開いたとき。凡例はエキスパート機能が入のときだけ。切はマスの読み方を見出しの ⓘ に出す。PRD D410） */
 function MonthLegendBody({ bar }: { bar: 'load' | 'staff' | null }) {
-  // expert 切は確定の段階が無いので、日の状態の凡例は「変更あり」だけ（ADR-0073）
-  const confirmStep = useConfirmStep();
-  const states = confirmStep ? STATE_ORDER : STATE_ORDER.filter((st) => st === 'changed');
   return (
     <div className="month-legend" data-testid="month-legend">
       <span className="month-legend-group">
-        {states.map((st) => (
+        {STATE_ORDER.map((st) => (
           <span key={st} className="month-legend-item">
             <span className={`month-swatch is-state-${st}`} aria-hidden="true">
               {st === 'told' && <Lock size={9} />}
@@ -308,7 +317,7 @@ function MonthLegendBody({ bar }: { bar: 'load' | 'staff' | null }) {
             {st === 'told' ? (
               <Term k="confirmed">{DAY_STATE_TEXT[st]}</Term>
             ) : st === 'changed' ? (
-              <Term k="confirmDiff">{confirmStep ? DAY_STATE_TEXT[st] : CHANGED_WORD}</Term>
+              <Term k="confirmDiff">{DAY_STATE_TEXT[st]}</Term>
             ) : (
               DAY_STATE_TEXT[st]
             )}
