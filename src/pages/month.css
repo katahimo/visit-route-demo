@@ -789,8 +789,3 @@
 .month-day-sheet .vrow {
   min-height: 56px;
 }
-/* 「変更あり」の印（expert 切。押すとその日の連絡の一覧） */
-.month-told-btn {
-  display: inline-flex;
-  cursor: pointer;
-}

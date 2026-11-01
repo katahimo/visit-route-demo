@@ -13,7 +13,7 @@
 // 5e 人の画面は畳む・日の予定の地図はボタンで開く・月のマスの読み方（PRD D385・D384）：〈利用者さん〉の一覧は名前・住所・いつもの予定の3列、
 //    〈スタッフ〉は名前・勤務日・勤務時間の3列。詳細は〈利用者さん〉＝名前・住所・予定（繰り返し）／〈スタッフ〉＝名前・勤務日・勤務時間を出し、
 //    段階・特性・決まりごと・担当・相性（〈スタッフ〉は自宅・特性・求めること・日ごとの勤務ほか）は「詳しく ▾」の中（閉じていると見えない・開くと見える）。
-//    日の予定の地図はふだん閉じ、「地図」のボタンで開く（1366px・390px）。月のマスの読み方は帯の3種類と「変更あり」に合わせ、条件に合わない・拘束超は言わない、
+//    日の予定の地図はふだん閉じ、「地図」のボタンで開く（1366px・390px）。月のマスは例外だけで吹き出しを出さず、読み方は見出しの ⓘ（帯の3種類と「変更あり」。PRD D410）、
 // 5f 「予定を入れる」と〈スタッフ〉・〈利用者さん〉のタブ（PRD D402）：月・週の主ボタンは「予定を入れる」（操作の行は2つまで。担当なしを組むは帯の［担当なしを組む］）、
 //    押すと引き出し（定期＝〈利用者さん〉・曜日・くり返し・時刻・所要／単発＝〈利用者さん〉・日付・時刻・所要）で「入れる」→ 予定に出て担当が自動で付く。
 //    〈スタッフ〉の一覧の上のタブ（一覧・勤務・相性）と〈利用者さん〉のタブ（一覧・相性）で行き来でき、メニューの印は〈スタッフ〉／〈利用者さん〉に付き、
@@ -47,7 +47,8 @@ const open = () => openPage({ viewport: { width: 1366, height: 768 }, start: 'as
 
 /** 1 #/home・#/・知らない URL は予定へ（ホームの画面は出ない） */
 async function redirects(page) {
-  await fresh(page, '/home', NAV_READY);
+  // 帯の［担当なしを組む］を確かめるので、デモの最初の組み（PRD D409）は元に戻して始める
+  await fresh(page, '/home', NAV_READY, { arranged: false });
   const d = await data(page);
   check(d.org.features.expert === false, '前提：初めて開くとエキスパート機能は切', d.org.features);
   check(/^#\/month/.test(hash(page)), '#/home は予定（月）へ移る', hash(page));
@@ -231,7 +232,8 @@ async function noBand(page) {
 
 /** 4 空き状況はメニューの項目（PRD D400。ADR-0078）：押すと空き状況・印も「空き状況」。予定の「その他 ▾」には空き状況・担当なしの訪問を組むが無い（月・週・日） */
 async function more(page) {
-  await fresh(page, '/month', NAV_READY, { start: 'demo' });
+  // 次の段（5 スマホ）で帯の［担当なしを組む］を見るので、デモの最初の組み（PRD D409）は元に戻して始める
+  await fresh(page, '/month', NAV_READY, { start: 'demo', arranged: false });
   for (const [to, id] of [
     ['/month', 'month-more'],
     ['/week', 'week-more'],
@@ -513,27 +515,21 @@ async function exceptions(page) {
       .evaluate((e) => e.open)),
     '日：札の詳細の理由は初め閉じている',
   );
-  // 月のマス・右の欄：条件に合わない・拘束超・内訳を出さず、帯と数がそろう
+  // 月のマスは例外だけ（PRD D410）：理由の札・種類の積み上げ・混み具合の棒を出さない。右の欄は日を押す前は1行の案内だけ
   await open1(page, '/month');
   const cells = await page.locator('.month-cell').allInnerTexts();
-  check(!cells.some((t) => /条件に合わない|拘束超/.test(t)), '月：マスに「条件に合わない」「拘束超」を出さない');
+  check(!cells.some((t) => /条件に合わない|拘束超|担当なし|変更あり/.test(t)), '月：マスに理由の札を出さない');
+  check(
+    (await page.locator('.month-cell .month-load, .month-cell [data-testid="month-unassigned"]').count()) === 0,
+    '月：マスに混み具合の棒・「担当なし N」を出さない',
+  );
   const aside = await page.getByTestId('month-aside').innerText();
   check(
-    !/条件に合わない|拘束|未連絡/.test(aside),
-    '月：右の欄に条件に合わない・拘束・未連絡を出さない',
+    aside.trim() === '日を押すとその日の訪問が出ます',
+    '月：右の欄は日を押す前は1行の案内だけ',
     aside.slice(0, 120),
   );
-  check(!/要対応 \d+件（/.test(aside), '月：右の欄の要対応の行に内訳（括弧）を出さない');
-  const care = await page
-    .locator('[data-kind="care"]')
-    .evaluateAll((els) => els.reduce((n, e) => n + Number(/要対応 (\d+)件/.exec(e.textContent)?.[1] ?? 0), 0));
-  const bandText = await page.getByTestId('attention-band-text').innerText();
-  const bandTotal = [...bandText.matchAll(/(\d+)件/g)].reduce((n, m) => n + Number(m[1]), 0);
-  check(care > 0 && care <= bandTotal, '月：右の欄の要対応の合計は帯の件数（今日〜翌月末）を超えない', {
-    care,
-    bandTotal,
-  });
-  check((await page.getByTestId('month-attention-details').count()) === 1, '月：右の欄の内訳は「詳しく」の中');
+  check((await page.getByTestId('month-attention').count()) === 0, '月：右の欄に要対応の一覧を出さない');
   // 過去の週：要対応・印を出さず、1行の状態の無い「詳しく」は凡例だけ
   await page.goto('about:blank');
   await page.goto(`${BASE}#/week`);
@@ -905,9 +901,8 @@ async function expertPeople(page) {
  * 入のメニュー（6つ・子は組むだけ）・ホームが無いこと・下のタブと引き出しは e2e-nav・e2e-home・e2e-mobile が見る
  */
 async function expertOn(page) {
-  await page.goto('about:blank');
-  await page.goto(`${BASE}#/month`);
-  await page.locator(NAV_READY).waitFor({ timeout: 60000 });
+  // 帯の「担当なし N件」を見るので、デモの最初の組み（PRD D409）は元に戻して始める
+  await fresh(page, '/month', NAV_READY, { arranged: false });
   await page.evaluate((k) => {
     const d = JSON.parse(localStorage.getItem(k));
     d.org.features = { ...d.org.features, expert: true };
@@ -1120,18 +1115,25 @@ async function planMap(page, w) {
   } else check(true, `日の予定（${w}）：訪問の選びでは担当に絞らない（全員のルートのまま）`);
 }
 
-/** 月のマスの「このマスの読み方」：切は帯の3種類と「変更あり」。条件に合わない・拘束超は言わない */
+/** 月のマスの読み方（PRD D410）：切はマスに吹き出しを出さず、見出しの ⓘ に出す。要対応は帯の3種類と「変更あり」 */
 async function monthTip(page) {
   await open1(page, '/month');
-  const cell = page.locator('.month-cell.is-care [data-tip]').first();
+  const cell = page.locator('[data-testid="month-day"]').first();
   await cell.waitFor({ timeout: 30000 });
+  check((await page.locator('.month-cell [data-tip]').count()) === 0, '月のマス：吹き出しの印（data-tip）を付けない');
   await cell.hover();
-  const tip = page.getByTestId('month-cell-tip');
-  await tip.waitFor({ timeout: 10000 });
-  const t = await tip.innerText();
-  check(/担当なし・重なり・休みの人/.test(t), '月のマスの読み方：要対応は 担当なし・重なり・休みの人', t);
-  check(!/条件に合わない|拘束/.test(t), '月のマスの読み方：条件に合わない・拘束超は言わない', t);
-  check(!BANNED.test(t), '月のマスの読み方：禁句が出ない', t.match(BANNED)?.[0]);
+  // 吹き出しが出ないことを確かめる（出るまでの 300ms より長く待つ。固定の待ち）
+  await page.waitForTimeout(600);
+  check((await page.getByTestId('month-cell-tip').count()) === 0, '月のマス：マウスを乗せても吹き出しを出さない');
+  const label = await cell.getAttribute('aria-label');
+  check(/訪問/.test(label ?? ''), '月のマス：読み上げの文は残す', label);
+  await page.locator('.page-head .hint summary').click();
+  const hint = page.getByTestId('month-cell-hint');
+  await hint.waitFor({ timeout: 10000 });
+  const t = await hint.innerText();
+  check(/担当なし・重なり・休みの人/.test(t), '月のマスの読み方（ⓘ）：要対応は 担当なし・重なり・休みの人', t);
+  check(!/条件に合わない|拘束|棒/.test(t), '月のマスの読み方（ⓘ）：条件に合わない・拘束超・棒は言わない', t);
+  check(!BANNED.test(t), '月のマスの読み方（ⓘ）：禁句が出ない', t.match(BANNED)?.[0]);
   await shot(page, 'simple-month-tip-1366');
   await page.mouse.move(0, 0);
 }
@@ -1423,23 +1425,20 @@ async function peopleTabs(page, w) {
   check((await page.getByTestId('people-tabs').count()) === 0, `予定と相性（${w}）：旧画面のタブは出さない`);
 }
 
-/** 5f 切：「予定を入れる」（定期・単発）と〈スタッフ〉・〈利用者さん〉のタブ（幅ごとに回す。落ちても幅は restoreWidth が戻す） */
-async function addAndTabs(page) {
-  await fresh(page, '/month', NAV_READY, { start: 'demo' });
-  for (const width of [1366, 390]) {
-    await page.setViewportSize({ width, height: width === 390 ? 844 : 768 });
-    const w = `${width}px`;
-    if (width === 1366) await addRecurring(page, w);
-    else {
-      await fresh(page, '/month', NAV_READY, { start: 'demo' });
-      await addRecurring(page, w);
-    }
-    await addOneOff(page, w);
-    await fresh(page, '/staff', '[data-testid="staff-row"]', { start: 'demo' });
-    await peopleTabs(page, w);
-  }
-  await page.setViewportSize({ width: 1366, height: 768 });
-}
+/**
+ * 5f 切：「予定を入れる」（定期・単発）と〈スタッフ〉・〈利用者さん〉のタブ（幅ごとに段を分ける。デモで始めるたびに最初の組みを待つので、
+ * 1つの段に入れると段の時間を超える。落ちても幅は restoreWidth が戻す）
+ */
+const addAndTabs = (width) => async (page) => {
+  await page.setViewportSize({ width, height: width === 390 ? 844 : 768 });
+  const w = `${width}px`;
+  // 入れた回に空いている人が付くことを見るので、デモの最初の組み（PRD D409）は元に戻して始める
+  await fresh(page, '/month', NAV_READY, { start: 'demo', arranged: false });
+  await addRecurring(page, w);
+  await addOneOff(page, w);
+  await fresh(page, '/staff', '[data-testid="staff-row"]', { start: 'demo' });
+  await peopleTabs(page, w);
+};
 
 /** 途中で落ちても幅を戻す（スマホの段が落ちて、あとの段が 390px のまま走らないように） */
 const restoreWidth = (fn) => async (page) => {
@@ -1463,7 +1462,14 @@ const steps = sharedPage({
     ['5c 切：画面の上の説明は1行・閉じたら出ない', intro],
     ['5d 切：スマホの操作の行・詳しく', restoreWidth(mobileExceptions)],
     ['5e 切：人の画面は畳む・地図はボタンで開く・マスの読み方', restoreWidth(people)],
-    ['5f 切：「予定を入れる」（定期・単発）・〈スタッフ〉〈利用者さん〉のタブ', restoreWidth(addAndTabs)],
+    [
+      '5f 切：「予定を入れる」（定期・単発）・〈スタッフ〉〈利用者さん〉のタブ（1366px）',
+      restoreWidth(addAndTabs(1366)),
+    ],
+    [
+      '5f2 切：「予定を入れる」（定期・単発）・〈スタッフ〉〈利用者さん〉のタブ（390px）',
+      restoreWidth(addAndTabs(390)),
+    ],
     ['6 入：メニュー6つ・ホームなし・帯の入の種類', expertOn],
     ['6b 入：操作の行（2つ＋その他）・「詳しく」の見出しの数と開け閉めの覚え・説明1行', expertSame],
     ['6c 入：人の一覧は3列＋「くわしい列」（覚える）・人のタブ・4段は組む画面だけ', restoreWidth(expertPeople)],

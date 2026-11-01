@@ -3,7 +3,7 @@
 // （e2e の共通の部品 scripts/lib/startFeatures.cjs と、全機能を見せたいデモの前準備のため。値は印だけで個人の情報は持たない）。
 // localStorage を触るのは store の中だけ（AGENTS.md）。読めなければ印なし（2問を出す）
 
-import type { FirstRunBooking } from '../lib/firstRun';
+import type { FirstRunBooking, FirstRunStart } from '../lib/firstRun';
 
 /** localStorage のキー（DemoData の STORAGE_KEY とは別。データの版・書き出し・初期状態に戻すに入れない） */
 export const FEATURES_START_KEY = 'vrdemo:features:start';
@@ -48,5 +48,26 @@ export function lastBooking(
     return BOOKINGS.find((b) => b === v) ?? null;
   } catch {
     return null;
+  }
+}
+
+/** デモを作った操作：最初の2問の「はじめる」（やり直しも）・デモの初期状態に戻す */
+export type DemoStart = { kind: 'answer'; start: FirstRunStart } | { kind: 'reset' };
+
+/**
+ * デモを作った直後に、今日〜翌月末の担当なしを1回自動で組むか（PRD D409。ADR-0079）。
+ * 「デモで試す」で始めたとき・初期状態に戻したときだけ組む。「自分のデータで始める」と、印「all」があるときは組まない
+ */
+export function arrangesAfterStart(s: DemoStart, all: boolean = startsWithAll()): boolean {
+  if (all) return false;
+  switch (s.kind) {
+    case 'answer':
+      return s.start === 'demo';
+    case 'reset':
+      return true;
+    default: {
+      const _: never = s;
+      return _;
+    }
   }
 }

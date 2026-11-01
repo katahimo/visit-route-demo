@@ -22,6 +22,7 @@ import {
   startWithAnswer,
   swapPrevious,
 } from './persist';
+import { arrangesAfterStart } from './start';
 
 /**
  * update の扱い：history が false なら履歴に積まず履歴を捨てる（戻せない操作）。group を渡すと、同じ group の続けての update を
@@ -93,6 +94,12 @@ export type DemoStore = {
   replacedCount: number;
   /** 保存の容量が足りず1世代の控えを捨てた回数（画面が知らせを出すきっかけ。ADR-0032） */
   previousDrops: number;
+  /**
+   * デモを作った直後に担当なしを1回自動で組む依頼の印（PRD D409。ADR-0079。「デモで試す」で始めた・初期状態に戻した直後。無ければ null）。
+   * 受けた画面（components/autoArrangeHost）は組む依頼を出して takeStartArrange で消す
+   */
+  startArrange: object | null;
+  takeStartArrange(token: object): void;
 };
 
 const Ctx = createContext<DemoStore | null>(null);
@@ -115,6 +122,7 @@ function useStoreState() {
   const [replacedCount, setReplacedCount] = useState(0);
   const replaced = useCallback(() => setReplacedCount((n) => n + 1), []);
   const [previousDrops, setPreviousDrops] = useState(0);
+  const [startArrange, setStartArrange] = useState<object | null>(null);
   // 別タブから読み直したデータは、書き戻さない（往復で上書き合戦にしない）
   const skipSave = useRef(true);
   const latest = useRef(data);
@@ -137,6 +145,8 @@ function useStoreState() {
     replaced,
     previousDrops,
     setPreviousDrops,
+    startArrange,
+    setStartArrange,
     skipSave,
     latest,
   };
@@ -246,7 +256,8 @@ function useHistoryActions(st: StoreState) {
 
 /** 丸ごと差し替える操作（読み込み・初期状態に戻す）と、1世代の控え（PRD D227。ADR-0032） */
 function useReplaceActions(st: StoreState) {
-  const { setData, setSaveError, setPrevious, setBroken, setFirstRun, firstRun, replaced, latest } = st;
+  const { setData, setSaveError, setPrevious, setBroken, setFirstRun, setStartArrange, firstRun, replaced, latest } =
+    st;
   /** 丸ごと差し替える（履歴は捨てる。差し替えの前のデータへは「直前の状態に戻す」で戻る） */
   const swapIn = useCallback(
     (d: DemoData) => {
@@ -267,8 +278,9 @@ function useReplaceActions(st: StoreState) {
       setSaveError(null);
       swapIn(resetStore(features ?? latest.current.org.features));
       replaced();
+      setStartArrange(arrangesAfterStart({ kind: 'reset' }) ? {} : null);
     },
-    [replaced, swapIn, setSaveError, latest],
+    [replaced, swapIn, setSaveError, setStartArrange, latest],
   );
   const keepPrevious = useCallback(
     (reason: string): PreviousKeep => {
@@ -303,11 +315,16 @@ function useReplaceActions(st: StoreState) {
       swapIn(startWithAnswer(answer));
       replaced();
       setFirstRun(null);
+      setStartArrange(arrangesAfterStart({ kind: 'answer', start: answer.start }) ? {} : null);
     },
-    [firstRun, keepPrevious, replaced, swapIn, setSaveError, setFirstRun],
+    [firstRun, keepPrevious, replaced, swapIn, setSaveError, setFirstRun, setStartArrange],
   );
   const askFirstRun = useCallback(() => setFirstRun('redo'), [setFirstRun]);
   const cancelFirstRun = useCallback(() => setFirstRun((k) => (k === 'redo' ? null : k)), [setFirstRun]);
+  const takeStartArrange = useCallback(
+    (token: object) => setStartArrange((cur) => (cur === token ? null : cur)),
+    [setStartArrange],
+  );
   return {
     replace,
     reset,
@@ -317,6 +334,7 @@ function useReplaceActions(st: StoreState) {
     startFirstRun,
     askFirstRun,
     cancelFirstRun,
+    takeStartArrange,
     firstRun,
   };
 }
@@ -335,9 +353,11 @@ export function DemoDataProvider({ children }: { children: ReactNode }): ReactNo
     startFirstRun,
     askFirstRun,
     cancelFirstRun,
+    takeStartArrange,
     firstRun,
   } = useReplaceActions(st);
-  const { initial, data, saveError, previous, broken, externalReloads, replacedCount, previousDrops } = st;
+  const { initial, data, saveError, previous, broken, externalReloads, replacedCount, previousDrops, startArrange } =
+    st;
 
   const value = useMemo(
     () => ({
@@ -364,6 +384,8 @@ export function DemoDataProvider({ children }: { children: ReactNode }): ReactNo
       externalReloads,
       replacedCount,
       previousDrops,
+      startArrange,
+      takeStartArrange,
     }),
     [
       data,
@@ -387,6 +409,8 @@ export function DemoDataProvider({ children }: { children: ReactNode }): ReactNo
       externalReloads,
       replacedCount,
       previousDrops,
+      startArrange,
+      takeStartArrange,
       st.latest,
     ],
   );

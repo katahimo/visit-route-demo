@@ -210,6 +210,8 @@ export function monthListEntries(x: {
   attentionByDate: ReadonlyMap<string, number>;
   /** 確定（伝えた）の段階を出すか（省略は出す。lib/settledView） */
   confirmStep?: boolean;
+  /** 理由の印と状態の言葉を出すか（省略は出す。切は出さない。lib/exceptionView の monthCellView） */
+  reasons?: boolean;
 }): MonthListEntry[] {
   const out: MonthListEntry[] = [];
   for (const d of x.days) {
@@ -226,6 +228,7 @@ export function monthListEntries(x: {
       row: monthListRow(s, x.today, extra, {
         attention: x.attentionByDate.get(d) ?? 0,
         confirmStep: x.confirmStep,
+        reasons: x.reasons,
       }),
       extra,
       off,
