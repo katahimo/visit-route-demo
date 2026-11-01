@@ -4,7 +4,8 @@ import type { Client, Visit } from '../contracts/documents';
 import type { ContactList, ContactVisit, StaffContact } from '../contracts/reassign';
 import { hhmmToMinutes, weekday } from '../domain/time';
 import { clockTime } from './dateText';
-import { isFirstVisit, type ServedPairs, type VisitRuleKey, type VisitRuleLine, visitRuleLines } from './firstVisit';
+import { firstVisitNotes, type ServedPairs } from './firstVisit';
+import type { VisitRuleKey, VisitRuleLine } from './visitRules';
 
 /**
  * 連絡文に使う名前・呼び方。敬称（訪問先の「様」・スタッフの「さん」）は固定で、呼び方（「スタッフ」など）が出る箇所は
@@ -30,7 +31,7 @@ export type ContactWords = {
   promised?: (visitId: string) => { from: number; to: number } | null;
   /**
    * 初めての訪問先（D415）：その〈スタッフ〉がその〈利用者さん〉を過去8週に担当していなければ決まりごとの行（空もある）、
-   * 担当していれば null。無ければ印も決まりごとも添えない
+   * 担当していれば null。無ければ印も決まりごとも添えない（添えるのは欠勤・キャンセルの欄の連絡だけ。withFirstNotes で付ける）
    */
   firstNotes?: (clientId: string, staffId: string) => VisitRuleLine[] | null;
 };
@@ -279,18 +280,10 @@ export function dayContactWords(x: {
   staffWord: string;
   orgName: string;
   staffName: (id: string) => string;
-  clientById: ReadonlyMap<
-    string,
-    Pick<Client, 'displayName' | VisitRuleKey> & { place: Pick<Client['place'], 'address'> }
-  >;
+  clientById: ReadonlyMap<string, Pick<Client, 'displayName'> & { place: Pick<Client['place'], 'address'> }>;
   /** その日の訪問（取り消し・休みの回も） */
   visits: readonly Visit[];
-  /** 過去8週に担当した組（servedPairsBefore）。無ければ初めての印を付けない（D415） */
-  served?: ServedPairs;
-  /** 決まりごとを載せるか（訪問先の決まりごとの機能。切なら印だけ） */
-  notesOn?: boolean;
 }): ContactWords {
-  const served = x.served;
   const visitOf = (id: string) => x.visits.find((v) => v.id === id);
   return {
     day: dateWordOf(x.date),
@@ -306,13 +299,26 @@ export function dayContactWords(x: {
       return { from, to: v.windowKind === 'window' ? hhmmToMinutes(v.latestStart) : from };
     },
     orgName: x.orgName,
-    firstNotes: served
-      ? (clientId, staffId) =>
-          isFirstVisit(served, clientId, staffId)
-            ? x.notesOn === false
-              ? []
-              : visitRuleLines(x.clientById.get(clientId))
-            : null
-      : undefined,
+  };
+}
+
+/**
+ * 欠勤・キャンセルの欄の連絡（振り直しで新しく入る人。D415）に、初めての訪問先の印と決まりごと（鍵を含む）を添える言葉にする。
+ * 日の予定の連絡の一覧・すべての連絡文・メールには添えない（dayContactWords のまま使う）
+ */
+export function withFirstNotes(
+  w: ContactWords,
+  x: {
+    /** 過去8週に担当した組（servedPairsBefore） */
+    served: ServedPairs;
+    clientById: ReadonlyMap<string, Pick<Client, VisitRuleKey>>;
+    /** 決まりごとを載せるか（訪問先の決まりごとの機能。切なら印だけ） */
+    notesOn: boolean;
+  },
+): ContactWords {
+  return {
+    ...w,
+    firstNotes: (clientId, staffId) =>
+      firstVisitNotes(x.served, { clientId, staffId, client: x.clientById.get(clientId), notesOn: x.notesOn }),
   };
 }

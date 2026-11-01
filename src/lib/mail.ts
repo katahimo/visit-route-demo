@@ -8,6 +8,7 @@ import { visitsOn } from '../patterns';
 import { type BuiltMail, buildMail, MAILTO_LIMIT, uniqueRecipients } from './mailto';
 import { BICYCLE_NOTE, dayStops, HOME_LABEL, legLinks, type RouteStop, tripLinks } from './mapsLink';
 import { type PrintDay, printDay } from './monthPrint';
+import { oneLine, visitRuleLines } from './visitRules';
 
 const WEEK = ['日', '月', '火', '水', '木', '金', '土'];
 
@@ -53,17 +54,11 @@ export function dayByStaff(data: MailInput, date: string): { day: PrintDay; bySt
   return { day, byStaff };
 }
 
-/** 決まりごとの行（空の項目は出さない。鍵は includeKeys のときだけ） */
+/** 住所と決まりごとの行（空の項目は出さない。決まりごとは lib/visitRules の並び。鍵は includeKeys のときだけ） */
 function ruleLines(c: Client | undefined, includeKeys: boolean): string[] {
   if (!c) return [];
-  const rows: [string, string][] = [
-    ['住所', c.place.address],
-    ['入り方', c.entryNote],
-    ['駐車場', c.parkingNote],
-    ['注意', c.cautionNote],
-    ...(includeKeys ? ([['鍵', c.keyNote]] as [string, string][]) : []),
-  ];
-  return rows.filter(([, t]) => t.trim() !== '').map(([k, t]) => `   ${k}：${t.replace(/\s*\n\s*/g, ' ')}`);
+  const address = c.place.address.trim() !== '' ? [{ label: '住所', text: oneLine(c.place.address) }] : [];
+  return [...address, ...visitRuleLines(c, includeKeys)].map((r) => `   ${r.label}：${r.text}`);
 }
 
 const nameOf = (c: Client | undefined) => (c ? `${c.displayName}様` : '（不明）');

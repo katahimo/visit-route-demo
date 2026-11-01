@@ -118,9 +118,10 @@ export function TableStage({
         <AnswerBox answer={answer}>
           {summary && (
             <>
-              <output className="inquiry-summary" data-testid="inquiry-summary">
+              {/* 読み上げは上の答え（role="status"）だけ。要約は読み上げの欄にしない（二重に読ませない） */}
+              <p className="inquiry-summary" data-testid="inquiry-summary">
                 {summary}
-              </output>
+              </p>
               <div className="row">
                 <button type="button" className="btn btn-primary" onClick={onCopy} data-testid="copy-summary">
                   <WithIcon icon={Copy}>要約をコピー</WithIcon>

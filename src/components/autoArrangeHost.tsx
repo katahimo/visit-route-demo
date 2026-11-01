@@ -35,13 +35,18 @@ export function AutoArrangeHost(): ReactNode {
     lastReplaced.current = replacedCount;
     autoArrange.abort();
   }, [replacedCount]);
-  // デモを作った直後の1回（差し替えで捨てたあと、描いた新しいデータで依頼する。同じ印で二度出さない）
+  // デモを作った直後の1回（差し替えで捨てたあと、描いた新しいデータで依頼する。同じ印で二度出さない）。
+  // 後片付けで「出した」を忘れる：開発中の StrictMode は効果を付け直し、つなぎ直し（上の connect）で1回目の計算を捨てるので、
+  // 2回目の付け直しで依頼し直す（印を消したあとの描き直しでは startArrange が null になり出さない）
   const taken = useRef<object | null>(null);
   useEffect(() => {
     if (!startArrange || taken.current === startArrange) return;
     taken.current = startArrange;
     takeStartArrange(startArrange);
     requestUnassignedArrange(latest.current, jstDate(Date.now()));
+    return () => {
+      taken.current = null;
+    };
   }, [startArrange, takeStartArrange]);
   const toast = useToast();
   const undo = useUndoAction();

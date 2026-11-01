@@ -22,7 +22,7 @@ import {
   startWithAnswer,
   swapPrevious,
 } from './persist';
-import { arrangesAfterStart } from './start';
+import { arrangePending, clearArrangePending } from './start';
 
 /**
  * update の扱い：history が false なら履歴に積まず履歴を捨てる（戻せない操作）。group を渡すと、同じ group の続けての update を
@@ -96,7 +96,8 @@ export type DemoStore = {
   previousDrops: number;
   /**
    * デモを作った直後に担当なしを1回自動で組む依頼の印（PRD D409。ADR-0079。「デモで試す」で始めた・初期状態に戻した直後。無ければ null）。
-   * 受けた画面（components/autoArrangeHost）は組む依頼を出して takeStartArrange で消す
+   * 印の元は sessionStorage（store/start の ARRANGE_PENDING_KEY）で、起動時にも読む（例外の画面から戻して読み直しても組む）。
+   * 受けた画面（components/autoArrangeHost）は組む依頼を出して takeStartArrange で消す（sessionStorage の印も消す）
    */
   startArrange: object | null;
   takeStartArrange(token: object): void;
@@ -122,7 +123,8 @@ function useStoreState() {
   const [replacedCount, setReplacedCount] = useState(0);
   const replaced = useCallback(() => setReplacedCount((n) => n + 1), []);
   const [previousDrops, setPreviousDrops] = useState(0);
-  const [startArrange, setStartArrange] = useState<object | null>(null);
+  // 組む印（sessionStorage）は起動時にも読む（例外の画面から初期状態に戻して読み直したときも組む。PRD D409）
+  const [startArrange, setStartArrange] = useState<object | null>(() => (arrangePending() ? {} : null));
   // 別タブから読み直したデータは、書き戻さない（往復で上書き合戦にしない）
   const skipSave = useRef(true);
   const latest = useRef(data);
@@ -278,7 +280,7 @@ function useReplaceActions(st: StoreState) {
       setSaveError(null);
       swapIn(resetStore(features ?? latest.current.org.features));
       replaced();
-      setStartArrange(arrangesAfterStart({ kind: 'reset' }) ? {} : null);
+      setStartArrange(arrangePending() ? {} : null);
     },
     [replaced, swapIn, setSaveError, setStartArrange, latest],
   );
@@ -315,14 +317,17 @@ function useReplaceActions(st: StoreState) {
       swapIn(startWithAnswer(answer));
       replaced();
       setFirstRun(null);
-      setStartArrange(arrangesAfterStart({ kind: 'answer', start: answer.start }) ? {} : null);
+      setStartArrange(arrangePending() ? {} : null);
     },
     [firstRun, keepPrevious, replaced, swapIn, setSaveError, setFirstRun, setStartArrange],
   );
   const askFirstRun = useCallback(() => setFirstRun('redo'), [setFirstRun]);
   const cancelFirstRun = useCallback(() => setFirstRun((k) => (k === 'redo' ? null : k)), [setFirstRun]);
   const takeStartArrange = useCallback(
-    (token: object) => setStartArrange((cur) => (cur === token ? null : cur)),
+    (token: object) => {
+      clearArrangePending();
+      setStartArrange((cur) => (cur === token ? null : cur));
+    },
     [setStartArrange],
   );
   return {

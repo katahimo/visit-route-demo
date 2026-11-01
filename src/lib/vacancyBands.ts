@@ -21,6 +21,35 @@ export const WISH_BANDS: readonly { id: WishBand; label: string; from: string; t
   { id: 'eve', label: '夕方', from: '17:00', to: '20:00' },
 ];
 
+/** 開始の幅（HH:mm。両端を含む） */
+export type WishRange = { from: string; to: string };
+
+/** 開始の幅の刻み（分。くわしい条件の選択肢と同じ30分） */
+const RANGE_STEP = 30;
+
+/**
+ * 開始の幅の既定（PRD D411。時間帯の「指定なし」＝時間帯のチップの全体 8:00〜20:00）：8:00 から、所要を足して 20:00 に収まる開始
+ * （30分刻みで切り下げ）まで。所要が長くて収まらなければ 8:00〜8:00
+ */
+export function defaultWishRange(durationMinutes: number): WishRange {
+  const first = hhmmToMinutes(WISH_BANDS[0]!.from);
+  const end = hhmmToMinutes(WISH_BANDS[WISH_BANDS.length - 1]!.to);
+  const last = Math.floor((end - durationMinutes) / RANGE_STEP) * RANGE_STEP;
+  return { from: minutesToHhmm(first), to: minutesToHhmm(Math.max(first, last)) };
+}
+
+/**
+ * 所要を変えたあとの開始の幅：今の幅が前の所要の既定のままなら新しい所要の既定にする（「指定なし」が 20:00 に収まる開始までのまま）。
+ * 利用者が幅を変えていれば・所要が数でなければそのまま
+ */
+export function rangeAfterDuration(range: WishRange, before: string, after: string): WishRange {
+  const b = Number(before);
+  const a = Number(after);
+  if (!Number.isInteger(b) || !Number.isInteger(a) || b <= 0 || a <= 0) return range;
+  const old = defaultWishRange(b);
+  return range.from === old.from && range.to === old.to ? defaultWishRange(a) : range;
+}
+
 /** 所要のチップ（分。ほかの分はくわしい条件） */
 export const DURATION_CHIPS: readonly number[] = [30, 45, 60, 90];
 

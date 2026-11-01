@@ -1,4 +1,4 @@
-import { type ReactNode, useId } from 'react';
+import { type ReactNode, useEffect, useId, useState } from 'react';
 import { ConditionsEditor } from '../components/conditions';
 import { FieldError, invalidAttrs } from '../components/FieldError';
 import { Hint } from '../components/ui';
@@ -107,7 +107,7 @@ export function WhenStage({
 }
 
 /**
- * くわしい条件 ▾（PRD D411。閉じて始める）：種類・所要（ほかの分）・開始の幅（30分刻み）・週の回数・開始日・見る週の数・必要な条件。
+ * くわしい条件 ▾（PRD D411。閉じて始める。中の入力に誤りがあれば開く）：種類・所要（ほかの分）・開始の幅（30分刻み）・週の回数・開始日・見る週の数・必要な条件。
  * 開始の幅を変えると時間帯のチップは指定なしに戻る（useVacancyInput）
  */
 function MoreConditions({
@@ -123,13 +123,24 @@ function MoreConditions({
 }) {
   const { typeId, setTypeId, duration, setDuration, wishFrom, setWishFrom, wishTo, setWishTo } = input;
   const { perWeek, setPerWeek, from, setFrom, weeks, setWeeks, requirements, setRequirements } = input;
+  // 中の入力に誤りがあれば開く（閉じたままだと、誤りの文が指す欄が見えない）。閉じるのは利用者に任せる
+  const [open, setOpen] = useState(false);
+  const bad = !ok.durationOk || !ok.fromOk || !ok.wishOk;
+  useEffect(() => {
+    if (bad) setOpen(true);
+  }, [bad]);
   const halfHours = HALF_HOURS.map((h) => (
     <option key={h} value={h}>
       {timeText(h)}
     </option>
   ));
   return (
-    <details className="vacancy-more" data-testid="vacancy-more">
+    <details
+      className="vacancy-more"
+      open={open}
+      onToggle={(e) => setOpen(e.currentTarget.open)}
+      data-testid="vacancy-more"
+    >
       <summary data-testid="vacancy-more-toggle">くわしい条件 ▾</summary>
       <div className="stack vacancy-more-body">
         <div className="form-grid">

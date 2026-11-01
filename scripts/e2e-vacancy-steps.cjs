@@ -254,8 +254,8 @@ async function bandsAndFold(page) {
   await settle(page, 500);
   const line = () => page.getByTestId('vacancy-when-line').textContent();
   check(
-    /9:00〜17:00に始める/.test(await line()),
-    '時間帯が指定なしなら、くわしい条件の開始の幅（既定 9:00〜17:00）',
+    /8:00〜19:00に始める/.test(await line()),
+    '時間帯が指定なしなら、くわしい条件の開始の幅（既定は 8:00 から、所要 60分を足して 20:00 に収まる 19:00 まで）',
     await line(),
   );
   await chip(page, 'wish-bands', '午前').click();
@@ -279,7 +279,7 @@ async function bandsAndFold(page) {
   // くわしい条件で開始の幅を変えると時間帯は指定なしに戻る
   await openMore(page);
   await page.getByTestId('wish-from').selectOption('10:00');
-  await until(async () => /10:00〜17:00に始める/.test(await line()));
+  await until(async () => /10:00〜19:00に始める/.test(await line()));
   check(
     (await pressed(chip(page, 'wish-bands', '指定なし'))) && !(await pressed(chip(page, 'wish-bands', '午前'))),
     'くわしい条件で開始の幅を変えると時間帯は「指定なし」',
@@ -296,10 +296,22 @@ async function bandsAndFold(page) {
     '読み直すと「詳しく ▾」は開いたまま（くわしい条件は閉じて始める）',
   );
   check(
-    /10:00〜17:00に始める/.test(await line()) && (await pressed(chip(page, 'wish-bands', '指定なし'))),
+    /10:00〜19:00に始める/.test(await line()) && (await pressed(chip(page, 'wish-bands', '指定なし'))),
     '読み直しても開始の幅と時間帯が残る',
     await line(),
   );
+  // くわしい条件の入力に誤り（開始の幅の「から」が「まで」より後）があれば、読み直しても くわしい条件 が開く
+  await openMore(page);
+  await page.getByTestId('wish-from').selectOption('19:30');
+  await settle(page, 400);
+  await page.reload();
+  await page.getByTestId('vacancy-more').waitFor({ timeout: 30000 });
+  check(
+    await until(async () => (await page.getByTestId('vacancy-more').getAttribute('open')) !== null),
+    'くわしい条件の入力に誤りがあれば くわしい条件 が開く',
+  );
+  await page.getByTestId('wish-from').selectOption('10:00');
+  await page.getByTestId('inquiry-summary').waitFor({ timeout: 30000 });
   await chip(page, 'wish-bands', '午後').click();
   await settle(page, 400);
   await page.reload();

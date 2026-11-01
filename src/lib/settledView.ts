@@ -33,7 +33,3 @@ export const showContactedButton = (state: ToldState, confirmStep: boolean): boo
 /** 未連絡の変更の件数の文（日・マスの読み上げ・一覧）。expert 切は「変更あり N件」 */
 export const changesText = (n: number, confirmStep: boolean): string =>
   confirmStep ? `未連絡の変更 ${n}件` : `${CHANGED_WORD} ${n}件`;
-
-/** 月のマスの札の文（入は「未連絡 N」、切は「変更あり N」。PRD D382） */
-export const changedFlagText = (n: number, confirmStep: boolean): string =>
-  confirmStep ? `未連絡 ${n}` : `${CHANGED_WORD} ${n}`;

@@ -20,6 +20,7 @@ import {
   type StaffChoice,
   type SuddenKind,
   type SuddenStep,
+  suddenPrimary,
   type VisitChoice,
 } from '../lib/sudden';
 
@@ -170,6 +171,20 @@ export function useSuddenSteps(p: SuddenPanelProps) {
       setDone({ kind: 'staff', text: absenceSummary(p.staffName(a.staffId), a, baseSlots), anneal });
       setStep(2);
     });
+  /** 計算中（［この案で決める］の計算・自動作成など）は入力を変えさせない（種類・人・欠勤の時間とメモ） */
+  const locked = busy || p.running;
+  /** 欠勤だけ登録（振り直さない）。押せないとき（入力の誤り・計算中）は何もしない */
+  const saveOnlyNow = () => {
+    if (!absence || input.error || locked) return;
+    p.onSaveOnly(withId(absence));
+  };
+  /** 1段目の主ボタン（担当のある訪問が無い日は［欠勤だけ登録］） */
+  const primary = suddenPrimary({ kind, staffId: input.staffId, hasBase: input.preview?.hasBase ?? false });
+  /** メモの Enter：主ボタンと同じ（PRD D251） */
+  const submit = () => {
+    if (primary === 'reassign' && !blocked) void reassignNow(input.recommended);
+    else if (primary === 'saveOnly') saveOnlyNow();
+  };
   const cancelNow = () => {
     if (!visitId) return;
     const info = p.visitInfo(visitId);
@@ -199,12 +214,16 @@ export function useSuddenSteps(p: SuddenPanelProps) {
     setSameDay,
     done,
     busy,
+    locked,
+    primary,
     sent,
     pickStaff,
     chooseKind,
     withId,
     guarded,
     reassignNow,
+    saveOnlyNow,
+    submit,
     cancelNow,
     close,
     copyRow,

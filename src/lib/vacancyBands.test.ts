@@ -7,7 +7,9 @@ import {
   bandSpans,
   bandText,
   DURATION_CHIPS,
+  defaultWishRange,
   inBands,
+  rangeAfterDuration,
   startRangeText,
   toggleBand,
   WISH_BANDS,
@@ -52,6 +54,21 @@ describe('時間帯と所要のチップ（PRD D411）', () => {
       { from: 480, to: 720 },
       { from: 1020, to: 1200 },
     ]);
+  });
+
+  it('開始の幅の既定（指定なし）は 8:00 から、所要を足して 20:00 に収まる開始（30分刻み）まで', () => {
+    expect(defaultWishRange(60)).toEqual({ from: '08:00', to: '19:00' });
+    expect(defaultWishRange(30)).toEqual({ from: '08:00', to: '19:30' });
+    expect(defaultWishRange(45)).toEqual({ from: '08:00', to: '19:00' });
+    expect(defaultWishRange(90)).toEqual({ from: '08:00', to: '18:30' });
+    expect(defaultWishRange(720)).toEqual({ from: '08:00', to: '08:00' });
+  });
+
+  it('所要を変えたら、既定のままの開始の幅だけ新しい所要の既定にする（変えた幅・数でない所要はそのまま）', () => {
+    expect(rangeAfterDuration({ from: '08:00', to: '19:00' }, '60', '90')).toEqual({ from: '08:00', to: '18:30' });
+    expect(rangeAfterDuration({ from: '09:00', to: '17:00' }, '60', '90')).toEqual({ from: '09:00', to: '17:00' });
+    expect(rangeAfterDuration({ from: '08:00', to: '19:00' }, '', '90')).toEqual({ from: '08:00', to: '19:00' });
+    expect(rangeAfterDuration({ from: '08:00', to: '18:30' }, '90', '6')).toEqual({ from: '08:00', to: '19:30' });
   });
 
   it('問い合わせの幅は端から端。選ばなければくわしい条件の幅', () => {

@@ -333,6 +333,7 @@ details[open] > summary .vacancy-fold-mark .when-open {
 }
 .inquiry-summary {
   display: block;
+  margin: 0;
   white-space: pre-wrap;
   padding: 12px 14px;
   border-radius: 12px;

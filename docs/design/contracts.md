@@ -149,7 +149,7 @@ ContactList = { staffChanged, timeChanged, staff: { staffId, added, removed, shi
 - 画面側（`lib/absences`）：元の案は `baseOf`（その日の訪問の担当＝`dayRoutes`）。`applyReassign` で振り直した担当を `writeRoutes` で訪問に書き（振り直した訪問と動かしていない訪問はピン）、`reassigns[date]` に振り直す前の担当（`baseRoutes`・`basePins`）を残す。続けて振り直すときは `base*` は最初のもの、`absenceIds` は累積。`revertReassign` は振り直す前の担当・ピンへ戻して `reassigns[date]` を消す
 - 案B の流れ（`pages/useReassignFlow`）：`prepareAnneal` → `runSolve(prep.problem, { seed: data.seed, iterations: defaultIterations(prep.problem), initial: prep.initial })` → `settleAnneal`（案A のままなら理由を知らせる）→ 作った案B は画面の状態（保存しない）で案A と並べ → 選ぶと `chooseReassign` で訪問に書く。作れないとき（欠勤が取り消された・案A が無い・計算中）はボタンを押せなくして理由
 - 欠勤は1人1日1件・30分単位（境は 12:00。欄で丸め、Excel では止める）。振り直しで件数の上限は超えない
-- 連絡文は `lib/contacts`（`staffMessage`・`clientMessages`・`allContactsText`・欠勤・キャンセルの欄の2段目の `contactRows`。コピー・メール・印刷だけ。ひな形と載せる範囲は ADR-0038・PRD D245・D246。初めての訪問先の決まりごとは `ContactWords.firstNotes`（`dayContactWords` が `lib/firstVisit` の `servedPairsBefore` から作る。PRD D415）
+- 連絡文は `lib/contacts`（`staffMessage`・`clientMessages`・`allContactsText`・欠勤・キャンセルの欄の2段目の `contactRows`。コピー・メール・印刷だけ。ひな形と載せる範囲は ADR-0038・PRD D245・D246。初めての訪問先の決まりごとは `ContactWords.firstNotes`（欠勤・キャンセルの欄の連絡だけ。`withFirstNotes` が `lib/firstVisit` の `servedPairsBefore`・`firstVisitNotes` から付ける。日の予定の連絡は `dayContactWords` のままで添えない。PRD D415）
 
 ## 繰り返し（`src/contracts/patterns.ts`。ADR-0012・ADR-0013・ADR-0053）
 

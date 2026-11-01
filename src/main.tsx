@@ -9,7 +9,7 @@ import { FirstRunGate } from './components/FirstRunPage';
 import { ToastProvider } from './components/Toast';
 import { DemoDataProvider, reset } from './store';
 
-/** データの読み込みそのものが失敗したとき：初期状態に戻して読み直す */
+/** データの読み込みそのものが失敗したとき：初期状態に戻して読み直す（デモを組む印は store が sessionStorage に置き、読み直したあとの起動で読む。PRD D409） */
 function resetAndReload() {
   try {
     reset();

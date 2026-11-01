@@ -1,20 +1,18 @@
-import { Car, DoorOpen, KeyRound, TriangleAlert } from 'lucide-react';
+import { Car, DoorOpen, KeyRound, type LucideIcon, TriangleAlert } from 'lucide-react';
 import type { Client } from '../contracts/documents';
+import { hasVisitRules, VISIT_RULES, type VisitRuleKey } from '../lib/visitRules';
 import { useFeature } from './useFeature';
 
+/** 決まりごとの項目ごとのアイコンと入力の例（項目と名前の並びは lib/visitRules の VISIT_RULES） */
+const RULE_VIEW: Record<VisitRuleKey, { icon: LucideIcon; placeholder: string }> = {
+  entryNote: { icon: DoorOpen, placeholder: '例：インターホンを押してから玄関へ' },
+  keyNote: { icon: KeyRound, placeholder: '例：ポストの中のキーボックス' },
+  parkingNote: { icon: Car, placeholder: '例：坂の下の空き地に1台' },
+  cautionNote: { icon: TriangleAlert, placeholder: '例：玄関の段差が高い' },
+};
+
 /** 訪問先の決まりごと（PRD D66。ADR-0013）の見出しとアイコン（入力欄・表示で同じ並び） */
-export const VISIT_RULE_FIELDS = [
-  { key: 'entryNote', label: '入り方', icon: DoorOpen, placeholder: '例：インターホンを押してから玄関へ' },
-  { key: 'keyNote', label: '鍵', icon: KeyRound, placeholder: '例：ポストの中のキーボックス' },
-  { key: 'parkingNote', label: '駐車場', icon: Car, placeholder: '例：坂の下の空き地に1台' },
-  { key: 'cautionNote', label: '注意', icon: TriangleAlert, placeholder: '例：玄関の段差が高い' },
-] as const;
-
-export type VisitRuleKey = (typeof VISIT_RULE_FIELDS)[number]['key'];
-
-/** 訪問先の決まりごとがあるか */
-export const hasVisitRules = (c: Pick<Client, VisitRuleKey> | undefined | null): boolean =>
-  !!c && VISIT_RULE_FIELDS.some((f) => c[f.key].trim() !== '');
+export const VISIT_RULE_FIELDS = VISIT_RULES.map((r) => ({ ...r, ...RULE_VIEW[r.key] }));
 
 /**
  * 訪問先の決まりごと（入り方・鍵・駐車場・注意）の表示。空の項目は出さず、どれも空なら何も出さない。

@@ -1,7 +1,7 @@
 // 最初の2問と案内ツアー（PRD D189〜D193・D379〜D381。ADR-0025・ADR-0045・ADR-0073）を本物のブラウザで確かめる：
 // 最初の2問（初めて開く＝保存データも印「all」も無いと、案内ツアーは自動で出ず、1画面に2問と主ボタン「はじめる」だけ。答えるまでデータを書かない・
 // 読み直してもまた2問・Tab は選んだ方だけ・矢印で選び直す）・デモ×定期（今の初期データ・利用者さん／スタッフ・「基本」・最初は月。
-// 作った直後に今日〜翌月末の担当なしを1回自動で組み、知らせ「N件の担当を組みました」と［元に戻す］。PRD D409）・
+// 作った直後に今日〜翌月末の担当なしを1回自動で組み、知らせ「N件の担当を組みました」と［元に戻す］。組む印（sessionStorage）は読み直しをまたいで起動で読む。PRD D409）・
 // デモ×単発（架空の単発の予約が今日から2週間分・お客様／シッター・「単発のみ」・最初は週）・
 // 自分のデータ（空のデータ＋3段の登録の案内：上に「1/3」・①②は「CSV・Excel を読み込む」（名簿の欄）と「1人ずつ入れる」（追加の画面）・③は予定へ・
 // 空のデータで月・週・日・一覧・設定などが壊れない。組まない）・印「all」（scripts/lib/startFeatures.cjs）があれば2問を出さず今の初期データ＋すべて入（組まない）・
@@ -193,6 +193,29 @@ async function firstRun(b) {
   // 組みの帯・知らせが出ないことを確かめる（固定の待ち）
   await page.waitForTimeout(1500);
   check((await page.getByTestId('auto-band').count()) === 0, '読み直しても組み直さない（組みの帯が出ない）');
+  check(
+    await page.evaluate(() => sessionStorage.getItem('vrdemo:arrange:pending') === null),
+    '組んだあとは組む印（sessionStorage）が残らない',
+  );
+  // 例外の画面の「データを初期状態に戻す」は store が組む印を sessionStorage に書いてから読み直す。印は読み直しをまたぎ、
+  // 起動した store が読んで組む（PRD D409）。ここでは担当を外したデータと印を置いて読み直し、起動で組むことを確かめる
+  await page.evaluate(
+    ([k, day]) => {
+      const x = JSON.parse(localStorage.getItem(k));
+      for (const v of x.visits) if (v.date >= day && !v.cancelled) v.staffId = null;
+      localStorage.setItem(k, JSON.stringify(x));
+      sessionStorage.setItem('vrdemo:arrange:pending', '1');
+    },
+    [STORAGE_KEY, TODAY],
+  );
+  await page.reload();
+  await page.locator('.app-main h1').first().waitFor({ timeout: 30000 });
+  const reArranged = await waitStartArranged(page);
+  check(/^\d+件の担当を組みました/.test(reArranged), '組む印を置いて読み直すと、起動で担当なしを組む', reArranged);
+  check(
+    await page.evaluate(() => sessionStorage.getItem('vrdemo:arrange:pending') === null),
+    '起動で組んだら組む印を消す（もう一度読み直しても組まない）',
+  );
   check((await tour(page).count()) === 0, '2問のあともツアーは出ない');
   await page.reload();
   await page.locator('.app-main h1').first().waitFor({ timeout: 30000 });

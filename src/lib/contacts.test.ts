@@ -12,6 +12,7 @@ import {
   dayContactWords,
   familyName,
   staffMessage,
+  withFirstNotes,
   withoutVisit,
 } from './contacts';
 
@@ -295,23 +296,25 @@ describe('dayContactWords（日の予定の連絡文の名前・呼び方）', (
     expect(w.promised?.('v1')).toEqual({ from: 540, to: 570 });
     expect(w.promised?.('v2')).toEqual({ from: 540, to: 540 });
     expect(w.promised?.('x')).toBeNull();
-    // 担当の履歴を渡さなければ初めての印を付けない
+    // 日の予定の連絡（一覧・すべての連絡文・メール）には初めての印・決まりごとを添えない（D415）
     expect(w.firstNotes).toBeUndefined();
   });
-  it('初めての訪問先（D415）：過去8週に担当していなければ決まりごとの行、担当していれば null。決まりごとを切れば印だけ', () => {
-    const base = {
+  it('withFirstNotes（欠勤・キャンセルの欄の連絡だけ。D415）：過去8週に担当していなければ決まりごとの行、担当していれば null。決まりごとを切れば印だけ', () => {
+    const clientById = new Map([['c1', { displayName: '天文台', place: { address: '仙台市' }, ...RULES }]]);
+    const base = dayContactWords({
       date: '2026-10-15',
       staffWord: 'ヘルパー',
       orgName: 'ほしみ',
       staffName: (id: string) => id,
-      clientById: new Map([['c1', { displayName: '天文台', place: { address: '仙台市' }, ...RULES }]]),
+      clientById,
       visits: [],
-      served: new Set(['c1\ns1']),
-    };
-    const on = dayContactWords(base);
+    });
+    const served = new Set(['c1\ns1']);
+    const on = withFirstNotes(base, { served, clientById, notesOn: true });
     expect(on.firstNotes?.('c1', 's1')).toBeNull();
     expect(on.firstNotes?.('c1', 's2')).toEqual([{ label: '鍵', text: 'ポストの中' }]);
-    expect(dayContactWords({ ...base, notesOn: false }).firstNotes?.('c1', 's2')).toEqual([]);
+    expect(withFirstNotes(base, { served, clientById, notesOn: false }).firstNotes?.('c1', 's2')).toEqual([]);
+    expect(base.firstNotes).toBeUndefined();
   });
 });
 

@@ -62,10 +62,22 @@ describe('空き状況の入力を覚える（PRD D258）', () => {
     const v = loadVacancyInput(TODAY, null, s);
     expect(v.duration).toBe('45');
     expect(v.weeks).toBe(defaultVacancyInput(TODAY).weeks);
-    expect(v.wishFrom).toBe('09:00');
+    expect(v.wishFrom).toBe('08:00');
     expect(v.from).toBe(TODAY);
     s.setItem(VACANCY_INPUT_KEY, '{壊れた');
     expect(loadVacancyInput(TODAY, null, s)).toEqual(defaultVacancyInput(TODAY));
+  });
+
+  it('既定の開始の幅は時間帯のチップの全体（8:00〜、所要 60分を足して 20:00 に収まる 19:00 開始まで。PRD D411）', () => {
+    const d = defaultVacancyInput(TODAY);
+    expect([d.duration, d.wishFrom, d.wishTo]).toEqual(['60', '08:00', '19:00']);
+  });
+
+  it('前の既定（9:00〜17:00）で覚えた開始の幅はそのまま読む', () => {
+    const s = memory();
+    s.setItem(VACANCY_INPUT_KEY, JSON.stringify({ ...defaultVacancyInput(TODAY), wishFrom: '09:00', wishTo: '17:00' }));
+    const v = loadVacancyInput(TODAY, null, s);
+    expect([v.wishFrom, v.wishTo]).toEqual(['09:00', '17:00']);
   });
 
   it('時間帯のチップを足す前の入力も読める（時間帯は指定なし）・知らない時間帯は既定', () => {

@@ -2,6 +2,7 @@
 // DemoData とは別のキーに「all」と書いてあれば、2問を出さず、すべて入（{}）の今の初期データで始める
 // （e2e の共通の部品 scripts/lib/startFeatures.cjs と、全機能を見せたいデモの前準備のため。値は印だけで個人の情報は持たない）。
 // localStorage を触るのは store の中だけ（AGENTS.md）。読めなければ印なし（2問を出す）
+// デモを作った直後に担当なしを組む印（PRD D409）もここに置く（sessionStorage。読み直しをまたいで、組み終える前に消さない）
 
 import type { FirstRunBooking, FirstRunStart } from '../lib/firstRun';
 
@@ -69,5 +70,47 @@ export function arrangesAfterStart(s: DemoStart, all: boolean = startsWithAll())
       const _: never = s;
       return _;
     }
+  }
+}
+
+/**
+ * デモを作った直後に担当なしを組む印のキー（sessionStorage。PRD D409。ADR-0079）。
+ * 初期状態に戻す（設定・例外の画面のどちらの入口からでも）・最初の2問の「デモで試す」で書き、
+ * store の起動時と作り直した直後に読み、組む依頼を出した画面が消す（読み直しをはさんでも1回だけ組む）
+ */
+export const ARRANGE_PENDING_KEY = 'vrdemo:arrange:pending';
+
+type PendingStore = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
+const sessionStore = (): PendingStore | null => globalThis.sessionStorage ?? null;
+
+/** デモを作ったら、組むときだけ組む印を書く（組まないときは消す。書けなくても続ける） */
+export function markArrangeAfterStart(
+  s: DemoStart,
+  all: boolean = startsWithAll(),
+  getStorage: () => PendingStore | null = sessionStore,
+): void {
+  try {
+    if (arrangesAfterStart(s, all)) getStorage()?.setItem(ARRANGE_PENDING_KEY, '1');
+    else getStorage()?.removeItem(ARRANGE_PENDING_KEY);
+  } catch {
+    // 書けなければ組まない
+  }
+}
+
+/** 組む印があるか（読むだけ。消すのは clearArrangePending） */
+export function arrangePending(getStorage: () => PendingStore | null = sessionStore): boolean {
+  try {
+    return getStorage()?.getItem(ARRANGE_PENDING_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+/** 組む依頼を出したら印を消す（二度組まない） */
+export function clearArrangePending(getStorage: () => PendingStore | null = sessionStore): void {
+  try {
+    getStorage()?.removeItem(ARRANGE_PENDING_KEY);
+  } catch {
+    // 消せなくても続ける
   }
 }

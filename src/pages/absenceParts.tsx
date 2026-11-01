@@ -38,6 +38,7 @@ export function AbsenceFields({
   baseSlots,
   date,
   error,
+  disabled = false,
 }: {
   draft: AbsenceDraft;
   onChange: (x: Partial<AbsenceDraft>) => void;
@@ -45,6 +46,8 @@ export function AbsenceFields({
   baseSlots: Slot[];
   date: string;
   error: string | null;
+  /** 計算中は入力を変えさせない（中の欄・ボタンをまとめて押せなくする） */
+  disabled?: boolean;
 }) {
   const shift = baseSlots[0];
   const end = baseSlots.at(-1);
@@ -56,7 +59,7 @@ export function AbsenceFields({
   const errorId = useId();
   const bad = invalidAttrs(!!error && !d.allDay, errorId);
   return (
-    <div className="stack" style={{ gap: 10 }}>
+    <fieldset className="stack absence-fields" style={{ gap: 10 }} disabled={disabled}>
       <p className="sub">
         {date.slice(5).replace('-', '/')} の働ける時間：{slotsText(baseSlots)}
       </p>
@@ -125,7 +128,7 @@ export function AbsenceFields({
       <FieldError id={errorId} live={false}>
         {error}
       </FieldError>
-    </div>
+    </fieldset>
   );
 }
 

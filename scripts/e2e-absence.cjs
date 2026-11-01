@@ -197,6 +197,14 @@ async function fromHome(page) {
   await settle(page, 400);
   const impact = await page.getByTestId('sudden-impact').textContent();
   check(/入らなくなる訪問 \d+件/.test(impact), '同じ段に見込み：入らなくなる訪問 N件', impact);
+  // 読み上げは前から置いた小さな欄に見込みの1行だけ（ボタン・「ほかのやり方」を含む中身ごとは読み上げない）
+  check(
+    (await page.getByTestId('sudden-live').textContent()) === impact &&
+      (await page.getByTestId('sudden-live').getAttribute('aria-live')) === 'polite' &&
+      (await page.getByTestId('absence-preview').getAttribute('aria-live')) === null,
+    '見込みの1行だけを読み上げの欄に出す（見込みの中身は読み上げの欄にしない）',
+    await page.getByTestId('sudden-live').textContent(),
+  );
   // 誰のどの訪問が誰へ移るか（PRD D265）：〈利用者さん〉の名前・時刻と、元の担当 → 新しい担当（入らない訪問は「入らない」）
   const moves = await panel(page)
     .getByTestId('reassign-move')
@@ -230,7 +238,28 @@ async function fromHome(page) {
     { recommendB, altButtons },
   );
   await page.screenshot({ path: path.join(OUT_DIR, 'step1-staff.png') });
+  // 計算中（押してから2段目まで）は種類・人・欠勤の時間を押せない：押す前から disabled の変わり目を見張る
+  await page.evaluate(() => {
+    const w = window;
+    w.__suddenLocked = false;
+    const look = () => {
+      const staff = document.querySelector('[data-testid="sudden-staff"]');
+      const kind = document.querySelector('[data-testid="sudden-kind-staff"]');
+      const fields = document.querySelector('fieldset.absence-fields');
+      if (staff?.disabled && kind?.disabled && fields?.disabled) w.__suddenLocked = true;
+    };
+    const ob = new MutationObserver(look);
+    ob.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['disabled'] });
+    w.__suddenLockedStop = () => ob.disconnect();
+  });
   await decideA(page);
+  check(
+    await page.evaluate(() => {
+      window.__suddenLockedStop();
+      return window.__suddenLocked;
+    }),
+    '［この案で決める］の計算中は種類・人・欠勤の時間とメモを押せない',
+  );
   check((await stepOf(page)) === '2', '決めると2段目（連絡・確定）。欄は閉じない');
   check(
     (await page.locator('h3.sudden-step-title').textContent()) === '変更を伝えて確定する',
@@ -462,8 +491,26 @@ async function toldContacts(page) {
   await page.getByTestId('sudden-staff').selectOption(best.value);
   await decideA(page);
   await waitStored(page, (d) => !!d.reassigns?.[TODAY] && d.absences.length === before.absences.length + 1);
+  const suddenFirst = (await contactRowsOf(page)).filter((r) => r.first).length;
   await page.keyboard.press('Escape');
   await panel(page).waitFor({ state: 'detached' });
+  // 初めての訪問先の決まりごと（鍵を含む）は欠勤・キャンセルの欄の連絡だけ。日の予定の連絡の一覧には添えない（PRD D415）
+  const contactButton = page.getByRole('button', { name: /^連絡の一覧/ }).first();
+  if ((await contactButton.count()) > 0) {
+    await contactButton.scrollIntoViewIfNeeded();
+    await contactButton.click();
+    await page.getByTestId('contact-sheet').waitFor({ timeout: 10000 });
+    const sheetText = await page.getByTestId('contact-sheet').innerText();
+    check(
+      !sheetText.includes('初めての訪問先です。'),
+      '日の予定の連絡の一覧には初めての訪問先の決まりごとを添えない（欄の連絡だけ）',
+      { suddenFirst },
+    );
+    await page.keyboard.press('Escape');
+    await page.getByTestId('contact-sheet').waitFor({ state: 'detached', timeout: 5000 });
+  } else {
+    check(false, '差の欄に「連絡の一覧」がある');
+  }
   // 欠勤の登録と振り直しは別の手（全体の元に戻す。PRD D329）：1回目で振り直す前（欠勤は残る）、2回目で欠勤も戻る
   await pressTool(page, '元に戻す', { where: 'more' });
   const mid = await waitStored(page, (d) => !d.reassigns?.[TODAY] && d.absences.length === before.absences.length + 1);
@@ -603,12 +650,15 @@ async function noPlanDay(page) {
     '訪問の無い日：［この案で決める］は出さず、「欠勤だけ登録」が主ボタン（主ボタンは1つ）',
     primaries,
   );
-  await page.getByTestId('sudden-save-only').click();
+  // メモの Enter は主ボタンと同じ［欠勤だけ登録］（PRD D251）
+  const memo = page.locator('.sudden-panel input:not([type])').first();
+  await memo.fill('通院');
+  await memo.press('Enter');
   await panel(page).waitFor({ state: 'detached' });
   const d = await waitStored(page, (x) => x.absences.some((a) => a.staffId === v && a.date === NEXT));
   check(
-    d.absences.some((a) => a.staffId === v && a.date === NEXT),
-    '訪問の無い日：欠勤だけ登録する',
+    d.absences.some((a) => a.staffId === v && a.date === NEXT && a.note === '通院'),
+    '訪問の無い日：メモの Enter で欠勤だけ登録する',
   );
 }
 

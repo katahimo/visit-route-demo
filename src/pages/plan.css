@@ -778,6 +778,13 @@ p.plan-band.error {
     display: none;
   }
 }
+/* 欠勤の時間とメモ（AbsenceFields）。計算中はまとめて押せなくするため fieldset にしている（枠は付けない） */
+fieldset.absence-fields {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
 .sudden-targets {
   margin: 0;
   padding-left: 1.2em;

@@ -11,7 +11,7 @@ import { type SuddenPanelProps, useSuddenSteps } from './useSuddenSteps';
 
 export function SuddenPanel(p: SuddenPanelProps) {
   const s = useSuddenSteps(p);
-  const { step, kind, done, close } = s;
+  const { step, done, close } = s;
   const { fallbackFocus, returnFocus } = p;
   const { body, footer } = step === 2 && done ? contactStep({ p, s }, done) : whatStep({ p, s });
   return (
@@ -24,15 +24,9 @@ export function SuddenPanel(p: SuddenPanelProps) {
       fallbackFocus={fallbackFocus}
       returnFocus={returnFocus}
       footer={footer}
-      // 1段目は form にして、欠勤のメモの Enter で主ボタン［この案で決める］と同じ（PRD D251）。種類を選んでも form のまま
-      // （form と div を切り替えると中身が作り直され、押したボタンのフォーカスが消える）
-      onSubmit={
-        step === 1
-          ? () => {
-              if (kind === 'staff' && s.preview?.hasBase && !s.blocked) void s.reassignNow(s.recommended);
-            }
-          : undefined
-      }
+      // 1段目は form にして、欠勤のメモの Enter で主ボタンと同じ（［この案で決める］、担当のある訪問が無い日は［欠勤だけ登録］。PRD D251）。
+      // 種類を選んでも form のまま（form と div を切り替えると中身が作り直され、押したボタンのフォーカスが消える）
+      onSubmit={step === 1 ? s.submit : undefined}
     >
       <div className="stack sudden-panel" style={{ gap: 12 }} data-testid="sudden-panel" data-step={step}>
         {body}

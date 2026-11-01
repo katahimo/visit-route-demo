@@ -24,7 +24,7 @@
 - 段の状態と処理は `useSuddenSteps`（props の型 `SuddenPanelProps`・`SuddenInit` もここ。欠勤の入力と見込みは中の `useAbsenceInput`）、段ごとの中身と下の帯は `suddenSteps.tsx` の `whatStep`（1段目）と `suddenContactStep.tsx` の `contactStep`（2段目）（どちらも `{ body, footer }` を返す）
 - 段・起きたこと・人・欠勤の入力・訪問・取り消しの種類・済んだこと・2段目の［連絡した］の印は欄の中の状態（［連絡した］はデータに残さない）
 - 段の表示は無い。段の見出し（`h3.sudden-step-title`・`data-return-focus`。1段目「何が起きたか」・2段目「変更を伝えて確定する」＝`SUDDEN_HEADINGS`）へ `focusKey`（段）でフォーカス
-- 1段目は `onSubmit` を渡して form にする（欠勤のメモの Enter で［この案で決める］と同じ。PRD D251）。種類を選んでも form のまま（form と div を切り替えると中身が作り直され、押したボタンのフォーカスが消える）
+- 1段目は `onSubmit` を渡して form にする（欠勤のメモの Enter で主ボタンと同じ：［この案で決める］、担当のある訪問が無い日は［欠勤だけ登録］。`lib/sudden` の `suddenPrimary`。PRD D251）。種類を選んでも form のまま（form と div を切り替えると中身が作り直され、押したボタンのフォーカスが消える）
 - 閉じる（`sudden-close`。1段目の帯）。Esc で閉じると入口へフォーカス。`onClose(toBar)`：振り直したあと Esc で閉じれば差の欄へ（`returnFocus` と `goToBar`）。「あとで確定する」「連絡したので確定」は差の欄へ移らない。戻る段は無い（決めたあとは「振り直す前に戻す」）
 - 振り直し・欠勤だけ登録・欠勤の取り消し・取り消し・確定・振り直す前に戻すは日の予定の関数を呼ぶだけ。2段目の振り直しの結果（`ReassignResultBox`＝`ReassignSummary`・`ReassignMoves`・`AnnealBox`）は `result`、連絡の一覧は `contacts`（`ContactRow[]`。差を出せなければ null）、〈スタッフ〉あてのメールは `contactMail`（メールが切なら渡さない）、案B の「変更を減らす」は `weight`・`onWeight`（差の欄の案B と同じ値）で受ける
 - エキスパート機能が切なら確定の段階を出さない：2段目の「連絡したので確定」「あとで確定する」と確定の状態の文は出さず（`confirmNote` の `confirmStep`。変更ありのときだけ「連絡の一覧で『連絡した』を押す」案内）、帯は「終わる」だけ。振り直しは store の `update` が自動で伝えた記録を付ける／伝えた日なら「変更あり」になる
@@ -47,7 +47,7 @@
 
 #### 1段目の見込みとボタン（PRD D264・D265・D414）
 
-- 見込みは `lib/planReassign` の `absencePreviewOf(data, date, absence)`（人と時間を選んだ時点で計算。メモは key に入れない。`attempt` で包む）：振り直す訪問（`targetsOf`）・元の案の有無・案A（`reassign`）で入らない件数・案A の差（`reassignDiff`）。`aria-live="polite"`（`absence-preview`）
+- 見込みは `lib/planReassign` の `absencePreviewOf(data, date, absence)`（人と時間を選んだ時点で計算。メモは key に入れない。`attempt` で包む）：振り直す訪問（`targetsOf`）・元の案の有無・案A（`reassign`）で入らない件数・案A の差（`reassignDiff`）。読み上げは前から置いておく小さな欄（`sudden-live`。`.sr-only`・`aria-live="polite"`）に見込みの1行（`lib/sudden` の `previewLine`）だけを出す（ボタン・「ほかのやり方」を含む中身 `absence-preview` は読み上げの欄にしない）。［この案で決める］の計算中（`busy`・`running`）は種類・人・訪問の選択・欠勤の時間とメモ（`AbsenceFields` の `fieldset disabled`）を押せない
 - `impactText(targets).title`：「入らなくなる訪問 N件」（`sudden-impact`）。無ければ「入らなくなる訪問はありません」
 - おすすめの1行（`sudden-recommend`。振り直す訪問があるとき）：案A で入らない見込みがあれば（`recommendAnneal({ hasBase, unplacedA })`）「おすすめ：案A では N件入りません。決めたあと、ほかの人の訪問も少し動かす案B を作って比べます」、無ければ「おすすめ：空き時間に入れます（案A。ほかの人の担当・順番・時刻は変えません）」
 - 担当が移る訪問の一覧（`ReassignMoves`。案A の差。入らない訪問は赤い縁）
@@ -59,7 +59,7 @@
 #### 2段目の連絡
 
 - 1人に1枚（`sudden-contacts` の `sudden-contact`。`data-to`＝`staff|client`・`data-kinds`）：宛名・種類の印（担当が外れる・新しく入る（`chip-move`）・時刻が変わる（`chip-warn`）・中止、〈利用者さん〉は「〈利用者さん〉あて」）・初めての訪問先の印「初めて」（`sudden-contact-first`。`ContactRow.first`）・連絡文（`sudden-contact-text`）・［文をコピー］（`sudden-contact-copy`。`copyText` とトースト）・〈スタッフ〉あての「メール」（`MailButton`・`MailLengthNote`。`sudden-contact-mail`。件名は `contactMailText`）・［連絡した］（`sudden-contact-sent`。印の鍵は宛先と文なので、文が変われば消える）
-- 初めての訪問先（PRD D415）：新しく入る〈スタッフ〉がその〈利用者さん〉を過去8週（前日まで）に担当していなければ、「お願いします」の行の末に「初めての訪問先です。」、下の行に決まりごと（「　入り方：…」「　鍵：…」「　駐車場：…」「　注意：…」。入っている項目だけ。訪問先の決まりごとの機能が切なら印だけ）。判定は `lib/firstVisit` の `servedPairsBefore(data, date)`（`visitsIn` の取り消していない担当のある回）と `isFirstVisit`、行は `visitRuleLines`。`usePlanPage` が `served` を作り `dayContactWords({ served, notesOn })` の `firstNotes` に渡す（差の欄の連絡の一覧も同じ文）
+- 初めての訪問先（PRD D415）：新しく入る〈スタッフ〉がその〈利用者さん〉を過去8週（前日まで）に担当していなければ、「お願いします」の行の末に「初めての訪問先です。」、下の行に決まりごと（「　入り方：…」「　鍵：…」「　駐車場：…」「　注意：…」。入っている項目だけ。訪問先の決まりごとの機能が切なら印だけ）。判定は `lib/firstVisit` の `servedPairsBefore(data, date)`（`visitsIn` の取り消していない担当のある回）と `isFirstVisit`、行は `visitRuleLines`。`usePlanPage` が `served` を作り、欄の連絡にだけ `withFirstNotes(dayContactWords(…), { served, clientById, notesOn })`（`firstNotes` は `lib/firstVisit` の `firstVisitNotes`）を渡す。日の予定の連絡の一覧・すべての連絡文のコピー・メールは `dayContactWords` のままで決まりごとを添えない。項目と名前の並びは `lib/visitRules` の `VISIT_RULES`（`components/VisitRules`・`lib/mail` も同じ）
 - 上に説明（欠勤とキャンセルで分ける）と、欠勤の人に残る訪問があれば「欠勤の人に残る訪問 N件（連絡文には入りません。日の予定で確かめてください）」（`sudden-contacts-left`。`leftCount`）、「連絡した N/M人」（`sudden-contacts-count`。`aria-live`）。行が無ければ「連絡が要る変更はありません。」、差を出せなければ「日の予定の「連絡の一覧」で確かめてください」（`sudden-contacts-none`）
 - 帯は「連絡したので確定」（`sudden-adopt`。塗り）・「あとで確定する」（`sudden-finish`。枠。確定済みなら「終わる」が主ボタン）。行の［文をコピー］・メールは枠の小さなボタン、［連絡した］はチェック
 - 日の予定（`PlanPage`）が作る：

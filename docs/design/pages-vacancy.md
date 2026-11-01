@@ -13,7 +13,7 @@
 
 | 段階 | 要素（data-testid） | 中身 |
 |---|---|---|
-| 1 いつ・何を | `vacancy-step-when` | チップ3行（`aria-pressed`）：曜日 `wish-days`（複数。選ばない＝どの曜日でも）・時間帯 `wish-bands`（指定なし／午前 8:00〜12:00／午後 12:00〜17:00／夕方 17:00〜20:00。複数可）・所要 `duration-chips`（30／45／60／90分）。その下に「くわしい条件 ▾」（`details` `vacancy-more`・開く `vacancy-more-toggle`。閉じて始め、開け閉めは覚えない）：種類 `vacancy-type`（選ぶと所要の初期値。選ばないときは「指定なし」）・所要 `vacancy-duration`（ほかの分）・開始の幅（から `wish-from`／まで `wish-to`。30分刻み。変えると時間帯は指定なしに戻る）・週の回数・開始日（初期値：今日）・見る週の数（1〜8、初期値4）・〈スタッフ〉の条件（`components/conditions.tsx`）。入力の誤りの文はチップの下（閉じていても見える） |
+| 1 いつ・何を | `vacancy-step-when` | チップ3行（`aria-pressed`）：曜日 `wish-days`（複数。選ばない＝どの曜日でも）・時間帯 `wish-bands`（指定なし／午前 8:00〜12:00／午後 12:00〜17:00／夕方 17:00〜20:00。複数可）・所要 `duration-chips`（30／45／60／90分）。その下に「くわしい条件 ▾」（`details` `vacancy-more`・開く `vacancy-more-toggle`。閉じて始め、開け閉めは覚えない。中の入力に誤りがあれば開く）：種類 `vacancy-type`（選ぶと所要の初期値。選ばないときは「指定なし」）・所要 `vacancy-duration`（ほかの分）・開始の幅（から `wish-from`／まで `wish-to`。30分刻み。変えると時間帯は指定なしに戻る）・週の回数・開始日（初期値：今日）・見る週の数（1〜8、初期値4）・〈スタッフ〉の条件（`components/conditions.tsx`）。入力の誤りの文はチップの下（閉じていても見える） |
 | 2 場所（任意） | `vacancy-step-place` | `details`。はじめ畳み、要約の行 `vacancy-place-line`（`placeLine`）・開く `vacancy-place-toggle`。summary の見出しは h2。`AddressField` は閉じても置いたまま |
 | 3 受けられる曜日・時間帯 | `vacancy-table-card` | 見出しに「目安（移動を前後15分で見込む）」か「〈場所〉への移動を含む」・答えのカード `vacancy-answer`（一番上。中に答える文 `inquiry-summary` と主ボタン「要約をコピー」`copy-summary`）・`vacancy-when-line`（`whenWhatLine`）・数えなかった日・担当なしの日の注意 `vacancy-noplan`・「詳しく ▾」（`DetailsFold`。testId `vacancy-details`・screen は `vacancy`＝開け閉めを `details:vacancy` で端末に覚える。閉じて始める）の中に 曜日×週のマス（`InquiryWeeks`）・小見出し「曜日・開始時刻ごとの表」・凡例（`vacancy-legend`：印 `vacancy-mark-legend`・色 `level-legend`（`VACANCY_LEGEND`。「0人（受けられない）」は薄い灰）・数字の読み方と `Term`（`vacancyCount`、場所が無いときだけ `vacancyEstimate`））・表 |
 | 4 次の一手 | `vacancy-step-next` | `inquiry-card`（「この問い合わせを押さえる」：「仮の〈利用者さん〉として押さえる」`hold-open`（従のボタン）・できないときの理由 `hold-why`）と `notice-card`（空き枠の案内文。`details`。見出しは h3） |
@@ -39,7 +39,7 @@
 
 #### 答えのカード・凡例
 
-- `vacancy-answer`（`data-tone`＝`ok`／`partial`／`ng`／`unknown`。答えの2行は `role="status"` の箱で、条件を変えると読み上げる（ボタンは入れない）。`answerCard`。結果は時間帯のチップの外のマスを除いたもの）：大きい文字で「受けられます：火・木 10:00〜12:00 に 3人」。時刻は ○ の開始時刻を曜日ごとに続いた範囲に（同じ時間の曜日はまとめる）、人数はその ○ のマスのどの週でも受けられる人数の幅（目安は「約」）。○ の曜日が週の回数より少なければ「週N回には足りません」、○ が無く △ があれば「受けられない週があります」、どちらも無ければ「受けられません」、始められる時刻が無ければ「受けられません：希望の時間帯に始められる時刻がありません」、案が無ければ「案が無く数えられません」。？ の曜日が混ざれば補いに「〈曜日〉は案が無く数えていません」。曜日は月曜はじめ。色は ok＝緑・partial＝黄・それ以外＝灰（赤にしない）。カードの中に答える文 `inquiry-summary`（白地）と主ボタン「要約をコピー」
+- `vacancy-answer`（`data-tone`＝`ok`／`partial`／`ng`／`unknown`。答えの2行は `role="status"` の箱で、条件を変えると読み上げる（ボタンは入れない）。`answerCard`。結果は時間帯のチップの外のマスを除いたもの）：大きい文字で「受けられます：火・木 10:00〜12:00 に 3人」。時刻は ○ の開始時刻を曜日ごとに続いた範囲に（同じ時間の曜日はまとめる）、人数はその ○ のマスのどの週でも受けられる人数の幅（目安は「約」）。○ の曜日が週の回数より少なければ「週N回には足りません」、○ が無く △ があれば「受けられない週があります」、どちらも無ければ「受けられません」、始められる時刻が無ければ「受けられません：希望の時間帯に始められる時刻がありません」、案が無ければ「案が無く数えられません」。？ の曜日が混ざれば補いに「〈曜日〉は案が無く数えていません」。曜日は月曜はじめ。色は ok＝緑・partial＝黄・それ以外＝灰（赤にしない）。カードの中に答える文 `inquiry-summary`（白地。読み上げの欄にしない `p`。読み上げは答えの2行の `role="status"` だけ）と主ボタン「要約をコピー」
 - 凡例は「詳しく ▾」の中の表の上の1か所（`vacancy-legend`）：印（○△×？の見本と読み方）・色（人数の段階）・「○ の数字は受けられる人数」と、週ごとのマスも同じ印と色・行の頭は一番良い開始時刻・マスを押すと日付ごとの人
 
 #### 担当なしの訪問がある日
@@ -56,9 +56,9 @@
 
 #### 時間帯のチップと問い合わせの試算
 
-- `lib/vacancyBands.ts`（純粋関数。テストあり）：`WISH_BANDS`・`DURATION_CHIPS`・`toggleBand`・`bandSpans`（開始の幅。from ≦ 開始 < to。接する帯はつなぐ）・`wishWindow`・`inBands`・`startRangeText`・`bandInquiry`
+- `lib/vacancyBands.ts`（純粋関数。テストあり）：`WISH_BANDS`・`DURATION_CHIPS`・`defaultWishRange`・`rangeAfterDuration`・`toggleBand`・`bandSpans`（開始の幅。from ≦ 開始 < to。接する帯はつなぐ）・`wishWindow`・`inBands`・`startRangeText`・`bandInquiry`
 - 時間帯は開始の時刻の幅で、終わりの時刻は含まない（午前は 11:30 開始まで。12:00 開始は午後）。契約の `InquiryWish` は幅1つなので、選んだ帯の端から端を幅にし、帯の外のマスを結果から除いて（`inBands`。時刻の列は残す）答えのカード・要約・仮押さえ・週ごとのマスに渡す（`bandInquiry`）。つながらない帯（午前と夕方）は範囲を分けて書く（「火 11:30、17:00」）。表は除かない元の結果
-- 時間帯を選ばなければ、くわしい条件の開始の幅（両端を含む。既定 9:00〜17:00）
+- 時間帯を選ばなければ（「指定なし」）、くわしい条件の開始の幅（両端を含む。既定は時間帯のチップの全体で 8:00 から、所要を足して 20:00 に収まる開始まで：`defaultWishRange`。所要を変えたら、幅が既定のままなら新しい所要の既定にする：`rangeAfterDuration`。前の既定 9:00〜17:00 で覚えた入力はそのまま読む）
 - 要約（`inquirySummary`）と「要約をコピー」（`lib/clipboard` の `copyText`）
 - 曜日×週のマス（`InquiryWeeks`。`lib/glance` の `inquiryRows`・`inquiryDayLevel`）：○ のあとに人数、行の頭に ○△×？と開始時刻
 - 曜日を変えるとすぐ結果

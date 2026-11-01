@@ -23,26 +23,19 @@ export type AbsenceBase = {
 export type AbsenceReassign = AbsenceBase & { targets: ReassignTarget[]; result: ReassignResult };
 
 /** 手順の前半（compile に失敗すると投げる） */
-export function absenceBaseOf(data: DemoData, date: string, absence: Absence): AbsenceBase {
+function absenceBaseOf(data: DemoData, date: string, absence: Absence): AbsenceBase {
   const d = saveAbsence(data, absence);
   const problem = compile(d, date);
   return { data: d, problem, base: baseOf(d, date, problem), absences: absencesOn(d, date) };
 }
 
 /** 振り直しの元の案に担当のある訪問があるか（無ければ振り直せない） */
-export const hasBase = (b: Pick<AbsenceBase, 'base'>): boolean =>
-  Object.values(b.base.routes).some((ids) => ids.length > 0);
+const hasBase = (b: Pick<AbsenceBase, 'base'>): boolean => Object.values(b.base.routes).some((ids) => ids.length > 0);
 
 /**
- * 手順の後半：振り直す訪問（targetsOf）と振り直した結果（reassign。案A）。
+ * 手順の後半：振り直す訪問（targetsOf）と振り直した結果（reassign。案A）と、振り直す前の並び（見込みの差に使う）。
  * 振り直す前の時刻（欠勤と重なるか）は、その日の欠勤を除いた問題で出す
  */
-export function reassignFrom(b: AbsenceBase, date: string): Pick<AbsenceReassign, 'targets' | 'result'> {
-  const { targets, result } = reassignWithBefore(b, date);
-  return { targets, result };
-}
-
-/** 手順の後半と、振り直す前の並び（その日の欠勤を除いた問題と元の案。見込みの差に使う） */
 function reassignWithBefore(b: AbsenceBase, date: string) {
   const absent = [...new Set(b.absences.map((a) => a.staffId))];
   const before = { problem: compile(withoutAbsencesOn(b.data, date), date), routes: b.base.routes };
@@ -53,7 +46,8 @@ function reassignWithBefore(b: AbsenceBase, date: string) {
 /** 欠勤を足して振り直す（前半と後半。失敗すると投げる。呼ぶ側は attempt で包む） */
 export function planReassign(data: DemoData, date: string, absence: Absence): AbsenceReassign {
   const b = absenceBaseOf(data, date, absence);
-  return { ...b, ...reassignFrom(b, date) };
+  const { targets, result } = reassignWithBefore(b, date);
+  return { ...b, targets, result };
 }
 
 /** 欠勤の見込み（「欠勤・キャンセル」の欄の1段目。PRD D414） */

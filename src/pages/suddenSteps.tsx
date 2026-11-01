@@ -5,7 +5,7 @@ import { Ban, CalendarX2, Check, Trash2, UserRoundX, X } from 'lucide-react';
 import { WithIcon } from '../components/ui';
 import type { Terms } from '../contracts/documents';
 import { absenceText } from '../lib/absences';
-import { cancelImpact, impactText, noPlanText, SUDDEN_HEADINGS, type SuddenKind } from '../lib/sudden';
+import { cancelImpact, impactText, noPlanText, previewLine, SUDDEN_HEADINGS, type SuddenKind } from '../lib/sudden';
 import { AbsenceFields, ReassignMoves } from './absenceParts';
 import { StayWeight } from './reassignParts';
 import type { StepCtx, StepView } from './useSuddenSteps';
@@ -28,10 +28,13 @@ function KindChoice({
   terms,
   kind,
   onChoose,
+  disabled,
 }: {
   terms: Terms;
   kind: SuddenKind | null;
   onChoose: (k: SuddenKind) => void;
+  /** 計算中は選び直させない */
+  disabled: boolean;
 }) {
   const items = [
     { k: 'staff', icon: UserRoundX, text: `${terms.staff}が休む` },
@@ -45,6 +48,7 @@ function KindChoice({
           type="button"
           aria-pressed={kind === x.k}
           className={kind === x.k ? 'is-on' : ''}
+          disabled={disabled}
           onClick={() => onChoose(x.k)}
           data-testid={`sudden-kind-${x.k}`}
         >
@@ -61,7 +65,7 @@ export function whatStep(ctx: StepCtx): StepView {
   const body = (
     <>
       {stepHeading(SUDDEN_HEADINGS[1])}
-      <KindChoice terms={p.terms} kind={s.kind} onChoose={s.chooseKind} />
+      <KindChoice terms={p.terms} kind={s.kind} onChoose={s.chooseKind} disabled={s.locked} />
       {s.kind === 'staff' ? staffBody(ctx) : s.kind === 'client' ? clientBody(ctx) : null}
     </>
   );
@@ -71,14 +75,14 @@ export function whatStep(ctx: StepCtx): StepView {
 
 /** 欠勤だけ登録（振り直さない）。振り直せない日は主ボタン */
 function saveOnlyButton({ p, s }: StepCtx, primary: boolean) {
-  const { absence, error, busy, withId } = s;
+  const { absence, error, locked, saveOnlyNow } = s;
   return (
     <button
       type="button"
       className={primary ? 'btn btn-primary' : 'btn btn-text'}
-      disabled={!absence || !!error || busy || p.running}
+      disabled={!absence || !!error || locked}
       title={p.running ? '計算中は押せません' : undefined}
-      onClick={() => absence && p.onSaveOnly(withId(absence))}
+      onClick={saveOnlyNow}
       data-testid="sudden-save-only"
     >
       欠勤だけ登録（振り直さない）
@@ -90,7 +94,7 @@ function saveOnlyButton({ p, s }: StepCtx, primary: boolean) {
 function staffBody(ctx: StepCtx) {
   const { p, s } = ctx;
   const { terms, staffList, date, onRemoveAbsence } = p;
-  const { staffId, pickStaff, draft, setDraft, baseSlots, existing, error, busy, guarded } = s;
+  const { staffId, pickStaff, draft, setDraft, baseSlots, existing, error, busy, locked, guarded } = s;
   return (
     <>
       {staffList.length === 0 ? (
@@ -98,7 +102,12 @@ function staffBody(ctx: StepCtx) {
       ) : (
         <label className="field">
           <span className="field-label">休む人</span>
-          <select value={staffId} onChange={(e) => pickStaff(e.target.value)} data-testid="sudden-staff">
+          <select
+            value={staffId}
+            disabled={locked}
+            onChange={(e) => pickStaff(e.target.value)}
+            data-testid="sudden-staff"
+          >
             <option value="">選んでください</option>
             {staffList.map((x) => (
               <option key={x.id} value={x.id}>
@@ -140,9 +149,14 @@ function staffBody(ctx: StepCtx) {
           baseSlots={baseSlots}
           date={date}
           error={error}
+          disabled={locked}
         />
       )}
       {staffId && !error && absencePlan(ctx)}
+      {/* 見込みの1行だけを読み上げる（前から置いておく小さな欄。ボタン・「ほかのやり方」を含む中身ごとは読み上げない） */}
+      <p className="sr-only" aria-live="polite" data-testid="sudden-live">
+        {previewLine(staffId && !error ? s.preview : undefined, p.running)}
+      </p>
     </>
   );
 }
@@ -151,21 +165,16 @@ function staffBody(ctx: StepCtx) {
 function absencePlan(ctx: StepCtx) {
   const { p, s } = ctx;
   const { preview, recommended, blocked } = s;
-  if (!preview)
-    return (
-      <p className="sub" aria-live="polite">
-        見込みを出せませんでした
-      </p>
-    );
+  if (!preview) return <p className="sub">見込みを出せませんでした</p>;
   if (!preview.hasBase)
     return (
-      <p className="warn-text" aria-live="polite" data-testid="sudden-no-plan">
+      <p className="warn-text" data-testid="sudden-no-plan">
         {noPlanText(p.running)}
       </p>
     );
   const impact = impactText(preview.targets);
   return (
-    <div className="stack sudden-plan" style={{ gap: 8 }} aria-live="polite" data-testid="absence-preview">
+    <div className="stack sudden-plan" style={{ gap: 8 }} data-testid="absence-preview">
       <strong className="sudden-impact" data-testid="sudden-impact">
         {impact.title}
       </strong>
@@ -213,10 +222,13 @@ function reassignButton({ s }: StepCtx, anneal: boolean, primary: boolean) {
 
 function staffFooter(ctx: StepCtx) {
   const { s } = ctx;
-  const canReassign = !!s.preview?.hasBase;
   return (
     <>
-      {canReassign ? reassignButton(ctx, s.recommended, true) : s.staffId ? saveOnlyButton(ctx, true) : null}
+      {s.primary === 'reassign'
+        ? reassignButton(ctx, s.recommended, true)
+        : s.primary === 'saveOnly'
+          ? saveOnlyButton(ctx, true)
+          : null}
       {closeButton(s.close)}
     </>
   );
@@ -225,7 +237,7 @@ function staffFooter(ctx: StepCtx) {
 /** 〈利用者さん〉がキャンセル：訪問・取り消しの種類・影響 */
 function clientBody({ p, s }: StepCtx) {
   const { terms, visitList, visitInfo, hasPlan } = p;
-  const { visitId, setVisitId, sameDay, setSameDay } = s;
+  const { visitId, setVisitId, sameDay, setSameDay, locked } = s;
   const info = visitId ? visitInfo(visitId) : null;
   return (
     <>
@@ -234,7 +246,12 @@ function clientBody({ p, s }: StepCtx) {
       ) : (
         <label className="field">
           <span className="field-label">訪問</span>
-          <select value={visitId} onChange={(e) => setVisitId(e.target.value)} data-testid="sudden-visit">
+          <select
+            value={visitId}
+            disabled={locked}
+            onChange={(e) => setVisitId(e.target.value)}
+            data-testid="sudden-visit"
+          >
             <option value="">選んでください</option>
             {visitList.map((v) => (
               <option key={v.id} value={v.id}>
@@ -244,7 +261,7 @@ function clientBody({ p, s }: StepCtx) {
           </select>
         </label>
       )}
-      <fieldset className="stack cancel-kind" style={{ gap: 6 }}>
+      <fieldset className="stack cancel-kind" style={{ gap: 6 }} disabled={locked}>
         <legend>取り消しの種類</legend>
         <label className="check">
           <input

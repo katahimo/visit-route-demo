@@ -1,9 +1,11 @@
 // 初めての訪問先（PRD D415。ADR-0082）：〈スタッフ〉がその〈利用者さん〉を過去8週に担当していなければ「初めて」。
-// 連絡文・日の予定の訪問の詳細・スマホ画面に、決まりごと（D66）を添えるかの判定と、決まりごとの行。純粋関数（データは書き換えない）
+// 欠勤・キャンセルの欄の連絡文に決まりごと（D66。lib/visitRules）を添えるか、日の予定の訪問の詳細・スマホ画面に「初めて」の印を付けるかの判定。
+// 純粋関数（データは書き換えない）
 import type { DemoData } from '../contracts/data';
 import type { Client } from '../contracts/documents';
 import { addDays } from '../domain/time';
 import { visitsIn } from '../patterns';
+import { type VisitRuleKey, type VisitRuleLine, visitRuleLines } from './visitRules';
 
 /** 担当の履歴を見る長さ（週） */
 export const FIRST_VISIT_WEEKS = 8;
@@ -28,23 +30,14 @@ export function servedPairsBefore(data: Pick<DemoData, 'visits' | 'patterns' | '
 export const isFirstVisit = (served: ServedPairs, clientId: string, staffId: string): boolean =>
   !served.has(pairKey(clientId, staffId));
 
-/** 決まりごとの項目（入り方・鍵・駐車場・注意。D66 の並び） */
-const RULES = [
-  ['entryNote', '入り方'],
-  ['keyNote', '鍵'],
-  ['parkingNote', '駐車場'],
-  ['cautionNote', '注意'],
-] as const;
-
-export type VisitRuleKey = (typeof RULES)[number][0];
-
-export type VisitRuleLine = { label: string; text: string };
-
-/** 決まりごとの行（入っている項目だけ。改行は空白にして1行に） */
-export function visitRuleLines(c: Pick<Client, VisitRuleKey> | null | undefined): VisitRuleLine[] {
-  if (!c) return [];
-  return RULES.filter(([k]) => c[k].trim() !== '').map(([k, label]) => ({
-    label,
-    text: c[k].trim().replace(/\s*\n\s*/g, ' '),
-  }));
+/**
+ * 初めての訪問先に添える決まりごと（D415。欠勤・キャンセルの欄の連絡文の「お願いします」の行）：初めてなら決まりごとの行
+ * （入っている項目だけ。決まりごとを切っていれば空＝印だけ）、過去8週に担当していれば null
+ */
+export function firstVisitNotes(
+  served: ServedPairs,
+  x: { clientId: string; staffId: string; client: Pick<Client, VisitRuleKey> | undefined; notesOn: boolean },
+): VisitRuleLine[] | null {
+  if (!isFirstVisit(served, x.clientId, x.staffId)) return null;
+  return x.notesOn ? visitRuleLines(x.client) : [];
 }

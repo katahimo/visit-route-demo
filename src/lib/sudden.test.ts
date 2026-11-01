@@ -12,10 +12,12 @@ import {
   draftOfTime,
   impactText,
   noPlanText,
+  previewLine,
   reassignBlocked,
   reassignMoveRows,
   recommendAnneal,
   staffChoices,
+  suddenPrimary,
   visitChoices,
 } from './sudden';
 
@@ -47,6 +49,29 @@ describe('absenceTimeOf・draftOfTime（欠勤の時間の選び方。PRD D414�
       note: 'メモ',
     });
     expect(draftOfTime(d, 'am').note).toBe('メモ');
+  });
+});
+
+describe('suddenPrimary（1段目の主ボタンとメモの Enter。PRD D251）', () => {
+  it('担当のある訪問がある日は［この案で決める］', () => {
+    expect(suddenPrimary({ kind: 'staff', staffId: 's1', hasBase: true })).toBe('reassign');
+  });
+  it('担当のある訪問が無い日は［欠勤だけ登録］（人を選んでいれば）', () => {
+    expect(suddenPrimary({ kind: 'staff', staffId: 's1', hasBase: false })).toBe('saveOnly');
+    expect(suddenPrimary({ kind: 'staff', staffId: '', hasBase: false })).toBeNull();
+  });
+  it('キャンセル・種類を選ぶ前は何もしない', () => {
+    expect(suddenPrimary({ kind: 'client', staffId: '', hasBase: false })).toBeNull();
+    expect(suddenPrimary({ kind: null, staffId: '', hasBase: false })).toBeNull();
+  });
+});
+
+describe('previewLine（見込みの1行の読み上げ）', () => {
+  it('見込みを出す前は空・作れなければその旨・担当のある訪問が無い日・入らなくなる件数', () => {
+    expect(previewLine(undefined, false)).toBe('');
+    expect(previewLine(null, false)).toBe('見込みを出せませんでした');
+    expect(previewLine({ hasBase: false, targets: [] }, true)).toBe(noPlanText(true));
+    expect(previewLine({ hasBase: true, targets: [{ reason: 'absence' }] }, false)).toBe('入らなくなる訪問 1件');
   });
 });
 

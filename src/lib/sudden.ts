@@ -144,6 +144,20 @@ export function impactText(targets: readonly Pick<ReassignTarget, 'reason'>[]): 
 }
 
 /**
+ * 見込みの1行（1段目の読み上げの小さな欄に出す。PRD D414）。見込みが無い（人・時間を選んでいない・入力の誤り）なら空。
+ * 見込みを作れなかった・担当のある訪問が無い日・入らなくなる訪問の件数のどれか
+ */
+export function previewLine(
+  preview: { hasBase: boolean; targets: readonly Pick<ReassignTarget, 'reason'>[] } | null | undefined,
+  running: boolean,
+): string {
+  if (preview === undefined) return '';
+  if (preview === null) return '見込みを出せませんでした';
+  if (!preview.hasBase) return noPlanText(running);
+  return impactText(preview.targets).title;
+}
+
+/**
  * ［この案で決める］を押せない理由（押せれば null）。入力の誤り → 計算中 → 見込みを出せない → 案が無い の順。
  * 案が無い日は欠勤だけ登録できる（PRD D26・D169）
  */
@@ -158,6 +172,19 @@ export function reassignBlocked(i: {
   if (!i.hasPreview) return '見込みを出せませんでした';
   if (!i.hasBase) return 'この日はまだ担当のある訪問がありません。欠勤だけ登録できます';
   return null;
+}
+
+/** 1段目の主ボタン（下の帯の濃い朱）と、メモの Enter でする操作：reassign＝［この案で決める］・saveOnly＝［欠勤だけ登録］・null＝何もしない */
+export type SuddenPrimary = 'reassign' | 'saveOnly' | null;
+
+/**
+ * 1段目の主ボタンが何か（〈スタッフ〉が休むのとき。PRD D251・D414）。担当のある訪問がある日（hasBase）は［この案で決める］、
+ * 人を選んでいて担当のある訪問が無い日（見込みを出せない日も）は［欠勤だけ登録］
+ */
+export function suddenPrimary(i: { kind: SuddenKind | null; staffId: string; hasBase: boolean }): SuddenPrimary {
+  if (i.kind !== 'staff') return null;
+  if (i.hasBase) return 'reassign';
+  return i.staffId ? 'saveOnly' : null;
 }
 
 /**

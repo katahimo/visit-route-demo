@@ -8,7 +8,7 @@ import { useToast } from '../components/Toast';
 import { useConfirmStep, useFeature } from '../components/useFeature';
 import { useRouteSelection } from '../components/useRouteSelection';
 import { useToldEntry } from '../components/useToldEntry';
-import { dayContactWords } from '../lib/contacts';
+import { dayContactWords, withFirstNotes } from '../lib/contacts';
 import { servedPairsBefore } from '../lib/firstVisit';
 import { contactMailText, mailTo } from '../lib/mail';
 import { usePlanData } from './usePlanData';
@@ -92,9 +92,10 @@ export function usePlanPage() {
   const drag = usePlanDrag({ owner: d.owner, running, moveTo: edits.moveTo, unassign: edits.unassign });
   /** この端末の mailto の長さの目安（ADR-0017） */
   const mailLimit = useMailLimit();
-  /** 過去8週に担当した組（初めての訪問先の印と決まりごと。PRD D415） */
+  /** 過去8週に担当した組（初めての訪問先の印と、欠勤・キャンセルの欄の連絡に添える決まりごと。PRD D415） */
   const served = useMemo(() => servedPairsBefore(d.data, date), [d.data, date]);
   const contact = {
+    /** 日の予定の連絡の一覧・すべての連絡文・メールの言葉（決まりごとは添えない。D415） */
     words: dayContactWords({
       date,
       staffWord: d.terms.staff,
@@ -102,8 +103,6 @@ export function usePlanPage() {
       staffName: d.staffName,
       clientById: d.clientById,
       visits: d.m.allVisits,
-      served,
-      notesOn: f.notesOn,
     }),
     /** 〈スタッフ〉あての連絡のメール（PRD D94。メールを切っていれば出さない） */
     staffMail: f.mailOn
@@ -139,7 +138,8 @@ export function usePlanPage() {
       told: d.told,
       toldState: d.toldState,
     },
-    contactWords: contact.words,
+    // 欠勤・キャンセルの欄の連絡（振り直しで新しく入る人）だけ、初めての訪問先に決まりごと（鍵を含む）を添える（D415）
+    contactWords: withFirstNotes(contact.words, { served, clientById: d.clientById, notesOn: f.notesOn }),
     applyCancel: edits.applyCancel,
     adopt: confirm.adopt,
     confirmStep: f.confirmStep,
