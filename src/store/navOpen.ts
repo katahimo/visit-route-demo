@@ -61,10 +61,11 @@ export function createNavOpenMemory(getStorage: () => KeyStore | null) {
 }
 
 /**
- * 予定の画面ごとの「詳しく ▾」の開け閉めの鍵（月・週・日。入切で同じ。PRD D393）。開いて読み直すと開いたまま。
+ * 画面ごとの「詳しく ▾」の開け閉めの鍵（予定の月・週・日（PRD D393）と空き状況（PRD D412）。入切で同じ）。開いて読み直すと開いたまま。
  * 値が true なら開く（無ければ閉じて始める）。メニューの項目の鍵（nav 項目の key）とも、説明の鍵（intro:<画面>）とも重ならない
  */
-export const detailsOpenKey = (screen: 'month' | 'week' | 'day'): string => `details:${screen}`;
+export type DetailsScreen = 'month' | 'week' | 'day' | 'vacancy';
+export const detailsOpenKey = (screen: DetailsScreen): string => `details:${screen}`;
 
 /**
  * 〈利用者さん〉・〈スタッフ〉の一覧の「くわしい列」の切り替えの鍵（エキスパート機能が入のとき。PRD D394）。一覧ごとに端末に覚える。

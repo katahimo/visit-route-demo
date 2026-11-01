@@ -11,7 +11,7 @@ const path = require('node:path');
 const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, settle, hashOf, stored, runSteps } = require('./lib/env.cjs');
 const { planDays } = require('./lib/plan.cjs');
 const { openContext, pagePerStep } = require('./lib/steps.cjs');
-const { goTo } = require('./lib/ui.cjs');
+const { goTo, reveal } = require('./lib/ui.cjs');
 
 /** 「10/21」の形（月の要対応の日付の文） */
 const md = (d) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
@@ -386,7 +386,9 @@ async function availability(page) {
 // ---- D204 空き状況の右の欄 ----
 async function vacancy(page) {
   await prepare(page);
-  await open(page, '/vacancy', '[data-testid="vacancy-grid"]');
+  await open(page, '/vacancy', '[data-testid="vacancy-answer"]');
+  // 表は「詳しく ▾」の中（PRD D412）
+  await reveal(page, 'vacancy-grid');
   const cells = page.getByTestId('vacancy-cell');
   const n = await cells.count();
   let found = false;
