@@ -1,5 +1,5 @@
 // 訪問の帯・行を選ぶ・押す（PRD D339〜D341。ADR-0056）：Shift／Ctrl＋クリック・Shift／Ctrl＋Enter・スマホは長押しか「選ぶ」と、
-// キーで動かす・押して開く（visitParts から分けた）
+// キーで動かす・押して開く
 import {
   type ButtonHTMLAttributes,
   type KeyboardEvent,

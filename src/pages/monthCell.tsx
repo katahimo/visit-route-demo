@@ -325,7 +325,7 @@ export const DayCell = memo(function DayCell(props: CellProps) {
   });
   const { tipText, guide } = text;
   const guideKey = guide.join('\n');
-  // 描いたあとに、日付をキーに読み方の文を置く（吹き出しは日付で引く。描画中に DOM を読まない。PR #42 のレビュー）
+  // 描いたあとに、日付をキーに読み方の文を置く（吹き出しは日付で引く。描画中に DOM を読まない）
   // biome-ignore lint/correctness/useExhaustiveDependencies: 文（guideKey）が変わったときだけ置き直す
   useLayoutEffect(() => {
     ctx.tipStore.set(d, { head: longDate(d), text: tipText, lines: guide });

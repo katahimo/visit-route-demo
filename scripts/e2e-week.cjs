@@ -1,5 +1,5 @@
 // 週間の時間軸の「〈利用者さん〉で見る」のつなぎこみ（PRD D136〜D140。ADR-0024）を本物のブラウザで確かめる：
-// 表示の切り替えは1つ（PRD D188：4つの表示・古い ?view=・?by= の URL で同じ表示・押したときの URL・390px で2段まで）、
+// 表示の切り替えは1つ（PRD D188：4つの表示・?view=・?by= の組の URL で同じ表示・押したときの URL・390px で2段まで）、
 // 表からの引き継ぎ（絞り込みなし＝書かない・あり＝先頭8人）、9人目の上限の文、戻るボタンで選択が戻り上限の文が消える、
 // 畳む・「あと N人」（1400px・390px。選んでいる人はいつも見え、選んでいない人は2行まで。開いた状態は週を送っても表と行き来しても残る）、
 // 週を送ると その週の先頭8人（データを作って確かめる）、「ほかの人を探す」で選んだ この週に訪問の無い人がチップの後ろに出る。
@@ -39,7 +39,7 @@ async function expandChips(page) {
   await settle(page, 100);
 }
 
-/** 表示の切り替えは1つ（PRD D188）：4つの表示・古い URL で同じ表示・押すと今までのクエリで書く・390px で2段まで */
+/** 表示の切り替えは1つ（PRD D188）：4つの表示・?view=・?by= の組の URL で同じ表示・押したときのクエリ・390px で2段まで */
 const VIEW_IDS = ['by-staff', 'by-client', 'tab-table', 'tab-clients'];
 const pressedView = (page) =>
   page
@@ -73,7 +73,7 @@ async function views(page) {
     '「見る人」の2つ目の切り替えは無い',
   );
   check((await page.getByTestId('week-views').getAttribute('aria-label')) === '表示', '切り替えの名前は「表示」');
-  // 古い URL（?view= と ?by= の組み合わせ）で開いても今までと同じ表示
+  // ?view= と ?by= の組み合わせの URL で開いても同じ表示
   for (const [hash, want] of [
     ['/week', 'by-staff'],
     ['/week?by=client', 'by-client'],
@@ -96,12 +96,12 @@ async function views(page) {
     await settle(page, 300);
     const pressed = await pressedView(page);
     const shown = await shownView(page);
-    check(JSON.stringify(pressed) === JSON.stringify([want]) && shown === want, `古い URL ${hash} → ${want}`, {
+    check(JSON.stringify(pressed) === JSON.stringify([want]) && shown === want, `URL ${hash} → ${want}`, {
       pressed,
       shown,
     });
   }
-  // 押すと今までのクエリで書く（時間軸は ?view= を書かない・表では ?by= を消す）。?d= は残す
+  // 押すとクエリを書く（時間軸は ?view= を書かない・表では ?by= を消す）。?d= は残す
   await open(page, `/week?d=${NEXT_MON}`);
   const want = {
     'by-client': (u) => /by=client/.test(u) && !/view=/.test(u) && !/client=/.test(u.replace('by=client', '')),
@@ -137,7 +137,7 @@ async function views(page) {
   check((await shownView(page)) === 'tab-clients', '戻るで1つ前の表示に戻る');
   await page.screenshot({ path: path.join(OUT_DIR, 'week-views-1400.png') });
 
-  // 390px：切り替えは幅に収まり2段まで（前は 表示・見る人 で3段）
+  // 390px：切り替えは幅に収まり2段まで
   await page.setViewportSize({ width: 390, height: 844 });
   await open(page, '/week?by=client');
   const boxes = await page
@@ -194,7 +194,7 @@ async function handoff(page) {
   );
 }
 
-/** 表から「時間軸：スタッフ」へ移っても ?client= を書き、そのあと「時間軸：利用者さん」で引き継がれる（D139。PR #44 のレビュー） */
+/** 表から「時間軸：スタッフ」へ移っても ?client= を書き、そのあと「時間軸：利用者さん」で引き継がれる（D139） */
 async function handoffViaStaff(page) {
   await page.setViewportSize({ width: 1400, height: 1000 });
   await open(page, '/week?view=clients');
@@ -340,7 +340,7 @@ async function nextWeek(page) {
       const to = new Date(`${from}T00:00:00Z`);
       to.setUTCDate(to.getUTCDate() + 6);
       const end = to.toISOString().slice(0, 10);
-      // 版2：繰り返しの回は保存せず計算するので、その人の繰り返しを次の週の前の日で終わらせ、保存した回は取り消す
+      // 繰り返しの回は保存せず計算するので、その人の繰り返しを次の週の前の日で終わらせ、保存した回は取り消す
       const prev = new Date(`${from}T00:00:00Z`);
       prev.setUTCDate(prev.getUTCDate() - 1);
       const last = prev.toISOString().slice(0, 10);

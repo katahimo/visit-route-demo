@@ -11,16 +11,14 @@
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-panel-foot.cjs
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）
 // 終了コード：全部通れば 0、通らないものがあれば 1。ページのエラー（pageerror）も失敗に数える
-const path = require('node:path');
 const { skipTour } = require('./lib/tourSeen.cjs');
 const { answerConfirms } = require('./lib/confirmDialog.cjs');
-const { launch, BASE, OUT_DIR, NOW, TODAY, STORAGE_KEY, check, settle, runSteps } = require('./lib/env.cjs');
+const { launch, BASE, NOW, TODAY, STORAGE_KEY, check, settle, runSteps, shot } = require('./lib/env.cjs');
 const { guard, closeContext, firstLine } = require('./lib/steps.cjs');
 const { goTo, pressTool } = require('./lib/ui.cjs');
 
 const drawer = (page) => page.locator('.drawer');
 const sudden = (page) => page.getByTestId('sudden-panel');
-const shot = (page, name) => page.screenshot({ path: path.join(OUT_DIR, `${name}.png`) });
 
 // 画面を新しく開く（共通の手 goTo。待つ長さ・見出し・落ち着くまでの待ちはこの画面の e2e の既定）
 const open = (page, hash, ready) => goTo(page, hash, { ready: ready, timeout: 60000, h1: false, settleMs: 400 });
@@ -375,7 +373,7 @@ async function otherTabToast(page) {
 
 /**
  * 欄を開いたまま知らせを出す（訪問の詳細の欄を開いたまま、別のタブの変更の知らせ。文だけ）：
- * 390px は見出しに重ならず、知らせの下（欄の中）を押せる。1400px は欄をまたがない（PR #46 のレビュー）
+ * 390px は見出しに重ならず、知らせの下（欄の中）を押せる。1400px は欄をまたがない
  */
 async function toastWhileOpen(page, w) {
   await otherTabToast(page);

@@ -1,6 +1,6 @@
 # 時間帯のバーと一目で分かる表示（画面共通）
 
-> この部品のファイル：`src/lib/barRows.ts`・`staffBar.ts`・`glance.ts`・`dayLine.ts`、`src/components/loadBar.tsx`（`loadBar.css`）・`staffBar.tsx`・`workBars.tsx`（`workBars.css`）・`glance.tsx`（`glance.css`）・`dayLines.tsx`（`dayLines.css`）・`barMarks.css`。使う画面：月・週・日・空き状況・勤務の見込み。関連 ADR：0012 追記・0015。関連 PRD：D54・D60・D75〜D85・D228。
+> この部品のファイル：`src/lib/barRows.ts`・`staffBar.ts`・`glance.ts`・`dayLine.ts`、`src/components/loadBar.tsx`（`loadBar.css`）・`staffBar.tsx`・`workBars.tsx`（`workBars.css`）・`glance.tsx`（`glance.css`）・`dayLines.tsx`（`dayLines.css`）・`barMarks.css`。使う画面：月・週・日・空き状況・勤務の見込み。関連 ADR：0012・0015。関連 PRD：D54・D60・D75〜D85・D228。
 
 ### 3段の区切り（`lib/barRows.ts`。PRD D82）
 

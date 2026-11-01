@@ -2,7 +2,7 @@
 // 列の見出しの名前が全部出る／吹き出しの開閉・キーボード・フォーカスの戻り・Tab で外へ出ると閉じる・中を巻ける・画面の端で切れない／
 // 〈スタッフ〉・〈利用者さん〉の画面で開く（#/staff/:id・#/clients/:id）／列（?sf=）と行（?cf=）の絞り込みと再読込での復元・履歴を増やさない・
 // 日本語の変換（IME）／0人の表示と「絞り込みを戻す」／最初に表の行が10行以上見える／
-// 回帰：相性のチップを押したままセルを押しても行が消えない（「表を並べ直す」で並べ直す）、絞り込みで見出しが消えたら吹き出しを閉じる／
+// 相性のチップを押したままセルを押しても行が消えない（「表を並べ直す」で並べ直す）、絞り込みで見出しが消えたら吹き出しを閉じる／
 // 性能：〈利用者さん〉300人×〈スタッフ〉60人で、セルを1回押してから描き終わるまでの時間（目安 100ms 以下）。
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-compat.cjs
@@ -11,10 +11,8 @@
 //                    超えたら最大3回りまで測り直して一番よい回りの中央値を使う。PRD D253。無ければ PERF_MS）
 // 終了コード：全部通れば 0、通らないものがあれば 1。ページのエラー（pageerror）も失敗に数える
 const path = require('node:path');
-const { skipTour } = require('./lib/tourSeen.cjs');
-const { answerConfirms } = require('./lib/confirmDialog.cjs');
-const { BASE, OUT_DIR, NOW, perfMs, check, note, settle, runSteps } = require('./lib/env.cjs');
-const { pagePerStep } = require('./lib/steps.cjs');
+const { BASE, OUT_DIR, perfMs, check, note, settle, runSteps } = require('./lib/env.cjs');
+const { openContext, pagePerStep } = require('./lib/steps.cjs');
 
 const PERF_MS = perfMs('PERF_MS_COMPAT', 100);
 /** 速さの計測：ならしの回数・1回りの回数・回りの最大・回りの合間（PRD D253） */
@@ -296,7 +294,7 @@ async function filters(page) {
   check(!urlOf(page).includes('sf=') && !urlOf(page).includes('cf='), '捨てたチップは URL を書き直す', urlOf(page));
 }
 
-/** 回帰：相性のチップを押したままセルを押しても行が消えない。絞り込みで見出しが消えたら吹き出しを閉じる */
+/** 相性のチップを押したままセルを押しても行が消えない。絞り込みで見出しが消えたら吹き出しを閉じる */
 async function regressions(page) {
   await openCompat(page, '?cf=chip:;x:ng');
   const n0 = await rows(page).count();
@@ -429,24 +427,12 @@ async function perf(page) {
   check(median <= PERF_MS, `セルを1回押して描き終わるまで（中央値 ${PERF_MS}ms 以下）`, { median, times, warmup });
 }
 
-const errors = [];
 const steps = pagePerStep({
-  open: async (browser, step) => {
-    const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
-    // 初回の案内ツアーを見た扱いにする（PRD D193）
-    await skipTour(ctx);
-    const page = await ctx.newPage();
-    // ページの時計を止める（ほかの e2e と同じ）。
-    // 速さは時計を止めない文脈で測る（setFixedTime は requestAnimationFrame・performance.now も差し替える。scripts/lib/env.cjs の withRealClock）
-    if (step !== perf) await page.clock.setFixedTime(NOW);
-    page.on('pageerror', (e) => errors.push(String(e)));
-    // 確認は独自のダイアログで受ける（ネイティブのダイアログが出たら失敗。PRD D146）
-    return { ctx, page, dlg: await answerConfirms(page) };
-  },
+  // 速さは時計を止めない文脈で測る（setFixedTime は requestAnimationFrame・performance.now も差し替える）
+  open: (browser, step) => openContext(browser, { clock: step !== perf }),
   steps: [namesAndLayout, popover, openById, filters, regressions, perf],
   label: (name) => `${name} が止まった`,
   after: (name, { dlg }) => check(dlg.native.length === 0, `${name}：ブラウザのダイアログを出さない`, dlg.native),
-  end: () => check(errors.length === 0, 'ページのエラーなし', errors.join(' / ')),
 });
 
 module.exports = { steps };

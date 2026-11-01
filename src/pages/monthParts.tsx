@@ -124,7 +124,7 @@ export function MonthPickers({
         </button>
       )}
       {focus.kind === 'all' && (
-        // 用語の説明（ボタン）は label の中に置かない（入力欄の名前が用語のボタンへ移るため。PR #42 のレビュー）。
+        // 用語の説明（ボタン）は label の中に置かない（入力欄の名前が用語のボタンへ移るため）。
         // 選ぶ欄の名前は aria-labelledby で「混み具合：」と用語をつなぐ
         <div className="month-picker">
           <span>

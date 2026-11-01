@@ -27,7 +27,7 @@ import { useValueStore } from './valueStore';
 import './scheduleParts.css';
 
 /**
- * 新しく組み始める前に、反映していない範囲の提案があれば捨ててよいか確かめる（提案は1つだけ。PR #81 のレビュー）。
+ * 新しく組み始める前に、反映していない範囲の提案があれば捨ててよいか確かめる（提案は1つだけ）。
  * 提案が無ければ確かめずに true
  */
 export async function confirmDropProposal(confirmDialog: ReturnType<typeof useConfirm>): Promise<boolean> {

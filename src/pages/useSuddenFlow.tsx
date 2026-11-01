@@ -69,7 +69,7 @@ export function useSuddenEntry(x: {
   setDate: (d: string) => void;
   /** データにいる〈スタッフ〉か */
   knownStaff: (id: string) => boolean;
-  /** その日に働く人か（休みの日・最終勤務日の後の人は選択肢に無く2段目が壊れるので1段目。PR #48 のレビュー） */
+  /** その日に働く人か（休みの日・最終勤務日の後の人は選択肢に無く2段目が壊れるので1段目） */
   works: (id: string) => boolean;
   open: (init: SuddenInit) => void;
 }) {
@@ -287,7 +287,7 @@ function suddenActions(
       if (!ok) return false;
       x.update((d) => removeAbsence(d, absence.id), '欠勤を取り消す');
       state.setSudden(null);
-      // 担当は変えない。振り直したあとなら「振り直す前に戻す」で担当を戻せる（「元に戻す」だと欠勤が戻ってしまう。PR #81 のレビュー）
+      // 担当は変えない。振り直したあとなら「振り直す前に戻す」で担当を戻せる（「元に戻す」だと欠勤が戻ってしまう）
       if (flow.info)
         toast('欠勤を取り消しました。担当を戻すには「振り直す前に戻す」を押してください', {
           action: { label: '振り直す前に戻す', onClick: () => void flow.revertLatest(), testId: 'toast-revert' },

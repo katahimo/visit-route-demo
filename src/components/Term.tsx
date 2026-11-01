@@ -106,7 +106,7 @@ export function Term({
   k: GlossaryKey;
   children?: ReactNode;
   testId?: string;
-  /** 用語のボタンの id（入力欄の aria-labelledby から引くとき。PR #42 のレビュー：label の中には置かない） */
+  /** 用語のボタンの id（入力欄の aria-labelledby から引くとき。label の中には置かない） */
   id?: string;
   /** 説明を付けず文字だけ出す（1画面で同じ語の2か所目から） */
   plain?: boolean;
@@ -168,7 +168,7 @@ function TermButton({
     [],
   );
 
-  // 同時に出す説明は1つだけ（PR #42 のレビュー）：開いたら知らせ、ほかの用語は閉じる
+  // 同時に出す説明は1つだけ：開いたら知らせ、ほかの用語は閉じる
   useEffect(() => {
     if (open) window.dispatchEvent(new CustomEvent(TERM_OPEN_EVENT, { detail: tipId }));
   }, [open, tipId]);
@@ -239,7 +239,7 @@ function TermButton({
           // 表の行・ラベルの中に置いても、押したときに行の操作・入力欄へのフォーカスを起こさない
           e.preventDefault();
           e.stopPropagation();
-          // 押して開いたもの（pinned）は、マウスが上にあっても、もう一度押せば閉じる。そうでなければ押して開く（PR #42 のレビュー）
+          // 押して開いたもの（pinned）は、マウスが上にあっても、もう一度押せば閉じる。そうでなければ押して開く
           if (pinned) {
             setPinned(false);
             setDismissed(true);

@@ -8,7 +8,7 @@
 import { CalendarCheck, Sparkles } from 'lucide-react';
 import { useId, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ArrangeSteps } from '../components/ArrangeSteps';
+import { ArrangeSteps } from '../components/SettingsTabs';
 import { RangeProposalBand } from '../components/scheduleParts';
 import { PageHeader, WithIcon } from '../components/ui';
 import { useBasisChanged } from '../components/useArrangeBasis';

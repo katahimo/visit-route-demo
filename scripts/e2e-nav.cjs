@@ -8,7 +8,7 @@
 // コマンドパレット（Ctrl+K で開く・role=dialog・aria-modal・combobox と listbox（aria-activedescendant）・裏の inert とスクロールのロック・
 // 打つと絞り込む・↑↓（端で回る）・Enter で移る・操作（欠勤・キャンセル・N月の担当を組む）・人の名前（よみ・カタカナ）でその人の画面・Esc とフォーカスの戻り・
 // 背景で閉じる・Tab が中で回る・Ctrl+K で閉じる・入力欄の中の Ctrl+K（入れた文字はそのまま・閉じたら入力欄へ）・右の欄が開いているときは開かない）、
-// 390px（上の帯のボタンから開ける・収まる・上の帯の名前・引き出しの並び・下のタブ（予定・〈利用者さん〉・〈スタッフ〉・組む・探す・メニュー）。「探す」は下のタブ）、印刷で出さない、300人×60人で打つたびの速さ。
+// 390px（下のタブの「探す」から開ける・収まる・上の帯の名前・引き出しの並び。下のタブの並びは e2e-mobile）、印刷で出さない、300人×60人で打つたびの速さ。
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-nav.cjs
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）。PERF_MS_NAV で1文字打って描き終わるまでの上限（既定 100ms。無ければ PERF_MS）、PERF_MS_NAV_CARE で「要対応」を打ったときにいちばん長く止まる時間の上限（既定 300ms）
@@ -72,7 +72,7 @@ async function seedPeople(page) {
 /** ひらがな → カタカナ */
 const toKata = (s) => s.replace(/[ぁ-ゖ]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) + 0x60));
 
-// メニューの最上位6つ（PRD D401。ADR-0067・ADR-0074 段1・ADR-0078）：見出しは無い。ホームは無く、空き状況は予定の次。子の項目を持つのは「組む」だけ
+// メニューの最上位6つ（PRD D401。ADR-0067・ADR-0074・ADR-0078）：見出しは無い。ホームは無く、空き状況は予定の次。子の項目を持つのは「組む」だけ
 const GROUPS = [];
 const LABELS = ['予定', '空き状況', '利用者さん', 'スタッフ', '組む', '設定'];
 /**
@@ -825,19 +825,9 @@ async function mobile(page) {
   );
   await page.screenshot({ path: path.join(OUT_DIR, 'nav-mobile-drawer.png') });
   await page.keyboard.press('Escape');
-  const tabs = await page.getByTestId('bottom-tabs').locator('.bottom-tab').allInnerTexts();
-  check(
-    JSON.stringify(tabs.map((t) => t.trim())) ===
-      JSON.stringify(['予定', '利用者さん', 'スタッフ', '組む', '探す', 'メニュー']),
-    '390px：下のタブは 予定・〈利用者さん〉・〈スタッフ〉・組む・探す・メニュー（設定はメニューの中。PRD D336・D401）',
-    tabs,
-  );
+  // 下のタブの並びと印は e2e-mobile の bottom
   await open(page, '/compare');
-  check(
-    (await page.getByTestId('screen-name').innerText()) === '提案を比べる' &&
-      JSON.stringify(await page.locator('.bottom-tab.active[aria-current="page"]').allInnerTexts()) === '["組む"]',
-    '390px：比較は上の帯「提案を比べる」、下のタブの「組む」に印（比較は組むの続き）',
-  );
+  check((await page.getByTestId('screen-name').innerText()) === '提案を比べる', '390px：比較は上の帯「提案を比べる」');
   await scheduleTab(page);
   await page.setViewportSize({ width: 1400, height: 1000 });
 }

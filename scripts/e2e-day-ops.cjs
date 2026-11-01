@@ -1,4 +1,4 @@
-// 見直しの5段目（ADR-0055。PRD D333〜D338）を本物のブラウザで確かめる：
+// 日の予定の操作（スマホの日ごとのリスト・下から出る欄・複数選択／広い画面の帯のキー。ADR-0055。PRD D333〜D338）を本物のブラウザで確かめる：
 // 390×844：日の予定は日ごとのリスト（最初の画面に訪問が見える・操作の行が1段・行に時刻・〈利用者さん〉・担当）、
 // 上の帯の日付送りとスワイプで日を送る、行を押すと下から出る欄（大きな4つのボタン：担当を替える・取り消す・道順・日の予定で見る。
 // 日時の変更・範囲は出ない。担当を替えて保存・取り消すと書き、元に戻すで戻る）、複数選択（長押し・「選ぶ」。帯は下から出る置き場所で
@@ -6,19 +6,28 @@
 // タブの並び・上の帯に「探す」が無いことは e2e-mobile）。
 // 1400×1000：日の予定の時間軸の帯のキーボード（↑↓ 15分・Shift+→ 隣の担当の列・→ 次の日（その日へ移る）・Enter で欄・Esc で帯へ・
 // Delete で取り消し（確認）・どれも全体の元に戻すの1手で手の名前・Ctrl+Z で全部戻る）、繰り返しの回の範囲の小さな帯（これ以降も）、
-// 週の時間軸の帯の ↓、パレットで担当の名前＋日付・「担当なし」で訪問を引く、担当を組むで出した範囲の提案が画面を移っても残る。
+// 週の時間軸の帯の ↓、パレットで担当の名前＋日付・「担当なし」で訪問を引く（範囲の提案が画面を移っても残ることは e2e-schedule-tools）。
 //
-// 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-mobile-v5.cjs
+// 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-day-ops.cjs
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）
 // 終了コード：全部通れば 0、通らないものがあれば 1。ページのエラー（pageerror）も失敗に数える
-const path = require('node:path');
-const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, settle, stored, until, runSteps } = require('./lib/env.cjs');
-const { markStandard } = require('./lib/standard.cjs');
+const {
+  BASE,
+  TODAY,
+  STORAGE_KEY,
+  check,
+  settle,
+  stored,
+  until,
+  runSteps,
+  waitStored,
+  MOD,
+  shot,
+} = require('./lib/env.cjs');
+const { watchNative } = require('./lib/confirmDialog.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
-const { clickMenu, pressTool, toolCount, undoState } = require('./lib/ui.cjs');
+const { pressTool, toolCount, undoState } = require('./lib/ui.cjs');
 
-const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
-const shot = (page, name) => page.screenshot({ path: path.join(OUT_DIR, `${name}.png`) });
 const visitsKey = (d) => JSON.stringify(d?.visits ?? null);
 const visitOf = (d, id) => d?.visits?.find((v) => v.id === id) ?? null;
 /** YYYY-MM-DD に n 日足す */
@@ -29,10 +38,6 @@ const addDays = (d, n) => {
 };
 const toMin = (hm) => Number(hm.slice(0, 2)) * 60 + Number(hm.slice(3, 5));
 
-/** 保存（少し遅れて書く）が条件を満たすまで待つ */
-async function waitStored(page, pred, timeout = 8000) {
-  return until(async () => pred(await stored(page)), timeout, 100).catch(() => false);
-}
 /** 初期データで日の予定（今日）を開く */
 async function freshPlan(page, hash = '/plan') {
   await page.goto(`${BASE}#/data`);
@@ -655,40 +660,10 @@ async function palette(page) {
   await page.keyboard.press('Escape');
 }
 
-// ---- 1400px：範囲の提案は画面を移っても残る ----
-async function keepRange(page) {
-  await freshPlan(page, '/week');
-  // 範囲の提案は担当を組むの画面で出す（ADR-0063。標準が無い間は組めないので先に登録。ADR-0065）
-  await markStandard(page);
-  await page.goto(`${BASE}#/arrange?date=${TODAY}`);
-  await page.getByTestId('arrange-start').click();
-  const band = page.locator('[data-testid="proposal-band"]');
-  await band.waitFor({ timeout: 120000 });
-  await clickMenu(page, '予定');
-  await page.waitForURL(/#\/(plan|week|month)/);
-  await clickMenu(page, '基本情報');
-  await page.waitForURL(/#\/basics/);
-  await page.goto(`${BASE}#/month`);
-  await page.getByTestId('schedule-toolbar').waitFor({ timeout: 60000 });
-  check(
-    (await page.locator('[data-testid="proposal-band"]').count()) === 1,
-    '範囲の提案：予定・基本情報へ移って月の予定に戻っても残る',
-  );
-  await page.locator('[data-testid="proposal-band"]').getByTestId('proposal-discard').click();
-}
-
 const steps = sharedPage({
   open: async () => {
     const s = await openPage({ viewport: { width: 390, height: 844 }, context: { hasTouch: true } });
-    const native = [];
-    s.page.on('dialog', (d) => {
-      if (d.type() === 'beforeunload') {
-        d.accept();
-        return;
-      }
-      native.push(`${d.type()}: ${d.message()}`);
-      d.dismiss();
-    });
+    const native = watchNative(s.page);
     // 地図のタイルは取りに行かない
     await s.ctx.route(/tile|cyberjapandata/, (r) => r.fulfill({ status: 204, body: '' }));
     return { ...s, native };
@@ -703,7 +678,6 @@ const steps = sharedPage({
     ['keyboard', keyboard],
     ['rescope-confirm', rescopeConfirm],
     ['palette', palette],
-    ['keep-range', keepRange],
   ],
   after: ({ native }) => {
     check(native.length === 0, 'ブラウザのダイアログを出さない', native);

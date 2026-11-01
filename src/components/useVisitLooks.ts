@@ -1,4 +1,4 @@
-// 期間の訪問の見た目（PRD D339〜D341。ADR-0056）：日の状態 useDayStatuses から引き、画面ごとに判定を持たない（visitParts から分けた）
+// 期間の訪問の見た目（PRD D339〜D341。ADR-0056）：日の状態 useDayStatuses から引き、画面ごとに判定を持たない
 import { useMemo } from 'react';
 import { isOnLeave } from '../domain/leaves';
 import { jstDate } from '../domain/time';

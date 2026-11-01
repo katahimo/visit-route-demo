@@ -4,7 +4,7 @@ import { confirmLeave } from '../lib/leaveGuard';
 import { useDay } from './day';
 import { useOpenVisit } from './VisitPanel';
 
-/** 候補を選んだときの処理（閉じて、訪問の欄を開く／画面を移る）。today は「訪問を追加」の日付 */
+/** 候補を選んだときの処理（閉じて、訪問の欄を開く／画面を移る）。today は「予定を入れる」の日付 */
 export function usePalettePick(onClose: () => void, today: string) {
   const { setDate } = useDay();
   const navigate = useNavigate();
@@ -13,7 +13,7 @@ export function usePalettePick(onClose: () => void, today: string) {
   return async (it: PaletteItem | undefined) => {
     if (!it) return;
     onClose();
-    // 訪問・「訪問を追加」は画面を移らずに、今の画面の上で訪問の詳細の欄を開く（PRD D304）
+    // 訪問・「予定を入れる」は画面を移らずに、今の画面の上で訪問の詳細の欄を開く（PRD D304）
     if (it.visitId) {
       openVisit({ visitId: it.visitId });
       return;

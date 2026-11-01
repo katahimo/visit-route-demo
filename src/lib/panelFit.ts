@@ -32,7 +32,7 @@ export function panelFit(v: ViewportLike): { top: number; height: number } | nul
 export const TOAST_SIDE_MIN_PX = 360;
 
 /**
- * 右の欄が開いている間の知らせ（トースト）の置き場所（PRD D197。PR #46 のレビュー）。
+ * 右の欄が開いている間の知らせ（トースト）の置き場所（PRD D197）。
  * 欄の外（幕の側）の幅が足りれば 'side'（その真ん中に出し、欄をまたがない）、足りなければ 'top'（欄の見出しのすぐ下）。
  * 600px 以下は欄が画面いっぱいなので必ず 'top'
  */

@@ -16,9 +16,9 @@ import {
   Users,
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
-import { ArrangeSteps } from '../components/ArrangeSteps';
 import { EmptyNext } from '../components/EmptyNext';
 import { FieldError } from '../components/FieldError';
+import { ArrangeSteps } from '../components/SettingsTabs';
 import { Term } from '../components/Term';
 import { Hint, IconButton, PageHeader, SectionTitle, Stat, WithIcon } from '../components/ui';
 import type { Visit } from '../contracts/documents';

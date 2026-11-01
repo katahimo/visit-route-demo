@@ -13,7 +13,7 @@ import { EdgeScroll } from './EdgeScroll';
 import { toldDateOf, useOpenTold } from './openTold';
 
 /**
- * 列の最小の幅（px。PRD D269）：1366px の画面で多くの列が入るよう詰める（前は 150px）。名前は折り返して切らない
+ * 列の最小の幅（px。PRD D269）：1366px の画面で多くの列が入るよう詰める。名前は折り返して切らない
  * （routeTimeline.css の .tl-head）
  */
 const TL_COL_MIN_PX = 128;

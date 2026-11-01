@@ -1,7 +1,7 @@
 // 札の3段の大きさと入れ物（PRD D342・D343）を本物のブラウザで確かめる：
 // 週の〈スタッフ〉×曜日の表の小さな札（「時刻 頭文字」・1マス3件まで・「+N」と一覧・Esc でフォーカスは「+N」・選ぶ・
 // ←→ で曜日・↓ で隣の担当・Enter で欄・Ctrl+Z・別のマスへのドラッグ）、〈利用者さん〉×曜日の表の札（時刻と担当の印・3件まで・
-// 同じ行の別の日へのドラッグ）、月のマスの1回目は右の欄の一覧・2回目で日の予定・マスのキー・一覧の行のドラッグ・
+// 同じ行の別の日へのドラッグ）、月のマスの1回目は右の欄の一覧・2回目で日の予定（マスのキーは e2e-shared-parts）・一覧の行のドラッグ・
 // 選んだ行の「別の日へ」（時刻はそのまま・Ctrl+Z 1回で戻る・確定した日は確認）、印（data-marks）が3段（l・s・m）で同じ、
 // 390px の週の表の長押しと月の下から出る欄、印刷で「+N」の一覧と選択の帯を出さない。
 // スクリーンショット week-chips-1400・week-more-1400・week-drag-1400・month-list-1400・week-chips-390・month-sheet-390
@@ -9,10 +9,8 @@
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-chip-containers.cjs
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）。FAKE_NOW は週の途中（既定の水曜）にする
 // 終了コード：全部通れば 0、通らないものがあれば 1。ページのエラー（pageerror）も失敗に数える
-const path = require('node:path');
 const {
   BASE,
-  OUT_DIR,
   TODAY,
   STORAGE_KEY,
   check,
@@ -22,15 +20,16 @@ const {
   runSteps,
   withTimeout,
   hashOf,
+  waitStored,
+  MOD,
+  shot,
 } = require('./lib/env.cjs');
 const { planDays } = require('./lib/plan.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
 const { answerConfirms } = require('./lib/confirmDialog.cjs');
 const { undoState } = require('./lib/ui.cjs');
 
-const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
 const WD = '日月火水木金土';
-const shot = (page, name) => page.screenshot({ path: path.join(OUT_DIR, `${name}.png`) });
 const visitOf = (d, id) => d?.visits?.find((v) => v.id === id) ?? null;
 const addDays = (d, n) => {
   const t = new Date(`${d}T00:00:00Z`);
@@ -54,9 +53,6 @@ const countText = (page) =>
     .innerText()
     .catch(() => '');
 
-async function waitStored(page, pred, timeout = 8000) {
-  return until(async () => pred(await stored(page)), timeout, 100).catch(() => false);
-}
 /** 初期データで開き直す。mutate があれば初期データを書き換えて（別のタブで書き換えたのと同じ）読み直す */
 async function fresh(page, hash, ready, mutate = null, arg = null) {
   await page.goto(`${BASE}#/data`);
@@ -773,7 +769,7 @@ async function weekClientKeys(page) {
   );
 }
 
-// ---- 月：マスの1回目は右の欄・2回目で日の予定・キー ----
+// ---- 月：マスの1回目は右の欄・2回目で日の予定（マスのキーは e2e-shared-parts の month） ----
 async function monthCells(page) {
   await fresh(page, `/month?ym=${TODAY.slice(0, 7)}&layout=calendar`, '[data-testid="month-grid"]');
   // 今日より後の、取り消しの無い訪問のある日
@@ -813,46 +809,6 @@ async function monthCells(page) {
   check(
     (await page.locator('.date-switch select').inputValue()) === day,
     '月：右の欄に出している日のマスをもう一度押すと日の予定',
-  );
-  // キー：←→ 日・↑↓ 週・Enter で一覧（最初の行へフォーカス）
-  await page.goto(`${BASE}#/month?ym=${TODAY.slice(0, 7)}&layout=calendar`);
-  await page.getByTestId('month-grid').waitFor({ timeout: 30000 });
-  await settle(page, 300);
-  const focusedDate = () => page.evaluate(() => document.activeElement?.dataset?.date ?? null);
-  const YM = TODAY.slice(0, 7);
-  const moves = [
-    ['ArrowRight', 1],
-    ['ArrowLeft', -1],
-    ['ArrowDown', 7],
-    ['ArrowUp', -7],
-  ];
-  const got = {};
-  for (const [key, step] of moves) {
-    // 月の中に収まる向きだけ
-    if (addDays(day, step).slice(0, 7) !== YM) continue;
-    await cell(day).focus();
-    await page.keyboard.press(key);
-    await settle(page, 150);
-    got[key] = (await focusedDate()) === addDays(day, step);
-  }
-  check(
-    Object.keys(got).length >= 2 && Object.values(got).every(Boolean),
-    '月：マスで ←→ は1日・↑↓ は1週のマスへ',
-    got,
-  );
-  await cell(day).focus();
-  await page.keyboard.press('Enter');
-  await list.waitFor({ timeout: 5000 });
-  await settle(page, 200);
-  check(
-    (await list.getAttribute('data-date')) === day &&
-      (await page.evaluate(() => document.activeElement?.dataset?.testid === 'month-visit')) &&
-      (await page.evaluate(
-        () =>
-          document.activeElement ===
-          document.querySelector('[data-testid="month-day-visits"] [data-testid="month-visit"]'),
-      )),
-    '月：マスで Enter でその日の一覧、フォーカスは最初の行',
   );
 }
 

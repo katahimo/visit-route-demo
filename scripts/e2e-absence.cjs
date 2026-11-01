@@ -273,7 +273,7 @@ async function fromHome(page) {
     check((await box.textContent()).includes('案A'), '案B を作った（案A のままの知らせ）');
   }
   await page.screenshot({ path: path.join(OUT_DIR, 'step4-staff.png') });
-  // 次へ：連絡（版2：確定＝伝えた内容なので、連絡の段で確定する。ADR-0053）
+  // 次へ：連絡（確定＝伝えた内容なので、連絡の段で確定する。ADR-0053）
   await page.getByTestId('sudden-to-contacts').click();
   // 5段目：連絡（PRD D243〜D246）
   await page.locator('[data-testid="sudden-panel"][data-step="5"]').waitFor({ timeout: 10000 });
@@ -413,7 +413,7 @@ async function reopenFocus(page, best) {
   await panel(page).waitFor({ state: 'detached' });
 }
 
-// ---- 伝えた日の5段目：手で変えた訪問も連絡の一覧に出る（PR #80 のレビュー）。欠勤の振り直しも「元に戻す」で欠勤ごと戻る ----
+// ---- 伝えた日の5段目：手で変えた訪問も連絡の一覧に出る。欠勤の振り直しも「元に戻す」で欠勤ごと戻る ----
 async function toldContacts(page) {
   await page.goto(`${BASE}#/data`);
   await page.evaluate((k) => localStorage.removeItem(k), STORAGE_KEY);
@@ -814,7 +814,7 @@ async function pickDate(page, date) {
   await waitPlan(page);
 }
 
-// ---- 「振り直す前に戻す」は別の日の振り直しのあとでは近道で戻さない・欠勤を取り消した知らせから戻す（PR #81 のレビュー） ----
+// ---- 「振り直す前に戻す」は別の日の振り直しのあとでは近道で戻さない・欠勤を取り消した知らせから戻す ----
 async function revertCases(page, st) {
   await page.goto(`${BASE}#/data`);
   await page.evaluate((k) => localStorage.removeItem(k), STORAGE_KEY);
