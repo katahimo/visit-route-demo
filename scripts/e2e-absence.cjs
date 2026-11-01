@@ -273,7 +273,7 @@ async function fromHome(page) {
     check((await box.textContent()).includes('案A'), '案B を作った（案A のままの知らせ）');
   }
   await page.screenshot({ path: path.join(OUT_DIR, 'step4-staff.png') });
-  // 次へ：連絡（版2：確定＝伝えた内容なので、連絡の段で確定する。ADR-0053）
+  // 次へ：連絡（確定＝伝えた内容なので、連絡の段で確定する。ADR-0053）
   await page.getByTestId('sudden-to-contacts').click();
   // 5段目：連絡（PRD D243〜D246）
   await page.locator('[data-testid="sudden-panel"][data-step="5"]').waitFor({ timeout: 10000 });

@@ -13,6 +13,7 @@
 const path = require('node:path');
 const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, settle, stored, runSteps } = require('./lib/env.cjs');
 const { planDays } = require('./lib/plan.cjs');
+const { watchNative } = require('./lib/confirmDialog.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
 const { closeMore, openMore, pressTool, toolCount, undoState } = require('./lib/ui.cjs');
 
@@ -51,7 +52,7 @@ async function editData(page, fn, arg) {
   await page.locator('h1').waitFor();
 }
 
-/** 訪問の担当（版2：保存した訪問は staffId、計算した繰り返しの回は繰り返しの担当）とピン */
+/** 訪問の担当（保存した訪問は staffId、計算した繰り返しの回は繰り返しの担当）とピン */
 function staffOf(d, vid) {
   const own = d.visits.find((v) => v.id === vid);
   if (own) return { staffId: own.staffId, pinned: !!own.pinned };
@@ -514,16 +515,8 @@ async function moreMenus(page) {
 const steps = sharedPage({
   open: async () => {
     const s = await openPage();
-    // 確認は独自のダイアログ。ブラウザのダイアログ（confirm・alert・prompt）が出たら失敗（PRD D146）
-    const native = [];
-    s.page.on('dialog', (d) => {
-      if (d.type() === 'beforeunload') {
-        d.accept();
-        return;
-      }
-      native.push(`${d.type()}: ${d.message()}`);
-      d.dismiss();
-    });
+    // 確認は独自のダイアログ。ブラウザのダイアログ（confirm・alert・prompt）が出たら失敗
+    const native = watchNative(s.page);
     return { ...s, native };
   },
   steps: [

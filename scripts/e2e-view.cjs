@@ -14,8 +14,6 @@
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）
 // 終了コード：全部通れば 0、通らないものがあれば 1。ページのエラー（pageerror）も失敗に数える
 const path = require('node:path');
-const { skipTour } = require('./lib/tourSeen.cjs');
-const { answerConfirms } = require('./lib/confirmDialog.cjs');
 const {
   BASE,
   OUT_DIR,
@@ -30,7 +28,7 @@ const {
   stored,
   runSteps,
 } = require('./lib/env.cjs');
-const { pagePerStep } = require('./lib/steps.cjs');
+const { openContext, pagePerStep } = require('./lib/steps.cjs');
 const { clickMenu, goTo } = require('./lib/ui.cjs');
 
 /** その人の画面（全画面）の外枠 */
@@ -237,7 +235,7 @@ async function clients(page, dlg) {
     '〈利用者さん〉：保存すると読むだけに戻り、保存した中身が出る（フォーカスは「直す」）',
   );
 
-  // ?id=（古いリンク）：その人の画面へ移る
+  // ?id=：その人の画面へ移る
   await open(page, '/clients?id=c2', '[data-testid="person-view"]');
   check(
     hashOf(page) === '#/clients/c2' && (await view(page).getAttribute('data-id')) === 'c2',
@@ -307,7 +305,7 @@ async function clientsMore(page, dlg) {
   );
   // 別の節を直すと、変更が無ければそのまま替わる・あれば確かめる
   await editSec(page, 'staffing');
-  // いつもの担当は繰り返しの担当（版2。ADR-0053）なので、担当できる人を限るで変更を作る
+  // いつもの担当は繰り返しの担当（ADR-0053）なので、担当できる人を限るで変更を作る
   await sec(page, 'staffing').getByLabel('担当できる人を限る').check();
   dlg.answer = false;
   dlg.messages.length = 0;
@@ -626,7 +624,7 @@ async function links(page) {
   );
 }
 
-/** その〈利用者さん〉のいつもの担当（版2：繰り返しの担当。今日以降も続く繰り返しを先に、開始の遅いものを先に。lib/usualStaff と同じ） */
+/** その〈利用者さん〉のいつもの担当（繰り返しの担当。今日以降も続く繰り返しを先に、開始の遅いものを先に。lib/usualStaff と同じ） */
 function usualOf(d, clientId) {
   let best = null;
   for (const p of d.patterns) {
@@ -650,7 +648,7 @@ async function names(page) {
     for (const c of d.clients) d.compat[c.id] = { ...(d.compat[c.id] ?? {}), s1: 2 };
     d.clients[0].active = false;
     d.clients[0].stage = 'ended';
-    // 版2：いつもの担当は繰り返しの担当
+    // いつもの担当は繰り返しの担当
     for (const p of d.patterns) if (p.clientId === d.clients[1].id) p.usualStaffId = 's1';
     localStorage.setItem(k, JSON.stringify(d));
   }, STORAGE_KEY);
@@ -834,24 +832,12 @@ async function staffIcon(page) {
   );
 }
 
-const errors = [];
 const steps = pagePerStep({
-  open: async (browser) => {
-    const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
-    // 初回の案内ツアーを見た扱いにする（PRD D193）
-    await skipTour(ctx);
-    // 地図のタイルは外へ取りに行かない
-    await ctx.route(/cyberjapandata\.gsi\.go\.jp/, (r) => r.fulfill({ status: 204, body: '' }));
-    const page = await ctx.newPage();
-    await page.clock.setFixedTime(NOW);
-    page.on('pageerror', (e) => errors.push(String(e)));
-    return { ctx, page, dlg: await answerConfirms(page) };
-  },
+  open: (browser) => openContext(browser),
   call: (fn, s) => fn(s.page, s.dlg),
   steps: [clients, clientsMore, reviewFixes, seeded, staff, staffMore, links, names, rowClick, staffIcon],
   label: (name) => `${name}：途中で止まった`,
   after: (name, { dlg }) => check(dlg.native.length === 0, `${name}：ブラウザのダイアログを出さない`, dlg.native),
-  end: () => check(errors.length === 0, 'ページのエラーが無い', errors),
 });
 
 module.exports = { steps };

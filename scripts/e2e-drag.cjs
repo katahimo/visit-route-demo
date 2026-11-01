@@ -1,6 +1,7 @@
-// 本物のマウス操作（mouse.down → move → up）で、画面のドラッグが動くかを確かめる（6種類）。
+// 本物のマウス操作（mouse.down → move → up）で、画面のドラッグが動くかを確かめる（5種類）。
 // 週の〈利用者さん〉で見るでは、初期値で先頭8人のチップが選ばれていることも確かめる（week-client-default。PRD D136・D137）。
-// 週・スタッフ／週・利用者さん／利用者さん×曜日の表／予定の時間軸／予定の順番／月 → 日（予定の時間軸。月のマスは1回目で右の欄、もう一度押して日の予定）。
+// 週・スタッフ／週・利用者さん／予定の時間軸／予定の順番／月 → 日（予定の時間軸。月のマスは1回目で右の欄、もう一度押して日の予定）。
+// 〈利用者さん〉×曜日の表・〈スタッフ〉×曜日の表・月の一覧の行のドラッグは e2e-chip-containers・e2e-shared-parts（どちらも本物のマウス）。
 // あわせて、週間の〈利用者さん〉×曜日の表の検索欄で日本語の変換（IME。CDP の Input.imeSetComposition）が壊れないかも確かめる
 // （week-clients-ime。変換中は URL の ?cf= を書かず、確定後に書く。URL が外から変わったら入力欄を合わせる。PRD D109）。
 // Playwright の dragTo や合成の DragEvent では、dragstart の中で画面の高さが変わってドラッグが取り消される不具合
@@ -149,59 +150,13 @@ async function weekTimeline(page, by) {
     },
     name,
   );
-  // 落とすと訪問の詳細の欄が落とした日時で開く（PRD D301。週の移動の欄はこの欄にした）
+  // 落とすと訪問の詳細の欄が落とした日時で開く（PRD D301）
   const summary = await page
     .getByTestId('visit-panel')
     .getByTestId('vp-date')
     .inputValue()
     .catch(() => null);
   report(name, r.ev.includes('drop') && !!summary && r.moved === 0, { vid, pickerOpen: open, ...r, summary });
-}
-
-async function weekClients(page) {
-  const name = 'week-clients';
-  await page.goto(`${BASE}#/week?view=clients`);
-  await page.reload();
-  await page.getByTestId('week-client-filter').waitFor();
-  await settle(page, 800);
-  // 表は選ばずに、この週に訪問がある人を全員出す（PRD D108。絞り込みは既定のまま）
-  await page.getByTestId('week-ccell').first().waitFor();
-  const items = page.locator('[data-testid="week-citem"][draggable="true"]');
-  let item = null;
-  let cell = null;
-  for (let i = 0; i < (await items.count()) && !cell; i++) {
-    const it = items.nth(i);
-    const { client, date } = await it.evaluate((el) => {
-      const td = el.closest('td');
-      return { client: td.dataset.client, date: td.dataset.date };
-    });
-    const cells = page.locator(`[data-testid="week-ccell"][data-client="${client}"]`);
-    for (let j = 0; j < (await cells.count()); j++) {
-      const d = await cells.nth(j).getAttribute('data-date');
-      if (d !== date && d >= TODAY) {
-        item = page.locator(`[data-testid="week-citem"][data-visit="${await it.getAttribute('data-visit')}"]`);
-        cell = page.locator(`[data-testid="week-ccell"][data-client="${client}"][data-date="${d}"]`);
-        break;
-      }
-    }
-  }
-  need(cell, `動かし先のマス（同じ〈利用者さん〉の、元の日以外で ${TODAY} 以降の日）`);
-  const r = await realDrag(
-    page,
-    item,
-    async () => {
-      const cb = await cell.boundingBox();
-      return { x: cb.x + cb.width / 2, y: cb.y + cb.height / 2 };
-    },
-    name,
-  );
-  // 落とすと訪問の詳細の欄が落とした日時で開く（PRD D301。週の移動の欄はこの欄にした）
-  const summary = await page
-    .getByTestId('visit-panel')
-    .getByTestId('vp-date')
-    .inputValue()
-    .catch(() => null);
-  report(name, r.ev.includes('drop') && !!summary && r.moved === 0, { ...r, summary });
 }
 
 /** 予定の画面：訪問を別の担当の列へ移す（時間軸・順番） */
@@ -302,7 +257,6 @@ const steps = sharedPage({
   steps: [
     ['week-staff', (page) => weekTimeline(page, 'staff')],
     ['week-client', (page) => weekTimeline(page, 'client')],
-    ['week-clients', weekClients],
     ['week-clients-ime', weekClientsIme],
     [
       'plan-timeline',

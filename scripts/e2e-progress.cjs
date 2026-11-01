@@ -1,7 +1,7 @@
 // 月の予定の進み具合の帯（PRD D151〜D155・D332。ADR-0025・ADR-0053・ADR-0054。週・日には出さない）を本物のブラウザで確かめる：
 // 月の帯（data-ym・数字が要対応の帯の未確定の日と同じ。今月＋翌月。「詳しく ▾」の中。PRD D393）、月の画面の「担当を AI で組む」は帯の1か所
 // （見出しのボタン・今月の準備は無い。帯の次の一手は主ボタンにせず、主ボタンは操作の行の「予定を入れる」で2つ目が「担当を組む」。PRD D402）で、押すと担当を組むの画面（#/arrange?ym=。ADR-0063）、
-// 帯の数字で月の画面の欄が開く（URL を変えない）、古い `?do=batch` は担当を組むの画面へ移す、
+// 帯の数字で月の画面の欄が開く（URL を変えない）、`?do=batch` は担当を組むの画面へ移す、
 // 週・日からの `?do=`（確定していない日・要対応）で月の画面の欄が開き ?do= が消える、来月も担当なしの日が多ければ「担当を AI で組む」、
 // 日の予定で確定すると状態の印が確定済み・月の帯の確定 +1、週・日に進み具合の帯は無い（週は1行の状態）、
 // 訪問の無いデータは「今日以降の訪問はありません」でボタンなし、
@@ -153,12 +153,12 @@ async function monthEntry(page) {
     hashOf(page),
   );
   await page.getByTestId('arrange-start').waitFor({ timeout: 10000 });
-  // 古い ?do=batch は担当を組むの画面へ移す
+  // ?do=batch は担当を組むの画面へ移す
   await page.evaluate((ym) => {
     location.hash = `#/month?ym=${ym}&do=batch`;
   }, YM);
   await page.waitForFunction(() => location.hash.startsWith('#/arrange'), null, { timeout: 10000 });
-  check(hashOf(page) === `#/arrange?ym=${YM}`, '月：古い ?do=batch は担当を組むの画面へ', hashOf(page));
+  check(hashOf(page) === `#/arrange?ym=${YM}`, '月：?do=batch は担当を組むの画面へ', hashOf(page));
   await open(page, `/month?ym=${YM}`, '[data-testid="month-grid"]');
   // 帯の数字 → 右の欄（画面の中で開く）
   await page.getByTestId('band-confirm').click();
@@ -202,7 +202,7 @@ async function monthEntry(page) {
   await popup.close();
 }
 
-// ---- 来月：繰り返しの回は繰り返しの担当で最初から入る（版2。未作成は無い）。担当なしの日が多ければ「担当を AI で組む」 ----
+// ---- 来月：繰り返しの回は繰り返しの担当で最初から入る（未作成の回は無い）。担当なしの日が多ければ「担当を AI で組む」 ----
 async function nextMonth(page) {
   await open(page, `/month?ym=${NEXT_YM}`, '[data-testid="month-grid"]');
   const v0 = await page.getByTestId('band-visits').innerText();
@@ -398,7 +398,7 @@ async function links(page) {
   );
 }
 
-// ---- 週・日の操作の行が速く出る（版2：日の割当は訪問から毎回計算する） ----
+// ---- 週・日の操作の行が速く出る（日の割当は訪問から毎回計算する） ----
 async function perf(page) {
   await editData(page, (key) => localStorage.removeItem(key), STORAGE_KEY);
   await markStandard(page);

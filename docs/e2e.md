@@ -17,9 +17,10 @@ AGENTS.md「コマンド」から引く詳細。e2e を走らせる・足す・�
 - 1つの段は最長3分（`E2E_STEP_TIMEOUT_MS`）
 - 保存した担当の入った訪問を用意する `planDays`（`scripts/lib/plan.cjs`。AI で組むので重い）は、初期データから組む所なら `{ cache: true }`（2回目からは結果の写し。包みの中では `E2E_PLAN_CACHE_DIR`＝`test-results/.plan-cache` で分け合う）
 - 落ちた test には trace・動画（perf は取らない）・`-fail-` のスクリーンショット・記録が付く（`npx playwright show-report`・`npx playwright show-trace`）
-- 文脈を作ったらすぐ `scripts/lib/tourSeen.cjs` の `skipTour(ctx)` を呼ぶ（e2e-tour は除く）。既定（`start: 'all'`）で印 `vrdemo:features:start` = `all`（`scripts/lib/startFeatures.cjs` の `startAll`）を入れ、最初の2問を出さず今の初期データ＋すべて入で始める。2問を確かめるときは `skipTour(ctx, { start: 'ask' })` か呼ばず、`scripts/lib/firstRun.cjs` の `answerFirstRun`・`answerIfAsked` で答える
-- 確定の操作を確かめる e2e は「すべて入」（エキスパート入）の前提で書く。「基本」で始めるもの（e2e-tour・e2e-auto-arrange・e2e-features・e2e-features2・e2e-settled・e2e-simple-menu）は確定の印を待たず、日の予定は `plan-summary` を待つ
-- 確認に答えるときは `scripts/lib/confirmDialog.cjs` の `answerConfirms(page)`（出た確認の見出しと本文を記録し `answer` のボタンを押す。ネイティブのダイアログは記録して失敗に、beforeunload だけ受ける）
+- 準備は `scripts/lib/steps.cjs` の `openPage`（sharedPage の準備）・`openContext(browser)`（pagePerStep の段ごとの文脈。地図のタイルを止め、確認は `answerConfirms`）を使う。どちらも案内ツアーを見た扱い・時計を `NOW` に止める・ページのエラーを集める（包みが失敗に数える）。自分で文脈を作るときはすぐ `scripts/lib/tourSeen.cjs` の `skipTour(ctx)` を呼ぶ（e2e-tour は除く）。既定（`start: 'all'`）で印 `vrdemo:features:start` = `all`（`scripts/lib/startFeatures.cjs` の `startAll`）を入れ、最初の2問を出さず今の初期データ＋すべて入で始める。2問を確かめるときは `skipTour(ctx, { start: 'ask' })` か呼ばず、`scripts/lib/firstRun.cjs` の `answerFirstRun`・`answerIfAsked` で答える
+- 確定の操作を確かめる e2e は「すべて入」（エキスパート入）の前提で書く。「基本」で始めるもの（e2e-tour・e2e-basic-auto・e2e-features・e2e-features2・e2e-simple-menu。2問に答えて始めるのは `scripts/lib/firstRun.cjs` の `openAsked`・`freshAsked`）は確定の印を待たず、日の予定は `plan-summary` を待つ
+- 確認に答えるときは `scripts/lib/confirmDialog.cjs` の `answerConfirms(page)`（出た確認の見出しと本文を記録し `answer` のボタンを押す。ネイティブのダイアログは記録して失敗に、beforeunload だけ受ける。答えずにネイティブのダイアログだけ記録するのは `watchNative(page)`）
+- 保存を待つ `waitStored(page, pred)`・修飾キー `MOD`・スクリーンショット `shot(page, 名前)` は `scripts/lib/env.cjs` にある（スクリプトに写さない）
 - 外部の検索・GAS は `page.route` の偽の応答に差し替え、外へは出さない。地図のタイルは取りに行かない
 
 ### 画面の位置を知る共通の手（`scripts/lib/ui.cjs`）
@@ -56,28 +57,26 @@ AGENTS.md「コマンド」から引く詳細。e2e を走らせる・足す・�
 | `e2e-absence.cjs` | 欠勤・当日キャンセルの欄（入口・段階・振り直し 案A／案B・差の欄・連絡の一覧） | |
 | `e2e-address.cjs` | 住所の入力（〈利用者さん〉・空き状況の場所・〈スタッフ〉の自宅。郵便番号・候補・失敗と時間切れ・名簿のあとの「位置の無い N人を地図に置く」） | 時間切れを待つので1分ほど |
 | `e2e-arrange.cjs` | 担当を組む（予定を組むの段・範囲・提案の帯・反映・組み直しの知らせ・基本情報の表） | |
-| `e2e-auto-arrange.cjs` | 自動の組み（「基本」で訪問・繰り返しを足すと担当が付く・知らせと［元に戻す］） | |
+| `e2e-basic-auto.cjs` | 「基本」で予定が自動で決まる（訪問・繰り返しを足すと担当が付く・帯の［担当なしを組む］・確定の段階なし・自動の伝えた記録・「変更あり」と連絡の一覧） | |
 | `e2e-chip-containers.cjs` | 札の3段と入れ物（週の表の札と「+N」・選ぶ・キー・ドラッグ・月のマス・`data-marks` が3段で同じ） | 1400px・390px |
 | `e2e-compat.cjs` | 相性の画面（吹き出し・絞り込みと URL・300人×60人の速さ） | `PERF_MS_COMPAT`（セルを押して描き終わるまで。既定 100ms） |
+| `e2e-day-ops.cjs` | 日の予定の操作（スマホの日ごとのリスト・下から出る欄・複数選択／広い画面の帯のキー・範囲の小さな帯・パレットの訪問） | 390px・1400px |
 | `e2e-details.cjs` | 予定（月・週・日）の名前から開く詳細 | `PERF_MS_DETAILS`（吹き出しが出るまで。既定 100ms） |
 | `e2e-details2.cjs` | 名前から詳細を開く場所（日の予定の入らなかった訪問・受けられる人・帯）・顧客台帳の形の名簿の読み込み・最終勤務日の知らせ | |
 | `e2e-dialog.cjs` | 独自の確認ダイアログ（ネイティブのダイアログが出たら失敗・ARIA・フォーカス・Esc・背景・390px・印刷） | |
-| `e2e-drag.cjs` | 本物のマウスでのドラッグ6種類・週の〈利用者さん〉で見るの初期値（先頭8人） | |
+| `e2e-drag.cjs` | 本物のマウスでのドラッグ5種類（表・月の一覧の行は e2e-chip-containers・e2e-shared-parts）・週の〈利用者さん〉で見るの初期値（先頭8人） | |
 | `e2e-features.cjs`・`e2e-features2.cjs` | 機能の入り切り（ひな形ごとのメニュー・下のタブ・パレット・起動の画面・切った URL／画面の中の入口・相性を切る・切ったまま保存）・管理者設定の見せ方 | 共通の部品は `scripts/lib/features.cjs` |
 | `e2e-home.cjs` | ホームは無い・要対応の帯（入）・`?do=`・まとめて確定・次の確定していない日へ | |
 | `e2e-links.cjs` | 行き止まりから次の画面へ移る道（月の要対応の行き先・勤務の見込み・勤務時間（シフト）・空き状況） | 別のタブでデータを書き換えて作る |
-| `e2e-mail-confirm.cjs` | 日・週の予定のメール（全員分の「メールを作る」で確定） | |
-| `e2e-mail-schedule.cjs` | メールの予約送信（つなぐ・接続を試す・予約して確定・取り消す・設定の手順の畳み） | GAS は偽の応答 |
+| `e2e-mail.cjs` | 日・週の予定のメール（全員分の「メールを作る」で確定）・予約送信（つなぐ・接続を試す・予約して確定・取り消す・設定の手順の畳み） | GAS は偽の応答 |
 | `e2e-mobile.cjs` | スマホ（390×844）のメニュー・引き出し・下のタブ・浮いている部品・狭い画面の表（カード・端の印）・1400px | |
-| `e2e-mobile-v5.cjs` | スマホの日ごとのリスト・下から出る欄・複数選択／広い画面のキーで動かす・パレットの訪問 | |
 | `e2e-nav.cjs` | メニューの並び・コマンドパレット・390px | `PERF_MS_NAV`（1文字。既定 100ms）・`PERF_MS_NAV_CARE`（「要対応」を打ったときの1回の止まり。既定 300ms） |
 | `e2e-panel-foot.cjs` | 右の欄の確定のボタンの帯（短い欄・長い欄・Tab・390px・キーボード・印刷） | 1400px・390px |
 | `e2e-person-page.cjs` | 〈利用者さん〉・〈スタッフ〉の画面の予定（カレンダー・空き枠のドラッグ・繰り返し・休み・390px・印刷） | |
 | `e2e-plan-menu.cjs` | 日の予定の手で直す操作と比較の画面 | |
 | `e2e-progress.cjs` | 月の進み具合の帯（数・行き先・担当を AI で組むが画面を移っても続く・390px・印刷） | `PERF_MS_PROGRESS`（既定 3000ms）。月末（`FAKE_NOW=2026-10-28`・`2026-10-31`）でも通る |
-| `e2e-schedule-v4.cjs` | 予定の日・週・月の共通の部品（操作の行・範囲の提案・複数選択・元に戻す）・メニューの子の項目・基本情報と人のタブ | |
-| `e2e-settled.cjs` | 決まった予定（「基本」：確定の段階なし・自動の伝えた記録・「変更あり」と連絡の一覧） | |
-| `e2e-shared-parts.cjs` | 訪問の札の共通の部品（週の表・月・人の予定表で複数選択・キー・`data-marks`・落とし先の判定） | 1400px・390px |
+| `e2e-schedule-tools.cjs` | 予定の日・週・月の共通の部品（操作の行・範囲の提案（画面を移っても残る）・複数選択・元に戻す）・パレットに案を比べるが出ない | |
+| `e2e-shared-parts.cjs` | 訪問の札の共通の部品（週の〈利用者さん〉の表・月のマスと一覧・人の予定表で複数選択・キー・`data-marks`・落とし先の判定。週の〈スタッフ〉の表のキーと長押しは e2e-chip-containers） | 1400px・390px |
 | `e2e-simple-menu.cjs` | 「基本」のメニュー5つ・要対応の帯・「予定を入れる」・人のタブ・人の画面の畳み・地図はボタン／入の人の一覧の「くわしい列」 | 1366px・390px |
 | `e2e-standard.cjs` | 組み方の標準（段・案をくらべる・表で直す・標準にする・条件の重みの寄り道） | |
 | `e2e-tour.cjs` | 最初の2問・登録の案内・案内ツアー・ファイル選択・月の日ごとの一覧・データを守る（控え・書き出した日・片づけ・壊れたデータ） | |

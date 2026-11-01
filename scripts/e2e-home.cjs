@@ -1,13 +1,12 @@
-// ホームは無い・要対応の帯（PRD D401・D404。ADR-0074 段1）を本物のブラウザで確かめる（エキスパート機能が入）：
-// 起動（#/・#/home・知らない URL）で予定の画面（繰り返しを使うなら月）へ移りホームの画面は出ない・ほかの画面の URL（人の画面など）と
-// 古い #/schedule は今までどおり、予定の上の帯（担当なし・重なり・休みの人のほか 組み方の標準が無い・基本情報が変わった（組み直す）・
+// ホームは無い・要対応の帯（PRD D401・D404）を本物のブラウザで確かめる（エキスパート機能が入）：
+// 起動（#/・#/home・知らない URL）で予定の画面（繰り返しを使うなら月）へ移りホームの画面は出ない・ほかの画面の URL（人の画面など）はそのまま・
+// #/schedule は日の予定へ、予定の上の帯（担当なし・重なり・休みの人のほか 組み方の標準が無い・基本情報が変わった（組み直す）・
 // 未確定 N日。文の並び・数・押した先（並びの先頭の種類：標準が無い→組み方の標準、組み直し→担当を組む、未確定は1日だけならその日の日の予定・
 // 2日以上なら月の右の欄）・無ければ出さない）、
-// 初期データ（版2。保存した訪問は空で、今日からの日は繰り返しの担当のまま・まだ伝えていない）、月の画面の ?do=attention・?do=unconfirmed で右の欄、
+// 初期データ（保存した訪問は空で、今日からの日は繰り返しの担当のまま・まだ伝えていない）、月の画面の ?do=attention・?do=unconfirmed で右の欄、
 // 月の「問題の無い日をまとめて確定」（PRD D223。N日・確認に日付と残す日・確定済みになり帯の未確定が減る・担当が休みの訪問のある日は外れ確認に日付が出る・
-// 未連絡の変更のある日は外れる・0日なら押せず理由）、確定した日の「次の確定していない日へ」（PRD D224）、
-// 訪問の無い人の欠勤は要対応に数えない、メニュー（1400px）の6つにホームが無い・空き状況がメニューの項目（PRD D400。ADR-0078）、
-// スマホ（390×844）で下のタブ（予定・〈利用者さん〉・〈スタッフ〉・組む・探す・メニュー）・横にはみ出さない。
+// 未連絡の変更のある日は外れる・0日なら押せず理由）、確定した日の「次の確定していない日へ」（PRD D224）、訪問の無い人の欠勤は要対応に数えない。
+// メニューの並び・下のタブは e2e-nav・e2e-mobile が見る。
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-home.cjs
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）
@@ -16,7 +15,7 @@ const path = require('node:path');
 const { answerConfirms } = require('./lib/confirmDialog.cjs');
 const { BASE, OUT_DIR, NOW, TODAY, STORAGE_KEY, check, hashOf, runSteps, settle, until } = require('./lib/env.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
-const { clickMenu, goTo, pressTool, reveal } = require('./lib/ui.cjs');
+const { goTo, reveal } = require('./lib/ui.cjs');
 const { visitsIn } = require('./lib/visits.cjs');
 
 const YM = TODAY.slice(0, 7);
@@ -98,7 +97,7 @@ async function start(page) {
   await open(page, '/staff/s1', '[data-testid="person-view"]');
   check(hashOf(page).startsWith('#/staff/s1'), 'ほかの画面の URL（人の画面）はそのまま', hashOf(page));
   await open(page, '/schedule', '.app-header');
-  check(hashOf(page).startsWith('#/plan'), '古い #/schedule は今までどおり日の予定へ', hashOf(page));
+  check(hashOf(page).startsWith('#/plan'), '#/schedule は日の予定へ', hashOf(page));
 }
 
 /** 別のタブで localStorage のデータを読み、node の中で書き換えて書き戻す（fn の戻り値を返す） */
@@ -295,7 +294,7 @@ async function seedPlans(page) {
         info.saved === 0 &&
         info.visitsAll === 0 &&
         info.usual >= info.patterns * 0.5,
-      '初期データ（版2）：保存した訪問は空（AI で組まない）で、今日からは繰り返しの担当のまま（計算した回）。過去の日は伝えた状態・今日からは伝えていない',
+      '初期データ：保存した訪問は空（AI で組まない）で、今日からは繰り返しの担当のまま（計算した回）。過去の日は伝えた状態・今日からは伝えていない',
       info,
     );
     await p.screenshot({ path: path.join(OUT_DIR, 'month-first-run-1440.png'), fullPage: true });
@@ -471,7 +470,7 @@ async function monthAttention(page, ym, date) {
 }
 
 /**
- * 欠勤があっても、その人に訪問が無ければ要対応に数えない（版2：要対応は訪問ごと。ADR-0053）：担当の無い〈スタッフ〉の欠勤を
+ * 欠勤があっても、その人に訪問が無ければ要対応に数えない（要対応は訪問ごと。ADR-0053）：担当の無い〈スタッフ〉の欠勤を
  * 別のタブで足し、マスに「欠」は出るが、要対応の帯・進み具合の帯・月の要対応の欄の数は変わらないことを確かめる
  */
 async function handledAbsence(page) {
@@ -580,59 +579,6 @@ async function monthDo(page) {
   );
 }
 
-/** メニュー（1400px）：6つにホームが無い。空き状況はメニューの項目（予定の次）、欠勤・キャンセルは操作の行から */
-async function wide(page) {
-  await reset(page);
-  await page.setViewportSize({ width: 1400, height: 1000 });
-  await open(page, `/month?ym=${YM}`);
-  const labels = await page.locator('.side-nav [data-testid="nav-link"]').allInnerTexts();
-  check(
-    !labels.some((l) => l.includes('ホーム')) && labels[0].trim() === '予定',
-    '広い画面：メニューの先頭は「予定」でホームは無い',
-    labels,
-  );
-  check(
-    (await page.locator('.side-nav [aria-current="page"]').first().innerText()).trim() === '予定',
-    '広い画面：月の予定では「予定」に印',
-  );
-  check(labels[1].trim() === '空き状況', '広い画面：メニューの2番目は「空き状況」', labels);
-  await clickMenu(page, '空き状況');
-  await page.waitForURL(/#\/vacancy/);
-  check(hashOf(page) === '#/vacancy', 'メニューの「空き状況」で空き状況へ', hashOf(page));
-  // 空き状況は別のチャンク：画面が出て印が移るまで待つ（URL が変わった直後は前の画面の印のことがある）
-  const curOf = async () =>
-    (await page.locator('.side-nav [aria-current="page"]').allInnerTexts()).map((s) => s.trim());
-  await until(async () => (await curOf())[0] === '空き状況', 30000);
-  check((await curOf())[0] === '空き状況', '空き状況の画面では「空き状況」に印', await curOf());
-  await open(page, `/month?ym=${YM}`);
-  await pressTool(page, '欠勤', { where: 'more' });
-  await page.waitForURL(/#\/plan/);
-  await page.locator('.date-switch select').waitFor();
-  check((await page.locator('.date-switch select').inputValue()) === TODAY, '欠勤・キャンセルを登録 → 今日の日の予定');
-  await page.screenshot({ path: path.join(OUT_DIR, 'menu-wide.png'), fullPage: true });
-}
-
-/** スマホ：下のタブ（予定・〈利用者さん〉・〈スタッフ〉・組む・探す・メニュー）・#/home は予定へ・横にはみ出さない */
-async function mobile(page) {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await open(page, '/home');
-  check(/^#\/month/.test(hashOf(page)), 'スマホ：#/home は予定の画面へ', hashOf(page));
-  const terms = (await stored(page)).org.terms;
-  const labels = await page.locator('.bottom-tabs .bottom-tab').allInnerTexts();
-  check(
-    JSON.stringify(labels.map((l) => l.trim())) ===
-      JSON.stringify(['予定', terms.client, terms.staff, '組む', '探す', 'メニュー']),
-    'スマホ：下のタブは 予定・〈利用者さん〉・〈スタッフ〉・組む・探す・メニュー',
-    labels,
-  );
-  const active = await page.locator('.bottom-tab.active[aria-current="page"]').allInnerTexts();
-  check(JSON.stringify(active) === '["予定"]', 'スマホ：予定のタブが active', active);
-  const scrollW = await page.evaluate(() => document.documentElement.scrollWidth);
-  check(scrollW <= 390, 'スマホ：横にはみ出さない', scrollW);
-  await page.screenshot({ path: path.join(OUT_DIR, 'month-mobile.png') });
-  await page.setViewportSize({ width: 1366, height: 768 });
-}
-
 const steps = sharedPage({
   open: async () => {
     const s = await openPage();
@@ -646,8 +592,6 @@ const steps = sharedPage({
     ['seed-plans', seedPlans],
     ['handled-absence', handledAbsence],
     ['month-do', monthDo],
-    ['wide', wide],
-    ['mobile', mobile],
   ],
   after: ({ dlg }) => check(dlg.native.length === 0, 'ブラウザのダイアログを出さない', dlg.native),
 });

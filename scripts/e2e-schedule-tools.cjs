@@ -1,142 +1,33 @@
-// 見直しの4段目（ADR-0054。PRD D326〜D332）を本物のブラウザで確かめる：
-// メニューの子の項目（予定・予定を組む。PRD D349・D361。ADR-0067。最上位5項目の並びは e2e-nav）と
-// 基本情報のタブ（予定と相性・相性・勤務時間（シフト）。〈利用者さん〉・〈スタッフ〉は人のタブ。PRD D394）、パレットに案を比べるが出ない、
+// 予定（日・週・月）の共通の部品（ADR-0054。PRD D326〜D332）を本物のブラウザで確かめる：
+// メニューの「基本情報」は予定と相性（#/basics）を開く・パレットに案を比べるが出ない（メニューの並び・子の項目・基本情報のタブは e2e-nav）、
 // 日・週・月の切り替えで同じ操作の行（欠勤・キャンセルを登録／元に戻す／（月だけ）その他 ▾。「AI で組む ▾」は無い）、
-// 担当を組むの画面で週を組んだ範囲の提案の帯（反映するまで訪問は変わらない・週・日の予定にも出る・「反映する」で1回の update・
+// 担当を組むの画面で週を組んだ範囲の提案の帯（反映するまで訪問は変わらない・週・日の予定にも出る・画面を移って月に戻っても残る・「反映する」で1回の update・
 // Ctrl+Z で戻る・Ctrl+Shift+Z でやり直す）、
 // 全体の元に戻す（入力欄の中では Ctrl+Z を奪わない・操作の行の「元に戻す」の title に手の名前・やり直しのトースト）、
 // 複数選択（日の時間軸の帯を Shift・Ctrl＋クリック、Shift＋Enter で足す、Esc で外す、帯の「時刻をずらす +15分」で2件の時刻が変わり1手で戻る、
 // 週の時間軸の帯で Ctrl＋クリック → 取り消す（独自の確認））、390px（操作の行と複数選択の帯がはみ出さない）、印刷（操作の行・帯を出さない）。
 //
-// 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-schedule-v4.cjs
+// 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-schedule-tools.cjs
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）
 // 終了コード：全部通れば 0、通らないものがあれば 1。ページのエラー（pageerror）も失敗に数える
-const path = require('node:path');
-const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, settle, stored, until, runSteps } = require('./lib/env.cjs');
+const { BASE, TODAY, STORAGE_KEY, check, settle, stored, runSteps, waitStored, MOD, shot } = require('./lib/env.cjs');
 const { markStandard } = require('./lib/standard.cjs');
+const { watchNative } = require('./lib/confirmDialog.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
 const { clickMenu, closeMore, openMore, pressTool, undoState } = require('./lib/ui.cjs');
 
-const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
-const shot = (page, name) => page.screenshot({ path: path.join(OUT_DIR, `${name}.png`) });
 const visitsKey = (d) => JSON.stringify(d?.visits ?? null);
-/** 親ごとの子の項目の key */
-const navKids = (page, parent, scope = '.side-nav') =>
-  page
-    .locator(`${scope} [data-parent="${parent}"] > .nav-sub > .nav-link.nav-child`)
-    .evaluateAll((els) => els.map((e) => e.dataset.key));
-/** 今の画面の印が付いた項目の key */
-const current = (page, scope = '.side-nav') =>
-  page
-    .locator(`${scope} [data-testid="nav-link"][aria-current="page"]`)
-    .evaluateAll((els) => els.map((e) => e.dataset.key));
-/** 親の行の項目が has-current（子に今の画面がある）か */
-const parentHasCurrent = async (page, parent, scope = '.side-nav') =>
-  (await page.locator(`${scope} [data-parent="${parent}"] > .nav-parent-row > .nav-link.has-current`).count()) === 1;
-
-/** 保存（少し遅れて書く）が条件を満たすまで待つ */
-async function waitStored(page, pred, timeout = 8000) {
-  return until(async () => pred(await stored(page)), timeout, 100).catch(() => false);
-}
 /** 予定の画面を開いて落ち着くまで待つ */
 async function openView(page, hash) {
   await page.goto(`${BASE}#${hash}`);
   await page.getByTestId('schedule-toolbar').waitFor({ timeout: 60000 });
   await settle(page, 400);
 }
-// ---- メニュー（子の項目）・基本情報のタブ・パレット ----
+// ---- メニューの「基本情報」の行き先・パレット（メニューの並び・子の項目・基本情報のタブは e2e-nav の menu） ----
 async function menu(page) {
   await page.goto(`${BASE}#/data`);
   await page.locator('h1').waitFor();
   await settle(page, 300);
-  // 最上位5項目の並びと名前・グループの見出しが無いことは e2e-nav の menu が確かめる
-  const kids = {
-    schedule: await navKids(page, 'schedule'),
-    arrange: await navKids(page, 'arrange'),
-  };
-  check(
-    JSON.stringify(kids) ===
-      JSON.stringify({
-        schedule: [],
-        arrange: ['arrange:basics', 'arrange:standard', 'arrange:assign'],
-      }) && (await page.locator('.side-nav [data-key="people"]').count()) === 0,
-    '予定に子は無く、組むの子は基本情報・組み方の標準・担当を組む（ADR-0067・ADR-0074）。メニューに「人」は無い',
-    kids,
-  );
-  await shot(page, 'menu-1400');
-  await clickMenu(page, '基本情報');
-  await page.waitForURL(/#\/basics$/);
-  const tabs = page.getByTestId('people-tabs');
-  await tabs.waitFor();
-  const tabNames = await tabs.locator('a').evaluateAll((els) => els.map((e) => e.textContent.trim()));
-  check(
-    JSON.stringify(tabNames) === JSON.stringify(['予定と相性', '相性', '勤務時間（シフト）']),
-    '基本情報のタブは3つ（先頭が予定と相性。〈利用者さん〉・〈スタッフ〉は人のタブの画面。PRD D394）',
-    tabNames,
-  );
-  check(
-    (await page.getByTestId('arrange-steps').count()) === 1 &&
-      (await tabs.getAttribute('aria-label')) === '基本情報の切り替え',
-    '基本情報のタブの上に予定を組むの段・タブの aria-label は「基本情報の切り替え」',
-  );
-  check(
-    (await tabs.locator('[aria-current="page"]').getAttribute('data-tab')) === 'basics',
-    '「基本情報」の既定は予定と相性のタブ',
-  );
-  check(
-    JSON.stringify(await current(page)) === JSON.stringify(['arrange:basics']) &&
-      (await parentHasCurrent(page, 'arrange')),
-    '予定と相性ではメニューの組むの子「基本情報」が今の画面（親の「組む」は has-current）',
-    await current(page),
-  );
-  // 基本情報のタブの「相性」は人のタブの画面へ移り、段は出ず、メニューの印は〈利用者さん〉（来た側の既定）
-  await tabs.locator('[data-tab="compat"]').click();
-  await page.waitForURL(/#\/compat/);
-  // 相性は別のチャンク：人のタブが出て前の画面（見出し「予定と相性」・段）が消えるまで待つ。
-  // 見出しの「相性」は「予定と相性」にも当たるので、見出しでは待たない
-  await page.getByTestId('people-tabs').waitFor({ timeout: 30000 });
-  await until(async () => (await page.getByTestId('arrange-steps').count()) === 0, 5000, 100).catch(() => {});
-  check(
-    (await page.getByTestId('people-tabs').locator('[aria-current="page"]').getAttribute('data-tab')) === 'compat' &&
-      (await page.getByTestId('people-tabs').getAttribute('aria-label')) === '利用者さんの画面の切り替え' &&
-      (await page.getByTestId('arrange-steps').count()) === 0,
-    '相性は人のタブ（一覧・相性）の画面で、予定を組むの段は出ない（組む画面だけ。PRD D394）',
-  );
-  await until(async () => JSON.stringify(await current(page)) === '["clients"]', 5000, 100).catch(() => {});
-  check(
-    JSON.stringify(await current(page)) === JSON.stringify(['clients']),
-    '相性は来た側（既定は〈利用者さん〉）の項目が今の画面（組むの子ではない）',
-    await current(page),
-  );
-  await page.getByTestId('people-tabs').locator('[data-tab="clients"]').click();
-  await page.waitForURL(/#\/clients$/);
-  await until(async () => JSON.stringify(await current(page)) === '["clients"]', 5000, 100).catch(() => {});
-  check(
-    JSON.stringify(await current(page)) === JSON.stringify(['clients']) &&
-      (await page.getByTestId('arrange-steps').count()) === 0,
-    '〈利用者さん〉一覧はメニューの上の段の項目「利用者さん」が今の画面（PRD D401）で、予定を組むの段は出ない',
-    await current(page),
-  );
-  check(
-    (await page.getByTestId('to-compat').count()) === 0,
-    '一覧の見出しの「相性の表」の文字ボタンは無い（タブで開く）',
-  );
-  await page.goto(`${BASE}#/workload`);
-  await page.getByTestId('people-tabs').waitFor();
-  check(
-    (await page.getByTestId('people-tabs').locator('[aria-current="page"]').getAttribute('data-tab')) ===
-      'availability',
-    '勤務の見込みは勤務のタブ（勤務時間（シフト））に印',
-  );
-  await until(async () => JSON.stringify(await current(page)) === '["staff"]', 5000, 100).catch(() => {});
-  check(
-    JSON.stringify(await current(page)) === JSON.stringify(['staff']) &&
-      (await page.getByTestId('arrange-steps').count()) === 0,
-    '勤務の見込みではメニューの〈スタッフ〉が今の画面（組むの子「基本情報」ではない）で、予定を組むの段は出ない',
-    await current(page),
-  );
-  await page.goto(`${BASE}#/compat`);
-  await page.getByTestId('people-tabs').waitFor();
   await clickMenu(page, '予定');
   await page.waitForURL(/#\/plan/);
   const basicsHref = await page.locator('.side-nav [data-key="arrange:basics"]').getAttribute('href');
@@ -296,6 +187,17 @@ async function scope(page) {
     (await page.locator('[data-testid="proposal-band"][data-kind="range"]').count()) === 1,
     '範囲の提案は週の予定にも出る',
   );
+  // 画面を移っても残る：メニューで予定・基本情報へ移り、月の予定に戻っても出る
+  await clickMenu(page, '予定');
+  await page.waitForURL(/#\/(plan|week|month)/);
+  await clickMenu(page, '基本情報');
+  await page.waitForURL(/#\/basics/);
+  await openView(page, '/month');
+  check(
+    (await page.locator('[data-testid="proposal-band"][data-kind="range"]').count()) === 1,
+    '範囲の提案：予定・基本情報へ移って月の予定に戻っても残る',
+  );
+  await openView(page, '/week');
   if (moved + shifted === 0) {
     await page.getByTestId('proposal-discard').click();
     await resetData(page);
@@ -530,16 +432,8 @@ async function narrow(page) {
 const steps = sharedPage({
   open: async () => {
     const s = await openPage();
-    // 確認は独自のダイアログ。ブラウザのダイアログが出たら失敗（PRD D146）
-    const native = [];
-    s.page.on('dialog', (d) => {
-      if (d.type() === 'beforeunload') {
-        d.accept();
-        return;
-      }
-      native.push(`${d.type()}: ${d.message()}`);
-      d.dismiss();
-    });
+    // 確認は独自のダイアログ。ブラウザのダイアログが出たら失敗
+    const native = watchNative(s.page);
     await s.page.goto(`${BASE}#/data`);
     await s.page.evaluate((k) => localStorage.removeItem(k), STORAGE_KEY);
     await s.page.reload();

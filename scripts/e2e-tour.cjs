@@ -178,7 +178,7 @@ async function firstRun(b) {
   await page.locator('.app-main h1').first().waitFor({ timeout: 30000 });
   check((await page.getByTestId('first-run').count()) === 0, '答えたあとは、読み直しても2問を出さない');
   await ctx.close();
-  // 印「all」（e2e の前準備）があれば2問を出さず、今までの初期データ＋すべて入で始める
+  // 印「all」（e2e の前準備）があれば2問を出さず、今の初期データ＋すべて入で始める
   const a = await newPage(b, { human: true, start: 'all' });
   await a.page.goto(`${BASE}#/home`);
   await a.page.getByTestId('sched-nav').waitFor({ timeout: 30000 });
@@ -188,7 +188,7 @@ async function firstRun(b) {
     (await a.page.getByTestId('first-run').count()) === 0 &&
       Object.values(ad.org.features).length === 0 &&
       ad.clients.length === 20,
-    '印「all」があれば2問を出さず、今までの初期データ＋すべて入（features は {}）で始める',
+    '印「all」があれば2問を出さず、今の初期データ＋すべて入（features は {}）で始める',
     ad.org.features,
   );
   await a.ctx.close();

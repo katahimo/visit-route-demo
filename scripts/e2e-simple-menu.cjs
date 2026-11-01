@@ -1,8 +1,8 @@
-// メニュー5つ・ホームの統合・要対応の帯（PRD D400・D403。ADR-0073 段(4)の1・ADR-0077・ADR-0078）を本物のブラウザで確かめる。
+// 「基本」のメニュー5つ・要対応の帯（PRD D400・D403。ADR-0073・ADR-0077・ADR-0078）を本物のブラウザで確かめる。
 // 初めて開いたとき（デモ×定期＝「基本」のひな形＝エキスパート機能は切）で、
 // 1 #/home・#/・知らない URL は予定（月）へ移る（ホームの画面は出ない）、
 // 2 左のメニューは 予定・空き状況・〈利用者さん〉・〈スタッフ〉・設定 の5つ（見出し・子の項目なし。今の画面の印・押して移る）。コマンドパレットの画面にホームが無い、
-// 3 予定（月・週・日）の上に要対応の帯（担当なし N件…。箱で、右に［担当なしを組む］（従のボタン。押すと組んで知らせ・件数が減る）と［見に行く ›］。
+// 3 予定（月・週・日）の上に要対応の帯（担当なし N件…。箱で、右に［担当なしを組む］（従のボタン。押したあとは e2e-basic-auto）と［見に行く ›］。
 //   見に行くは重なり・休みの人の訪問を先に、無ければ担当なし。日の予定で今日を見たまま押しても変わる）。月・週・日のどれにも出る。訪問が無ければ出さない、
 // 4 空き状況はメニューの項目（押すと空き状況・印は「空き状況」）。予定の「その他 ▾」（月・週・日）には空き状況・担当なしの訪問を組むが無い、
 // 5 スマホ（390px）：下のタブは 予定・〈利用者さん〉・〈スタッフ〉・設定＋探す＋メニュー。引き出しは空き状況を足した5つ。帯（［担当なしを組む］・［見に行く ›］）・「その他 ▾」が収まる、
@@ -14,69 +14,36 @@
 //    〈スタッフ〉は名前・勤務日・勤務時間の3列。詳細は〈利用者さん〉＝名前・住所・予定（繰り返し）／〈スタッフ〉＝名前・勤務日・勤務時間を出し、
 //    段階・特性・決まりごと・担当・相性（〈スタッフ〉は自宅・特性・求めること・日ごとの勤務ほか）は「詳しく ▾」の中（閉じていると見えない・開くと見える）。
 //    日の予定の地図はふだん閉じ、「地図」のボタンで開く（1366px・390px）。月のマスの読み方は帯の3種類と「変更あり」に合わせ、条件に合わない・拘束超は言わない、
-// 5f 「予定を入れる」と〈スタッフ〉・〈利用者さん〉のタブ（PRD D402。ADR-0073 第4段）：月・週の主ボタンは「予定を入れる」（操作の行は2つまで。担当なしを組むは帯の［担当なしを組む］）、
+// 5f 「予定を入れる」と〈スタッフ〉・〈利用者さん〉のタブ（PRD D402）：月・週の主ボタンは「予定を入れる」（操作の行は2つまで。担当なしを組むは帯の［担当なしを組む］）、
 //    押すと引き出し（定期＝〈利用者さん〉・曜日・くり返し・時刻・所要／単発＝〈利用者さん〉・日付・時刻・所要）で「入れる」→ 予定に出て担当が自動で付く。
 //    〈スタッフ〉の一覧の上のタブ（一覧・勤務・相性）と〈利用者さん〉のタブ（一覧・相性）で行き来でき、メニューの印は〈スタッフ〉／〈利用者さん〉に付き、
 //    相性・勤務の画面に禁句・点数が出ない。1366px・390px。幅は落ちても戻す、
-// 6 エキスパート機能を入にすると メニューは 予定・空き状況・〈利用者さん〉・〈スタッフ〉・組む・設定 の6つ（子は組むだけ）でホームは無く（#/home は予定へ）、帯に 組み方の標準が無い・未確定 N日 が足される。入では操作の行・説明・進み具合は今のまま（段2〜4 で変える）。
-// 6c 入の人の一覧（PRD D394。ADR-0074 段3）：〈スタッフ〉・〈利用者さん〉の一覧は見出しがメニューの名前で、切と同じ人のタブ（一覧・勤務・相性／一覧・相性）と3列で始まり、
+// 6 エキスパート機能を入にすると帯に 組み方の標準が無い・未確定 N日 が足され［担当なしを組む］は出ない（入のメニュー・ホームが無いことは e2e-nav・e2e-home）。
+// 6b 入の操作の行（主ボタン＋1つ＋「その他 ▾」）・「詳しく ▾」の見出しの数と開け閉めの覚え・説明1行。
+// 6c 入の人の一覧（PRD D394）：〈スタッフ〉・〈利用者さん〉の一覧は見出しがメニューの名前で、切と同じ人のタブ（一覧・勤務・相性／一覧・相性）と3列で始まり、
 //    表の上の「くわしい列」を入れると専門の列が足され、一覧ごとに端末に覚えて読み直しても同じ（外すと3列に戻る。切は切り替えが無い）。休止中は状態の列に重ねない。
-//    相性は来た側のタブ・メニューの印。予定を組むの4段は 予定と相性・組み方の標準・担当を組むだけで、人の画面には出ない。基本情報のタブは 予定と相性・相性・勤務時間（シフト）。1366px・390px、
-// スクリーンショット：simple-band-go-day-1366・simple-band-arrange-1366（3）、simple-add-*（5f）・simple-clients-1366・simple-staff-1366・simple-plan-map-closed-1366 ほか（5e は simple-people-*・simple-plan-map-*）、simple-month-1366・simple-band-plan-1366・simple-menu-more-1366・simple-week-390・simple-tabs-390・simple-drawer-390
+//    相性は来た側のタブ・メニューの印。1366px・390px（予定を組むの4段・基本情報のタブは e2e-nav）。
+// スクリーンショット：simple-band-go-day-1366（3）、simple-add-*（5f）・simple-clients-1366・simple-staff-1366・simple-plan-map-closed-1366 ほか（5e は simple-people-*・simple-plan-map-*）、simple-month-1366・simple-band-plan-1366・simple-menu-more-1366・simple-week-390・simple-tabs-390・simple-drawer-390
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-simple-menu.cjs
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）
 // 終了コード：全部通れば 0、通らないものがあれば 1。ページのエラー（pageerror）も失敗に数える
-const path = require('node:path');
-const {
-  BASE,
-  NOW,
-  OUT_DIR,
-  STORAGE_KEY,
-  check,
-  launch,
-  runSteps,
-  settle,
-  until,
-  watchErrors,
-} = require('./lib/env.cjs');
-const { sharedPage } = require('./lib/steps.cjs');
-const { skipTour } = require('./lib/tourSeen.cjs');
-const { answerIfAsked } = require('./lib/firstRun.cjs');
+const { BASE, STORAGE_KEY, check, runSteps, settle, until, shot } = require('./lib/env.cjs');
+const { openPage, sharedPage } = require('./lib/steps.cjs');
+const { freshAsked } = require('./lib/firstRun.cjs');
 const { navUsr, pressTool, watchNavUsr } = require('./lib/ui.cjs');
 
 const data = (page) => page.evaluate((k) => JSON.parse(localStorage.getItem(k)), STORAGE_KEY);
 const hash = (page) => new URL(page.url()).hash;
-const shot = (page, name) => page.screenshot({ path: path.join(OUT_DIR, `${name}.png`) });
 const side = (page) => page.locator('.side-nav [data-testid="nav-link"]');
 const texts = (loc) => loc.evaluateAll((els) => els.map((e) => e.textContent.trim().replace(/\s+/g, ' ')));
 
-/** 初期データに戻して開く（初めて開いたときの2問に「デモで試す・定期」で答える＝「基本」＝エキスパート機能は切）。start は 'demo'|'own' */
-async function fresh(page, to, ready, answer) {
-  await page.goto(`${BASE}#/data`);
-  await page.evaluate((k) => localStorage.removeItem(k), STORAGE_KEY);
-  await page.goto(`${BASE}#${to}`);
-  await page.reload();
-  if (await answerIfAsked(page, ready, answer)) {
-    await page.goto('about:blank');
-    await page.goto(`${BASE}#${to}`);
-  }
-  await page.locator(ready).first().waitFor({ timeout: 60000 });
-  await settle(page, 400);
-}
+const fresh = freshAsked;
 
 const NAV_READY = '[data-testid="sched-nav"]';
 
-/** 準備：1366×768・初回は2問に答える。時計は NOW に止める */
-async function open() {
-  const b = await launch();
-  const ctx = await b.newContext({ viewport: { width: 1366, height: 768 } });
-  await skipTour(ctx, { start: 'ask' });
-  const page = await ctx.newPage();
-  await page.clock.setFixedTime(NOW);
-  watchErrors(page);
-  return { b, ctx, page };
-}
+/** 準備：1366×768・初回は2問を出す（fresh で答える）。時計は NOW に止める */
+const open = () => openPage({ viewport: { width: 1366, height: 768 }, start: 'ask' });
 
 /** 1 #/home・#/・知らない URL は予定へ（ホームの画面は出ない） */
 async function redirects(page) {
@@ -210,7 +177,6 @@ async function band(page) {
   check((await page.getByTestId('attention-band').count()) === 1, '日の予定にも帯が出る', before);
   await shot(page, 'simple-band-plan-1366');
   await bandGoOnDay(page);
-  await bandArrange(page);
 }
 
 /** 日の予定で今日を見たまま［見に行く ›］を押すと画面が変わる（PRD D403。重なりがあればその訪問の日へ移って選び、担当なしだけなら欄を開く） */
@@ -251,34 +217,6 @@ async function bandGoOnDay(page) {
     check(!!panelOpen, '担当なしだけなら、その訪問の欄（訪問の詳細）が開く', { visitId: st.visitId });
   }
   await shot(page, 'simple-band-go-day-1366');
-}
-
-/** 帯の［担当なしを組む］（PRD D403）：押すと「N件の担当を組みました」［元に戻す］が出て、帯の「担当なし」の件数が減る（消える） */
-async function bandArrange(page) {
-  await page.goto('about:blank');
-  await page.goto(`${BASE}#/month`);
-  await page.locator(NAV_READY).waitFor({ timeout: 60000 });
-  const arrange = page.getByTestId('attention-band-arrange');
-  await arrange.waitFor({ timeout: 60000 });
-  const countOf = async () => {
-    const t = (await page.getByTestId('attention-band-text').count())
-      ? await page.getByTestId('attention-band-text').innerText()
-      : '';
-    const m = /担当なし (\d+)件/.exec(t);
-    return m ? Number(m[1]) : 0;
-  };
-  const n0 = await countOf();
-  check(n0 > 0, '前提：帯に「担当なし N件」がある', n0);
-  check(!/btn-primary/.test((await arrange.getAttribute('class')) ?? ''), '［担当なしを組む］は主ボタンではない');
-  await arrange.click();
-  const toast = page.locator('.toast-layer .toast-text').filter({ hasText: /件の担当を組みました/ });
-  await toast.first().waitFor({ timeout: 120000 });
-  check(/^\d+件の担当を組みました/.test(await toast.first().innerText()), '押すと知らせ「N件の担当を組みました」');
-  check((await page.getByTestId('toast-undo').count()) === 1, '知らせに［元に戻す］がある');
-  await shot(page, 'simple-band-arrange-1366');
-  await until(async () => (await countOf()) < n0, 30000);
-  const n1 = await countOf();
-  check(n1 < n0, '組むと帯の「担当なし」の件数が減る（または消える）', { n0, n1 });
 }
 
 /** 3b 訪問が無ければ帯を出さない（自分のデータで始めた空のデータ） */
@@ -689,7 +627,7 @@ const EXPERT_HEADING = {
   'day-details': /^点数 \d+・移動 \d+分/,
 };
 
-/** 6b 入（段2。PRD D402・D393）：操作の行は主ボタン＋1つ＋「その他 ▾」、進み具合・件数・今の担当の1行は「詳しく ▾」（閉じて始まり、見出しに数）、説明は1行で初回だけ */
+/** 6b 入（PRD D402・D393）：操作の行は主ボタン＋1つ＋「その他 ▾」、進み具合・件数・今の担当の1行は「詳しく ▾」（閉じて始まり、見出しに数）、説明は1行で初回だけ */
 async function expertSame(page) {
   await page.evaluate((k) => {
     const d = JSON.parse(localStorage.getItem(k));
@@ -800,7 +738,7 @@ const columnsMemory = (page, list) =>
 
 /** 入の一覧：3列で始め、「くわしい列」の切り替えで専門の列が足され、覚えて読み直しても同じ（一覧ごと。PRD D394） */
 async function expertList(page, w, { to, list, table, row, simple, extra, heading, postal }) {
-  await openPage(page, to);
+  await openTo(page, to);
   await page.locator(row).first().waitFor({ timeout: 60000 });
   check(
     (await page.locator('h1').innerText()).trim() === heading,
@@ -872,13 +810,13 @@ async function expertList(page, w, { to, list, table, row, simple, extra, headin
 
 /** 入の一覧を戻す（次の幅・次の確かめに残さない） */
 async function expertListOff(page, to, row, list) {
-  await openPage(page, to);
+  await openTo(page, to);
   await page.locator(row).first().waitFor({ timeout: 60000 });
   await columnsToggle(page).uncheck();
   await until(async () => (await columnsMemory(page, list)) === false, 5000, 100);
 }
 
-/** 6c 入：〈利用者さん〉・〈スタッフ〉の一覧は切と同じタブと3列、「くわしい列」で専門の列（覚える。一覧ごと）、4段は組む画面だけ（PRD D394） */
+/** 6c 入：〈利用者さん〉・〈スタッフ〉の一覧は切と同じタブと3列、「くわしい列」で専門の列（覚える。一覧ごと。PRD D394。4段と基本情報のタブは e2e-nav） */
 async function expertPeople(page) {
   const terms = (await data(page)).org.terms;
   const offName = await page.evaluate((k) => {
@@ -930,7 +868,7 @@ async function expertPeople(page) {
       ['/staff', ['一覧', '勤務', '相性'], terms.staff],
       ['/clients', ['一覧', '相性'], terms.client],
     ]) {
-      await openPage(page, to);
+      await openTo(page, to);
       const st = await peopleTabState(page);
       check(
         JSON.stringify(st.names) === JSON.stringify(names),
@@ -953,46 +891,19 @@ async function expertPeople(page) {
     await shot(page, `expert-compat-${page.viewportSize().width}`);
     await expertListOff(page, '/staff', '[data-testid="staff-row"]', 'staff');
     await expertListOff(page, '/clients', '[data-testid="client-row"]', 'clients');
-    await openPage(page, '/clients');
+    await openTo(page, '/clients');
     check(
       JSON.stringify(await heads(page, 'narrow-clients')) === JSON.stringify(['名前', '住所', 'いつもの予定']),
       `入 clients（${w}）：切り替えを外すと3列に戻る`,
     );
   }
   await page.setViewportSize({ width: 1366, height: 768 });
-  // 予定を組むの4段は「組む」の画面だけ（人の画面・相性・勤務には出ない）。基本情報のタブは 予定と相性・相性・勤務時間（シフト）
-  for (const to of ['/clients', '/staff', '/compat', '/availability', '/workload']) {
-    await openPage(page, to);
-    check((await page.getByTestId('arrange-steps').count()) === 0, `入 ${to}：予定を組むの段は出さない`);
-  }
-  for (const [to, n] of [
-    ['/basics', 4],
-    ['/standard', 4],
-    ['/arrange', 4],
-  ]) {
-    await openPage(page, to);
-    check(
-      (await page.locator('[data-testid="arrange-steps"] li').count()) === n,
-      `入 ${to}：予定を組むの段が出る（組む画面）`,
-    );
-  }
-  await openPage(page, '/basics');
-  const bt = await texts(page.locator('[data-testid="people-tabs"] [data-tab]'));
-  check(
-    JSON.stringify(bt) === JSON.stringify(['予定と相性', '相性', '勤務時間（シフト）']),
-    '入 /basics：基本情報のタブは 予定と相性・相性・勤務時間（シフト）（〈利用者さん〉・〈スタッフ〉は人のタブ）',
-    bt,
-  );
-  const cur = await texts(page.locator('.side-nav [aria-current="page"]'));
-  check(
-    JSON.stringify(cur) === JSON.stringify(['基本情報']),
-    '入 /basics：メニューは「組む」の子「基本情報」に印',
-    cur,
-  );
-  await shot(page, 'expert-basics-1366');
 }
 
-/** 6 エキスパート機能を入にすると 予定・〈利用者さん〉・〈スタッフ〉・組む・設定 の5つ。ホームは無く、帯に入だけの種類が足される（PRD D401・D404） */
+/**
+ * 6 エキスパート機能を入にすると、帯に入だけの種類（組み方の標準が無い・未確定 N日）が足され［担当なしを組む］は出ない（PRD D404）。
+ * 入のメニュー（6つ・子は組むだけ）・ホームが無いこと・下のタブと引き出しは e2e-nav・e2e-home・e2e-mobile が見る
+ */
 async function expertOn(page) {
   await page.goto('about:blank');
   await page.goto(`${BASE}#/month`);
@@ -1003,33 +914,8 @@ async function expertOn(page) {
     localStorage.setItem(k, JSON.stringify(d));
   }, STORAGE_KEY);
   await page.goto('about:blank');
-  await page.goto(`${BASE}#/home`);
+  await page.goto(`${BASE}#/month`);
   await page.locator(NAV_READY).waitFor({ timeout: 60000 });
-  check(/^#\/month/.test(hash(page)), 'expert 入：#/home も予定（月）へ移る（ホームは無い）', hash(page));
-  check((await page.getByTestId('home-tasks').count()) === 0, 'expert 入：ホームの画面は出ない');
-  const terms = (await data(page)).org.terms;
-  const labels = await page
-    .locator('.side-nav [data-testid="nav-link"]:not(.nav-child) > span:first-of-type')
-    .allInnerTexts();
-  check(
-    JSON.stringify(labels) === JSON.stringify(['予定', '空き状況', terms.client, terms.staff, '組む', '設定']),
-    'expert 入：メニューは 予定・空き状況・〈利用者さん〉・〈スタッフ〉・組む・設定 の6つ',
-    labels,
-  );
-  const kids = await page.locator('.side-nav .nav-child > span:first-of-type').allInnerTexts();
-  check(
-    JSON.stringify(kids) === JSON.stringify(['基本情報', '組み方の標準', '担当を組む']),
-    'expert 入：子の項目は「組む」の 基本情報・組み方の標準・担当を組む だけ',
-    kids,
-  );
-  check(
-    (await page.locator('.side-nav [data-testid="nav-toggle"]').count()) === 1,
-    'expert 入：畳む ▾ は「組む」の1つだけ',
-  );
-  check(
-    (await page.locator('.side-nav [data-testid="nav-badge"]').count()) === 1,
-    'expert 入：件数の印は1つだけ（組む）',
-  );
   await settle(page, 600);
   await page.getByTestId('attention-band').waitFor({ timeout: 60000 });
   const bandText = await page.getByTestId('attention-band-text').innerText();
@@ -1052,32 +938,6 @@ async function expertOn(page) {
     );
     await page.keyboard.press('Escape');
   }
-  await page.goto('about:blank');
-  await page.goto(`${BASE}#/zzz-unknown`);
-  await page.locator(NAV_READY).waitFor({ timeout: 60000 });
-  check(/^#\/month/.test(hash(page)), 'expert 入：知らない URL も予定へ', hash(page));
-  // スマホ：下のタブは 予定・〈利用者さん〉・〈スタッフ〉・組む・探す・メニュー（設定はメニューの中）
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('about:blank');
-  await page.goto(`${BASE}#/month`);
-  await page.locator(NAV_READY).waitFor({ timeout: 60000 });
-  const tabs = (await page.locator('.bottom-tabs .bottom-tab').allInnerTexts()).map((t) => t.trim());
-  check(
-    JSON.stringify(tabs) === JSON.stringify(['予定', terms.client, terms.staff, '組む', '探す', 'メニュー']),
-    'expert 入（390px）：下のタブは 予定・〈利用者さん〉・〈スタッフ〉・組む・探す・メニュー',
-    tabs,
-  );
-  await page.getByTestId('menu-btn').click();
-  const drawer = await page
-    .locator('[role="dialog"] [data-testid="nav-link"]:not(.nav-child) > span:first-of-type')
-    .allInnerTexts();
-  check(
-    JSON.stringify(drawer) === JSON.stringify(['予定', '空き状況', terms.client, terms.staff, '組む', '設定']),
-    'expert 入（390px）：引き出しも6つ（設定はここ）',
-    drawer,
-  );
-  await page.keyboard.press('Escape');
-  await page.setViewportSize({ width: 1366, height: 768 });
 }
 
 /** 画面ごとの欄（節）の data-section の並び。「詳しく」の外／中 */
@@ -1470,7 +1330,7 @@ async function addOneOff(page, w) {
 }
 
 /** 予定以外の画面を開く（見出しが出るまで待つ） */
-async function openPage(page, to) {
+async function openTo(page, to) {
   await page.goto('about:blank');
   await page.goto(`${BASE}#${to}`);
   await page.locator('.app-main h1, main h1').first().waitFor({ timeout: 60000 });
@@ -1524,7 +1384,7 @@ async function tabGo(page, label, to, expect) {
 async function peopleTabs(page, w) {
   const terms = (await data(page)).org.terms;
   const staffTabs = ['一覧', '勤務', '相性'];
-  await openPage(page, '/staff');
+  await openTo(page, '/staff');
   const first = await peopleTabState(page);
   check(
     JSON.stringify(first.names) === JSON.stringify(staffTabs),
@@ -1548,7 +1408,7 @@ async function peopleTabs(page, w) {
   // 勤務の見込み（#/workload。「基本」では機能が切）の印は、タブの match（lib/peopleTabs）と menu の match が同じ画面に当てる（単体テスト）
   // 〈利用者さん〉：一覧・相性。相性の画面ではこちらから来た側のタブ・印
   const c = { names: ['一覧', '相性'], menu: terms.client, side: 'clients' };
-  await openPage(page, '/clients');
+  await openTo(page, '/clients');
   const cs = await peopleTabState(page);
   check(
     JSON.stringify(cs.names) === JSON.stringify(c.names),
@@ -1559,7 +1419,7 @@ async function peopleTabs(page, w) {
   await tabGo(page, `${terms.client}の`, '/compat', { ...c, tab: '相性' });
   await tabGo(page, `${terms.client}の`, '/clients', { ...c, tab: '一覧' });
   // 予定と相性（#/basics）など旧画面のタブは出さない
-  await openPage(page, '/basics');
+  await openTo(page, '/basics');
   check((await page.getByTestId('people-tabs').count()) === 0, `予定と相性（${w}）：旧画面のタブは出さない`);
 }
 

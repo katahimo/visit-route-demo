@@ -10,14 +10,9 @@
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-person-page.cjs
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）
 // 終了コード：全部通れば 0、通らないものがあれば 1。ページのエラー（pageerror）も失敗に数える
-const path = require('node:path');
-const { skipTour } = require('./lib/tourSeen.cjs');
-const { answerConfirms } = require('./lib/confirmDialog.cjs');
 const { visitsIn } = require('./lib/visits.cjs');
 const {
   BASE,
-  OUT_DIR,
-  NOW,
   TODAY,
   STORAGE_KEY,
   check,
@@ -28,11 +23,11 @@ const {
   stored,
   runSteps,
   withTimeout,
+  shot,
 } = require('./lib/env.cjs');
-const { pagePerStep } = require('./lib/steps.cjs');
+const { openContext, pagePerStep } = require('./lib/steps.cjs');
 const { clickMenu, goTo } = require('./lib/ui.cjs');
 
-const shot = (page, name) => page.screenshot({ path: path.join(OUT_DIR, `${name}.png`) });
 const panel = (page) => page.getByTestId('visit-panel');
 const cal = (page) => page.getByTestId('pcal');
 const visitBtn = (page, id) => page.locator(`[data-testid="pcal-visit"][data-visit="${id}"]`);
@@ -450,7 +445,7 @@ async function patterns(page, dlg) {
   let d = await dataWhen(page, (x) => x.patterns.filter((p) => p.clientId === 'c1').length === p0 + 1);
   const added = d.patterns.find((p) => p.clientId === 'c1' && p.earliestStart === '17:00');
   check(!!added && added.weekdays.join() === '4', '「繰り返しを足す」→ 保存で繰り返しが増える', added);
-  // 版2：繰り返しの回は保存せず、見るときに計算する（ADR-0053）。カレンダーに足した繰り返しの回が出る
+  // 繰り返しの回は保存せず、見るときに計算する（ADR-0053）。カレンダーに足した繰り返しの回が出る
   await page
     .locator(`[data-testid="pcal-visit"][data-visit$="_${added?.id}"]`)
     .first()
@@ -648,7 +643,7 @@ async function staffPage(page) {
   const id = await first.getAttribute('data-visit');
   const d = await stored(page);
   const date = await first.getAttribute('data-date');
-  // 版2：担当は訪問に持つ（保存した回は staffId、計算した回は繰り返しの担当）
+  // 担当は訪問に持つ（保存した回は staffId、計算した回は繰り返しの担当）
   const own = d.visits.find((x) => x.id === id);
   const pat = d.patterns.find((p) => id === `${date}_${p.id}`);
   check(own ? own.staffId === 's1' : pat?.usualStaffId === 's1', '出す回はその日にこの人が担当の回', {
@@ -727,23 +722,12 @@ async function print(page) {
   await page.emulateMedia({ media: 'screen' });
 }
 
-const errors = [];
 const steps = pagePerStep({
-  open: async (browser) => {
-    const ctx = await browser.newContext({ viewport: { width: 1400, height: 1000 } });
-    await skipTour(ctx);
-    // 地図のタイルは外へ取りに行かない
-    await ctx.route(/cyberjapandata\.gsi\.go\.jp/, (r) => r.fulfill({ status: 204, body: '' }));
-    const page = await ctx.newPage();
-    await page.clock.setFixedTime(NOW);
-    page.on('pageerror', (e) => errors.push(String(e)));
-    return { ctx, page, dlg: await answerConfirms(page) };
-  },
+  open: (browser) => openContext(browser, { viewport: { width: 1400, height: 1000 } }),
   call: (fn, s) => fn(s.page, s.dlg),
   steps: [fromList, highlightAndMonth, slotNew, dragMove, patterns, leaves, monthLink, staffPage, narrow, print],
   label: (name) => `${name}：途中で止まった`,
   after: (name, { dlg }) => check(dlg.native.length === 0, `${name}：ブラウザのダイアログを出さない`, dlg.native),
-  end: () => check(errors.length === 0, 'ページのエラーが無い', errors),
 });
 
 module.exports = { steps };
