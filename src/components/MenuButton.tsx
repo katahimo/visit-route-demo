@@ -26,11 +26,11 @@ export type MenuItem = {
   /** この項目の前に区切りの線を入れる */
   separatorBefore?: boolean;
   /**
-   * 名前の下に出す1行の説明（何が変わり、手直し・固定がどうなるか。PRD D156）。押せないときは、代わりに押せない理由を出す。
+   * 名前の下に出す1行の説明（何が変わり、手直し・固定がどうなるか。PRD D315）。押せないときは、代わりに押せない理由を出す。
    * 読み上げは名前と別に aria-describedby で
    */
   description?: ReactNode;
-  /** この項目からまとまり（role="group"）を始め、その見出しにする（PRD D156。区切りの線も入れる） */
+  /** この項目からまとまり（role="group"）を始め、その見出しにする（PRD D315。区切りの線も入れる） */
   group?: string;
   testId?: string;
 };
@@ -39,7 +39,7 @@ export type MenuItem = {
  * 押すと項目の一覧が開くボタン（WAI-ARIA の menu button。予定の画面の「その他 ▾」など。PRD D63）。
  * キーボード：ボタンで Enter・Space・↓ は先頭、↑ は最後の項目へ。一覧の中は ↑↓・Home・End で移り、Enter・Space で選ぶ、
  * Esc で閉じてボタンへ戻る、Tab で閉じる。押せない項目もフォーカスは移る（理由は title と aria-describedby。説明のある項目は
- * 説明の行に理由を出す）。group のある項目からは見出し付きのまとまり（role="group"・aria-label）にする（PRD D156）。
+ * 説明の行に理由を出す）。group のある項目からは見出し付きのまとまり（role="group"・aria-label）にする（PRD D315）。
  * 一覧は浮かせて出す（開いても下の画面の高さは変わらない＝ドラッグの位置をずらさない）
  */
 export function MenuButton({

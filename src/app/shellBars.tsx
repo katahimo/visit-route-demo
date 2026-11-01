@@ -43,7 +43,7 @@ export function AppHeader({
       <BatchBand />
       {/* 欄の保存・要対応の帯の［担当なしを組む］の自動の組みの進み具合（長引いたときだけ。ADR-0072） */}
       <AutoArrangeBand />
-      {/* スマホだけ：ロゴと今の画面の名前（PRD D132。広い画面では出さない。「メニュー」は下のタブ。PRD D336） */}
+      {/* スマホだけ：ロゴと今の画面の名前（PRD D132。広い画面では出さない。「メニュー」は下のタブ。PRD D401） */}
       <div className="m-head-title">
         <span className="brand-mark" aria-hidden="true">
           <RouteIcon size={18} strokeWidth={2.4} />
@@ -88,7 +88,7 @@ export function AppHeader({
 
 /**
  * スマホだけ：よく使うタブ（入は 予定・〈利用者さん〉・〈スタッフ〉・組む、切は 予定・空き状況・〈利用者さん〉・〈スタッフ〉。
- * 切で空き状況を切れば空き状況の代わりに設定。lib/nav の bottomTabKeys）と「探す」「メニュー」（PRD D336・D400・D401。印刷では出さない）
+ * 切で空き状況を切れば空き状況の代わりに設定。lib/nav の bottomTabKeys）と「探す」「メニュー」（PRD D401・D400。印刷では出さない）
  */
 export function BottomTabs({
   groups,
@@ -138,7 +138,7 @@ export function BottomTabs({
           </Link>
         );
       })}
-      {/* 「探す」：コマンドパレットを開く（PRD D336） */}
+      {/* 「探す」：コマンドパレットを開く（PRD D401） */}
       <button
         type="button"
         className="bottom-tab"
@@ -151,7 +151,7 @@ export function BottomTabs({
         <Search size={20} strokeWidth={2.1} aria-hidden="true" />
         <span>探す</span>
       </button>
-      {/* 「メニュー」：全部の画面の引き出し（PRD D133・D336） */}
+      {/* 「メニュー」：全部の画面の引き出し（PRD D133・D401） */}
       <button
         ref={menuBtnRef}
         type="button"

@@ -1,7 +1,7 @@
 # ADR-0025：やりたいことから入る導線（欠勤の欄・言葉の案内・行き先）
 
 - 日付：2026-10-18
-- 状態：採用（ホームと進み具合の帯は ADR-0074 で無くした・畳んだ。欠勤の欄の連絡の段は ADR-0038、欄の段階は ADR-0082 で2段に、ツアーは ADR-0073・0074）
+- 状態：採用・一部を ADR-0074・0079・0082 で置き換え（ホームと進み具合の帯は ADR-0074、月のマスの読み方は ADR-0079、欠勤の欄の段は ADR-0082。連絡の段は ADR-0038、ツアーは ADR-0073・0074）
 - 関連：ADR-0026・0027
 
 ## 背景
@@ -10,8 +10,8 @@
 ## 決定
 既存の画面・操作へ移る導線を足す。数え方・文の決まりは `lib/` の純粋関数1か所に置く。
 - 日の状態の計算は `components/useDayStatuses.ts` で月・帯と共有する
-- 欠勤・キャンセルの入口：段階のある右の欄（`pages/SuddenPanel.tsx`、決まりは `lib/sudden.ts`）。何が起きたか → 人 → 影響と振り直し → 連絡と確定
-- 言葉：点数の理由は `lib/scoreReason`、用語は辞書 `lib/glossary` と `Term`（同時に1つ）、空の画面は「なぜ空か＋行き先」（`lib/emptyGuide`）、月のマスの読み方は表に1つの吹き出し（`MonthCellTip`）
+- 欠勤・キャンセルの入口：段階のある右の欄（`pages/SuddenPanel.tsx`、決まりは `lib/sudden.ts`）
+- 言葉：点数の理由は `lib/scoreReason`、用語は辞書 `lib/glossary` と `Term`（同時に1つ）、空の画面は「なぜ空か＋行き先」（`lib/emptyGuide`）
 - 空き状況は1画面で いつ・何を → 場所 → 受けられる曜日・時間帯 → 次の一手（`lib/vacancyView`）。週の表示は `?view=`・`?by=`（`lib/weekView`）
 - 390px の月は日ごとの一覧（`?layout=`。`lib/monthList`）。ファイル選択は日本語の部品 `FilePick`
 - 右の欄の確定ボタンの帯は内容の直後に `position: sticky; bottom: 0`（`usePanelFoot`。`--drawer-foot-h`）

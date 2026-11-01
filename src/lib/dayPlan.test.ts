@@ -161,7 +161,7 @@ describe('確定（伝えた内容）と未連絡の変更', () => {
   });
 });
 
-describe('unassignedDays（担当の足りない日。空き状況。PRD D259）', () => {
+describe('unassignedDays（担当の足りない日。空き状況。PRD D328）', () => {
   const TODAY = '2026-10-21';
   /** 繰り返しの担当を外したデモのデータ（どの回も担当なし） */
   const unassigned = (): DemoData => {

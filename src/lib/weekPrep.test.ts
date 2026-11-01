@@ -6,7 +6,7 @@ import { weekConfirmLabel, weekDayCountText, weekNext, weekPrepOf, weekStatusTex
 const bulk = (x: Partial<BulkConfirm> = {}): BulkConfirm => ({ targets: [], problem: [], changed: [], ...x });
 const base = { futureDays: 5, bulk: bulk(), running: false };
 
-describe('weekNext（週の主ボタン。PRD D280。週の予定では AI で組まない）', () => {
+describe('weekNext（週の主ボタン。PRD D328。週の予定では AI で組まない）', () => {
   it('確定 → 済み の順で1つ', () => {
     expect(weekNext({ ...base, bulk: bulk({ targets: ['2026-10-22', '2026-10-23'] }) })).toMatchObject({
       kind: 'confirm',
@@ -36,7 +36,7 @@ describe('weekNext（週の主ボタン。PRD D280。週の予定では AI で�
   });
 });
 
-describe('weekDayCountText（日の見出しの件数。PRD D282）', () => {
+describe('weekDayCountText（日の見出しの件数。PRD D314）', () => {
   it('件数と担当なし', () => {
     expect(weekDayCountText({ count: 0, unassigned: 0 })).toBe('0件');
     expect(weekDayCountText({ count: 17, unassigned: 0 })).toBe('17件');
@@ -44,7 +44,7 @@ describe('weekDayCountText（日の見出しの件数。PRD D282）', () => {
   });
 });
 
-describe('weekPrepOf（この週の準備のまとめ。PRD D280・D332）', () => {
+describe('weekPrepOf（この週の準備のまとめ。PRD D328・D332）', () => {
   const st = (date: string, x: Partial<DayStatus> = {}): DayStatus =>
     ({ date, count: 2, state: 'none', care: 0, ...x }) as DayStatus;
   it('まとめて確定の振り分け（月と同じ決まり）と1行の状態', () => {

@@ -203,7 +203,7 @@ export function PlanOneLine({
   );
 }
 
-/** 操作の行の「使い方」で開く説明（PRD D279・D344。操作の行のすぐ下） */
+/** 操作の行の「使い方」で開く説明（PRD D327・D344。操作の行のすぐ下） */
 export function PlanHelp({
   helpRef,
   staffTerm,

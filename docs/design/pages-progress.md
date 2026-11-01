@@ -2,7 +2,7 @@
 
 > この画面のファイル：`src/components/progressBand.tsx`（`progressBand.css`）・`src/lib/progressBand.ts`・`src/lib/dayStatuses.ts`・`src/components/useDayStatuses.ts`。関連 ADR：0025・0038・0044・0062。関連 PRD：D151〜D155・D161・D393・D401・D404。
 
-### ホームは置かない（PRD D401・D404）
+### 起動の画面（ホームは置かない。PRD D401・D404）
 
 `#/home`・起動（`#/`）・知らない URL は予定の画面（`lib/nav` の `homePath(features)`＝月か週）へ移す（`Navigate replace`。`App.tsx`）。今日やることは予定の上の要対応の帯（[pages-nav.md](pages-nav.md) の「要対応の帯」）と「その他 ▾」が受け持つ。月の後半の日 15 は `lib/scheduleMode` の `LATE_MONTH_FROM_DAY`。
 
