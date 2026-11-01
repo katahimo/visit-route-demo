@@ -120,6 +120,8 @@
 | [0076](adr/0076-roster-import-then-place-all.md) | 名簿の読み込み後にまとめて地図に置く |
 | [0077](adr/0077-attention-band-arrange-and-go.md) | 要対応の帯から担当なしを組む |
 | [0078](adr/0078-vacancy-in-menu.md) | 空き状況をメニューに |
+| [0079](adr/0079-demo-starts-arranged-month-exceptions-only.md) | デモは組み終えて始め、月のマスは例外だけ |
+| [0080](adr/0080-vacancy-one-question-mobile-tab.md) | 空き状況はチップで聞き答えを先頭に・スマホの下のタブ |
 
 ## 文書の保ち方
 
