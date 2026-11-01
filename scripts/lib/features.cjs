@@ -64,8 +64,9 @@ const MENU = ['予定', '空き状況', '利用者さん', 'スタッフ', '組�
 const MENU_NO_EXPERT = ['予定', '空き状況', '利用者さん', 'スタッフ', '設定'];
 /** 空き状況の機能（vacancy）を切ったときのメニュー（空き状況の項目が消える） */
 const withoutVacancy = (labels) => labels.filter((l) => l !== '空き状況');
-/** エキスパート機能が切の下のタブ（メニューのうち4つ。空き状況は引き出しとパレットだけで、下のタブは変えない。PRD D400） */
-const TABS_NO_EXPERT = ['予定', '利用者さん', 'スタッフ', '設定'];
+/** エキスパート機能が切の下のタブ（予定・空き状況・〈利用者さん〉・〈スタッフ〉。空き状況が切なら空き状況の代わりに設定。PRD D400。ADR-0080） */
+const tabsNoExpert = (on) =>
+  on.includes('vacancy') ? ['予定', '空き状況', '利用者さん', 'スタッフ'] : ['予定', '利用者さん', 'スタッフ', '設定'];
 /** 組むの子の項目の key（すべて入：基本情報・組み方の標準・担当を組む。作業の順。条件の重みは子に入れない。〈利用者さん〉・〈スタッフ〉は上の段。ADR-0067・ADR-0074） */
 const ARRANGE_KIDS = ['arrange:basics', 'arrange:standard', 'arrange:assign'];
 /** 組み方の標準を登録したあとの組むの子（基本情報・担当を組む。標準の組み直しは担当を組むの見出しの［標準の組み方を変える］から） */
@@ -139,8 +140,8 @@ const menuFor = (on) => {
 const scheduleKidsFor = () => [];
 /** 設定の子の項目（無い：設定のタブは画面の上に出る） */
 const settingsKidsFor = () => [];
-/** 下のタブ（「探す」「メニュー」はボタン。入は 予定・〈利用者さん〉・〈スタッフ〉・組む、切は 予定・〈利用者さん〉・〈スタッフ〉・設定。PRD D400・D401） */
-const tabsFor = (on) => (on.includes('expert') ? ['予定', '利用者さん', 'スタッフ', '組む'] : TABS_NO_EXPERT);
+/** 下のタブ（「探す」「メニュー」はボタン。入は 予定・〈利用者さん〉・〈スタッフ〉・組む、切は tabsNoExpert。PRD D400・D401） */
+const tabsFor = (on) => (on.includes('expert') ? ['予定', '利用者さん', 'スタッフ', '組む'] : tabsNoExpert(on));
 /** 起動・#/home の URL の行き先（入切とも予定の画面：繰り返しを使うなら月、使わないなら週。ADR-0073・ADR-0074） */
 const homeHashFor = (on) => (on.includes('patterns') ? '#/month' : '#/week');
 /** 起動の画面を開く（予定の上のナビの行を待つ） */

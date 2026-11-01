@@ -368,12 +368,13 @@ describe('menuSections（ひな形ごとの項目。PRD D213・D275）', () => {
     expect(screens({ compat: false })).not.toContain('相性');
     expect(screens({})).toContain('相性');
   });
-  it('下のタブは 予定・〈利用者さん〉・〈スタッフ〉・組む。空き状況・欠勤を切っても変わらない（PRD D336・D401。ADR-0078）', () => {
+  it('入の下のタブは 予定・〈利用者さん〉・〈スタッフ〉・組む。空き状況・欠勤を切っても変わらない。切は D400（PRD D336・D400・D401。ADR-0078・ADR-0080）', () => {
     const keys = (f: Features) => bottomTabs(menuSections(terms, TODAY, f), f).map((t) => t.key);
     expect(keys({})).toEqual(['schedule', 'clients', 'staff', 'arrange']);
     expect(keys({ vacancy: false, sudden: false })).toEqual(['schedule', 'clients', 'staff', 'arrange']);
-    // 組む（エキスパート機能）を切ると、メニューの4つ（設定まで）
-    expect(keys({ expert: false })).toEqual(['schedule', 'clients', 'staff', 'settings']);
+    // 組む（エキスパート機能）を切ると 予定・空き状況・〈利用者さん〉・〈スタッフ〉。空き状況も切れば空き状況の代わりに設定（ADR-0080）
+    expect(keys({ expert: false })).toEqual(['schedule', 'vacancy', 'clients', 'staff']);
+    expect(keys({ expert: false, vacancy: false })).toEqual(['schedule', 'clients', 'staff', 'settings']);
   });
 });
 

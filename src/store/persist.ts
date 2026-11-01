@@ -6,7 +6,7 @@ import { jstDate } from '../domain/time';
 import { createFirstRunData, type FirstRunAnswer, firstRunSetup } from '../lib/firstRun';
 import { createInitialData } from '../seed/plans';
 import { repair } from './repair';
-import { lastBooking, rememberBooking, startsWithAll } from './start';
+import { lastBooking, markArrangeAfterStart, rememberBooking, startsWithAll } from './start';
 
 /** 壊れた JSON の退避先 */
 export const BROKEN_KEY = 'vrdemo:data:broken';
@@ -480,6 +480,8 @@ export function readPrevious(): DemoData | ImportError | null {
  * 今のデータが無い（読み込みが例外で落ちた例外の画面から戻す）ときはすべて入（{}）：今まで全部入りだった人を「基本」にしない
  */
 export function reset(features?: Features): DemoData {
+  // 組む印は読み直しをまたぐ（例外の画面から戻して読み直しても組む。PRD D409）
+  markArrangeAfterStart({ kind: 'reset' });
   const booking = startsWithAll() ? null : lastBooking();
   // 印「all」か、最後の問2の答えの印が無いときは今までどおり（定期の初期データ。入り切りは今のまま、無ければすべて入）
   if (booking === null) return commitNew(createInitialData(today(), features ?? current?.org.features ?? {}));
@@ -504,5 +506,6 @@ function commitNew(d: DemoData): DemoData {
  */
 export function startWithAnswer(answer: FirstRunAnswer): DemoData {
   rememberBooking(answer.booking);
+  markArrangeAfterStart({ kind: 'answer', start: answer.start });
   return commitNew(createFirstRunData(answer, today()));
 }

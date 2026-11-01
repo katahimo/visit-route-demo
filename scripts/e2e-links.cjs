@@ -2,7 +2,7 @@
 // 月の要対応の行き先（担当なしの訪問のある日 → 日の画面の「担当なし」の列へ巻く・
 // 拘束が上限を超える → 稼働の見込みをその月・その人で。行き先の文「（〜で開く）」・`?do=` は消える）、
 // 稼働の見込みの日ごとの表の日付と〈スタッフ〉×日の表のマスから日の画面（マスに名前の吹き出しを付けない）、
-// 稼働時間の右の欄から「欠勤・キャンセル」の欄（その人の2段目。欠勤が無ければ登録の文）、空き状況の右の欄の日ごとの結果から日の画面。
+// 稼働時間の右の欄から「欠勤・キャンセル」の欄（その人を選んで開く。欠勤が無ければ登録の文）、空き状況の右の欄の日ごとの結果から日の画面。
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-links.cjs
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）
@@ -11,7 +11,7 @@ const path = require('node:path');
 const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, settle, hashOf, stored, runSteps } = require('./lib/env.cjs');
 const { planDays } = require('./lib/plan.cjs');
 const { openContext, pagePerStep } = require('./lib/steps.cjs');
-const { goTo } = require('./lib/ui.cjs');
+const { goTo, reveal } = require('./lib/ui.cjs');
 
 /** 「10/21」の形（月の要対応の日付の文） */
 const md = (d) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
@@ -269,7 +269,7 @@ async function availability(page) {
       .locator('td')
       .nth(col - 1)
       .locator('button');
-  // 欠勤のある人：「直す・取り消す」で、その人の2段目
+  // 欠勤のある人：「直す・取り消す」で、その人を選んで開く
   await cellOf(ABSENT).click();
   const link = page.getByTestId('availability-absence-link');
   await link.waitFor({ timeout: 5000 });
@@ -288,7 +288,7 @@ async function availability(page) {
   await page.getByTestId('sudden-staff').waitFor({ timeout: 10000 });
   check(
     (await page.getByTestId('sudden-staff').inputValue()) === ABSENT,
-    '「欠勤・キャンセル」の欄をその人の2段目で開く',
+    '「欠勤・キャンセル」の欄をその人を選んで開く',
     await page.getByTestId('sudden-staff').inputValue(),
   );
   check(!/do=|date=|staff=/.test(hashOf(page)), '?do=・?date=・?staff= は消える', hashOf(page));
@@ -318,13 +318,14 @@ async function availability(page) {
   } else {
     check(false, '用意：その日に休みの人がいる');
   }
-  // URL で休みの人を渡しても2段目にしない（1段目）
+  // URL で休みの人を渡しても人を選ばない（種類も選ばずに開く）
   if (offId) {
     await open(page, `/plan?date=${SECOND}&do=absence&staff=${offId}`, '.date-switch select');
     await page.getByTestId('sudden-panel').waitFor({ timeout: 10000 });
     check(
-      (await page.locator('h3.sudden-step-title').textContent()) === '何が起きましたか？',
-      'その日に働かない人の staff= は1段目で開く',
+      (await page.getByTestId('sudden-staff').count()) === 0 &&
+        (await page.getByTestId('sudden-kind-staff').getAttribute('aria-pressed')) === 'false',
+      'その日に働かない人の staff= は人を選ばずに開く',
       offId,
     );
   }
@@ -351,7 +352,7 @@ async function availability(page) {
     check(
       (await tab.locator('.date-switch select').inputValue()) === SECOND &&
         (await tab.getByTestId('sudden-staff').inputValue()) === PRESENT,
-      'Ctrl+クリック：新しいタブでその日・その人の2段目',
+      'Ctrl+クリック：新しいタブでその日・その人を選んで開く',
     );
     await tab.close();
   }
@@ -374,19 +375,22 @@ async function availability(page) {
     await page.getByTestId('availability-retired').waitFor({ timeout: 5000 });
     check((await link.count()) === 0, '最終勤務日の後：欠勤・キャンセルへのリンクを出さない');
   }
-  // 知らない人の staff= は1段目
+  // 知らない人の staff= は人を選ばずに開く
   await open(page, `/plan?date=${SECOND}&do=absence&staff=nobody`, '.date-switch select');
   await page.getByTestId('sudden-panel').waitFor({ timeout: 10000 });
   check(
-    (await page.locator('h3.sudden-step-title').textContent()) === '何が起きましたか？',
-    '知らない人の staff= は1段目で開く',
+    (await page.getByTestId('sudden-staff').count()) === 0 &&
+      (await page.getByTestId('sudden-kind-staff').getAttribute('aria-pressed')) === 'false',
+    '知らない人の staff= は人を選ばずに開く',
   );
 }
 
 // ---- D204 空き状況の右の欄 ----
 async function vacancy(page) {
   await prepare(page);
-  await open(page, '/vacancy', '[data-testid="vacancy-grid"]');
+  await open(page, '/vacancy', '[data-testid="vacancy-answer"]');
+  // 表は「詳しく ▾」の中（PRD D412）
+  await reveal(page, 'vacancy-grid');
   const cells = page.getByTestId('vacancy-cell');
   const n = await cells.count();
   let found = false;

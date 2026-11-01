@@ -1,17 +1,61 @@
 // e2e の共通：最初の2問（PRD D379〜D381。ADR-0073）に答える。
 // 初めて開いたとき（保存データも印「all」も無い。scripts/lib/startFeatures.cjs）は2問の画面が出る。
 // 画面の data-testid：first-run（画面）・first-run-start-<demo|own>（問1）・first-run-booking-<oneOff|regular>（問2）・first-run-submit（はじめる）
-const { BASE, STORAGE_KEY, settle } = require('./env.cjs');
+const { BASE, STORAGE_KEY, settle, until } = require('./env.cjs');
 const { openPage } = require('./steps.cjs');
 const { answerConfirms } = require('./confirmDialog.cjs');
 
-/** 2問に答えて「はじめる」を押す（既定は 問1＝デモで試す・問2＝定期の訪問が中心。今の初期データ＋「基本」のひな形） */
-async function answerFirstRun(page, { start = 'demo', booking = 'regular' } = {}) {
+/** 自動の組みの終わりの知らせ（lib/autoArrangeBatch の autoDoneText） */
+const ARRANGED_RE = /件の担当を組みました|担当なしのまま|自動で組めませんでした/;
+
+/**
+ * デモを作った直後の1回の組み（PRD D409。ADR-0079）が終わるまで待つ（終わりの知らせが出るまで。最長 ms）。
+ * 組みは画面の中で続くので、終わる前に読み直す・移ると組まれない。知らせの文を返す（出なければ空）。
+ * 組む担当なしが無いデモ（単発のデモは担当つきで作る）は依頼が出ず知らせも出ないので、組んでいる間の帯（auto-band。
+ * 組み始めて 600ms で出る）も要対応の帯の［担当なしを組む］も3秒続けて無ければ、組むものが無いとして空を返す
+ */
+async function waitStartArranged(page, ms = 180000) {
+  const toastText = async () =>
+    (await page.locator('.toast-layer .toast-text').allInnerTexts()).find((t) => ARRANGED_RE.test(t));
+  let idleSince = null;
+  const text = await until(
+    async () => {
+      const t = await toastText();
+      if (t) return t;
+      const busy =
+        (await page.getByTestId('auto-band').count()) > 0 ||
+        (await page.getByTestId('attention-band-arrange').count()) > 0;
+      if (busy) idleSince = null;
+      else idleSince ??= Date.now();
+      return idleSince !== null && Date.now() - idleSince >= 3000 ? 'idle' : undefined;
+    },
+    ms,
+    100,
+  );
+  return text && text !== 'idle' ? text : '';
+}
+
+/**
+ * 2問に答えて「はじめる」を押す（既定は 問1＝デモで試す・問2＝定期の訪問が中心。今の初期データ＋「基本」のひな形）。
+ * デモなら、作った直後の1回の組みが終わるまで待つ（waitStartArranged）。arranged が false なら、終わりの知らせの［元に戻す］で
+ * 組む前（初期データの担当なしが残る）に戻す（要対応の帯の［担当なしを組む］や、空いている人への自動の組みを確かめるとき）
+ */
+async function answerFirstRun(page, { start = 'demo', booking = 'regular', arranged = true } = {}) {
   await page.getByTestId('first-run').waitFor({ timeout: 30000 });
   await page.getByTestId(`first-run-start-${start}`).check();
   await page.getByTestId(`first-run-booking-${booking}`).check();
   await page.getByTestId('first-run-submit').click();
   await page.getByTestId('first-run').waitFor({ state: 'detached', timeout: 30000 });
+  if (start !== 'demo') return;
+  const text = await waitStartArranged(page);
+  if (arranged || !/件の担当を組みました/.test(text)) return;
+  await page.getByTestId('toast-undo').first().click();
+  await until(
+    async () => (await page.locator('.toast-layer .toast-text').allInnerTexts()).some((t) => /^元に戻しました/.test(t)),
+    10000,
+  );
+  // 戻したデータの保存（300ms 間引き）を待つ
+  await settle(page, 600);
 }
 
 /**
@@ -54,4 +98,4 @@ async function openAsked({ viewport = { width: 1400, height: 1000 } } = {}) {
   return { ...s, dlg: await answerConfirms(s.page) };
 }
 
-module.exports = { answerFirstRun, answerIfAsked, freshAsked, openAsked };
+module.exports = { ARRANGED_RE, answerFirstRun, answerIfAsked, freshAsked, openAsked, waitStartArranged };

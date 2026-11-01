@@ -80,7 +80,9 @@ describe('detailsOpenKey（「詳しく ▾」の開け閉めの鍵）', () => {
   it('画面ごとに別の鍵。開いたことを覚えて読み直しても開いたまま（ほかの画面は閉じたまま）', () => {
     const { ls } = fake();
     const nav = createNavOpenMemory(() => ls);
-    expect(new Set([detailsOpenKey('month'), detailsOpenKey('week'), detailsOpenKey('day')]).size).toBe(3);
+    const keys = (['month', 'week', 'day', 'vacancy'] as const).map(detailsOpenKey);
+    expect(new Set(keys).size).toBe(4);
+    expect(detailsOpenKey('vacancy')).toBe('details:vacancy');
     nav.write(detailsOpenKey('week'), true);
     const again = createNavOpenMemory(() => ls).read();
     expect(again[detailsOpenKey('week')]).toBe(true);

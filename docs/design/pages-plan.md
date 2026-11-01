@@ -13,7 +13,7 @@
 | クエリ | 動き |
 |---|---|
 | `?date=YYYY-MM-DD`（`?do=` なし） | その日を選び `?date=` を消す（`dateParam` の effect） |
-| `?date=…&do=absence`（`SUDDEN_DO`）［`&staff=`］ | その日を選び「欠勤・キャンセル」の欄を開く。`&staff=` の人がその日に働く（`slotsOf` の `baseSlots` がある＝`staffChoices` に出る）ときだけ `open({ kind: 'staff', staffId })`（2段目）、ほかは1段目。`?do=`・`?date=`・`staff` を消す。開く日を覚えて日付が変わってから開く（日付を変えると欄を閉じる effect より後） |
+| `?date=…&do=absence`（`SUDDEN_DO`）［`&staff=`］ | その日を選び「欠勤・キャンセル」の欄を開く。`&staff=` の人がその日に働く（`slotsOf` の `baseSlots` がある＝`staffChoices` に出る）ときだけ `open({ kind: 'staff', staffId })`（その人を選んで開く）、ほかは人を選ばずに開く。`?do=`・`?date=`・`staff` を消す。開く日を覚えて日付が変わってから開く（日付を変えると欄を閉じる effect より後） |
 | `?date=…&do=unassigned`（`UNASSIGNED_DO`） | 「`?do=unassigned`」 |
 | `?date=…&do=told` | その日の連絡の一覧を開く |
 
@@ -212,7 +212,7 @@
 
 - カード・一覧に種類の色の印と名前（`components/visitType.tsx`。`title`・読み上げにも）。種類の必要条件で外れる理由は理由の欄に
 - 仮押さえの〈利用者さん〉の訪問に「仮」の印
-- 帯・カードの詳細に決まりごと（`components/VisitRules.tsx`）と道順のリンク
+- 帯・カードの詳細に決まりごと（`components/VisitRules.tsx`）と道順のリンク。今の担当がその〈利用者さん〉を過去8週に担当していなければ（`lib/firstVisit` の `servedPairsBefore`・`isFirstVisit`。`usePlanPage` の `served`）、詳細の先頭に「初めて」の印と決まりごと（`VisitRules first`・`visit-first`。PRD D415）
 - 詳細の名前は `PersonButton`：時間軸は見出しの〈利用者さん〉と「担当：」、順番は `visit-who` の「〈利用者さん〉：」「担当：」。一覧の名前も
 
 #### 日の予定のメール（`pages/mailPanels.tsx` の `DayMailPanel`）

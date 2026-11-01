@@ -1,5 +1,5 @@
-// 予定の画面の急な欠勤（ADR-0011。PRD D26〜D32）：欠勤の入力欄と見込み（「欠勤・キャンセル」の欄で使う。PRD D169）・
-// 振り直しの差の欄・入らない訪問の受けられる人
+// 予定の画面の急な欠勤（ADR-0011。PRD D26〜D32）：欠勤の入力欄（「欠勤・キャンセル」の欄の1段目。PRD D414）・
+// 振り直しの差の欄・担当が移る訪問の一覧・入らない訪問の受けられる人
 import {
   ArrowRight,
   CircleOff,
@@ -15,99 +15,73 @@ import { PersonButton } from '../components/PersonPopover';
 import { StaffMarkById } from '../components/StaffMark';
 import { Hint, WithIcon } from '../components/ui';
 import { useExceptionsOnly } from '../components/useFeature';
-import type { DemoData, ReassignInfo } from '../contracts/data';
-import type { Absence, Visit } from '../contracts/documents';
+import type { ReassignInfo } from '../contracts/data';
+import type { Visit } from '../contracts/documents';
 import type { Problem } from '../contracts/problem';
-import type { ReassignCandidate, ReassignDiff, ReassignLeft, ReassignTarget } from '../contracts/reassign';
+import type { ReassignCandidate, ReassignDiff, ReassignLeft } from '../contracts/reassign';
 import { HALF_HOURS, type Slot, slotsText, timeText as t } from '../domain/availability';
 import { hhmmToMinutes, minutesToHhmm } from '../domain/time';
-import { absenceText } from '../lib/absences';
 import { attempt, deltaText, r0 } from '../lib/common';
 import { reassignWords } from '../lib/exceptionView';
-import { absenceBaseOf, hasBase, reassignFrom } from '../lib/planReassign';
 import { shiftText } from '../lib/reassignMenu';
-import { type AbsenceDraft, reassignMoveRows } from '../lib/sudden';
+import { ABSENCE_TIMES, type AbsenceDraft, absenceTimeOf, draftOfTime, reassignMoveRows } from '../lib/sudden';
 import { candidatesFor } from '../reassign';
 
-/** 見込み（振り直す訪問）：入力のたびに targetsOf を呼ぶ */
-export type AbsencePreview = {
-  targets: ReassignTarget[];
-  /** 振り直しの元の案に担当のある訪問があるか（無ければ振り直せない） */
-  hasBase: boolean;
-  /** 案A（空き時間に入れるだけ）で入らない見込みの件数（案B を勧める。2回目） */
-  unplacedA: number;
-};
-
-/** 欠勤の入力から、その欠勤を入れたデータで振り直す訪問を出す（画面に規則を書かず reassign を呼ぶだけ） */
-export function previewOf(data: DemoData, date: string, absence: Absence): AbsencePreview | null {
-  return attempt(() => {
-    const b = absenceBaseOf(data, date, absence);
-    if (!hasBase(b)) return { targets: [], hasBase: false, unplacedA: 0 };
-    // 案A の見込み（決定的で速い）。入らない訪問があれば案B を勧める
-    const { targets, result } = reassignFrom(b, date);
-    return { targets, hasBase: true, unplacedA: result.unplaced.length };
-  }).value;
-}
-
 /**
- * 欠勤の入力欄（終日／時間帯・開始と終了（30分刻み。空＝始業から・終業まで）・早道・メモ）。値は呼ぶ側が持つ
- * （「欠勤・キャンセル」の欄の2段目。PRD D26・D169。いまの時刻は扱わない。過去の欠勤は登録しない前提）
+ * 欠勤の入力欄（終日／午前だけ／午後だけ／時間帯・開始と終了（30分刻み。空＝始業から・終業まで）・早道・メモ）。値は呼ぶ側が持つ
+ * （「欠勤・キャンセル」の欄の1段目。PRD D26・D414。いまの時刻は扱わない。過去の欠勤は登録しない前提）。
+ * 人を替えたら作り直す（呼ぶ側で key に人を入れる。「時間帯」を選んだかはこの中の状態）
  */
 export function AbsenceFields({
   draft: d,
   onChange,
   baseSlots,
-  existing,
   date,
   error,
+  disabled = false,
 }: {
   draft: AbsenceDraft;
   onChange: (x: Partial<AbsenceDraft>) => void;
   /** 欠勤を差し引く前のその日の稼働時間帯 */
   baseSlots: Slot[];
-  existing: Absence | null;
   date: string;
   error: string | null;
+  /** 計算中は入力を変えさせない（中の欄・ボタンをまとめて押せなくする） */
+  disabled?: boolean;
 }) {
   const shift = baseSlots[0];
   const end = baseSlots.at(-1);
   const set = onChange;
+  // 「時間帯」を押したら、開始・終了が午前だけ・午後だけと同じでも時間帯の欄を出したままにする
+  const [range, setRange] = useState(() => absenceTimeOf(d) === 'range');
+  const time = range && !d.allDay ? 'range' : absenceTimeOf(d);
   // 誤り（開始・終了の組み合わせ）は開始と終了の欄に印を付ける（PRD D250）
   const errorId = useId();
   const bad = invalidAttrs(!!error && !d.allDay, errorId);
   return (
-    <div className="stack" style={{ gap: 10 }}>
+    <fieldset className="stack absence-fields" style={{ gap: 10 }} disabled={disabled}>
       <p className="sub">
         {date.slice(5).replace('-', '/')} の働ける時間：{slotsText(baseSlots)}
-        {existing && `（いま：${absenceText(existing, baseSlots)}）`}
       </p>
-      <fieldset className="segmented seg-sm" aria-label="欠勤の長さ">
-        {(
-          [
-            [true, '終日'],
-            [false, '時間帯'],
-          ] as const
-        ).map(([v, text]) => (
+      <fieldset className="segmented seg-sm" aria-label="欠勤の時間" data-testid="absence-time">
+        {ABSENCE_TIMES.map((x) => (
           <button
-            key={text}
+            key={x.key}
             type="button"
-            aria-pressed={d.allDay === v}
-            className={d.allDay === v ? 'is-on' : ''}
-            onClick={() => set({ allDay: v })}
+            aria-pressed={time === x.key}
+            className={time === x.key ? 'is-on' : ''}
+            onClick={() => {
+              setRange(x.key === 'range');
+              set(draftOfTime(d, x.key));
+            }}
           >
-            {text}
+            {x.label}
           </button>
         ))}
       </fieldset>
-      {!d.allDay && (
+      {time === 'range' && (
         <div className="stack" style={{ gap: 8 }}>
           <div className="row absence-quick" style={{ flexWrap: 'wrap', gap: 6 }}>
-            <button type="button" className="btn btn-small" onClick={() => set({ from: '', to: '12:00' })}>
-              午前だけ
-            </button>
-            <button type="button" className="btn btn-small" onClick={() => set({ from: '12:00', to: '' })}>
-              午後だけ
-            </button>
             <button type="button" className="btn btn-small" onClick={() => set({ from: d.from || '15:00', to: '' })}>
               〇時から（早退）
             </button>
@@ -144,7 +118,7 @@ export function AbsenceFields({
               </select>
             </label>
           </div>
-          <span className="sub">30分単位です（半端な時刻は近い30分に丸めて選んでください。午前／午後の境は12:00）</span>
+          <span className="sub">30分単位（午前／午後の境は12:00）</span>
         </div>
       )}
       <label className="field">
@@ -154,28 +128,7 @@ export function AbsenceFields({
       <FieldError id={errorId} live={false}>
         {error}
       </FieldError>
-    </div>
-  );
-}
-
-/** 見込みの振り直す訪問の一覧（理由つき。「欠勤・キャンセル」の欄の3段目） */
-export function AbsenceTargets({
-  targets,
-  visitLabel,
-}: {
-  targets: ReassignTarget[];
-  visitLabel: (id: string) => string;
-}) {
-  if (targets.length === 0) return null;
-  return (
-    <ul className="sudden-targets">
-      {targets.map((x) => (
-        <li key={x.visitId} className="sub">
-          {visitLabel(x.visitId)}
-          {x.reason === 'unreachable' ? '（間に合わない）' : x.reason === 'notAllowed' ? '（必須の条件）' : ''}
-        </li>
-      ))}
-    </ul>
+    </fieldset>
   );
 }
 
@@ -320,7 +273,7 @@ export function ReassignBar({
 }
 
 /**
- * 「欠勤・キャンセル」の欄の4段目：今の担当の振り直しのまとめと、誰のどの訪問が誰へ移るか（PRD D265）。
+ * 「欠勤・キャンセル」の欄の2段目：今の担当の振り直しのまとめと、誰のどの訪問が誰へ移るか（PRD D265）。
  * children は案A・案B を選ぶ欄（差の欄と同じ部品・同じ操作）
  */
 export function ReassignResultBox({
@@ -359,7 +312,7 @@ export function ReassignResultBox({
   );
 }
 
-/** 振り直しのまとめ（変わる人・振り直し・入らない・欠勤の人のまま・移動）。差の欄と「欠勤・キャンセル」の欄の4段目で共通 */
+/** 振り直しのまとめ（変わる人・振り直し・入らない・欠勤の人のまま・移動）。差の欄と「欠勤・キャンセル」の欄の2段目で共通 */
 export function ReassignSummary({
   diff,
   left,
@@ -384,7 +337,7 @@ export function ReassignSummary({
 }
 
 /**
- * 「欠勤・キャンセル」の欄の4段目：誰のどの訪問が誰へ移るか（PRD D265。ADR-0044）。〈利用者さん〉の名前・時刻
+ * 「欠勤・キャンセル」の欄の1段目と2段目：誰のどの訪問が誰へ移るか（PRD D265。ADR-0044）。〈利用者さん〉の名前・時刻
  * （visitLabel）と、元の担当 → 新しい担当。入らない訪問は「入らない」。確定の前に結果を見て安心できるように
  */
 export function ReassignMoves({

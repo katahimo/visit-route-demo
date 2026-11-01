@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import type { ToldState } from './dayPlan';
 import {
   CHANGED_WORD,
-  changedFlagText,
   changesText,
   dayStateText,
   headerToldChip,
@@ -56,12 +55,5 @@ describe('changesText', () => {
   it('入は未連絡の変更、切は変更あり', () => {
     expect(changesText(2, true)).toBe('未連絡の変更 2件');
     expect(changesText(2, false)).toBe('変更あり 2件');
-  });
-});
-
-describe('changedFlagText', () => {
-  it('月のマスの札：入は「未連絡 N」、切は「変更あり N」', () => {
-    expect(changedFlagText(2, true)).toBe('未連絡 2');
-    expect(changedFlagText(2, false)).toBe('変更あり 2');
   });
 });

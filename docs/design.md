@@ -162,6 +162,7 @@ flowchart LR
   - `allowedStaffIds`：いない・休止中の人と重なりを除く（空になれば限らない）。active・tentative を段階に合わせる（`stageFlags`）
 - 最初の2問を出さない印（PRD D276・D379）：`store/start.ts` の `startsWithAll(getStorage)`：`vrdemo:features:start` が `all` なら真（保存データが無いとき、2問を出さず今の初期データ＋すべて入の `{}` で始める）、ほか（無い・読めない）は偽。読むのは保存データが無いときだけ。画面からは書かない（e2e の `scripts/lib/startFeatures.cjs` と、全機能を見せるデモの前準備）
 - 最初の2問（PRD D379〜D381）：内部の state `firstRun`（`'first'`＝初めて開いたとき・`'redo'`＝設定からのやり直し・`null`＝出さない）のうち `null` 以外のあいだ、公開の `useDemoData().needsFirstRun: boolean` が真になり、画面は本体の代わりに2問の画面を出す（`components/FirstRunPage` の `FirstRunGate`）。`startFirstRun(answer)` は、やり直し（`redo`）なら先に `keepPrevious('最初の設定をやり直す')` で1世代の控えを残し、`startWithAnswer` で作って書き、`replace` と同じに履歴を捨てて `replacedCount` を増やす（元に戻す Ctrl+Z の対象外）。`askFirstRun()` は2問をもう一度出すだけ（答えるまで今のデータのまま）。`redoingFirstRun`（`firstRun === 'redo'`）のときだけ画面は従のボタン「やめる」を出し、`cancelFirstRun()` で今のデータのまま戻る。`first` のあいだは仮の空データを保存しない（保存の effect が `firstRun === 'first'` で書かない。StrictMode の2回実行でも）
+- デモを作った直後の1回の組み（PRD D409。ADR-0079）：`persist` の `startWithAnswer`・`reset` は、`store/start.ts` の `arrangesAfterStart({ kind: 'answer', start } | { kind: 'reset' })`（「デモで試す」で始めた・初期状態に戻したときだけ真。「自分のデータで始める」・印 `all` のときは偽）が真なら、組む印を sessionStorage（`ARRANGE_PENDING_KEY`。`markArrangeAfterStart`）に書く（偽なら消す）。store は起動時と作り直した直後にその印を読み（`arrangePending`）、公開の `startArrange`（印のオブジェクト）を置く。例外の画面の「データを初期状態に戻す」（`main.tsx` の `reset` → 読み直し）からでも、読み直したあとの起動で組む。`components/autoArrangeHost` が差し替えで前の計算を捨てたあと、描いた新しいデータで `requestUnassignedArrange`（要対応の帯の［担当なしを組む］と同じ依頼・知らせ・［元に戻す］）を1回出し、`takeStartArrange` で印を消す（sessionStorage の印も `clearArrangePending` で消す）。開発中の StrictMode の付け直しでは、後片付けで「出した」を忘れ、つなぎ直したあとに依頼し直す。開いただけ・ふつうの読み直しでは組まない
 - 1世代の控え（PRD D227）：`keepPrevious(data, reason, at)` は置き換える前のデータを `vrdemo:data:prev` に書く（次に残すと上書き）。書けなければ前の世代を消して1回だけ試し直し、それでもだめなら残さず `{ kept: false, why: '控えを残せません：容量不足' }`（操作は止めない）。`cancel()` で前の世代に戻す（確認を取り消したとき）。画面は確認で OK になってから残す（確認の本文は見込みの `canKeepPrevious()`：保存が使えない・最後の保存が容量超過なら「容量不足」）。`previousInfo()`・`readPrevious()`（`importJson` を通す）・`samePreviousInfo(a, b)`（同じなら react の state を替えない）。`swapPrevious(now)` は控えを読み、いまのデータを「直前の状態に戻す」として控えてから控えのデータを返す（もう一度戻せる）。いまのデータを控えに残せなければ戻さず（控えは元のまま）「いまのデータを控えに残せないため戻せません：容量不足」。react の `restorePrevious()` はこれを使う。本体の保存（`writeNow`）が容量超過なら控えを捨ててもう1回書き（いまのデータが先）、捨てたら `previousDrops` を1つ増やす（画面がトースト「容量が足りないため、直前の状態の控えを消しました」）
 - 最後に書き出した日・控えの知らせ：`store/backup.ts` の `backupMemory`（`lastExport()`・`markExported(kind, date)`・`lastReminded()`・`markReminded(date)`。`createBackupMemory(getStorage)`）。DemoData の外。知らせるかは `lib/backupReminder` の `shouldRemindBackup`（純粋関数）
 - 決まった予定の自動の伝えた記録：`update(fn, label?, opts?)` が fn の結果に `lib/settled` の `autoTell(before, after, today)` を通す（expert 切のとき、保存した訪問が変わった今日〜1か月先の日に伝えた記録を付ける。同じ1手に入り、元に戻すで一緒に戻る）。止めるのは `opts.tell: false`（名簿の読み込み・予約の読み込み・古い記録を消す）。`undo`・`redo`・`replace`・`reset`・`restorePrevious`・別のタブの読み直しは `update` を通らないので付けない
@@ -379,14 +380,14 @@ flowchart LR
 - 予定（日・週・月）の共通の部品：`components/scheduleParts`（操作の行・複数選択の帯 `SelectionBar`。月は「別の日へ」も。書くのは `lib/multiEdit`）と `components/undo`（元に戻す・Ctrl+Z。殻に1つ）。予定は手で直す（AI で組むのは担当を組む・自動の組み・欠勤の振り直し）。本体は3画面に残す
 - 自動の組み：
   - 計算は `lib/autoArrange`（純粋関数。範囲 `autoRange`＝今日〜翌月末・対象 `autoTargets`／`unassignedTargets`＝担当なし・ピンなし・伝えていない日・今日以降の訪問のうち今の入力で増えた・日時が変わったもの、ほかの担当はピン扱い・日の問題 `autoDayPlan`・書く `applyAutoArrange`）。解く入れ物は `lib/autoArrangeBatch`（`autoArrange`＝モジュールの入れ物。依頼 `requestAutoArrange`・`requestUnassignedArrange` を順に待たせるキュー、1日ずつ Worker で解き、終わったら `update` 1回（名前「自動で組む」）で書く。提案は出さない）。画面とつなぐのは `components/autoArrangeHost`（`AutoArrangeHost`＝知らせ「N件の担当を組みました」と［元に戻す］・データの差し替えで捨てる。`AutoArrangeBand`＝計算が長引いたときだけの進み具合の帯）
-  - 走らせるのは人が入力して保存したときだけ：〈利用者さん〉の繰り返しの足す・直す（`pages/usePatternsFlow`。`writeUsual: true`）・訪問の詳細の欄の保存（`components/useVisitPanel`。`writeUsual: false`）・「予定を入れる」・要対応の帯の［担当なしを組む］。ドラッグ・複数選択・日の予定の手直し・開いただけ・基本情報の変更では走らせない
+  - 走らせるのは人が入力して保存したときだけ：〈利用者さん〉の繰り返しの足す・直す（`pages/usePatternsFlow`。`writeUsual: true`）・訪問の詳細の欄の保存（`components/useVisitPanel`。`writeUsual: false`）・「予定を入れる」・要対応の帯の［担当なしを組む］と、デモを作った直後の1回（「デモで試す」で始めた・最初の設定をやり直した（デモ）・初期状態に戻した。PRD D409。印 `all` では組まない）。ドラッグ・複数選択・日の予定の手直し・開いただけ・基本情報の変更では走らせない
   - 計算中の次の依頼は順に待たせ（書いた結果の上に組む）、計算中にその日が変わったら（`proposalDayFresh`）その日は書かず知らせに添える。`monthBatch` とは同時に解けるが、同じ日に二重には書かない
   - `usualStaffId` は繰り返しの保存から（`writeUsual`）だけ書く（担当が決まっていない繰り返しだけ。書いた回で最も多く付いた担当）。範囲（今日〜翌月末）内で今回書かなかった回（組めない・過去・伝えた日・飛ばした日）は書く前のままの保存した回として残し、範囲より後の回だけが新しい担当になる
-- 例外だけ見せる（expert 切）：判定は `lib/exceptionView`（`exceptionsOnly`・`mainTools`・`detailItems`・`introShown`・`proposalWords`・`arrangeWords`）と `lib/visitLook` の `exceptionsOnly`（`lib/attentionBand` の `isBandIssue`＝帯と同じ分け方）。入も同じ部品を使う
+- 例外だけ見せる（expert 切）：判定は `lib/exceptionView`（`exceptionsOnly`・`mainTools`・`detailItems`・`monthCellView`・`introShown`・`proposalWords`・`arrangeWords`）と `lib/visitLook` の `exceptionsOnly`（`lib/attentionBand` の `isBandIssue`＝帯と同じ分け方）。入も同じ部品を使う
   - 訪問の札：正常は時刻・名前・担当の1行。目立たせるのは担当なし・重なり・休みの人と「変更あり」だけ。資格✗／限✗・ピン・この回だけ変更・仮押さえの印と、条件に合わない（notAllowed）の赤は出さない（`dayLooks` の `exceptionsOnly`。日・週・月・人の予定表で共通）。日の順番の札は1行（`VisitCard` の `oneLine`）、時間軸は移動・待ち・自宅の分数の区間を出さない（`showLegs`）、担当なしの札に入れられない理由を出さない（`showUnplacedReasons`）
-  - 月のマスの「このマスの読み方」は帯の3種類と「変更あり」に合わせ、条件に合わない・拘束超の説明を出さない（`lib/monthGuide` の `confirmStep`）
+  - 月のマスは例外だけ（`lib/exceptionView` の `monthCellView`。PRD D410）：日付・訪問の件数・要対応の札・休 N・今日の印だけを出し、種類の積み上げ・混み具合の棒・理由の札は出さない。マスの吹き出しの代わりに見出しの ⓘ（`lib/monthGuide` の `monthCellHint`）。右の欄は日を押す前は1行の案内だけで、要対応の一覧を出さない（日ごとの一覧の行も同じ。詳細は [design/pages-month.md](design/pages-month.md)）
   - 日の予定の地図：切はページに地図のカード（`plan-map`）を置かず、「地図」のボタン（`components/MapDock` の `map-dock-fab`。`target` が null）をいつも出す。入はカードを置き、画面の外のときだけ浮かせる
-- 「詳しく ▾」（`components/DetailsFold`。入切とも）：閉じて始まり、開け閉めは月・週・日の画面ごとに端末に覚える（`store/navOpen` の `detailsOpenKey`）。月＝進み具合の帯・月全体の件数・凡例、週＝1行の状態・時間軸の凡例と使い方、日＝今の担当の1行（点数・理由・移動）と担当ごとの1日。入は日の要対応の訪問の帯も中に入れ、見出しの1行に数（`lib/detailsHeading`。月＝担当 a/b日・確定 c/d日、週＝未確定 N日・要対応 M件、日＝点数・移動・入らない・守れない条件）
+- 「詳しく ▾」（`components/DetailsFold`。入切とも）：閉じて始まり、開け閉めは月・週・日と空き状況の画面ごとに端末に覚える（`store/navOpen` の `detailsOpenKey`）。空き状況＝曜日×週のマス・凡例・曜日×開始時刻の表（PRD D412）、月＝進み具合の帯・月全体の件数・凡例、週＝1行の状態・時間軸の凡例と使い方、日＝今の担当の1行（点数・理由・移動）と担当ごとの1日。入は日の要対応の訪問の帯も中に入れ、見出しの1行に数（`lib/detailsHeading`。月＝担当 a/b日・確定 c/d日、週＝未確定 N日・要対応 M件、日＝点数・移動・入らない・守れない条件）
 - 操作の行（入切とも）：主ボタン1つ＋ボタン1つまで、ほかは「その他 ▾」（`components/toolbarRow`。`mainTools(zoom, avail, expert)`）。入＝月・週は「予定を入れる」＋「担当を組む」、日は「予定を入れる」＋「確定（伝えた）」。切＝「予定を入れる」＋「欠勤・キャンセルを登録」（スマホの日は追加を出さず主ボタンなし）。担当なしを組むのは要対応の帯の［担当なしを組む］（`components/useBandArrange`。切で、今日〜翌月末の組める担当なしが1件以上のときだけ。押すと `requestUnassignedArrange`）。詳細は [design/pages-common.md](design/pages-common.md) の「予定の共通の部品」
 - 画面の上の説明は入切とも1行・初回だけ（`components/useIntro`。閉じたら `store/navOpen` の鍵 `intro:month`・`intro:week`・`intro:day` に覚える）。範囲の案の帯・使い方は 標準・提案・反映・ピン・プリセット の言葉を使わない（`proposalWords`）
 - 「予定を入れる」（入切とも）：月・週の主ボタン（`toolbar-add-plan`。スマホも文字を残す）が引き出し `components/AddPlanPanel`（`add-plan`。`SidePanel`。スマホは下から出る）を開く。〈利用者さん〉（利用中の人）と、定期（機能 `patterns` が入）＝曜日・くり返し・時刻・所要、単発（切）＝日付・時刻・所要。入れ方・初めの値・知らせの文は `lib/addPlan`（`addPlanKind`・`addPlanPatternForm`・`addPlanVisitDraft`。テストあり）、状態と保存は `components/useAddPlan`。定期は `components/usePatternAdd`（`parsePatternForm` で確かめて足し、`requestAutoArrange`（`writeUsual`）。`usePatternsFlow` と共通）、単発は `applyVisitEdit` の新しい訪問と `requestAutoArrange`（「元に戻す」付きの知らせ）。担当は選ばず自動の組みで付く。日の予定の主ボタンも同じ言葉で、開くのは訪問の欄（`VisitPanel`）
@@ -546,9 +547,10 @@ Worker 内の例外は `error` で返し、内部の文言は出さない（「A
 | 条件の重みの画面 | 考え方（プリセット）の中身と点数の基準を決める。組み方の標準の「案をくらべる」からの寄り道で、プリセットの節を表の上に |  | 0035・0065・0066 |
 | 予定と担当の手直し | 日の予定の1画面で訪問の一覧と担当を直す。AI で組むのは予定を組む |  | 0009・0063 |
 | 欠勤と振り直し | 別の記録 `absences`。案A＝空きに入れるだけ、案B＝減点つき焼きなまし。コンポーネント reassign、結果は訪問に書き振り直す前の担当を `reassigns` に残す |  | 0011・0053 |
-| 欠勤・キャンセルの連絡 | 欄の5段目で、確定し直した差と取り消した訪問から1人に1行の連絡文。［連絡した］は欄の中だけ。〈利用者さん〉あては担当の姓と時刻だけ |  | 0038 |
+| 欠勤・キャンセルの連絡 | 欄の2段目（連絡・確定）で、確定し直した差と取り消した訪問から1人に1行の連絡文。［連絡した］は欄の中だけ。〈利用者さん〉あては担当の姓と時刻だけ |  | 0038 |
+| 欠勤・キャンセルの欄の段 | 2段（何が起きたか → 連絡・確定）。選んだ時点で案A の見込みと担当が移る訪問を出し、［この案で決める］で登録と振り直しを1手で。初めての訪問先（過去8週に担当なし）は連絡文・訪問の詳細・スマホ画面に決まりごとを添える |  | 0082 |
 | 一月分の予定 | 繰り返し（定期パターン）の回は見るときに計算し、変えた回だけ保存する。種類の条件は常に必須、AI で組むのは1日ずつ |  | 0012・0053 |
-| 空き状況 | 元の案に他の人を変えずに仮の訪問を入れて数える |  | 0012 |
+| 空き状況 | 元の案に他の人を変えずに仮の訪問を入れて数える。曜日・時間帯・所要のチップで聞き、答えのカードでコピー（表は「詳しく」） |  | 0012・0080 |
 | 第N曜日・休み・決まりごと・案内文 | パターンに項目を足す、休みは別の記録で派生、固定の4項目、空き状況から純粋関数で文 |  | 0013 |
 | 担当を限る・希望休・印刷 | compile が可否で外す、欠勤のメモで見分ける、印刷専用の経路 |  | 0014 |
 | 退職・拘束・段階 | 最終勤務日＋一括振り直し、上限は注意だけ、段階が正 |  | 0015 |
@@ -558,7 +560,7 @@ Worker 内の例外は `error` で返し、内部の文言は出さない（「A
 | 見出し・ボタン | 見出しは `PageHeader` の1つの型（題名・1行の説明・右に主ボタン1つ・予定の3画面はすぐ下のナビの行に［月｜週｜日］）、ボタンは塗り＝主／枠＝副／文字＝ついでの3段 |  | 0036 |
 | 名簿 | 1シートを ID か名前で突き合わせ、総入れ替えは終了・休止。入出力は各一覧の名簿の欄で、Excel と CSV（文字コードは自動で見分ける） |  | 0020・0068 |
 | 絞り込み・詳細・人の画面 | 共通の `ClientFilter`、吹き出し、人は全画面（タブ・予定のカレンダー・節ごとの「直す → 保存」） |  | 0021・0022・0052 |
-| スマホ・確認 | 下のタブ（予定・〈利用者さん〉・〈スタッフ〉・組む・探す（パレット）・メニュー（引き出し）。エキスパート機能が切なら 組むの代わりに設定。空き状況は引き出しとパレット）、要対応の帯（入切とも。入は入だけの種類つき）、`useConfirm` |  | 0024〜0026・0045・0073・0074 |
+| スマホ・確認 | 下のタブ（予定・〈利用者さん〉・〈スタッフ〉・組む・探す（パレット）・メニュー（引き出し）。エキスパート機能が切なら 予定・空き状況・〈利用者さん〉・〈スタッフ〉・探す・メニュー（空き状況が切なら空き状況の代わりに設定）。入の空き状況・設定は引き出しとパレット）、要対応の帯（入切とも。入は入だけの種類つき）、`useConfirm` |  | 0024〜0026・0045・0073・0074・0080 |
 | スマホの予定・キーボード | スマホは日ごとのリストと下から出る欄（見る・取り消す・担当替えだけ）、週・月は「まとめて見る」。広い画面は帯を矢印キーで動かし、繰り返しの回は小さな帯で範囲 |  | 0055 |
 | 訪問の札の共通の部品 | 見た目・選ぶ・キー・落とし先の判定を共通の部品に。札は3段・入れ物は時間軸・表・リスト。月のマスは押すと右の欄にその日の行 |  | 0056・0057 |
 | 機能の入り切り | 機能ごと（22）を `org.features`、ひな形は一度書き込む、好み・決まりは計算からも外す。初めて開いたときは最初の2問の答えでひな形（単発＝「単発のみ」・定期＝「基本」）が決まる |  | 0028・0045・0073 |

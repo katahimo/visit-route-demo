@@ -1,212 +1,17 @@
 import { BookmarkPlus, Copy, MapPin, MessageSquareText } from 'lucide-react';
-import { type ReactNode, type RefObject, useId } from 'react';
-import { ConditionsEditor } from '../components/conditions';
-import { FieldError, invalidAttrs } from '../components/FieldError';
+import type { ReactNode, RefObject } from 'react';
+import { DetailsFold } from '../components/DetailsFold';
 import { AddressField } from '../components/placeLookup';
-import { Hint, WithIcon } from '../components/ui';
-import '../components/weekdayToggles.css';
-import type { DemoData } from '../contracts/data';
+import { WithIcon } from '../components/ui';
 import type { Place, VisitType } from '../contracts/documents';
-import {
-  type InquiryWish,
-  VACANCY_DURATION_MAX,
-  VACANCY_DURATION_MIN,
-  VACANCY_MARGIN_DEFAULT,
-  VACANCY_WEEKS_MAX,
-  VACANCY_WEEKS_MIN,
-  type VacancyCell,
-  type VacancyResult,
-} from '../contracts/vacancy';
-import { HALF_HOURS, timeText } from '../domain/availability';
+import { type InquiryWish, VACANCY_MARGIN_DEFAULT, type VacancyCell, type VacancyResult } from '../contracts/vacancy';
 import { pinnedAddressAfter } from '../lib/addressLookup';
-import { WEEKDAY_LABELS } from '../lib/common';
 import { inquiryRows } from '../lib/glance';
-import { typeOf } from '../lib/patternText';
-import { type AnswerCard, NO_TYPE_TEXT, placeLine } from '../lib/vacancyView';
+import { type AnswerCard, placeLine } from '../lib/vacancyView';
 import type { VacancyInputState } from './useVacancyInput';
-import {
-  AnswerBox,
-  FoldMark,
-  InquiryWeeks,
-  NoPlanNote,
-  ROW_WEEKDAYS,
-  StepNo,
-  VacancyGrid,
-  VacancyLegendBox,
-} from './vacancyParts';
+import { AnswerBox, FoldMark, InquiryWeeks, NoPlanNote, StepNo, VacancyGrid, VacancyLegendBox } from './vacancyParts';
 
-// 空き状況の画面（VacancyPage）の段階（PRD D184）：1 いつ・何を、2 場所、3 受けられる曜日・時間帯、4 次の一手
-
-/** 1 いつ・何を（PRD D184）。入れるとすぐ下の結果が変わる（自動で計算し直すので主ボタンは無い） */
-export function WhenStage({
-  data,
-  input,
-  durationOk,
-  fromOk,
-  wishOk,
-}: {
-  data: Pick<DemoData, 'visitTypes' | 'items' | 'org'>;
-  input: VacancyInputState;
-  durationOk: boolean;
-  fromOk: boolean;
-  wishOk: boolean;
-}) {
-  const { typeId, setTypeId, duration, setDuration, wishFrom, setWishFrom, wishTo, setWishTo } = input;
-  const { perWeek, setPerWeek, from, setFrom, weeks, setWeeks, wishDays, setWishDays } = input;
-  const { requirements, setRequirements } = input;
-  /** 入力の誤りの文の id（入力欄の aria-describedby。PRD D250） */
-  const durationErrId = useId();
-  const fromErrId = useId();
-  const wishErrId = useId();
-  return (
-    <section className="card stack vacancy-stage" data-testid="vacancy-step-when">
-      <div className="section-title">
-        <h2>
-          <StepNo n={1} />
-          いつ・何を
-        </h2>
-      </div>
-      <div className="form-grid">
-        <label>
-          種類
-          <select
-            value={typeId}
-            data-testid="vacancy-type"
-            onChange={(e) => {
-              const t = typeOf(data.visitTypes, e.target.value);
-              setTypeId(e.target.value);
-              // 種類を選ぶと所要の初期値をその種類の標準の所要にする
-              if (t) setDuration(String(t.durationMinutes));
-            }}
-          >
-            <option value="">{NO_TYPE_TEXT}</option>
-            {data.visitTypes.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          所要（分）
-          <input
-            type="number"
-            min={VACANCY_DURATION_MIN}
-            max={VACANCY_DURATION_MAX}
-            step={5}
-            value={duration}
-            {...invalidAttrs(!durationOk, durationErrId)}
-            data-testid="vacancy-duration"
-            onChange={(e) => setDuration(e.target.value)}
-          />
-        </label>
-        <label>
-          希望の開始（から）
-          <select
-            value={wishFrom}
-            {...invalidAttrs(!wishOk, wishErrId)}
-            onChange={(e) => setWishFrom(e.target.value)}
-            data-testid="wish-from"
-          >
-            {HALF_HOURS.map((h) => (
-              <option key={h} value={h}>
-                {timeText(h)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          希望の開始（まで）
-          <select
-            value={wishTo}
-            {...invalidAttrs(!wishOk, wishErrId)}
-            onChange={(e) => setWishTo(e.target.value)}
-            data-testid="wish-to"
-          >
-            {HALF_HOURS.map((h) => (
-              <option key={h} value={h}>
-                {timeText(h)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          週の回数
-          <select value={perWeek} onChange={(e) => setPerWeek(Number(e.target.value))}>
-            {[1, 2, 3, 4, 5, 6, 7].map((n) => (
-              <option key={n} value={n}>
-                週{n}回
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          開始日
-          <input
-            type="date"
-            value={from}
-            {...invalidAttrs(!fromOk, fromErrId)}
-            onChange={(e) => setFrom(e.target.value)}
-          />
-        </label>
-        <label>
-          見る週の数
-          <select value={weeks} onChange={(e) => setWeeks(Number(e.target.value))}>
-            {Array.from({ length: VACANCY_WEEKS_MAX - VACANCY_WEEKS_MIN + 1 }, (_, i) => i + VACANCY_WEEKS_MIN).map(
-              (n) => (
-                <option key={n} value={n}>
-                  {n}週
-                </option>
-              ),
-            )}
-          </select>
-        </label>
-      </div>
-      <WishDaysField wishDays={wishDays} setWishDays={setWishDays} />
-      <FieldError id={durationErrId} live={false}>
-        {!durationOk && `所要は${VACANCY_DURATION_MIN}〜${VACANCY_DURATION_MAX}分で入れてください`}
-      </FieldError>
-      <FieldError id={fromErrId} live={false}>
-        {!fromOk && '開始日を入れてください'}
-      </FieldError>
-      <FieldError id={wishErrId} live={false}>
-        {!wishOk && '希望の開始は「から」を「まで」より前にしてください'}
-      </FieldError>
-      <details className="vacancy-more">
-        <summary>
-          {data.org.terms.staff}の条件
-          {requirements.length > 0 ? `（${requirements.length}件）` : '（問わない）'}
-        </summary>
-        <Hint>例：性別が女性。種類の「担当に必要な条件」は、ここで選ばなくても入ります。</Hint>
-        <ConditionsEditor items={data.items} target="staff" value={requirements} onChange={setRequirements} />
-      </details>
-    </section>
-  );
-}
-
-/** 希望の曜日（複数。選ばない＝どの曜日でも） */
-function WishDaysField({ wishDays, setWishDays }: Pick<VacancyInputState, 'wishDays' | 'setWishDays'>) {
-  const toggleDay = (w: number) =>
-    setWishDays(wishDays.includes(w) ? wishDays.filter((x) => x !== w) : [...wishDays, w]);
-  return (
-    <div className="stack" style={{ gap: 4 }}>
-      <span className="sub">希望の曜日（選ばない＝どの曜日でも）</span>
-      <fieldset className="weekday-toggles" aria-label="希望の曜日" data-testid="wish-days">
-        {ROW_WEEKDAYS.map((w) => (
-          <button
-            key={w}
-            type="button"
-            className={`weekday-toggle${wishDays.includes(w) ? ' is-on' : ''}`}
-            aria-pressed={wishDays.includes(w)}
-            onClick={() => toggleDay(w)}
-          >
-            {WEEKDAY_LABELS[w]}
-          </button>
-        ))}
-      </fieldset>
-    </div>
-  );
-}
+// 空き状況の画面（VacancyPage）の段階（PRD D184）：2 場所、3 受けられる曜日・時間帯、4 次の一手（1 いつ・何を は vacancyWhen）
 
 /**
  * 2 場所（任意。PRD D184・D185）：はじめは畳んで要約の行だけ。開くと郵便番号・住所・地図。
@@ -259,15 +64,21 @@ export function PlaceStage({
   );
 }
 
-/** 3 受けられる曜日・時間帯（PRD D184・D187）：要約・週ごとのマス・曜日×開始時刻の表 */
+/**
+ * 3 受けられる曜日・時間帯（PRD D184・D187・D412）：一番上に答えのカード（中に主ボタン［要約をコピー］）。
+ * 希望の曜日×週のマス（D79）・凡例・曜日×開始時刻の表（D45）は「詳しく ▾」（閉じて始め、開け閉めは details:vacancy で覚える）
+ */
 export function TableStage({
   view,
   picked,
   onPick,
+  onCopy,
   gridRef,
 }: {
   view: {
     result: VacancyResult | null;
+    /** 時間帯のチップの外のマスを除いた結果（週ごとのマス。lib/vacancyBands の inBands） */
+    answerResult: VacancyResult | null;
     busy: boolean;
     exactPlace: Place | null;
     whenLine: string;
@@ -281,9 +92,11 @@ export function TableStage({
   };
   picked: VacancyCell | null;
   onPick: (c: VacancyCell) => void;
+  onCopy: () => void;
   gridRef: RefObject<HTMLDivElement | null>;
 }) {
-  const { result, busy, exactPlace, whenLine, answer, noPlan, missing, summary, wish, vType, staffWord } = view;
+  const { result, answerResult, busy, exactPlace, whenLine, answer, noPlan, missing, summary, wish, vType, staffWord } =
+    view;
   return (
     <section className="card stack vacancy-stage" data-testid="vacancy-table-card">
       <div className="section-title">
@@ -301,33 +114,43 @@ export function TableStage({
           </div>
         )}
       </div>
+      {answer && (
+        <AnswerBox answer={answer}>
+          {summary && (
+            <>
+              {/* 読み上げは上の答え（role="status"）だけ。要約は読み上げの欄にしない（二重に読ませない） */}
+              <p className="inquiry-summary" data-testid="inquiry-summary">
+                {summary}
+              </p>
+              <div className="row">
+                <button type="button" className="btn btn-primary" onClick={onCopy} data-testid="copy-summary">
+                  <WithIcon icon={Copy}>要約をコピー</WithIcon>
+                </button>
+              </div>
+            </>
+          )}
+        </AnswerBox>
+      )}
       <p className="sub vacancy-when-line" data-testid="vacancy-when-line">
         {whenLine}
       </p>
-      {answer && <AnswerBox answer={answer} />}
       <NoPlanNote noPlan={noPlan} missing={missing} />
-      {summary && (
-        <>
-          <h3 className="vacancy-sub-title">答える文（下の「要約をコピー」でコピー）</h3>
-          <output className="inquiry-summary" data-testid="inquiry-summary">
-            {summary}
-          </output>
-          {result && <InquiryWeeks rows={inquiryRows(result, wish)} exact={result.exact} />}
-        </>
-      )}
-      <h3 className="vacancy-sub-title">曜日・開始時刻ごとの表</h3>
-      <VacancyLegendBox exact={!!result?.exact} vType={vType} />
-      {result && result.times.length === 0 && <p className="sub">所要が長すぎて、入る時刻がありません</p>}
-      {result && result.times.length > 0 && (
-        <VacancyGrid result={result} staffWord={staffWord} picked={picked} onPick={onPick} gridRef={gridRef} />
-      )}
+      <DetailsFold testId="vacancy-details" screen="vacancy">
+        {answerResult && summary && <InquiryWeeks rows={inquiryRows(answerResult, wish)} exact={answerResult.exact} />}
+        <h3 className="vacancy-sub-title">曜日・開始時刻ごとの表</h3>
+        <VacancyLegendBox exact={!!result?.exact} vType={vType} />
+        {result && result.times.length === 0 && <p className="sub">所要が長すぎて、入る時刻がありません</p>}
+        {result && result.times.length > 0 && (
+          <VacancyGrid result={result} staffWord={staffWord} picked={picked} onPick={onPick} gridRef={gridRef} />
+        )}
+      </DetailsFold>
     </section>
   );
 }
 
 /**
- * 4 次の一手（PRD D184・D186）：この問い合わせに答える（要約をコピー＝この段階の主ボタン・仮押さえ）と、
- * 空き枠を広く知らせる（案内文・コピー・紹介元へメール。はじめは畳む。children）
+ * 4 次の一手（PRD D184・D186・D412）：この問い合わせを仮押さえする（従のボタン）と、
+ * 空き枠を広く知らせる（案内文・コピー・紹介元へメール。はじめは畳む。children）。要約のコピーは答えのカードの中
  */
 export function NextStage({
   summary,
@@ -335,7 +158,6 @@ export function NextStage({
   perWeek,
   hasPlace,
   clientWord,
-  onCopy,
   onHoldOpen,
   children,
 }: {
@@ -344,7 +166,6 @@ export function NextStage({
   perWeek: number;
   hasPlace: boolean;
   clientWord: string;
-  onCopy: () => void;
   onHoldOpen: () => void;
   children?: ReactNode;
 }) {
@@ -359,22 +180,18 @@ export function NextStage({
       <div className="stack vacancy-next" data-testid="inquiry-card">
         <h3 className="vacancy-sub-title">
           <WithIcon icon={MessageSquareText} size={16}>
-            この問い合わせに答える
+            この問い合わせを押さえる
           </WithIcon>
         </h3>
         {summary ? (
           <>
-            <div className="row" style={{ flexWrap: 'wrap' }}>
-              <button type="button" className="btn btn-primary" onClick={onCopy} data-testid="copy-summary">
-                <WithIcon icon={Copy}>要約をコピー</WithIcon>
-              </button>
-              {canHold && (
+            {canHold ? (
+              <div className="row" style={{ flexWrap: 'wrap' }}>
                 <button type="button" className="btn" data-testid="hold-open" onClick={onHoldOpen}>
                   <WithIcon icon={BookmarkPlus}>仮の{clientWord}として押さえる</WithIcon>
                 </button>
-              )}
-            </div>
-            {!canHold && (
+              </div>
+            ) : (
               <p className="sub" data-testid="hold-why">
                 仮押さえは、希望の曜日・時間帯に、どの週も受けられる（○）開始時刻が週{perWeek}回分あるときにできます。
               </p>

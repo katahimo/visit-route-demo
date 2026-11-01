@@ -94,11 +94,16 @@ export const basicsTabs = (features: Features): { to: string; label: string; mat
   }));
 
 /**
- * 下のタブに並べる項目の key（そのあとに「探す」「メニュー」。PRD D400・D401）：エキスパート機能が切なら メニューのうち4つ
- * （予定・〈利用者さん〉・〈スタッフ〉・設定。空き状況は引き出しとパレット。ADR-0078）、入なら 予定・〈利用者さん〉・〈スタッフ〉・組む（設定はメニューの中）
+ * 下のタブに並べる項目の key（そのあとに「探す」「メニュー」。PRD D400・D401）：エキスパート機能が切なら
+ * 予定・空き状況・〈利用者さん〉・〈スタッフ〉（設定は引き出しとパレット。空き状況が切なら空き状況の代わりに設定。ADR-0080）、
+ * 入なら 予定・〈利用者さん〉・〈スタッフ〉・組む（設定・空き状況は引き出し）
  */
-export const bottomTabKeys = (features: Features): readonly string[] =>
-  isOn(features, 'expert') ? ['schedule', 'clients', 'staff', 'arrange'] : ['schedule', 'clients', 'staff', 'settings'];
+export const bottomTabKeys = (features: Features): readonly string[] => {
+  if (isOn(features, 'expert')) return ['schedule', 'clients', 'staff', 'arrange'];
+  return isOn(features, 'vacancy')
+    ? ['schedule', 'vacancy', 'clients', 'staff']
+    : ['schedule', 'clients', 'staff', 'settings'];
+};
 
 /**
  * 起動したとき（#/・#/home・知らない URL）・切った機能の URL から移る先（PRD D213・D400・D401）：ホームは無いので予定の画面

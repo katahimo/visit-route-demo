@@ -1,13 +1,15 @@
 // 日の予定（PRD D4・D13・D18。版2：ADR-0053）の状態と処理をまとめる：計算（usePlanData）・表示（usePlanView）・
 // 移動とフォーカス（usePlanNav）・手直しと確定（usePlanEdits）・ドラッグ（usePlanDrag）・欠勤の振り直し（useReassignFlow）・
 // 「欠勤・キャンセル」の欄（useSuddenFlow）。画面の部品はここで返すものだけを使う
+import { useMemo } from 'react';
 import { useDay } from '../components/day';
 import { useMailLimit } from '../components/mailParts';
 import { useToast } from '../components/Toast';
 import { useConfirmStep, useFeature } from '../components/useFeature';
 import { useRouteSelection } from '../components/useRouteSelection';
 import { useToldEntry } from '../components/useToldEntry';
-import { dayContactWords } from '../lib/contacts';
+import { dayContactWords, withFirstNotes } from '../lib/contacts';
+import { servedPairsBefore } from '../lib/firstVisit';
 import { contactMailText, mailTo } from '../lib/mail';
 import { usePlanData } from './usePlanData';
 import { usePlanDrag } from './usePlanDrag';
@@ -33,6 +35,8 @@ function usePlanFeatures() {
     compatOn: useFeature('compat'),
     /** 確定（伝えた）の段階（expert 入。切なら自動で決まり、確定のボタンなどは出さない。ADR-0073） */
     confirmStep: useConfirmStep(),
+    /** 訪問先の決まりごと（初めての訪問先の連絡文に添える。PRD D415） */
+    notesOn: useFeature('visitNotes'),
   };
 }
 
@@ -88,7 +92,10 @@ export function usePlanPage() {
   const drag = usePlanDrag({ owner: d.owner, running, moveTo: edits.moveTo, unassign: edits.unassign });
   /** この端末の mailto の長さの目安（ADR-0017） */
   const mailLimit = useMailLimit();
+  /** 過去8週に担当した組（初めての訪問先の印と、欠勤・キャンセルの欄の連絡に添える決まりごと。PRD D415） */
+  const served = useMemo(() => servedPairsBefore(d.data, date), [d.data, date]);
   const contact = {
+    /** 日の予定の連絡の一覧・すべての連絡文・メールの言葉（決まりごとは添えない。D415） */
     words: dayContactWords({
       date,
       staffWord: d.terms.staff,
@@ -105,7 +112,7 @@ export function usePlanPage() {
     onCopied: (ok: boolean, what: string) =>
       toast(ok ? `${what}をコピーしました` : 'コピーできませんでした。文を選んでコピーしてください'),
   };
-  // ---- 「欠勤・キャンセル」の欄（PRD D167〜D172）：選択肢・訪問の担当・4段目の振り直しの結果・5段目の連絡 ----
+  // ---- 「欠勤・キャンセル」の欄（PRD D167〜D172）：選択肢・訪問の担当・2段目の振り直しの結果と連絡 ----
   const sudden = useSuddenFlow({
     date,
     data: d.data,
@@ -131,7 +138,8 @@ export function usePlanPage() {
       told: d.told,
       toldState: d.toldState,
     },
-    contactWords: contact.words,
+    // 欠勤・キャンセルの欄の連絡（振り直しで新しく入る人）だけ、初めての訪問先に決まりごと（鍵を含む）を添える（D415）
+    contactWords: withFirstNotes(contact.words, { served, clientById: d.clientById, notesOn: f.notesOn }),
     applyCancel: edits.applyCancel,
     adopt: confirm.adopt,
     confirmStep: f.confirmStep,
@@ -159,6 +167,7 @@ export function usePlanPage() {
     confirm,
     drag,
     contact,
+    served,
     sudden,
     suddenState,
     map,

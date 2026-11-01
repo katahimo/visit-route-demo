@@ -7,7 +7,7 @@
 
 関連 ADR：0024・0027・0045・0054・0055・0063・0067・0073・0074・0077・0078。関連 PRD：D132〜D135・D179〜D183・D237・D239・D270・D273・D275・D326・D336・D347・D349・D360・D394・D400〜D404。
 
-- メニューは見出しなし・ホームなしの1グループ。エキスパート機能（`expert`）切：予定・空き状況・〈利用者さん〉・〈スタッフ〉・設定 の5つ。入：〈スタッフ〉と設定のあいだに「組む」を足した6つ。左のメニュー・スマホの引き出しで同じ。下のタブは空き状況を除く4つ
+- メニューは見出しなし・ホームなしの1グループ。エキスパート機能（`expert`）切：予定・空き状況・〈利用者さん〉・〈スタッフ〉・設定 の5つ。入：〈スタッフ〉と設定のあいだに「組む」を足した6つ。左のメニュー・スマホの引き出しで同じ。下のタブは 切が 予定・空き状況・〈利用者さん〉・〈スタッフ〉、入が 予定・〈利用者さん〉・〈スタッフ〉・組む
 - 要対応は予定の上の要対応の帯、欠勤・キャンセルは予定の操作の行（その他 ▾）から開く。担当を組む（`/arrange`）は切ではメニューに出さず、日の予定などから開く
 - 子の項目を持つのは入の「組む」だけ：基本情報・組み方の標準（標準が無い間だけ）・担当を組む（作業の順。条件の重みは組み方の標準の寄り道）。子は親の下の字下げした小さな行（`.nav-sub`・`.nav-child`）。親の行の右の ▾（`button.nav-toggle`・data-testid `nav-toggle`・`aria-expanded`・`aria-controls`＝`nav-sub-<key>`・名前「◯の項目を畳む／開く」）で畳める。設定は子を持たず、押すと最後に開いたタブ
 - 畳み：既定は `NAV_OPEN_DEFAULT`＝組むを開く。開け閉めは localStorage の `visit-route-demo:nav-open`（`store/navOpen` の `navOpenMemory`。`{ 親の key: boolean }` の JSON。読めなければ既定）。今の画面の親が畳んであれば、画面を移ったときに開く（自分で畳んだ開け閉めは、移るまで変えない）
@@ -20,7 +20,7 @@
 ### メニューの並び・下のタブ・要対応の帯
 
 - 判定は `lib/nav` の `menuSections`（`expert` の入切だけで分ける）。項目の `key`：`schedule`・`vacancy`・`clients`・`staff`・（入）`arrange`・`settings`。名前は 予定・空き状況・`terms.client`・`terms.staff`・組む・設定。`to`＝`scheduleHref(last.schedule)`・`/vacancy`・`/clients`・`/staff`・`/arrange`（子つき）・`settingsHref`。今の画面の印（`match`）：予定は 月・週・日（切はさらに比較・担当を組む）、空き状況は空き状況、〈利用者さん〉・〈スタッフ〉は `lib/peopleTabs` の `peopleMatch(side, last.people, !expert)`（一覧と人のタブの画面。相性は来た側の1つ。予定と相性は切だけ〈利用者さん〉、入は「組む」の基本情報）、組むは `ARRANGE_PATHS`、設定は設定のタブ。〈利用者さん〉・〈スタッフ〉の画面（`/clients/:id`・`/staff/:id`）は `activeNavPath` で一覧に当てる。切った機能の項目は出さない
-- 下のタブ：`bottomTabs(groups, features)`。並びは `bottomTabKeys(features)`：入は 予定・〈利用者さん〉・〈スタッフ〉・組む、切は 予定・〈利用者さん〉・〈スタッフ〉・設定。そのあとに画面のボタンの「探す」「メニュー」。空き状況は入れない（幅が尽きる。引き出しとパレットから）
+- 下のタブ：`bottomTabs(groups, features)`。並びは `bottomTabKeys(features)`：入は 予定・〈利用者さん〉・〈スタッフ〉・組む（設定・空き状況は引き出しとパレット）、切は 予定・空き状況・〈利用者さん〉・〈スタッフ〉（設定は引き出しとパレット。空き状況（`vacancy`）が切なら空き状況の代わりに設定。ADR-0080）。そのあとに画面のボタンの「探す」「メニュー」
 - 起動先：`homePath(features)`＝`startGuidePlanPath(features)`（繰り返しを使うなら `/month`、使わないなら `/week`）。`#/home`・`#/`・知らない URL・切った機能の URL（知らせ `FeatureOffNotice` を上に出す）はここへ移す（`Navigate replace`。`App.tsx`）
 - 画面の一覧（`screenSections`。パレットの画面・上の帯の名前）：予定（月・週・日・空き状況。切はさらに担当を組む）／見出しなしの人のグループ（切は先頭に予定と相性・〈利用者さん〉・〈スタッフ〉・相性・勤務時間（シフト）・勤務の見込み）／組む（入だけ。予定と相性・条件の重み・組み方の標準・担当を組む）／設定
 - 要対応の帯（`components/attentionBand.tsx`・`attentionBand.css`・フック `useAttentionBand`。data-testid `attention-band`）：月・週・日の予定のナビの行のすぐ下に1本（入切とも。無ければ出さない。印刷で出さない）

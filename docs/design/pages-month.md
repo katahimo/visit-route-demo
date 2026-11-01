@@ -1,6 +1,6 @@
 # 月の予定と月の印刷
 
-> この画面のファイル：`src/pages/MonthPage.tsx`（`month.css`。組み立てだけ。状態と処理は `useMonthNav`・`useMonthFocus`・`useMonthDays`・`useMonthFocusDays`・`useMonthOff`・`useMonthAside`・`useMonthBatch`・`useMonthMenu`（`useMonthPanels`・`monthMore`）・`useMonthDayList`・`useMonthVisitRows`・`useMonthListRows`、見た目は `monthSections.tsx`（区画）・`monthParts.tsx`（見出しの欄・凡例）・`monthGrid.tsx`（カレンダーの表・日ごとの一覧）・`monthCell.tsx`（`DayCell`）・`monthCellTip.tsx`（`MonthCellTip`）・`monthAside.tsx`（右の欄・下から出る欄）、計算は `src/lib/monthCell.ts`（`dayCellText`）・`monthView.ts`（表示の選択・日ごとの集計・一覧の行））・`MonthPrintPage.tsx`（`monthPrint.css`）、`src/lib/month.ts`・`monthList.ts`・`monthGuide.ts`・`monthPrint.ts`・`monthRest.ts`・`requestedOff.ts`・`dayStatuses.ts`・`confirmDay.ts`・`settledView.ts`・`attentionBand.ts`、`src/components/useDayStatuses.ts`・`useBulkConfirm.ts`（週と共通）・`visitParts.tsx`（マスの選ぶ・その日の回の一覧の行・ドラッグ）・`scheduleParts.tsx`（選択の帯の「別の日へ」）。関連 ADR：0012〜0015・0031・0032・0042・0051〜0053・0056・0057・0063・0073・0074。関連 PRD：D36〜D44・D53〜D55・D65・D69・D70・D151〜D154・D176・D189〜D192・D201〜D204・D223・D228・D256・D257・D278・D295・D313・D321・D332・D334・D339〜D343・D347・D382・D384・D393・D400〜D404。
+> この画面のファイル：`src/pages/MonthPage.tsx`（`month.css`。組み立てだけ。状態と処理は `useMonthNav`・`useMonthFocus`・`useMonthDays`・`useMonthFocusDays`・`useMonthOff`・`useMonthAside`・`useMonthBatch`・`useMonthMenu`（`useMonthPanels`・`monthMore`）・`useMonthDayList`・`useMonthVisitRows`・`useMonthListRows`、見た目は `monthSections.tsx`（区画）・`monthParts.tsx`（見出しの欄・凡例）・`monthGrid.tsx`（カレンダーの表・日ごとの一覧）・`monthCell.tsx`（`DayCell`）・`monthCellTip.tsx`（`MonthCellTip`）・`monthAside.tsx`（右の欄・下から出る欄）、計算は `src/lib/monthCell.ts`（`dayCellText`）・`monthView.ts`（表示の選択・日ごとの集計・一覧の行））・`MonthPrintPage.tsx`（`monthPrint.css`）、`src/lib/month.ts`・`monthList.ts`・`monthGuide.ts`・`monthPrint.ts`・`monthRest.ts`・`requestedOff.ts`・`dayStatuses.ts`・`confirmDay.ts`・`settledView.ts`・`attentionBand.ts`、`src/components/useDayStatuses.ts`・`useBulkConfirm.ts`（週と共通）・`visitParts.tsx`（マスの選ぶ・その日の回の一覧の行・ドラッグ）・`scheduleParts.tsx`（選択の帯の「別の日へ」）。関連 ADR：0012〜0015・0031・0032・0042・0051〜0053・0056・0057・0063・0073・0074・0079。関連 PRD：D36〜D44・D53〜D55・D65・D69・D70・D151〜D154・D176・D189〜D192・D201〜D204・D223・D228・D256・D257・D278・D295・D313・D321・D332・D334・D339〜D343・D347・D382・D384・D393・D400〜D404・D410。
 > 3段のバー・混み具合の塗りは [pages-bars.md](pages-bars.md)、進み具合の帯は [pages-progress.md](pages-progress.md)、操作の行・訪問の札・選ぶ・キー・`VisitRow`・落とし先の判定は [pages-common.md](pages-common.md)。
 > 担当は訪問に持ち、日の状態は「まだ伝えていない／確定済み／未連絡の変更あり」、要対応は訪問ごとの検査。
 
@@ -52,8 +52,8 @@
 | 未連絡の変更あり（`is-state-changed`） | 淡い黄＋鉛筆 |
 | 要対応（`needsCare`、今日以降。`is-care`） | 赤い太枠＋日付の横の赤い札「要対応 N」（`month-attn`。N は右の欄の行の数） |
 
-- `aria-label` に状態の文字を入れる。`title` は付けず、`data-tip="cell"` で読み方の吹き出し
-- 中身（全体の表示）：
+- `aria-label` に状態の文字を入れる。`title` は付けず、入は `data-tip="cell"` で読み方の吹き出し（切は吹き出しを出さない。下の「エキスパート機能が切のとき」）
+- 中身（全体の表示。エキスパート機能が入のとき。切は下の「エキスパート機能が切のとき」）：
   - 件数（取り消し・休みを除く。`month-count`）
   - 種類ごとの件数の積み上げバー（種類の色。`title` に内訳）
   - 印 `month-marks`（`lib/month` の `dayMarks`）：「休 N」（勤務の無い人＋希望休の人。同じ月の同じ曜日の最頻値より多い日だけ出し、希望休のある日は常に出す。`lib/monthRest` の `usualRestByWeekday`・`showRestMark`。読み上げ・吹き出しには人数を残す。希望休がいれば紫。title「休む〈スタッフ〉 N人（内訳）」）・「欠 名前」（希望休でない欠勤だけ。`month-absent`。欠勤の人に担当の訪問が残れば要対応に出る）・その日に始まる（▶）・終わる（■）定期パターンのある〈利用者さん〉・〈利用者さん〉の休み（ベッドのアイコンと、1人なら名前の頭・2人以上なら人数。`dayMarks.leaves`）・「最終 名前」（title「最終勤務日（翌日から勤務なし）：…」）
@@ -87,13 +87,13 @@
   - 右の欄は名前と「〈名前〉の予定（M月）を開く」（`month-client-open`。`/clients/:id?cal=month&d=YYYY-MM-01`）だけ
 - 右の欄の見出しの名前は `PersonButton`
 
-#### マスの読み方の吹き出し（カレンダーのときだけ）
+#### マスの読み方の吹き出し（カレンダーで、エキスパート機能が入のときだけ）
 
 - `lib/monthGuide.ts`（純粋関数。テストあり）：`cellGuide(input)`＝そのマスに出ている印だけの読み方の行（背景の色・赤い点・赤い枠・「要対応 N」の札（`attention`）・件数・種類の帯・休 N（希 N。`restShown` が偽なら書かない）・欠・▶■・ベッド・最終・担当なし（`unassigned`）・ほかの要対応（`issues`）・未連絡（`changed`）・拘束超・3段の棒（`barRowsText()`）・人の表示の棒・代・変）。`createTipStore`
 - 描いたあと（`useLayoutEffect`）に日付をキーに文を置き場に置き、吹き出しは `useSyncExternalStore` で日付から引く（描画中に DOM を読まない）
 - `MonthCellTip`：表の要素に1回だけ `pointerover`・`pointerout`・`focusin`・`focusout`。マウスは 300ms 止まったら出し、出ていれば隣のマスへすぐ移す。離れて 120ms で消す。キーボードは `:focus-visible` のときだけで、そのあいだはマウスの出入りを見ない。出しているマスは日付で持ち、描き直しでも閉じない。Esc・フォーカスが外れると消える。吹き出しはマウスを受けない（`.is-passive`）。タッチでは出さない
 
-#### 凡例（`MonthLegend`）
+#### 凡例（`MonthLegend`。エキスパート機能が入のときだけ）
 
 - `details`（`month-legend-fold`）。閉じているときは「凡例を見る」（`month-legend-toggle`）と1行の要約（`month-legend-line`。狭い画面は省略記号）、開くと `MonthLegendBody`（`month-legend`）。はじめ畳み、保存しない。印刷では「凡例を見る」を出さない
 - 要約：「色＝日の状態・赤い枠と「要対応 N」の札＝要対応・▶■＝始まる／終わる」
@@ -101,19 +101,25 @@
 
 #### 日ごとの一覧
 
-- `lib/monthList.ts`（純粋関数。テストあり）：`MonthLayout`（`calendar`・`list`）・`MONTH_LIST_QUERY`（`(max-width: 600px)`）・`monthLayoutOf(param, narrow)`・`monthListFocusDate`・`DAY_STATE_TEXT`・`monthListRow`（日付・件数・状態の文・`care`・旗）
+- `lib/monthList.ts`（純粋関数。テストあり）：`MonthLayout`（`calendar`・`list`）・`MONTH_LIST_QUERY`（`(max-width: 600px)`）・`monthLayoutOf(param, narrow)`・`monthListFocusDate`・`DAY_STATE_TEXT`・`monthListRow`（日付・件数・状態の文・`care`・旗。`reasons` が偽（切）なら旗は空で状態の印と文を出さない。読み上げの `label` には残す）
 - 今月の一覧の上に「今日へ」（`month-list-today`）
 - `month-list`（`ul`）。開いたとき `monthListFocusDate` の行へ巻く。行は `scroll-margin` で上の帯・下のタブを避ける
 - 行は `button.month-list-btn`（`month-list-day`・`data-date`・`data-state`・`data-off`）。押すとマスと同じ（`pickDay`。「休みを入れる」のときは `toggleOff`・押せない日は `aria-disabled`）
 - 表示の選択が〈スタッフ〉なら勤務の状態と担当の件数、〈利用者さん〉なら訪問の時刻と担当、休みを入れるときはその日の扱いを行の下に
 - 390px で土曜も見え、はみ出さない。600px 以下の操作の行は1段で、見せ方の切り替え（`month-layout`）はアイコンだけ（名前は読み上げ）
 
-#### エキスパート機能が切のとき
+#### エキスパート機能が切のとき（マスは例外だけ。PRD D410。ADR-0079）
 
-- 確定の段階を出さない（`lib/settledView` の `showConfirmStep`）：進み具合の帯の「確定 N/N日」と「確定していない日を見る」（`bandNext` の `confirmStep`）・右の欄の「確定していない日」とまとめて確定（`?do=unconfirmed` は要対応へ）・マスの鍵と「まだ伝えていない」「確定済み」の色・文（`shownDayState`・`dayStateText`。「変更あり」だけ見せる）
-- 決まったあとの変更は訪問の「変更あり」の印とマスの鉛筆の印（押すとその日の連絡の一覧。マスのクリックの中で印を見分けて `/plan?date=…&do=told` へ）
-- 進み具合の帯・「月全体：担当なし N件」・凡例は「詳しく ▾」の中。説明は1行で初回だけ
-- 要対応は帯と同じ分け方（担当なし・重なり・休みの人。`lib/attentionBand` の `exceptionStatus`。`useMonthDays` が日の状態を絞る）で数え、マスの赤枠・「要対応 N」・「条件に合わない」の旗・拘束超の札、右の欄の要対応の行・進み具合の数もそろう（拘束超の行は出さない）。右の欄の内訳（括弧）は「詳しく」の中、未連絡の変更は「変更あり」と言う。マスの種類・混み具合のバーと▶■は変えない
+何を出すかは `lib/exceptionView` の `monthCellView(only)`（`bars`・`otherMarks`・`reasons`・`guide`・`attentionList`）の1か所で決め、マス（`DayCell`）・日ごとの一覧の行（`monthListRow` の `reasons`）・右の欄・見出しが読む。入はいまのまま。
+
+- マスに出すのは 日付・訪問の件数（`month-count`）・要対応の札（`month-attn`。D295）・「休 N」（`month-resting`。D295 の決め方。希望休の「（希 N）」も）・今日の印・選んだ件数・組んでいる間の「組んでいます…」だけ。種類の積み上げ・混み具合の棒・ほかの印（欠・▶■・ベッド・最終）・旗（担当なし N・担当が休み N・変更あり N・拘束超 N）・鍵と鉛筆の印は出さない。背景・枠の色（`is-state-changed`・`is-care`）は残す。理由は押した日の右の欄（`DayVisits`）と日の予定で見る
+- 読み上げ（`aria-label`）は入と同じ文（理由も読む）。マスに吹き出しは出さない（`data-tip` を付けず `MonthCellTip` も置かない）。マスの読み方は見出しの ⓘ（`PageHeader` の右。`MonthCellHint`＝`Hint`「マスの読み方」・`month-cell-hint`。文は `lib/monthGuide` の `monthCellHint`）
+- 日ごとの一覧の行も同じ（旗・状態の印と文を出さない。要対応の札は出す）
+- 右の欄は、日を押す前は「日を押すとその日の訪問が出ます」（`month-aside-pick`。`MONTH_ASIDE_PICK_TEXT`）の1行だけで、要対応の一覧（`MonthAttention`）は出さない（件数の正は上の要対応の帯。D404）。進み具合の帯の「要対応」・`?do=attention`・コマンドパレットの「要対応を見る」は、いちばん早い要対応の行き先（`attentionTarget`。一覧の行を押したのと同じ）へ移る（`useMonthAside` の `firstAttention`。要対応が無ければ右の欄へ移るだけ）
+- 確定の段階を出さない（`lib/settledView` の `showConfirmStep`）：進み具合の帯の「確定 N/N日」と「確定していない日を見る」（`bandNext` の `confirmStep`）・右の欄の「確定していない日」とまとめて確定（`?do=unconfirmed` は要対応と同じ扱い）
+- 決まったあとの変更は訪問の「変更あり」の印（右の欄の行・日の予定。押すとその日の連絡の一覧）。マスには出さない（変更ありの日は「要対応 N」に数える）
+- 進み具合の帯・「月全体：担当なし N件」は「詳しく ▾」の中（凡例は入れない。`detailItems`）。説明は1行で初回だけ
+- 要対応は帯と同じ分け方（担当なし・重なり・休みの人。`lib/attentionBand` の `exceptionStatus`。`useMonthDays` が日の状態を絞る）で数え、マスの赤枠・「要対応 N」・進み具合の数もそろう
 
 #### 右の欄（要対応・確定していない日。入のとき）
 
@@ -133,7 +139,7 @@
 | `?do=` | 動き |
 |---|---|
 | `batch` | 担当を組むの画面のその月（`/arrange?ym=`。replace）へ移す |
-| `attention`・`unconfirmed` | 全体の表示にして右の欄へ移りフォーカス |
+| `attention`・`unconfirmed` | 全体の表示にして右の欄へ移りフォーカス（切の `attention` は、いちばん早い要対応の行き先へ移る） |
 
 #### 担当を組んでいる間
 

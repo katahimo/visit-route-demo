@@ -151,16 +151,16 @@ export function noticeLine(periodLabel: string, typeName: string | null, duratio
 }
 
 /**
- * いつ・何をの段階の要約（結果の見出しの下に出す1行。PRD D184）：「種類の指定なし・60分・月水・9:00〜17:00に始める・週1回・10/20から4週」。
- * 所要が正しくないときは所要を、希望の開始の「から」が「まで」より後のときは時間帯を「—」にする
+ * いつ・何をの段階の要約（結果の見出しの下に出す1行。PRD D184・D411）：「種類の指定なし・60分・月水・9:00〜17:00に始める・週1回・10/20から4週」。
+ * startRange は開始の幅の文（時間帯のチップなら「8:00〜12:00・17:00〜20:00」。lib/vacancyBands の startRangeText）。
+ * 所要が正しくないときは所要を、くわしい条件の開始の「から」が「まで」より後のときは時間帯を「—」にする
  */
 export function whenWhatLine(q: {
   typeName: string | null;
   duration: string;
   durationOk: boolean;
   weekdayLabels: string[];
-  from: string;
-  to: string;
+  startRange: string;
   wishOk: boolean;
   perWeek: number;
   startMd: string;
@@ -168,7 +168,7 @@ export function whenWhatLine(q: {
 }): string {
   const days = q.weekdayLabels.length === 0 ? 'どの曜日でも' : q.weekdayLabels.join('');
   const dur = q.durationOk ? `${q.duration}分` : '—';
-  const time = q.wishOk ? `${q.from}〜${q.to}に始める` : '—';
+  const time = q.wishOk ? `${q.startRange}に始める` : '—';
   return `${typeText(q.typeName)}・${dur}・${days}・${time}・週${q.perWeek}回・${q.startMd}から${q.weeks}週`;
 }
 
@@ -275,7 +275,7 @@ export function answerCard(result: VacancyResult, wish: Omit<InquiryWish, 'start
       head: `週${perWeek}回には足りません`,
       body,
       note: withUnknown(
-        `どの週も受けられるのは週${ok.length}回分です。曜日・時間帯を広げるか、下の表の △ を見てください。`,
+        `どの週も受けられるのは週${ok.length}回分です。曜日・時間帯を広げるか、「詳しく」の表の △ を見てください。`,
       ),
     };
   }
@@ -286,7 +286,7 @@ export function answerCard(result: VacancyResult, wish: Omit<InquiryWish, 'start
       head: '受けられない週があります',
       body: `${partial.map((wd) => WEEKDAY_LABELS[wd]).join('・')} は週によって受けられます`,
       note: withUnknown(
-        'どの週も受けられる開始の時刻はありません。下の表の △ を押すと、受けられない日付が分かります。',
+        'どの週も受けられる開始の時刻はありません。「詳しく」の表の △ を押すと、受けられない日付が分かります。',
       ),
     };
   }

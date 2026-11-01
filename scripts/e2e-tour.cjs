@@ -1,9 +1,10 @@
 // 最初の2問と案内ツアー（PRD D189〜D193・D379〜D381。ADR-0025・ADR-0045・ADR-0073）を本物のブラウザで確かめる：
 // 最初の2問（初めて開く＝保存データも印「all」も無いと、案内ツアーは自動で出ず、1画面に2問と主ボタン「はじめる」だけ。答えるまでデータを書かない・
-// 読み直してもまた2問・Tab は選んだ方だけ・矢印で選び直す）・デモ×定期（今の初期データ・利用者さん／スタッフ・「基本」・最初は月）・
+// 読み直してもまた2問・Tab は選んだ方だけ・矢印で選び直す）・デモ×定期（今の初期データ・利用者さん／スタッフ・「基本」・最初は月。
+// 作った直後に今日〜翌月末の担当なしを1回自動で組み、知らせ「N件の担当を組みました」と［元に戻す］。組む印（sessionStorage）は読み直しをまたいで起動で読む。PRD D409）・
 // デモ×単発（架空の単発の予約が今日から2週間分・お客様／シッター・「単発のみ」・最初は週）・
 // 自分のデータ（空のデータ＋3段の登録の案内：上に「1/3」・①②は「CSV・Excel を読み込む」（名簿の欄）と「1人ずつ入れる」（追加の画面）・③は予定へ・
-// 空のデータで月・週・日・一覧・設定などが壊れない）・印「all」（scripts/lib/startFeatures.cjs）があれば2問を出さず今の初期データ＋すべて入・
+// 空のデータで月・週・日・一覧・設定などが壊れない。組まない）・印「all」（scripts/lib/startFeatures.cjs）があれば2問を出さず今の初期データ＋すべて入（組まない）・
 // 設定の「最初の設定をやり直す」（確認の文は元に戻す Ctrl+Z の対象外・先に書き出す案内 → 2問へ戻る → 答えでデータを作り直す・控えが残る）、
 // 案内ツアー（データの画面の「案内をもう一度見る」から開く：role="dialog"・aria-modal・見出しと本文・1 / 2・最初のフォーカスは「次へ」・
 // 裏の inert とスクロールのロック・「戻る」は最初の枚で押せない・Tab と Shift+Tab が中で回る・開いている間は Ctrl+K でパレットを開かない・
@@ -26,6 +27,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { startAll } = require('./lib/startFeatures.cjs');
 const { skipTour } = require('./lib/tourSeen.cjs');
+const { waitStartArranged } = require('./lib/firstRun.cjs');
 const {
   launch,
   BASE,
@@ -155,9 +157,16 @@ async function firstRun(b) {
   await answered(page);
   await page.locator('.app-main h1').first().waitFor({ timeout: 30000 });
   await until(async () => (await stored2(page)) !== null, 10000);
-  const d = await stored2(page);
-  const f = d.org.features;
   check(/#\/month/.test(hashOf(page)), 'デモ・定期：最初に開く画面は月の予定', hashOf(page));
+  // 作った直後に担当なしを1回自動で組む（要対応の帯の［担当なしを組む］と同じ知らせ・［元に戻す］。PRD D409）
+  const arranged = await waitStartArranged(page);
+  check(/^\d+件の担当を組みました/.test(arranged), 'デモ・定期：作った直後に担当なしを組み、知らせが出る', arranged);
+  check((await page.getByTestId('toast-undo').count()) >= 1, 'デモ・定期：組んだ知らせに［元に戻す］');
+  const d = await until(async () => {
+    const x = await stored2(page);
+    return x?.visits.some((v) => v.staffId) ? x : null;
+  }, 10000);
+  const f = d.org.features;
   check(
     d.org.terms.client === '利用者さん' && d.org.terms.staff === 'スタッフ',
     'デモ・定期：呼び名は利用者さん／スタッフ',
@@ -169,9 +178,43 @@ async function firstRun(b) {
     f,
   );
   check(
-    d.clients.length === 20 && d.patterns.some((p) => p.usualStaffId) && d.visits.length === 0,
+    d.clients.length === 20 && d.patterns.some((p) => p.usualStaffId),
     'デモ・定期：今の初期データ（20人・繰り返しの担当あり）',
-    { clients: d.clients.length, visits: d.visits.length },
+    { clients: d.clients.length },
+  );
+  check(
+    d.visits.length > 0 && d.visits.every((v) => v.pinned === false) && d.visits.some((v) => v.staffId),
+    'デモ・定期：組んだ回が担当つきで保存される（ピンは付けない）',
+    d.visits.length,
+  );
+  // 開くたびには組まない（読み直しても組みの知らせは出ない）
+  await page.reload();
+  await page.locator('.app-main h1').first().waitFor({ timeout: 30000 });
+  // 組みの帯・知らせが出ないことを確かめる（固定の待ち）
+  await page.waitForTimeout(1500);
+  check((await page.getByTestId('auto-band').count()) === 0, '読み直しても組み直さない（組みの帯が出ない）');
+  check(
+    await page.evaluate(() => sessionStorage.getItem('vrdemo:arrange:pending') === null),
+    '組んだあとは組む印（sessionStorage）が残らない',
+  );
+  // 例外の画面の「データを初期状態に戻す」は store が組む印を sessionStorage に書いてから読み直す。印は読み直しをまたぎ、
+  // 起動した store が読んで組む（PRD D409）。ここでは担当を外したデータと印を置いて読み直し、起動で組むことを確かめる
+  await page.evaluate(
+    ([k, day]) => {
+      const x = JSON.parse(localStorage.getItem(k));
+      for (const v of x.visits) if (v.date >= day && !v.cancelled) v.staffId = null;
+      localStorage.setItem(k, JSON.stringify(x));
+      sessionStorage.setItem('vrdemo:arrange:pending', '1');
+    },
+    [STORAGE_KEY, TODAY],
+  );
+  await page.reload();
+  await page.locator('.app-main h1').first().waitFor({ timeout: 30000 });
+  const reArranged = await waitStartArranged(page);
+  check(/^\d+件の担当を組みました/.test(reArranged), '組む印を置いて読み直すと、起動で担当なしを組む', reArranged);
+  check(
+    await page.evaluate(() => sessionStorage.getItem('vrdemo:arrange:pending') === null),
+    '起動で組んだら組む印を消す（もう一度読み直しても組まない）',
   );
   check((await tour(page).count()) === 0, '2問のあともツアーは出ない');
   await page.reload();
@@ -191,6 +234,7 @@ async function firstRun(b) {
     '印「all」があれば2問を出さず、今の初期データ＋すべて入（features は {}）で始める',
     ad.org.features,
   );
+  check(ad.visits.length === 0, '印「all」：組まない（組んだ回が保存されない）', ad.visits.length);
   await a.ctx.close();
 }
 
@@ -259,6 +303,10 @@ async function firstRunOwn(b) {
   check(
     d.clients.length === 0 && d.staff.length === 0 && d.visits.length === 0 && d.patterns.length === 0,
     '自分のデータ：空のデータ（人・訪問・繰り返しは無い）',
+  );
+  check(
+    !(await page.locator('.toast-layer .toast-text').allInnerTexts()).some((t) => /担当を組みました/.test(t)),
+    '自分のデータ：組まない（組みの知らせが出ない）',
   );
   check(
     d.visitTypes.length > 0 && d.org.terms.client === '利用者さん' && d.org.features.patterns === true,

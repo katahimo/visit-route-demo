@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { useDayModel } from '../components/useDayModel';
+import { attentionTarget } from '../lib/links';
 import { monthFeatures, monthPrintHref } from '../lib/monthView';
 import {
   legendBarOf,
@@ -71,6 +72,8 @@ export default function MonthPage() {
     showAll: fs.showAll,
     problemOf: (d) => month.perDay.get(d)?.problem,
     bulk: month.bulk,
+    firstAttention: month.attention[0] ? attentionTarget(month.attention[0], data.org.features) : null,
+    openTarget: nav.openTarget,
   });
   const list = useMonthDayList({
     data,
@@ -111,7 +114,7 @@ export default function MonthPage() {
 
   return (
     <div className="stack">
-      <MonthTopBars nav={nav} absence={on.sudden ? { date } : null} moreItems={more.items} />
+      <MonthTopBars nav={nav} absence={on.sudden ? { date } : null} moreItems={more.items} staffTerm={terms.staff} />
 
       <MonthDetails
         ym={ym}

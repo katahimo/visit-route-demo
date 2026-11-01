@@ -1,8 +1,23 @@
 /* 空き状況と問い合わせの試算（#/vacancy。ADR-0012。段階3） */
-.vacancy-more summary {
+/* 段階1のチップ（PRD D411）：曜日・時間帯・所要。時間帯は文字が長いので横に余白 */
+.vacancy-chip-row {
+  gap: 4px;
+}
+.vacancy-chip {
+  padding: 0 12px;
+}
+/* くわしい条件 ▾（閉じて始める） */
+.vacancy-more > summary {
   cursor: pointer;
+  list-style: none;
   font-weight: 700;
   padding: 4px 0;
+}
+.vacancy-more > summary::-webkit-details-marker {
+  display: none;
+}
+.vacancy-more-body {
+  padding-top: 8px;
 }
 /* 段階（PRD D184〜D186）：1 いつ・何を → 2 場所（任意。畳む）→ 3 受けられる曜日・時間帯 → 4 次の一手 */
 .vacancy-step-no {
@@ -135,11 +150,12 @@ details[open] > summary .vacancy-fold-mark .when-open {
   border-radius: 12px;
   background: var(--soft);
 }
-/* 答えのカード（PRD D258）：結果の1枚目。受けられる＝緑、一部・足りない＝黄、受けられない・数えられない＝灰 */
+/* 答えのカード（PRD D258・D412）：結果の一番上。受けられる＝緑、一部・足りない＝黄、受けられない・数えられない＝灰。
+   中に答える文と［要約をコピー］ */
 .vacancy-answer {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 10px;
   padding: 14px 16px;
   border-radius: 14px;
   border: 2px solid var(--line);
@@ -172,8 +188,16 @@ details[open] > summary .vacancy-fold-mark .when-open {
 .vacancy-answer-body {
   font-weight: 700;
 }
+.vacancy-answer-status {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
 .vacancy-answer-note {
   margin: 0;
+}
+.vacancy-answer .inquiry-summary {
+  background: #fff;
 }
 @media (max-width: 600px) {
   .vacancy-answer-main {
@@ -309,6 +333,7 @@ details[open] > summary .vacancy-fold-mark .when-open {
 }
 .inquiry-summary {
   display: block;
+  margin: 0;
   white-space: pre-wrap;
   padding: 12px 14px;
   border-radius: 12px;
