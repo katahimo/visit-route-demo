@@ -13,6 +13,7 @@
 - 欠勤・キャンセルの入口：段階のある右の欄（`pages/SuddenPanel.tsx`、決まりは `lib/sudden.ts`）
 - 言葉：点数の理由は `lib/scoreReason`、用語は辞書 `lib/glossary` と `Term`（同時に1つ）、空の画面は「なぜ空か＋行き先」（`lib/emptyGuide`）
 - 空き状況は1画面で いつ・何を → 場所 → 受けられる曜日・時間帯 → 次の一手（`lib/vacancyView`）。週の表示は `?view=`・`?by=`（`lib/weekView`）
+- 入の月のマスの読み方は表に1つの吹き出し（`MonthCellTip`。切は見出しの ⓘ。ADR-0079）
 - 390px の月は日ごとの一覧（`?layout=`。`lib/monthList`）。ファイル選択は日本語の部品 `FilePick`
 - 右の欄の確定ボタンの帯は内容の直後に `position: sticky; bottom: 0`（`usePanelFoot`。`--drawer-foot-h`）
 - 行き先は `lib/links.ts`。日の予定の `?do=unassigned`・`?do=absence&staff=…`。読んだら URL から消す
