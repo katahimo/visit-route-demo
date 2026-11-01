@@ -1,4 +1,4 @@
-// 日の予定（PRD D4・D13・D18。版2：ADR-0053）の状態と処理をまとめる：計算（usePlanData）・表示（usePlanView）・
+// 日の予定（PRD D4・D316・D18。版2：ADR-0053）の状態と処理をまとめる：計算（usePlanData）・表示（usePlanView）・
 // 移動とフォーカス（usePlanNav）・手直しと確定（usePlanEdits）・ドラッグ（usePlanDrag）・欠勤の振り直し（useReassignFlow）・
 // 「欠勤・キャンセル」の欄（useSuddenFlow）。画面の部品はここで返すものだけを使う
 import { useMemo } from 'react';

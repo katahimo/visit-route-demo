@@ -25,7 +25,7 @@ import { useCompareProposal } from './useCompareProposal';
 import { useCompareScores } from './useCompareScores';
 
 /**
- * 提案を比べる（D19・D22・ADR-0005。版2は ADR-0053）：その日の「今の担当」と、この画面で作った提案（プリセットごと。保存しない）
+ * 提案を比べる（D317・D315・ADR-0005。版2は ADR-0053）：その日の「今の担当」と、この画面で作った提案（プリセットごと。保存しない）
  * から、任意の2つを A・B に選んで比べる。条件の差・合計と条件ごと・担当ごとの順番・地図（A 点線、B 実線）。
  * 提案は「反映する」で訪問の担当・開始に書く（ピンの訪問はそのまま）。採点は A・B とも点数の基準の物差し（ADR-0010）
  */
@@ -83,7 +83,7 @@ export default function ComparePage() {
   // ---- 提案の操作（保存しない。決定2）----
   const applyChoice = useApplyChoice({ data, update, date, problem, stale, onApplied: cs.dropApplied });
 
-  // ---- 提案を作る（PRD D159）：プリセット（考え方）を選び、ピンの訪問はそのままで AI で組む ----
+  // ---- 提案を作る（PRD D317）：プリセット（考え方）を選び、ピンの訪問はそのままで AI で組む ----
   const proposal = useCompareProposal(data, date, m.allVisits, problem, cs.addMade);
 
   // ---- 条件の差・担当ごとの比較 ----

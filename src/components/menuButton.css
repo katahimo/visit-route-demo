@@ -17,7 +17,7 @@
   left: 0;
   z-index: 1050;
   min-width: 300px;
-  /* 中身の幅に合わせる（ボタンの幅に縮めない）。説明の行（PRD D156）があっても広がりすぎない。狭い画面は画面の幅に収める */
+  /* 中身の幅に合わせる（ボタンの幅に縮めない）。説明の行（PRD D315）があっても広がりすぎない。狭い画面は画面の幅に収める */
   width: max-content;
   max-width: min(400px, calc(100vw - 24px));
   max-height: min(70vh, 560px);
@@ -108,7 +108,7 @@
 .menu-item-desc.is-why::before {
   content: '押せません：';
 }
-/* まとまりの見出し（PRD D156。読み上げは role="group" の aria-label） */
+/* まとまりの見出し（PRD D315。読み上げは role="group" の aria-label） */
 .menu-group + .menu-group,
 .menu-group + .menu-sep,
 div[role='none'] + .menu-group {

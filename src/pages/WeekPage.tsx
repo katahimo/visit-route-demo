@@ -41,7 +41,7 @@ import './week.css';
 export default function WeekPage() {
   const nav = useWeekNav();
   const { today, anchor, dates, start, tab, by, narrow, goWeek, openDay } = nav;
-  /** 予定のモード（PRD D348）：組むではメールを出さず、確認では札を動かさない */
+  /** 予定のモード（PRD D355）：組むではメールを出さず、確認では札を動かさない */
   const model = useWeekModel(nav.date, dates, tab);
   const { data, compileInput, terms, days, visitById, table } = model;
   /** 欠勤・キャンセルの入口（ADR-0028 の sudden） */
@@ -63,7 +63,7 @@ export default function WeekPage() {
     : [];
   const lead = useIntro('week', `この週の担当を見て、日時をドラッグでずらし、${terms.staff}に伝えたら確定します`);
   const { timelineRef, tableScrollRef, clientScrollRef } = useWeekTodayScroll(nav);
-  // ---- この週の準備（PRD D280・D282。ADR-0046・ADR-0053）：担当なしを組む → 確定 → 済み の主ボタン1つ ----
+  // ---- この週の準備（PRD D328・D314。ADR-0046・ADR-0053）：担当なしを組む → 確定 → 済み の主ボタン1つ ----
   const prepFlow = useWeekPrep({ data, compileInput, dates, today });
   const { prep, next } = prepFlow;
   const people = useWeekClients(model, nav);
@@ -161,7 +161,7 @@ export default function WeekPage() {
 
       {mailOpen && mailOn && <WeekMailPanel data={data} dates={dates} onClose={() => setMailOpen(false)} />}
       {/* 複数選択の帯（PRD D330。画面の下に貼り付く） */}
-      {/* 選んだ訪問をまとめて動かす帯は、確認のモードでは出さない（札を動かさない。PRD D348） */}
+      {/* 選んだ訪問をまとめて動かす帯は、確認のモードでは出さない（札を動かさない。PRD D355） */}
       <SelectionBar ids={visits.multi.ids} onClear={visits.multi.clear} dates={dates} />
       {/* キーで動かした先の読み上げと、繰り返しの回の範囲を選び直す小さな帯（PRD D333） */}
       <KeyMoveBand onMoved={visits.onMoved} />

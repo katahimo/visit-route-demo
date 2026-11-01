@@ -17,7 +17,7 @@ import { PlanToolbar } from './planToolbar';
 import { usePlanPage } from './usePlanPage';
 
 /**
- * 日の予定（D4・D13・D18。版2：ADR-0053）：その日の訪問と担当を1画面で扱う。担当・開始・ピンは訪問が持ち、列はその日の訪問の
+ * 日の予定（D4・D316・D18。版2：ADR-0053）：その日の訪問と担当を1画面で扱う。担当・開始・ピンは訪問が持ち、列はその日の訪問の
  * 担当と開始の並び（lib/dayPlan の routesOf）。担当を替える（ドラッグ・「担当を変える ▾」）と最も費用の少ない位置に入れてピンにし、
  * 訪問に書く（writeRoutes）。日の予定では AI で組まない（手で直す。AI は「担当を組む」の画面。ADR-0063）。そこで組んだ範囲の提案は帯で見て反映できる。
  * 「確定」は〈スタッフ〉に伝えた内容を残す（DaySnapshot）。そのあとに変えた訪問は「未連絡の変更」になり、連絡の一覧に出る。
@@ -93,7 +93,7 @@ export default function PlanPage() {
         <NotInProblemCard p={p} />
         <PlanPanels p={p} />
         {/* 複数選択の帯（PRD D330。画面の下に貼り付く） */}
-        {/* 選んだ訪問をまとめて動かす帯は、確認のモードでは出さない（札を動かさない。PRD D348） */}
+        {/* 選んだ訪問をまとめて動かす帯は、確認のモードでは出さない（札を動かさない。PRD D355） */}
         <SelectionBar ids={v.multi.ids} onClear={v.multi.clear} dates={[date]} />
       </div>
     </OpenToldContext.Provider>

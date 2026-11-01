@@ -257,7 +257,7 @@
   color: var(--danger);
   font-weight: 700;
 }
-/* 欠勤の手当てが済んだ日（確定済みで手当ての要らない日。PRD D281）：情報なので赤くしない */
+/* 欠勤の手当てが済んだ日（確定済みで手当ての要らない日。PRD D321）：情報なので赤くしない */
 .month-mark.is-absent.is-done {
   color: var(--sub);
   font-weight: 400;

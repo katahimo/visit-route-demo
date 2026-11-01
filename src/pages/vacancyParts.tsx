@@ -140,7 +140,7 @@ export function AnswerBox({ answer, children }: { answer: AnswerCard; children?:
   );
 }
 
-/** 数えなかった日・担当なしの訪問がある日の注意はここ1か所（PRD D176）。担当なしは担当を組むの画面か日の予定で入れる（PRD D259） */
+/** 数えなかった日・担当なしの訪問がある日の注意はここ1か所（PRD D176）。担当なしは担当を組むの画面か日の予定で入れる（PRD D328） */
 export function NoPlanNote({ noPlan, missing }: { noPlan: string[]; missing: string[] }) {
   if (noPlan.length === 0 && missing.length === 0) return null;
   return (

@@ -34,7 +34,7 @@ export type ShownView = 'timeline' | 'order' | 'list' | 'day';
 export function usePlanView(date: string) {
   /** スマホの幅（600px 以下）は訪問を足さない（ADR-0051 の決定5） */
   const compact = useMedia(COMPACT_QUERY);
-  /** 操作の行の「使い方」（スマホは「その他 ▾」の中）で開いた説明（PRD D279・D344。保存しない） */
+  /** 操作の行の「使い方」（スマホは「その他 ▾」の中）で開いた説明（PRD D327・D344。保存しない） */
   const [helpOpen, setHelpOpen] = useState(false);
   const helpRef = useRef<HTMLDivElement>(null);
   useEffect(() => {

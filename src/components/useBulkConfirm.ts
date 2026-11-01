@@ -6,7 +6,7 @@ import { useConfirm } from './ConfirmDialog';
 import { useToast } from './Toast';
 
 /**
- * 問題の無い日をまとめて確定（PRD D223・D280）：月の予定と週の予定で同じ確認の型・同じ書き方。
+ * 問題の無い日をまとめて確定（PRD D223・D328）：月の予定と週の予定で同じ確認の型・同じ書き方。
  * 独自の確認（日付と残す日）のあと、1回の update で日ごとに日の画面の「この割当で確定」と同じ書き方（lib/confirmDay）。
  * 担当を組んでいる間（monthBatch）は確定しない。problemOf は日の状態を数えたときの問題、afterDone は確定のあとのフォーカスの移し先
  */
