@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { AttentionBand } from '../components/attentionBand';
 import { EmptyNext } from '../components/EmptyNext';
 import type { MenuItem } from '../components/MenuButton';
+import { NextMonthCheck } from '../components/nextMonthCheck';
 import { ScheduleNav } from '../components/ScheduleNav';
 import { RangeProposalBand, ScheduleToolbar, SelectionBar } from '../components/scheduleParts';
 import { PageHeader } from '../components/ui';
@@ -110,6 +111,8 @@ export default function WeekPage() {
       />
       {/* 要対応の帯（入切とも。PRD D400・D403・D404）。1行の状態（PRD D332）は「詳しく」の中 */}
       <AttentionBand />
+      {/* 来月の確認（切で月の20日以降。PRD D413） */}
+      <NextMonthCheck />
       {/* 操作の行（日・週・月で同じ作り。PRD D327・D402）。メールで送るは「その他 ▾」。担当なしを組むは要対応の帯、空き状況はメニュー（PRD D403・D400） */}
       <ScheduleToolbar
         zoom="week"

@@ -4,6 +4,8 @@
 // 2 左のメニューは 予定・空き状況・〈利用者さん〉・〈スタッフ〉・設定 の5つ（見出し・子の項目なし。今の画面の印・押して移る）。コマンドパレットの画面にホームが無い、
 // 3 予定（月・週・日）の上に要対応の帯（担当なし N件…。箱で、右に［担当なしを組む］（従のボタン。押したあとは e2e-basic-auto）と［見に行く ›］。
 //   見に行くは重なり・休みの人の訪問を先に、無ければ担当なし。日の予定で今日を見たまま押しても変わる）。月・週・日のどれにも出る。訪問が無ければ出さない、
+// 3c 来月の確認（PRD D413）：ページの時計を今月の19日・25日に止め直す。19日は出さず、25日は帯の下に「〈来月〉の予定 N件はできています」＋要対応の数・
+//   ［〈来月〉を見る ›］（月の予定の来月）・［×］（消えて読み直しても出さない。端末に覚え、データに入れない）。390px で収まる、
 // 4 空き状況はメニューの項目（押すと空き状況・印は「空き状況」）。予定の「その他 ▾」（月・週・日）には空き状況・担当なしの訪問を組むが無い、
 // 5 スマホ（390px）：下のタブは 予定・空き状況・〈利用者さん〉・〈スタッフ〉＋探す＋メニュー（ADR-0080）。引き出しは設定を足した5つ。帯（［担当なしを組む］・［見に行く ›］）・「その他 ▾」が収まる、
 // 5b 例外だけ見せる（PRD D384）：月・週・日の操作の行は主ボタン1つ＋1つ（＋「その他 ▾」。元に戻す・表示の切り替え・使い方は「その他 ▾」の中）、
@@ -23,12 +25,12 @@
 // 6c 入の人の一覧（PRD D394）：〈スタッフ〉・〈利用者さん〉の一覧は見出しがメニューの名前で、切と同じ人のタブ（一覧・勤務・相性／一覧・相性）と3列で始まり、
 //    表の上の「くわしい列」を入れると専門の列が足され、一覧ごとに端末に覚えて読み直しても同じ（外すと3列に戻る。切は切り替えが無い）。休止中は状態の列に重ねない。
 //    相性は来た側のタブ・メニューの印。1366px・390px（予定を組むの4段・基本情報のタブは e2e-nav）。
-// スクリーンショット：simple-band-go-day-1366（3）、simple-add-*（5f）・simple-clients-1366・simple-staff-1366・simple-plan-map-closed-1366 ほか（5e は simple-people-*・simple-plan-map-*）、simple-month-1366・simple-band-plan-1366・simple-menu-more-1366・simple-week-390・simple-tabs-390・simple-drawer-390
+// スクリーンショット：simple-band-go-day-1366（3）、simple-next-month-plan-1366・simple-next-month-390（3c）、simple-add-*（5f）・simple-clients-1366・simple-staff-1366・simple-plan-map-closed-1366 ほか（5e は simple-people-*・simple-plan-map-*）、simple-month-1366・simple-band-plan-1366・simple-menu-more-1366・simple-week-390・simple-tabs-390・simple-drawer-390
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-simple-menu.cjs
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）
 // 終了コード：全部通れば 0、通らないものがあれば 1。ページのエラー（pageerror）も失敗に数える
-const { BASE, STORAGE_KEY, check, runSteps, settle, until, shot } = require('./lib/env.cjs');
+const { BASE, NOW, TODAY, STORAGE_KEY, check, runSteps, settle, until, shot } = require('./lib/env.cjs');
 const { openPage, sharedPage } = require('./lib/steps.cjs');
 const { freshAsked } = require('./lib/firstRun.cjs');
 const { navUsr, pressTool, watchNavUsr } = require('./lib/ui.cjs');
@@ -228,6 +230,100 @@ async function noBand(page) {
   await page.locator(NAV_READY).waitFor({ timeout: 60000 });
   await settle(page, 600);
   check((await page.getByTestId('attention-band').count()) === 0, '訪問が無ければ帯を出さない');
+}
+
+/**
+ * 3c 来月の確認（PRD D413。ADR-0081）：ページの時計を今月の19日・25日に止め直して確かめる（終わったら NOW と幅に戻す）。
+ * 19日は出さない。25日は月・週・日の要対応の帯の下に「〈来月〉の予定 N件はできています」の1行、［〈来月〉を見る ›］で月の予定の来月、
+ * 390px で横にはみ出さない、［×］で消えて読み直しても出さない（端末に覚える。データには入れない）
+ */
+async function nextMonth(page) {
+  const ym = TODAY.slice(0, 7);
+  const [y, m] = ym.split('-').map(Number);
+  const next = `${m === 12 ? y + 1 : y}-${String((m % 12) + 1).padStart(2, '0')}`;
+  const label = `${Number(next.slice(5))}月`;
+  const key = `nextMonth:${ym}`;
+  const box = page.getByTestId('next-month-check');
+  const open = async (to) => {
+    await page.goto('about:blank');
+    await page.goto(`${BASE}#${to}`);
+    await page.locator(NAV_READY).waitFor({ timeout: 60000 });
+  };
+  try {
+    await page.clock.setFixedTime(new Date(`${ym}-19T12:00:00+09:00`));
+    await fresh(page, '/month', NAV_READY);
+    // 前に閉じた覚えを消して始める（同じページで段を走らせ直しても同じ結果に）
+    await page.evaluate(
+      ([k, name]) => {
+        const v = JSON.parse(localStorage.getItem(k) ?? '{}');
+        delete v[name];
+        localStorage.setItem(k, JSON.stringify(v));
+      },
+      [INTRO_KEY, key],
+    );
+    await open('/month');
+    await settle(page, 600);
+    check((await box.count()) === 0, '19日は来月の確認を出さない');
+    await page.clock.setFixedTime(new Date(`${ym}-25T12:00:00+09:00`));
+    for (const to of ['/month', '/week', '/plan']) {
+      await open(to);
+      await box.waitFor({ timeout: 60000 });
+      const t = await page.getByTestId('next-month-check-text').innerText();
+      check(
+        new RegExp(`^${label}の予定 [1-9]\\d*件はできています(・(担当なし|重なり|休みの人) [1-9]\\d*件)*$`).test(t),
+        `${to}：25日は「${label}の予定 N件はできています」（要対応は0件を書かない）`,
+        t,
+      );
+      const below = await box.evaluate((el) => {
+        const band = document.querySelector('[data-testid="attention-band"]');
+        const nav = document.querySelector('[data-testid="sched-nav"]');
+        const after = (a) => !a || !!(a.compareDocumentPosition(el) & 4);
+        return after(band) && after(nav);
+      });
+      check(below, `${to}：来月の確認は要対応の帯（あれば）とナビの行より下`);
+      const names = await box
+        .locator('a, button')
+        .evaluateAll((els) => els.map((e) => e.getAttribute('aria-label') ?? e.textContent.trim()));
+      check(
+        names.length === 2 && names[0] === `${label}を見る` && /閉じる/.test(names[1]),
+        `${to}：［${label}を見る ›］と［×］（読み上げの名前つき）`,
+        names,
+      );
+    }
+    await shot(page, 'simple-next-month-plan-1366');
+    // ［〈来月〉を見る ›］→ 月の予定の来月
+    await open('/week');
+    await page.getByTestId('next-month-check-go').click();
+    await until(async () => hash(page).startsWith(`#/month?ym=${next}`));
+    check(hash(page).startsWith(`#/month?ym=${next}`), `［${label}を見る ›］で月の予定の${label}へ`, hash(page));
+    // 390px：折り返して収まる
+    await page.setViewportSize({ width: 390, height: 844 });
+    await open('/month');
+    await box.waitFor({ timeout: 60000 });
+    await settle(page, 400);
+    const r = await box.boundingBox();
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+    check(!!r && r.x >= 0 && r.x + r.width <= 391 && !overflow, '390px：来月の確認が幅に収まる（横にはみ出さない）', r);
+    await box.scrollIntoViewIfNeeded();
+    await shot(page, 'simple-next-month-390');
+    await page.setViewportSize({ width: 1366, height: 768 });
+    // ［×］で消え、読み直しても出さない（この端末に覚える。データには入れない）
+    await page.getByTestId('next-month-check-close').click();
+    await until(async () => (await box.count()) === 0, 5000);
+    check((await box.count()) === 0, '［×］で来月の確認が消える');
+    await open('/week');
+    await settle(page, 600);
+    check((await box.count()) === 0, '閉じたあとは読み直しても、ほかの予定の画面でも出さない');
+    const remembered = await page.evaluate(
+      ([k, name]) => JSON.parse(localStorage.getItem(k) ?? '{}')[name],
+      [INTRO_KEY, key],
+    );
+    check(remembered === false, `端末に覚える（${INTRO_KEY} の ${key}）`, remembered);
+    check(!JSON.stringify(await data(page)).includes('nextMonth'), '閉じたことはデータ（書き出し）に入れない');
+  } finally {
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await page.clock.setFixedTime(NOW);
+  }
 }
 
 /** 4 空き状況はメニューの項目（PRD D400。ADR-0078）：押すと空き状況・印も「空き状況」。予定の「その他 ▾」には空き状況・担当なしの訪問を組むが無い（月・週・日） */
@@ -1456,6 +1552,7 @@ const steps = sharedPage({
     ['2 切：メニューは5つ（空き状況を含む）・パレットにホームが無い', menu],
     ['3 切：予定の上の要対応の帯（見に行く・担当なしを組む）', band],
     ['3b 切：訪問が無ければ帯を出さない', noBand],
+    ['3c 切：月の20日以降は帯の下に来月の確認（日付を止めて）', nextMonth],
     ['4 切：空き状況はメニューの項目（「その他 ▾」には無い）', more],
     ['5 切：スマホの下のタブ・引き出し・帯', restoreWidth(mobile)],
     ['5b 切：例外だけ見せる（操作の行・詳しく・札・言葉）', exceptions],

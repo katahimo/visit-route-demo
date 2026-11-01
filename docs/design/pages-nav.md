@@ -30,6 +30,11 @@
   - 1行は「要対応 担当なし N件・重なり N件・休みの人 N件・…」（0件の種類は書かない。並びは `BAND_KINDS`）
   - ［見に行く ›］（`attention-band-go`）の先 `go`（`BandGo`＝`{ to, date?, visitId? }`）は並びの先頭の種類：訪問の種類は、重なり・休みの人の訪問があればそのうち、無ければ担当なしのうち、いちばん早い日の開始（`startOf`）がいちばん早い訪問。`setDate(日)` のうえ `navigate('/plan', { state: { visitId, band: true } })`。日の予定の `usePlanNav` が、担当のある訪問は選んで見える所へ巻き、担当なしは `band` のときだけ欄（受けられる人）を開く（日の予定を開いたまま押しても `location.key` で受け直す。履歴は置き換え）。標準が無いは `/standard`、組み直しは `/arrange?ym=<組む月>`、未確定は1日だけならその日の `/plan`・2日以上なら `/month?ym=…&do=unconfirmed`。下書きのある画面からは `confirmLeave` で確かめる
   - ［担当なしを組む］（`attention-band-arrange`。`components/useBandArrange`）：切で、今日〜翌月末の組める担当なし（`targetCount(unassignedTargets(…))`）が1件以上か組んでいる間だけ。`btn btn-small` の従のボタン。押すと `requestUnassignedArrange`、組んでいる間は「組んでいます…」で `aria-disabled`
+- 来月の確認（PRD D413。ADR-0081。`components/nextMonthCheck.tsx`・フック `useNextMonthCheck`・CSS は `attentionBand.css`。data-testid `next-month-check`）：月・週・日の予定の要対応の帯のすぐ下に1行（帯が無くても出す。印刷で出さない）
+  - 出す条件は `lib/nextMonthCheck` の `nextMonthTarget(today, expert, stored)`（純粋関数。テストあり）：エキスパート機能が切・今日が月の `NEXT_MONTH_FROM_DAY`（20）日以降・`store/navOpen` の鍵 `nextMonthCheckKey(today)`＝`nextMonth:<今月>` が false でない。当てはまれば来月（YYYY-MM）
+  - 中身は `nextMonthCheck(statuses, ym)`：来月の日ごとの状態（`useDayStatuses`。要対応の帯・月の画面と同じ覚え）の `count` の合計と、訪問ごとに `visitBandKind`（要対応の帯と同じ：担当なし → 休みの人 → 重なり）で数えた件数。合計が0なら null（出さない）
+  - 1行は「12月の予定 N件はできています・担当なし a件・重なり b件・休みの人 c件」（0件の種類は書かない。`next-month-check-text`）。右に［12月を見る ›］（`next-month-check-go`。`/month?ym=<来月>` へのリンク）と［×］（`next-month-check-close`。読み上げ「12月の確認を閉じる（今月は出しません）」）。箱は `section` で読み上げの名前「12月の確認」。色は地の文（急ぎではない）。狭い幅は折り返す
+  - ［×］は `navOpenMemory.write(nextMonth:<今月>, false)`（端末に覚える。データ・書き出しに入れない）。閉じたらフォーカスを見出しへ移す。翌月の20日には鍵が変わるのでまた出す。ボタンは足さない（来月の担当なしを組むのは帯の［担当なしを組む］。今日〜翌月末）
 - 「予定を入れる」：日の主ボタンも同じ言葉（`ADD_VISIT_LABEL`。開くのは訪問の欄）。月・週は `ToolbarRow`（`mainTools` の `plan`）から `components/AddPlanPanel` を開く（[design.md](../design.md) の「予定を入れる」）
 - 人の小さいタブ：`lib/peopleTabs`（`peopleTabs`・`peopleTabsLabel`・`peopleSideOf`・`rememberedSide`・`peopleMatch`）と `components/SettingsTabs` の `PeopleTabs`（一覧・相性・勤務の画面。`data-testid="people-tabs"`）。相性でどちらから来たかは `components/peopleSide`。予定と相性は別の `BasicsNav`
 - 予定の「その他 ▾」：画面ごとの項目（表示の切り替え・使い方・印刷など）と元に戻す・やり直すだけ
