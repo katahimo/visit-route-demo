@@ -87,8 +87,7 @@ describe('noticeLine・whenWhatLine', () => {
         durationOk: true,
         wishOk: true,
         weekdayLabels: [],
-        from: '9:00',
-        to: '17:00',
+        startRange: '9:00〜17:00',
         perWeek: 1,
         startMd: '10/20',
         weeks: 4,
@@ -101,13 +100,12 @@ describe('noticeLine・whenWhatLine', () => {
         durationOk: true,
         wishOk: true,
         weekdayLabels: ['月', '水'],
-        from: '10:00',
-        to: '12:00',
+        startRange: '10:00〜12:00・17:00〜18:00',
         perWeek: 2,
         startMd: '11/1',
         weeks: 2,
       }),
-    ).toBe('家事・90分・月水・10:00〜12:00に始める・週2回・11/1から2週');
+    ).toBe('家事・90分・月水・10:00〜12:00・17:00〜18:00に始める・週2回・11/1から2週');
   });
   it('所要が正しくない・「から」が「まで」より後なら、その部分は「—」', () => {
     const base = {
@@ -115,8 +113,7 @@ describe('noticeLine・whenWhatLine', () => {
       duration: '3',
       durationOk: false,
       weekdayLabels: ['火'],
-      from: '17:00',
-      to: '9:00',
+      startRange: '17:00〜9:00',
       wishOk: false,
       perWeek: 1,
       startMd: '10/20',

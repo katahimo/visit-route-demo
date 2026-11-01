@@ -86,7 +86,10 @@ export function AppHeader({
   );
 }
 
-/** スマホだけ：よく使うタブ（入は 予定・〈利用者さん〉・〈スタッフ〉・組む、切は 予定・〈利用者さん〉・〈スタッフ〉・設定）と「探す」「メニュー」（PRD D336・D400・D401。印刷では出さない） */
+/**
+ * スマホだけ：よく使うタブ（入は 予定・〈利用者さん〉・〈スタッフ〉・組む、切は 予定・空き状況・〈利用者さん〉・〈スタッフ〉。
+ * 切で空き状況を切れば空き状況の代わりに設定。lib/nav の bottomTabKeys）と「探す」「メニュー」（PRD D336・D400・D401。印刷では出さない）
+ */
 export function BottomTabs({
   groups,
   features,
@@ -135,7 +138,7 @@ export function BottomTabs({
           </Link>
         );
       })}
-      {/* 「探す」：コマンドパレットを開く（PRD D336。空き状況はメニューと探すから） */}
+      {/* 「探す」：コマンドパレットを開く（PRD D336） */}
       <button
         type="button"
         className="bottom-tab"

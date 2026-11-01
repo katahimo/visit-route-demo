@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { WishBand } from './vacancyBands';
 import { defaultVacancyInput, loadVacancyInput, saveVacancyInput, VACANCY_INPUT_KEY } from './vacancyInput';
 
 const TODAY = '2026-10-21';
@@ -34,6 +35,7 @@ describe('空き状況の入力を覚える（PRD D258）', () => {
       wishDays: [2, 4],
       wishFrom: '10:00',
       wishTo: '12:00',
+      wishBands: ['am', 'eve'] as WishBand[],
       perWeek: 2,
       noticePeriod: 'fourWeeks' as const,
       noticeTypeId: 'vt-2',
@@ -45,6 +47,7 @@ describe('空き状況の入力を覚える（PRD D258）', () => {
     expect(back.typeId).toBe('vt-1');
     expect(back.place).toEqual(v.place);
     expect(back.wishDays).toEqual([2, 4]);
+    expect(back.wishBands).toEqual(['am', 'eve']);
     expect(back.noticePeriod).toBe('fourWeeks');
     expect(back.from).toBe('2026-10-25');
     // 消えた種類は捨てる
@@ -63,6 +66,18 @@ describe('空き状況の入力を覚える（PRD D258）', () => {
     expect(v.from).toBe(TODAY);
     s.setItem(VACANCY_INPUT_KEY, '{壊れた');
     expect(loadVacancyInput(TODAY, null, s)).toEqual(defaultVacancyInput(TODAY));
+  });
+
+  it('時間帯のチップを足す前の入力も読める（時間帯は指定なし）・知らない時間帯は既定', () => {
+    const s = memory();
+    const { wishBands: _, ...old } = { ...defaultVacancyInput(TODAY), duration: '90', wishFrom: '10:00' };
+    s.setItem(VACANCY_INPUT_KEY, JSON.stringify(old));
+    const v = loadVacancyInput(TODAY, null, s);
+    expect(v.wishBands).toEqual([]);
+    expect(v.duration).toBe('90');
+    expect(v.wishFrom).toBe('10:00');
+    s.setItem(VACANCY_INPUT_KEY, JSON.stringify({ ...old, wishBands: ['night'] }));
+    expect(loadVacancyInput(TODAY, null, s).wishBands).toEqual([]);
   });
 
   it('書けなくても例外を出さない', () => {

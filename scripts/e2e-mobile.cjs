@@ -17,7 +17,7 @@ const path = require('node:path');
 const { skipTour } = require('./lib/tourSeen.cjs');
 const { OUT_DIR, NOW, STORAGE_KEY, check, isFocused, runSteps, settle } = require('./lib/env.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
-const { goTo } = require('./lib/ui.cjs');
+const { goTo, reveal } = require('./lib/ui.cjs');
 
 const drawer = (page) => page.getByTestId('nav-drawer');
 /** メニューの最上位の項目（子の無い項目と、畳める親の行の項目。PRD D349） */
@@ -253,7 +253,7 @@ async function bottom(page) {
   await open(page, '/vacancy', '[data-testid="bottom-tabs"]');
   check(
     (await active()).length === 0,
-    '下のタブ：空き状況はメニューの項目で下のタブには無い（どれも active にしない。下のタブは変えない。PRD D400）',
+    '下のタブ：入の空き状況は引き出しの項目で下のタブには無い（どれも active にしない。PRD D401）',
     await active(),
   );
   await open(page, '/types', '[data-testid="bottom-tabs"]');
@@ -749,9 +749,11 @@ async function narrowWeek(page) {
   }
 }
 
-/** 空き状況（PRD D221）：表ははじめ 9:00 の列から（曜日の列のすぐ右）。右に続きがある印は端まで巻くと消える */
+/** 空き状況（PRD D221）：表は「詳しく ▾」を開くと 9:00 の列から（曜日の列のすぐ右）。右に続きがある印は端まで巻くと消える */
 async function narrowVacancy(page) {
-  await open(page, '/vacancy', '[data-testid="vacancy-grid"]');
+  await open(page, '/vacancy', '[data-testid="vacancy-answer"]');
+  // 表は「詳しく ▾」の中（PRD D412）。開いたときに 9:00 の列まで巻く
+  await reveal(page, 'vacancy-grid');
   await settle(page, 300);
   const st = await page.getByTestId('vacancy-grid').evaluate((t) => {
     const box = t.parentElement;

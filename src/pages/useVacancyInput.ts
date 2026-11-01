@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ClientPlace, VisitType } from '../contracts/documents';
 import type { Condition } from '../contracts/rules';
 import { VACANCY_DURATION_MAX, VACANCY_DURATION_MIN, type VacancyQuery, type VacancyRange } from '../contracts/vacancy';
+import type { WishBand } from '../lib/vacancyBands';
 import { loadVacancyInput, saveVacancyInput } from '../lib/vacancyInput';
 import { type NoticePeriod, vacancyQuery } from '../lib/vacancyView';
 
@@ -9,7 +10,7 @@ import { type NoticePeriod, vacancyQuery } from '../lib/vacancyView';
 export type VacancyPlace = ClientPlace & { pinnedAddress: string };
 
 /**
- * 空き状況の入力（条件の欄・問い合わせの試算・案内文の期間と種類）。
+ * 空き状況の入力（チップ・くわしい条件・場所・問い合わせの試算・案内文の期間と種類。PRD D411）。
  * 入力はタブの間だけ覚える（sessionStorage。ほかの画面へ移って戻っても残り、閉じれば消える。PRD D258）
  */
 export function useVacancyInput(today: string, visitTypes: readonly VisitType[]) {
@@ -25,8 +26,18 @@ export function useVacancyInput(today: string, visitTypes: readonly VisitType[])
   const [from, setFrom] = useState(saved.from);
   // 問い合わせの試算
   const [wishDays, setWishDays] = useState<number[]>(saved.wishDays);
-  const [wishFrom, setWishFrom] = useState(saved.wishFrom);
-  const [wishTo, setWishTo] = useState(saved.wishTo);
+  const [wishFrom, setWishFromRaw] = useState(saved.wishFrom);
+  const [wishTo, setWishToRaw] = useState(saved.wishTo);
+  // 時間帯のチップ（空＝指定なし。PRD D411）。くわしい条件で開始の幅を変えたら指定なしに戻す
+  const [wishBands, setWishBands] = useState<WishBand[]>(saved.wishBands);
+  const setWishFrom = (v: string) => {
+    setWishFromRaw(v);
+    setWishBands([]);
+  };
+  const setWishTo = (v: string) => {
+    setWishToRaw(v);
+    setWishBands([]);
+  };
   const [perWeek, setPerWeek] = useState(saved.perWeek);
   // 空き枠の案内文（PRD D67。ADR-0013）の期間・種類
   const [noticePeriod, setNoticePeriod] = useState<NoticePeriod>(saved.noticePeriod);
@@ -43,6 +54,7 @@ export function useVacancyInput(today: string, visitTypes: readonly VisitType[])
       wishDays,
       wishFrom,
       wishTo,
+      wishBands,
       perWeek,
       noticePeriod,
       noticeTypeId,
@@ -57,6 +69,7 @@ export function useVacancyInput(today: string, visitTypes: readonly VisitType[])
     wishDays,
     wishFrom,
     wishTo,
+    wishBands,
     perWeek,
     noticePeriod,
     noticeTypeId,
@@ -80,6 +93,8 @@ export function useVacancyInput(today: string, visitTypes: readonly VisitType[])
     setWishFrom,
     wishTo,
     setWishTo,
+    wishBands,
+    setWishBands,
     perWeek,
     setPerWeek,
     noticePeriod,
