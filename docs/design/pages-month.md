@@ -18,7 +18,7 @@
 #### 並び
 
 1. 見出し：`lead`「一月の担当を見て、担当なしや要対応を手で直し、確定します」。すぐ下にナビの行（`ScheduleNav`）：「今日」・‹ 月を選ぶ欄（`month-title`）›・［月｜週｜日］。下に要対応の帯 `AttentionBand`
-2. 操作の行（`ScheduleToolbar zoom="month"`）：入＝主「予定を入れる」（`toolbar-add-plan`）＋「担当を組む」（`toolbar-assign`。`/arrange?ym=`）、切＝主「予定を入れる」＋「欠勤・キャンセルを登録」（`sudden-open`。選んでいる日（今日より前なら今日）の日の予定で欄を開くリンク）。「その他 ▾」（`month-more`）：見せ方（`month-layout-calendar`・`month-layout-list`）・元に戻す／やり直す・入は欠勤・キャンセルを登録・「表示を選ぶ」・「印刷」・「勤務の見込み」・「マスの見方の説明」・空き状況
+2. 操作の行（`ScheduleToolbar zoom="month"`）：入＝主「予定を入れる」（`toolbar-add-plan`）＋「担当を組む」（`toolbar-assign`。`/arrange?ym=`）、切＝主「予定を入れる」＋「欠勤・キャンセルを登録」（`sudden-open`。選んでいる日（今日より前なら今日）の日の予定で欄を開くリンク）。「その他 ▾」（`month-more`）：見せ方（`month-layout-calendar`・`month-layout-list`）・元に戻す／やり直す・入は欠勤・キャンセルを登録・「表示を選ぶ」・「印刷」・「勤務の見込み」・「マスの見方の説明」（空き状況はメニュー。ADR-0078）
 3. 範囲の提案の帯（`RangeProposalBand`）
 4. 操作の欄 `month-head`：
    - 「その他 ▾」の項目：「表示を選ぶ（〈スタッフ〉・〈利用者さん〉・混み具合）」（`month-more-pickers`。開いていれば「表示の選択をたたむ」、選んでいる間・休みの入力中は押せず理由「表示を「全体」・混み具合を「すべて」に戻すと、たためます」）・「印刷」（`month-print`。選んでいる〈スタッフ〉があれば `&staff=`。`monthPrint` が入のとき）・「勤務の見込み」（`month-workload`。`/workload?ym=`。`workload` が入のとき）・「マスの見方の説明」（`month-more-help`。開いていれば「…を閉じる」）。印刷・勤務の見込みには1行の説明
@@ -28,7 +28,7 @@
      - 〈スタッフ〉を選んでいれば「休みを入れる」（`month-off-toggle`）
      - 全体なら「混み具合：」と `Term`（`loadCount`）と選ぶ欄 `month-load-type`（数える人：すべて／〈種類〉。名前は aria-labelledby）
    - 訪問の無い月は「定期パターンが無いか、この月の訪問がありません」
-   - マスの見方の説明 `month-help`（開くとフォーカスを移す。マスの押し方・右の欄の行の押し方と「別の日へ」・マスの色と印・赤い枠と「要対応 N」の札・黄の点線の「注意」・混み具合のバー。「説明を閉じる」）
+   - マスの見方の説明 `month-help`（開くとフォーカスを移す。文は `lib/monthGuide` の `monthHelpLines(staffTerm, only)`。マスの押し方・右の欄の行の押し方と「別の日へ」・赤い枠と「要対応 N」の札。入はさらにマスの色と印（凡例）・「未連絡 N」・混み具合のバーと端の印、切は印の意味を見出しの ⓘ（`monthCellHint`）へ案内する。「説明を閉じる」）
 5. 本体：カレンダー（`month-grid`）か日ごとの一覧（`month-list`）
 6. 右の欄 `month-aside`：その日の回の一覧（先頭）・要対応・確定していない日、選んだ人の集計
 7. 選択の帯 `SelectionBar`（`moveDay`。画面の下）と、キーで動かした先の読み上げ・範囲の帯 `KeyMoveBand`

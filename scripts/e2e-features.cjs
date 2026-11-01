@@ -492,7 +492,7 @@ async function pathVariants(page, dlg, ctx) {
     const hasNotice = (await page.getByTestId('feature-off-notice').count()) === 1;
     check(/^#\/month/.test(hashOf(page)) && hasNotice, `切った機能の ${h} も予定の画面へ移し知らせる`, hashOf(page));
   }
-  // 390px：空き状況を切っても下のタブは6つ（予定・〈利用者さん〉・〈スタッフ〉・組む・探す・メニュー。入の下のタブに空き状況は無い。PRD D336・D401）で、全幅を等分する
+  // 390px：空き状況を切っても下のタブは6つ（予定・〈利用者さん〉・〈スタッフ〉・組む・探す・メニュー。入の下のタブに空き状況は無い。PRD D401）で、全幅を等分する
   await page.setViewportSize({ width: 390, height: 844 });
   await open(page, '/month', '[data-testid="sched-nav"]');
   const boxes = await page
@@ -517,7 +517,7 @@ async function pathVariants(page, dlg, ctx) {
   );
   await page.screenshot({ path: path.join(OUT_DIR, 'tabs-4-mobile.png') });
   await page.setViewportSize({ width: 1400, height: 1000 });
-  // 欠勤・キャンセルと空き状況の両方を切ると「当日・問い合わせ」は見出しごと消える（PRD D232。片方なら残るのは allOn で確かめる）
+  // 欠勤・キャンセルと空き状況の両方を切ると「当日・問い合わせ」は見出しごと消える（PRD D326。片方なら残るのは allOn で確かめる）
   await writeFeaturesInOtherTab(ctx, { sudden: false, vacancy: false });
   await open(page, '/month', '[data-testid="sched-nav"]');
   const m = await menu(page);

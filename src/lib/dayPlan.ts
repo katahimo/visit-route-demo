@@ -114,7 +114,7 @@ export function unassignedOf(problem: Problem, routes: Routes): string[] {
 }
 
 /**
- * 担当の足りない日（空き状況の注意。PRD D259）：dates のうち今日以降で、伝えていない、担当なしの訪問がある日（昇順）
+ * 担当の足りない日（空き状況の注意。PRD D328）：dates のうち今日以降で、伝えていない、担当なしの訪問がある日（昇順）
  */
 export function unassignedDays(data: DemoData, dates: readonly string[], today: string): string[] {
   return dates

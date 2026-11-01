@@ -1,4 +1,4 @@
-// 日の予定（PRD D4・D13・D18。版2：ADR-0053）の計算：その日の訪問・担当の並び・採点・要対応・伝えた内容との差・列。
+// 日の予定（PRD D4・D316・D18。版2：ADR-0053）の計算：その日の訪問・担当の並び・採点・要対応・伝えた内容との差・列。
 // どれも useDayModel の上の useMemo（計算は lib・evaluate・matching の純粋関数）。データは書かない
 import { useMemo } from 'react';
 import { useDayModel } from '../components/useDayModel';

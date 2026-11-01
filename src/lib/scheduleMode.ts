@@ -12,7 +12,7 @@ export const nextYm = (today: string): string => ymOf(addDays(`${ymOf(today)}-01
 
 /**
  * この日（日付の日）以降を月の後半とし、来月の準備を始める日にする（シフトの希望・利用者さんへの連絡は月の後半に始まり、月末7日では
- * 来月の担当を組むのが遅い。事業所ごとに変えない：契約に足すほどの差が無い。PRD D255 の日。段1でホームを無くして移した。ADR-0074）
+ * 来月の担当を組むのが遅い。事業所ごとに変えない：契約に足すほどの差が無い。PRD D404 の日。段1でホームを無くして移した。ADR-0074）
  */
 export const LATE_MONTH_FROM_DAY = 15;
 
@@ -56,7 +56,7 @@ function countUnassigned(
 }
 
 /**
- * メニューの件数の印（PRD D349・D401）：組む月の担当なしの日の数（unassignedDayCount）と、組み方の標準があるか（PRD D360）。
+ * メニューの件数の印（PRD D401）：組む月の担当なしの日の数（unassignedDayCount）と、組み方の標準があるか（PRD D360）。
  * compile しないので画面を移るたびに数えても軽い
  */
 export function menuBadges(

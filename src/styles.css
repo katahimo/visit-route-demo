@@ -36,7 +36,7 @@
   --header-h: 72px;
   /* 予定の上のナビの行（.sched-nav。861px 以上は sticky）の高さ。ScheduleNav が測って入れる。無い画面・狭い画面では 0 */
   --sched-nav-h: 0px;
-  /* スマホの下のタブ（.bottom-tabs）の高さ。広い画面では 0。浮いている部品・本文の下の余白がこれを避ける（PRD D134） */
+  /* スマホの下のタブ（.bottom-tabs）の高さ。広い画面では 0。浮いている部品・本文の下の余白がこれを避ける（PRD D401） */
   --bottom-tabs-h: 0px;
   /* Mac は丸ゴシック、Windows は BIZ UDPゴシック・游ゴシック（Regular は細いので Medium を先）・メイリオ
      （system-ui より前。後ろだと Windows の UI の書体になる） */
@@ -278,7 +278,7 @@ label {
   /* 文だけの知らせなので、重なった下の入力欄・ボタンを押せるようにする（ボタン付きの知らせはボタンだけ押せる） */
   pointer-events: none;
 }
-/* ボタン付きの知らせ（手直しの「元に戻す」。PRD D218）。重ねている間は消さないので、箱（文の幅だけ）はマウスを受ける（PRD D268） */
+/* ボタン付きの知らせ（手直しの「元に戻す」。PRD D329）。重ねている間は消さないので、箱（文の幅だけ）はマウスを受ける（PRD D268） */
 .toast.has-action {
   pointer-events: auto;
   display: flex;
@@ -770,7 +770,7 @@ tbody tr:hover td {
 .nav-link.active svg {
   color: var(--primary);
 }
-/* 畳める項目（PRD D349）：親の行の右に ▾。子は字下げした少し小さな行。親は子が今の画面のとき太字だけ（地の色は子に） */
+/* 畳める項目（PRD D401）：親の行の右に ▾。子は字下げした少し小さな行。親は子が今の画面のとき太字だけ（地の色は子に） */
 .nav-parent-row {
   display: flex;
   align-items: center;
@@ -936,7 +936,7 @@ tbody tr:hover td {
   min-width: 0;
   max-width: 1440px;
 }
-/* スマホの上の帯の部品（ロゴと画面の名前）と下のタブ（「メニュー」を含む）は、広い画面では出さない（PRD D132・D134・D274） */
+/* スマホの上の帯の部品（ロゴと画面の名前）と下のタブ（「メニュー」を含む）は、広い画面では出さない（PRD D132・D401） */
 .m-head-title,
 .bottom-tabs {
   display: none;
@@ -952,7 +952,7 @@ tbody tr:hover td {
   .side-nav {
     display: none;
   }
-  /* 上の帯：左にロゴと今の画面の名前、右に「探す」と日付の切り替え。狭ければ日付の切り替えを2段目へ（「メニュー」は下のタブ。PRD D274） */
+  /* 上の帯：左にロゴと今の画面の名前、右に「探す」と日付の切り替え。狭ければ日付の切り替えを2段目へ（「メニュー」は下のタブ。PRD D401） */
   /* 横向きの iPhone の切り欠き・上の帯の下の余白は safe-area で避ける（index.html の viewport-fit=cover） */
   .app-header {
     min-height: 0;
@@ -1022,7 +1022,7 @@ tbody tr:hover td {
     padding: 16px max(14px, env(safe-area-inset-right, 0px)) calc(40px + var(--bottom-tabs-h))
       max(14px, env(safe-area-inset-left, 0px));
   }
-  /* 下のタブ：予定・〈利用者さん〉・〈スタッフ〉・組む・探す・メニュー（iPhone のホームバーは safe-area で避ける。PRD D336）。
+  /* 下のタブ：予定・〈利用者さん〉・〈スタッフ〉・組む・探す・メニュー（iPhone のホームバーは safe-area で避ける。PRD D401）。
      タブの数（欠勤を切ると減る。ADR-0028）に合わせて全幅を等分する */
   .bottom-tabs {
     position: fixed;
@@ -2286,7 +2286,7 @@ html[data-drawer-toast="side"] body:has(.drawer-wrap) .toast {
   .nav-link.nav-child {
     min-height: 44px;
   }
-  /* 畳む ▾（見た目 28px）は押せる所を 44px に（PRD D349） */
+  /* 畳む ▾（見た目 28px）は押せる所を 44px に（PRD D401） */
   .nav-toggle::before {
     content: "";
     position: absolute;

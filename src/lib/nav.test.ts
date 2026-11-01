@@ -259,7 +259,7 @@ describe('navTitleParts（上の帯の名前。画面の一覧から引く）', 
   });
 });
 
-describe('bottomTabs（PRD D336・D400・D401）', () => {
+describe('bottomTabs（PRD D401・D400）', () => {
   it('入：予定・〈利用者さん〉・〈スタッフ〉・組むの順に引く（5つ目以降の「探す」「メニュー」は画面のボタン。設定はメニューの中）', () => {
     expect(bottomTabs(groups, {}).map((i) => i.key)).toEqual(['schedule', 'clients', 'staff', 'arrange']);
     expect(bottomTabs(groups, {}).map(tabLabel)).toEqual(['予定', '利用者さん', 'スタッフ', '組む']);

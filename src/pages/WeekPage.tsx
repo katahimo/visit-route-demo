@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { AttentionBand } from '../components/attentionBand';
 import { EmptyNext } from '../components/EmptyNext';
 import type { MenuItem } from '../components/MenuButton';
+import { NextMonthCheck } from '../components/nextMonthCheck';
 import { ScheduleNav } from '../components/ScheduleNav';
 import { RangeProposalBand, ScheduleToolbar, SelectionBar } from '../components/scheduleParts';
 import { PageHeader } from '../components/ui';
@@ -41,7 +42,7 @@ import './week.css';
 export default function WeekPage() {
   const nav = useWeekNav();
   const { today, anchor, dates, start, tab, by, narrow, goWeek, openDay } = nav;
-  /** 予定のモード（PRD D348）：組むではメールを出さず、確認では札を動かさない */
+  /** 予定のモード（PRD D355）：組むではメールを出さず、確認では札を動かさない */
   const model = useWeekModel(nav.date, dates, tab);
   const { data, compileInput, terms, days, visitById, table } = model;
   /** 欠勤・キャンセルの入口（ADR-0028 の sudden） */
@@ -63,7 +64,7 @@ export default function WeekPage() {
     : [];
   const lead = useIntro('week', `この週の担当を見て、日時をドラッグでずらし、${terms.staff}に伝えたら確定します`);
   const { timelineRef, tableScrollRef, clientScrollRef } = useWeekTodayScroll(nav);
-  // ---- この週の準備（PRD D280・D282。ADR-0046・ADR-0053）：担当なしを組む → 確定 → 済み の主ボタン1つ ----
+  // ---- この週の準備（PRD D328・D314。ADR-0046・ADR-0053）：担当なしを組む → 確定 → 済み の主ボタン1つ ----
   const prepFlow = useWeekPrep({ data, compileInput, dates, today });
   const { prep, next } = prepFlow;
   const people = useWeekClients(model, nav);
@@ -110,6 +111,8 @@ export default function WeekPage() {
       />
       {/* 要対応の帯（入切とも。PRD D400・D403・D404）。1行の状態（PRD D332）は「詳しく」の中 */}
       <AttentionBand />
+      {/* 来月の確認（切で月の20日以降。PRD D413） */}
+      <NextMonthCheck />
       {/* 操作の行（日・週・月で同じ作り。PRD D327・D402）。メールで送るは「その他 ▾」。担当なしを組むは要対応の帯、空き状況はメニュー（PRD D403・D400） */}
       <ScheduleToolbar
         zoom="week"
@@ -161,7 +164,7 @@ export default function WeekPage() {
 
       {mailOpen && mailOn && <WeekMailPanel data={data} dates={dates} onClose={() => setMailOpen(false)} />}
       {/* 複数選択の帯（PRD D330。画面の下に貼り付く） */}
-      {/* 選んだ訪問をまとめて動かす帯は、確認のモードでは出さない（札を動かさない。PRD D348） */}
+      {/* 選んだ訪問をまとめて動かす帯は、確認のモードでは出さない（札を動かさない。PRD D355） */}
       <SelectionBar ids={visits.multi.ids} onClear={visits.multi.clear} dates={dates} />
       {/* キーで動かした先の読み上げと、繰り返しの回の範囲を選び直す小さな帯（PRD D333） */}
       <KeyMoveBand onMoved={visits.onMoved} />

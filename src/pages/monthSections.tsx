@@ -6,6 +6,7 @@ import { AttentionBand } from '../components/attentionBand';
 import { DetailsFold } from '../components/DetailsFold';
 import { FieldError } from '../components/FieldError';
 import type { MenuItem } from '../components/MenuButton';
+import { NextMonthCheck } from '../components/nextMonthCheck';
 import { type BandModel, ProgressBand } from '../components/progressBand';
 import { ScheduleNav } from '../components/ScheduleNav';
 import { RangeProposalBand, ScheduleToolbar, SelectionBar } from '../components/scheduleParts';
@@ -90,10 +91,12 @@ export function MonthTopBars({
       />
       {/* 要対応の帯（入切とも。PRD D400・D403・D404） */}
       <AttentionBand />
-      {/* 進み具合の帯（PRD D151〜D155）は「詳しく」の中（MonthDetails。主ボタンは操作の行の「予定を入れる」。PRD D384・D393）。担当なしの次の一手は担当を組むの画面へ（ADR-0063）。
+      {/* 来月の確認（切で月の20日以降。PRD D413） */}
+      <NextMonthCheck />
+      {/* 進み具合の帯（PRD D151〜D154・D316）は「詳しく」の中（MonthDetails。主ボタンは操作の行の「予定を入れる」。PRD D384・D393）。担当なしの次の一手は担当を組むの画面へ（ADR-0063）。
         畳んだ中を開かずに行ける「担当を組む」は操作の行（入） */}
       {/* 操作の行（日・週・月で同じ作り。PRD D327・D402）。カレンダーと日ごとの一覧の切り替え（PRD D189。600px 以下ははじめ一覧。URL の ?layout=）・
-        月送り・今月のほかのときどき使う操作は「その他 ▾」（PRD D278） */}
+        月送り・今月のほかのときどき使う操作は「その他 ▾」（PRD D327） */}
       <ScheduleToolbar
         zoom="month"
         absence={absence}
@@ -181,6 +184,7 @@ export function MonthHeadCard({
 }) {
   const terms = data.org.terms;
   const { focus } = fs;
+  const only = useExceptionsOnly();
   // 件数の行・凡例は「詳しく」の中（MonthDetails）なので、ほかに出すものが無ければ欄ごと出さない
   if (!pickersShown && !noVisitsWhy && !panels.helpOpen && off.offStaffId === null && !batch.batch && !batch.error)
     return null;
@@ -217,7 +221,12 @@ export function MonthHeadCard({
       )}
       {noVisitsWhy && <p className="sub">{noVisitsWhy}</p>}
       {panels.helpOpen && (
-        <MonthHelp helpRef={panels.helpRef} staffTerm={terms.staff} onClose={() => panels.setHelpOpen(false)} />
+        <MonthHelp
+          helpRef={panels.helpRef}
+          staffTerm={terms.staff}
+          only={only}
+          onClose={() => panels.setHelpOpen(false)}
+        />
       )}
       {off.offStaffId !== null && (
         <MonthOffBar name={fs.focusName} offDays={fd.offDates.length} note={off.offNote} onOpenDay={nav.openDay} />

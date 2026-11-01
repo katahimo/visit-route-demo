@@ -1,4 +1,4 @@
-// メニューの決まり（PRD D132〜D135・D178〜D180・D230〜D232・D326。ADR-0034・0045・0054。design.md §4 app）。
+// メニューの決まり（PRD D132〜D135・D179・D180・D326・D230・D231。ADR-0034・0045・0054。design.md §4 app）。
 // 左のメニュー・スマホの引き出し・下のタブ（menuSections）と、上の帯の画面の名前・コマンドパレットの画面（screenSections）で、
 // 並びと今の画面をどれと見るかを1か所で決める
 import type { Terms } from '../contracts/documents';
@@ -11,7 +11,7 @@ import { SUDDEN_DO } from './sudden';
 
 /**
  * メニューの1項目（アイコンなどは呼ぶ側で足す）。to に `?` を含むものは操作（画面の中の欄を開く）で、今の画面の印を付けない。
- * short は下のタブの短い名前（無ければ label。PRD D232）。
+ * short は下のタブの短い名前（無ければ label。PRD D326）。
  * match はこの項目が受け持つ画面のパス（今の画面の印。無ければ to だけ。PRD D273・D275。予定は月・週・日・比較、設定は設定のタブ）
  */
 export type NavEntry = { to: string; label: string; short?: string; match?: readonly string[] };
@@ -164,7 +164,7 @@ export function navTitleParts(
 }
 
 /**
- * 下のタブの項目：メニューから bottomTabKeys の順に引く（メニューに無い項目は出さない。PRD D336・D400・D401）
+ * 下のタブの項目：メニューから bottomTabKeys の順に引く（メニューに無い項目は出さない。PRD D401・D400）
  */
 export function bottomTabs<T extends NavEntry & { key: string; children?: readonly T[] }>(
   groups: readonly NavSection<T>[],
@@ -174,12 +174,12 @@ export function bottomTabs<T extends NavEntry & { key: string; children?: readon
   return bottomTabKeys(features).flatMap((key) => all.find((i) => i.key === key) ?? []);
 }
 
-/** 下のタブの名前：短い名前（予定・組むなど）。無ければメニューの名前（PRD D336） */
+/** 下のタブの名前：短い名前（予定・組むなど）。無ければメニューの名前（PRD D401） */
 export const tabLabel = (item: NavEntry): string => item.short ?? item.label;
 
 /**
  * 下のタブ・メニューの項目を押したとき：今開いている画面そのものなら何もしない（'stay'。押し直して URL のクエリ＝画面の状態を
- * 消さない。PRD D133・D336）。ほかは移る（'go'。比較から「予定」は覚えた表示へ移る）
+ * 消さない。PRD D133・D401）。ほかは移る（'go'。比較から「予定」は覚えた表示へ移る）
  */
 export function tabClick(item: NavEntry, pathname: string): 'stay' | 'go' {
   // 〈利用者さん〉の画面（`/clients/:id`）から一覧の項目を押したら一覧へ移る（同じ画面ではない）
@@ -209,7 +209,7 @@ export type NavIcon =
   | 'data';
 /**
  * メニューの項目（アイコンの名前つき）。key は下のタブで引く名前（URL が覚えた表示で変わる項目があるため）。
- * children は畳める子の項目（PRD D349）、badge は件数の印
+ * children は畳める子の項目（PRD D401）、badge は件数の印
  */
 export type MenuItem = NavEntry & {
   key: string;
@@ -219,7 +219,7 @@ export type MenuItem = NavEntry & {
 };
 
 /**
- * メニューの件数の印と状態（PRD D349・D360・D363・D401）：組む月の担当なしの日の数・組み方の標準があるか
+ * メニューの件数の印と状態（PRD D401・D360・D363）：組む月の担当なしの日の数・組み方の標準があるか
  * （あれば「組む」の子に組み方の標準を出さない。ADR-0066 追記）・基本情報が最後に組んだあとに変わったか（ADR-0067）
  */
 export type MenuBadges = {
@@ -228,7 +228,7 @@ export type MenuBadges = {
   basisChanged?: boolean;
 };
 
-/** 畳める項目（親の key。いまは「組む」だけ）と既定で開いておくか（PRD D349・D401） */
+/** 畳める項目（親の key。いまは「組む」だけ）と既定で開いておくか（PRD D401） */
 export const NAV_OPEN_DEFAULT: Readonly<Record<string, boolean>> = { arrange: true };
 
 /** 欠勤・キャンセルの欄を今日の日の予定で開く URL（PRD D172） */

@@ -1,4 +1,4 @@
-// 日の予定の「欠勤・キャンセル」の欄（PRD D167〜D172・D243〜D246）の状態と処理：開け閉め・パレットや週・月の操作の行などの入口（?do=absence）・
+// 日の予定の「欠勤・キャンセル」の欄（PRD D167〜D172・D244〜D246・D325）の状態と処理：開け閉め・パレットや週・月の操作の行などの入口（?do=absence）・
 // 欠勤だけ登録・欠勤の取り消し・欄からの訪問の取り消し・2段目の連絡の差。振り直しは useReassignFlow
 import { type ComponentProps, type RefObject, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';

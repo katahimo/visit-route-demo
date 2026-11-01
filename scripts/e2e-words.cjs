@@ -351,7 +351,7 @@ async function legend(page) {
   check(!(await page.getByTestId('month-legend').isVisible()), '月：凡例の中身は畳んだ中');
   const line = await page.locator('.month-legend-line').innerText();
   check(/色＝日の状態/.test(line), '月：1行の要約', line);
-  // 混み具合の選択は「その他 ▾」の「表示を選ぶ」の中（PRD D278）
+  // 混み具合の選択は「その他 ▾」の「表示を選ぶ」の中（PRD D327）
   check(
     (await page.getByTestId('month-load-type').count()) === 0,
     '月：表示の選択（混み具合）ははじめ「その他 ▾」にたたむ',

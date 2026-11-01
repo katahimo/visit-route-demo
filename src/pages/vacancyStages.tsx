@@ -14,7 +14,7 @@ import { AnswerBox, FoldMark, InquiryWeeks, NoPlanNote, StepNo, VacancyGrid, Vac
 // 空き状況の画面（VacancyPage）の段階（PRD D184）：2 場所、3 受けられる曜日・時間帯、4 次の一手（1 いつ・何を は vacancyWhen）
 
 /**
- * 2 場所（任意。PRD D184・D185）：はじめは畳んで要約の行だけ。開くと郵便番号・住所・地図。
+ * 2 場所（任意。PRD D184）：はじめは畳んで要約の行だけ。開くと郵便番号・住所・地図。
  * 畳んでも中の入力・ピンは残す（details の中に置いたまま。閉じても消さない）
  */
 export function PlaceStage({
@@ -25,7 +25,7 @@ export function PlaceStage({
   hasPin: boolean;
 }) {
   const { place, setPlace } = input;
-  // 段階の要約の行（PRD D184・D185）
+  // 段階の要約の行（PRD D184）
   const summary = placeLine(
     { address: place.address, pinnedAddress: place.pinnedAddress, hasPin },
     VACANCY_MARGIN_DEFAULT,
@@ -149,7 +149,7 @@ export function TableStage({
 }
 
 /**
- * 4 次の一手（PRD D184・D186・D412）：この問い合わせを仮押さえする（従のボタン）と、
+ * 4 次の一手（PRD D184・D412）：この問い合わせを仮押さえする（従のボタン）と、
  * 空き枠を広く知らせる（案内文・コピー・紹介元へメール。はじめは畳む。children）。要約のコピーは答えのカードの中
  */
 export function NextStage({

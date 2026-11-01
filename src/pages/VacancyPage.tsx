@@ -26,7 +26,7 @@ import './settings.css';
 import './vacancy.css';
 
 /**
- * 空き状況と問い合わせの試算（ADR-0012。段階3＝PRD D45〜D48。design.md §4 pages「空き状況と問い合わせの試算」）。
+ * 空き状況と問い合わせの試算（ADR-0012。段階3＝PRD D45〜D47・D54。design.md §4 pages「空き状況と問い合わせの試算」）。
  * チップ（曜日・時間帯・所要）とくわしい条件 → 答えのカードと要約のコピー → 「詳しく ▾」の曜日×開始時刻の表（マスを押すと日付ごとの人）→ 仮押さえ（PRD D411・D412）。
  * データは読むだけ。仮押さえだけが1回の update で〈利用者さん〉（仮）と定期パターンを入れる（lib/hold の holdData）。
  * 入力は useVacancyInput、計算は useVacancyResult、案内文は useVacancyNotice、仮押さえは useVacancyHold、段階の見た目は vacancyWhen・vacancyStages
@@ -80,7 +80,7 @@ export default function VacancyPage() {
   };
 
   const noPlan = result?.noPlanDates ?? [];
-  /** 担当の足りない日（範囲の今日以降の、担当なしの訪問がある・伝えていない日。PRD D259）。担当は担当を組むの画面か日の予定で入れる（ADR-0063） */
+  /** 担当の足りない日（範囲の今日以降の、担当なしの訪問がある・伝えていない日。PRD D328）。担当は担当を組むの画面か日の予定で入れる（ADR-0063） */
   const rangeKey = result ? result.dates.join(',') : '';
   // biome-ignore lint/correctness/useExhaustiveDependencies: 範囲は日付の並び（rangeKey）で見る
   const missing = useMemo(() => (result ? unassignedDays(data, result.dates, today) : []), [data, rangeKey, today]);

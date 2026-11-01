@@ -73,7 +73,7 @@ export function Brand({ orgName }: { orgName: string }) {
 }
 
 /**
- * 畳める項目の開け閉め（PRD D349）。押して変えた開け閉めは覚える（この端末に残す。store/navOpen）。
+ * 畳める項目の開け閉め（PRD D401）。押して変えた開け閉めは覚える（この端末に残す。store/navOpen）。
  * 今の画面の親は、その親へ移ったときに開いて見せる（auto。覚えない。押して畳めば auto を外す）
  */
 function useNavOpen(groups: readonly NavSection<NavItem>[], pathname: string) {
@@ -93,7 +93,7 @@ function useNavOpen(groups: readonly NavSection<NavItem>[], pathname: string) {
 
 /**
  * メニューの並び（左のメニューとスマホの引き出しで共通。グループの見出し付きの縦並び）。
- * 子の項目を持つ項目は ▾ で畳める（PRD D349）。押して変えた開け閉めは覚える。今の画面の親は、その親へ移ったときに開いて見せる
+ * 子の項目を持つ項目は ▾ で畳める（PRD D401）。押して変えた開け閉めは覚える。今の画面の親は、その親へ移ったときに開いて見せる
  * （覚えない。同じ親の中で画面を移っても、畳んだら畳んだまま）。
  * 今の画面の印は、開いていれば子に、畳んでいれば親に付ける
  */

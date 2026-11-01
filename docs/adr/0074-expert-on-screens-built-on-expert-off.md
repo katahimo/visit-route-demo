@@ -1,7 +1,7 @@
 # ADR-0074：エキスパート機能が入の画面も切の作りを土台にする
 
 - 日付：2026-10-31
-- 状態：採用・段0〜5 実装済み（メニューの空き状況は ADR-0078、担当なしを組む入口は ADR-0077）
+- 状態：採用・一部を ADR-0078・0080 で置き換え（メニューと下のタブの空き状況）。担当なしを組む入口は ADR-0077
 - 関連：ADR-0029・0041・0053・0067・0072・0073
 
 ## 背景
@@ -11,7 +11,7 @@
 画面の骨組みは切と同じにし、切の部品（`exceptionView`・`peopleView`・要対応の帯・「詳しく ▾」・「その他 ▾」）をそのまま使う。入の差は部品の中の1か所に足す。機能は消さず、場所を変える・畳む・既定で閉じる。
 
 ### メニュー・帯
-- 入のメニューは 予定・〈利用者さん〉・〈スタッフ〉・組む・設定（判定は `lib/nav` の `menuSections` の1か所）。「組む」だけが子（基本情報・組み方の標準（登録後は出さない）・担当を組む）を持つ
+- 入のメニューは 予定・空き状況・〈利用者さん〉・〈スタッフ〉・組む・設定（空き状況は ADR-0078。判定は `lib/nav` の `menuSections` の1か所）。「組む」だけが子（基本情報・組み方の標準（登録後は出さない）・担当を組む）を持つ
 - 件数の印は「組む」の親の行に1つ（組み直しの知らせ、無ければ担当なしの日の数）
 - 下のタブは 予定・〈利用者さん〉・〈スタッフ〉・組む・探す・メニュー（`bottomTabKeys(features)`）
 - ホームは無い。`#/home`・`#/`・知らない URL・切った機能の URL は `homePath(features)`（繰り返しを使うなら月、使わないなら週）
@@ -42,11 +42,9 @@
 ### e2e
 - 共通の手 `scripts/lib/ui.cjs`（画面へ行く・メニューを押す・操作の行のボタン・「その他 ▾」・「詳しく ▾」）。画面が変わっても表の1か所を直す。位置は `pressTool` の `where: 'row'`・`'more'`
 
-### 後片付け（段5。新しい D番号は無い）
-- 使われない CSS（`.month-prep*`・`.grid2`・`.m-sr`・`.person-view-list`）を消した。入だけの古い部品は段1〜4 で消えていて、`check:code` の基準は空のまま
-- 名前を今の役割に合わせた：`SimpleToolbar`（`components/simpleToolbar`）→ `ToolbarRow`（`components/toolbarRow`）、`simpleText` → `exceptionText`、`useBandArrange` の `simple` → `exceptionOnly`、`lib/monthGuide` の `simple` → `noConfirm`、`docs/design/pages-home.md` → `pages-progress.md`
-- 週のナビの行の状態（`week-next-status`）は「未確定 N日」「確定済み」だけ、理由（`week-next-why`）は1行。詳しい数は「詳しく ▾」と要対応の帯にある
-- 畳みの計測（`components/useChipFold.ts`）の測り直しの鍵を `lib/fold` の `chipFoldKey`・`nextFullHeight` に置いた（幅・中身の高さ・書体・チップの表示）。e2e-week の fold の段は、押した印が付くのを待ってから次を押し、失敗時は aria-expanded と「あと N人」の数を記録する（CPU を4〜8倍絞ると、表を押した直後に時間軸を押して `goView` が押しを捨てる競合を再現した。CI の失敗と同じ原因かは未確認）
+### 週のナビの行・畳み
+- 週のナビの行の状態（`week-next-status`）は「未確定 N日」「確定済み」だけ、理由（`week-next-why`）は1行。詳しい数は「詳しく ▾」と要対応の帯
+- 畳みの計測（`components/useChipFold.ts`）の測り直しの鍵は `lib/fold` の `chipFoldKey`・`nextFullHeight`（幅・中身の高さ・書体・チップの表示）
 
 ## 捨てた案
 入の画面を個別に削る（二つの画面が残る）・表示の密さを別の切り替えにする（組み合わせが倍）・ホームを残す・入は「詳しく」を既定で開く（縦の長さが戻る）。
