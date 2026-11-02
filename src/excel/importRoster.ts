@@ -136,7 +136,7 @@ export async function importRoster(
   mode: RosterMode,
   today: string = jstDate(Date.now()),
 ): Promise<RosterImportResult | ImportError> {
-  const loaded = await loadRosterBook(buf, base, kind, { today });
+  const loaded = await loadRosterBook(buf, base, kind, { today, items: base.items });
   if ('code' in loaded) return loaded;
   const r = readLoaded(loaded, base, kind, mode);
   // ほかのソフトの形で読んだときは、誤りの文の列名もその形の列名で出す（ADR-0073・ADR-0075）

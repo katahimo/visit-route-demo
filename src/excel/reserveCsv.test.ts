@@ -237,9 +237,9 @@ describe('形の一覧', () => {
   it('ID は重ならず、名簿の種類ごとに見分ける', () => {
     const ids = ROSTER_FORMS.map((f) => f.id);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(readRosterForm(STAFF_TABLE, 'client', { today: '2026-10-31' })).toBeNull();
-    expect(readRosterForm(STAFF_TABLE, 'staff', { today: '2026-10-31' })?.form.id).toBe('reserve-staff');
-    expect(readRosterForm([['名前']], 'staff', { today: '2026-10-31' })).toBeNull();
+    expect(readRosterForm(STAFF_TABLE, 'client', { today: '2026-10-31', items: [] })).toBeNull();
+    expect(readRosterForm(STAFF_TABLE, 'staff', { today: '2026-10-31', items: [] })?.form.id).toBe('reserve-staff');
+    expect(readRosterForm([['名前']], 'staff', { today: '2026-10-31', items: [] })).toBeNull();
   });
   it('形を足すと、その形で読む（別の会社の形を足すときの手本）', () => {
     const other = {
@@ -249,7 +249,7 @@ describe('形の一覧', () => {
       toRoster: (t: readonly (readonly string[])[]) =>
         t[0]?.[0] === 'スタッフ名' ? { rows: [['名前'], ...t.slice(1).map((r) => [r[0] ?? ''])], skipped: [] } : null,
     };
-    const hit = readRosterForm([['スタッフ名'], ['架空 一子']], 'staff', { today: '2026-10-31' }, [
+    const hit = readRosterForm([['スタッフ名'], ['架空 一子']], 'staff', { today: '2026-10-31', items: [] }, [
       ...ROSTER_FORMS,
       other,
     ]);
