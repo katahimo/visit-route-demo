@@ -37,7 +37,7 @@
   - ［×］は `navOpenMemory.write(nextMonth:<今月>, false)`（端末に覚える。データ・書き出しに入れない）。閉じたらフォーカスを見出しへ移す。翌月の20日には鍵が変わるのでまた出す。ボタンは足さない（来月の担当なしを組むのは帯の［担当なしを組む］。今日〜翌月末）
 - 「予定を入れる」：日の主ボタンも同じ言葉（`ADD_VISIT_LABEL`。開くのは訪問の欄）。月・週は `ToolbarRow`（`mainTools` の `plan`）から `components/AddPlanPanel` を開く（[design.md](../design.md) の「予定を入れる」）
 - 人の小さいタブ：`lib/peopleTabs`（`peopleTabs`・`peopleTabsLabel`・`peopleSideOf`・`rememberedSide`・`peopleMatch`）と `components/SettingsTabs` の `PeopleTabs`（一覧・相性・勤務の画面。`data-testid="people-tabs"`）。相性でどちらから来たかは `components/peopleSide`。予定と相性は別の `BasicsNav`
-- 予定の「その他 ▾」：画面ごとの項目（表示の切り替え・使い方・印刷など）と元に戻す・やり直すだけ
+- 予定の「その他 ▾」：画面ごとの項目（表示の切り替え・使い方・印刷など）と元に戻す・やり直す・連絡を貼り付けて入れる（PRD D418）だけ
 
 ### `lib/nav.ts`（純粋関数。テストあり）
 

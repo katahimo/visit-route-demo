@@ -2,15 +2,18 @@
 // どのボタンを残すかは lib/exceptionView の mainTools（入と切の差はそこの1か所）。
 // 切：日は「予定を入れる」（その日の訪問の欄を開く）が主ボタン（スマホは出さず主ボタン無し）、週・月は「予定を入れる」（引き出しは AddPlanPanel。PRD D402）。
 // もう1つは「欠勤・キャンセルを登録」。担当なしを組むは要対応の帯（PRD D403。ADR-0077）。
-// 入：月・週は「予定を入れる」＋「担当を組む」（担当を組むの画面へ）、日は「予定を入れる」＋「確定（伝えた）」。欠勤・キャンセルは「その他 ▾」の中
-import { Plus, Sparkles } from 'lucide-react';
+// 入：月・週は「予定を入れる」＋「担当を組む」（担当を組むの画面へ）、日は「予定を入れる」＋「確定（伝えた）」。欠勤・キャンセルは「その他 ▾」の中。
+// 入切とも「その他 ▾」の最後に「連絡を貼り付けて入れる」（PRD D418。欠勤・キャンセルか〈利用者さん〉の休みの機能が入のとき）
+import { ClipboardPaste, Plus, Sparkles } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ADD_VISIT_LABEL, mainTools, type ScheduleZoom } from '../lib/exceptionView';
 import { AddPlanPanel } from './AddPlanPanel';
 import { MenuButton, type MenuItem } from './MenuButton';
+import { PASTE_LABEL, PastePanel } from './PastePanel';
 import { WithIcon } from './ui';
 import { useHistoryMenuItems } from './undo';
+import { useFeature } from './useFeature';
 
 /** 欠勤・キャンセルを登録：切は操作の行のボタン（node）、入は「その他 ▾」の項目（item） */
 export type AbsenceTool = { node: ReactNode; item: MenuItem };
@@ -46,6 +49,10 @@ export function ToolbarRow({
 }) {
   const history = useHistoryMenuItems();
   const [adding, setAdding] = useState(false);
+  const [pasting, setPasting] = useState(false);
+  const suddenOn = useFeature('sudden');
+  const leaveOn = useFeature('clientLeave');
+  const pasteOn = suddenOn || leaveOn;
   const { primary, second } = mainTools(
     zoom,
     {
@@ -57,7 +64,14 @@ export function ToolbarRow({
     },
     expert,
   );
-  const items = [...moreItems, ...history, ...(expert && absence ? [absence.item] : [])];
+  const paste: MenuItem = {
+    key: 'paste',
+    label: PASTE_LABEL,
+    icon: ClipboardPaste,
+    onSelect: () => setPasting(true),
+    testId: 'paste-open',
+  };
+  const items = [...moreItems, ...history, ...(expert && absence ? [absence.item] : []), ...(pasteOn ? [paste] : [])];
   return (
     <div className={`row schedule-toolbar is-simple ${className}`} data-testid="schedule-toolbar" data-zoom={zoom}>
       {primary === 'add' && add && (
@@ -110,6 +124,7 @@ export function ToolbarRow({
       />
       {after}
       {adding && <AddPlanPanel onClose={() => setAdding(false)} />}
+      {pasting && <PastePanel onClose={() => setPasting(false)} />}
     </div>
   );
 }
