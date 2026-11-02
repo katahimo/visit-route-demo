@@ -192,6 +192,13 @@ async function firstRun(b) {
     'デモ・定期：組んだ回が担当つきで保存される（ピンは付けない）',
     d.visits.length,
   );
+  // 繰り返しの担当がその日に担当できない回は担当なしで作ってあるので、組んだあとの要対応の帯に重なり・休みの人が残らない（PRD D322）
+  const bandLeft = async () => {
+    const el = page.getByTestId('attention-band-text');
+    return (await el.count()) === 0 ? '' : (await el.innerText()).trim();
+  };
+  const noOverlap = await until(async () => !/重なり|間に合わない|休みの人/.test(await bandLeft()), 10000);
+  check(!!noOverlap, 'デモ・定期：組んだあとの要対応の帯に重なり・休みの人が無い', await bandLeft());
   // 開くたびには組まない（読み直しても組みの知らせは出ない）
   await page.reload();
   await page.locator('.app-main h1').first().waitFor({ timeout: 30000 });
@@ -239,7 +246,12 @@ async function firstRun(b) {
     '印「all」があれば2問を出さず、今の初期データ＋すべて入（features は {}）で始める',
     ad.org.features,
   );
-  check(ad.visits.length === 0, '印「all」：組まない（組んだ回が保存されない）', ad.visits.length);
+  // 保存した回は初期データの「その日に担当できない回」の担当なしだけ（PRD D322）
+  check(
+    ad.visits.every((v) => v.staffId === null && v.start === null),
+    '印「all」：組まない（担当の入った回が保存されない）',
+    ad.visits.length,
+  );
   await a.ctx.close();
 }
 

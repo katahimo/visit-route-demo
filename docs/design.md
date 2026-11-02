@@ -181,13 +181,14 @@ flowchart LR
   - [ ] 古いデータが §5 の既定値で読め、repair が効き、直す所の無い〈利用者さん〉は同じ物（テスト）
 
 ### seed（デモの初期データ）
-- 責務：PoC本体 `scripts/seedDemo.ts` の生成（仙台・〈スタッフ〉8人・訪問先20か所・稼働時間帯の上書き）を写し、項目・条件・相性・種類・繰り返し・プリセットの初期値を足す。起動したときの初期データは、過去の日（前の月の1日〜昨日）を伝えた状態にし、今日からは繰り返しの担当のまま（AI で組まない。PRD D322）。日付だけで結果が決まる
+- 責務：PoC本体 `scripts/seedDemo.ts` の生成（仙台・〈スタッフ〉8人・訪問先20か所・稼働時間帯の上書き）を写し、項目・条件・相性・種類・繰り返し・プリセットの初期値を足す。起動したときの初期データは、過去の日（前の月の1日〜昨日）を伝えた状態にし、今日からは繰り返しの担当のまま（AI で組まない。その日に担当できない回だけこの回だけ担当なし。PRD D322）。日付だけで結果が決まる
 - 持つデータ（持ち主）：なし
-- 提供するAPI：`createDemoData(today)`（繰り返しと繰り返しの担当。保存した回は入れない）、`seed/oneOff` の `createOneOffDemoData(today, features)`（単発のデモ）、`seed/blank` の `createBlankData(today, org, visitTypes)`（空のデータ）・`ONE_OFF_VISIT_TYPES`・`REGULAR_VISIT_TYPES`、`seed/plans` の `createInitialData(today, features = {})`（`createDemoData` に機能の入り切りを入れ、過去の日を伝えた状態にする。store が起動・初期化で使う）、`seedPatternStart(today)`、`seedPatterns`、`INITIAL_PRESETS`・`initialPresets()`・`applyPreset(rules, preset)`・`matchesPreset`・`presetOf(rules, presets)`・`scorePresetOf(presets, id)`（無ければ先頭）・`scoreRulesOf(data)`（条件に点数の基準のプリセットを当てたもの。0件なら条件そのもの）。AI で組んだ日のあるデータ（テスト用）は `seed/plans.testkit.ts` の `withSeedPlans(data, today, days = 7)`
+- 提供するAPI：`createDemoData(today)`（繰り返しと繰り返しの担当。保存した回は入れない）、`seed/oneOff` の `createOneOffDemoData(today, features)`（単発のデモ）、`seed/blank` の `createBlankData(today, org, visitTypes)`（空のデータ）・`ONE_OFF_VISIT_TYPES`・`REGULAR_VISIT_TYPES`、`seed/plans` の `createInitialData(today, features = {})`（`createDemoData` に機能の入り切りを入れ、今日からのその日に担当できない回を担当なしにし、過去の日を伝えた状態にする。store が起動・初期化で使う）、`seedPatternStart(today)`、`seedPatterns`、`INITIAL_PRESETS`・`initialPresets()`・`applyPreset(rules, preset)`・`matchesPreset`・`presetOf(rules, presets)`・`scorePresetOf(presets, id)`（無ければ先頭）・`scoreRulesOf(data)`（条件に点数の基準のプリセットを当てたもの。0件なら条件そのもの）。AI で組んだ日のあるデータ（テスト用）は `seed/plans.testkit.ts` の `withSeedPlans(data, today, days = 7)`
 - 単発のデモ（`seed/oneOff.ts`。PRD D380）：ベビーシッター型の架空の事業所。お客様6・シッター4（仙台の公共施設の近く。実在の人・住所ではない）と、今日から14日（`ONE_OFF_DEMO_DAYS`）の単発の予約（日の番号を7で割った余りで1〜3件、同じ日に同じお客様は重ならない。繰り返し・伝えた記録は無い）。担当は `generateDay`（手作業らしい割当）で決め、乱数・現在時刻を使わず、今日は引数。種類は「見守り・保育」（必要条件なし）
 - 空のデータ（`seed/blank.ts`。PRD D381）：人・訪問・繰り返しは無く、訪問の種類（定期＝介護・リハビリ、単発＝見守り・保育）と呼び名・機能の入り切りだけ。項目・条件・プリセットは今の初期データと同じ。事業所名は「自分の事業所」（`OWN_ORG_NAME`）。単発のデモと共通の土台
 - 初期データ：
   - 繰り返しは前の月の1日（`seedPatternStart`）から。前の月の1日〜昨日は伝えた内容を入れる（`withPastTold`：その日の取り消していない訪問の繰り返しの担当を写す。開始は null＝時刻の違いを数えない。確定の時刻はその日の18:00（日本時間））。今日からは伝えていない
+  - 今日から14日（`DEMO_DAYS`）で、繰り返しの担当がその日に担当できない回（`compile` の可否が否：s1 の時間休・s7 の遅出などの勤務の上書き・休み・欠勤に作業が収まらない、必須の条件・相性×）は、担当なし・開始なし・ピンなし・`edited: false` の保存した回にする（`seed/plans` の `withUnfitUnassigned`。繰り返しの担当は変えない）。デモで始めるときの自動の組み（D409）が埋めるので、要対応の帯に重なり・休みの人が残らず、重なったまま伝えた記録にもならない
   - 繰り返しの担当（`withUsualStaff`）：内部で作った割当でその〈利用者さん〉を多く担当した順に、繰り返しの曜日すべてに勤務があり、同じ人のほかの回と30分（`USUAL_GAP_MINUTES`）より近く重ならない人。いなければ null（担当なし）
   - 呼び方は「スタッフ」（`domain/terms.ts` の care の既定「ヘルパー」は写したまま）
   - 訪問は希望の時刻ちょうど（PoC本体の幅は始まりの時刻。c4 だけ終わりの 10:30＝日曜に担当が足りなくなるため）
@@ -196,11 +197,12 @@ flowchart LR
   - 種類：介護（色0。資格に介護福祉士・初任者研修・看護師のどれか）、リハビリ（色3。理学療法士・作業療法士・言語聴覚士のどれか）。理学療法士は s4・s7
   - 繰り返し：〈利用者さん〉ごとに1つ（ID＝〈利用者さん〉の ID。平日の1曜日だけ休み・`weekend` の印で土日も。毎週。時刻・所要は `slot`。子どもは種類なし、ほかは介護）。リハビリ40分を c7（水 14:00・s4）・c14（金 15:00・s7）。回は保存せず見るときに計算する（ID `${日付}_${繰り返しID}`）
   - 決まりごとの例は c2・c4・c9・c13（`VISIT_RULE_SEEDS`）。欠勤・休みなし。`scorePresetId` は `balance`
-- 依存するもの：domain、patterns（`seed/plans` が過去の日の回を計算する）。`seed/plans.testkit.ts` だけ solver・`lib/dayPlan`
+- 依存するもの：domain、patterns（`seed/plans` が過去の日の回を計算する）、matching（`seed/plans` がその日に担当できるかを `compile` で見る。`seed/generate` が条件を判定する）。`seed/plans.testkit.ts` だけ solver・`lib/dayPlan`
 - 配置：`src/seed/`
 - 完了の条件：
   - [ ] 同じ日付で同じデータ。繰り返しの担当は重ならない人（テスト）
-  - [ ] `createInitialData`：過去（前の月の1日〜昨日）は確定済み・今日からは伝えた内容が無く、保存した回が無い（繰り返しの担当のまま）（テスト）
+  - [ ] 初期データ → デモで始めるときの自動の組みのあと、帯に重なり・休みの人が無く、変更ありの日も無い（テスト `seed/plans.demoStart.test.ts`）
+  - [ ] `createInitialData`：過去（前の月の1日〜昨日）は確定済み・今日からは伝えた内容が無く、保存した回はその日に担当できない回の担当なしだけ（ほかは繰り返しの担当のまま）（テスト）
   - [ ] 性別希望・NG・種類・繰り返し・訪問の ID が上のとおり、プリセットは §5 の3種（テスト）
 
 ### domain（PoC本体から写した純粋関数）

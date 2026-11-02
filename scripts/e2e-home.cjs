@@ -280,8 +280,8 @@ async function seedPlans(page) {
       version: d0.version,
       snapshots: Object.keys(d0.snapshots).filter((x) => x >= TODAY).length,
       past: Object.keys(d0.snapshots).filter((x) => x < TODAY).length,
-      saved: d0.visits.filter((v) => SEED_DAYS.includes(v.date) && !v.cancelled).length,
-      visitsAll: d0.visits.length,
+      // 保存した回は、繰り返しの担当がその日に担当できない回の担当なしだけ（PRD D322）
+      assigned: d0.visits.filter((v) => v.staffId !== null || v.start !== null || v.pinned).length,
       usual: d0.patterns.filter((x) => x.usualStaffId).length,
       patterns: d0.patterns.length,
       old: ['aiPlans', 'manualPlans', 'aiRuns'].filter((x) => x in d0),
@@ -291,10 +291,9 @@ async function seedPlans(page) {
         info.snapshots === 0 &&
         info.past > 0 &&
         info.old.length === 0 &&
-        info.saved === 0 &&
-        info.visitsAll === 0 &&
+        info.assigned === 0 &&
         info.usual >= info.patterns * 0.5,
-      '初期データ：保存した訪問は空（AI で組まない）で、今日からは繰り返しの担当のまま（計算した回）。過去の日は伝えた状態・今日からは伝えていない',
+      '初期データ：担当の入った保存した訪問は無く（AI で組まない）、今日からは繰り返しの担当のまま（計算した回。担当できない回だけ担当なし）。過去の日は伝えた状態・今日からは伝えていない',
       info,
     );
     await p.screenshot({ path: path.join(OUT_DIR, 'month-first-run-1440.png'), fullPage: true });

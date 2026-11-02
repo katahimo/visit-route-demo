@@ -1196,10 +1196,10 @@ async function people(page) {
 /** 日の予定の地図：ふだん閉じ、「地図」のボタンで開く（PC もスマホと同じ形） */
 async function planMap(page, w) {
   await open1(page, '/plan');
-  await page.getByTestId('attention-band').waitFor({ timeout: 60000 });
-  check((await page.getByTestId('plan-map').count()) === 0, `日の予定（${w}）：地図は閉じている（ページに置かない）`);
+  // 目印は地図のボタン（デモの最初の組みのあとは担当なし・重なりが無く、要対応の帯が出ないこともある。PRD D322）
   const fab = page.locator('.map-dock-fab');
-  await fab.waitFor({ timeout: 10000 });
+  await fab.waitFor({ timeout: 60000 });
+  check((await page.getByTestId('plan-map').count()) === 0, `日の予定（${w}）：地図は閉じている（ページに置かない）`);
   check(/地図/.test(await fab.innerText()), `日の予定（${w}）：「地図」のボタンがある`);
   check((await page.locator('section.map-dock').count()) === 0, `日の予定（${w}）：ボタンを押すまで地図は出ない`);
   await shot(page, `simple-plan-map-closed-${page.viewportSize().width}`);
