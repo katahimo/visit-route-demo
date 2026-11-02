@@ -1,5 +1,6 @@
 // 日ごとの状態（月のマスの色・要対応・今月の準備と同じ数え方）の計算と、日ごとの覚え。React・store は使わない。
-// 画面からは components/useDayStatuses で使う。覚えはアプリで1つ（dayStatusMemo）を、要対応の帯・月の画面と自動の組みの対象（lib/autoArrange）で分け合う
+// 画面からは components/useDayStatuses で使う。覚えはアプリで1つ（dayStatusMemo）を、要対応の帯・月の画面と自動の組みの対象（lib/autoArrange）・
+// 自動の伝えた記録（lib/settled）で分け合う
 import type { DemoData } from '../contracts/data';
 import type { Visit } from '../contracts/documents';
 import type { Problem } from '../contracts/problem';
@@ -98,18 +99,26 @@ export function compileInputOf(data: CompileInput): CompileInput {
 }
 
 /**
- * その日たちの、帯の種類（担当なし・間に合わない・重なり・休みの人。lib/bandIssues）の訪問の ID（日付 → ID の集まり）。
- * 要対応の帯と同じ日ごとの状態（dayStatusMemo）から引く
+ * その日たちの問題と、帯の種類（担当なし・間に合わない・重なり・休みの人。lib/bandIssues）の訪問の ID（日付 → 問題・ID の集まり）。
+ * 要対応の帯と同じ日ごとの状態（dayStatusMemo）から引く（自動の伝えた記録 lib/settled もこれで決める）。訪問が無い日の問題は null
  */
+export function dayBandOf(
+  data: CompileInput & Pick<DemoData, 'snapshots'>,
+  days: readonly string[],
+): Map<string, { problem: Problem | null; ids: Set<string> }> {
+  const out = new Map<string, { problem: Problem | null; ids: Set<string> }>();
+  for (const [date, { status, problem }] of dayStatusMemo.statusesOf(data.snapshots, compileInputOf(data), days)) {
+    const ids = new Set<string>();
+    for (const [id, issues] of status.issues) if (visitBandKind(issues)) ids.add(id);
+    out.set(date, { problem, ids });
+  }
+  return out;
+}
+
+/** その日たちの、帯の種類の訪問の ID（日付 → ID の集まり。dayBandOf の ID だけ） */
 export function bandIssueIds(
   data: CompileInput & Pick<DemoData, 'snapshots'>,
   days: readonly string[],
 ): Map<string, Set<string>> {
-  const out = new Map<string, Set<string>>();
-  for (const [date, { status }] of dayStatusMemo.statusesOf(data.snapshots, compileInputOf(data), days)) {
-    const ids = new Set<string>();
-    for (const [id, issues] of status.issues) if (visitBandKind(issues)) ids.add(id);
-    out.set(date, ids);
-  }
-  return out;
+  return new Map([...dayBandOf(data, days)].map(([date, { ids }]) => [date, ids]));
 }

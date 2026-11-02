@@ -1,7 +1,8 @@
 // 自動の組み（ADR-0072 第2段。PRD D372〜D376・D403・D405）の計算：欄の保存・要対応の帯の［要対応を組む］で、担当なしの訪問を自動で組む。
 // エキスパート機能が切なら、間に合わない・重なり・休みの人の訪問（帯の種類。lib/bandIssues）も担当・開始を組み直してよい対象にする（ADR-0089。
 // 伝えた日の訪問は除く。組み直しても要対応が減らない訪問は元の担当のまま）。
-// どれも純粋関数（DemoData を書き換えない・乱数と今の時刻を使わない。今日は引数、seed は data.seed）。
+// DemoData を書き換えず、乱数と今の時刻を使わない（今日は引数、seed は data.seed。同じ入力なら同じ結果）。ただし帯の種類の訪問（bandIssueIds）は
+// アプリで1つの日ごとの覚え（lib/dayStatuses の dayStatusMemo）から引くので、覚えを書き足す（結果は覚えの有無で変わらない）。
 // 組む範囲は今日（繰り返しの開始日が先ならその日）から翌月末まで。ほかの訪問の担当は（手でも AI でも標準でも）ピンと同じに固定して動かさず、伝えた日は組まない（expert 切は伝えた日も担当なしだけ埋める。skipsToldDays）。
 // 解く入れ物（Worker・キュー・反映の1手）は lib/autoArrangeBatch
 import type { DemoData } from '../contracts/data';
@@ -12,10 +13,11 @@ import { addDays, hhmmToMinutes } from '../domain/time';
 import { scheduleRoute } from '../matching';
 import { findVisit, putVisits, visitsOn } from '../patterns';
 import { defaultIterations } from '../solver';
+import { dayBandIssues } from './bandIssues';
 import { own } from './common';
 import { activeDayVisits, clockOf, dayProblemOf } from './dayPlan';
 import { bandIssueIds } from './dayStatuses';
-import { type DayInputs, proposalDayFresh } from './monthBatch';
+import { type DayInputs, dayInputsOf, proposalDayFresh } from './monthBatch';
 import { showConfirmStep } from './settledView';
 import { monthDates, ymOf } from './ym';
 
@@ -77,17 +79,16 @@ const NO_IDS: ReadonlySet<string> = new Set();
 const isTarget = (data: TargetData, v: Visit, today: string, issues: ReadonlySet<string>): boolean =>
   isFree(data, v, today) || (issues.has(v.id) && isMovable(data, v, today));
 
-/** range（今日より前は除く）の日ごとに、対象の訪問を集める（pick が真の訪問。対象が無い日は出さない） */
+/** days の日ごとに、対象の訪問を集める（pick が真の訪問。対象が無い日は出さない） */
 function collect(
   data: TargetData,
   today: string,
-  range: DateRange,
+  days: readonly string[],
   pick: (v: Visit) => boolean,
   issues: IssueIds = new Map(),
 ): AutoTarget[] {
   const out: AutoTarget[] = [];
-  const to = range.to;
-  for (let date = range.from > today ? range.from : today; date <= to; date = addDays(date, 1)) {
+  for (const date of days) {
     const here = issues.get(date) ?? NO_IDS;
     // 利用中でない人・休みの訪問は問題に入らないので除く
     const ids = activeDayVisits(data, date)
@@ -98,16 +99,32 @@ function collect(
   return out;
 }
 
-/** range の日（今日より前は除く） */
-function rangeDays(today: string, range: DateRange): string[] {
+/**
+ * range の日（今日より前は除く。日付の順）。range を省くと自動の組みの範囲（autoRange）＝要対応の帯が見る日（lib/attentionBand）。
+ * 日のリストはここの1か所で作る
+ */
+export function rangeDays(today: string, range: DateRange = autoRange(today)): string[] {
   const days: string[] = [];
   for (let date = range.from > today ? range.from : today; date <= range.to; date = addDays(date, 1)) days.push(date);
   return days;
 }
 
-/** 要対応の訪問も組み直すなら range の日ごとの帯の種類の訪問、組み直さないなら空 */
-const issuesIn = (data: DemoData, today: string, range: DateRange): IssueIds =>
-  rearrangesIssues(data) ? bandIssueIds(data, rangeDays(today, range)) : new Map();
+/** 要対応の訪問も組み直すなら days の日ごとの帯の種類の訪問、組み直さないなら空 */
+const issuesIn = (data: DemoData, days: readonly string[]): IssueIds =>
+  rearrangesIssues(data) ? bandIssueIds(data, days) : new Map();
+
+/**
+ * 保存で変わった日：range の日（今日より前は除く）のうち、その日の訪問（visitsOn。保存した回と計算した回）か、その日の問題の入力
+ * （欠勤・稼働時間・〈利用者さん〉の休み）が before と after で違う日
+ */
+export function changedDays(before: DemoData, after: DemoData, today: string, range: DateRange): string[] {
+  return rangeDays(today, range).filter((date) => {
+    const a = visitsOn(before, date);
+    const b = visitsOn(after, date);
+    if (a.length !== b.length || a.some((v, k) => v !== b[k])) return true;
+    return dayInputsOf(before, date).day !== dayInputsOf(after, date).day;
+  });
+}
 
 /**
  * 保存の前後で、自動で組む対象（PRD D373）：after の range の訪問のうち、before に同じ ID が無い（増えた）か日付・開始（早）・
@@ -119,7 +136,7 @@ export function autoTargets(
   today: string,
   range: DateRange,
 ): AutoTarget[] {
-  return collect(after, today, range, (v) => {
+  return collect(after, today, rangeDays(today, range), (v) => {
     const b = findVisit(before, v.id);
     return !b || b.date !== v.date || b.earliestStart !== v.earliestStart || b.latestStart !== v.latestStart;
   });
@@ -130,15 +147,18 @@ export function autoTargets(
  * エキスパート機能が切なら、帯の種類（間に合わない・重なり・休みの人）に当たる組み直してよい訪問（isMovable）。休み・利用中でない人の訪問は除く
  */
 export function bandTargets(data: DemoData, today: string, range: DateRange): AutoTarget[] {
-  return collect(data, today, range, () => true, issuesIn(data, today, range));
+  const days = rangeDays(today, range);
+  return collect(data, today, days, () => true, issuesIn(data, days));
 }
 
 /**
- * 保存のあとの自動の組みに足す対象（PRD D405。ADR-0089）：エキスパート機能が切なら、range の帯の種類（間に合わない・重なり・休みの人）に当たる
- * 組み直してよい担当のある訪問（isMovable）。前からある担当なしは入れない（拾うのは要対応の帯の［要対応を組む］。PRD D407）
+ * 保存のあとの自動の組みに足す対象（PRD D405。ADR-0089）：エキスパート機能が切なら、days（その保存で変わった日。changedDays）の
+ * 帯の種類（間に合わない・重なり・休みの人）に当たる組み直してよい担当のある訪問（isMovable）。前からある担当なしは入れない
+ * （拾うのは要対応の帯の［要対応を組む］。PRD D407）。変わっていない日の直せない要対応で、保存のたびに組みを走らせない
  */
-export function issueTargets(data: DemoData, today: string, range: DateRange): AutoTarget[] {
-  return collect(data, today, range, (v) => v.staffId !== null, issuesIn(data, today, range));
+export function issueTargets(data: DemoData, today: string, days: readonly string[]): AutoTarget[] {
+  const from = days.filter((d) => d >= today);
+  return collect(data, today, from, (v) => v.staffId !== null, issuesIn(data, from));
 }
 
 /** 2つの対象を日ごとにまとめる（同じ訪問は1つ。日付の順） */
@@ -189,7 +209,7 @@ export function autoDayPlan(data: DemoData, date: string, targetIds: readonly st
   if (skipsToldDays(data) && own(data.snapshots, date)) return null;
   const visits = visitsOn(data, date);
   const want = new Set(targetIds);
-  const issues = issuesIn(data, date, { from: date, to: date }).get(date) ?? NO_IDS;
+  const issues = issuesIn(data, [date]).get(date) ?? NO_IDS;
   const targets = visits.filter((v) => want.has(v.id) && isTarget(data, v, date, issues));
   if (targets.length === 0) return null;
   const free = new Set(targets.map((v) => v.id));
@@ -313,10 +333,49 @@ function usualStaffOf(data: DemoData, days: readonly { visits: readonly Visit[];
 }
 
 /**
- * その日の解いた担当・開始（対象の訪問だけ。訪問ID → 担当・開始）。対象が入った担当ごとに、解いた列を lenient で数え直し、
- * その担当の既存の訪問（担当のある訪問）がすべて列に残り、開始が保存した開始のままで、遅れ（時間の違反）も無いときだけ、
- * その担当への対象を書く。満たさなければその担当の対象は書かない（担当なしは担当なしのまま、要対応の担当のある訪問は元の担当・開始のまま。
- * ほかの担当の訪問の開始・並びを崩さない）。書いた対象は遅れの無い列に入るので、組み直した要対応は必ず減り、減らない訪問は元のまま（ADR-0089）
+ * 1人の列を確かめる：col（訪問の並び。早い順）を lenient で数え直し、遅れ（時間の違反）が無く、固めた訪問（fixed。担当のある訪問と、
+ * 書かずに元へ戻す訪問）がすべて開始が保存した開始のままのときだけ、各訪問の開始（分）を返す。満たさなければ null
+ */
+function checkColumn(
+  problem: Problem,
+  si: number,
+  col: readonly string[],
+  index: ReadonlyMap<string, number>,
+  fixed: ReadonlyMap<string, Visit>,
+): Map<string, number> | null {
+  const timing = scheduleRoute(
+    problem,
+    si,
+    col.map((id) => index.get(id)!),
+    'lenient',
+  );
+  if (!timing || timing.violations.length > 0) return null;
+  const at = new Map(timing.stops.map((x) => [x.visitId, x.start]));
+  for (const v of fixed.values()) {
+    const start = at.get(v.id);
+    if (start === undefined || (v.start !== null && Math.round(start) !== hhmmToMinutes(v.start))) return null;
+  }
+  return at;
+}
+
+/** 書かずに元の担当・開始へ戻す対象を、その開始（無ければ開始（早））で固めた問題（列の確かめに入れる） */
+function pinBack(problem: Problem, back: readonly Visit[], index: ReadonlyMap<string, number>): Problem {
+  if (back.length === 0) return problem;
+  const list = [...problem.visits];
+  for (const v of back) {
+    const j = index.get(v.id)!;
+    if (v.start !== null) list[j] = { ...list[j]!, earliest: hhmmToMinutes(v.start), latest: hhmmToMinutes(v.start) };
+  }
+  return { ...problem, visits: list };
+}
+
+/**
+ * その日の解いた担当・開始（対象の訪問だけ。訪問ID → 担当・開始）。対象が入った担当ごとに、その担当への対象を書くかを決める：
+ * 解いた列に、書かずに元の担当・開始へ戻す担当ありの対象（ほかの担当で書けなかった要対応の訪問）のうちその担当のものを開始の順に入れて
+ * lenient で数え直し、その担当の既存の訪問（担当のある訪問）と戻した訪問がすべて保存した開始のままで、遅れ（時間の違反）も無いときだけ書く。
+ * 満たさない担当への書き込みをやめると、その担当の列にあった担当ありの対象が元の担当へ戻るので、変わらなくなるまで繰り返す
+ * （書く担当は減る一方なので必ず止まる）。書かない対象は、担当なしは担当なしのまま、要対応の担当のある訪問は元の担当・開始のまま
+ * （ほかの担当の訪問の開始・並びを崩さない）。書いた列は遅れが無いので組み直した要対応は減り、減らない訪問は元のまま（ADR-0089）
  */
 function solvedOf(day: AutoDay): Solved {
   const out: Solved = new Map();
@@ -324,26 +383,84 @@ function solvedOf(day: AutoDay): Solved {
   if (!problem) return out;
   const target = new Set(day.targetIds);
   const index = new Map(problem.visits.map((v, j) => [v.id, j]));
-  problem.staff.forEach((st, si) => {
+  const columns = new Map<string, string[]>();
+  for (const st of problem.staff) {
     const column = (day.routes[st.id] ?? []).filter((id) => index.has(id));
-    if (!column.some((id) => target.has(id))) return;
-    const timing = scheduleRoute(
-      problem,
-      si,
-      column.map((id) => index.get(id)!),
-      'lenient',
+    if (column.some((id) => target.has(id))) columns.set(st.id, column);
+  }
+  /** 書く担当（初めは対象が入った担当すべて。確かめで落ちた担当を外していく） */
+  const writing = new Set(columns.keys());
+  let starts = new Map<string, Map<string, number>>();
+  for (let changed = true; changed; ) {
+    changed = false;
+    const written = new Set<string>();
+    for (const sid of writing) for (const id of columns.get(sid)!) if (target.has(id)) written.add(id);
+    // 書かない担当ありの対象は元の担当・開始へ戻る
+    const back = day.visits.filter(
+      (v) => target.has(v.id) && !written.has(v.id) && v.staffId !== null && index.has(v.id),
     );
-    if (!timing || timing.violations.length > 0) return;
-    const at = new Map(timing.stops.map((x) => [x.visitId, x.start]));
-    const held = day.visits.filter((v) => v.staffId === st.id && !target.has(v.id) && index.has(v.id));
-    const same = held.every((v) => {
-      const start = at.get(v.id);
-      return start !== undefined && (v.start === null || Math.round(start) === hhmmToMinutes(v.start));
-    });
-    if (!same) return;
-    for (const id of column) if (target.has(id)) out.set(id, { staffId: st.id, start: clockOf(at.get(id) ?? 0) });
-  });
+    const checked = pinBack(problem, back, index);
+    starts = new Map();
+    for (const sid of [...writing]) {
+      const si = problem.staff.findIndex((s) => s.id === sid);
+      const column = columns.get(sid)!;
+      const mine = back.filter((v) => v.staffId === sid);
+      const fixed = new Map<string, Visit>();
+      for (const v of day.visits)
+        if (v.staffId === sid && index.has(v.id) && (!target.has(v.id) || mine.includes(v))) fixed.set(v.id, v);
+      const at = checkColumn(checked, si, withBack(checked, si, column, index, mine), index, fixed);
+      if (at) starts.set(sid, at);
+      else {
+        writing.delete(sid);
+        changed = true;
+      }
+    }
+  }
+  for (const sid of writing) {
+    const at = starts.get(sid)!;
+    for (const id of columns.get(sid)!)
+      if (target.has(id)) out.set(id, { staffId: sid, start: clockOf(at.get(id) ?? 0) });
+  }
   return out;
+}
+
+/**
+ * 解いた列（column）に、戻した訪問（mine）を保存した開始（無ければ開始（早））の順に入れた並び。列の訪問の開始は lenient で数えた開始
+ * （遅れがあっても並べるのに使うだけ。遅れは checkColumn が見る）
+ */
+function withBack(
+  problem: Problem,
+  si: number,
+  column: readonly string[],
+  index: ReadonlyMap<string, number>,
+  mine: readonly Visit[],
+): string[] {
+  if (mine.length === 0) return [...column];
+  const timing = scheduleRoute(
+    problem,
+    si,
+    column.map((id) => index.get(id)!),
+    'lenient',
+  );
+  const at = new Map(timing?.stops.map((x) => [x.visitId, x.start]) ?? []);
+  const list = column.map((id) => ({ id, t: at.get(id) ?? 0 }));
+  for (const v of mine) list.push({ id: v.id, t: hhmmToMinutes(v.start ?? v.earliestStart) });
+  return list.sort((x, y) => x.t - y.t).map((x) => x.id);
+}
+
+/**
+ * 安全柵：その日の解いた担当・開始（here）を書くと、帯の種類の訪問（lib/bandIssues の dayBandIssues）の数が減るときだけそのまま返し、
+ * 減らない日は書かない（空）。列の確かめ（solvedOf）をすり抜けて要対応を増やす・減らさない書き込みを残さない（ADR-0089）
+ */
+function keepIfFewer(data: DemoData, day: AutoDay, here: Solved): Solved {
+  if (here.size === 0) return here;
+  const put: Visit[] = [];
+  for (const v of visitsOn(data, day.date)) {
+    const to = here.get(v.id);
+    if (to) put.push({ ...v, staffId: to.staffId, start: to.start, pinned: false });
+  }
+  const after = { ...data, visits: putVisits(data.visits, put) };
+  return dayBandIssues(after, day.date).size < dayBandIssues(data, day.date).size ? here : new Map();
 }
 
 /**
@@ -365,7 +482,7 @@ export function applyAutoArrange(data: DemoData, days: readonly AutoDay[], opts:
       continue;
     }
     appliedDays.push(day.date);
-    solved.set(day.date, solvedOf(day));
+    solved.set(day.date, keepIfFewer(data, day, solvedOf(day)));
   }
   const usual = opts.writeUsual
     ? usualStaffOf(

@@ -17,7 +17,7 @@
 //    （札は選ばない）、「連絡した」で今の担当・時刻が伝えた記録になり「変更あり」が消える（操作の行の［元に戻す］で戻る）
 //  8 週の予定の印を押すとその日の日の予定へ移り連絡の一覧が開く（URL の ?do=told・?date= は消える）
 //  9 月の予定：確定の段階（進み具合の帯の「確定」・右の欄の「確定していない日」・まとめて確定）が無い。マスに「変更あり」の印は出さず、
-//   押した日の右の欄の行の印から連絡の一覧へ（PRD D410）
+//   押した日の右の欄の行の印から連絡の一覧へ（PRD D410）。?do=unconfirmed は最初の要対応の日の予定へ移る（切は要対応の一覧が無い）
 // 10 エキスパート機能を入にすると確定（伝えた）の操作が出て、自動では伝えない（直しても snapshots は増えない）
 // 11 決まった日に訪問を足すと自動の組みが担当を付け、足した訪問は「変更あり」（伝えた記録は書き換えない）
 //
@@ -482,10 +482,15 @@ async function month(page) {
   await sheet(page).waitFor({ timeout: 15000 });
   const mh = new URL(page.url()).hash;
   check(/^#\/plan/.test(mh) && !/do=told|date=/.test(mh), '右の欄の行の印を押すと日の予定へ移り連絡の一覧が開く', mh);
+  // ?do=unconfirmed は切では要対応へ：要対応の一覧が無い（切）ので、月に要対応があれば最初の要対応の行き先（日の予定）へ移る
+  // （lib/useMonthAside の showAside）。月の右の欄は移る前の一瞬だけ描かれるので、それを待たず、移った先（日の予定）を待つ。
+  // この段の月は今日が「変更あり」（上で「要対応 N」の札を確かめた）なので、要対応は必ずある
   await page.goto('about:blank');
   await page.goto(`${BASE}#/month?do=unconfirmed`);
-  await page.getByTestId('month-aside').waitFor({ timeout: 60000 });
+  const toPlan = await until(async () => /^#\/plan/.test(hashOf(page)), 60000);
+  await page.getByTestId('sched-nav').waitFor({ timeout: 60000 });
   await settle(page, 400);
+  check(!!toPlan, '?do=unconfirmed は確定していない日の欄でなく、最初の要対応の日の予定へ移る', hashOf(page));
   check(
     (await page.getByTestId('month-unconfirmed').count()) === 0,
     '?do=unconfirmed でも確定していない日の欄は出ない（要対応へ）',

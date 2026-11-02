@@ -14,6 +14,7 @@ import './attentionBand.css';
  * 未確定・組み直し・標準が無いも足す）。無ければ出さない。右に［要対応を組む］（切で組める要対応の訪問があるとき。従のボタン）と［見に行く ›］。
  * 見に行くは、訪問の種類なら 間に合わない・重なり・休みの人 → 担当なし の並び（日付 → 開始）で、押すたびに次の1件のある日の予定を開き、
  * その訪問を選んで見える所へ巻く（担当なしは欄を開く。日の予定の usePlanNav）。2件目からは「n/N」と［‹ 前へ］（useBandStep。ADR-0089）。
+ * ［見に行く］の読み上げの名前は「次を見に行く」、位置「n/N」は aria-live（polite）で知らせる。
  * 日の予定でその日を見ているときも、移り直して同じことをする。入だけの種類は移る先が決まっている（lib/attentionBand の go）。印刷では出さない
  */
 export function AttentionBand() {
@@ -74,28 +75,30 @@ export function AttentionBand() {
           </button>
         )}
         {place && (
-          <>
-            <button
-              type="button"
-              className="attention-band-go"
-              onClick={() => void go(-1)}
-              aria-label={`前へ（${place.n}/${place.total}）`}
-              data-testid="attention-band-prev"
-            >
-              <ChevronLeft size={16} aria-hidden="true" />
-              前へ
-            </button>
+          <button
+            type="button"
+            className="attention-band-go"
+            onClick={() => void go(-1)}
+            data-testid="attention-band-prev"
+          >
+            <ChevronLeft size={16} aria-hidden="true" />
+            前へ
+          </button>
+        )}
+        {/* 位置「n/N」は読み上げに知らせる（入れ物は常に置き、中身だけ変える） */}
+        <span aria-live="polite" className="attention-band-live">
+          {place && (
             <span className="attention-band-place" data-testid="attention-band-place">
               {place.n}/{place.total}
             </span>
-          </>
-        )}
+          )}
+        </span>
         <button
           ref={goRef}
           type="button"
           className="attention-band-go"
           onClick={() => void go(1)}
-          aria-label={place ? `見に行く（${place.n}/${place.total}）` : undefined}
+          aria-label="次を見に行く"
           data-testid="attention-band-go"
         >
           見に行く

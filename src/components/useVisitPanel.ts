@@ -181,8 +181,7 @@ export function useVisitSave(p: {
       )
         return;
     }
-    // 自動の組みの依頼を出さない保存（担当なしをはっきり選んだ）は、組むのを待たずに決まった扱いにする（ADR-0073）
-    const action = write(r.data, isNew ? '訪問を追加' : '訪問を保存', staff === null ? { settleNow: true } : undefined);
+    const action = write(r.data, isNew ? '訪問を追加' : '訪問を保存');
     if (!action) {
       setError({ text: STALE });
       return;

@@ -138,6 +138,13 @@ describe('bandStep（順番に見に行く。PRD D403・ADR-0089）', () => {
     // 最後を見て消えたら、次は最初へ
     expect(bandStep(band([day(TODAY, { c: ['late'], b: ['late'] })]).visits, before[2]!, 1)?.visit.visitId).toBe('c');
   });
+  it('見た訪問が消えても、同じ日・同じ開始の別の訪問は飛ばさない', () => {
+    const v = (visitId: string, start: number): BandVisit => ({ date: TODAY, visitId, start, attend: true });
+    const x = v('x', 540);
+    const after = [v('y', 540), v('z', 630)]; // [X 9:00, Y 9:00, Z 10:30] から X が消えた
+    expect(bandStep(after, x, 1)?.visit.visitId).toBe('y');
+    expect(bandStep([v('w', 480), ...after], x, -1)?.visit.visitId).toBe('y');
+  });
 });
 
 describe('bandPlace（帯の「n/N」）', () => {

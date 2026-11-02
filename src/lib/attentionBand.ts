@@ -2,8 +2,7 @@
 // 日ごとの状態（lib/month の DayStatus。月の画面のマス・要対応と同じ数え方）から、目立たせる訪問だけを数える純粋関数。データは書き換えない。
 // 切の種類は 担当なし・間に合わない・重なり・休みの人（分け方は lib/bandIssues。ADR-0089）。エキスパート機能が入なら、そのあとに
 // 条件に合わない・拘束超・組み方の標準が無い・基本情報が変わった（組み直す）・未確定 N日 を足す
-import { addDays } from '../domain/time';
-import { autoRange } from './autoArrange';
+import { rangeDays } from './autoArrange';
 import { isBandIssue, type VisitBandKind, visitBandKind } from './bandIssues';
 import type { VisitIssue } from './dayPlan';
 import type { DayStatus } from './month';
@@ -41,13 +40,8 @@ export function exceptionStatus(s: DayStatus): DayStatus {
   return { ...s, issues, care: issues.size, needsCare: issues.size > 0, overSpan: [] };
 }
 
-/** 帯が見る日：今日から翌月末まで（自動の組みの範囲 autoRange と同じ。要対応の帯の「要対応を組む」と件数の範囲をそろえる） */
-export function bandDays(today: string): string[] {
-  const { from, to } = autoRange(today);
-  const days: string[] = [];
-  for (let d = from; d <= to; d = addDays(d, 1)) days.push(d);
-  return days;
-}
+/** 帯が見る日：今日から翌月末まで（自動の組みの範囲 autoRange の日＝lib/autoArrange の rangeDays。要対応の帯の「要対応を組む」と件数の範囲をそろえる） */
+export const bandDays = (today: string): string[] => rangeDays(today);
 
 /** 押したときに移る先：to は URL（クエリ付き）、date があれば移る前に選んでいる日付をその日にする、visitId があればその訪問を選んで見える所へ巻く（日の予定） */
 export type BandGo = { to: string; date?: string; visitId?: string };
@@ -177,7 +171,8 @@ export const visitTo = (v: BandVisit): BandGo => ({ to: '/plan', date: v.date, v
 /**
  * 順番に見に行く（PRD D403。ADR-0089）：今の帯の訪問の並び（list。押したときの帯から作り直したもの）で、最後に見た訪問（seen）の
  * 次（dir=1）か前（dir=-1）の1件と、その位置（0 から）。まだ見ていなければ次は最初・前は最後。最後の次は最初、最初の前は最後へ。
- * 見た訪問が直して消えていれば、並びの同じ位置（種類の組・日付・開始）から次・前を探す（消えた訪問は飛ばす）。並びが空なら null
+ * 見た訪問が直して消えていれば、並びの同じ位置（種類の組・日付・開始）から次・前を探す（消えた訪問は飛ばす。同じ日・同じ開始の別の訪問は
+ * 飛ばさず、次ならその最初・前ならその最後）。並びが空なら null
  */
 export function bandStep(
   list: readonly BandVisit[],
@@ -192,12 +187,12 @@ export function bandStep(
     const at = list.findIndex((v) => v.visitId === seen.visitId);
     if (at >= 0) index = (at + dir + n) % n;
     else if (dir === 1) {
-      const next = list.findIndex((v) => bandVisitOrder(v, seen) > 0);
+      const next = list.findIndex((v) => bandVisitOrder(v, seen) >= 0);
       index = next >= 0 ? next : 0;
     } else {
       let prev = n - 1;
       for (let i = n - 1; i >= 0; i--)
-        if (bandVisitOrder(list[i]!, seen) < 0) {
+        if (bandVisitOrder(list[i]!, seen) <= 0) {
           prev = i;
           break;
         }

@@ -28,10 +28,9 @@ import { arrangePending, clearArrangePending } from './start';
  * update の扱い：history が false なら履歴に積まず履歴を捨てる（戻せない操作）。group を渡すと、同じ group の続けての update を
  * 1手にまとめる（1回の操作で何度も書くとき。住所をまとめて探すなど）。tell が false なら、エキスパート機能が切のときの
  * 「決まった予定」の自動の伝えた記録（lib/settled の autoTell。ADR-0073）を付けない（名簿の読み込み・古い記録を消すなど、
- * 予定を直す操作ではない update）。settleNow が true なら、自動の組みの依頼が出る訪問（今回増えた・日時が変わった担当なし）があっても待たずに
- * 記録する（依頼を出さない保存・まとめて直すなど。待ちが終わらないため）
+ * 予定を直す操作ではない update）
  */
-export type UpdateOptions = { history?: boolean; group?: object; tell?: false; settleNow?: true };
+export type UpdateOptions = { history?: boolean; group?: object; tell?: false };
 
 export type DemoStore = {
   data: DemoData;
@@ -95,7 +94,7 @@ export type DemoStore = {
   /** 保存の容量が足りず1世代の控えを捨てた回数（画面が知らせを出すきっかけ。ADR-0032） */
   previousDrops: number;
   /**
-   * デモを作った直後に担当なしを1回自動で組む依頼の印（PRD D409。ADR-0079。「デモで試す」で始めた・初期状態に戻した直後。無ければ null）。
+   * デモを作った直後に要対応を1回自動で組む依頼の印（PRD D409。ADR-0079。「デモで試す」で始めた・初期状態に戻した直後。無ければ null）。
    * 印の元は sessionStorage（store/start の ARRANGE_PENDING_KEY）で、起動時にも読む（例外の画面から戻して読み直しても組む）。
    * 受けた画面（components/autoArrangeHost）は組む依頼を出して takeStartArrange で消す（sessionStorage の印も消す）
    */

@@ -45,7 +45,3 @@ export function dayBandIssues(data: CompileInput, date: string, problem?: Proble
   }
   return out;
 }
-
-/** 帯の種類の訪問が残る日か（自動の伝えた記録を付けない日。PRD D382・ADR-0089） */
-export const hasBandIssues = (data: CompileInput, date: string, problem?: Problem | null): boolean =>
-  dayBandIssues(data, date, problem).size > 0;

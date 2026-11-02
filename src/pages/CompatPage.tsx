@@ -38,7 +38,8 @@ export default function CompatPage() {
     [],
   );
   const close = useCallback(() => setOpened(null), []);
-  const isOpen = (kind: CompatOpenKind, id: string) => opened?.kind === kind && opened.id === id;
+  const isOpen = (kind: CompatOpenKind, id: string, sid?: string) =>
+    opened?.kind === kind && opened.id === id && (sid === undefined || opened.sid === sid);
   const popId = (kind: CompatOpenKind, id: string) => `${uid}-${kind}-${id}`;
   const cellAnchorId = `${uid}-cell`;
 

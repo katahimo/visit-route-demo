@@ -305,11 +305,16 @@ describe('createAutoArrange（自動の組みの入れ物。ADR-0072）', () => 
 
 describe('知らせ・帯の文', () => {
   it('件数があれば「N件の担当を組みました」、無ければ〈スタッフ〉の呼び方で「組める…がいませんでした」', () => {
-    const d = { written: 4, appliedDays: 2, skippedDays: 0, error: null };
+    const d = { written: 4, appliedDays: 2, skippedDays: 0, error: null, staffedOnly: false };
     expect(autoDoneText(d, 'スタッフ')).toBe('4件の担当を組みました');
     expect(autoDoneText({ ...d, written: 0 }, 'シッター')).toBe('組めるシッターがいませんでした。担当なしのまま');
     expect(autoDoneText({ ...d, skippedDays: 1 }, 'スタッフ')).toContain('変わった日は組んでいません');
     expect(autoDoneText({ ...d, error: '失敗' }, 'スタッフ')).toContain('失敗');
+  });
+  it('対象がすべて担当のある訪問（要対応の組み直しだけ）で何も書かなかったときは知らせない', () => {
+    const d = { written: 0, appliedDays: 1, skippedDays: 0, error: null, staffedOnly: true };
+    expect(autoDoneText(d, 'スタッフ')).toBeNull();
+    expect(autoDoneText({ ...d, written: 2 }, 'スタッフ')).toBe('2件の担当を組みました');
   });
   it('進み具合の帯の文', () => {
     expect(autoBandText({ index: 2, total: 10, waiting: 0 })).toBe('担当を自動で組んでいます 3/10日');

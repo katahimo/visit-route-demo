@@ -26,6 +26,8 @@ const CompatRow = memo(function CompatRow({
   row,
   open,
   popId,
+  openSid,
+  cellPopId,
   activeCol,
   activeId,
 }: {
@@ -37,6 +39,10 @@ const CompatRow = memo(function CompatRow({
   open: boolean;
   /** 名前の吹き出しの id（名前の欄の id は `${popId}-btn`） */
   popId: string;
+  /** 相性を選ぶ欄が開いているマスの〈スタッフ〉（この行に無ければ null） */
+  openSid: string | null;
+  /** この行のマスの相性を選ぶ欄の id */
+  cellPopId: string;
   /** この行で Tab の止まり所になる列（−1＝名前。null＝この行には無い） */
   activeCol: number | null;
   /** 止まり所のマスの id（相性を選ぶ欄をそこに出す） */
@@ -68,7 +74,9 @@ const CompatRow = memo(function CompatRow({
       {cols.map((s, j) => {
         const l = compatLevelOf(row, s.id);
         const active = activeCol === j;
+        const expanded = openSid === s.id;
         return (
+          // biome-ignore lint/a11y/useAriaPropsSupportedByRole: role="grid" の表のマス（gridcell）は aria-expanded を持てる（相性を選ぶ欄の開け閉め）
           <td
             key={s.id}
             id={active ? activeId : undefined}
@@ -77,6 +85,8 @@ const CompatRow = memo(function CompatRow({
             title={`${c.displayName} × ${s.name}：${COMPAT_MEANING[l]}（押すと選べます）`}
             aria-label={`${c.displayName}と${s.name}の相性：${COMPAT_MEANING[l]}`}
             aria-haspopup="dialog"
+            aria-expanded={expanded}
+            aria-controls={expanded ? cellPopId : undefined}
             data-kind="cell"
             data-testid="compat-cell"
             data-sid={s.id}
@@ -201,7 +211,8 @@ export function CompatTable({
   /** 行 */
   clients: readonly Client[];
   compat: Compat;
-  isOpen: (kind: CompatOpenKind, id: string) => boolean;
+  /** 開いているか（sid を渡すとマスの〈スタッフ〉まで見る） */
+  isOpen: (kind: CompatOpenKind, id: string, sid?: string) => boolean;
   /** 吹き出しの id（見出し・名前の欄の id は `${popId}-btn`） */
   popId: (kind: CompatOpenKind, id: string) => string;
   /** 止まり所のマスの id（相性を選ぶ欄の位置とフォーカスの戻り先） */
@@ -298,6 +309,8 @@ export function CompatTable({
               row={Object.hasOwn(compat, c.id) ? compat[c.id] : undefined}
               open={isOpen('client', c.id)}
               popId={popId('client', c.id)}
+              openSid={isOpen('cell', c.id) ? (staff.find((s) => isOpen('cell', c.id, s.id))?.id ?? null) : null}
+              cellPopId={popId('cell', c.id)}
               activeCol={at.row === i ? at.col : null}
               activeId={cellAnchorId}
             />

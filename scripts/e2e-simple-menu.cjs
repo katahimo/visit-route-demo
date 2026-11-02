@@ -4,7 +4,7 @@
 // 2 左のメニューは 予定・空き状況・〈利用者さん〉・〈スタッフ〉・設定 の5つ（見出し・子の項目なし。今の画面の印・押して移る）。コマンドパレットの画面にホームが無い、
 // 3 予定（月・週・日）の上に要対応の帯（担当なし N件…。箱で、右に［要対応を組む］（従のボタン。押したあとは e2e-basic-auto）と［見に行く ›］。
 //   見に行くは間に合わない・重なり・休みの人の訪問を先に、無ければ担当なし。日の予定で今日を見たまま押しても変わる）。月・週・日のどれにも出る。訪問が無ければ出さない、
-// 3d 順番に見に行く（PRD D403。ADR-0089）：押すたびに次の訪問へ進み、2件目から「n/N」と［‹ 前へ］（読み上げの名前に n/N）。前へで1つ戻り、
+// 3d 順番に見に行く（PRD D403。ADR-0089）：押すたびに次の訪問へ進み、2件目から「n/N」（aria-live で知らせる）と［‹ 前へ］（読み上げの名前は「次を見に行く」）。前へで1つ戻り、
 //   最初の前は最後（N/N）、最後の次は最初（1/N）、
 // 3c 来月の確認（PRD D413）：ページの時計を今月の19日・25日に止め直す。19日は出さず、25日は帯の下に「〈来月〉の予定 N件はできています」＋要対応の数・
 //   ［〈来月〉を見る ›］（月の予定の来月）・［×］（消えて読み直しても出さない。端末に覚え、データに入れない）。390px で収まる、
@@ -236,7 +236,7 @@ async function bandGoOnDay(page) {
 
 /**
  * 3d 順番に見に行く（PRD D403。ADR-0089）：［見に行く ›］を押すたびに帯の並びの次の訪問へ。2件目から「n/N」と［‹ 前へ］を出し、
- * 前へで1つ戻る。最初の前は最後、最後の次は最初へ。見に行くの読み上げの名前に「n/N」を含める。読み直すと最初から（保存しない）
+ * 前へで1つ戻る。最初の前は最後、最後の次は最初へ。見に行くの読み上げの名前は「次を見に行く」、「n/N」は aria-live で知らせる。読み直すと最初から（保存しない）
  */
 async function bandOrder(page) {
   await page.goto('about:blank');
@@ -272,7 +272,11 @@ async function bandOrder(page) {
   check(m?.[1] === '2' && total >= 2, '2件目から帯に「2/N」', second.place);
   check((await page.getByTestId('attention-band-prev').count()) === 1, '2件目から［‹ 前へ］を出す');
   const label = await page.getByTestId('attention-band-go').getAttribute('aria-label');
-  check(label === `見に行く（2/${total}）`, '見に行くの読み上げの名前に「n/N」を含める', label);
+  check(label === '次を見に行く', '見に行くの読み上げの名前は「次を見に行く」', label);
+  const live = await page
+    .getByTestId('attention-band-place')
+    .evaluate((e) => e.closest('[aria-live]')?.getAttribute('aria-live') ?? null);
+  check(live === 'polite', '位置「n/N」は aria-live="polite" で知らせる', live);
   const back = await press('attention-band-prev');
   check(back.id === first.id && back.place === `1/${total}`, '［‹ 前へ］で1つ前の訪問へ戻る（1/N）', back);
   const last = await press('attention-band-prev');

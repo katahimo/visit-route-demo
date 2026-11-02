@@ -1,4 +1,5 @@
-// 決まった予定（ADR-0073。PRD D382）：expert 切のとき、visits が変わった日（今日〜1か月先）に自動で伝えた記録を付ける
+// 決まった予定（ADR-0073。PRD D382）：expert 切のとき、visits が変わった日と、訪問を変えない直しで要対応が消えた日（今日〜1か月先）に
+// 自動で伝えた記録を付ける
 import { describe, expect, it } from 'vitest';
 import type { DemoData } from '../contracts/data';
 import { addDays } from '../domain/time';
@@ -64,6 +65,27 @@ describe('autoTell', () => {
     // features に expert の記載が無い（既定は入）ときも
     const none = makeData({ ...before, org: { ...before.org, features: {} } });
     expect(autoTell(none, { ...none, visits: after.visits }, TODAY, AT).snapshots).toEqual({});
+  });
+  it('visits が変わらない直し（欠勤を消すなど）で帯の種類が無くなった日は付ける。要対応が変わらない日・前から無い日は付けない（ADR-0089）', () => {
+    const absence = {
+      id: 'ab1',
+      staffId: 's1',
+      date: DATE,
+      from: null,
+      to: null,
+      note: '',
+    } as DemoData['absences'][number];
+    const off = base({
+      visits: [fixed('a', '09:00', { staffId: 's1' }), fixed('b', '11:00', { staffId: 's2' })],
+      absences: [absence],
+    });
+    // s1 が欠勤の日に s1 の訪問＝休みの人。欠勤を消すと要対応が無くなり、その操作で付く
+    expect(autoTell(off, { ...off, absences: [] }, TODAY, AT).snapshots[DATE]).toMatchObject({ at: AT });
+    // 要対応が残るままの直し（名前だけ変える）は付けない
+    expect(autoTell(off, { ...off, staff: off.staff.map((x) => ({ ...x })) }, TODAY, AT).snapshots).toEqual({});
+    // 前から要対応の無い日は、訪問の外の直しでは付けない（直した日ではない）
+    const clean = { ...off, absences: [] };
+    expect(autoTell(clean, { ...clean, staff: [...clean.staff] }, TODAY, AT).snapshots).toEqual({});
   });
   it('visits が変わらない操作（visits の外だけ・同じ中身の作り直し）は記録しない', () => {
     const before = base();
@@ -154,7 +176,7 @@ describe('autoTell', () => {
   });
 });
 
-describe('待ちの条件（自動の組みの依頼が出る訪問だけ待つ）', () => {
+describe('担当なしが残る日（自動の組みを待つ日）は付けない', () => {
   it('担当を外した（担当なしの列へ）日は、担当なしが残るので付けない（ADR-0089）', () => {
     const before = base({ visits: [fixed('a', '09:00', { staffId: 's1' }), fixed('b', '11:00', { staffId: 's2' })] });
     const none = {
@@ -163,13 +185,12 @@ describe('待ちの条件（自動の組みの依頼が出る訪問だけ待つ�
     };
     expect(autoTell(before, none, TODAY, AT).snapshots[DATE]).toBeUndefined();
   });
-  it('別の日へ移した担当なしの訪問は待つ。依頼を出さない保存（wait:false）でも担当なしが残る日は付けない', () => {
+  it('別の日へ移した担当なしの訪問の日は、担当なしが残るので付けない（元の日は付く）', () => {
     const before = base({ visits: [fixed('a', '09:00', { staffId: 's1' }), fixed('b', '11:00')] });
     const day = addDays(TODAY, 1);
     const moved = { ...before, visits: putVisits(before.visits, [{ ...before.visits[1]!, date: day }]) };
     // 元の日（a だけ残る）は付き、移した先は付かない
     expect(Object.keys(autoTell(before, moved, TODAY, AT).snapshots)).toEqual([TODAY]);
-    expect(Object.keys(autoTell(before, moved, TODAY, AT, { wait: false }).snapshots)).toEqual([TODAY]);
   });
 });
 

@@ -12,6 +12,7 @@ import {
   autoRange,
   autoSolveOptions,
   bandTargets,
+  changedDays,
   isMovable,
   issueTargets,
   mergeTargets,
@@ -65,7 +66,7 @@ describe('要対応の訪問の組み直し（ADR-0089）', () => {
     // 問題の無い担当のある訪問は入らない
     expect(t[0]?.ids).not.toContain(`${TODAY}_c14`);
     // 保存のあとに足す対象（issueTargets）は担当のある要対応だけ（前からの担当なしは入れない）
-    expect(issueTargets(late, TODAY, { from: TODAY, to: TODAY })).toEqual([{ date: TODAY, ids: [C1] }]);
+    expect(issueTargets(late, TODAY, [TODAY])).toEqual([{ date: TODAY, ids: [C1] }]);
   });
 
   it('間に合わない訪問は組み直されて要対応が減り、問題の無い訪問は動かない', () => {
@@ -99,6 +100,43 @@ describe('要対応の訪問の組み直し（ADR-0089）', () => {
     expect(dayBandIssues(r.data, TODAY).get(target!)).toBeUndefined();
   });
 
+  it('書かずに元の担当へ戻した要対応の訪問も元の列で確かめ、違反が出る担当へは書かない（重なりを増やさない）', () => {
+    // c1 を s2 にすると重なり1件。c12 を 10:00〜10:20 の10分にして担当なしで足す
+    const base = withC1({ staffId: 's2' });
+    const c12 = visitsOn(base, TODAY).find((v) => v.id === `${TODAY}_c12`)!;
+    const d = {
+      ...base,
+      visits: putVisits(base.visits, [{ ...c12, earliestStart: '10:00', latestStart: '10:20', durationMinutes: 10 }]),
+    };
+    const before = dayBandIssues(d, TODAY);
+    expect(before.get(C1)).toBe('overlap');
+    const plan = autoDayPlan(d, TODAY, [C1, c12.id])!;
+    expect(plan.targetIds).toEqual([C1, c12.id]);
+    // 解いた結果を作る：c1 は s5 の先頭（s5 の訪問と重なって書けない）、c12 は s2 の c5 の前（c1 を s2 に戻すと重なる）
+    const routes: Record<string, string[]> = {};
+    for (const s of plan.problem.staff)
+      routes[s.id] = plan.visits
+        .filter((v) => v.staffId === s.id && !plan.targetIds.includes(v.id) && !v.cancelled)
+        .map((v) => v.id);
+    routes.s5 = [C1, ...(routes.s5 ?? [])];
+    const s2 = routes.s2!;
+    s2.splice(s2.indexOf(`${TODAY}_c5`), 0, c12.id);
+    const day: AutoDay = {
+      date: TODAY,
+      problem: plan.problem,
+      visits: plan.visits,
+      inputs: dayInputsOf(d, TODAY),
+      routes,
+      targetIds: plan.targetIds,
+    };
+    const r = applyAutoArrange(d, [day], { writeUsual: false, rangeTo: TODAY });
+    expect(r.written).toBe(0);
+    expect(findVisit(r.data, c12.id)?.staffId).toBeNull();
+    expect(findVisit(r.data, C1)).toEqual(findVisit(d, C1));
+    const after = [...dayBandIssues(r.data, TODAY)].filter(([, k]) => k === 'overlap');
+    expect(after).toEqual([[C1, 'overlap']]);
+  });
+
   it('伝えた日の訪問は動かさない（担当なしは今までどおり埋める）。ピンの訪問・エキスパート入も動かさない', () => {
     const told = { ...late, snapshots: { [TODAY]: { date: TODAY, at: 0, visits: [] } } };
     const v = findVisit(told, C1)!;
@@ -111,6 +149,21 @@ describe('要対応の訪問の組み直し（ADR-0089）', () => {
     expect(rearrangesIssues(expert)).toBe(false);
     expect(bandTargets(expert, TODAY, { from: TODAY, to: TODAY })[0]?.ids ?? []).not.toContain(C1);
     expect(autoDayPlan(expert, TODAY, [C1])).toBeNull();
+  });
+
+  it('changedDays：保存で訪問か問題の入力が変わった日だけ（保存のあとに足す要対応はその日だけ）', () => {
+    const range = { from: TODAY, to: '2026-10-25' };
+    expect(changedDays(late, late, TODAY, range)).toEqual([]);
+    const c = visitsOn(late, '2026-10-23')[0]!;
+    const moved = { ...late, visits: putVisits(late.visits, [{ ...c, earliestStart: '07:00', latestStart: '07:00' }]) };
+    expect(changedDays(late, moved, TODAY, range)).toEqual(['2026-10-23']);
+    const absence = { id: 'ab-x', staffId: 's1', date: '2026-10-24', from: null, to: null, note: '' };
+    const off = { ...late, absences: [...late.absences, absence] } as DemoData;
+    expect(changedDays(late, off, TODAY, range)).toEqual(['2026-10-24']);
+    // 今日の c1 の間に合わないは、今日が変わっていなければ足さない
+    const dates = issueTargets(moved, TODAY, changedDays(late, moved, TODAY, range)).map((t) => t.date);
+    expect(dates).not.toContain(TODAY);
+    expect(issueTargets(moved, TODAY, [TODAY])[0]?.ids).toContain(C1);
   });
 
   it('mergeTargets：日ごとにまとめ、同じ訪問は1つ・日付の順', () => {
