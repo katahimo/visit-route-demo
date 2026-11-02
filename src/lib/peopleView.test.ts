@@ -17,7 +17,6 @@ import {
   newClientShowsStage,
   peopleIntro,
   shiftText,
-  showCompatWeightNote,
   showStageNote,
   splitFolded,
   staffColumns,
@@ -155,10 +154,8 @@ describe('短い文', () => {
 });
 
 describe('相性の画面の説明', () => {
-  it('切は点（点数）・条件の重みを言わない。入は今のまま', () => {
-    expect(compatHintLabel(true)).toBe('相性のしくみ');
+  it('切は説明を出さない（点・条件の重みを言わない）。入は「点のしくみ」', () => {
+    expect(compatHintLabel(true)).toBeNull();
     expect(compatHintLabel(false)).toBe('点のしくみ');
-    expect(showCompatWeightNote(true)).toBe(false);
-    expect(showCompatWeightNote(false)).toBe(true);
   });
 });

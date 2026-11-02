@@ -173,7 +173,7 @@ export function whoOf(p: PlanCtx, id: string, sid: string | null, withClient = t
  */
 export function tagsOf(p: PlanCtx, id: string, pinHint = true) {
   const { pins, staffName, hardOf, toldMarks, running, reassignMarks, leftById, unpin, only } = bv(p);
-  // 例外だけ見せる（切）：ピン・条件に合わない印は出さない（担当なし・重なり・休みの人と「変更あり」だけ目立たせる）
+  // 例外だけ見せる（切）：ピン・条件に合わない印は出さない（担当なし・間に合わない・重なり・休みの人と「変更あり」だけ目立たせる）
   const pin = only ? undefined : own(pins, id);
   const hard = only ? undefined : hardOf.get(id);
   const subFrom = reassignMarks.substitute.get(id);

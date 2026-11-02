@@ -5,7 +5,7 @@ import { addDays } from '../domain/time';
 import { putVisits, visitsOn } from '../patterns';
 import { createDemoData } from '../seed';
 import { defaultIterations } from '../solver';
-import { autoDayPlan, autoRange, autoSolveOptions, autoTargets, targetCount, unassignedTargets } from './autoArrange';
+import { autoDayPlan, autoRange, autoSolveOptions, autoTargets, bandTargets, targetCount } from './autoArrange';
 
 const TODAY = '2026-10-21';
 const RANGE = autoRange(TODAY);
@@ -121,10 +121,10 @@ describe('autoTargets（増えた・日時が変わった担当なしの訪問�
   });
 });
 
-describe('unassignedTargets（ホームの取りこぼし）', () => {
+describe('bandTargets（要対応の帯の［要対応を組む］の対象）', () => {
   it('範囲の担当なし・ピンなし・伝えていない・今日以降の訪問すべて。数も数える', () => {
     const d = unassigned();
-    const t = unassignedTargets(d, TODAY, RANGE);
+    const t = bandTargets(d, TODAY, RANGE);
     expect(dates(t)[0]).toBe(TODAY);
     expect(targetCount(t)).toBe(ids(t).length);
     const first = t[0]!;
@@ -138,23 +138,25 @@ describe('unassignedTargets（ホームの取りこぼし）', () => {
       org: { ...d.org, features: { expert: true } },
       snapshots: { [TODAY]: { date: TODAY, at: 0, visits: [] } },
     };
-    expect(dates(unassignedTargets(told, TODAY, RANGE))).not.toContain(TODAY);
+    expect(dates(bandTargets(told, TODAY, RANGE))).not.toContain(TODAY);
   });
 
-  it('担当のある訪問・利用中でない人の訪問・休みの訪問は入らない', () => {
+  it('担当のある訪問（入は全部・切は帯の種類に当たらないもの）・利用中でない人の訪問・休みの訪問は入らない', () => {
     const d0 = unassigned();
     const d = { ...d0, patterns: d0.patterns.map((p) => ({ ...p, usualStaffId: 's3' })) };
-    expect(targetCount(unassignedTargets(d, TODAY, RANGE))).toBe(0);
+    const expert = { ...d, org: { ...d.org, features: { expert: true } } };
+    expect(targetCount(bandTargets(expert, TODAY, RANGE))).toBe(0);
+    // 切：全部 s3 にすると重なる回が帯の種類（重なり）になり、それだけが入る（ADR-0089）
+    const today = bandTargets(d, TODAY, { from: TODAY, to: TODAY });
+    const all = visitsOn(d, TODAY).filter((v) => !v.cancelled);
+    expect(targetCount(today)).toBeGreaterThan(0);
+    expect(targetCount(today)).toBeLessThan(all.length);
     const u = unassigned();
     const c = u.clients[0]!;
     const stopped = { ...u, clients: u.clients.map((x) => (x.id === c.id ? { ...x, active: false } : x)) };
-    expect(targetCount(unassignedTargets(stopped, TODAY, RANGE))).toBeLessThan(
-      targetCount(unassignedTargets(u, TODAY, RANGE)),
-    );
+    expect(targetCount(bandTargets(stopped, TODAY, RANGE))).toBeLessThan(targetCount(bandTargets(u, TODAY, RANGE)));
     const leave = { ...u, clientLeaves: [{ id: 'l1', clientId: c.id, from: TODAY, to: RANGE.to, note: '' }] };
-    expect(targetCount(unassignedTargets(leave, TODAY, RANGE))).toBeLessThan(
-      targetCount(unassignedTargets(u, TODAY, RANGE)),
-    );
+    expect(targetCount(bandTargets(leave, TODAY, RANGE))).toBeLessThan(targetCount(bandTargets(u, TODAY, RANGE)));
   });
 });
 
@@ -204,7 +206,7 @@ describe('autoDayPlan（1日の問題）', () => {
     const plan = autoDayPlan(settled, TODAY, [`${TODAY}_pn`]);
     expect(plan).not.toBeNull();
     expect(plan!.targetIds).toEqual([`${TODAY}_pn`]);
-    expect(dates(unassignedTargets(settled, TODAY, RANGE))).toContain(TODAY);
+    expect(dates(bandTargets(settled, TODAY, RANGE))).toContain(TODAY);
     // 担当のスタッフがいなければ問題にならない
     const none = { ...d, staff: d.staff.map((s) => ({ ...s, active: false })) };
     expect(autoDayPlan(none, TODAY, [`${TODAY}_pn`])).toBeNull();

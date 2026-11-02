@@ -1,6 +1,6 @@
 // ホームは無い・要対応の帯（PRD D401・D404）を本物のブラウザで確かめる（エキスパート機能が入）：
 // 起動（#/・#/home・知らない URL）で予定の画面（繰り返しを使うなら月）へ移りホームの画面は出ない・ほかの画面の URL（人の画面など）はそのまま・
-// #/schedule は日の予定へ、予定の上の帯（担当なし・重なり・休みの人のほか 組み方の標準が無い・基本情報が変わった（組み直す）・
+// #/schedule は日の予定へ、予定の上の帯（担当なし・間に合わない・重なり・休みの人のほか 組み方の標準が無い・基本情報が変わった（組み直す）・
 // 未確定 N日。文の並び・数・押した先（並びの先頭の種類：標準が無い→組み方の標準、組み直し→担当を組む、未確定は1日だけならその日の日の予定・
 // 2日以上なら月の右の欄）・無ければ出さない）、
 // 初期データ（保存した訪問は空で、今日からの日は繰り返しの担当のまま・まだ伝えていない）、月の画面の ?do=attention・?do=unconfirmed で右の欄、
@@ -138,7 +138,15 @@ async function band(page) {
     '標準が無い初期データ：「組み方の標準が無い」と「未確定 N日」も出る',
     text,
   );
-  const order = ['担当なし', '重なり', '休みの人', '組み方の標準が無い', '基本情報が変わった', '未確定'];
+  const order = [
+    '担当なし',
+    '間に合わない',
+    '重なり',
+    '休みの人',
+    '組み方の標準が無い',
+    '基本情報が変わった',
+    '未確定',
+  ];
   const at = order.map((k) => text.indexOf(k)).filter((i) => i >= 0);
   check(
     at.every((i, n) => n === 0 || at[n - 1] < i),
@@ -155,7 +163,7 @@ async function band(page) {
     check(await bandShown(page, 30000), `${to}：要対応の帯が出る`);
   }
   await page.screenshot({ path: path.join(OUT_DIR, 'band-first-1366.png') });
-  // ［見に行く ›］を押す → 日の予定でその訪問（重なり・休みの人があればそれ、無ければ担当なし）へ（PRD D403）
+  // ［見に行く ›］を押す → 日の予定でその訪問（間に合わない・重なり・休みの人があればそれ、無ければ担当なし）へ（PRD D403）
   await open(page, `/month?ym=${YM}`);
   await page.getByTestId('attention-band').waitFor({ timeout: 30000 });
   await until(async () => /担当なし \d+件/.test((await bandText(page)) ?? ''), 60000);
@@ -280,8 +288,8 @@ async function seedPlans(page) {
       version: d0.version,
       snapshots: Object.keys(d0.snapshots).filter((x) => x >= TODAY).length,
       past: Object.keys(d0.snapshots).filter((x) => x < TODAY).length,
-      saved: d0.visits.filter((v) => SEED_DAYS.includes(v.date) && !v.cancelled).length,
-      visitsAll: d0.visits.length,
+      // 保存した回は、繰り返しの担当がその日に担当できない回の担当なしだけ（PRD D322）
+      assigned: d0.visits.filter((v) => v.staffId !== null || v.start !== null || v.pinned).length,
       usual: d0.patterns.filter((x) => x.usualStaffId).length,
       patterns: d0.patterns.length,
       old: ['aiPlans', 'manualPlans', 'aiRuns'].filter((x) => x in d0),
@@ -291,10 +299,9 @@ async function seedPlans(page) {
         info.snapshots === 0 &&
         info.past > 0 &&
         info.old.length === 0 &&
-        info.saved === 0 &&
-        info.visitsAll === 0 &&
+        info.assigned === 0 &&
         info.usual >= info.patterns * 0.5,
-      '初期データ：保存した訪問は空（AI で組まない）で、今日からは繰り返しの担当のまま（計算した回）。過去の日は伝えた状態・今日からは伝えていない',
+      '初期データ：担当の入った保存した訪問は無く（AI で組まない）、今日からは繰り返しの担当のまま（計算した回。担当できない回だけ担当なし）。過去の日は伝えた状態・今日からは伝えていない',
       info,
     );
     await p.screenshot({ path: path.join(OUT_DIR, 'month-first-run-1440.png'), fullPage: true });
@@ -506,7 +513,7 @@ async function handledAbsence(page) {
     band: after.band,
     rows: after.rows.length,
   });
-  // 要対応の帯の文（担当なし・重なり・休みの人の数）も変わらない
+  // 要対応の帯の文（担当なし・間に合わない・重なり・休みの人の数）も変わらない
   await open(page, `/month?ym=${ym}`);
   await page.getByTestId('attention-band').waitFor({ timeout: 30000 });
   const same = await until(async () => {

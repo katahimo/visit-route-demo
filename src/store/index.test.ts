@@ -118,8 +118,8 @@ describe('load・save', () => {
     const d = load();
     expect(d.version).toBe(DATA_VERSION);
     expect(mem.has(STORAGE_KEY)).toBe(true);
-    // 今日からの日は AI で組まない（繰り返しの担当のまま。保存した回は無い。PRD D322。ADR-0064）
-    expect(d.visits).toEqual([]);
+    // 今日からの日は AI で組まない（繰り返しの担当のまま。保存した回はその日に担当できない回の担当なしだけ。PRD D322。ADR-0064）
+    expect(d.visits.every((v) => v.staffId === null && v.start === null && !v.pinned)).toBe(true);
   });
 
   it('壊れた JSON は退避して初期データを返す', () => {

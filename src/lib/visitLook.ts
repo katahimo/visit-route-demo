@@ -4,7 +4,7 @@
 import type { Visit } from '../contracts/documents';
 import type { Problem } from '../contracts/problem';
 import type { ContactList } from '../contracts/reassign';
-import { isBandIssue } from './attentionBand';
+import { isBandIssue } from './bandIssues';
 import { clockTime } from './dateText';
 import type { IssueKind } from './dayPlan';
 import { CHANGED_WORD } from './settledView';
@@ -50,7 +50,7 @@ export type LookFacts = {
   /** 確定（伝えた）の段階を出すか（lib/settledView の showConfirmStep。省略は出す）。切なら未連絡の変更は「変更あり」の印（押せる） */
   confirmStep?: boolean;
   /**
-   * 例外だけ見せる（エキスパート機能が切。PRD D384）：目立たせるのは担当なし・重なり・休みの人（要対応の中身は呼ぶ側が帯と同じ分け方で絞る）と
+   * 例外だけ見せる（エキスパート機能が切。PRD D384）：目立たせるのは担当なし・間に合わない・重なり・休みの人（要対応の中身は呼ぶ側が帯と同じ分け方で絞る）と
    * 「変更あり」だけ。資格✗・限✗・ピン・この回だけ変更・仮押さえの印は出さない
    */
   exceptionsOnly?: boolean;
@@ -139,7 +139,7 @@ export function dayLooks(
     past?: boolean;
     /** 確定（伝えた）の段階を出すか（省略は出す。lib/settledView） */
     confirmStep?: boolean;
-    /** 例外だけ見せる（エキスパート機能が切。担当なし・重なり・休みの人と「変更あり」だけ目立たせる。lib/attentionBand と同じ分け方） */
+    /** 例外だけ見せる（エキスパート機能が切。担当なし・間に合わない・重なり・休みの人と「変更あり」だけ目立たせる。lib/bandIssues と同じ分け方） */
     exceptionsOnly?: boolean;
   },
 ): Map<string, VisitLook> {
@@ -170,7 +170,7 @@ export function dayLooks(
 export type PlanTone = 'red' | 'pinned' | null;
 
 /**
- * 順番のカードの色。切（only＝例外だけ見せる。PRD D384）は札の見た目（look）の tone だけ（担当なし・重なり・休みの人。ピン・必須の違反は色にしない）。
+ * 順番のカードの色。切（only＝例外だけ見せる。PRD D384）は札の見た目（look）の tone だけ（担当なし・間に合わない・重なり・休みの人。ピン・必須の違反は色にしない）。
  * 入は必須の違反（hard）なら red、ピンなら pinned
  */
 export function cardTone(x: { only: boolean; look: VisitLook | undefined; hard: boolean; pinned: boolean }): PlanTone {

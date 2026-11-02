@@ -361,7 +361,7 @@ async function band(page) {
   await until(async () => !!(await navUsr(page))?.visitId);
   const id = (await navUsr(page))?.visitId ?? null;
   check(!!id, '要対応の帯から日の予定へ移り、行き先の訪問の ID を渡している', id);
-  // 重なり・休みの人の訪問があればその訪問（選ばれた札。もう一度押すと選びが外れるので押さない）、無ければ担当なしの訪問（未割当の欄の札）の詳細から欄を開く
+  // 間に合わない・重なり・休みの人の訪問があればその訪問（選ばれた札。もう一度押すと選びが外れるので押さない）、無ければ担当なしの訪問（未割当の欄の札）の詳細から欄を開く
   const card = page.locator(`[data-visit="${id}"]`).first();
   await card.waitFor({ timeout: 30000 });
   await settle(page, 400);

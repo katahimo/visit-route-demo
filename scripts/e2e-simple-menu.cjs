@@ -2,12 +2,14 @@
 // 初めて開いたとき（デモ×定期＝「基本」のひな形＝エキスパート機能は切）で、
 // 1 #/home・#/・知らない URL は予定（月）へ移る（ホームの画面は出ない）、
 // 2 左のメニューは 予定・空き状況・〈利用者さん〉・〈スタッフ〉・設定 の5つ（見出し・子の項目なし。今の画面の印・押して移る）。コマンドパレットの画面にホームが無い、
-// 3 予定（月・週・日）の上に要対応の帯（担当なし N件…。箱で、右に［担当なしを組む］（従のボタン。押したあとは e2e-basic-auto）と［見に行く ›］。
-//   見に行くは重なり・休みの人の訪問を先に、無ければ担当なし。日の予定で今日を見たまま押しても変わる）。月・週・日のどれにも出る。訪問が無ければ出さない、
+// 3 予定（月・週・日）の上に要対応の帯（担当なし N件…。箱で、右に［要対応を組む］（従のボタン。押したあとは e2e-basic-auto）と［見に行く ›］。
+//   見に行くは間に合わない・重なり・休みの人の訪問を先に、無ければ担当なし。日の予定で今日を見たまま押しても変わる）。月・週・日のどれにも出る。訪問が無ければ出さない、
+// 3d 順番に見に行く（PRD D403。ADR-0089）：押すたびに次の訪問へ進み、2件目から「n/N」（aria-live で知らせる）と［‹ 前へ］（読み上げの名前は「次を見に行く」）。前へで1つ戻り、
+//   最初の前は最後（N/N）、最後の次は最初（1/N）、
 // 3c 来月の確認（PRD D413）：ページの時計を今月の19日・25日に止め直す。19日は出さず、25日は帯の下に「〈来月〉の予定 N件はできています」＋要対応の数・
 //   ［〈来月〉を見る ›］（月の予定の来月）・［×］（消えて読み直しても出さない。端末に覚え、データに入れない）。390px で収まる、
 // 4 空き状況はメニューの項目（押すと空き状況・印は「空き状況」）。予定の「その他 ▾」（月・週・日）には空き状況・担当なしの訪問を組むが無い、
-// 5 スマホ（390px）：下のタブは 予定・空き状況・〈利用者さん〉・〈スタッフ〉＋探す＋メニュー（ADR-0080）。引き出しは設定を足した5つ。帯（［担当なしを組む］・［見に行く ›］）・「その他 ▾」が収まる、
+// 5 スマホ（390px）：下のタブは 予定・空き状況・〈利用者さん〉・〈スタッフ〉＋探す＋メニュー（ADR-0080）。引き出しは設定を足した5つ。帯（［要対応を組む］・［見に行く ›］）・「その他 ▾」が収まる、
 // 5b 例外だけ見せる（PRD D384）：月・週・日の操作の行は主ボタン1つ＋1つ（＋「その他 ▾」。元に戻す・表示の切り替え・使い方は「その他 ▾」の中）、
 //    点数・理由・件数の内訳・凡例・進み具合は「詳しく」の中（閉じているときは見えない・開くと見える）、移動・待ちの分数の線と担当なしの理由の札は出ない、
 //    訪問の札は時刻・名前の1行（順番の表示）、ピン・資格✗の印は出ない、「標準・提案・反映・ピン・プリセット」の言葉が月・週・日と「その他 ▾」「詳しく」に出ない、
@@ -15,14 +17,14 @@
 // 5e 人の画面は畳む・日の予定の地図はボタンで開く・月のマスの読み方（PRD D385・D384）：〈利用者さん〉の一覧は名前・住所・いつもの予定の3列、
 //    〈スタッフ〉は名前・勤務日・勤務時間の3列。詳細は〈利用者さん〉＝名前・住所・予定（繰り返し）／〈スタッフ〉＝名前・勤務日・勤務時間を出し、
 //    段階・特性・決まりごと（「基本」は決まりごとの機能が入。ADR-0086）・担当・相性（〈スタッフ〉は自宅・特性・求めること・日ごとの勤務ほか）は「詳しく ▾」の中（閉じていると見えない・開くと見える）。
-//    日の予定の地図はふだん閉じ、「地図」のボタンで開く（1366px・390px）。月のマスは例外だけで吹き出しを出さず、読み方は見出しの ⓘ（帯の3種類と「変更あり」。PRD D410）、
-// 5f 「予定を入れる」と〈スタッフ〉・〈利用者さん〉のタブ（PRD D402）：月・週の主ボタンは「予定を入れる」（操作の行は2つまで。担当なしを組むは帯の［担当なしを組む］）、
+//    日の予定の地図はふだん閉じ、「地図」のボタンで開く（1366px・390px）。月のマスは例外だけで吹き出しを出さず、読み方は見出しの ⓘ（帯の4種類と「変更あり」。PRD D410）、
+// 5f 「予定を入れる」と〈スタッフ〉・〈利用者さん〉のタブ（PRD D402）：月・週の主ボタンは「予定を入れる」（操作の行は2つまで。要対応を組むのは帯の［要対応を組む］）、
 //    押すと引き出し（定期＝〈利用者さん〉・曜日・くり返し・開始日（既定は今日・今日より前は誤り。PRD D416）・時刻・所要／単発＝〈利用者さん〉・日付・時刻・所要）で
 //    「入れる」→ 予定に出て開始日からの回に担当が自動で付く。くり返しは 毎週〜4週ごと・毎月（第N）（「基本」は毎月の第N の機能が入。ADR-0086）。
 //    5f3 最初の2問で定期を選んだデータ（「基本」）のままで、くり返しに「毎月（第N）」と第1〜第5 のチップ（選ばなければ誤り。入れた回に担当が自動で付き、組みの終わりまで待って次の段へ）、
 //    〈スタッフ〉の一覧の上のタブ（一覧・勤務・相性）と〈利用者さん〉のタブ（一覧・相性）で行き来でき、メニューの印は〈スタッフ〉／〈利用者さん〉に付き、
 //    相性・勤務の画面に禁句・点数が出ない。1366px・390px。幅は落ちても戻す、
-// 6 エキスパート機能を入にすると帯に 組み方の標準が無い・未確定 N日 が足され［担当なしを組む］は出ない（入のメニュー・ホームが無いことは e2e-nav・e2e-home）。
+// 6 エキスパート機能を入にすると帯に 組み方の標準が無い・未確定 N日 が足され［要対応を組む］は出ない（入のメニュー・ホームが無いことは e2e-nav・e2e-home）。
 // 6b 入の操作の行（主ボタン＋1つ＋「その他 ▾」）・「詳しく ▾」の見出しの数と開け閉めの覚え・説明1行。
 // 6c 入の人の一覧（PRD D394）：〈スタッフ〉・〈利用者さん〉の一覧は見出しがメニューの名前で、切と同じ人のタブ（一覧・勤務・相性／一覧・相性）と3列で始まり、
 //    表の上の「くわしい列」を入れると専門の列が足され、一覧ごとに端末に覚えて読み直しても同じ（外すと3列に戻る。切は切り替えが無い）。休止中は状態の列に重ねない。
@@ -54,7 +56,7 @@ const open = () => openPage({ viewport: { width: 1366, height: 768 }, start: 'as
 
 /** 1 #/home・#/・知らない URL は予定へ（ホームの画面は出ない） */
 async function redirects(page) {
-  // 帯の［担当なしを組む］を確かめるので、デモの最初の組み（PRD D409）は元に戻して始める
+  // 帯の［要対応を組む］を確かめるので、デモの最初の組み（PRD D409）は元に戻して始める
   await fresh(page, '/home', NAV_READY, { arranged: false });
   const d = await data(page);
   check(d.org.features.expert === false, '前提：初めて開くとエキスパート機能は切', d.org.features);
@@ -152,15 +154,20 @@ async function band(page) {
   await bandEl.waitFor({ timeout: 60000 });
   await shot(page, 'simple-band-month-1366');
   const before = await bandEl.innerText();
-  // 帯は1つのボタンではなく、箱（文・［担当なしを組む］・［見に行く ›］）。担当なしを組むは従のボタン（主ボタンは画面に1つ。PRD D403）
+  // 帯は1つのボタンではなく、箱（文・［要対応を組む］・［見に行く ›］）。要対応を組むは従のボタン（主ボタンは画面に1つ。PRD D403）
   check(
     (await bandEl.evaluate((el) => el.tagName)) !== 'BUTTON' && (await bandEl.locator('button').count()) === 2,
-    '帯は箱で、中のボタンは2つ（担当なしを組む・見に行く）',
+    '帯は箱で、中のボタンは2つ（要対応を組む・見に行く。前へは2件目から）',
+  );
+  check(
+    (await page.getByTestId('attention-band-arrange').innerText()).includes('要対応を組む'),
+    'ボタンの名前は「要対応を組む」',
+    await page.getByTestId('attention-band-arrange').innerText(),
   );
   check(
     (await page.getByTestId('attention-band-arrange').count()) === 1 &&
       (await page.getByTestId('attention-band-go').count()) === 1,
-    '帯に［担当なしを組む］と［見に行く ›］がある（切で組める担当なしがある）',
+    '帯に［要対応を組む］と［見に行く ›］がある（切で組める要対応がある）',
   );
   check((await bandEl.locator('.btn-primary').count()) === 0, '帯のボタンは主ボタン（.btn-primary）ではない');
   await watchNavUsr(page);
@@ -210,10 +217,10 @@ async function bandGoOnDay(page) {
   const panelOpen = await until(async () => (await page.getByTestId('visit-panel').count()) > 0, 5000);
   const picked = await el.evaluate((e) => e.classList.contains('is-picked'));
   const text = await page.getByTestId('attention-band-text').innerText();
-  // 重なり・休みの人があれば、その訪問のある日へ移って選ばれる（担当なしの欄は開かない）。無ければ担当なしの訪問の欄を開く
-  if (/重なり \d+件|休みの人 \d+件/.test(text)) {
+  // 間に合わない・重なり・休みの人があれば、その訪問のある日へ移って選ばれる（担当なしの欄は開かない）。無ければ担当なしの訪問の欄を開く
+  if (/間に合わない \d+件|重なり \d+件|休みの人 \d+件/.test(text)) {
     // 担当が休止中の訪問は担当の列に無く選べないので欄が開く（どちらかで画面が変わる）
-    check(picked || !!panelOpen, '重なり・休みの人の訪問は、日の予定で選ばれる（選べなければ欄が開く）', {
+    check(picked || !!panelOpen, '間に合わない・重なり・休みの人の訪問は、日の予定で選ばれる（選べなければ欄が開く）', {
       visitId: st.visitId,
       picked,
     });
@@ -225,6 +232,58 @@ async function bandGoOnDay(page) {
     check(!!panelOpen, '担当なしだけなら、その訪問の欄（訪問の詳細）が開く', { visitId: st.visitId });
   }
   await shot(page, 'simple-band-go-day-1366');
+}
+
+/**
+ * 3d 順番に見に行く（PRD D403。ADR-0089）：［見に行く ›］を押すたびに帯の並びの次の訪問へ。2件目から「n/N」と［‹ 前へ］を出し、
+ * 前へで1つ戻る。最初の前は最後、最後の次は最初へ。見に行くの読み上げの名前は「次を見に行く」、「n/N」は aria-live で知らせる。読み直すと最初から（保存しない）
+ */
+async function bandOrder(page) {
+  await page.goto('about:blank');
+  await page.goto(`${BASE}#/month`);
+  await page.getByTestId('attention-band-go').waitFor({ timeout: 60000 });
+  await settle(page, 600);
+  const place = () =>
+    page
+      .getByTestId('attention-band-place')
+      .innerText()
+      .catch(() => null);
+  /** 押して、渡した訪問 ID と「n/N」を返す */
+  const press = async (testId) => {
+    await watchNavUsr(page);
+    await page.getByTestId(testId).click();
+    const usr = await until(async () => (await navUsr(page))?.visitId ?? null, 30000);
+    await page.getByTestId('attention-band-go').waitFor({ timeout: 30000 });
+    await settle(page, 300);
+    // 担当なしの訪問は欄（受けられる人）が開くので、閉じてから次を押す
+    if ((await page.getByTestId('visit-panel').count()) > 0) {
+      await page.keyboard.press('Escape');
+      await page.getByTestId('visit-panel').waitFor({ state: 'detached', timeout: 10000 });
+    }
+    return { id: usr, place: await place() };
+  };
+  const first = await press('attention-band-go');
+  check(!!first.id, '1回目：帯の並びの最初の訪問へ', first);
+  check((await page.getByTestId('attention-band-prev').count()) === 0, '1件目では「n/N」と［‹ 前へ］を出さない', first);
+  const second = await press('attention-band-go');
+  const m = /^(\d+)\/(\d+)$/.exec(second.place ?? '');
+  const total = Number(m?.[2] ?? 0);
+  check(!!second.id && second.id !== first.id, '2回目：次の訪問へ進む', { first, second });
+  check(m?.[1] === '2' && total >= 2, '2件目から帯に「2/N」', second.place);
+  check((await page.getByTestId('attention-band-prev').count()) === 1, '2件目から［‹ 前へ］を出す');
+  const label = await page.getByTestId('attention-band-go').getAttribute('aria-label');
+  check(label === '次を見に行く', '見に行くの読み上げの名前は「次を見に行く」', label);
+  const live = await page
+    .getByTestId('attention-band-place')
+    .evaluate((e) => e.closest('[aria-live]')?.getAttribute('aria-live') ?? null);
+  check(live === 'polite', '位置「n/N」は aria-live="polite" で知らせる', live);
+  const back = await press('attention-band-prev');
+  check(back.id === first.id && back.place === `1/${total}`, '［‹ 前へ］で1つ前の訪問へ戻る（1/N）', back);
+  const last = await press('attention-band-prev');
+  check(last.place === `${total}/${total}` && last.id !== first.id, '最初の前は最後の訪問へ（N/N）', last);
+  const wrap = await press('attention-band-go');
+  check(wrap.id === first.id && wrap.place === `1/${total}`, '最後の次は最初の訪問へ戻る（1/N）', wrap);
+  await shot(page, 'simple-band-order-1366');
 }
 
 /** 3b 訪問が無ければ帯を出さない（自分のデータで始めた空のデータ） */
@@ -333,7 +392,7 @@ async function nextMonth(page) {
 
 /** 4 空き状況はメニューの項目（PRD D400。ADR-0078）：押すと空き状況・印も「空き状況」。予定の「その他 ▾」には空き状況・担当なしの訪問を組むが無い（月・週・日） */
 async function more(page) {
-  // 次の段（5 スマホ）で帯の［担当なしを組む］を見るので、デモの最初の組み（PRD D409）は元に戻して始める
+  // 次の段（5 スマホ）で帯の［要対応を組む］を見るので、デモの最初の組み（PRD D409）は元に戻して始める
   await fresh(page, '/month', NAV_READY, { start: 'demo', arranged: false });
   for (const [to, id] of [
     ['/month', 'month-more'],
@@ -427,7 +486,7 @@ async function mobile(page) {
   await page.goto('about:blank');
   await page.goto(`${BASE}#/plan`);
   await page.getByTestId('attention-band').waitFor({ timeout: 60000 });
-  // スマホの日の予定は主ボタンが無い（担当なしを組むは帯の［担当なしを組む］。PRD D403）
+  // スマホの日の予定は主ボタンが無い（要対応を組むのは帯の［要対応を組む］。PRD D403）
   await page.getByTestId('attention-band-arrange').waitFor({ timeout: 10000 });
   check(
     (await page.getByTestId('toolbar-arrange').count()) === 0,
@@ -436,7 +495,7 @@ async function mobile(page) {
   check(
     (await page.getByTestId('attention-band-go').isVisible()) &&
       (await page.getByTestId('attention-band-arrange').isVisible()),
-    'スマホの帯に［担当なしを組む］と［見に行く ›］が見える',
+    'スマホの帯に［要対応を組む］と［見に行く ›］が見える',
   );
   await shot(page, 'simple-plan-more-390');
   await page.setViewportSize({ width: 1366, height: 768 });
@@ -1017,7 +1076,7 @@ async function expertPeople(page) {
 }
 
 /**
- * 6 エキスパート機能を入にすると、帯に入だけの種類（組み方の標準が無い・未確定 N日）が足され［担当なしを組む］は出ない（PRD D404）。
+ * 6 エキスパート機能を入にすると、帯に入だけの種類（組み方の標準が無い・未確定 N日）が足され［要対応を組む］は出ない（PRD D404）。
  * 入のメニュー（6つ・子は組むだけ）・ホームが無いこと・下のタブと引き出しは e2e-nav・e2e-home・e2e-mobile が見る
  */
 async function expertOn(page) {
@@ -1042,7 +1101,7 @@ async function expertOn(page) {
   check(
     (await page.getByTestId('attention-band-arrange').count()) === 0 &&
       (await page.getByTestId('attention-band-go').count()) === 1,
-    'expert 入：帯に［担当なしを組む］は出ない（「担当を組む」の画面で組む）。［見に行く ›］はある',
+    'expert 入：帯に［要対応を組む］は出ない（「担当を組む」の画面で組む）。［見に行く ›］はある',
   );
   if ((await page.getByTestId('month-more').count()) > 0) {
     await page.getByTestId('month-more').click();
@@ -1196,10 +1255,10 @@ async function people(page) {
 /** 日の予定の地図：ふだん閉じ、「地図」のボタンで開く（PC もスマホと同じ形） */
 async function planMap(page, w) {
   await open1(page, '/plan');
-  await page.getByTestId('attention-band').waitFor({ timeout: 60000 });
-  check((await page.getByTestId('plan-map').count()) === 0, `日の予定（${w}）：地図は閉じている（ページに置かない）`);
+  // 目印は地図のボタン（デモは組み終えて始め、要対応を組むで間に合わない・重なりも組み直すので、帯が出ないこともある。PRD D322・ADR-0089）
   const fab = page.locator('.map-dock-fab');
-  await fab.waitFor({ timeout: 10000 });
+  await fab.waitFor({ timeout: 60000 });
+  check((await page.getByTestId('plan-map').count()) === 0, `日の予定（${w}）：地図は閉じている（ページに置かない）`);
   check(/地図/.test(await fab.innerText()), `日の予定（${w}）：「地図」のボタンがある`);
   check((await page.locator('section.map-dock').count()) === 0, `日の予定（${w}）：ボタンを押すまで地図は出ない`);
   await shot(page, `simple-plan-map-closed-${page.viewportSize().width}`);
@@ -1252,7 +1311,11 @@ async function monthTip(page) {
   const hint = page.getByTestId('month-cell-hint');
   await hint.waitFor({ timeout: 10000 });
   const t = await hint.innerText();
-  check(/担当なし・重なり・休みの人/.test(t), '月のマスの読み方（ⓘ）：要対応は 担当なし・重なり・休みの人', t);
+  check(
+    /担当なし・間に合わない・重なり・休みの人/.test(t),
+    '月のマスの読み方（ⓘ）：要対応は 担当なし・間に合わない・重なり・休みの人',
+    t,
+  );
   check(!/条件に合わない|拘束|棒/.test(t), '月のマスの読み方（ⓘ）：条件に合わない・拘束超・棒は言わない', t);
   check(!BANNED.test(t), '月のマスの読み方（ⓘ）：禁句が出ない', t.match(BANNED)?.[0]);
   await shot(page, 'simple-month-tip-1366');
@@ -1261,7 +1324,7 @@ async function monthTip(page) {
 
 const SCORE = /点数|\d+\s*点/;
 
-/** 操作の行を確かめる：1つ目が主ボタン「予定を入れる」・2つ目が欠勤・キャンセル・合わせて2つまで・組むは帯の［担当なしを組む］ */
+/** 操作の行を確かめる：1つ目が主ボタン「予定を入れる」・2つ目が欠勤・キャンセル・合わせて2つまで・組むは帯の［要対応を組む］ */
 async function addToolbar(page, to, zoom, w) {
   await open1(page, to);
   const btns = await toolbarButtons(page);
@@ -1285,7 +1348,7 @@ async function addToolbar(page, to, zoom, w) {
   await page.getByTestId(`${zoom}-more`).click();
   check(
     (await page.getByTestId('more-auto-arrange').count()) === 0,
-    `${zoom}（${w}）：「その他 ▾」に担当なしの訪問を組むは無い（帯の［担当なしを組む］で組む）`,
+    `${zoom}（${w}）：「その他 ▾」に担当なしの訪問を組むは無い（帯の［要対応を組む］で組む）`,
   );
   await closeMore(page, zoom);
   await shot(page, `simple-add-${zoom}-toolbar-${page.viewportSize().width}`);
@@ -1672,7 +1735,8 @@ const steps = sharedPage({
   steps: [
     ['1 切：#/home・#/・知らない URL は予定へ', redirects],
     ['2 切：メニューは5つ（空き状況を含む）・パレットにホームが無い', menu],
-    ['3 切：予定の上の要対応の帯（見に行く・担当なしを組む）', band],
+    ['3 切：予定の上の要対応の帯（見に行く・要対応を組む）', band],
+    ['3d 切：［見に行く ›］で順番に次の訪問へ（n/N・前へ・最後から最初へ）', bandOrder],
     ['3b 切：訪問が無ければ帯を出さない', noBand],
     ['3c 切：月の20日以降は帯の下に来月の確認（日付を止めて）', nextMonth],
     ['4 切：空き状況はメニューの項目（「その他 ▾」には無い）', more],

@@ -1,4 +1,4 @@
-// デモを作った直後に担当なしを組むか（PRD D409。ADR-0079）
+// デモを作った直後に要対応（担当なし・間に合わない・重なり・休みの人）を組むか（PRD D409。ADR-0079）
 import { describe, expect, it } from 'vitest';
 import {
   ARRANGE_PENDING_KEY,

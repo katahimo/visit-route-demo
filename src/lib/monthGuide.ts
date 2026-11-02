@@ -88,7 +88,7 @@ export function cellGuide(x: CellGuideInput): string[] {
 export function monthCellHint(staffTerm: string): string[] {
   return [
     '「N件」＝その日の訪問の件数',
-    '赤い「要対応 N」＝手当ての要る訪問の件数（担当なし・重なり・休みの人・変更あり）',
+    '赤い「要対応 N」＝手当ての要る訪問の件数（担当なし・間に合わない・重なり・休みの人・変更あり）',
     `「休 N」＝休む${staffTerm}の人数（同じ曜日のふだんより多い日だけ。「（希 N）」はそのうち希望休）`,
     '「今日」＝今日のマス',
     '日を押すと、その日の訪問と理由が右の欄に出ます。もう一度押すと日の予定',

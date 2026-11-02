@@ -1,7 +1,7 @@
 // 最初の2問と案内ツアー（PRD D189〜D193・D379〜D381。ADR-0025・ADR-0045・ADR-0073）を本物のブラウザで確かめる：
 // 最初の2問（初めて開く＝保存データも印「all」も無いと、案内ツアーは自動で出ず、1画面に2問と主ボタン「はじめる」だけ。答えるまでデータを書かない・
 // 読み直してもまた2問・Tab は選んだ方だけ・矢印で選び直す）・デモ×定期（今の初期データ・利用者さん／スタッフ・「基本」・最初は月。
-// 作った直後に今日〜翌月末の担当なしを1回自動で組み、知らせ「N件の担当を組みました」と［元に戻す］。組む印（sessionStorage）は読み直しをまたいで起動で読む。PRD D409）・
+// 作った直後に今日〜翌月末の要対応（担当なし・間に合わない・重なり・休みの人）を1回自動で組み、知らせ「N件の担当を組みました」と［元に戻す］。組む印（sessionStorage）は読み直しをまたいで起動で読む。PRD D409）・
 // デモ×単発（架空の単発の予約が今日から2週間分・お客様／シッター・「単発のみ」・最初は週）・
 // 自分のデータ（空のデータ＋3段の登録の案内：上に「1/3」・①②は「CSV・Excel を読み込む」（名簿の欄）と「1人ずつ入れる」（追加の画面）・③は予定へ・
 // 空のデータで月・週・日・一覧・設定などが壊れない。組まない）・印「all」（scripts/lib/startFeatures.cjs）があれば2問を出さず今の初期データ＋すべて入（組まない）・
@@ -158,7 +158,7 @@ async function firstRun(b) {
   await page.locator('.app-main h1').first().waitFor({ timeout: 30000 });
   await until(async () => (await stored2(page)) !== null, 10000);
   check(/#\/month/.test(hashOf(page)), 'デモ・定期：最初に開く画面は月の予定', hashOf(page));
-  // 作った直後に担当なしを1回自動で組む（要対応の帯の［担当なしを組む］と同じ知らせ・［元に戻す］。PRD D409）
+  // 作った直後に要対応を1回自動で組む（要対応の帯の［要対応を組む］と同じ知らせ・［元に戻す］。PRD D409）
   const arranged = await waitStartArranged(page);
   check(/^\d+件の担当を組みました/.test(arranged), 'デモ・定期：作った直後に担当なしを組み、知らせが出る', arranged);
   check((await page.getByTestId('toast-undo').count()) >= 1, 'デモ・定期：組んだ知らせに［元に戻す］');
@@ -192,6 +192,13 @@ async function firstRun(b) {
     'デモ・定期：組んだ回が担当つきで保存される（ピンは付けない）',
     d.visits.length,
   );
+  // 繰り返しの担当がその日に担当できない回は担当なしで作ってあるので、組んだあとの要対応の帯に重なり・休みの人が残らない（PRD D322）
+  const bandLeft = async () => {
+    const el = page.getByTestId('attention-band-text');
+    return (await el.count()) === 0 ? '' : (await el.innerText()).trim();
+  };
+  const noOverlap = await until(async () => !/重なり|間に合わない|休みの人/.test(await bandLeft()), 10000);
+  check(!!noOverlap, 'デモ・定期：組んだあとの要対応の帯に重なり・休みの人が無い', await bandLeft());
   // 開くたびには組まない（読み直しても組みの知らせは出ない）
   await page.reload();
   await page.locator('.app-main h1').first().waitFor({ timeout: 30000 });
@@ -216,7 +223,7 @@ async function firstRun(b) {
   await page.reload();
   await page.locator('.app-main h1').first().waitFor({ timeout: 30000 });
   const reArranged = await waitStartArranged(page);
-  check(/^\d+件の担当を組みました/.test(reArranged), '組む印を置いて読み直すと、起動で担当なしを組む', reArranged);
+  check(/^\d+件の担当を組みました/.test(reArranged), '組む印を置いて読み直すと、起動で要対応を組む', reArranged);
   check(
     await page.evaluate(() => sessionStorage.getItem('vrdemo:arrange:pending') === null),
     '起動で組んだら組む印を消す（もう一度読み直しても組まない）',
@@ -239,7 +246,12 @@ async function firstRun(b) {
     '印「all」があれば2問を出さず、今の初期データ＋すべて入（features は {}）で始める',
     ad.org.features,
   );
-  check(ad.visits.length === 0, '印「all」：組まない（組んだ回が保存されない）', ad.visits.length);
+  // 保存した回は初期データの「その日に担当できない回」の担当なしだけ（PRD D322）
+  check(
+    ad.visits.every((v) => v.staffId === null && v.start === null),
+    '印「all」：組まない（担当の入った回が保存されない）',
+    ad.visits.length,
+  );
   await a.ctx.close();
 }
 

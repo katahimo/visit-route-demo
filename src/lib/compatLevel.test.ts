@@ -1,17 +1,20 @@
 // 相性の記号（PRD D113・D177）
 import { describe, expect, it } from 'vitest';
 import {
+  COMPAT_CHOICES,
   COMPAT_LEGEND,
   COMPAT_MEANING,
+  COMPAT_WORD,
   compatLevelClass,
   compatLevelOf,
-  cycleCompat,
-  nextCompatLevel,
+  setCompatLevel,
 } from './compatLevel';
 
-describe('nextCompatLevel', () => {
-  it('◎→○→空→△→×→◎ と回る', () => {
-    expect([2, 1, 0, -1, -2].map((l) => nextCompatLevel(l as 2 | 1 | 0 | -1 | -2))).toEqual([1, 0, -1, -2, 2]);
+describe('COMPAT_CHOICES', () => {
+  it('選ぶ欄は ◎→○→未入力→△→× の5段（どれにも意味の文がある）', () => {
+    expect(COMPAT_CHOICES).toEqual([2, 1, 0, -1, -2]);
+    expect(COMPAT_CHOICES.every((l) => COMPAT_MEANING[l].endsWith(COMPAT_WORD[l]))).toBe(true);
+    expect(COMPAT_MEANING[-2]).toBe('× 担当にしない');
   });
 });
 
@@ -40,16 +43,16 @@ describe('compatLevelClass', () => {
   });
 });
 
-describe('cycleCompat', () => {
-  it('次の相性にする（ほかの行・人はそのまま、元は変えない）', () => {
+describe('setCompatLevel', () => {
+  it('選んだ相性にする（ほかの行・人はそのまま、元は変えない）', () => {
     const compat = { c1: { s1: 2 as const, s2: -1 as const }, c2: { s1: 1 as const } };
-    const next = cycleCompat(compat, 'c1', 's1');
-    expect(next).toEqual({ c1: { s1: 1, s2: -1 }, c2: { s1: 1 } });
+    const next = setCompatLevel(compat, 'c1', 's1', -2);
+    expect(next).toEqual({ c1: { s1: -2, s2: -1 }, c2: { s1: 1 } });
     expect(compat.c1.s1).toBe(2);
   });
 
-  it('未入力に戻ったら消し、行が無ければ作る', () => {
-    expect(cycleCompat({ c1: { s1: 1 } }, 'c1', 's1')).toEqual({ c1: {} });
-    expect(cycleCompat({}, 'c1', 's1')).toEqual({ c1: { s1: -1 } });
+  it('未入力なら消し、行が無ければ作る', () => {
+    expect(setCompatLevel({ c1: { s1: 1 } }, 'c1', 's1', 0)).toEqual({ c1: {} });
+    expect(setCompatLevel({}, 'c1', 's1', 1)).toEqual({ c1: { s1: 1 } });
   });
 });

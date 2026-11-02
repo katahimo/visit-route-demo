@@ -113,7 +113,7 @@ export default function WeekPage() {
       <AttentionBand />
       {/* 来月の確認（切で月の20日以降。PRD D413） */}
       <NextMonthCheck />
-      {/* 操作の行（日・週・月で同じ作り。PRD D327・D402）。メールで送るは「その他 ▾」。担当なしを組むは要対応の帯、空き状況はメニュー（PRD D403・D400） */}
+      {/* 操作の行（日・週・月で同じ作り。PRD D327・D402）。メールで送るは「その他 ▾」。要対応を組むのは要対応の帯、空き状況はメニュー（PRD D403・D400） */}
       <ScheduleToolbar
         zoom="week"
         absence={suddenOn ? { date: anchor } : null}

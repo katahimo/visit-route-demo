@@ -1785,10 +1785,10 @@ label.check input {
   font-weight: 600;
 }
 
-/* 相性の表 */
+/* 相性の表（PRD D420）：マスはボタンの箱にせず、細い線の格子に記号だけ。入れた相性だけ地の色 */
 .compat-table {
   border-collapse: separate;
-  border-spacing: 2px;
+  border-spacing: 0;
   width: auto;
 }
 .compat-table th,
@@ -1801,31 +1801,34 @@ label.check input {
   text-align: center !important;
   white-space: nowrap;
 }
-.compat-btn {
-  width: 44px;
-  height: 36px;
-  border: 1.5px solid var(--line);
-  border-radius: 8px;
-  background: #faf6f2;
-  font: inherit;
-  font-size: 1.1rem;
+.compat-table td.compat-cell {
+  width: 42px;
+  min-width: 42px;
+  height: 34px;
+  padding: 0;
+  border-bottom: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+  text-align: center;
+  font-size: 1.05rem;
   font-weight: 700;
-  cursor: pointer;
   color: var(--ink);
+  cursor: pointer;
 }
-.compat-btn.lv2,
-.compat-btn.lv1 {
-  background: #e1f1e7;
+.compat-table td.compat-cell.lv2,
+.compat-table td.compat-cell.lv1 {
+  background: #eef7f1;
   color: var(--ok-ink);
 }
-.compat-btn.lvm1 {
-  background: #fbefd6;
+.compat-table td.compat-cell.lvm1 {
+  background: #fdf5e6;
   color: var(--warn-ink);
 }
-.compat-btn.lvm2 {
-  background: #fbe1dd;
+.compat-table td.compat-cell.lvm2 {
+  background: #fbe9e6;
   color: var(--danger);
-  border-color: var(--danger);
+}
+.compat-table td.compat-cell:hover {
+  background: var(--primary-soft);
 }
 
 /* スタッフのスマホ画面風 */

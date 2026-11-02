@@ -457,15 +457,15 @@ async function legend(page) {
   } else {
     check(false, '休みを入れられる日がある（読み方の更新の確かめ）');
   }
-  // 相性のセルの記号の意味
+  // 相性のマスの記号の意味
   await open(page, '/compat', '[data-testid="compat-table"]');
-  const x = page.locator('.compat-btn', { hasText: '×' }).first();
+  const x = page.locator('[data-testid="compat-cell"]', { hasText: '×' }).first();
   if ((await x.count()) > 0) {
-    check(/担当にしない/.test((await x.getAttribute('aria-label')) ?? ''), '相性：× のセルの読み上げに意味');
-    check(/× 担当にしない/.test((await x.getAttribute('title')) ?? ''), '相性：× のセルの title に意味');
+    check(/担当にしない/.test((await x.getAttribute('aria-label')) ?? ''), '相性：× のマスの読み上げに意味');
+    check(/× 担当にしない/.test((await x.getAttribute('title')) ?? ''), '相性：× のマスの title に意味');
   }
-  const blank = page.locator('.compat-btn:not(.lv2):not(.lv1):not(.lvm1):not(.lvm2)').first();
-  check(/未入力/.test((await blank.getAttribute('aria-label')) ?? ''), '相性：空のセルは「未入力」');
+  const blank = page.locator('[data-testid="compat-cell"].lv0').first();
+  check(/未入力/.test((await blank.getAttribute('aria-label')) ?? ''), '相性：空のマスは「未入力」');
 }
 
 // ---- 理由の見せ方と警告の色（PRD D228・D229）----

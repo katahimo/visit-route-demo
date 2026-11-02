@@ -476,12 +476,13 @@ const KIND_ORDER: Record<AttentionKind, number> = { care: 0, changed: 1, overSpa
 
 /** 要対応の内訳（「担当なし 2」「担当が休み 1」。検査の種類の順） */
 export function issueBreakdown(issues: ReadonlyMap<string, readonly VisitIssue[]>): string[] {
-  const order: VisitIssue['kind'][] = ['unassigned', 'off', 'notAllowed', 'late'];
+  const order: VisitIssue['kind'][] = ['unassigned', 'off', 'notAllowed', 'late', 'overlap'];
   const label: Record<VisitIssue['kind'], string> = {
     unassigned: '担当なし',
     off: '担当が休み',
     notAllowed: '条件に合わない',
     late: '時間に間に合わない',
+    overlap: '前の訪問と重なる',
   };
   const count = new Map<VisitIssue['kind'], number>();
   for (const list of issues.values()) {

@@ -2,7 +2,7 @@
 // DemoData とは別のキーに「all」と書いてあれば、2問を出さず、すべて入（{}）の今の初期データで始める
 // （e2e の共通の部品 scripts/lib/startFeatures.cjs と、全機能を見せたいデモの前準備のため。値は印だけで個人の情報は持たない）。
 // localStorage を触るのは store の中だけ（AGENTS.md）。読めなければ印なし（2問を出す）
-// デモを作った直後に担当なしを組む印（PRD D409）もここに置く（sessionStorage。読み直しをまたいで、組み終える前に消さない）
+// デモを作った直後に要対応を組む印（PRD D409。要対応の帯の［要対応を組む］と同じ依頼）もここに置く（sessionStorage。読み直しをまたいで、組み終える前に消さない）
 
 import type { FirstRunBooking, FirstRunStart } from '../lib/firstRun';
 
@@ -56,7 +56,7 @@ export function lastBooking(
 export type DemoStart = { kind: 'answer'; start: FirstRunStart } | { kind: 'reset' };
 
 /**
- * デモを作った直後に、今日〜翌月末の担当なしを1回自動で組むか（PRD D409。ADR-0079）。
+ * デモを作った直後に、今日〜翌月末の要対応（担当なし・間に合わない・重なり・休みの人）を1回自動で組むか（PRD D409。ADR-0079）。
  * 「デモで試す」で始めたとき・初期状態に戻したときだけ組む。「自分のデータで始める」と、印「all」があるときは組まない
  */
 export function arrangesAfterStart(s: DemoStart, all: boolean = startsWithAll()): boolean {
@@ -74,7 +74,7 @@ export function arrangesAfterStart(s: DemoStart, all: boolean = startsWithAll())
 }
 
 /**
- * デモを作った直後に担当なしを組む印のキー（sessionStorage。PRD D409。ADR-0079）。
+ * デモを作った直後に要対応を組む印のキー（sessionStorage。PRD D409。ADR-0079）。
  * 初期状態に戻す（設定・例外の画面のどちらの入口からでも）・最初の2問の「デモで試す」で書き、
  * store の起動時と作り直した直後に読み、組む依頼を出した画面が消す（読み直しをはさんでも1回だけ組む）
  */

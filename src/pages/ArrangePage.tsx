@@ -3,7 +3,7 @@
 // ほかの画面へ移っても続く。ADR-0042）。提案は範囲の提案の帯で見て［反映する］［捨てる］（反映は全体の「元に戻す」で1手戻る）。
 // いつも点数の基準（標準の考え方）で組む。エキスパート機能が入で組み方の標準が無い間は組まず、組み方の標準へ案内する（ADR-0065）。
 // エキスパート機能が切なら、標準が無くても点数の基準のプリセットで組む（標準・案を比べるへの入口は出さない。ADR-0072）。
-// 日を選んで「案を比べる」（#/compare）へ移れる（案を比べるが使えるとき）。
+// 範囲の最初の日で「案を比べる」（#/compare）へ移れる（案を比べるが使えるとき。日は比べる画面で選び直す。ADR-0088）。
 // 基本情報（予定・相性・勤務時間）が最後に組んだあとに変われば、上に知らせと［組み直す］（ADR-0067）
 import { CalendarCheck, Sparkles } from 'lucide-react';
 import { useId, useMemo, useState } from 'react';
@@ -88,10 +88,8 @@ export default function ArrangePage() {
   const { error, setError, start } = useArrangeStart({ scope, ym, at, today, rangeLabel, mode, targets });
   const shownError = error ?? done?.error ?? null;
 
-  /** 案を比べる日（範囲の中の今日以降の最初の訪問のある日。選び直せる） */
-  const firstDay = allTargets[0] ?? dates.find((d) => d >= today) ?? dates[0]!;
-  const [compareDay, setCompareDay] = useState<string | null>(null);
-  const compareDate = compareDay && dates.includes(compareDay) ? compareDay : firstDay;
+  /** 案を比べる日（範囲の中の今日以降の最初の訪問のある日。選び直すのは比べる画面の日付。ADR-0088） */
+  const compareDate = allTargets[0] ?? dates.find((d) => d >= today) ?? dates[0]!;
 
   return (
     <div className="stack arrange-page">
@@ -157,14 +155,7 @@ export default function ArrangePage() {
       {/* 組んだ提案（日・週・月の予定にも同じ帯が出る。PRD D328） */}
       <RangeProposalBand />
 
-      {compareOn && (
-        <ArrangeCompareSection
-          headingId={`${ids}-compare`}
-          compareDate={compareDate}
-          dates={dates}
-          onDate={setCompareDay}
-        />
-      )}
+      {compareOn && <ArrangeCompareSection headingId={`${ids}-compare`} compareDate={compareDate} />}
     </div>
   );
 }

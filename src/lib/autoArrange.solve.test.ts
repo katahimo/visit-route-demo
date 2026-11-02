@@ -76,7 +76,7 @@ describe('applyAutoArrange（反映。D373・D405）', () => {
     }
     expect(r.written).toBe(3);
     expect(findVisit(r.data, `${dates[0]}_pn`)!.pinned).toBe(false);
-    // 単発・要対応の帯の［担当なしを組む］（writeUsual: false）は繰り返しの担当に書かない
+    // 単発・要対応の帯の［要対応を組む］（writeUsual: false）は繰り返しの担当に書かない
     expect(r.data.patterns.find((p) => p.id === 'pn')!.usualStaffId).toBeNull();
   });
 
@@ -161,7 +161,7 @@ describe('繰り返しの担当（D376）', () => {
     expect(keep.data.patterns.find((p) => p.id === 'pn')!.usualStaffId).toBe(b);
   });
 
-  it('writeUsual が偽（単発・要対応の帯の［担当なしを組む］）なら書かない', () => {
+  it('writeUsual が偽（単発・要対応の帯の［要対応を組む］）なら書かない', () => {
     const main = staffIds(solved[0]!)[0]!;
     const r = applyAutoArrange(d, [{ ...solved[0]!, routes: { [main]: [`${dates[0]}_pn`] } }], {
       writeUsual: false,

@@ -33,7 +33,7 @@ describe('ADD_VISIT_LABEL（日の主ボタンと新規の欄の見出し）', (
 });
 
 describe('mainTools（操作の行は主ボタン1つ＋最大1つ）', () => {
-  it('日は 予定を入れる（主）＋欠勤・キャンセル（担当なしを組むは要対応の帯。PRD D403）', () => {
+  it('日は 予定を入れる（主）＋欠勤・キャンセル（要対応を組むは要対応の帯。PRD D403）', () => {
     expect(mainTools('day', all)).toEqual({ primary: 'add', second: 'absence' });
   });
   it('日でスマホ（追加できない）は主ボタン無し＋欠勤・キャンセル', () => {
@@ -63,7 +63,7 @@ describe('mainTools（入）', () => {
     expect(mainTools('day', all, true)).toEqual({ primary: 'add', second: 'confirm' });
     expect(mainTools('day', { ...all, confirm: false }, true)).toEqual({ primary: 'add', second: null });
   });
-  it('日でスマホ（追加できない）は 確定（伝えた）が主ボタン。担当なしを組むは入では出さない', () => {
+  it('日でスマホ（追加できない）は 確定（伝えた）が主ボタン。要対応を組むは入では出さない', () => {
     expect(mainTools('day', { ...all, add: false }, true)).toEqual({ primary: 'confirm', second: null });
     expect(mainTools('day', { ...all, add: false, confirm: false }, true)).toEqual({ primary: null, second: null });
   });
