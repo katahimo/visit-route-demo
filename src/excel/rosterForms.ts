@@ -2,6 +2,7 @@
 // 新しいソフト（別の会社）の CSV を読むときは、形ごとのファイル（ledgerCsv・reserveCsv のように列名と写し方を書く）を作り、
 // ここの ROSTER_FORMS に1行足す。読み方（rosterRows）・画面・確認の文は変えなくてよい
 import type { RosterKind } from '../contracts/data';
+import type { Item } from '../contracts/rules';
 import type { RosterTable } from './csvColumns';
 import { ledgerErrorMessage, ledgerToRoster } from './ledgerCsv';
 import {
@@ -12,11 +13,14 @@ import {
   reserveStaffErrorMessage,
   reserveStaffToRoster,
 } from './reserveCsv';
+import { STAFF_LEDGER_KEEP_BLANK, staffLedgerErrorMessage, staffLedgerToRoster } from './staffLedgerCsv';
 
 /** 形を写すときに渡す値（今日で決まる値＝退職日を過ぎたら休止、など） */
 export interface RosterFormEnv {
   /** 今日（YYYY-MM-DD） */
   today: string;
+  /** 今の項目（職員台帳の資格を〈スタッフ〉の項目「資格」の選択肢に写す） */
+  items: readonly Item[];
 }
 
 /** ほかのソフトの名簿の形 */
@@ -62,6 +66,14 @@ export const ROSTER_FORMS: readonly RosterForm[] = [
     toRoster: (t, env) => reserveStaffToRoster(t, env.today),
     errorMessage: reserveStaffErrorMessage,
     keepBlank: RESERVE_STAFF_KEEP_BLANK,
+  },
+  {
+    id: 'staff-ledger',
+    label: '職員台帳',
+    kind: 'staff',
+    toRoster: (t, env) => staffLedgerToRoster(t, env.today, env.items),
+    errorMessage: staffLedgerErrorMessage,
+    keepBlank: STAFF_LEDGER_KEEP_BLANK,
   },
 ];
 
