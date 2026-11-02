@@ -1,6 +1,7 @@
-// 条件の重みの画面のプリセットの節（D20・D235。ADR-0008・ADR-0035・ADR-0065）：点数の基準の選択・プリセットごとの名前・一言の編集
-// （変えるとすぐ保存）・型ごとの重み・必須の読み取り専用の一覧・消す（初期の3つと最後の1つは消せない）。プリセットの重みは変えない
-// （重みを変えるときは上の表で直して新しい考え方として保存する）。状態と処理は usePresetSection
+// 条件の重みの画面のプリセットの節（D20・D235。ADR-0008・ADR-0035・ADR-0065・ADR-0088）：プリセットの一覧の各行の丸で点数の基準を選ぶ・
+// プリセットごとの名前・一言の編集（変えるとすぐ保存）・型ごとの重み・必須の読み取り専用の一覧（基準のプリセットは下の条件の表に寄せる）・
+// 消す（初期の3つと最後の1つは消せない）。プリセットの重みは変えない（重みを変えるときは下の表で直して新しい考え方として保存する）。
+// 状態と処理は usePresetSection
 import { LayoutGrid, ShieldCheck, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Term } from '../components/Term';
@@ -35,9 +36,14 @@ export function PresetSection({
           <Hint>
             <ul className="hint-list">
               <li>
-                プリセットの重み・必須は変えられません。重みを変えるときは、上の表で直して新しい考え方として保存します。
+                丸で選んだプリセットが点数の基準（ふだんの考え方）です。担当を組む・訪問ごとの検査はこの重み・必須で計算し、画面の点数（100点満点）もこれで付けます。
               </li>
-              <li>組み方の標準の「案をくらべる」は、すべてのプリセットで案を作ります。</li>
+              <li>
+                プリセットの重み・必須は変えられません。下の表は点数の基準の重みから始め、変えると新しいプリセットとして保存します。
+              </li>
+              <li>
+                組み方の標準の「案をくらべる」はすべてのプリセットで案を作り、案から作った表を登録するとそのプリセットが点数の基準になります。
+              </li>
               <li>{MAX_PRESETS}つまで作れます。名前・一言は変えるとすぐ保存します。初期の3つは消せません。</li>
             </ul>
           </Hint>
@@ -47,8 +53,9 @@ export function PresetSection({
           <Term k="preset" />（{data.presets.length}/{MAX_PRESETS}）
         </span>
       </SectionTitle>
-      <ScoreRulerChoice presets={data.presets} rulerId={flow.ruler?.id} onChoose={flow.choose} />
-      <div className="stack" style={{ gap: 8 }}>
+      {/* 点数の基準の選択はプリセットの一覧の各行の丸（同じプリセットを2回並べない。ADR-0088） */}
+      <fieldset className="preset-list" data-testid="score-ruler-choice">
+        <legend className="sub">左の丸で点数の基準（ふだんの考え方）を選びます</legend>
         {data.presets.map((p, i) => (
           <PresetEdit
             key={p.id}
@@ -60,55 +67,12 @@ export function PresetSection({
             flow={flow}
           />
         ))}
-      </div>
+      </fieldset>
     </div>
   );
 }
 
-/** 点数の基準の選択（ラジオ。ふだん使う考え方） */
-function ScoreRulerChoice({
-  presets,
-  rulerId,
-  onChoose,
-}: {
-  presets: Preset[];
-  rulerId: string | undefined;
-  onChoose: (p: Preset) => Promise<void>;
-}) {
-  return (
-    <fieldset className="score-ruler" data-testid="score-ruler-choice">
-      <legend>
-        点数の基準
-        <Hint ariaLabel="点数の基準の説明">
-          <ul className="hint-list">
-            <li>ここで選んだプリセットが、ふだんの考え方です。</li>
-            <li>担当を組む・訪問ごとの検査はこの重み・必須で計算し、画面の点数（100点満点）もこれで付けます。</li>
-            <li>上の表はこのプリセットの重みから始め、変えると新しいプリセットとして保存します。</li>
-            <li>
-              組み方の標準の「案をくらべる」はすべてのプリセットで案を作り、案から作った表を登録するとそのプリセットが点数の基準になります。
-            </li>
-          </ul>
-        </Hint>
-      </legend>
-      <div className="row" style={{ flexWrap: 'wrap', gap: 12 }}>
-        {presets.map((p) => (
-          <label key={p.id} className="score-ruler-option">
-            <input
-              type="radio"
-              name="score-preset"
-              value={p.id}
-              checked={rulerId === p.id}
-              onChange={() => void onChoose(p)}
-            />
-            {p.name}
-          </label>
-        ))}
-      </div>
-    </fieldset>
-  );
-}
-
-/** プリセット1つ（畳める。名前・一言の編集・重みの読み取り専用の一覧・消す） */
+/** プリセット1つ（左に点数の基準の丸。畳める中身は名前・一言の編集・重みの読み取り専用の一覧・消す） */
 function PresetEdit({
   preset: p,
   no,
@@ -126,55 +90,78 @@ function PresetEdit({
   terms: Terms;
   flow: PresetFlow;
 }) {
-  const { ruler, rename, remove } = flow;
+  const { ruler, rename, remove, choose } = flow;
   const initial = isInitialPreset(p.id);
+  const isRuler = ruler?.id === p.id;
   return (
-    <details className="preset-edit" data-testid="preset-edit" data-preset={p.id}>
-      <summary className="narrow-preset-summary">
-        <span className="preset-no">{no}</span>
-        <strong>{p.name}</strong>
-        {initial && (
-          <span className="chip" data-testid="preset-initial">
-            初期
-          </span>
-        )}
-        {ruler?.id === p.id && <span className="chip">点数の基準</span>}
-        <span className="sub ellipsis">{p.note}</span>
-      </summary>
-      <div className="stack" style={{ gap: 8, paddingTop: 8 }}>
-        <div className="row" style={{ flexWrap: 'wrap' }}>
-          <div className="stack" style={{ maxWidth: 220, gap: 2 }}>
-            <span>名前</span>
-            <PresetText
-              value={p.name}
-              max={PRESET_NAME_MAX}
-              required
-              ariaLabel="プリセットの名前"
-              onChange={(name) => rename(p.id, { name })}
-            />
+    <div className="preset-row">
+      <input
+        type="radio"
+        name="score-preset"
+        value={p.id}
+        checked={isRuler}
+        onChange={() => void choose(p)}
+        aria-label={`「${p.name}」を点数の基準にする`}
+        data-testid="score-ruler-radio"
+      />
+      <details className="preset-edit" data-testid="preset-edit" data-preset={p.id}>
+        <summary className="narrow-preset-summary">
+          <span className="preset-no">{no}</span>
+          <strong>{p.name}</strong>
+          {initial && (
+            <span className="chip" data-testid="preset-initial">
+              初期
+            </span>
+          )}
+          <span className="sub ellipsis">{p.note}</span>
+        </summary>
+        <div className="stack" style={{ gap: 8, paddingTop: 8 }}>
+          <div className="row" style={{ flexWrap: 'wrap' }}>
+            <div className="stack" style={{ maxWidth: 220, gap: 2 }}>
+              <span>名前</span>
+              <PresetText
+                value={p.name}
+                max={PRESET_NAME_MAX}
+                required
+                ariaLabel="プリセットの名前"
+                onChange={(name) => rename(p.id, { name })}
+              />
+            </div>
+            <div className="stack" style={{ flex: 1, minWidth: 200, gap: 2 }}>
+              <span>一言</span>
+              <PresetText
+                value={p.note}
+                max={PRESET_NOTE_MAX}
+                ariaLabel="プリセットの一言"
+                onChange={(note) => rename(p.id, { note })}
+              />
+            </div>
           </div>
-          <div className="stack" style={{ flex: 1, minWidth: 200, gap: 2 }}>
-            <span>一言</span>
-            <PresetText
-              value={p.note}
-              max={PRESET_NOTE_MAX}
-              ariaLabel="プリセットの一言"
-              onChange={(note) => rename(p.id, { note })}
-            />
-          </div>
+          {isRuler ? (
+            // 基準のプリセットの重み・必須は下の条件の表と同じなので、表に寄せる（ADR-0088）
+            <p className="sub" data-testid="preset-weights-basis">
+              重み・必須は下の条件の表のとおりです（点数の基準）。
+            </p>
+          ) : (
+            <PresetWeights preset={p} shownTypes={shownTypes} terms={terms} />
+          )}
+          {!initial && !only && (
+            <div className="row">
+              <button
+                type="button"
+                className="btn btn-small"
+                onClick={() => void remove(p)}
+                data-testid="preset-remove"
+              >
+                <WithIcon icon={Trash2} size={14}>
+                  このプリセットを消す
+                </WithIcon>
+              </button>
+            </div>
+          )}
         </div>
-        <PresetWeights preset={p} shownTypes={shownTypes} terms={terms} />
-        {!initial && !only && (
-          <div className="row">
-            <button type="button" className="btn btn-small" onClick={() => void remove(p)} data-testid="preset-remove">
-              <WithIcon icon={Trash2} size={14}>
-                このプリセットを消す
-              </WithIcon>
-            </button>
-          </div>
-        )}
-      </div>
-    </details>
+      </details>
+    </div>
   );
 }
 

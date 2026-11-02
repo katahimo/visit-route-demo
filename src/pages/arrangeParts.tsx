@@ -1,5 +1,5 @@
 // 担当を組む画面（ArrangePage）の区画：範囲・AI で組む（組む日・考え方・進み具合）・案を比べる
-import { CalendarCheck, CalendarDays, GitCompareArrows, RefreshCw, Sparkles, Square } from 'lucide-react';
+import { CalendarCheck, GitCompareArrows, RefreshCw, Sparkles, Square } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { FieldError } from '../components/FieldError';
 import { WithIcon } from '../components/ui';
@@ -300,39 +300,22 @@ export function ArrangeRunSection({ view, actions }: { view: ArrangeRunProps; ac
   );
 }
 
-/** 案を比べる区画（日を選んで「案を比べる」「日の予定」へ移る） */
-export function ArrangeCompareSection({
-  headingId,
-  compareDate,
-  dates,
-  onDate,
-}: {
-  headingId: string;
-  compareDate: string;
-  dates: readonly string[];
-  onDate: (day: string) => void;
-}) {
+/**
+ * 案を比べる区画（範囲の今日以降の最初の訪問のある日で「案を比べる」を開く。日は比べる画面の上の帯で選び直す。
+ * 日付の欄・［日の予定を見る］は比べる画面の日付と提案の帯の日のリンクに寄せた。ADR-0088）
+ */
+export function ArrangeCompareSection({ headingId, compareDate }: { headingId: string; compareDate: string }) {
   return (
     <section className="card stack" aria-labelledby={headingId} data-testid="arrange-compare">
       <h2 id={headingId} className="arrange-title">
         案を比べる
       </h2>
-      <p className="sub">1日を選び、今の担当と考え方ごとの提案を並べて比べます（保存しません）</p>
+      <p className="sub">
+        1日を選び、今の担当と考え方ごとの提案を並べて比べます（保存しません。日は比べる画面で選び直せます）
+      </p>
       <div className="row">
-        <input
-          type="date"
-          aria-label="比べる日"
-          value={compareDate}
-          min={dates[0]}
-          max={dates[dates.length - 1]}
-          onChange={(e) => isDate(e.target.value) && onDate(e.target.value)}
-          data-testid="arrange-compare-date"
-        />
         <Link className="btn" to={`/compare?date=${compareDate}`} data-testid="arrange-compare-open">
           <WithIcon icon={GitCompareArrows}>{dateText(compareDate)}の案を比べる</WithIcon>
-        </Link>
-        <Link className="btn btn-text" to={`/plan?date=${compareDate}`} data-testid="arrange-day-open">
-          <WithIcon icon={CalendarDays}>日の予定を見る</WithIcon>
         </Link>
       </div>
     </section>
