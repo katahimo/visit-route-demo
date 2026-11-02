@@ -124,6 +124,9 @@
 | [0080](adr/0080-vacancy-one-question-mobile-tab.md) | 空き状況はチップで聞き答えを先頭に・スマホの下のタブ |
 | [0081](adr/0081-next-month-check.md) | 月の終わりに来月の確認を1行で |
 | [0082](adr/0082-absence-two-steps-first-visit-notes.md) | 欠勤・キャンセルを2段・初めての訪問先に決まりごと |
+| [0083](adr/0083-add-plan-start-date-and-text-buttons.md) | 予定を入れるに開始日と毎月・文字のボタン・スマホ画面の日送り |
+| [0084](adr/0084-paste-absences-and-cancels.md) | 貼り付けた連絡から欠勤・キャンセル・休みをまとめて入れる |
+| [0085](adr/0085-chat-copy-one-tap.md) | 日の予定をチャット用の文にして1タップでコピー |
 
 ## 文書の保ち方
 

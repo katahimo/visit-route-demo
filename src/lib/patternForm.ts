@@ -5,6 +5,7 @@ import type { PatternChange } from '../contracts/patterns';
 import { hhmmToMinutes, minutesToHhmm } from '../domain/time';
 import { timesOn } from '../patterns';
 import { newId, WEEKDAY_LABELS } from './common';
+import { EVERY_WEEKS_LABELS } from './patternText';
 
 /** 繰り返しの入力欄（足す・直す） */
 export type PatternForm = {
@@ -82,6 +83,52 @@ export const patternFormOf = (p: Pattern | null, today: string, defaultDuration:
         note: '',
       };
 
+/** くり返しの選択肢（1つの選択。ADR-0083）：'1'〜'4'＝毎週〜4週ごと（repeat 'weekly' と everyWeeks）、'monthly'＝毎月の第N（monthWeeks） */
+export type RepeatChoice = '1' | '2' | '3' | '4' | 'monthly';
+
+/** くり返しの選択肢の並び（monthly は毎月の第N の機能 patternMonthly が入のときだけ出す） */
+export const repeatChoices = (monthlyOn: boolean): RepeatChoice[] =>
+  monthlyOn ? ['1', '2', '3', '4', 'monthly'] : ['1', '2', '3', '4'];
+
+/** 選択肢の呼び方（毎週・隔週・3週ごと・4週ごと・毎月（第N）） */
+export function repeatChoiceLabel(c: RepeatChoice): string {
+  switch (c) {
+    case 'monthly':
+      return '毎月（第N）';
+    case '1':
+    case '2':
+    case '3':
+    case '4':
+      return EVERY_WEEKS_LABELS[Number(c)] ?? `${c}週ごと`;
+    default: {
+      const _: never = c;
+      return _;
+    }
+  }
+}
+
+/** 欄の値 → 選択肢（毎週系で 1〜4 の外の間隔は毎週に寄せる） */
+export function repeatChoiceOf(f: Pick<PatternForm, 'repeat' | 'everyWeeks'>): RepeatChoice {
+  if (f.repeat === 'monthly') return 'monthly';
+  return f.everyWeeks === 2 || f.everyWeeks === 3 || f.everyWeeks === 4 ? (String(f.everyWeeks) as RepeatChoice) : '1';
+}
+
+/** 選択肢 → 欄の値（毎月は repeat だけを変え、間隔と第N は残す。毎週系は repeat 'weekly' と everyWeeks） */
+export function withRepeatChoice<F extends Pick<PatternForm, 'repeat' | 'everyWeeks'>>(f: F, c: RepeatChoice): F {
+  return c === 'monthly' ? { ...f, repeat: 'monthly' } : { ...f, repeat: 'weekly', everyWeeks: Number(c) };
+}
+
+/** 文字の値が選択肢か（select の値を受けるとき） */
+export const isRepeatChoice = (v: string): v is RepeatChoice =>
+  v === '1' || v === '2' || v === '3' || v === '4' || v === 'monthly';
+
+/** 数の並びに入れる・外す（小さい順にそろえる。曜日・第N のチップ） */
+export const toggleNumber = (list: readonly number[], n: number): number[] =>
+  (list.includes(n) ? list.filter((x) => x !== n) : [...list, n]).sort((a, b) => a - b);
+
+/** 第N の誤りの文（毎月で第N を選んでいない。足す・直す欄と「予定を入れる」で同じ） */
+export const MONTH_WEEKS_ERROR = '第何週かを1つ以上選んでください';
+
 /** 選んだ曜日（日曜はじまりの順） */
 export const sortedWeekdays = (f: Pick<PatternForm, 'weekdays'>): number[] => [...f.weekdays].sort((a, b) => a - b);
 
@@ -112,7 +159,7 @@ export function parsePatternForm(
   visitTypes: readonly Pick<VisitType, 'id'>[],
 ): Pattern | string {
   if (f.weekdays.length === 0) return '曜日を1つ以上選んでください';
-  if (f.repeat === 'monthly' && f.monthWeeks.length === 0) return '第何週かを1つ以上選んでください';
+  if (f.repeat === 'monthly' && f.monthWeeks.length === 0) return MONTH_WEEKS_ERROR;
   const latest = f.windowKind === 'fixed' ? f.earliestStart : f.latestStart;
   if (f.earliestStart > latest) return '開始（遅）は開始（早）以降にしてください';
   const dayTimes = dayTimesOf(f);

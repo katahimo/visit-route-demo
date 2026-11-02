@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { clockTime, dateText, mdText, monthLabel, ymText } from './dateText';
+import { clockTime, dateText, dateTextFrom, mdText, monthLabel, ymText } from './dateText';
 
 describe('日付・年月・時刻の短い書式', () => {
+  it('年が違えば年も付ける', () => {
+    expect(dateTextFrom('2026-10-12', '2026-01-01')).toBe('10/12（月）');
+    expect(dateTextFrom('2027-01-05', '2026-12-28')).toBe('2027/1/5（火）');
+  });
+
   it('mdText・dateText：「11/4」「11/4（水）」（先頭の0を付けない）', () => {
     expect(mdText('2026-11-04')).toBe('11/4');
     expect(dateText('2026-11-04')).toBe('11/4（水）');

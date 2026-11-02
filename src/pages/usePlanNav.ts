@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { focusUndo, undoFocusTarget } from '../components/undo';
+import { useDateEntry } from '../components/useDateEntry';
 import type { useRouteSelection } from '../components/useRouteSelection';
 import { useOpenVisit } from '../components/VisitPanel';
 import { useVisitKeys } from '../components/visitKeys';
@@ -137,19 +138,7 @@ function useGoTo(d: PlanData, v: PlanView, sel: RouteSel) {
 function useUrlEntry(date: string, setDate: (d: string) => void, d: PlanData, goToNone: () => void) {
   const [params, setParams] = useSearchParams();
   const doParam = params.get('do');
-  const dateParam = params.get('date');
-  // biome-ignore lint/correctness/useExhaustiveDependencies: ?date= が付いたときだけ
-  useEffect(() => {
-    if (dateParam === null || doParam !== null) return;
-    if (isDate(dateParam) && dateParam !== date) setDate(dateParam);
-    setParams(
-      (p) => {
-        p.delete('date');
-        return p;
-      },
-      { replace: true },
-    );
-  }, [dateParam]);
+  useDateEntry(date, setDate);
   const pendingNone = useRef<string | null>(null);
   /** ?do=unassigned を受けた回数（同じ日を開いたままでも、巻く effect を走らせる） */
   const [noneAsked, setNoneAsked] = useState(0);

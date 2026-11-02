@@ -1,6 +1,6 @@
 // 自動の組み（ADR-0072 第2段。PRD D372〜D376）の計算：欄の保存・要対応の帯の［担当なしを組む］で、担当なしの訪問だけを自動で組む。
 // どれも純粋関数（DemoData を書き換えない・乱数と今の時刻を使わない。今日は引数、seed は data.seed）。
-// 組む範囲は今日から翌月末まで。ほかの訪問の担当は（手でも AI でも標準でも）ピンと同じに固定して動かさず、伝えた日は組まない（expert 切は伝えた日も担当なしだけ埋める。skipsToldDays）。
+// 組む範囲は今日（繰り返しの開始日が先ならその日）から翌月末まで。ほかの訪問の担当は（手でも AI でも標準でも）ピンと同じに固定して動かさず、伝えた日は組まない（expert 切は伝えた日も担当なしだけ埋める。skipsToldDays）。
 // 解く入れ物（Worker・キュー・反映の1手）は lib/autoArrangeBatch
 import type { DemoData } from '../contracts/data';
 import type { Visit } from '../contracts/documents';
@@ -22,11 +22,13 @@ export type DateRange = { from: string; to: string };
 /** 日ごとの組む訪問（日付の順。ids はその日の訪問の ID） */
 export type AutoTarget = { date: string; ids: string[] };
 
-/** 自動で組む範囲：今日から翌月末まで（PRD D372） */
-export function autoRange(today: string): DateRange {
-  const ym = ymOf(today);
-  const next = ymOf(addDays(`${ym}-01`, 31));
-  return { from: today, to: monthDates(next).at(-1) ?? today };
+/**
+ * 自動で組む範囲：今日から翌月末まで（PRD D372）。from（繰り返しの開始日。PRD D416）が今日より後なら、開始日からその翌月末まで
+ */
+export function autoRange(today: string, from: string = today): DateRange {
+  const start = from > today ? from : today;
+  const next = ymOf(addDays(`${ymOf(start)}-01`, 31));
+  return { from: start, to: monthDates(next).at(-1) ?? start };
 }
 
 type TargetData = Pick<DemoData, 'visits' | 'patterns' | 'clients' | 'clientLeaves' | 'snapshots' | 'org'>;

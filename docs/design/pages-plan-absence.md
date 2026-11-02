@@ -1,6 +1,6 @@
 # 日の予定：欠勤・キャンセルと振り直し
 
-> この画面のファイル：`src/pages/SuddenPanel.tsx`・`absenceParts.tsx`（`AbsenceFields`・`ReassignBar`・`ReassignResultBox`・`ReassignSummary`・`ReassignMoves`・`CandidateBox`）・`useSuddenSteps.ts`・`suddenSteps.tsx`・`suddenContactStep.tsx`・`reassignParts.tsx`（`AnnealBox`・`StayWeight`・`ContactButton`・`ReassignDock`）・`contactPanel.tsx`（`ContactPanel`）・`useReassignFlow.ts`・`useSuddenFlow.tsx`・`usePlanRun.ts`・`PlanPage.tsx`・`plan.css`、`src/lib/sudden.ts`・`absences.ts`・`planReassign.ts`・`contacts.ts`・`firstVisit.ts`・`clipboard.ts`。関連 ADR：0011・0015・0036・0038・0044・0053・0054・0073・0082。関連 PRD：D26〜D29・D31・D32・D34・D35・D167・D169〜D172・D238・D244〜D246・D264・D265・D296・D325・D329・D382・D414・D415。
+> この画面のファイル：`src/pages/SuddenPanel.tsx`・`absenceParts.tsx`（`AbsenceFields`・`ReassignBar`・`ReassignResultBox`・`ReassignSummary`・`ReassignMoves`・`CandidateBox`）・`useSuddenSteps.ts`・`suddenSteps.tsx`・`suddenContactStep.tsx`・`reassignParts.tsx`（`AnnealBox`・`StayWeight`・`ContactButton`・`ReassignDock`）・`contactPanel.tsx`（`ContactPanel`）・`useReassignFlow.ts`・`useSuddenFlow.tsx`・`usePlanRun.ts`・`PlanPage.tsx`・`plan.css`、`src/lib/sudden.ts`・`absences.ts`・`planReassign.ts`・`contacts.ts`・`firstVisit.ts`・`clipboard.ts`、貼り付けは `src/components/PastePanel.tsx`・`usePasteNotices.ts`・`pastePanel.css`・`src/lib/pasteNotices.ts`・`pasteRows.ts`。関連 ADR：0011・0015・0036・0038・0044・0053・0054・0073・0082・0084。関連 PRD：D26〜D29・D31・D32・D34・D35・D167・D169〜D172・D238・D244〜D246・D264・D265・D296・D325・D329・D382・D414・D415・D418。
 > 日の予定の全体は [pages-plan.md](pages-plan.md)。計算（`reassign`・`targetsOf`・`prepareAnneal`・`settleAnneal`）は design.md の「reassign」。
 > 振り直しは `writeRoutes` で訪問に書き（今の担当になる）、振り直す前の担当は `reassigns[date]`。確定は2段目の「連絡したので確定」（伝えた内容 `snapshots`）。
 
@@ -91,6 +91,16 @@
 #### 確かめ
 
 `scripts/e2e-absence.cjs`：入口から1段目が開き `?do=`・`?date=` が消える・見出し「何が起きたか」と段の表示が無いこと・種類を選んでもフォーカスが残る・人を選ぶまで決めるボタンが出ない・時間帯の誤り・午前だけですぐ見込み・同じ段に見込み（入らなくなる訪問 N件・担当が移る訪問の一覧）・主ボタンは［この案で決める］の1つ・「ほかのやり方」ははじめ畳みで文字のボタンと「変更を減らす」・案A で決めて2段目（振り直しの結果・「変更を減らす」は「詳しく」に畳む）・案B を作って選ぶ・連絡（休む人あて・新しく入る人あて・初めての訪問先の印と文・〈利用者さん〉あては敬語でほかの人の名前なし・メールは mailto:・［連絡した］で「連絡した 1/N人」・［文をコピー］の知らせ）→「連絡したので確定」で確定済み・決めて Esc で差の欄へ・開き直して欠勤だけ登録・種類を変えると選択を消す・当日キャンセル（既定・影響の文・2段目で担当に「中止です」）・Esc で入口へフォーカス・「欠勤を直す」で人を選んで開き「この日の欠勤：…」から取り消す・担当のある訪問が無い日は欠勤だけが主ボタン・案A で入らない日のおすすめは案B・390px で入口・種類・欄・一覧・2段目が収まる・印刷で入口を出さない・「元に戻す」で振り直し → 欠勤の順に戻る・別の日の振り直しのあとの「振り直す前に戻す」。
+
+### 「連絡を貼り付けて入れる」の欄（PRD D418。ADR-0084）
+
+届いた連絡（LINE WORKS などの文）を貼り、欠勤・訪問の取り消し・〈利用者さん〉の休みをまとめて入れる。読むのは決まりだけ（AI・OCR は使わない。外へ送らない）。振り直さない（PRD §4）。
+
+- 入口：予定（月・週・日）の「その他 ▾」の最後の項目「連絡を貼り付けて入れる」（`paste-open`。入切とも。`components/toolbarRow` の `ToolbarRow` が `PastePanel` を開く）。機能 `sudden` と `clientLeave` がどちらも切なら出さない（D213）。下のタブ・メニューは変えない
+- `components/PastePanel.tsx`：`SidePanel`（見出し「連絡を貼り付けて入れる」・`paste-panel`。スマホは下から出る）。テキストの欄（`paste-text`。開くとここへフォーカス）・1行の説明（〈スタッフ〉・〈利用者さん〉の呼び方で言葉の例）・件数（`paste-count`「読めた N行・読めない M行」。`aria-live`）・一覧（`paste-rows`。行 `paste-row`・`data-state`＝`ok|ng`）。読めた行はチェック（`paste-row-check`。初めは入）と読んだ内容（「11/6（金）市役所 まち子 欠勤 〜12:00」）、読めない行は内容（名前・日付まで読めた行は読んだ内容、ほかは元の行）と理由（`paste-row-reason`）。帯は主ボタン［N件を入れる］（`paste-apply`。0件は `aria-disabled`）と［やめる］（`paste-close`）。Esc・閉じると「その他 ▾」へ戻る
+- `components/usePasteNotices.ts`：入力のたびに 250ms 待って読み直す（`PASTE_READ_DELAY_MS`）。外したチェックは行の文と同じ文の何回目かで覚える（`lib/pasteRows` の `pasteRowKeys`。上に行を足しても外したチェックが戻らない）。［N件を入れる］は待ちの間でも今の文で読み直し、`applyPasteRows` を1回の `update`（手の名前「連絡を貼り付けて入れる」。元に戻せる）。知らせ `pasteDoneText`「N件を入れました。要対応 M件」（［元に戻す］付き）で欄を閉じる
+- `lib/pasteNotices.ts`（読み。純粋関数・テストあり）：`noticePeople`（利用中の〈スタッフ〉・〈利用者さん〉の 名前・姓・よみ・よみの姓を `noticeForm` の形で。`noticeForm`＝`lib/search` の `normalizeKana` を空白で区切った語ごとに当て、空白は1つ残す。名前を探す文も同じ形にし、境目をまたいで別の名前に当てない（「上田 中止」の中の「田中」））・`readNotices`／`readNotice`（1行ずつ。空の行は飛ばす）・`resolveDate`（年が無ければ base の `PAST_WINDOW_DAYS`＝60日前以降でいちばん早い日（その幅の過去は過ぎた日のまま。今日 11/2 の「11/1」は過ぎた日）、日だけなら今月（過ぎていれば過ぎた日）かその日のある次の月。期間の終わりは始まりの日を base に）・`absenceSpan`／`timeOf`（時刻〜時刻（区切りは 〜・-・から・より。「15時から17時まで」）・〇時から・〇時まで・午前＝〜12:00・午後＝12:00〜。午後3時は15:00）・`findPerson`（鍵の中の空白は有無を問わない。かなだけの2文字以下の鍵（よみの姓など）は前後が区切り・漢字・行の端（あとは さん・さま も可）のときだけ（「お願いします」の中の「いし」に当てない）。いちばん長く当たった名前。長い名前の中の短い名前は捨てる。同じ文字が2人＝同じ名前が2人、別の名前が2つ＝名前が2つある）。言葉：〈スタッフ〉＋休・欠勤＝欠勤（希望休は終日・メモ「希望休」）、〈利用者さん〉＋入院・ショート＝休み（日付2つか「〜日付」「日付まで」。メモ「入院」「ショートステイ」。終わりが始まりより前か `LEAVE_MAX_DAYS`＝93日（両端を含む）を超えれば 期間が長すぎる・向きが逆。年またぎ 12/30〜1/2 は通す）、＋中止・キャンセル・休＝その日の取り消し。「出勤」を含む行（「午後から出勤」）は意味が逆なので読まない。読めない理由 `READ_REASONS`（日付が無い・日付が読めない・日付が2つある・終わりの日が無い・名前が見つからない・同じ名前が2人・名前が2つある・休み・中止などの言葉が無い・時刻が読めない・過ぎた日・期間が長すぎる・向きが逆・出勤の時刻は読めません（休む時間帯で書く））
+- `lib/pasteRows.ts`（照らし合わせと書き込み。純粋関数・テストあり）：`pasteRows(data, text, today)`＝読む → `pasteRowsOf`。理由 `ROW_REASONS`：欠勤は `requestedOff` の `offDayState`（勤務の無い日・すでに入っている）と `absenceError`（時刻は30分単位）、取り消しは `activeDayVisits` のその〈利用者さん〉の訪問（無ければ、取り消し済み・休みの訪問があれば すでに入っている、無ければ その日に訪問が無い）、休みは同じ〈利用者さん〉の重なる休み（すでに入っている）、同じ人・同じ日（休みは同じ期間）の2行目は「上の行と同じ」、上の行で受け入れた休みと期間が重なる同じ〈利用者さん〉の休みは「上の行と重なる」。一覧の文（`actionText`）は今日と年が違う日に年を付ける（`lib/dateText` の `dateTextFrom`「2027/1/5（火）」）。機能 `sudden` が切なら欠勤・取り消しの行は「欠勤・キャンセルの機能が切」、`clientLeave` が切なら休みの行は「〈利用者さん〉の休みの機能が切」（`leaveOffReason`）。`applyPasteRows`＝欠勤 `saveAbsence`・取り消し `cancelVisitOp`（その日の訪問すべて。今日なら当日キャンセル。繰り返しの回は「この回だけ」）・休み `saveLeave`。`pasteCareCount`＝欠勤・取り消しの日（今日以降）の要対応の帯と同じ種類（`visitBandKind`）の訪問の数（その日の要対応の合計）
 
 ### 振り直し（案A）
 
@@ -218,4 +228,5 @@
 - [ ] 比較の画面で 欠勤前／案A／案B を比べられる（欠勤前は1つ）
 - [ ] 決めると2段目に、休む人・新しく入る人・〈利用者さん〉あての文と［文をコピー］・メール・［連絡した］が出る。キャンセルでは担当に「中止です」（390px で横にはみ出さない）
 - [ ] 新しく入る人がその〈利用者さん〉を過去8週に担当していなければ、「お願いします」の行に「初めての訪問先です。」と決まりごと（入っている項目だけ）、行に「初めて」の印。日の予定の訪問の詳細とスマホ画面にも「初めて」の印と決まりごとが先頭に出る
-- [ ] `lib/absences`・`lib/contacts`・`lib/clipboard`（失敗の経路）・`lib/sudden`・`lib/firstVisit`・`lib/planReassign` のテストが通る
+- [ ] 「その他 ▾」の「連絡を貼り付けて入れる」に3行（欠勤・取り消し・休み）と読めない行を貼ると、一覧に読んだ内容とチェック・理由が出て、［3件を入れる］1回で入り「3件を入れました。要対応 M件」。担当は変わらず、「元に戻す」1回で3件とも戻る。同じ文をもう一度貼ると「すでに入っている」
+- [ ] `lib/pasteNotices`・`lib/pasteRows`・`lib/absences`・`lib/contacts`・`lib/clipboard`（失敗の経路）・`lib/sudden`・`lib/firstVisit`・`lib/planReassign` のテストが通る

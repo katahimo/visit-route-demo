@@ -270,8 +270,10 @@ export function requestAutoArrange(a: {
   after: DemoData;
   today: string;
   writeUsual: boolean;
+  /** 繰り返しの開始日（足した繰り返しから。今日より後なら開始日から翌月末までを組む。PRD D416） */
+  from?: string;
 }): boolean {
-  const range = autoRange(a.today);
+  const range = autoRange(a.today, a.from);
   const targets = autoTargets(a.before, a.after, a.today, range);
   return autoArrange.request({
     targets,

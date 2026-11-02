@@ -287,6 +287,14 @@ async function bandsAndFold(page) {
   // 「詳しく ▾」を開くと表。開け閉めは端末に覚え、読み直しても開いたまま
   await reveal(page, 'vacancy-grid');
   check((await page.getByTestId('vacancy-details').getAttribute('open')) !== null, '「詳しく ▾」を開くと表が見える');
+  // 開け閉めは details の toggle の事件で覚える（少し遅れて届く）。覚えたのを確かめてから読み直す
+  await until(
+    () =>
+      page.evaluate(
+        () => JSON.parse(localStorage.getItem('visit-route-demo:nav-open') || '{}')['details:vacancy'] === true,
+      ),
+    5000,
+  );
   await page.reload();
   await page.getByTestId('inquiry-summary').waitFor({ timeout: 30000 });
   await page.getByTestId('vacancy-grid').waitFor({ timeout: 30000 });

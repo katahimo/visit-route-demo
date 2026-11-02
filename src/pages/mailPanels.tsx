@@ -64,11 +64,14 @@ export function DayMailPanel({
   date,
   onClose,
   confirm,
+  keys,
 }: {
   data: DemoData;
   date: string;
   onClose: () => void;
   confirm?: DayMailConfirm;
+  /** 「鍵の情報も入れる」の選択を欄の外と分け合う（日の予定のチャット用にコピーと同じ選択。PRD D419）。無ければ欄の中だけ */
+  keys?: { on: boolean; set: (on: boolean) => void };
 }) {
   const terms = data.org.terms;
   /**
@@ -78,7 +81,9 @@ export function DayMailPanel({
   const notesOn = isOn(data.org.features, 'visitNotes');
   const mapsOn = isOn(data.org.features, 'mapsLink');
   /** 鍵の情報も入れる（既定はオフ。保存しない） */
-  const [includeKeys, setIncludeKeys] = useState(false);
+  const [ownKeys, setOwnKeys] = useState(false);
+  const includeKeys = keys ? keys.on : ownKeys;
+  const setIncludeKeys = keys ? keys.set : setOwnKeys;
   const limit = useMailLimit();
   /**
    * 本文の担当の言い方：確定の欄（confirm）から送るメールは、送ると確定になるので「確定した担当」と書く（PRD D346。
@@ -136,7 +141,8 @@ export function DayMailPanel({
                   style={{ width: 'auto' }}
                   data-testid="mail-include-keys"
                 />
-                鍵の情報も入れる（既定は入れません。メールは転送・誤送信で人の目に触れることがあります）
+                鍵の情報も入れる（既定は入れません。メールは転送・誤送信で人の目に触れることがあります
+                {keys ? '。「チャット用にコピー」も同じ' : ''}）
               </label>
             )}
             <MailNotice>

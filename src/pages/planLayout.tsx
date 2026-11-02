@@ -377,6 +377,7 @@ export function PlanPanels({ p }: { p: PlanCtx }) {
           data={data}
           date={date}
           onClose={() => v.setPanel(null)}
+          keys={{ on: v.includeKeys, set: v.setIncludeKeys }}
           confirm={{
             state: d.toldState,
             onConfirm: (by, note) => {

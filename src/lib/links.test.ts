@@ -3,6 +3,7 @@ import {
   attentionTarget,
   dayHref,
   shouldOpenTold,
+  staffViewHref,
   suddenHref,
   TOLD_DO,
   toldEntryDate,
@@ -91,5 +92,13 @@ describe('toldEntryDate・shouldOpenTold（?do=told の入口）', () => {
     expect(shouldOpenTold(D, D, false)).toBe(false);
     expect(shouldOpenTold(D, '2026-10-22', true)).toBe(false);
     expect(shouldOpenTold(null, D, true)).toBe(false);
+  });
+});
+
+describe('staffViewHref（〈スタッフ〉のスマホ画面。PRD D417）', () => {
+  it('日付を渡すと ?date= を付ける。ID は URL 用に直す', () => {
+    expect(staffViewHref('s1')).toBe('/staff-view/s1');
+    expect(staffViewHref('s1', '2026-11-02')).toBe('/staff-view/s1?date=2026-11-02');
+    expect(staffViewHref('a b')).toBe('/staff-view/a%20b');
   });
 });

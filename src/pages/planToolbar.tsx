@@ -1,6 +1,7 @@
 // 日の予定の操作の行（日・週・月で同じ作り・同じ位置。PRD D327・D402）：予定を入れる（主）・確定（伝えた）（入）／
-// その他 ▾（欠勤・キャンセル（入）・元に戻す・表示の切り替え・使い方・メールで送る）と、計算中の進み具合（PRD D249）
-import { Info, Mail, Plus, Square } from 'lucide-react';
+// その他 ▾（欠勤・キャンセル（入）・元に戻す・表示の切り替え・使い方・書き出し（チャット用にコピー・メールで送る・印刷。PRD D419））と、
+// 計算中の進み具合（PRD D249）
+import { Info, Mail, MessageSquareText, Plus, Printer, Square } from 'lucide-react';
 import type { MenuItem } from '../components/MenuButton';
 import { ScheduleToolbar } from '../components/scheduleParts';
 import { WithIcon } from '../components/ui';
@@ -46,23 +47,39 @@ const viewItem = (k: string, text: string, i: number, current: boolean, onSelect
 });
 
 /**
+ * 書き出し（行き先ごとに1つずつ。PRD D419）：チャット用にコピー・印刷（文に出す訪問のある日。取り消し・休みの訪問だけの日は出さない）、
+ * メールで送る（`mail` が入で、訪問のある日・未連絡の変更のある日）
+ */
+function exportItemsOf(p: PlanCtx): MenuItem[] {
+  const hasVisits = p.contact.hasShownVisits;
+  const items: MenuItem[] = [
+    ...(hasVisits
+      ? [
+          {
+            key: 'chat',
+            label: 'チャット用にコピー',
+            icon: MessageSquareText,
+            onSelect: p.contact.copyChat,
+            testId: 'day-chat-copy',
+          },
+        ]
+      : []),
+    ...(p.f.mailOn && (p.d.hasPlan || p.d.toldState === 'changed')
+      ? [{ key: 'mail', label: 'メールで送る', icon: Mail, onSelect: () => p.v.setPanel('mail'), testId: 'day-mail' }]
+      : []),
+    ...(hasVisits
+      ? [{ key: 'print', label: '印刷', icon: Printer, onSelect: () => window.print(), testId: 'day-print' }]
+      : []),
+  ];
+  return items.map((x, i) => (i === 0 ? { ...x, group: '書き出し' } : x));
+}
+
+/**
  * 操作の行の「その他 ▾」の項目（入切とも。PRD D402）：スマホは 予定を入れる・日ごとのリスト／順番／一覧、パソコン・タブレットは 時間軸／順番／一覧
- * （訪問のある日だけ）、使い方、予定をメールで送る（訪問のある日・未連絡の変更のある日）
+ * （訪問のある日だけ）、使い方、書き出し（exportItemsOf）
  */
 function moreItemsOf(p: PlanCtx, addWhy: string | false): MenuItem[] {
   const { compact, mView, setMView, shownView, setColView, helpOpen, setHelpOpen } = p.v;
-  const mail: MenuItem[] =
-    p.f.mailOn && (p.d.hasPlan || p.d.toldState === 'changed')
-      ? [
-          {
-            key: 'mail',
-            label: '予定をメールで送る',
-            icon: Mail,
-            onSelect: () => p.v.setPanel('mail'),
-            testId: 'day-mail',
-          },
-        ]
-      : [];
   return [
     // 予定を入れるは、スマホでは「その他 ▾」の中（パソコン・タブレットは操作の行の主ボタン）
     ...(compact
@@ -103,7 +120,7 @@ function moreItemsOf(p: PlanCtx, addWhy: string | false): MenuItem[] {
       onSelect: () => setHelpOpen(!helpOpen),
       testId: 'plan-more-help',
     },
-    ...mail,
+    ...exportItemsOf(p),
   ];
 }
 

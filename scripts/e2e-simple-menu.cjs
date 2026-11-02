@@ -17,7 +17,8 @@
 //    段階・特性・決まりごと・担当・相性（〈スタッフ〉は自宅・特性・求めること・日ごとの勤務ほか）は「詳しく ▾」の中（閉じていると見えない・開くと見える）。
 //    日の予定の地図はふだん閉じ、「地図」のボタンで開く（1366px・390px）。月のマスは例外だけで吹き出しを出さず、読み方は見出しの ⓘ（帯の3種類と「変更あり」。PRD D410）、
 // 5f 「予定を入れる」と〈スタッフ〉・〈利用者さん〉のタブ（PRD D402）：月・週の主ボタンは「予定を入れる」（操作の行は2つまで。担当なしを組むは帯の［担当なしを組む］）、
-//    押すと引き出し（定期＝〈利用者さん〉・曜日・くり返し・時刻・所要／単発＝〈利用者さん〉・日付・時刻・所要）で「入れる」→ 予定に出て担当が自動で付く。
+//    押すと引き出し（定期＝〈利用者さん〉・曜日・くり返し・開始日（既定は今日・今日より前は誤り。PRD D416）・時刻・所要／単発＝〈利用者さん〉・日付・時刻・所要）で
+//    「入れる」→ 予定に出て開始日からの回に担当が自動で付く。5f3 毎月の第N の機能を入れると、くり返しに「毎月（第N）」と第1〜第5 のチップ（選ばなければ誤り。入れた回に担当が自動で付き、組みの終わりまで待って次の段へ）、
 //    〈スタッフ〉の一覧の上のタブ（一覧・勤務・相性）と〈利用者さん〉のタブ（一覧・相性）で行き来でき、メニューの印は〈スタッフ〉／〈利用者さん〉に付き、
 //    相性・勤務の画面に禁句・点数が出ない。1366px・390px。幅は落ちても戻す、
 // 6 エキスパート機能を入にすると帯に 組み方の標準が無い・未確定 N日 が足され［担当なしを組む］は出ない（入のメニュー・ホームが無いことは e2e-nav・e2e-home）。
@@ -32,7 +33,7 @@
 // 終了コード：全部通れば 0、通らないものがあれば 1。ページのエラー（pageerror）も失敗に数える
 const { BASE, NOW, TODAY, STORAGE_KEY, check, runSteps, settle, until, shot } = require('./lib/env.cjs');
 const { openPage, sharedPage } = require('./lib/steps.cjs');
-const { freshAsked } = require('./lib/firstRun.cjs');
+const { freshAsked, waitStartArranged } = require('./lib/firstRun.cjs');
 const { navUsr, pressTool, watchNavUsr } = require('./lib/ui.cjs');
 
 const data = (page) => page.evaluate((k) => JSON.parse(localStorage.getItem(k)), STORAGE_KEY);
@@ -41,6 +42,9 @@ const side = (page) => page.locator('.side-nav [data-testid="nav-link"]');
 const texts = (loc) => loc.evaluateAll((els) => els.map((e) => e.textContent.trim().replace(/\s+/g, ' ')));
 
 const fresh = freshAsked;
+
+/** n 日ずらした日付（YYYY-MM-DD） */
+const shiftDay = (date, n) => new Date(Date.parse(`${date}T00:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
 
 const NAV_READY = '[data-testid="sched-nav"]';
 
@@ -457,6 +461,25 @@ const toolbarButtons = (page) =>
     })),
   );
 
+/**
+ * 「詳しく ▾」（testId）の見出しを押し、開け閉めが端末に覚えられるまで待つ（画面 screen の鍵 details:<screen>）。
+ * 覚えるのは details の toggle の事件（押したあと遅れて別の仕事で来る）なので、押してすぐ読み直すと覚える前にページが替わる
+ */
+async function toggleDetails(page, testId, screen) {
+  await page.getByTestId(`${testId}-summary`).click();
+  await until(
+    () =>
+      page.evaluate(
+        ([k, key, id]) => {
+          const open = document.querySelector(`[data-testid="${id}"]`)?.open;
+          return (JSON.parse(localStorage.getItem(k) || '{}')[key] === true) === open;
+        },
+        [INTRO_KEY, `details:${screen}`, testId],
+      ),
+    5000,
+  );
+}
+
 /** 画面を開く（説明の覚えは消さない） */
 async function open1(page, to) {
   await page.goto('about:blank');
@@ -582,7 +605,7 @@ async function exceptions(page) {
     );
   }
   await open1(page, '/month');
-  await page.getByTestId('month-details-summary').click();
+  await toggleDetails(page, 'month-details', 'month');
   await page.reload();
   await page.locator(NAV_READY).waitFor({ timeout: 60000 });
   await settle(page, 600);
@@ -591,7 +614,7 @@ async function exceptions(page) {
     (await page.evaluate(() => !!document.querySelector('[data-testid="month-details-heading"]'))) === false,
     '切：見出しに数を出さない',
   );
-  await page.getByTestId('month-details-summary').click();
+  await toggleDetails(page, 'month-details', 'month');
   // 日の「一覧で見る」：ピン・条件に合わないの札と禁句が出ない
   await open1(page, '/plan');
   await pressTool(page, 'plan-view-list', { where: 'more' });
@@ -775,7 +798,7 @@ async function expertSame(page) {
   }
   // 開け閉めは画面ごとに端末に覚える：月を開いて読み直すと開いたまま、週・日は閉じたまま。閉じて読み直すと閉じる
   await open1(page, '/month');
-  await page.getByTestId('month-details-summary').click();
+  await toggleDetails(page, 'month-details', 'month');
   check(await page.getByTestId('month-details').evaluate((e) => e.open), '入 月：「詳しく」を押すと開く');
   check(await page.getByTestId('progress-band').first().isVisible(), '入 月：開くと進み具合の帯が見える');
   await page.reload();
@@ -796,7 +819,7 @@ async function expertSame(page) {
     '入 日：月を開いても日は閉じたまま（画面ごと）',
   );
   await open1(page, '/month');
-  await page.getByTestId('month-details-summary').click();
+  await toggleDetails(page, 'month-details', 'month');
   await page.reload();
   await page.locator(NAV_READY).waitFor({ timeout: 60000 });
   await settle(page, 600);
@@ -1288,6 +1311,19 @@ async function addRecurring(page, w) {
     labels,
   );
   check((await box.getByTestId('add-plan-date').count()) === 0, `定期（${w}）：日付の欄は無い`);
+  // 開始日（PRD D416）：既定は今日・今日より前は選べない。くり返しは 毎週〜4週ごと（「基本」は毎月の第N の機能が切なので毎月は出さない）
+  const from = box.getByTestId('add-plan-from');
+  check(
+    (await from.inputValue()) === TODAY && (await from.getAttribute('min')) === TODAY,
+    `定期（${w}）：開始日は今日（今日より前は選べない）`,
+    await from.inputValue(),
+  );
+  const repeatOpts = await texts(box.getByTestId('add-plan-repeat').locator('option'));
+  check(
+    JSON.stringify(repeatOpts) === JSON.stringify(['毎週', '隔週', '3週ごと', '4週ごと']),
+    `定期（${w}）：くり返しは 毎週・隔週・3週ごと・4週ごと（毎月の第N の機能が切なら毎月は無い）`,
+    repeatOpts,
+  );
   const body = await page.locator('aside, [role="dialog"]').last().innerText();
   check(!BANNED.test(body), `定期（${w}）：引き出しに禁句が出ない`, body.match(BANNED)?.[0]);
   await settle(page, 700);
@@ -1322,6 +1358,17 @@ async function addRecurring(page, w) {
   check((await focusedTestId()) === 'add-plan-duration', `定期（${w}）：誤った所要の欄へフォーカス`);
   check((await data(page)).patterns.length === d0.patterns.length, `定期（${w}）：誤りのときは増えない`);
   await box.getByTestId('add-plan-duration').fill('60');
+  // 今日より前の開始日は開始日の欄に誤り（データは増えない）
+  await from.fill(shiftDay(TODAY, -1));
+  await page.getByTestId('add-plan-save').click();
+  await until(async () => (await focusedTestId()) === 'add-plan-from');
+  check(
+    (await from.getAttribute('aria-invalid')) === 'true' &&
+      (await box.locator('[role="alert"]').innerText()) === '開始日は今日以降の日付にしてください',
+    `定期（${w}）：今日より前の開始日は開始日の欄に誤り（aria-invalid・フォーカス）`,
+  );
+  const startDay = shiftDay(TODAY, 7);
+  await from.fill(startDay);
   await box.getByTestId('add-plan-start').fill('13:15');
   await box.getByTestId('add-plan-repeat').selectOption('2');
   await page.getByTestId('add-plan-save').click();
@@ -1342,8 +1389,10 @@ async function addRecurring(page, w) {
       p.clientId === client &&
       JSON.stringify(p.weekdays) === '[5]' &&
       p.earliestStart === '13:15' &&
-      p.everyWeeks === 2,
-    `定期（${w}）：選んだ〈利用者さん〉・金曜・13:15・隔週の繰り返しが増えた`,
+      p.everyWeeks === 2 &&
+      p.repeat === 'weekly' &&
+      p.from === startDay,
+    `定期（${w}）：選んだ〈利用者さん〉・金曜・13:15・隔週・開始日（1週間後）の繰り返しが増えた`,
     p,
   );
   check(
@@ -1358,14 +1407,88 @@ async function addRecurring(page, w) {
   }, 30000);
   const hit = d2?.visits.filter((v) => v.pattern?.id === p.id && v.staffId) ?? [];
   check(
-    hit.length > 0 && hit.every((v) => v.pinned === false),
-    `定期（${w}）：入れた繰り返しの回に担当が自動で付く`,
-    hit.length,
+    hit.length > 0 && hit.every((v) => v.pinned === false && v.date >= startDay),
+    `定期（${w}）：入れた繰り返しの回（開始日から）に担当が自動で付く`,
+    hit.map((v) => v.date),
   );
   const cname = d1.clients.find((c) => c.id === client).displayName;
   await open1(page, `/plan?date=${hit[0].date}`);
   const planText = await page.locator('main, .content').first().innerText();
   check(planText.includes(cname) && planText.includes('13:15'), `定期（${w}）：その日の予定に ${cname} 13:15 が出る`);
+}
+
+/**
+ * 毎月（第N。PRD D416）：毎月の第N の機能（patternMonthly）を入れた「基本」で、くり返しに「毎月（第N）」が出て、選ぶと第1〜第5 のチップ。
+ * 第N を選ばずに入れると第N の欄に誤り（aria-invalid・フォーカス）、第2・第4 を選んで入れると repeat 'monthly'・monthWeeks [2, 4] の繰り返しが増える
+ */
+async function addMonthly(page) {
+  await fresh(page, '/month', NAV_READY, { start: 'demo' });
+  await page.evaluate((k) => {
+    const d = JSON.parse(localStorage.getItem(k));
+    d.org.features = { ...d.org.features, patternMonthly: true };
+    localStorage.setItem(k, JSON.stringify(d));
+  }, STORAGE_KEY);
+  await page.goto('about:blank');
+  await page.goto(`${BASE}#/month`);
+  await page.locator(NAV_READY).waitFor({ timeout: 60000 });
+  const d0 = await data(page);
+  const box = await openAdd(page, 'recurring', '毎月');
+  const repeat = box.getByTestId('add-plan-repeat');
+  const opts = await texts(repeat.locator('option'));
+  check(
+    JSON.stringify(opts) === JSON.stringify(['毎週', '隔週', '3週ごと', '4週ごと', '毎月（第N）']),
+    '毎月：くり返しは 毎週・隔週・3週ごと・4週ごと・毎月（第N）の1つの選択',
+    opts,
+  );
+  check((await box.getByTestId('add-plan-month-weeks').count()) === 0, '毎月：毎週のときは第N のチップを出さない');
+  await repeat.selectOption('monthly');
+  const weeks = box.getByTestId('add-plan-month-weeks');
+  await weeks.waitFor();
+  const chips = await texts(weeks.locator('button'));
+  check(
+    JSON.stringify(chips) === JSON.stringify(['第1', '第2', '第3', '第4', '第5']),
+    '毎月：第1〜第5 のチップ',
+    chips,
+  );
+  const focusedTestId = () => page.evaluate(() => document.activeElement?.getAttribute('data-testid'));
+  await page.getByTestId('add-plan-save').click();
+  await until(async () => (await focusedTestId()) === 'add-plan-month-weeks');
+  check(
+    (await weeks.getAttribute('aria-invalid')) === 'true' &&
+      (await box.locator('[role="alert"]').innerText()) === '第何週かを1つ以上選んでください',
+    '毎月：第N を選ばずに入れると第N の欄に誤り（aria-invalid・フォーカス）',
+  );
+  check((await data(page)).patterns.length === d0.patterns.length, '毎月：誤りのときは増えない');
+  await weeks.getByRole('button', { name: '第2' }).click();
+  await weeks.getByRole('button', { name: '第4' }).click();
+  check(
+    (await weeks.getByRole('button', { name: '第4' }).getAttribute('aria-pressed')) === 'true',
+    '毎月：押したチップは aria-pressed',
+  );
+  await settle(page, 300);
+  await shot(page, 'simple-add-drawer-monthly-1366');
+  await page.getByTestId('add-plan-save').click();
+  await box.waitFor({ state: 'detached', timeout: 10000 });
+  const d1 = await until(async () => {
+    const x = await data(page);
+    return x.patterns.length === d0.patterns.length + 1 ? x : null;
+  }, 15000);
+  const p = d1?.patterns.at(-1);
+  check(
+    !!p && p.repeat === 'monthly' && JSON.stringify(p.monthWeeks) === '[2,4]' && p.from === TODAY,
+    '毎月：repeat monthly・第2・第4・開始日は今日の繰り返しが増えた',
+    p,
+  );
+  // 入れたあとの自動の組みが終わるまで待つ（終わる前に段を終えると、次の段の fresh が保存データを消したあとに
+  // 組みの結果と pagehide の保存が書き戻し、最初の2問が出ずに前の段のデータで始まる）
+  const text = await waitStartArranged(page, 60000);
+  await settle(page, 600);
+  const assigned = ((await data(page)).visits ?? []).filter((v) => v.pattern?.id === p?.id && v.staffId);
+  check(
+    /件の担当を組みました/.test(text) && assigned.length > 0 && assigned.every((v) => v.pinned === false),
+    '毎月：入れた繰り返しの回に担当が自動で付く（組みの終わりの知らせ）',
+    `${text} ${assigned.length}件`,
+  );
 }
 
 /** 単発：週で押す → 〈利用者さん〉・日付・時刻・所要 → 入れる → 訪問が1件増え、予定に出る */
@@ -1567,6 +1690,7 @@ const steps = sharedPage({
       '5f2 切：「予定を入れる」（定期・単発）・〈スタッフ〉〈利用者さん〉のタブ（390px）',
       restoreWidth(addAndTabs(390)),
     ],
+    ['5f3 切：「予定を入れる」の毎月（第N）・誤りの欄（毎月の第N の機能を入）', addMonthly],
     ['6 入：メニュー6つ・ホームなし・帯の入の種類', expertOn],
     ['6b 入：操作の行（2つ＋その他）・「詳しく」の見出しの数と開け閉めの覚え・説明1行', expertSame],
     ['6c 入：人の一覧は3列＋「くわしい列」（覚える）・人のタブ・4段は組む画面だけ', restoreWidth(expertPeople)],

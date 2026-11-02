@@ -46,6 +46,12 @@ describe('autoRange', () => {
     expect(autoRange('2026-12-31')).toEqual({ from: '2026-12-31', to: '2027-01-31' });
     expect(autoRange('2027-01-31').to).toBe('2027-02-28');
   });
+  it('開始日が今日より後なら開始日からその翌月末まで。今日より前・今日なら今日から（PRD D416）', () => {
+    expect(autoRange('2026-11-02', '2026-12-20')).toEqual({ from: '2026-12-20', to: '2027-01-31' });
+    expect(autoRange('2026-11-02', '2026-11-10')).toEqual({ from: '2026-11-10', to: '2026-12-31' });
+    expect(autoRange('2026-11-02', '2026-10-01')).toEqual({ from: '2026-11-02', to: '2026-12-31' });
+    expect(autoRange('2026-11-02', '2026-11-02')).toEqual(autoRange('2026-11-02'));
+  });
 });
 
 describe('autoTargets（増えた・日時が変わった担当なしの訪問。D373）', () => {

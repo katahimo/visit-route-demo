@@ -32,6 +32,12 @@ export const TOLD_DO = 'told';
 export const toldHref = (date: string): string => `/plan?date=${date}&do=${TOLD_DO}`;
 
 /**
+ * 〈スタッフ〉のスマホ画面（PRD D16・D417）の URL。date を渡すとその日で開く（画面が ?date= を読んで消す。〈スタッフ〉の一覧の「今日の画面」）
+ */
+export const staffViewHref = (staffId: string, date?: string): string =>
+  `/staff-view/${encodeURIComponent(staffId)}${date ? `?date=${date}` : ''}`;
+
+/**
  * 日の画面の URL の入口 `?do=told`：受けたら移る先の日（?date= が正しければその日、無ければ今の日）。`?do=told` でなければ null。
  * 受けたら画面は ?do=・?date= を URL から消す（useToldEntry）
  */
