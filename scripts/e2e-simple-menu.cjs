@@ -18,7 +18,7 @@
 //    日の予定の地図はふだん閉じ、「地図」のボタンで開く（1366px・390px）。月のマスは例外だけで吹き出しを出さず、読み方は見出しの ⓘ（帯の3種類と「変更あり」。PRD D410）、
 // 5f 「予定を入れる」と〈スタッフ〉・〈利用者さん〉のタブ（PRD D402）：月・週の主ボタンは「予定を入れる」（操作の行は2つまで。担当なしを組むは帯の［担当なしを組む］）、
 //    押すと引き出し（定期＝〈利用者さん〉・曜日・くり返し・開始日（既定は今日・今日より前は誤り。PRD D416）・時刻・所要／単発＝〈利用者さん〉・日付・時刻・所要）で
-//    「入れる」→ 予定に出て開始日からの回に担当が自動で付く。5f3 毎月の第N の機能を入れると、くり返しに「毎月（第N）」と第1〜第5 のチップ（選ばなければ誤り）、
+//    「入れる」→ 予定に出て開始日からの回に担当が自動で付く。5f3 毎月の第N の機能を入れると、くり返しに「毎月（第N）」と第1〜第5 のチップ（選ばなければ誤り。入れた回に担当が自動で付き、組みの終わりまで待って次の段へ）、
 //    〈スタッフ〉の一覧の上のタブ（一覧・勤務・相性）と〈利用者さん〉のタブ（一覧・相性）で行き来でき、メニューの印は〈スタッフ〉／〈利用者さん〉に付き、
 //    相性・勤務の画面に禁句・点数が出ない。1366px・390px。幅は落ちても戻す、
 // 6 エキスパート機能を入にすると帯に 組み方の標準が無い・未確定 N日 が足され［担当なしを組む］は出ない（入のメニュー・ホームが無いことは e2e-nav・e2e-home）。
@@ -33,7 +33,7 @@
 // 終了コード：全部通れば 0、通らないものがあれば 1。ページのエラー（pageerror）も失敗に数える
 const { BASE, NOW, TODAY, STORAGE_KEY, check, runSteps, settle, until, shot } = require('./lib/env.cjs');
 const { openPage, sharedPage } = require('./lib/steps.cjs');
-const { freshAsked } = require('./lib/firstRun.cjs');
+const { freshAsked, waitStartArranged } = require('./lib/firstRun.cjs');
 const { navUsr, pressTool, watchNavUsr } = require('./lib/ui.cjs');
 
 const data = (page) => page.evaluate((k) => JSON.parse(localStorage.getItem(k)), STORAGE_KEY);
@@ -461,6 +461,25 @@ const toolbarButtons = (page) =>
     })),
   );
 
+/**
+ * 「詳しく ▾」（testId）の見出しを押し、開け閉めが端末に覚えられるまで待つ（画面 screen の鍵 details:<screen>）。
+ * 覚えるのは details の toggle の事件（押したあと遅れて別の仕事で来る）なので、押してすぐ読み直すと覚える前にページが替わる
+ */
+async function toggleDetails(page, testId, screen) {
+  await page.getByTestId(`${testId}-summary`).click();
+  await until(
+    () =>
+      page.evaluate(
+        ([k, key, id]) => {
+          const open = document.querySelector(`[data-testid="${id}"]`)?.open;
+          return (JSON.parse(localStorage.getItem(k) || '{}')[key] === true) === open;
+        },
+        [INTRO_KEY, `details:${screen}`, testId],
+      ),
+    5000,
+  );
+}
+
 /** 画面を開く（説明の覚えは消さない） */
 async function open1(page, to) {
   await page.goto('about:blank');
@@ -586,7 +605,7 @@ async function exceptions(page) {
     );
   }
   await open1(page, '/month');
-  await page.getByTestId('month-details-summary').click();
+  await toggleDetails(page, 'month-details', 'month');
   await page.reload();
   await page.locator(NAV_READY).waitFor({ timeout: 60000 });
   await settle(page, 600);
@@ -595,7 +614,7 @@ async function exceptions(page) {
     (await page.evaluate(() => !!document.querySelector('[data-testid="month-details-heading"]'))) === false,
     '切：見出しに数を出さない',
   );
-  await page.getByTestId('month-details-summary').click();
+  await toggleDetails(page, 'month-details', 'month');
   // 日の「一覧で見る」：ピン・条件に合わないの札と禁句が出ない
   await open1(page, '/plan');
   await pressTool(page, 'plan-view-list', { where: 'more' });
@@ -779,7 +798,7 @@ async function expertSame(page) {
   }
   // 開け閉めは画面ごとに端末に覚える：月を開いて読み直すと開いたまま、週・日は閉じたまま。閉じて読み直すと閉じる
   await open1(page, '/month');
-  await page.getByTestId('month-details-summary').click();
+  await toggleDetails(page, 'month-details', 'month');
   check(await page.getByTestId('month-details').evaluate((e) => e.open), '入 月：「詳しく」を押すと開く');
   check(await page.getByTestId('progress-band').first().isVisible(), '入 月：開くと進み具合の帯が見える');
   await page.reload();
@@ -800,7 +819,7 @@ async function expertSame(page) {
     '入 日：月を開いても日は閉じたまま（画面ごと）',
   );
   await open1(page, '/month');
-  await page.getByTestId('month-details-summary').click();
+  await toggleDetails(page, 'month-details', 'month');
   await page.reload();
   await page.locator(NAV_READY).waitFor({ timeout: 60000 });
   await settle(page, 600);
@@ -1459,6 +1478,16 @@ async function addMonthly(page) {
     !!p && p.repeat === 'monthly' && JSON.stringify(p.monthWeeks) === '[2,4]' && p.from === TODAY,
     '毎月：repeat monthly・第2・第4・開始日は今日の繰り返しが増えた',
     p,
+  );
+  // 入れたあとの自動の組みが終わるまで待つ（終わる前に段を終えると、次の段の fresh が保存データを消したあとに
+  // 組みの結果と pagehide の保存が書き戻し、最初の2問が出ずに前の段のデータで始まる）
+  const text = await waitStartArranged(page, 60000);
+  await settle(page, 600);
+  const assigned = ((await data(page)).visits ?? []).filter((v) => v.pattern?.id === p?.id && v.staffId);
+  check(
+    /件の担当を組みました/.test(text) && assigned.length > 0 && assigned.every((v) => v.pinned === false),
+    '毎月：入れた繰り返しの回に担当が自動で付く（組みの終わりの知らせ）',
+    `${text} ${assigned.length}件`,
   );
 }
 
