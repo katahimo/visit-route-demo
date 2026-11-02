@@ -40,16 +40,21 @@ describe('日付', () => {
     expect(resolveDate({ y: 2026, m: 12, d: 3 }, TODAY)).toBe('2026-12-03');
     expect(resolveDate({ y: 2026, m: 2, d: 30 }, TODAY)).toBeNull();
   });
-  it('年の無い日付は今日以降でいちばん近い日（今日を含む）', () => {
+  it('年の無い日付は今日以降でいちばん近い日（今日を含む）。60日以内の過去はその日（過ぎた日）', () => {
     expect(resolveDate({ y: null, m: 12, d: 3 }, TODAY)).toBe('2026-12-03');
     expect(resolveDate({ y: null, m: 10, d: 12 }, TODAY)).toBe('2026-10-12');
-    expect(resolveDate({ y: null, m: 10, d: 11 }, TODAY)).toBe('2027-10-11');
+    expect(resolveDate({ y: null, m: 10, d: 11 }, TODAY)).toBe('2026-10-11');
+    expect(resolveDate({ y: null, m: 8, d: 13 }, TODAY)).toBe('2026-08-13');
+    expect(resolveDate({ y: null, m: 8, d: 12 }, TODAY)).toBe('2027-08-12');
+    expect(resolveDate({ y: null, m: 12, d: 20 }, '2027-01-10')).toBe('2026-12-20');
+    expect(readNotice('11/1 田中 休み', people, '2026-11-02')?.reason).toBe(READ_REASONS.past);
     expect(resolveDate({ y: null, m: 2, d: 29 }, TODAY)).toBe('2028-02-29');
     expect(resolveDate({ y: null, m: 13, d: 1 }, TODAY)).toBeNull();
   });
-  it('日だけは今月か、その日のある次の月', () => {
+  it('日だけは今月か、その日のある次の月（今月の過ぎた日はその日＝過ぎた日）', () => {
     expect(resolveDate({ y: null, m: null, d: 20 }, TODAY)).toBe('2026-10-20');
-    expect(resolveDate({ y: null, m: null, d: 3 }, TODAY)).toBe('2026-11-03');
+    expect(resolveDate({ y: null, m: null, d: 3 }, TODAY)).toBe('2026-10-03');
+    expect(resolveDate({ y: null, m: null, d: 3 }, '2026-10-31')).toBe('2026-10-03');
     expect(resolveDate({ y: null, m: null, d: 31 }, '2026-11-05')).toBe('2026-12-31');
     expect(resolveDate({ y: null, m: null, d: 40 }, TODAY)).toBeNull();
   });
@@ -97,6 +102,23 @@ describe('名前', () => {
     expect(reason('12/3 田中 佐藤 休み')).toBe(READ_REASONS.twoNames);
     expect(reason('12/3 休止 休み')).toBe(READ_REASONS.noName);
   });
+  it('空白をまたいで別の名前に当てない（上田 中止 の中の 田中）', () => {
+    const ps = noticePeople(
+      [],
+      [client('u1', 0, 0, { displayName: '上田 一郎' }), client('u2', 0, 0, { displayName: '田中 二郎' })],
+    );
+    expect(readNotice('12/3 上田 中止', ps, TODAY)?.action).toMatchObject({ kind: 'cancel', clientId: 'u1' });
+    expect(readNotice('12/3 田中 中止', ps, TODAY)?.action).toMatchObject({ clientId: 'u2' });
+    expect(readNotice('12/3 上田一郎 中止', ps, TODAY)?.action).toMatchObject({ clientId: 'u1' });
+  });
+  it('よみの短い姓は前後が区切り・漢字・行の端のときだけ（お願いします の中の いし に当てない）', () => {
+    const ps = noticePeople([], [client('k1', 0, 0, { displayName: '石 花', kana: 'いし はな' })]);
+    expect(readNotice('12/3 田中です。お願いします 中止', ps, TODAY)?.reason).toBe(READ_REASONS.noName);
+    expect(readNotice('12/3 いし 中止', ps, TODAY)?.action).toMatchObject({ clientId: 'k1' });
+    expect(readNotice('12/3 イシ様 中止', ps, TODAY)?.action).toMatchObject({ clientId: 'k1' });
+    expect(readNotice('12/3 いしさん 中止', ps, TODAY)?.action).toMatchObject({ clientId: 'k1' });
+    expect(readNotice('12/3 いしかわ 中止', ps, TODAY)?.reason).toBe(READ_REASONS.noName);
+  });
   it('名前と言葉の読めない行は名前を返す', () => {
     expect(read('12/3 田中 よろしく')).toMatchObject({ name: '田中 花子', reason: READ_REASONS.noWord });
   });
@@ -124,6 +146,12 @@ describe('言葉と時間帯', () => {
     expect(action('12/3 田中 10:00〜12:00 休み')).toMatchObject({ from: '10:00', to: '12:00' });
     expect(action('12/3 田中 10時半～12時 休み')).toMatchObject({ from: '10:30', to: '12:00' });
     expect(action('12/3 田中 午後3時から休み')).toMatchObject({ from: '15:00', to: null });
+    expect(action('12/3 田中 15時から17時まで休み')).toMatchObject({ from: '15:00', to: '17:00' });
+    expect(action('12/3 田中 10時より12時 欠勤')).toMatchObject({ from: '10:00', to: '12:00' });
+  });
+  it('「出勤」を含む行は読まない（午後から出勤＝午前が休みで意味が逆）', () => {
+    expect(reason('12/3 田中 午後から出勤')).toBe(READ_REASONS.workTime);
+    expect(reason('12/3 田中 10時出勤')).toBe(READ_REASONS.workTime);
   });
   it('時刻の文', () => {
     expect(timeOf('9時')).toBe('09:00');
@@ -157,9 +185,18 @@ describe('言葉と時間帯', () => {
     // 終わりの年が無ければ始まりの日以降でいちばん近い日
     expect(action('12/28〜1/5 山田様 入院')).toMatchObject({ from: '2026-12-28', to: '2027-01-05' });
   });
-  it('休みの終わりが無い・前後が逆・言葉が無い', () => {
+  it('休みの終わりが無い・前後が逆・長すぎる・言葉が無い', () => {
     expect(reason('12/3 山田様 入院')).toBe(READ_REASONS.noEnd);
-    expect(reason('2026/12/10〜2026/12/3 山田様 入院')).toBe(READ_REASONS.badDate);
+    expect(reason('2026/12/10〜2026/12/3 山田様 入院')).toBe(READ_REASONS.badSpan);
+    // 年の無い終わりが始まりより前：約1年の休みにしない
+    expect(reason('12/10〜12/3 山田様 入院')).toBe(READ_REASONS.badSpan);
+    expect(reason('12/10〜9/1 山田様 入院')).toBe(READ_REASONS.badSpan);
+    // 93日まで（始まりと終わりを含む）は読む。年またぎは通す
+    expect(action('11/1〜2027/2/1 山田様 入院')).toMatchObject({ from: '2026-11-01', to: '2027-02-01' });
+    expect(reason('11/1〜2027/2/2 山田様 入院')).toBe(READ_REASONS.badSpan);
+    expect(action('12/30〜1/2 山田様 ショート')).toMatchObject({ from: '2026-12-30', to: '2027-01-02' });
+    // 終わりが今日より前は過ぎた日
+    expect(reason('10/11まで 山田様 入院')).toBe(READ_REASONS.past);
     expect(reason('12/3 山田様 よろしく')).toBe(READ_REASONS.noWord);
     expect(reason('12/3 田中 入院')).toBe(READ_REASONS.noWord);
   });

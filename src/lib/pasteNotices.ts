@@ -1,12 +1,15 @@
 // 連絡を貼り付けて入れる（PRD D418。ADR-0084）の読み：貼った文を1行ずつ決まりで読み、欠勤・訪問の取り消し・〈利用者さん〉の休みにする。
 // AI・OCR は使わない（データを外へ送らない）。読むのは 日付（12/3・12月3日・2026/12/3・3日）・名前（名前・姓・よみ。様・さんは無視）・
 // 言葉（休み・中止・入院など）・時間帯（午前・午後・〇時から・〇時まで・時刻〜時刻）・休みの期間（〜12/10）。
+// 「出勤」を含む行は意味が逆（午後から出勤＝午前が休み）なので読まない。
 // データの状態（すでに入っている・訪問が無い・機能が切）は lib/pasteRows が見る。どれも純粋関数（データを書き換えない）
 import type { Client, Staff } from '../contracts/documents';
+import { addDays } from '../domain/time';
 import { familyName } from './contacts';
 import { isDate } from './isDate';
 import { REQUESTED_OFF_NOTE } from './requestedOff';
 import { normalizeKana } from './search';
+import { daysBetween } from './ym';
 
 /** 読んだ結果の操作：その日の欠勤／その日の訪問の取り消し／〈利用者さん〉の休み */
 export type NoticeAction =
@@ -29,9 +32,28 @@ export const READ_REASONS = {
   noWord: '休み・中止などの言葉が無い',
   badTime: '時刻が読めない',
   past: '過ぎた日',
+  badSpan: '期間が長すぎる・向きが逆',
+  workTime: '出勤の時刻は読めません（休む時間帯で書く）',
 } as const;
 
-/** 名前を当てる相手（〈スタッフ〉・〈利用者さん〉）。keys は比べる形（normalizeKana）の 名前・姓・よみ・よみの姓 */
+/** 年の無い日付を過ぎた日として読む幅（日）：base からこの日数までの過去は、次の年にせずその日のまま（過ぎた日）にする */
+export const PAST_WINDOW_DAYS = 60;
+
+/** 〈利用者さん〉の休みの期間の上限（日。始まりと終わりの日を含む）。超えれば「期間が長すぎる・向きが逆」 */
+export const LEAVE_MAX_DAYS = 93;
+
+/**
+ * 名前を探す形：NFKC・小文字・ひらがな・ハイフンを長音に（lib/search の normalizeKana）。空白は消さず1つにまとめて残す
+ * （「上田 中止」を「上田中止」にして中の「田中」に当てない）
+ */
+export function noticeForm(text: string): string {
+  return text
+    .split(/(\s+)/)
+    .map((t) => (/^\s+$/.test(t) ? ' ' : normalizeKana(t)))
+    .join('');
+}
+
+/** 名前を当てる相手（〈スタッフ〉・〈利用者さん〉）。keys は名前を探す形（noticeForm。名前の中の空白は1つ）の 名前・姓・よみ・よみの姓 */
 export type NoticePerson = { kind: 'staff' | 'client'; id: string; name: string; keys: string[] };
 
 /** 名前を当てる相手の一覧：利用中の〈スタッフ〉と、利用中の〈利用者さん〉（名前・姓・よみ・よみの姓） */
@@ -40,7 +62,7 @@ export function noticePeople(
   clients: readonly Pick<Client, 'id' | 'displayName' | 'kana' | 'active'>[],
 ): NoticePerson[] {
   const keysOf = (names: string[]) => [
-    ...new Set(names.flatMap((n) => [normalizeKana(n), normalizeKana(familyName(n))]).filter((k) => k !== '')),
+    ...new Set(names.flatMap((n) => [noticeForm(n).trim(), noticeForm(familyName(n))]).filter((k) => k !== '')),
   ];
   return [
     ...staff
@@ -86,8 +108,9 @@ function dateHits(s: string): DateHit[] {
 }
 
 /**
- * 日付を決める（実在しなければ null）。年が無ければ base（今日、期間の終わりは始まりの日）以降でいちばん近い日、
- * 月も無ければ base の月から先で、その日のある最初の月
+ * 日付を決める（実在しなければ null）。年が無ければ base（今日、期間の終わりは始まりの日）の PAST_WINDOW_DAYS 日前以降で
+ * いちばん早い日（その幅の過去は過ぎた日のまま返す。今日 11/2 の「11/1」は 11/1、「9/1」は来年）。
+ * 月も無ければ base の月から先で、その日のある最初の月（base の月の過ぎた日はその日のまま）
  */
 export function resolveDate(hit: Pick<DateHit, 'y' | 'm' | 'd'>, base: string): string | null {
   if (hit.y !== null && hit.m !== null) {
@@ -98,9 +121,10 @@ export function resolveDate(hit: Pick<DateHit, 'y' | 'm' | 'd'>, base: string): 
   const bm = Number(base.slice(5, 7));
   if (hit.m !== null) {
     if (hit.m < 1 || hit.m > 12) return null;
-    for (const y of [by, by + 1, by + 2, by + 3, by + 4]) {
+    const floor = addDays(base, -PAST_WINDOW_DAYS);
+    for (const y of [by - 1, by, by + 1, by + 2, by + 3, by + 4]) {
       const v = ymd(y, hit.m, hit.d);
-      if (isDate(v) && v >= base) return v;
+      if (isDate(v) && v >= floor) return v;
     }
     return null;
   }
@@ -108,7 +132,7 @@ export function resolveDate(hit: Pick<DateHit, 'y' | 'm' | 'd'>, base: string): 
     const mm = ((bm - 1 + i) % 12) + 1;
     const yy = by + Math.floor((bm - 1 + i) / 12);
     const v = ymd(yy, mm, hit.d);
-    if (isDate(v) && v >= base) return v;
+    if (isDate(v) && (i === 0 || v >= base)) return v;
   }
   return null;
 }
@@ -117,7 +141,9 @@ export function resolveDate(hit: Pick<DateHit, 'y' | 'm' | 'd'>, base: string): 
 
 /** 時刻の形：10:00・10時・10時半・10時30分（前に 午前・午後 があれば午後は12時間足す） */
 const T = String.raw`(?:午前|午後)?\d{1,2}(?::\d{2}|時(?:半|\d{1,2}分)?)`;
-const RANGE_RE = new RegExp(String.raw`((?:午前|午後)?\d{1,2}(?::\d{2}|時(?:半|\d{1,2}分)?)?)\s*[~〜ー－-]\s*(${T})`);
+const RANGE_RE = new RegExp(
+  String.raw`((?:午前|午後)?\d{1,2}(?::\d{2}|時(?:半|\d{1,2}分)?)?)\s*(?:[~〜ー－-]|から|より)\s*(${T})`,
+);
 const FROM_RE = new RegExp(String.raw`(${T})\s*(?:から|より|[~〜])`);
 const TO_RE = new RegExp(String.raw`(?:(${T})\s*まで|[~〜]\s*(${T}))`);
 
@@ -135,7 +161,7 @@ export function timeOf(text: string): string | null {
 /** 欠勤の時間帯（null＝始業から・終業まで。両方 null＝終日）。時刻の形が読めなければ bad */
 type AbsenceSpan = { from: string | null; to: string | null; bad: boolean; text: string };
 
-/** 行の時間帯：時刻〜時刻 → 〇時から → 〇時まで → 午前（〜12:00）・午後（12:00〜）。無ければ終日 */
+/** 行の時間帯：時刻〜時刻（〇時から〇時まで）→ 〇時から → 〇時まで → 午前（〜12:00）・午後（12:00〜）。無ければ終日 */
 export function absenceSpan(s: string): AbsenceSpan {
   const range = RANGE_RE.exec(s);
   if (range) {
@@ -162,8 +188,35 @@ export function absenceSpan(s: string): AbsenceSpan {
 
 type NameHit = { person: NoticePerson; start: number; end: number };
 
+/** かなだけの2文字以下の鍵（よみの姓など）：前後が区切り・漢字・行の端のときだけ当てる（「お願いします」の中の「いし」に当てない） */
+const SHORT_KANA_RE = /^[\p{Script=Hiragana}ー]{1,2}$/u;
+/** 前後に来てよい字：漢字か、文字・数字でないもの（空白・記号） */
+const isEdge = (ch: string | undefined): boolean => ch === undefined || /\p{Script=Han}|[^\p{L}\p{N}]/u.test(ch);
+/** 短いかなの鍵のあとに来てよい敬称 */
+const HONORIFIC_RE = /^(さん|さま)/;
+
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** 鍵を探す正規表現（鍵の中の空白は、無くても複数でもよい） */
+const keyRe = (k: string) => new RegExp(k.split(' ').map(escapeRe).join('\\s*'), 'g');
+
+/** text の中で鍵が当たる位置（重なりも数える。短いかなの鍵は前後の字を見る） */
+function keyHits(text: string, k: string): { start: number; end: number }[] {
+  const re = keyRe(k);
+  const short = SHORT_KANA_RE.test(k);
+  const out: { start: number; end: number }[] = [];
+  for (let m = re.exec(text); m !== null; m = re.exec(text)) {
+    const start = m.index;
+    const end = start + m[0].length;
+    re.lastIndex = start + 1;
+    if (short && !(isEdge(text[start - 1]) && (isEdge(text[end]) || HONORIFIC_RE.test(text.slice(end))))) continue;
+    out.push({ start, end });
+  }
+  return out;
+}
+
 /**
- * 行（比べる形）の中の名前：いちばん長く当たった名前を取り、長い名前の中に入っている短い名前（「泉図書館」の中の「図書館」）は捨てる。
+ * 行（名前を探す形 noticeForm）の中の名前：いちばん長く当たった名前を取り、長い名前の中に入っている短い名前（「泉図書館」の中の「図書館」）は捨てる。
  * 1人なら person、同じ文字が2人以上に当たれば sameName、別の名前が2つあれば twoNames、無ければ none
  */
 export function findPerson(
@@ -171,11 +224,7 @@ export function findPerson(
   people: readonly NoticePerson[],
 ): { person: NoticePerson; hit: string } | { error: 'noName' | 'sameName' | 'twoNames' } {
   const hits: NameHit[] = [];
-  for (const p of people)
-    for (const k of p.keys) {
-      for (let i = text.indexOf(k); i >= 0; i = text.indexOf(k, i + 1))
-        hits.push({ person: p, start: i, end: i + k.length });
-    }
+  for (const p of people) for (const k of p.keys) for (const h of keyHits(text, k)) hits.push({ person: p, ...h });
   const kept = hits.filter(
     (h) => !hits.some((o) => o.start <= h.start && h.end <= o.end && o.end - o.start > h.end - h.start),
   );
@@ -183,12 +232,14 @@ export function findPerson(
   if (ids.size === 0) return { error: 'noName' };
   const first = kept[0]!;
   if (ids.size === 1) return { person: first.person, hit: text.slice(first.start, first.end) };
-  const spans = new Set(kept.map((h) => text.slice(h.start, h.end)));
+  const spans = new Set(kept.map((h) => text.slice(h.start, h.end).replace(/\s/g, '')));
   return { error: spans.size === 1 ? 'sameName' : 'twoNames' };
 }
 
 // ---- 言葉 ----
 
+/** 「出勤」（午後から出勤＝午前が休み。意味が逆なので読まない） */
+const WORK_WORD = /出勤/;
 /** 〈スタッフ〉の欠勤の言葉（比べる形）：休み・休・欠勤・希望休・やすみ */
 const STAFF_WORD = /休|欠勤|やすみ/;
 /** 〈利用者さん〉の取り消しの言葉：中止・キャンセル・休み・お休み */
@@ -204,7 +255,7 @@ const LEAVE_WORDS: readonly { re: RegExp; note: string }[] = [
 const fail = (line: string, reason: string, name = ''): NoticeRead => ({ line, name, action: null, reason });
 
 /**
- * 1行を読む（空の行は null）。今日（today）より前の日付は「過ぎた日」。
+ * 1行を読む（空の行は null）。今日（today）より前の日付は「過ぎた日」、「出勤」を含む行は読まない。
  * 〈スタッフ〉＋休みの言葉＝その日の欠勤（時間帯・希望休はメモ「希望休」）、〈利用者さん〉＋入院・ショート＋2つ目の日付か「〜日付」＝休み、
  * 〈利用者さん〉＋中止・キャンセル・休み＝その日の訪問の取り消し
  */
@@ -212,13 +263,14 @@ export function readNotice(raw: string, people: readonly NoticePerson[], today: 
   const line = raw.trim();
   if (line === '') return null;
   const s = line.normalize('NFKC').replace(WEEKDAY_RE, ' ');
+  if (WORK_WORD.test(s)) return fail(line, READ_REASONS.workTime);
   const dates = dateHits(s);
   if (dates.length === 0) return fail(line, READ_REASONS.noDate);
   // 日付を抜いた残りで時刻・名前・言葉を読む（12/3 の 3 を時刻に、日付の数字を名前に混ぜない）
   let rest = s;
   for (const d of [...dates].reverse()) rest = `${rest.slice(0, d.start)} ${rest.slice(d.start + d.length)}`;
   const span = absenceSpan(rest);
-  const words = normalizeKana(span.text === '' ? rest : rest.replace(span.text, ' '));
+  const words = noticeForm(span.text === '' ? rest : rest.replace(span.text, ' '));
   const found = findPerson(words, people);
   if ('error' in found) return fail(line, READ_REASONS[found.error]);
   const { person } = found;
@@ -256,7 +308,10 @@ export function readNotice(raw: string, people: readonly NoticePerson[], today: 
   return { line, name: person.name, reason: null, action: { kind: 'cancel', clientId: person.id, date } };
 }
 
-/** 休みの期間：日付が2つなら始まり〜終わり、1つで「〜日付」「日付まで」なら今日〜その日。終わりが無ければ読めない */
+/**
+ * 休みの期間：日付が2つなら始まり〜終わり、1つで「〜日付」「日付まで」なら今日〜その日。終わりが無ければ読めない。
+ * 終わりが始まりより前（今日より前なら過ぎた日）か、LEAVE_MAX_DAYS 日を超える期間は「期間が長すぎる・向きが逆」（年またぎ 12/30〜1/2 は通す）
+ */
 function readLeave(line: string, person: NoticePerson, dates: DateHit[], today: string, note: string): NoticeRead {
   if (dates.length > 2) return fail(line, READ_REASONS.twoDates, person.name);
   const [a, b] = dates as [DateHit, DateHit | undefined];
@@ -264,8 +319,9 @@ function readLeave(line: string, person: NoticePerson, dates: DateHit[], today: 
   const from = b ? resolveDate(a, today) : today;
   if (from === null) return fail(line, READ_REASONS.badDate, person.name);
   const to = resolveDate(b ?? a, from);
-  if (to === null || to < from) return fail(line, READ_REASONS.badDate, person.name);
-  if (from < today) return fail(line, READ_REASONS.past, person.name);
+  if (to === null) return fail(line, READ_REASONS.badDate, person.name);
+  if (from < today || to < today) return fail(line, READ_REASONS.past, person.name);
+  if (to < from || daysBetween(from, to) + 1 > LEAVE_MAX_DAYS) return fail(line, READ_REASONS.badSpan, person.name);
   return { line, name: person.name, reason: null, action: { kind: 'leave', clientId: person.id, from, to, note } };
 }
 

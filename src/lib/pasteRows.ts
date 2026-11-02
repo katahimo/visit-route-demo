@@ -7,7 +7,7 @@ import type { Features } from '../contracts/features';
 import { visitsOn } from '../patterns';
 import { absenceError, absenceText, saveAbsence } from './absences';
 import { visitBandKind } from './attentionBand';
-import { dateText } from './dateText';
+import { dateTextFrom } from './dateText';
 import { activeDayVisits } from './dayPlan';
 import { isOn } from './features';
 import { saveLeave } from './leaves';
@@ -33,14 +33,19 @@ export const ROW_REASONS = {
   noShift: '勤務の無い日',
   badTime: '時刻は30分単位',
   same: '上の行と同じ',
+  overlap: '上の行と重なる',
   suddenOff: '欠勤・キャンセルの機能が切',
 } as const;
 
 /** 〈利用者さん〉の休みの機能が切のときの理由（呼び方を入れる） */
 export const leaveOffReason = (client: string): string => `${client}の休みの機能が切`;
 
-/** 読んだ内容の文（「12/3（水）田中 終日の欠勤」「12/3（水）〜12/10（木）図書館 ふみ 休み（入院）」） */
-export function actionText(a: NoticeAction, name: string, visits = 1): string {
+/**
+ * 読んだ内容の文（「12/3（水）田中 終日の欠勤」「12/3（水）〜12/10（木）図書館 ふみ 休み（入院）」）。
+ * 今日（today）と年が違う日は年も（「2027/1/5（火）」）
+ */
+export function actionText(a: NoticeAction, name: string, today: string, visits = 1): string {
+  const dateText = (date: string) => dateTextFrom(date, today);
   switch (a.kind) {
     case 'absence': {
       const what =
@@ -58,13 +63,23 @@ export function actionText(a: NoticeAction, name: string, visits = 1): string {
   }
 }
 
-/** 同じ行かを見る鍵（同じ人・同じ日） */
+/** 同じ行かを見る鍵（同じ人・同じ日。休みは同じ期間） */
 const keyOf = (a: NoticeAction): string =>
   a.kind === 'absence'
     ? `a:${a.staffId}:${a.date}`
     : a.kind === 'cancel'
       ? `c:${a.clientId}:${a.date}`
-      : `l:${a.clientId}:${a.from}`;
+      : `l:${a.clientId}:${a.from}:${a.to}`;
+
+/** 一覧の行の鍵（チェックを外した行を覚える）：行の文と、同じ文の何回目か（上に行を足しても同じ行は同じ鍵） */
+export function pasteRowKeys(rows: readonly Pick<PasteRow, 'line'>[]): string[] {
+  const count = new Map<string, number>();
+  return rows.map((r) => {
+    const n = count.get(r.line) ?? 0;
+    count.set(r.line, n + 1);
+    return `${n}:${r.line}`;
+  });
+}
 
 /** 1つの操作をデータに照らす（入れられなければ理由、取り消しは取り消す訪問） */
 function check(
@@ -105,16 +120,29 @@ function check(
   }
 }
 
-/** 読んだ行をデータに照らして一覧にする（同じ人・同じ日の2つ目からは「上の行と同じ」） */
+/** 受け入れた休みと重なるか（同じ〈利用者さん〉で期間が重なる） */
+const overlapsLeave = (accepted: readonly NoticeAction[], a: NoticeAction): boolean =>
+  a.kind === 'leave' &&
+  accepted.some((x) => x.kind === 'leave' && x.clientId === a.clientId && x.from <= a.to && a.from <= x.to);
+
+/**
+ * 読んだ行をデータに照らして一覧にする（同じ人・同じ日（休みは同じ期間）の2つ目からは「上の行と同じ」、
+ * 上の行で受け入れた休みと期間が重なる休みは「上の行と重なる」）
+ */
 export function pasteRowsOf(data: DemoData, reads: readonly NoticeRead[], today: string): PasteRow[] {
   const seen = new Set<string>();
+  const accepted: NoticeAction[] = [];
   return reads.map((r): PasteRow => {
     if (!r.action) return { line: r.line, text: r.line, action: null, visitIds: [], reason: r.reason };
     const c = check(data, r.action, today, data.org.features);
     const key = keyOf(r.action);
-    const reason = c.reason ?? (seen.has(key) ? ROW_REASONS.same : null);
-    if (reason === null) seen.add(key);
-    const text = actionText(r.action, r.name, c.visitIds.length);
+    const reason =
+      c.reason ?? (seen.has(key) ? ROW_REASONS.same : overlapsLeave(accepted, r.action) ? ROW_REASONS.overlap : null);
+    if (reason === null) {
+      seen.add(key);
+      accepted.push(r.action);
+    }
+    const text = actionText(r.action, r.name, today, c.visitIds.length);
     return reason === null
       ? { line: r.line, text, action: r.action, visitIds: c.visitIds, reason: null }
       : { line: r.line, text, action: null, visitIds: [], reason };

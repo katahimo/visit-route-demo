@@ -83,7 +83,7 @@
 ### 〈スタッフ〉のスマホ画面（`#/staff-view/:staffId`。見本・表示だけ）
 
 - `AdminShell` の外（`Guarded`）。`.staff-shell` の上と左右を safe-area で避ける
-- 日付は画面で共通の選んでいる日（`useDay`）。`?date=` で開くとその日を選んで URL から消す（`components/useDateEntry`。日の予定の `?date=` と共通）。名前と日付の横に［‹ 前の日］（`sv-prev`）［次の日 ›］（`sv-next`）と［今日］（`sv-today`。今日のときは出さない）（`sv-day-nav`。`staffViewParts` の `StaffViewDayNav`。PRD D417）。見出しは今日なら「今日の訪問順」、ほかの日は「訪問順」
+- 日付は画面で共通の選んでいる日（`useDay`）。`?date=` で開くとその日を選んで URL から消す（`components/useDateEntry`。日の予定の `?date=` と共通）。名前と日付の横に［‹ 前の日］（`sv-prev`）［次の日 ›］（`sv-next`）と［今日］（`sv-today`。今日のときは出さない。押すとボタンが消えるのでフォーカスを［次の日 ›］へ移す）（`sv-day-nav`。`staffViewParts` の `StaffViewDayNav`。PRD D417）。名前と日付（`sv-date`）は `aria-live="polite"`（日送りで変わった日付を読み上げる）。見出しは今日なら「今日の訪問順」、ほかの日は「訪問順」
 - その日の順番（時刻は欠勤を差し引いた `slotsOf`）。休みの訪問は担当でも出さない
 - 各訪問の下に訪問先の決まりごと（`VisitRules`）。初めての訪問先（過去8週にその人が担当していない。`lib/firstVisit`）は名前のすぐ下に「初めて」の印と決まりごと（`visit-first`。PRD D415）
 - 道順のリンク：地図の下に「1日の全行程を開く」（`sv-trip`・`maps-trip`。分けたときは「全行程 1/2を開く」…）、各訪問に `VisitRouteLinks`（前の場所は前の訪問先、1件目は自宅）。全行程の横に未登録の人・自宅・自転車の一言（`sv-trip-skipped`）。公共交通は全行程を出さず「訪問ごとの…を使ってください」（`sv-transit`）

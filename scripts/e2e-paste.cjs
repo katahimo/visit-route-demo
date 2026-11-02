@@ -3,7 +3,8 @@
 // 貼ると少し待って1行ずつ読み、一覧（読んだ内容とチェック・読めない理由）と件数が出る → チェックを外すと主ボタンの件数が減る →
 // ［N件を入れる］（主ボタンは1つ）で欠勤・訪問の取り消し（この回だけ）・〈利用者さん〉の休みを1回で書き、知らせ「N件を入れました。要対応 M件」、
 // 担当は振り直さない → 同じ文をもう一度貼ると「すでに入っている」で主ボタンが押せない → Esc で閉じて「その他 ▾」へフォーカス →
-// 「元に戻す」1回で3件とも戻る、読めない行（日付が無い・名前が見つからない・過ぎた日・終わりの日が無い）の理由（同じ名前が2人などは lib の test）、
+// 「元に戻す」1回で3件とも戻る、読めない行（日付が無い・名前が見つからない・過ぎた日・終わりの日が無い・出勤の時刻・上の行と重なる休み）の理由
+// （同じ名前が2人などは lib の test）、上に行を足しても外したチェックが戻らない、
 // 〈利用者さん〉の休みの機能を切ると休みの行が「…の休みの機能が切」、欠勤・キャンセルと休みの両方を切ると入口を出さない。
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-paste.cjs
@@ -114,10 +115,12 @@ const steps = sharedPage({
           `${md(DAY)} 高橋 休み`,
           `2020/1/6 ${surname(staff.name)} 休み`,
           `${md(DAY)} ${surname(leave.displayName)}様 ショート`,
+          `${md(DAY)} ${surname(staff.name)}さん 午後から出勤`,
+          `${md(addDays(DAY, 3))}〜${md(addDays(LEAVE_TO, 3))} ${surname(leave.displayName)}様 入院`,
         ].join('\n');
         await paste(page, pasted);
         const rows = await rowsOf(page);
-        check(rows.length === 7, '7行を読む（空でない行）', JSON.stringify(rows));
+        check(rows.length === 9, '9行を読む（空でない行）', JSON.stringify(rows));
         check(
           rows.slice(0, 3).every((r) => r.state === 'ok' && r.checked === true),
           '読めた3行はチェック入り',
@@ -132,11 +135,18 @@ const steps = sharedPage({
         check(rows[2]?.text.includes('休み（入院）'), '休みの行', rows[2]?.text);
         check(
           JSON.stringify(rows.slice(3).map((r) => r.reason)) ===
-            JSON.stringify(['日付が無い', '名前が見つからない', '過ぎた日', '終わりの日が無い']),
+            JSON.stringify([
+              '日付が無い',
+              '名前が見つからない',
+              '過ぎた日',
+              '終わりの日が無い',
+              '出勤の時刻は読めません（休む時間帯で書く）',
+              '上の行と重なる',
+            ]),
           '読めない行の理由',
           JSON.stringify(rows.slice(3)),
         );
-        check((await page.getByTestId('paste-count').textContent()).includes('読めた 3行・読めない 4行'), '件数の1行');
+        check((await page.getByTestId('paste-count').textContent()).includes('読めた 3行・読めない 6行'), '件数の1行');
         check(
           (await page.getByTestId('paste-apply').textContent()).includes('3件を入れる'),
           '主ボタンは［3件を入れる］',
@@ -148,7 +158,17 @@ const steps = sharedPage({
           (await page.getByTestId('paste-apply').textContent()).includes('2件を入れる'),
           'チェックを外すと［2件を入れる］',
         );
-        await box.check();
+        // 上に行を足しても、外したチェックは外したまま（鍵は行の文と同じ文の何回目か）
+        await paste(page, `お疲れさまです（追記）\n${pasted}`);
+        const added = await rowsOf(page);
+        check(
+          added[2]?.checked === false && added[1]?.checked === true && added[3]?.checked === true,
+          '上に行を足しても外したチェックが戻らない',
+          JSON.stringify(added.slice(0, 4)),
+        );
+        await paste(page, pasted);
+        await page.getByTestId('paste-row-check').nth(1).check();
+        check((await page.getByTestId('paste-apply').textContent()).includes('3件を入れる'), '戻すと［3件を入れる］');
       },
     ],
     [

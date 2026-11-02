@@ -115,7 +115,10 @@ export default function StaffViewPage() {
             <div className="sv-meta sub">
               <span className="with-staff-mark">
                 <StaffMark staff={me} size="sm" />
-                {me.name}さん・{dateText(date)}
+                {/* 日送りで変わる日付を読み上げる */}
+                <span aria-live="polite" data-testid="sv-date">
+                  {me.name}さん・{dateText(date)}
+                </span>
               </span>
               <StaffViewDayNav date={date} today={today} setDate={setDate} />
               {!told && ids.length > 0 && (

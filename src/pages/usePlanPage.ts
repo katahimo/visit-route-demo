@@ -11,6 +11,7 @@ import { useToldEntry } from '../components/useToldEntry';
 import { dayChatText } from '../lib/chatText';
 import { copyText } from '../lib/clipboard';
 import { dayContactWords, withFirstNotes } from '../lib/contacts';
+import { activeDayVisits } from '../lib/dayPlan';
 import { servedPairsBefore } from '../lib/firstVisit';
 import { contactMailText, mailTo } from '../lib/mail';
 import { usePlanData } from './usePlanData';
@@ -96,7 +97,11 @@ export function usePlanPage() {
   const mailLimit = useMailLimit();
   /** 過去8週に担当した組（初めての訪問先の印と、欠勤・キャンセルの欄の連絡に添える決まりごと。PRD D415） */
   const served = useMemo(() => servedPairsBefore(d.data, date), [d.data, date]);
+  /** チャットの文・印刷に出す訪問があるか（取り消し・休み・休止中の〈利用者さん〉の訪問を除く。dayChatText と同じ数え方） */
+  const hasShownVisits = useMemo(() => activeDayVisits(d.data, date).length > 0, [d.data, date]);
   const contact = {
+    /** 書き出し（チャット用にコピー・印刷）を出すか（PRD D419） */
+    hasShownVisits,
     /** 日の予定の連絡の一覧・すべての連絡文・メールの言葉（決まりごとは添えない。D415） */
     words: dayContactWords({
       date,

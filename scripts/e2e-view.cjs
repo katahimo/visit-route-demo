@@ -800,6 +800,12 @@ async function staffViewDays(page) {
     'スマホ画面：［今日］で今日へ戻る',
     await meta(),
   );
+  const focused = await page.evaluate(() => document.activeElement?.getAttribute('data-testid') ?? '');
+  check(focused === 'sv-next', 'スマホ画面：［今日］が消えたらフォーカスは［次の日 ›］（body に落とさない）', focused);
+  check(
+    (await page.getByTestId('sv-date').getAttribute('aria-live')) === 'polite',
+    'スマホ画面：名前と日付は aria-live="polite"',
+  );
   await page.setViewportSize({ width: 1280, height: 900 });
 }
 

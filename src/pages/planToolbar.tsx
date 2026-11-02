@@ -47,11 +47,11 @@ const viewItem = (k: string, text: string, i: number, current: boolean, onSelect
 });
 
 /**
- * 書き出し（行き先ごとに1つずつ。PRD D419）：チャット用にコピー・印刷（訪問のある日）、メールで送る（`mail` が入で、訪問のある日・
- * 未連絡の変更のある日）
+ * 書き出し（行き先ごとに1つずつ。PRD D419）：チャット用にコピー・印刷（文に出す訪問のある日。取り消し・休みの訪問だけの日は出さない）、
+ * メールで送る（`mail` が入で、訪問のある日・未連絡の変更のある日）
  */
 function exportItemsOf(p: PlanCtx): MenuItem[] {
-  const hasVisits = p.d.visits.length > 0;
+  const hasVisits = p.contact.hasShownVisits;
   const items: MenuItem[] = [
     ...(hasVisits
       ? [

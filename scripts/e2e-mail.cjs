@@ -222,6 +222,30 @@ const steps = sharedPage({
           withKeys.slice(0, 300),
         );
         await page.screenshot({ path: path.join(OUT_DIR, 'day-chat-copy.png') });
+        // 休み（取り消し）の訪問しかない日は「チャット用にコピー」「印刷」を出さない（文に出す訪問の数で判定）
+        const date = await page.evaluate(() => document.querySelector('.app-shell')?.getAttribute('data-date'));
+        const saved = await page.evaluate((k) => localStorage.getItem(k), STORAGE_KEY);
+        await page.evaluate(
+          ({ k, date }) => {
+            const d = JSON.parse(localStorage.getItem(k));
+            d.clientLeaves = d.clients.map((c) => ({
+              id: `e2e-${c.id}`,
+              clientId: c.id,
+              from: date,
+              to: date,
+              note: '',
+            }));
+            localStorage.setItem(k, JSON.stringify(d));
+          },
+          { k: STORAGE_KEY, date },
+        );
+        await openDay(page);
+        check(
+          (await toolCount(page, 'day-chat-copy')) === 0 && (await toolCount(page, 'day-print')) === 0,
+          '休みの訪問しかない日は「チャット用にコピー」「印刷」を出さない',
+        );
+        await page.evaluate(({ k, v }) => localStorage.setItem(k, v), { k: STORAGE_KEY, v: saved });
+        await openDay(page);
       },
     ],
     [

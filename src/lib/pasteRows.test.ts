@@ -11,6 +11,7 @@ import {
   pasteApplyLabel,
   pasteCareCount,
   pasteDoneText,
+  pasteRowKeys,
   pasteRows,
   ROW_REASONS,
 } from './pasteRows';
@@ -52,12 +53,14 @@ describe('一覧', () => {
 
   it('内容の文：時間帯・希望休・取り消し1件', () => {
     expect(
-      actionText({ kind: 'absence', staffId: 's1', date: TUE, from: '10:00', to: '12:00', note: '' }, '田中'),
+      actionText({ kind: 'absence', staffId: 's1', date: TUE, from: '10:00', to: '12:00', note: '' }, '田中', DATE),
     ).toBe('10/13（火）田中 欠勤 10:00〜12:00');
     expect(
-      actionText({ kind: 'absence', staffId: 's1', date: TUE, from: null, to: null, note: '希望休' }, '田中'),
+      actionText({ kind: 'absence', staffId: 's1', date: TUE, from: null, to: null, note: '希望休' }, '田中', DATE),
     ).toBe('10/13（火）田中 希望休');
-    expect(actionText({ kind: 'cancel', clientId: 'c1', date: TUE }, '山田')).toBe('10/13（火）山田 訪問の取り消し');
+    expect(actionText({ kind: 'cancel', clientId: 'c1', date: TUE }, '山田', DATE)).toBe(
+      '10/13（火）山田 訪問の取り消し',
+    );
   });
 
   it('すでに入っている：同じ日の欠勤・取り消し済み・重なる休み', () => {
@@ -85,6 +88,27 @@ describe('一覧', () => {
       null,
       ROW_REASONS.same,
     ]);
+  });
+
+  it('同じ貼り付けの中で重なる休みは2つ目から「上の行と重なる」。同じ期間は「上の行と同じ」', () => {
+    const rows = pasteRows(
+      data(),
+      '10/13〜10/20 川口様 入院\n10/15〜10/22 川口様 入院\n10/13〜10/20 川口様 入院\n10/21〜10/25 川口様 入院\n10/15〜10/22 山田様 入院',
+      DATE,
+    );
+    expect(rows.map((r) => r.reason)).toEqual([null, ROW_REASONS.overlap, ROW_REASONS.same, null, null]);
+  });
+
+  it('今年でない日は年も出す', () => {
+    const rows = pasteRows(data(), '12/28〜1/5 川口様 入院', DATE);
+    expect(rows[0]!.text).toBe('12/28（月）〜2027/1/5（火）川口 春 休み（入院）');
+  });
+
+  it('チェックの鍵は文と同じ文の何回目か（上に行を足しても変わらない）', () => {
+    const a = pasteRowKeys([{ line: 'x' }, { line: 'y' }, { line: 'x' }]);
+    const b = pasteRowKeys([{ line: 'z' }, { line: 'x' }, { line: 'y' }, { line: 'x' }]);
+    expect(a).toEqual(['0:x', '0:y', '1:x']);
+    expect(b.slice(1)).toEqual(a);
   });
 
   it('機能が切：欠勤・キャンセルが切なら欠勤と取り消し、休みが切なら休みの行が読めない', () => {

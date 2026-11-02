@@ -3,16 +3,20 @@
 import { useEffect, useMemo, useState } from 'react';
 import { jstDate } from '../domain/time';
 import { newId } from '../lib/common';
-import { applyPasteRows, type PasteRow, pasteCareCount, pasteDoneText, pasteRows } from '../lib/pasteRows';
+import {
+  applyPasteRows,
+  type PasteRow,
+  pasteCareCount,
+  pasteDoneText,
+  pasteRowKeys,
+  pasteRows,
+} from '../lib/pasteRows';
 import { useDemoData } from '../store';
 import { useToast } from './Toast';
 import { useUndoAction } from './undo';
 
 /** 打つ・貼るたびに読み直すまでの待ち（ミリ秒） */
 export const PASTE_READ_DELAY_MS = 250;
-
-/** 一覧の行の鍵（チェックを外した行を覚える。行の位置と文） */
-const rowKey = (i: number, r: Pick<PasteRow, 'line'>) => `${i}:${r.line}`;
 
 export function usePasteNotices(onClose: () => void) {
   const { data, update } = useDemoData();
@@ -28,7 +32,12 @@ export function usePasteNotices(onClose: () => void) {
     return () => clearTimeout(t);
   }, [text]);
   const rows = useMemo(() => pasteRows(data, readText, today), [data, readText, today]);
-  const pickedOf = (list: readonly PasteRow[]) => list.filter((r, i) => r.action && !unchecked.has(rowKey(i, r)));
+  /** 一覧の行の鍵（文と同じ文の何回目か。上に行を足しても外したチェックを保つ） */
+  const keys = useMemo(() => pasteRowKeys(rows), [rows]);
+  const pickedOf = (list: readonly PasteRow[]) => {
+    const ks = list === rows ? keys : pasteRowKeys(list);
+    return list.filter((r, i) => r.action && !unchecked.has(ks[i]!));
+  };
   const picked = pickedOf(rows);
 
   const save = () => {
@@ -44,7 +53,7 @@ export function usePasteNotices(onClose: () => void) {
   const toggle = (i: number) => {
     const r = rows[i];
     if (!r?.action) return;
-    const k = rowKey(i, r);
+    const k = keys[i]!;
     setUnchecked((s) => {
       const next = new Set(s);
       if (next.has(k)) next.delete(k);
@@ -58,7 +67,7 @@ export function usePasteNotices(onClose: () => void) {
     setText,
     rows,
     /** その行が入れる対象か（読めた行でチェックが入） */
-    checked: (i: number) => !!rows[i]?.action && !unchecked.has(rowKey(i, rows[i]!)),
+    checked: (i: number) => !!rows[i]?.action && !unchecked.has(keys[i]!),
     toggle,
     count: picked.length,
     terms: data.org.terms,
