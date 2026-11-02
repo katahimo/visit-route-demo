@@ -1,5 +1,5 @@
 // 来月の確認（PRD D413。ADR-0081）の中身：エキスパート機能が切で月の20日以降なら、来月の日ごとの状態（要対応の帯・月の画面と同じ数え方。
-// useDayStatuses）から lib/nextMonthCheck が件数と担当なし・重なり・休みの人を数える。閉じたかは端末に覚える（store/navOpen の鍵 nextMonth:<今月>。
+// useDayStatuses）から lib/nextMonthCheck が件数と担当なし・間に合わない・重なり・休みの人を数える。閉じたかは端末に覚える（store/navOpen の鍵 nextMonth:<今月>。
 // データ・書き出しには入れない）
 import { useMemo, useSyncExternalStore } from 'react';
 import { jstDate } from '../domain/time';

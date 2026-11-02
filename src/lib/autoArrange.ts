@@ -1,4 +1,6 @@
-// 自動の組み（ADR-0072 第2段。PRD D372〜D376）の計算：欄の保存・要対応の帯の［担当なしを組む］で、担当なしの訪問だけを自動で組む。
+// 自動の組み（ADR-0072 第2段。PRD D372〜D376・D403・D405）の計算：欄の保存・要対応の帯の［要対応を組む］で、担当なしの訪問を自動で組む。
+// エキスパート機能が切なら、間に合わない・重なり・休みの人の訪問（帯の種類。lib/bandIssues）も担当・開始を組み直してよい対象にする（ADR-0089。
+// 伝えた日の訪問は除く。組み直しても要対応が減らない訪問は元の担当のまま）。
 // どれも純粋関数（DemoData を書き換えない・乱数と今の時刻を使わない。今日は引数、seed は data.seed）。
 // 組む範囲は今日（繰り返しの開始日が先ならその日）から翌月末まで。ほかの訪問の担当は（手でも AI でも標準でも）ピンと同じに固定して動かさず、伝えた日は組まない（expert 切は伝えた日も担当なしだけ埋める。skipsToldDays）。
 // 解く入れ物（Worker・キュー・反映の1手）は lib/autoArrangeBatch
@@ -12,6 +14,7 @@ import { findVisit, putVisits, visitsOn } from '../patterns';
 import { defaultIterations } from '../solver';
 import { own } from './common';
 import { activeDayVisits, clockOf, dayProblemOf } from './dayPlan';
+import { bandIssueIds } from './dayStatuses';
 import { type DayInputs, proposalDayFresh } from './monthBatch';
 import { showConfirmStep } from './settledView';
 import { monthDates, ymOf } from './ym';
@@ -45,19 +48,66 @@ export function isFree(data: Pick<DemoData, 'snapshots' | 'org'>, v: Visit, toda
   return v.staffId === null && !v.pinned && !v.cancelled && v.date >= today && !told;
 }
 
+/**
+ * 要対応の訪問（間に合わない・重なり・休みの人）も組み直すか（ADR-0089）：エキスパート機能が切のときだけ。
+ * 入は担当を組むの画面で組むので、担当のある訪問は動かさない（ADR-0072）
+ */
+export const rearrangesIssues = (data: Pick<DemoData, 'org'>): boolean => !skipsToldDays(data);
+
+/**
+ * 組み直してよい担当のある訪問か（帯の種類に当たるかは呼ぶ側が見る）：担当あり・ピンなし・取り消しでない・今日以降・その日に伝えた記録が無い
+ * （伝えた日の訪問は、伝えた内容を黙って変えないので動かさない）。エキスパート機能が入なら常に偽
+ */
+export function isMovable(data: Pick<DemoData, 'snapshots' | 'org'>, v: Visit, today: string): boolean {
+  return (
+    rearrangesIssues(data) &&
+    v.staffId !== null &&
+    !v.pinned &&
+    !v.cancelled &&
+    v.date >= today &&
+    !own(data.snapshots, v.date)
+  );
+}
+
+/** 日付 → 帯の種類の訪問の ID（lib/dayStatuses の bandIssueIds）。無い日は空 */
+type IssueIds = ReadonlyMap<string, ReadonlySet<string>>;
+const NO_IDS: ReadonlySet<string> = new Set();
+
+/** 組む対象か：担当なし（isFree）か、帯の種類に当たる組み直してよい訪問（isMovable） */
+const isTarget = (data: TargetData, v: Visit, today: string, issues: ReadonlySet<string>): boolean =>
+  isFree(data, v, today) || (issues.has(v.id) && isMovable(data, v, today));
+
 /** range（今日より前は除く）の日ごとに、対象の訪問を集める（pick が真の訪問。対象が無い日は出さない） */
-function collect(data: TargetData, today: string, range: DateRange, pick: (v: Visit) => boolean): AutoTarget[] {
+function collect(
+  data: TargetData,
+  today: string,
+  range: DateRange,
+  pick: (v: Visit) => boolean,
+  issues: IssueIds = new Map(),
+): AutoTarget[] {
   const out: AutoTarget[] = [];
   const to = range.to;
   for (let date = range.from > today ? range.from : today; date <= to; date = addDays(date, 1)) {
+    const here = issues.get(date) ?? NO_IDS;
     // 利用中でない人・休みの訪問は問題に入らないので除く
     const ids = activeDayVisits(data, date)
-      .filter((v) => isFree(data, v, today) && pick(v))
+      .filter((v) => isTarget(data, v, today, here) && pick(v))
       .map((v) => v.id);
     if (ids.length > 0) out.push({ date, ids });
   }
   return out;
 }
+
+/** range の日（今日より前は除く） */
+function rangeDays(today: string, range: DateRange): string[] {
+  const days: string[] = [];
+  for (let date = range.from > today ? range.from : today; date <= range.to; date = addDays(date, 1)) days.push(date);
+  return days;
+}
+
+/** 要対応の訪問も組み直すなら range の日ごとの帯の種類の訪問、組み直さないなら空 */
+const issuesIn = (data: DemoData, today: string, range: DateRange): IssueIds =>
+  rearrangesIssues(data) ? bandIssueIds(data, rangeDays(today, range)) : new Map();
 
 /**
  * 保存の前後で、自動で組む対象（PRD D373）：after の range の訪問のうち、before に同じ ID が無い（増えた）か日付・開始（早）・
@@ -75,18 +125,43 @@ export function autoTargets(
   });
 }
 
-/** 日の取りこぼし（要対応の帯・その他 ▾ の組む）：range の担当なし・ピンなし・伝えていない・今日以降の訪問すべて（休み・利用中でない人の訪問は除く） */
-export function unassignedTargets(data: TargetData, today: string, range: DateRange): AutoTarget[] {
-  return collect(data, today, range, () => true);
+/**
+ * 要対応の帯の［要対応を組む］・デモの開始の組み（PRD D403・D409）：range の担当なし・ピンなし・伝えていない・今日以降の訪問すべてと、
+ * エキスパート機能が切なら、帯の種類（間に合わない・重なり・休みの人）に当たる組み直してよい訪問（isMovable）。休み・利用中でない人の訪問は除く
+ */
+export function bandTargets(data: DemoData, today: string, range: DateRange): AutoTarget[] {
+  return collect(data, today, range, () => true, issuesIn(data, today, range));
 }
 
-/** targets のうち、今のデータでも組める（担当なし・ピンなし・取り消しでない・伝えていない・今日以降）訪問だけに絞る */
+/**
+ * 保存のあとの自動の組みに足す対象（PRD D405。ADR-0089）：エキスパート機能が切なら、range の帯の種類（間に合わない・重なり・休みの人）に当たる
+ * 組み直してよい担当のある訪問（isMovable）。前からある担当なしは入れない（拾うのは要対応の帯の［要対応を組む］。PRD D407）
+ */
+export function issueTargets(data: DemoData, today: string, range: DateRange): AutoTarget[] {
+  return collect(data, today, range, (v) => v.staffId !== null, issuesIn(data, today, range));
+}
+
+/** 2つの対象を日ごとにまとめる（同じ訪問は1つ。日付の順） */
+export function mergeTargets(a: readonly AutoTarget[], b: readonly AutoTarget[]): AutoTarget[] {
+  const byDate = new Map<string, string[]>();
+  for (const t of [...a, ...b]) {
+    const ids = byDate.get(t.date) ?? [];
+    for (const id of t.ids) if (!ids.includes(id)) ids.push(id);
+    byDate.set(t.date, ids);
+  }
+  return [...byDate].sort(([x], [y]) => (x < y ? -1 : x > y ? 1 : 0)).map(([date, ids]) => ({ date, ids }));
+}
+
+/**
+ * targets のうち、今のデータでも組める（担当なし・ピンなし・取り消しでない・伝えていない・今日以降。切なら組み直してよい担当のある訪問も）訪問だけに絞る。
+ * 担当のある訪問が今も帯の種類に当たるかは、組むとき（autoDayPlan）に確かめる
+ */
 export function stillTargets(data: TargetData, targets: readonly AutoTarget[], today: string): AutoTarget[] {
   const out: AutoTarget[] = [];
   for (const t of targets) {
     const want = new Set(t.ids);
     const ids = activeDayVisits(data, t.date)
-      .filter((v) => want.has(v.id) && isFree(data, v, today))
+      .filter((v) => want.has(v.id) && (isFree(data, v, today) || isMovable(data, v, today)))
       .map((v) => v.id);
     if (ids.length > 0) out.push({ date: t.date, ids });
   }
@@ -100,7 +175,8 @@ export const targetCount = (targets: readonly AutoTarget[]): number => targets.r
 export type AutoDayPlan = { visits: Visit[]; problem: Problem; targetIds: string[] };
 
 /**
- * 自動の組みの1日の問題。対象は targetIds のうち今も組める（担当なし・ピンなし・取り消しでない）訪問。それ以外は動かさない：
+ * 自動の組みの1日の問題。対象は targetIds のうち今も組める（担当なし・ピンなし・取り消しでない）訪問と、エキスパート機能が切なら
+ * 今も帯の種類（間に合わない・重なり・休みの人）に当たる組み直してよい訪問（isMovable。担当を外して自由に組む。ADR-0089）。それ以外は動かさない：
  * - 担当のある訪問は、手でも AI でも標準でも、すべてピン（担当を固定して問題に入れる）
  * - 対象でない担当なしの訪問は、組まないので問題から外す（取り消しと同じに扱う）。組めばその人の枠を先に取ってしまい、
  *   対象が入らなくなる。外した訪問は担当なしのまま残り、あとで手で選ぶ
@@ -113,7 +189,8 @@ export function autoDayPlan(data: DemoData, date: string, targetIds: readonly st
   if (skipsToldDays(data) && own(data.snapshots, date)) return null;
   const visits = visitsOn(data, date);
   const want = new Set(targetIds);
-  const targets = visits.filter((v) => want.has(v.id) && isFree(data, v, date));
+  const issues = issuesIn(data, date, { from: date, to: date }).get(date) ?? NO_IDS;
+  const targets = visits.filter((v) => want.has(v.id) && isTarget(data, v, date, issues));
   if (targets.length === 0) return null;
   const free = new Set(targets.map((v) => v.id));
   const active = new Set(data.staff.filter((s) => s.active).map((s) => s.id));
@@ -194,7 +271,7 @@ export type AutoDay = {
 };
 
 export type AutoApplyOptions = {
-  /** 繰り返しの保存から来た（繰り返しの担当を書く。D376）。単発・要対応の帯の［担当なしを組む］は false */
+  /** 繰り返しの保存から来た（繰り返しの担当を書く。D376）。単発・要対応の帯の［要対応を組む］は false */
   writeUsual: boolean;
   /** 組む範囲の終わり（autoRange の to）。繰り返しの担当を書くとき、これ以前の回で今回書かなかったものは書く前の担当のまま残す */
   rangeTo: string;
@@ -238,7 +315,8 @@ function usualStaffOf(data: DemoData, days: readonly { visits: readonly Visit[];
 /**
  * その日の解いた担当・開始（対象の訪問だけ。訪問ID → 担当・開始）。対象が入った担当ごとに、解いた列を lenient で数え直し、
  * その担当の既存の訪問（担当のある訪問）がすべて列に残り、開始が保存した開始のままで、遅れ（時間の違反）も無いときだけ、
- * その担当への対象を書く。満たさなければその担当の対象は担当なしのまま（ほかの担当の訪問の開始・並びを崩さない）
+ * その担当への対象を書く。満たさなければその担当の対象は書かない（担当なしは担当なしのまま、要対応の担当のある訪問は元の担当・開始のまま。
+ * ほかの担当の訪問の開始・並びを崩さない）。書いた対象は遅れの無い列に入るので、組み直した要対応は必ず減り、減らない訪問は元のまま（ADR-0089）
  */
 function solvedOf(day: AutoDay): Solved {
   const out: Solved = new Map();
@@ -270,7 +348,7 @@ function solvedOf(day: AutoDay): Solved {
 
 /**
  * 自動の組みを反映する（純粋関数。PRD D405）：組み始めたときのままの日（proposalDayFresh）だけ、対象の訪問の担当・開始を書く。
- * ピンなどほかの訪問は変えない。組めなかった対象は担当なしのまま。
+ * ピンなどほかの訪問は変えない。組めなかった対象は担当なしのまま（要対応の担当のある訪問は元の担当のまま）。
  * writeUsual が真のとき（繰り返しの保存から）は、対象の回の繰り返しで担当が決まっていないものの usualStaffId に、書いた回で最も多く付いた
  * 担当を書く（D376）。書くと計算した回の担当がその人に変わるので、先に繰り返しに書いてから、解いた対象の回を保存した回に書き、
  * 範囲の終わり（rangeTo）以前の書かなかった回は書く前の担当のまま保存した回として残す（担当なしで残った回・別の人の回・過去・伝えた日は変わらない）

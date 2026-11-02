@@ -113,12 +113,33 @@ describe('autoTell', () => {
       visits: putVisits(added.visits, [{ ...added.visits[1]!, staffId: 's2', start: '11:00' }]),
     };
     expect(autoTell(added, arranged, TODAY, AT).snapshots[DATE]!.visits.map((x) => x.staffId)).toEqual(['s1', 's2']);
-    // 前からある担当なしの訪問（b）は待たず、別の訪問（a）を手で直せば付く
+    // 前からある担当なしの訪問（b）が残る日は、別の訪問（a）を手で直しても付けない（要対応が残る日。ADR-0089）
     const edited = {
       ...added,
       visits: putVisits(added.visits, [{ ...added.visits[0]!, staffId: 's2', start: '09:00' }]),
     };
-    expect(autoTell(added, edited, TODAY, AT).snapshots[DATE]!.visits.map((x) => x.staffId)).toEqual(['s2', null]);
+    expect(autoTell(added, edited, TODAY, AT).snapshots).toEqual({});
+  });
+  it('帯の種類（担当なし・間に合わない・重なり・休みの人）の訪問が残る日は付けず、直して無くなったときに付ける（ADR-0089）', () => {
+    const before = base({ visits: [fixed('a', '09:00', { staffId: 's1' }), fixed('b', '11:00', { staffId: 's2' })] });
+    // b を a と同じ 9:00・同じ s1 にする＝重なり
+    const overlap = {
+      ...before,
+      visits: putVisits(before.visits, [
+        { ...before.visits[1]!, staffId: 's1', earliestStart: '09:00', latestStart: '09:00', start: null },
+      ]),
+    };
+    const out = autoTell(before, overlap, TODAY, AT);
+    expect(out.snapshots[DATE]).toBeUndefined();
+    // 担当を s2 に直すと重なりが無くなり、その操作で付く
+    const fixedDay = {
+      ...out,
+      visits: putVisits(out.visits, [{ ...overlap.visits[1]!, staffId: 's2', start: '09:00' }]),
+    };
+    expect(autoTell(out, fixedDay, TODAY, AT + 1).snapshots[DATE]).toMatchObject({ at: AT + 1 });
+    // すでに伝えた日は、あとで重なりができても記録はそのまま（その後の変更は「変更あり」）
+    const told = autoTell(out, fixedDay, TODAY, AT + 1);
+    expect(autoTell(told, { ...told, visits: overlap.visits }, TODAY, AT + 2).snapshots[DATE]!.at).toBe(AT + 1);
   });
   it('まとめて直す（multiEdit）の結果も拾う', () => {
     const before = base();
@@ -134,28 +155,28 @@ describe('autoTell', () => {
 });
 
 describe('待ちの条件（自動の組みの依頼が出る訪問だけ待つ）', () => {
-  it('担当を外した（担当なしの列へ）・日時が同じ担当なしへの変更は待たない', () => {
+  it('担当を外した（担当なしの列へ）日は、担当なしが残るので付けない（ADR-0089）', () => {
     const before = base({ visits: [fixed('a', '09:00', { staffId: 's1' }), fixed('b', '11:00', { staffId: 's2' })] });
     const none = {
       ...before,
       visits: putVisits(before.visits, [{ ...before.visits[1]!, staffId: null, start: null }]),
     };
-    expect(autoTell(before, none, TODAY, AT).snapshots[DATE]).toBeTruthy();
+    expect(autoTell(before, none, TODAY, AT).snapshots[DATE]).toBeUndefined();
   });
-  it('別の日へ移した担当なしの訪問は待つ。依頼を出さない保存（wait:false）は待たない', () => {
+  it('別の日へ移した担当なしの訪問は待つ。依頼を出さない保存（wait:false）でも担当なしが残る日は付けない', () => {
     const before = base({ visits: [fixed('a', '09:00', { staffId: 's1' }), fixed('b', '11:00')] });
     const day = addDays(TODAY, 1);
     const moved = { ...before, visits: putVisits(before.visits, [{ ...before.visits[1]!, date: day }]) };
-    // 元の日（a だけ残る）は付き、移した先は待つ
+    // 元の日（a だけ残る）は付き、移した先は付かない
     expect(Object.keys(autoTell(before, moved, TODAY, AT).snapshots)).toEqual([TODAY]);
-    expect(Object.keys(autoTell(before, moved, TODAY, AT, { wait: false }).snapshots).sort()).toEqual([TODAY, day]);
+    expect(Object.keys(autoTell(before, moved, TODAY, AT, { wait: false }).snapshots)).toEqual([TODAY]);
   });
 });
 
 describe('settleDates（自動の組みが終わったとき。待っていた日を終わらせる）', () => {
   it('範囲内で伝えた記録の無い日に付ける。付いている日・範囲外・今日より前は変えない', () => {
     const d = base({
-      visits: [fixed('a', '09:00', { staffId: 's1' }), fixed('b', '09:00', { date: addDays(TODAY, 1) })],
+      visits: [fixed('a', '09:00', { staffId: 's1' }), fixed('b', '09:00', { date: addDays(TODAY, 1), staffId: 's2' })],
     });
     const out = settleDates(
       d,
@@ -171,6 +192,10 @@ describe('settleDates（自動の組みが終わったとき。待っていた�
   it('expert 入なら何もしない', () => {
     const d = base({ org: { ...makeData().org, features: { expert: true } } });
     expect(settleDates(d, [TODAY], TODAY, AT)).toBe(d);
+  });
+  it('組めずに要対応（担当なし）が残る日は付けない（ADR-0089）', () => {
+    const d = base({ visits: [fixed('a', '09:00', { staffId: 's1' }), fixed('b', '11:00')] });
+    expect(settleDates(d, [TODAY], TODAY, AT).snapshots).toEqual({});
   });
 });
 

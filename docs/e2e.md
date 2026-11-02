@@ -17,7 +17,7 @@ AGENTS.md「コマンド」から引く詳細。e2e を走らせる・足す・�
 - 1つの段は最長3分（`E2E_STEP_TIMEOUT_MS`）
 - 保存した担当の入った訪問を用意する `planDays`（`scripts/lib/plan.cjs`。AI で組むので重い）は、初期データから組む所なら `{ cache: true }`（2回目からは結果の写し。包みの中では `E2E_PLAN_CACHE_DIR`＝`test-results/.plan-cache` で分け合う）
 - 落ちた test には trace・動画（perf は取らない）・`-fail-` のスクリーンショット・記録が付く（`npx playwright show-report`・`npx playwright show-trace`）
-- 準備は `scripts/lib/steps.cjs` の `openPage`（sharedPage の準備）・`openContext(browser)`（pagePerStep の段ごとの文脈。地図のタイルを止め、確認は `answerConfirms`）を使う。どちらも案内ツアーを見た扱い・時計を `NOW` に止める・ページのエラーを集める（包みが失敗に数える）。自分で文脈を作るときはすぐ `scripts/lib/tourSeen.cjs` の `skipTour(ctx)` を呼ぶ（e2e-tour は除く）。既定（`start: 'all'`）で印 `vrdemo:features:start` = `all`（`scripts/lib/startFeatures.cjs` の `startAll`）を入れ、最初の2問を出さず今の初期データ＋すべて入で始める。2問を確かめるときは `skipTour(ctx, { start: 'ask' })` か呼ばず、`scripts/lib/firstRun.cjs` の `answerFirstRun`・`answerIfAsked` で答える。「デモで試す」で答えると、作った直後に担当なしを1回自動で組む（PRD D409。印 `all` では組まない）ので、`answerFirstRun` は組みの終わりの知らせまで待つ（`waitStartArranged`。終わる前に読み直すと組まれない）。初期データの担当なしが要る確かめ（帯の［担当なしを組む］など）は `{ arranged: false }` で知らせの［元に戻す］を押して組む前に戻す
+- 準備は `scripts/lib/steps.cjs` の `openPage`（sharedPage の準備）・`openContext(browser)`（pagePerStep の段ごとの文脈。地図のタイルを止め、確認は `answerConfirms`）を使う。どちらも案内ツアーを見た扱い・時計を `NOW` に止める・ページのエラーを集める（包みが失敗に数える）。自分で文脈を作るときはすぐ `scripts/lib/tourSeen.cjs` の `skipTour(ctx)` を呼ぶ（e2e-tour は除く）。既定（`start: 'all'`）で印 `vrdemo:features:start` = `all`（`scripts/lib/startFeatures.cjs` の `startAll`）を入れ、最初の2問を出さず今の初期データ＋すべて入で始める。2問を確かめるときは `skipTour(ctx, { start: 'ask' })` か呼ばず、`scripts/lib/firstRun.cjs` の `answerFirstRun`・`answerIfAsked` で答える。「デモで試す」で答えると、作った直後に担当なしを1回自動で組む（PRD D409。印 `all` では組まない）ので、`answerFirstRun` は組みの終わりの知らせまで待つ（`waitStartArranged`。終わる前に読み直すと組まれない）。初期データの担当なしが要る確かめ（帯の［要対応を組む］・［見に行く ›］の順番など）は `{ arranged: false }` で知らせの［元に戻す］を押して組む前に戻す。組み終えたデモは間に合わない・重なりも組み直す（ADR-0089）ので、帯が出ないことがある（帯を画面の準備の目印にしない）
 - 確定の操作を確かめる e2e は「すべて入」（エキスパート入）の前提で書く。「基本」で始めるもの（e2e-tour・e2e-basic-auto・e2e-features・e2e-features2・e2e-simple-menu。2問に答えて始めるのは `scripts/lib/firstRun.cjs` の `openAsked`・`freshAsked`）は確定の印を待たず、日の予定は `plan-summary` を待つ
 - 確認に答えるときは `scripts/lib/confirmDialog.cjs` の `answerConfirms(page)`（出た確認の見出しと本文を記録し `answer` のボタンを押す。ネイティブのダイアログは記録して失敗に、beforeunload だけ受ける。答えずにネイティブのダイアログだけ記録するのは `watchNative(page)`）
 - 保存を待つ `waitStored(page, pred)`・修飾キー `MOD`・スクリーンショット `shot(page, 名前)` は `scripts/lib/env.cjs` にある（スクリプトに写さない）
@@ -29,7 +29,7 @@ AGENTS.md「コマンド」から引く詳細。e2e を走らせる・足す・�
 
 - `goTo(page, 行き先, { ready, timeout, h1, settleMs })`：URL で画面へ行く（about:blank を挟む）。行き先は名前（`月`・`週`・`日`・`利用者さん`・`スタッフ`・`設定`・`基本情報`・`組む`・`空き状況`・`欠勤` ほか。表は `SCREENS`）か `/path?query`。各スクリプトの `open` の多くはこれの薄い包み（読み直す形の `open` や `openPlan`・`freshPlan` などは自前の待ちを持つ）
 - `clickMenu(page, 行き先, scope)`：左のメニューの項目を名前で押す（畳んだ親の中なら開いてから。名前は 予定・利用者さん・スタッフ・設定・基本情報・組む・担当を組む・組み方の標準）。メニューを押して移ることそのものを確かめるときだけ使い、ただ移りたいなら `goTo`
-- `pressTool(page, 操作, { where })`：操作の行のボタンを名前で押す。既定は行にあっても「その他 ▾」の中でも押せる。`where: 'row'`・`where: 'more'` は位置そのものを確かめる所に付ける（`元に戻す`・`欠勤`（入は `where: 'more'`）・`勤務の見込み`・`印刷`・`担当なしを組む`・`予定を入れる`・`担当を組む`・`確定`・`使い方`・`メールで送る` ほか。表は `TOOLS`。表に無い名前は testid として行→「その他 ▾」の順に探す）。`openMore`・`closeMore` は「その他 ▾」の開け閉め
+- `pressTool(page, 操作, { where })`：操作の行のボタンを名前で押す。既定は行にあっても「その他 ▾」の中でも押せる。`where: 'row'`・`where: 'more'` は位置そのものを確かめる所に付ける（`元に戻す`・`欠勤`（入は `where: 'more'`）・`勤務の見込み`・`印刷`・`予定を入れる`・`担当を組む`・`確定`・`使い方`・`メールで送る` ほか。表は `TOOLS`。表に無い名前は testid として行→「その他 ▾」の順に探す）。`openMore`・`closeMore` は「その他 ▾」の開け閉め
 - `undoState(page)`・`toolCount(page, testId)`：「元に戻す」の状態（押せるか・手の名前）を「その他 ▾」を開いて読む／行と「その他 ▾」の中を合わせた testid の数
 - `openScreenDetails(page)`：画面の「詳しく ▾」（月・週・日）を開く（開け閉めは覚えるので、以後その画面は開いて始まる）
 - `openDetails(page, testId)`・`reveal(page, testId)`：「詳しく ▾」を開く／その要素を含む畳んだ「詳しく ▾」だけ開いて見えるまで待つ。畳んだ中の点数・移動・凡例を読む前に `reveal`。管理者設定のひな形の「適用」は `scripts/lib/features.cjs` の `applyTemplate` が `openDetails(page, 'feature-templates-fold')` で開いてから押す
@@ -57,7 +57,7 @@ AGENTS.md「コマンド」から引く詳細。e2e を走らせる・足す・�
 | `e2e-absence.cjs` | 欠勤・当日キャンセルの欄（入口・2段（何が起きたか → 連絡・確定）・［この案で決める］・振り直し 案A／案B・差の欄・連絡の一覧・初めての訪問先の決まりごと） | |
 | `e2e-address.cjs` | 住所の入力（〈利用者さん〉・空き状況の場所・〈スタッフ〉の自宅。郵便番号・候補・失敗と時間切れ・名簿のあとの「位置の無い N人を地図に置く」） | 時間切れを待つので1分ほど |
 | `e2e-arrange.cjs` | 担当を組む（予定を組むの段・範囲・提案の帯・反映・組み直しの知らせ・基本情報の表・案を比べるのカードは［〈日〉の案を比べる］だけで比較の画面は段なし。ADR-0088） | |
-| `e2e-basic-auto.cjs` | 「基本」で予定が自動で決まる（訪問・繰り返しを足すと担当が付く・帯の［担当なしを組む］・確定の段階なし・自動の伝えた記録・「変更あり」と連絡の一覧） | |
+| `e2e-basic-auto.cjs` | 「基本」で予定が自動で決まる（訪問・繰り返しを足すと担当が付く・帯の［要対応を組む］・間に合わない訪問（時間休）が帯に出て［要対応を組む］で組み直され帯から消える・確定の段階なし・要対応が残る日は伝えた記録も「変更あり」も出ない・要対応の無い日の自動の伝えた記録・「変更あり」と連絡の一覧） | 自動の伝えた記録を見る段は、今日の要対応の回を取り消して要対応の無い日にしてから（`clearIssuesToday`） |
 | `e2e-chip-containers.cjs` | 札の3段と入れ物（週の表の札と「+N」・選ぶ・キー・ドラッグ・月のマス・`data-marks` が3段で同じ） | 1400px・390px |
 | `e2e-compat.cjs` | 相性の画面（操作の数・表の中を矢印で動く・マスを押すと出る選ぶ欄・吹き出し・1つに畳んだ絞り込みと URL・300人×60人の速さ） | `PERF_MS_COMPAT`（相性を選んで描き終わるまで。既定 100ms。マスを押して選ぶ欄が開くまでは注記） |
 | `e2e-day-ops.cjs` | 日の予定の操作（スマホの日ごとのリスト・下から出る欄・複数選択／広い画面の帯のキー・範囲の小さな帯・パレットの訪問） | 390px・1400px |
@@ -78,7 +78,7 @@ AGENTS.md「コマンド」から引く詳細。e2e を走らせる・足す・�
 | `e2e-progress.cjs` | 月の進み具合の帯（数・行き先・担当を AI で組むが画面を移っても続く・390px・印刷） | `PERF_MS_PROGRESS`（既定 3000ms）。月末（`FAKE_NOW=2026-10-28`・`2026-10-31`）でも通る |
 | `e2e-schedule-tools.cjs` | 予定の日・週・月の共通の部品（操作の行・範囲の提案（画面を移っても残る）・複数選択・元に戻す）・パレットに案を比べるが出ない | |
 | `e2e-shared-parts.cjs` | 訪問の札の共通の部品（週の〈利用者さん〉の表・月のマスと一覧・人の予定表で複数選択・キー・`data-marks`・落とし先の判定。週の〈スタッフ〉の表のキーと長押しは e2e-chip-containers） | 1400px・390px |
-| `e2e-simple-menu.cjs` | 「基本」のメニュー5つ・要対応の帯・来月の確認（段の中でページの時計を今月の19日・25日に止め直す）・「予定を入れる」（開始日・「基本」のままで毎月の第N と誤りの欄）・人のタブ・人の画面の畳み（決まりごとは「詳しく」の中）・地図はボタン／入の人の一覧の「くわしい列」 | 1366px・390px |
+| `e2e-simple-menu.cjs` | 「基本」のメニュー5つ・要対応の帯（［要対応を組む］・［見に行く ›］で順番に次の訪問へ＝「n/N」・［‹ 前へ］・最後から最初へ）・来月の確認（段の中でページの時計を今月の19日・25日に止め直す）・「予定を入れる」（開始日・「基本」のままで毎月の第N と誤りの欄）・人のタブ・人の画面の畳み（決まりごとは「詳しく」の中）・地図はボタン／入の人の一覧の「くわしい列」 | 1366px・390px |
 | `e2e-standard.cjs` | 組み方の標準（段・案をくらべる・表で直す・標準にする・条件の重みの寄り道） | |
 | `e2e-tour.cjs` | 最初の2問（定期は「基本」＝毎月の第N・決まりごとが入。デモは作った直後に1回組む・自分のデータと印「all」は組まない）・登録の案内・案内ツアー・ファイル選択・月の日ごとの一覧・データを守る（控え・書き出した日・片づけ・壊れたデータ） | |
 | `e2e-vacancy-steps.cjs` | 空き状況の段階（いつ・何を → 場所 → 受けられる曜日・時間帯 → 次の一手）・チップとくわしい条件・答えのカードの［要約をコピー］・表の「詳しく ▾」 | `PERF_MS_VACANCY`（結果が出るまで。既定 5000ms）。住所の検索は偽の応答 |

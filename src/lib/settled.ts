@@ -1,11 +1,13 @@
 // 決まった予定（ADR-0073。PRD D382）：エキスパート機能（expert）が切のとき、自動で組んだ日・手で直した日は、
 // 今日から1か月先まで決まった（伝えた）扱いにする＝自動で伝えた記録（snapshots[日]。tellDay と同じ書き方）を付ける。
+// ただし帯の種類（担当なし・間に合わない・重なり・休みの人。lib/bandIssues）の訪問が残る日は付けず、無くなった時点で付ける（ADR-0089）。
 // 「どの操作のあとに記録するか」はこの autoTell の1か所だけが決める（呼ぶのは store の update の1か所）。
 // 純粋関数（データは書き換えず新しい DemoData を返す。at は引数）
 import type { DemoData } from '../contracts/data';
 import type { Visit } from '../contracts/documents';
 import { addDays, jstDate } from '../domain/time';
 import { autoRange, autoTargets, isFree } from './autoArrange';
+import { hasBandIssues } from './bandIssues';
 import { own } from './common';
 import { dayProblemOf, tellDay } from './dayPlan';
 import { isOn } from './features';
@@ -49,15 +51,19 @@ function diffVisits(before: readonly Visit[], after: readonly Visit[]): { change
   return { changed, removed: before.some((v) => !now.has(v.id)) };
 }
 
-/** その日に伝えた記録を付ける（付いている日・計算に入れる訪問が無い日は変えない） */
+/**
+ * その日に伝えた記録を付ける（付いている日・計算に入れる訪問が無い日は変えない）。帯の種類の訪問が残る日も付けない
+ * （連絡していない日に「未連絡の変更」を出さない。直して無くなったときの操作で付く。ADR-0089）
+ */
 function tellIfNeeded(data: DemoData, date: string, at: number): DemoData {
   if (own(data.snapshots, date)) return data;
   const problem = dayProblemOf(data, date);
-  return problem && problem.visits.length > 0 ? tellDay(data, date, problem, at) : data;
+  if (!problem || problem.visits.length === 0 || hasBandIssues(data, date, problem)) return data;
+  return tellDay(data, date, problem, at);
 }
 
 /**
- * 日のリストを決まった扱いにする（expert 切のとき。範囲内で伝えた記録の無い日に、その日の問題で tellDay）。
+ * 日のリストを決まった扱いにする（expert 切のとき。範囲内で伝えた記録の無い日に、その日の問題で tellDay。帯の種類の訪問が残る日は除く）。
  * 自動の組みの仕事が終わったとき（反映した・何も書かなかったに関わらず）に、その仕事の対象の日へ呼ぶ（待っていた日を終わらせる。
  * 繰り返しの保存からの自動の組みで visits が変わらない日もここで拾う）
  */
@@ -83,6 +89,7 @@ export function settleDates(
  *   ある日。先に記録すると組む前の担当なしが伝えた内容に入るので、組んだあとの update（または自動の組みの終わりの settleDates）で記録する。
  *   opts.wait が false の update（settleNow。依頼を出さない保存）は待たない
  * - 拾わない：今日より前の日・範囲の外の日、すでに伝えた記録がある日（書き換えない。その後の変更は未連絡の変更＝「変更あり」になる）、
+ *   帯の種類（担当なし・間に合わない・重なり・休みの人）の訪問が残る日（その日の訪問を直して無くなったときに付く。ADR-0089）、
  *   expert 入のとき、訪問が変わらない操作（〈スタッフ〉の勤務・繰り返しパターン・〈利用者さん〉の休みなど visits の外だけを変える操作。
  *   繰り返しの回は上書きするまで保存した訪問にならない）、計算に入れる訪問が無い日
  * - 止める update（UpdateOptions.tell:false）：名簿の読み込み・古い記録を消す・設定の操作（訪問の種類を消す・項目・条件・プリセット・呼び名・

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { attentionBand, bandDays, exceptionStatus, isBandIssue } from './attentionBand';
+import { attentionBand, type BandVisit, bandDays, bandPlace, bandStep, exceptionStatus } from './attentionBand';
+import { isBandIssue } from './bandIssues';
 import type { IssueKind } from './dayPlan';
 import type { DayStatus } from './month';
 
@@ -20,6 +21,7 @@ const day = (date: string, issues: Record<string, IssueKind[]> = {}): DayStatus 
 const TODAY = '2026-10-21';
 const ZERO = {
   unassigned: 0,
+  late: 0,
   overlap: 0,
   off: 0,
   notAllowed: 0,
@@ -34,26 +36,27 @@ describe('attentionBand（要対応の帯。PRD D400・D403・D404）', () => {
     expect(attentionBand([], TODAY)).toBeNull();
     expect(attentionBand([day(TODAY), day('2026-10-22')], TODAY)).toBeNull();
   });
-  it('担当なし・重なり・休みの人の訪問を種類ごとに数え、1行の文にする（0件の種類は書かない）', () => {
+  it('担当なし・間に合わない・重なり・休みの人の訪問を種類ごとに数え、1行の文にする（0件の種類は書かない。ADR-0089）', () => {
     const b = attentionBand(
       [
-        day(TODAY, { a: ['unassigned'], b: ['unassigned'], c: ['late'] }),
+        day(TODAY, { a: ['unassigned'], b: ['unassigned'], c: ['overlap'], f: ['late'] }),
         day('2026-10-23', { d: ['off'], e: ['unassigned'] }),
       ],
       TODAY,
     );
-    expect(b?.counts).toEqual({ ...ZERO, unassigned: 3, overlap: 1, off: 1 });
-    expect(b?.text).toBe('担当なし 3件・重なり 1件・休みの人 1件');
+    expect(b?.counts).toEqual({ ...ZERO, unassigned: 3, late: 1, overlap: 1, off: 1 });
+    expect(b?.text).toBe('担当なし 3件・間に合わない 1件・重なり 1件・休みの人 1件');
+    expect(attentionBand([day(TODAY, { a: ['late'] })], TODAY)?.text).toBe('間に合わない 1件');
     expect(attentionBand([day(TODAY, { a: ['off'] })], TODAY)?.text).toBe('休みの人 1件');
   });
   it('条件に合わない（notAllowed）だけの訪問は数えない。重なりと重なった訪問は重なりに数える', () => {
     expect(attentionBand([day(TODAY, { a: ['notAllowed'] })], TODAY)).toBeNull();
-    const b = attentionBand([day(TODAY, { a: ['notAllowed', 'late'], b: ['notAllowed'] })], TODAY);
+    const b = attentionBand([day(TODAY, { a: ['notAllowed', 'overlap'], b: ['notAllowed'] })], TODAY);
     expect(b?.counts).toEqual({ ...ZERO, overlap: 1 });
   });
-  it('1つの訪問は1つの種類（休みの人と重なりが重なっても休みの人）', () => {
-    const b = attentionBand([day(TODAY, { a: ['late', 'off'] })], TODAY);
-    expect(b?.counts).toEqual({ ...ZERO, off: 1 });
+  it('1つの訪問は1つの種類（休みの人と重なりが重なっても休みの人。間に合わないと重なりなら間に合わない）', () => {
+    const b = attentionBand([day(TODAY, { a: ['overlap', 'off'], b: ['overlap', 'late'] })], TODAY);
+    expect(b?.counts).toEqual({ ...ZERO, off: 1, late: 1 });
   });
   it('今日より前の日は数えない', () => {
     expect(attentionBand([day('2026-10-20', { a: ['unassigned'] })], TODAY)).toBeNull();
@@ -67,14 +70,14 @@ describe('attentionBand（要対応の帯。PRD D400・D403・D404）', () => {
     );
     expect(b?.go).toEqual({ to: '/plan', date: TODAY, visitId: 'b' });
   });
-  it('最初の訪問は重なり・休みの人を先に（担当なしのほうが早い日でも）、無ければ担当なし（PRD D403）', () => {
+  it('最初の訪問は間に合わない・重なり・休みの人を先に（担当なしのほうが早い日でも）、無ければ担当なし（PRD D403）', () => {
     const start: Record<string, number> = { a: 480, w: 900 };
     const b = attentionBand(
       [day(TODAY, { a: ['unassigned'] }), day('2026-10-24', { w: ['late'] }), day('2026-10-25', { y: ['off'] })],
       TODAY,
       (id) => start[id] ?? null,
     );
-    expect(b?.text).toBe('担当なし 1件・重なり 1件・休みの人 1件');
+    expect(b?.text).toBe('担当なし 1件・間に合わない 1件・休みの人 1件');
     expect(b?.go).toEqual({ to: '/plan', date: '2026-10-24', visitId: 'w' });
     expect(
       attentionBand([day('2026-10-23', { u: ['unassigned'] }), day(TODAY, { v: ['unassigned'] })], TODAY)?.go,
@@ -96,6 +99,57 @@ describe('attentionBand（要対応の帯。PRD D400・D403・D404）', () => {
       TODAY,
     );
     expect(b?.go).toEqual({ to: '/plan', date: '2026-10-22', visitId: 'y' });
+  });
+});
+
+describe('bandStep（順番に見に行く。PRD D403・ADR-0089）', () => {
+  const start: Record<string, number> = { a: 600, b: 540, c: 480, u: 420, v: 700 };
+  const band = (statuses: DayStatus[]) => attentionBand(statuses, TODAY, (id) => start[id] ?? null)!;
+  const ids = (list: readonly BandVisit[]) => list.map((v) => v.visitId);
+  it('並びは 間に合わない・重なり・休みの人 → 担当なし、それぞれ日付 → 開始', () => {
+    const b = band([
+      day(TODAY, { u: ['unassigned'], a: ['overlap'], b: ['late'] }),
+      day('2026-10-22', { c: ['off'], v: ['unassigned'] }),
+    ]);
+    expect(ids(b.visits)).toEqual(['b', 'a', 'c', 'u', 'v']);
+    expect(b.go.visitId).toBe('b');
+  });
+  it('押すたびに次へ、最後の次は最初、前へは1つ戻り、最初の前は最後', () => {
+    const list = band([day(TODAY, { a: ['late'], b: ['overlap'], u: ['unassigned'] })]).visits;
+    expect(ids(list)).toEqual(['b', 'a', 'u']);
+    const s1 = bandStep(list, null, 1)!;
+    expect(s1).toMatchObject({ index: 0, visit: { visitId: 'b' } });
+    const s2 = bandStep(list, s1.visit, 1)!;
+    expect(s2).toMatchObject({ index: 1, visit: { visitId: 'a' } });
+    const s3 = bandStep(list, s2.visit, 1)!;
+    expect(s3.visit.visitId).toBe('u');
+    expect(bandStep(list, s3.visit, 1)).toMatchObject({ index: 0, visit: { visitId: 'b' } });
+    expect(bandStep(list, s2.visit, -1)?.visit.visitId).toBe('b');
+    expect(bandStep(list, s1.visit, -1)).toMatchObject({ index: 2, visit: { visitId: 'u' } });
+    expect(bandStep([], null, 1)).toBeNull();
+  });
+  it('見た訪問が直して消えたら、同じ位置の次・前から（消えた訪問は飛ばす）', () => {
+    const before = band([day(TODAY, { c: ['late'], b: ['late'], a: ['late'] })]).visits;
+    expect(ids(before)).toEqual(['c', 'b', 'a']);
+    const seen = before[1]!; // b を見た
+    const after = band([day(TODAY, { c: ['late'], a: ['late'] })]).visits; // b を直した
+    expect(bandStep(after, seen, 1)?.visit.visitId).toBe('a');
+    expect(bandStep(after, seen, -1)?.visit.visitId).toBe('c');
+    // 最後を見て消えたら、次は最初へ
+    expect(bandStep(band([day(TODAY, { c: ['late'], b: ['late'] })]).visits, before[2]!, 1)?.visit.visitId).toBe('c');
+  });
+});
+
+describe('bandPlace（帯の「n/N」）', () => {
+  const v = (visitId: string): BandVisit => ({ date: TODAY, visitId, start: 0, attend: true });
+  const list = [v('a'), v('b'), v('c')];
+  it('2回目から、見た訪問が並びにあるときだけ n/N', () => {
+    expect(bandPlace(list, null)).toBeNull();
+    expect(bandPlace(list, { visit: v('a'), presses: 1 })).toBeNull();
+    expect(bandPlace(list, { visit: v('b'), presses: 2 })).toEqual({ n: 2, total: 3 });
+    expect(bandPlace(list, { visit: v('a'), presses: 4 })).toEqual({ n: 1, total: 3 });
+    expect(bandPlace(list, { visit: v('x'), presses: 3 })).toBeNull();
+    expect(bandPlace([v('a')], { visit: v('a'), presses: 3 })).toBeNull();
   });
 });
 
@@ -143,7 +197,7 @@ describe('attentionBand の入だけの種類（エキスパート機能が入�
   it('条件に合わない（必須の違反の訪問）・拘束超（日）は入だけ数え、切（渡さない）は数えない。ホームの要対応が知らせていたもの', () => {
     const told1 = {
       ...told(TODAY),
-      ...day(TODAY, { a: ['notAllowed'], b: ['notAllowed', 'late'] }),
+      ...day(TODAY, { a: ['notAllowed'], b: ['notAllowed', 'overlap'] }),
       state: 'told' as const,
     };
     const span = { ...told('2026-10-23'), overSpan: ['s1'] };
@@ -172,8 +226,8 @@ describe('attentionBand の入だけの種類（エキスパート機能が入�
       ...open,
       hasStandard: false,
     });
-    expect(b?.text).toBe('担当なし 1件・重なり 1件・組み方の標準が無い・未確定 2日');
-    expect(b?.go).toEqual({ to: '/plan', date: TODAY, visitId: 'b' }); // 重なりが先（PRD D403）
+    expect(b?.text).toBe('担当なし 1件・間に合わない 1件・組み方の標準が無い・未確定 2日');
+    expect(b?.go).toEqual({ to: '/plan', date: TODAY, visitId: 'b' }); // 間に合わないが先（PRD D403）
     // 訪問の種類が無ければ、標準が無いへ（未確定より先）
     expect(attentionBand([untold('2026-10-23')], TODAY, undefined, { ...open, hasStandard: false })?.go).toEqual({
       to: '/standard',
@@ -186,6 +240,7 @@ describe('isBandIssue・exceptionStatus（例外だけ見せる）', () => {
     expect(isBandIssue('unassigned')).toBe(true);
     expect(isBandIssue('off')).toBe(true);
     expect(isBandIssue('late')).toBe(true);
+    expect(isBandIssue('overlap')).toBe(true);
     expect(isBandIssue('notAllowed')).toBe(false);
   });
   it('要対応を絞って数え直し、拘束超は見せない。元は変えない', () => {

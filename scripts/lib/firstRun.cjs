@@ -12,7 +12,7 @@ const ARRANGED_RE = /件の担当を組みました|担当なしのまま|自動
  * デモを作った直後の1回の組み（PRD D409。ADR-0079）が終わるまで待つ（終わりの知らせが出るまで。最長 ms）。
  * 組みは画面の中で続くので、終わる前に読み直す・移ると組まれない。知らせの文を返す（出なければ空）。
  * 組む担当なしが無いデモ（単発のデモは担当つきで作る）は依頼が出ず知らせも出ないので、組んでいる間の帯（auto-band。
- * 組み始めて 600ms で出る）も要対応の帯の［担当なしを組む］も3秒続けて無ければ、組むものが無いとして空を返す
+ * 組み始めて 600ms で出る）も要対応の帯の［要対応を組む］も3秒続けて無ければ、組むものが無いとして空を返す
  */
 async function waitStartArranged(page, ms = 180000) {
   const toastText = async () =>
@@ -38,7 +38,7 @@ async function waitStartArranged(page, ms = 180000) {
 /**
  * 2問に答えて「はじめる」を押す（既定は 問1＝デモで試す・問2＝定期の訪問が中心。今の初期データ＋「基本」のひな形）。
  * デモなら、作った直後の1回の組みが終わるまで待つ（waitStartArranged）。arranged が false なら、終わりの知らせの［元に戻す］で
- * 組む前（初期データの担当なしが残る）に戻す（要対応の帯の［担当なしを組む］や、空いている人への自動の組みを確かめるとき）
+ * 組む前（初期データの担当なしが残る）に戻す（要対応の帯の［要対応を組む］や、空いている人への自動の組みを確かめるとき）
  */
 async function answerFirstRun(page, { start = 'demo', booking = 'regular', arranged = true } = {}) {
   await page.getByTestId('first-run').waitFor({ timeout: 30000 });

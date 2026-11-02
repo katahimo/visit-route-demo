@@ -107,7 +107,7 @@ describe('writeRoutes（提案を反映する・担当を替える）', () => {
 });
 
 describe('visitIssues（訪問ごとの検査）', () => {
-  it('担当なし・担当が休み（欠勤）・時間に間に合わない', () => {
+  it('担当なし・担当が休み（欠勤）・前の訪問と重なる', () => {
     const d = data({
       absences: [{ id: 'a', staffId: 's2', date: DATE, from: null, to: null, note: '' }],
       visits: [
@@ -120,8 +120,17 @@ describe('visitIssues（訪問ごとの検査）', () => {
     const issues = visitIssues(p, dayRoutes(d, DATE, p), visitsOn(d, DATE));
     expect(issues.get('v3')!.map((x) => x.kind)).toEqual(['unassigned']);
     expect(issues.get(P1)!.map((x) => x.kind)).toEqual(['off']);
-    // 同じ人に同じ時刻の2件：どちらかが間に合わない
-    expect([issues.get('v1'), issues.get('v2')].flat().some((x) => x?.kind === 'late')).toBe(true);
+    // 同じ人に同じ時刻の2件：どちらかが重なり（その訪問だけなら収まる。ADR-0089）
+    const both = [issues.get('v1'), issues.get('v2')].flat();
+    expect(both.some((x) => x?.kind === 'overlap')).toBe(true);
+    expect(both.some((x) => x?.kind === 'late')).toBe(false);
+  });
+  it('その訪問だけでも働ける時間・時間の約束に収まらないなら「間に合わない」（重なりではない。ADR-0089）', () => {
+    const d = data({ visits: [fixed('v1', 'c1', '05:00', { staffId: 's1' })] });
+    const p = dayProblemOf(d, DATE)!;
+    const issues = visitIssues(p, dayRoutes(d, DATE, p), visitsOn(d, DATE));
+    expect(issues.get('v1')!.map((x) => x.kind)).toContain('late');
+    expect(issues.get('v1')!.map((x) => x.kind)).not.toContain('overlap');
   });
 });
 

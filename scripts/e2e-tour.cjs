@@ -158,7 +158,7 @@ async function firstRun(b) {
   await page.locator('.app-main h1').first().waitFor({ timeout: 30000 });
   await until(async () => (await stored2(page)) !== null, 10000);
   check(/#\/month/.test(hashOf(page)), 'デモ・定期：最初に開く画面は月の予定', hashOf(page));
-  // 作った直後に担当なしを1回自動で組む（要対応の帯の［担当なしを組む］と同じ知らせ・［元に戻す］。PRD D409）
+  // 作った直後に担当なしを1回自動で組む（要対応の帯の［要対応を組む］と同じ知らせ・［元に戻す］。PRD D409）
   const arranged = await waitStartArranged(page);
   check(/^\d+件の担当を組みました/.test(arranged), 'デモ・定期：作った直後に担当なしを組み、知らせが出る', arranged);
   check((await page.getByTestId('toast-undo').count()) >= 1, 'デモ・定期：組んだ知らせに［元に戻す］');

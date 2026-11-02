@@ -45,11 +45,11 @@ describe('nextMonthCheck（来月の件数と要対応。PRD D413）', () => {
       ym: '2026-12',
       label: '12月',
       total: 9,
-      counts: { unassigned: 0, overlap: 0, off: 0 },
+      counts: { unassigned: 0, late: 0, overlap: 0, off: 0 },
       text: '12月の予定 9件はできています',
     });
   });
-  it('担当なし・重なり・休みの人を要対応の帯と同じ数え方で足す（0件の種類は書かない。条件に合わないは数えない）', () => {
+  it('担当なし・間に合わない・重なり・休みの人を要対応の帯と同じ数え方で足す（0件の種類は書かない。条件に合わないは数えない）', () => {
     const c = nextMonthCheck(
       [
         // 今月の担当なしは数えない
@@ -59,10 +59,13 @@ describe('nextMonthCheck（来月の件数と要対応。PRD D413）', () => {
       ],
       '2026-12',
     );
-    expect(c?.counts).toEqual({ unassigned: 2, overlap: 0, off: 1 });
+    expect(c?.counts).toEqual({ unassigned: 2, late: 0, overlap: 0, off: 1 });
     expect(c?.text).toBe('12月の予定 12件はできています・担当なし 2件・休みの人 1件');
-    const all = nextMonthCheck([day('2027-01-05', 2, { a: ['unassigned'], b: ['late'], c: ['off'] })], '2027-01');
-    expect(all?.text).toBe('1月の予定 2件はできています・担当なし 1件・重なり 1件・休みの人 1件');
+    const all = nextMonthCheck(
+      [day('2027-01-05', 2, { a: ['unassigned'], b: ['overlap'], c: ['off'], e: ['late'] })],
+      '2027-01',
+    );
+    expect(all?.text).toBe('1月の予定 2件はできています・担当なし 1件・間に合わない 1件・重なり 1件・休みの人 1件');
   });
   it('来月に訪問が1件も無ければ null（出さない）', () => {
     expect(nextMonthCheck([], '2026-12')).toBeNull();

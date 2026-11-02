@@ -37,7 +37,7 @@ const SCREENS = {
 /**
  * 行き先の名前 → 左のメニューの項目（data-key）の候補。前にあるものから探す（メニューの作りが変わったらここだけ直す。
  * 欠勤はメニューに無く、予定の操作の行から（pressTool）。空き状況は予定の次の項目（PRD D400。ADR-0078）。
- * 担当なしを組むは予定の上の要対応の帯の attention-band-arrange（PRD D403））
+ * 要対応を組むのは予定の上の要対応の帯の attention-band-arrange（PRD D403））
  */
 const MENU_KEYS = {
   予定: ['schedule'],
