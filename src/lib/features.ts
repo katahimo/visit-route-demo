@@ -299,11 +299,22 @@ export type TemplateId = (typeof TEMPLATE_IDS)[number];
 /** ひな形：名前・1行の説明・入れる機能（ほかは切） */
 export type TemplateDef = { id: TemplateId; label: string; description: string; on: readonly FeatureId[] };
 
-/** 基本のひな形で入れる機能（予定・繰り返し・欠勤・キャンセル・空き状況・相性・道順のリンク・住所の検索） */
-const BASIC_ON: readonly FeatureId[] = ['patterns', 'sudden', 'vacancy', 'compat', 'mapsLink', 'geocode'];
+/** 基本のひな形で入れる機能（予定・繰り返し・毎月の第N・曜日ごとの時刻・欠勤・キャンセル・空き状況・相性・決まりごと・道順のリンク・住所の検索。ADR-0086） */
+const BASIC_ON: readonly FeatureId[] = [
+  'patterns',
+  'patternMonthly',
+  'sudden',
+  'vacancy',
+  'compat',
+  'visitNotes',
+  'mapsLink',
+  'geocode',
+];
 
-/** 単発のみのひな形で入れる機能：基本から繰り返し（patterns）だけを外したもの（ADR-0072 第2段。PRD D378） */
-const ONE_OFF_ON: readonly FeatureId[] = BASIC_ON.filter((f) => f !== 'patterns');
+/** 単発のみのひな形で入れる機能：基本から繰り返し（patterns・patternMonthly）と決まりごと（visitNotes）を外したもの（ADR-0072 第2段・ADR-0086。PRD D378） */
+const ONE_OFF_ON: readonly FeatureId[] = BASIC_ON.filter(
+  (f) => f !== 'patterns' && f !== 'patternMonthly' && f !== 'visitNotes',
+);
 
 /** ひな形の5つ（ADR-0028 の表に、ADR-0072 の単発のみを足したもの） */
 export const TEMPLATES: readonly TemplateDef[] = [
@@ -318,7 +329,7 @@ export const TEMPLATES: readonly TemplateDef[] = [
     id: 'basic',
     label: '基本',
     description:
-      '予定（月・週・日）と欠勤・キャンセル・空き状況・相性・道順・住所の検索だけ。まず割当と当日の対応を見たいとき',
+      '予定（月・週・日。毎月の第N・曜日ごとの時刻も）と欠勤・キャンセル・空き状況・相性・決まりごと・道順・住所の検索だけ。まず割当と当日の対応を見たいとき',
     on: BASIC_ON,
   },
   {
@@ -331,19 +342,8 @@ export const TEMPLATES: readonly TemplateDef[] = [
   {
     id: 'monthlyField',
     label: '月次予定・現場共有',
-    description:
-      '基本に、第N曜日・曜日ごとの時刻・休み・希望休・月の印刷・案内文・担当を限る・決まりごと・Excel。月の予定が複雑なとき',
-    on: [
-      ...BASIC_ON,
-      'patternMonthly',
-      'clientLeave',
-      'requestedOff',
-      'monthPrint',
-      'vacancyNotice',
-      'allowedStaff',
-      'visitNotes',
-      'excel',
-    ],
+    description: '基本に、休み・希望休・月の印刷・案内文・担当を限る・Excel。月の予定が複雑なとき',
+    on: [...BASIC_ON, 'clientLeave', 'requestedOff', 'monthPrint', 'vacancyNotice', 'allowedStaff', 'excel'],
   },
   {
     id: 'all',

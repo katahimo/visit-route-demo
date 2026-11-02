@@ -14,11 +14,12 @@
 // 5c 画面の上の説明は1行で、閉じたら読み直しても出ない（画面ごと。この端末に覚える）、
 // 5e 人の画面は畳む・日の予定の地図はボタンで開く・月のマスの読み方（PRD D385・D384）：〈利用者さん〉の一覧は名前・住所・いつもの予定の3列、
 //    〈スタッフ〉は名前・勤務日・勤務時間の3列。詳細は〈利用者さん〉＝名前・住所・予定（繰り返し）／〈スタッフ〉＝名前・勤務日・勤務時間を出し、
-//    段階・特性・決まりごと・担当・相性（〈スタッフ〉は自宅・特性・求めること・日ごとの勤務ほか）は「詳しく ▾」の中（閉じていると見えない・開くと見える）。
+//    段階・特性・決まりごと（「基本」は決まりごとの機能が入。ADR-0086）・担当・相性（〈スタッフ〉は自宅・特性・求めること・日ごとの勤務ほか）は「詳しく ▾」の中（閉じていると見えない・開くと見える）。
 //    日の予定の地図はふだん閉じ、「地図」のボタンで開く（1366px・390px）。月のマスは例外だけで吹き出しを出さず、読み方は見出しの ⓘ（帯の3種類と「変更あり」。PRD D410）、
 // 5f 「予定を入れる」と〈スタッフ〉・〈利用者さん〉のタブ（PRD D402）：月・週の主ボタンは「予定を入れる」（操作の行は2つまで。担当なしを組むは帯の［担当なしを組む］）、
 //    押すと引き出し（定期＝〈利用者さん〉・曜日・くり返し・開始日（既定は今日・今日より前は誤り。PRD D416）・時刻・所要／単発＝〈利用者さん〉・日付・時刻・所要）で
-//    「入れる」→ 予定に出て開始日からの回に担当が自動で付く。5f3 毎月の第N の機能を入れると、くり返しに「毎月（第N）」と第1〜第5 のチップ（選ばなければ誤り。入れた回に担当が自動で付き、組みの終わりまで待って次の段へ）、
+//    「入れる」→ 予定に出て開始日からの回に担当が自動で付く。くり返しは 毎週〜4週ごと・毎月（第N）（「基本」は毎月の第N の機能が入。ADR-0086）。
+//    5f3 最初の2問で定期を選んだデータ（「基本」）のままで、くり返しに「毎月（第N）」と第1〜第5 のチップ（選ばなければ誤り。入れた回に担当が自動で付き、組みの終わりまで待って次の段へ）、
 //    〈スタッフ〉の一覧の上のタブ（一覧・勤務・相性）と〈利用者さん〉のタブ（一覧・相性）で行き来でき、メニューの印は〈スタッフ〉／〈利用者さん〉に付き、
 //    相性・勤務の画面に禁句・点数が出ない。1366px・390px。幅は落ちても戻す、
 // 6 エキスパート機能を入にすると帯に 組み方の標準が無い・未確定 N日 が足され［担当なしを組む］は出ない（入のメニュー・ホームが無いことは e2e-nav・e2e-home）。
@@ -1162,7 +1163,8 @@ async function people(page) {
       base: `/clients/${cid}`,
       tab: 'basic',
       shown: ['basic', 'place'],
-      folded: ['stage', 'traits', 'staffing', 'conds'],
+      // 決まりごと（rules）は「基本」で機能が入（ADR-0086）。切の画面では「詳しく」の中
+      folded: ['stage', 'traits', 'rules', 'staffing', 'conds'],
       absentTab: 'staffing',
       brief: /\S/,
       shot: 'client',
@@ -1311,7 +1313,7 @@ async function addRecurring(page, w) {
     labels,
   );
   check((await box.getByTestId('add-plan-date').count()) === 0, `定期（${w}）：日付の欄は無い`);
-  // 開始日（PRD D416）：既定は今日・今日より前は選べない。くり返しは 毎週〜4週ごと（「基本」は毎月の第N の機能が切なので毎月は出さない）
+  // 開始日（PRD D416）：既定は今日・今日より前は選べない。くり返しは 毎週〜4週ごと・毎月（第N）（「基本」は毎月の第N の機能が入。ADR-0086）
   const from = box.getByTestId('add-plan-from');
   check(
     (await from.inputValue()) === TODAY && (await from.getAttribute('min')) === TODAY,
@@ -1320,8 +1322,8 @@ async function addRecurring(page, w) {
   );
   const repeatOpts = await texts(box.getByTestId('add-plan-repeat').locator('option'));
   check(
-    JSON.stringify(repeatOpts) === JSON.stringify(['毎週', '隔週', '3週ごと', '4週ごと']),
-    `定期（${w}）：くり返しは 毎週・隔週・3週ごと・4週ごと（毎月の第N の機能が切なら毎月は無い）`,
+    JSON.stringify(repeatOpts) === JSON.stringify(['毎週', '隔週', '3週ごと', '4週ごと', '毎月（第N）']),
+    `定期（${w}）：くり返しは 毎週・隔週・3週ごと・4週ごと・毎月（第N）（「基本」は毎月の第N の機能が入）`,
     repeatOpts,
   );
   const body = await page.locator('aside, [role="dialog"]').last().innerText();
@@ -1418,20 +1420,17 @@ async function addRecurring(page, w) {
 }
 
 /**
- * 毎月（第N。PRD D416）：毎月の第N の機能（patternMonthly）を入れた「基本」で、くり返しに「毎月（第N）」が出て、選ぶと第1〜第5 のチップ。
+ * 毎月（第N。PRD D416）：最初の2問で定期を選んだ「基本」のまま（毎月の第N の機能 patternMonthly が入。ADR-0086）、くり返しに「毎月（第N）」が出て、選ぶと第1〜第5 のチップ。
  * 第N を選ばずに入れると第N の欄に誤り（aria-invalid・フォーカス）、第2・第4 を選んで入れると repeat 'monthly'・monthWeeks [2, 4] の繰り返しが増える
  */
 async function addMonthly(page) {
   await fresh(page, '/month', NAV_READY, { start: 'demo' });
-  await page.evaluate((k) => {
-    const d = JSON.parse(localStorage.getItem(k));
-    d.org.features = { ...d.org.features, patternMonthly: true };
-    localStorage.setItem(k, JSON.stringify(d));
-  }, STORAGE_KEY);
-  await page.goto('about:blank');
-  await page.goto(`${BASE}#/month`);
-  await page.locator(NAV_READY).waitFor({ timeout: 60000 });
   const d0 = await data(page);
+  check(
+    d0.org.features.patterns === true && d0.org.features.patternMonthly === true && d0.org.features.visitNotes === true,
+    '前提：定期の答えは「基本」で、毎月の第N・決まりごとの機能が入（ADR-0086）',
+    d0.org.features,
+  );
   const box = await openAdd(page, 'recurring', '毎月');
   const repeat = box.getByTestId('add-plan-repeat');
   const opts = await texts(repeat.locator('option'));
@@ -1690,7 +1689,7 @@ const steps = sharedPage({
       '5f2 切：「予定を入れる」（定期・単発）・〈スタッフ〉〈利用者さん〉のタブ（390px）',
       restoreWidth(addAndTabs(390)),
     ],
-    ['5f3 切：「予定を入れる」の毎月（第N）・誤りの欄（毎月の第N の機能を入）', addMonthly],
+    ['5f3 切：「予定を入れる」の毎月（第N）・誤りの欄（「基本」のまま）', addMonthly],
     ['6 入：メニュー6つ・ホームなし・帯の入の種類', expertOn],
     ['6b 入：操作の行（2つ＋その他）・「詳しく」の見出しの数と開け閉めの覚え・説明1行', expertSame],
     ['6c 入：人の一覧は3列＋「くわしい列」（覚える）・人のタブ・4段は組む画面だけ', restoreWidth(expertPeople)],

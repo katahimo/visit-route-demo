@@ -30,23 +30,13 @@ const FEATURE_IDS = [
   'geocode',
   'excel',
 ];
-/** ひな形で入れる機能（ADR-0028 の表） */
-const BASIC_ON = ['patterns', 'sudden', 'vacancy', 'compat', 'mapsLink', 'geocode'];
+/** ひな形で入れる機能（ADR-0028 の表。基本に毎月の第N・決まりごとを足したのは ADR-0086） */
+const BASIC_ON = ['patterns', 'patternMonthly', 'sudden', 'vacancy', 'compat', 'visitNotes', 'mapsLink', 'geocode'];
 const TEMPLATE_ON = {
-  oneOff: BASIC_ON.filter((id) => id !== 'patterns'),
+  oneOff: BASIC_ON.filter((id) => !['patterns', 'patternMonthly', 'visitNotes'].includes(id)),
   basic: BASIC_ON,
   laborContract: [...BASIC_ON, 'clientStage', 'offboard', 'workload', 'fare'],
-  monthlyField: [
-    ...BASIC_ON,
-    'patternMonthly',
-    'clientLeave',
-    'requestedOff',
-    'monthPrint',
-    'vacancyNotice',
-    'allowedStaff',
-    'visitNotes',
-    'excel',
-  ],
+  monthlyField: [...BASIC_ON, 'clientLeave', 'requestedOff', 'monthPrint', 'vacancyNotice', 'allowedStaff', 'excel'],
   all: FEATURE_IDS,
 };
 const TEMPLATE_LABEL = {

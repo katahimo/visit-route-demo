@@ -127,6 +127,7 @@
 | [0083](adr/0083-add-plan-start-date-and-text-buttons.md) | 予定を入れるに開始日と毎月・文字のボタン・スマホ画面の日送り |
 | [0084](adr/0084-paste-absences-and-cancels.md) | 貼り付けた連絡から欠勤・キャンセル・休みをまとめて入れる |
 | [0085](adr/0085-chat-copy-one-tap.md) | 日の予定をチャット用の文にして1タップでコピー |
+| [0086](adr/0086-basic-template-monthly-and-visit-notes.md) | 「基本」のひな形に毎月の第N曜日と決まりごと |
 
 ## 文書の保ち方
 
