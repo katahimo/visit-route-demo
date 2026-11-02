@@ -24,6 +24,7 @@
 //    5f3 最初の2問で定期を選んだデータ（「基本」）のままで、くり返しに「毎月（第N）」と第1〜第5 のチップ（選ばなければ誤り。入れた回に担当が自動で付き、組みの終わりまで待って次の段へ）、
 //    〈スタッフ〉の一覧の上のタブ（一覧・勤務・相性）と〈利用者さん〉のタブ（一覧・相性）で行き来でき、メニューの印は〈スタッフ〉／〈利用者さん〉に付き、
 //    相性・勤務の画面に禁句・点数が出ない。1366px・390px。幅は落ちても戻す、
+// 5f4 「CSV でまとめて入れる」（PRD D423）：単発のみ（Excel は切）でも引き出しに畳んで出る。テンプレート・見ている月の書き出し・1件足したファイルの読み込み（確認のあと引き出しが閉じる）、
 // 6 エキスパート機能を入にすると帯に 組み方の標準が無い・未確定 N日 が足され［要対応を組む］は出ない（入のメニュー・ホームが無いことは e2e-nav・e2e-home）。
 // 6b 入の操作の行（主ボタン＋1つ＋「その他 ▾」）・「詳しく ▾」の見出しの数と開け閉めの覚え・説明1行。
 // 6c 入の人の一覧（PRD D394）：〈スタッフ〉・〈利用者さん〉の一覧は見出しがメニューの名前で、切と同じ人のタブ（一覧・勤務・相性／一覧・相性）と3列で始まり、
@@ -34,6 +35,7 @@
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-simple-menu.cjs
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）
 // 終了コード：全部通れば 0、通らないものがあれば 1。ページのエラー（pageerror）も失敗に数える
+const fs = require('node:fs');
 const { BASE, NOW, TODAY, STORAGE_KEY, check, runSteps, settle, until, shot } = require('./lib/env.cjs');
 const { openPage, sharedPage } = require('./lib/steps.cjs');
 const { freshAsked, waitStartArranged } = require('./lib/firstRun.cjs');
@@ -1483,6 +1485,66 @@ async function addRecurring(page, w) {
 }
 
 /**
+ * 5f4 「CSV でまとめて入れる」（PRD D423。ADR-0090）：単発のデモ（「単発のみ」＝Excel の入出力は切）でも引き出しに畳んで出る。
+ * テンプレートは列名の行だけ、書き出しは見ている月の単発の訪問（件数がボタンに出る）。書き出した列で1件足したファイルを読むと、
+ * 確認のあと訪問が1件増え、引き出しが閉じる
+ */
+async function addCsv(page) {
+  await fresh(page, '/week', NAV_READY, { start: 'demo', booking: 'oneOff' });
+  const d0 = await data(page);
+  check(d0.org.features.excel !== true, '前提：単発のみのひな形は Excel の入出力が切', d0.org.features.excel);
+  const box = await openAdd(page, 'oneOff', 'CSV');
+  const csv = box.getByTestId('plan-csv');
+  check((await csv.getAttribute('open')) === null, 'CSV：ふだんは畳む');
+  await box.getByTestId('plan-csv-open').click();
+  const tpl = await Promise.all([page.waitForEvent('download'), box.getByTestId('plan-csv-template').click()]);
+  const head = fs
+    .readFileSync(await tpl[0].path(), 'utf8')
+    .replace(/^\uFEFF/, '')
+    .trim();
+  check(
+    head === '訪問ID,日付,開始,開始の上限,所要(分),訪問先,メモ,取り消し,担当',
+    'CSV：テンプレートは列名の行だけ',
+    head,
+  );
+  const label = await box.getByTestId('plan-csv-export').innerText();
+  check(/月の単発の訪問を書き出す（\d+件）/.test(label), 'CSV：書き出しのボタンに月と件数', label);
+  const exp = await Promise.all([page.waitForEvent('download'), box.getByTestId('plan-csv-export').click()]);
+  const lines = fs
+    .readFileSync(await exp[0].path(), 'utf8')
+    .replace(/^\uFEFF/, '')
+    .trim()
+    .split('\r\n');
+  check(
+    lines.length > 1 && /^visit-route-demo-visits-\d{4}-\d{2}\.csv$/.test(exp[0].suggestedFilename()),
+    'CSV：書き出しのファイル',
+    lines.length,
+  );
+  const cols = lines[0].split(',');
+  const first = lines[1].split(',');
+  const added = ['', first[cols.indexOf('日付')], '6:30', '', '30', first[cols.indexOf('訪問先')], 'CSV', '', ''].join(
+    ',',
+  );
+  await box
+    .getByTestId('plan-csv-file')
+    .locator('input[type=file]')
+    .setInputFiles({ name: 'plan.csv', mimeType: 'text/csv', buffer: Buffer.from([...lines, added].join('\r\n')) });
+  // 確認（予約の CSV と同じ。PRD D408）：件数を見て「読み込む」
+  const dlg = page.getByTestId('confirm-dialog');
+  await dlg.waitFor({ timeout: 15000 });
+  const body = await dlg.innerText();
+  check(/このアプリの予定の形/.test(body) && /追加 1件/.test(body), 'CSV：確認に形と件数', body);
+  await dlg.getByTestId('confirm-ok').click();
+  await box.waitFor({ state: 'detached', timeout: 15000 });
+  await settle(page, 600);
+  const d1 = await data(page);
+  check(d1.visits.length === d0.visits.length + 1, 'CSV：読み込むと訪問が1件増える（書き出した行は変更なし）', [
+    d0.visits.length,
+    d1.visits.length,
+  ]);
+}
+
+/**
  * 毎月（第N。PRD D416）：最初の2問で定期を選んだ「基本」のまま（毎月の第N の機能 patternMonthly が入。ADR-0086）、くり返しに「毎月（第N）」が出て、選ぶと第1〜第5 のチップ。
  * 第N を選ばずに入れると第N の欄に誤り（aria-invalid・フォーカス）、第2・第4 を選んで入れると repeat 'monthly'・monthWeeks [2, 4] の繰り返しが増える
  */
@@ -1754,6 +1816,7 @@ const steps = sharedPage({
       restoreWidth(addAndTabs(390)),
     ],
     ['5f3 切：「予定を入れる」の毎月（第N）・誤りの欄（「基本」のまま）', addMonthly],
+    ['5f4 切：「予定を入れる」の CSV でまとめて入れる（単発のみ）', addCsv],
     ['6 入：メニュー6つ・ホームなし・帯の入の種類', expertOn],
     ['6b 入：操作の行（2つ＋その他）・「詳しく」の見出しの数と開け閉めの覚え・説明1行', expertSame],
     ['6c 入：人の一覧は3列＋「くわしい列」（覚える）・人のタブ・4段は組む画面だけ', restoreWidth(expertPeople)],

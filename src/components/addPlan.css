@@ -16,3 +16,21 @@
 .add-plan .form-grid {
   grid-template-columns: minmax(0, 1fr);
 }
+/* CSV でまとめて入れる（components/PlanCsvSection。ADR-0090）：入力の欄と線で分け、ふだんは畳む */
+.add-plan-csv {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.add-plan-csv[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.add-plan-csv-title {
+  cursor: pointer;
+  font-weight: 600;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}

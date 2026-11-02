@@ -21,11 +21,11 @@ export const bookingHasChanges = (r: Pick<BookingImportResult, 'added' | 'update
 export const bookingSummary = (r: Pick<BookingImportResult, 'added' | 'updated' | 'unchanged'>): string =>
   `追加 ${r.added}件・更新 ${r.updated}件・変更なし ${r.unchanged}件`;
 
-/** 入れなかった予約・読めなかった行の文（無ければ空の並び） */
+/** 入れなかった行・読めなかった行の文（無ければ空の並び） */
 export function bookingProblems(r: Pick<BookingImportResult, 'unmatched' | 'badRows'>, clientTerm: string): string[] {
   return [
     ...(r.unmatched.length > 0
-      ? [`入れなかった予約（${clientTerm}に名前が無い・同じ名前が2人以上）：${listText(r.unmatched)}`]
+      ? [`入れなかった行（${clientTerm}に名前が無い・同じ名前が2人以上）：${listText(r.unmatched)}`]
       : []),
     ...(r.badRows.length > 0 ? [`読めなかった行：${listText(r.badRows)}`] : []),
   ];
@@ -41,12 +41,12 @@ export function bookingConfirmBody(x: {
   const { r } = x;
   const enc = r.source.format === 'csv' ? `（文字コード ${r.source.encoding}）` : '';
   return [
-    `「${x.fileName}」の予約を訪問として読み込みます。CSV${enc}・${r.otherForm.label}の形として読みました。`,
+    `「${x.fileName}」を訪問として読み込みます。CSV${enc}・${r.otherForm.label}の形として読みました。`,
     bookingSummary(r),
-    ...(r.cancelledSkipped > 0 ? [`取り消し済みの予約 ${r.cancelledSkipped}件は入れません。`] : []),
+    ...(r.cancelledSkipped > 0 ? [`取り消し済みで、まだ入れていない ${r.cancelledSkipped}件は入れません。`] : []),
     ...bookingProblems(r, x.clientTerm),
     otherFormSkippedText(r.otherForm),
-    '担当は決めません（担当なし）。同じ予約番号の訪問は日付・時刻・所要・メモをファイルに合わせ、担当・ピン・アプリでの取り消しは残します。ファイルに無い訪問はそのままです。',
+    '担当は決めません（担当なし）。同じ予約番号・訪問IDの訪問は日付・時刻・所要・メモをファイルに合わせ、担当・ピン・取り消しは残します（取り消しはファイルでは戻せません）。ファイルに無い訪問はそのままです。',
     keepNote(x.keep),
   ].join('\n');
 }
@@ -61,4 +61,4 @@ export const bookingDoneText = (
   features: Features,
   keep: KeepState,
 ): string =>
-  `予約を読み込みました（追加 ${r.added}件・更新 ${r.updated}件）。担当は${arrangeHint(features)}で組めます${keptSuffix(keep)}`;
+  `訪問を読み込みました（追加 ${r.added}件・更新 ${r.updated}件）。担当は${arrangeHint(features)}で組めます${keptSuffix(keep)}`;

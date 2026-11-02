@@ -1,5 +1,5 @@
-// 予約の CSV の読み込み（ADR-0075。PRD D408。データの画面の「予約の CSV」から）：ほかのソフトの予約の CSV を読んで、
-// 件数（追加・更新・変更なし・入れなかった予約）を見せて確かめてから、store の update で訪問（単発・担当なし）として入れる。
+// 予約の CSV の読み込み（ADR-0075・ADR-0090。PRD D408・D423。データの画面の「予約の CSV」と、予定の「予定を入れる」の引き出しから）：ほかのソフトの予約の CSV を読んで、
+// 件数（追加・更新・変更なし・入れなかった行）を見せて確かめてから、store の update で訪問（単発・担当なし）として入れる。
 // 入れる手は usePendingImport（名簿の読み込みと同じ）
 import { useState } from 'react';
 import { bookingConfirmBody, bookingDoneText, bookingHasChanges, bookingProblems } from '../lib/bookingScreen';
@@ -9,7 +9,8 @@ import { canKeepPrevious } from '../store';
 import { useConfirm } from './ConfirmDialog';
 import { IMPORT_CHANGED_TEXT, usePendingImport } from './usePendingImport';
 
-export function useBookingImport() {
+/** onDone：入れたあとに呼ぶ（引き出しを閉じるなど） */
+export function useBookingImport(onDone?: () => void) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const { data, toast, changedSince, commit } = usePendingImport(setError);
@@ -27,23 +28,24 @@ export function useBookingImport() {
     if (!bookingHasChanges(r)) {
       const problems = bookingProblems(r, clientTerm);
       if (problems.length > 0)
-        setError([`入れる予約はありませんでした（変更なし ${r.unchanged}件）`, ...problems].join('\n'));
-      else toast(`予約に変更はありませんでした（変更なし ${r.unchanged}件）`);
+        setError([`入れる訪問はありませんでした（変更なし ${r.unchanged}件）`, ...problems].join('\n'));
+      else toast(`変更はありませんでした（変更なし ${r.unchanged}件）`);
       return;
     }
     if (changedSince(base)) return setError(IMPORT_CHANGED_TEXT);
     const ok = await confirmDialog({
-      title: '予約を読み込みますか？',
+      title: '訪問を読み込みますか？',
       body: bookingConfirmBody({ fileName: file.name, r, clientTerm, keep: canKeepPrevious() }),
-      confirmLabel: '予約を読み込む',
+      confirmLabel: '読み込む',
     });
     if (!ok) return;
     if (changedSince(base)) return setError(IMPORT_CHANGED_TEXT);
     commit({
       base,
       next: r.data,
-      label: '予約の読み込み',
+      label: '訪問の読み込み',
       done: (keep) => bookingDoneText(r, base.org.features, keep),
+      onDone,
     });
   };
 

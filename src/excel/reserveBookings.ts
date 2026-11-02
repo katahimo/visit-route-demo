@@ -1,7 +1,13 @@
 // 予約システムの予約の形（ADR-0075。PRD D408）：予約番号・予約日・予約時（「AM枠 10:00～12:00」など）・所要時間(分)・メニュー名・状況・氏名 … を
 // 予約の1件（Booking）に写す純粋関数。新規登録者（予約を入れた人）は担当ではないので読まない（担当は組むときに決める）
 import { hhmmToMinutes } from '../domain/time';
-import type { Booking, BookingTable } from './booking';
+import {
+  type Booking,
+  type BookingTable,
+  DAY_MINUTES,
+  BOOKING_MINUTES as MINUTES,
+  BOOKING_NOTE_MAX as NOTE_MAX,
+} from './booking';
 import { cellOf, clip, columnsOf, hasColumns, isBlankRow, skippedColumns } from './csvColumns';
 import { parseDateText } from './text';
 
@@ -16,17 +22,9 @@ const COL = {
   name: '氏名',
 } as const;
 
-/** 訪問の所要の範囲（contracts の visitSchema と同じ） */
-const MINUTES = { min: 5, max: 720 } as const;
-/** 訪問のメモの上限（contracts の visitSchema と同じ） */
-const NOTE_MAX = 200;
-
 /** 1行目の列名が予約の CSV の形か */
 export const isReserveBookingHeader = (header: readonly string[]): boolean =>
   hasColumns(columnsOf(header), [COL.ref, COL.date, COL.time, COL.name]);
-
-/** 1日の分（訪問は日をまたがない） */
-const DAY_MINUTES = 24 * 60;
 
 /** 「AM枠 10:00～12:00」「9:30〜17:00」→ 開始（HH:mm）と、終わりまでの分（無ければ null）。読めなければ null */
 export function parseTimeRange(text: string): { start: string; minutes: number | null } | null {

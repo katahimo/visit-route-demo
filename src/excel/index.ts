@@ -8,3 +8,5 @@ export { importBookings } from './importBookings';
 export { importRoster, rosterRetiresMost, rosterSummary, rosterWarning } from './importRoster';
 // 名簿の CSV（ADR-0068）
 export { exportRosterCsv } from './rosterCsv';
+// 予定の CSV（単発の訪問の書き出し・テンプレート。読み込みは importBookings。ADR-0090）
+export { exportVisitsCsv, visitCsvTemplate } from './visitCsv';

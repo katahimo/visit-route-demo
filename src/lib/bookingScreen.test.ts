@@ -34,7 +34,7 @@ describe('予約の読み込みの文', () => {
     expect(bookingProblems(result(), 'お客様')).toEqual([]);
     const names = ['A（1件）', 'B（1件）', 'C（1件）', 'D（1件）', 'E（1件）', 'F（2件）', 'G（1件）'];
     expect(bookingProblems(result({ unmatched: names, badRows: ['3行目：予約日がありません'] }), 'お客様')).toEqual([
-      '入れなかった予約（お客様に名前が無い・同じ名前が2人以上）：A（1件）・B（1件）・C（1件）・D（1件）・E（1件） ほか 2件',
+      '入れなかった行（お客様に名前が無い・同じ名前が2人以上）：A（1件）・B（1件）・C（1件）・D（1件）・E（1件） ほか 2件',
       '読めなかった行：3行目：予約日がありません',
     ]);
   });
@@ -42,20 +42,20 @@ describe('予約の読み込みの文', () => {
   it('確認の本文に形・文字コード・読まなかった列・担当なしを出す', () => {
     const body = bookingConfirmBody({ fileName: 'Reserve.csv', r: result(), clientTerm: 'お客様', keep });
     expect(body).toContain(
-      '「Reserve.csv」の予約を訪問として読み込みます。CSV（文字コード UTF-16LE）・予約システムの予約の形として読みました。',
+      '「Reserve.csv」を訪問として読み込みます。CSV（文字コード UTF-16LE）・予約システムの予約の形として読みました。',
     );
     expect(body).toContain('読まなかった列：支払金額');
     expect(body).toContain('担当は決めません');
-    expect(body).not.toContain('取り消し済みの予約');
+    expect(body).not.toContain('取り消し済みで');
     expect(
       bookingConfirmBody({ fileName: 'a.csv', r: result({ cancelledSkipped: 2 }), clientTerm: 'お客様', keep }),
-    ).toContain('取り消し済みの予約 2件は入れません。');
+    ).toContain('取り消し済みで、まだ入れていない 2件は入れません。');
     expect(body).toContain('直前の状態に戻す');
   });
 
   it('知らせ（控えを残せなければ理由を添える）', () => {
     expect(bookingDoneText(result(), { expert: true }, keep)).toBe(
-      '予約を読み込みました（追加 2件・更新 1件）。担当は「担当を組む」で組めます',
+      '訪問を読み込みました（追加 2件・更新 1件）。担当は「担当を組む」で組めます',
     );
     expect(bookingDoneText(result(), { expert: false }, keep)).toContain('予定の上の要対応の帯の「要対応を組む」');
     expect(bookingDoneText(result(), { expert: true }, { kept: false, why: '容量が足りません' })).toContain(

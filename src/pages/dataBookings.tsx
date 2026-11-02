@@ -22,7 +22,7 @@ export function BookingCard({ t }: { t: Pick<Terms, 'client' | 'staff'> }) {
         <span id={titleId}>予約の CSV</span>
       </SectionTitle>
       <Hint>
-        ほかのソフトから書き出した予約の CSV（読める形：{BOOKING_FORM_LABELS}
+        ほかのソフトの予約やこのアプリの予定の CSV（読める形：{BOOKING_FORM_LABELS}
         ）を、1回ずつの訪問（担当なし）として入れます。
         {t.client}は名前で突き合わせるので、先に<Link to="/clients">{t.client}一覧</Link>
         の「Excel・CSV」で{t.client}の名簿を読み込んでください。同じ予約番号は直し、二重には入れません。
