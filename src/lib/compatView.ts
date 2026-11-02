@@ -270,26 +270,44 @@ export function weeklyHours(
 /** 人数の文字（絞っていなければ「N人」、絞っていれば「N人／M人」） */
 const countText = (shown: number, total: number) => (shown === total ? `${total}人` : `${shown}人／${total}人`);
 
-/** 〈スタッフ〉の列の欄の要約（例「スタッフ 8人・絞り込みなし」「スタッフ 3人／8人・名前「市」・特性2」） */
-export function staffFilterSummary(state: StaffFilterState, shown: number, total: number, staffTerm: string): string {
+/** 〈スタッフ〉の列の絞り込みの中身（名前・特性のチップの数） */
+function staffFilterParts(state: StaffFilterState): string[] {
   const parts: string[] = [];
   if (state.query.trim() !== '') parts.push(`名前「${state.query.trim()}」`);
   if (state.chips.length > 0) parts.push(`特性${state.chips.length}`);
-  return `${staffTerm} ${countText(shown, total)}・${parts.length > 0 ? parts.join('・') : '絞り込みなし'}`;
+  return parts;
 }
 
-/** 〈利用者さん〉の行の欄の要約（例「利用者さん 2人／20人・地区1・チップ1」）。地区は選んだ市区と町名の数 */
-export function clientFilterSummary(
+/** 〈利用者さん〉の行の絞り込みの中身（地区は選んだ市区と町名の数、チップは相性のチップも数える） */
+function clientFilterParts(
   state: Pick<ClientFilterState, 'query' | 'cities' | 'towns' | 'chips' | 'types' | 'extra'>,
-  shown: number,
-  total: number,
-  clientTerm: string,
-): string {
+): string[] {
   const parts: string[] = [];
   if (state.query.trim() !== '') parts.push(`名前「${state.query.trim()}」`);
   const area = state.cities.length + state.towns.length;
   if (area > 0) parts.push(`地区${area}`);
   const chips = state.chips.length + (state.types?.length ?? 0) + (state.extra?.length ?? 0);
   if (chips > 0) parts.push(`チップ${chips}`);
-  return `${clientTerm} ${countText(shown, total)}・${parts.length > 0 ? parts.join('・') : '絞り込みなし'}`;
+  return parts;
+}
+
+/**
+ * 畳んだ「絞り込み」の欄の要約（PRD D116・D420）。絞っていなければ「絞り込みなし」、絞っていれば絞った側だけ
+ * 人数と中身（例「スタッフ 3人／8人・名前「市」・特性2　利用者さん 2人／20人・地区1」）
+ */
+export function compatFilterSummary(
+  staff: { state: StaffFilterState; shown: number; total: number },
+  clients: {
+    state: Pick<ClientFilterState, 'query' | 'cities' | 'towns' | 'chips' | 'types' | 'extra'>;
+    shown: number;
+    total: number;
+  },
+  terms: { staff: string; client: string },
+): string {
+  const out: string[] = [];
+  const sp = staffFilterParts(staff.state);
+  if (sp.length > 0) out.push(`${terms.staff} ${countText(staff.shown, staff.total)}・${sp.join('・')}`);
+  const cp = clientFilterParts(clients.state);
+  if (cp.length > 0) out.push(`${terms.client} ${countText(clients.shown, clients.total)}・${cp.join('・')}`);
+  return out.length > 0 ? out.join('　') : '絞り込みなし';
 }

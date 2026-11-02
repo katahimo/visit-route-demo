@@ -181,8 +181,8 @@ export const newClientHint = (only: boolean): string =>
 
 // ---- 相性の画面の説明 ----
 
-/** 相性の凡例の下の説明の見出し：切は「点」（点数）を言わず「相性のしくみ」。入は今のまま（PRD D384・D394） */
-export const compatHintLabel = (only: boolean): string => (only ? '相性のしくみ' : '点のしくみ');
-
-/** 相性の説明に「条件の重み」の画面の話を入れるか（切はその画面を出さないので入れない） */
-export const showCompatWeightNote = (only: boolean): boolean => !only;
+/**
+ * 相性の凡例の横の説明（「点のしくみ」）を出すか。切は出さない（記号の意味は凡例の1行と、マスを押すと出る欄で足りる。
+ * 点・「条件の重み」の画面の話は切では言わない）。入は点の話と条件の重みの話（PRD D384・D394・D420）
+ */
+export const compatHintLabel = (only: boolean): string | null => (only ? null : '点のしくみ');

@@ -31,6 +31,10 @@ export function popoverPlace(
   return { top: Math.max(MARGIN, anchor.top - GAP - Math.min(size.height, maxHeight)), left, maxHeight };
 }
 
+/** 開いたときにフォーカスする要素（選択子に当たる中の要素。無ければ吹き出しそのもの） */
+const focusTarget = (el: HTMLElement | null, selector?: string): HTMLElement | null =>
+  (selector ? el?.querySelector<HTMLElement>(selector) : null) ?? el;
+
 /**
  * 吹き出し（role="dialog"。名前は見出し titleId）。閉じ方：Esc（吹き出しの中で押したとき）・外を押す・Tab で外へ出る・
  * ボタンをもう一度押す（呼ぶ側）・閉じるボタン。閉じたらフォーカスを押したボタン（anchorId の要素）に戻す
@@ -45,6 +49,7 @@ export function DetailPopover({
   onClose,
   children,
   testId,
+  focusSelector,
 }: {
   id: string;
   /** 押したボタンの id（位置を合わせ、閉じたらフォーカスを戻す） */
@@ -54,6 +59,8 @@ export function DetailPopover({
   onClose: () => void;
   children: ReactNode;
   testId?: string;
+  /** 開いたときにフォーカスする中の要素（CSS の選択子。無ければ吹き出しそのもの。相性の選ぶ欄は今の相性のボタン） */
+  focusSelector?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const latest = useRef(onClose);
@@ -107,7 +114,7 @@ export function DetailPopover({
   // フォーカス：開いたら吹き出しへ、閉じたら（外したら）押したボタンへ
   // biome-ignore lint/correctness/useExhaustiveDependencies: anchorEl は anchorId だけで決まる
   useEffect(() => {
-    ref.current?.focus({ preventScroll: true });
+    focusTarget(ref.current, focusSelector)?.focus({ preventScroll: true });
     return () => {
       anchorEl()?.focus({ preventScroll: true });
     };
