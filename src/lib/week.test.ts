@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { DemoData } from '../contracts/data';
 import type { Pattern } from '../contracts/documents';
+import type { Item } from '../contracts/rules';
 import { compile } from '../matching';
 import { client, DATE, ITEMS, makeData, staff, visit } from '../matching/fixtures.testkit';
+import { QUALIFICATION_OPTIONS } from '../seed/qualifications';
 import {
   allowedStaffOf,
   clientItemMark,
@@ -185,6 +187,15 @@ describe('qualificationBadges・staffWithQualification（資格）', () => {
       { short: '看護', name: '看護師' },
     ]);
     expect(qualificationBadges(ITEMS, staff('s4', 38, 140))).toEqual([]);
+  });
+
+  it('初期の資格の選択肢（27）のバッジは重ならない（先頭2文字で重なるものは別の短い名前。PRD D422）', () => {
+    const items: Item[] = [
+      { id: 'q', name: '資格', target: 'staff', kind: 'multi', options: [...QUALIFICATION_OPTIONS] },
+    ];
+    const all = qualificationBadges(items, staff('s9', 38, 140, { traits: { q: [...QUALIFICATION_OPTIONS] } }));
+    expect(all).toHaveLength(27);
+    expect(new Set(all.map((b) => b.short)).size).toBe(27);
   });
 
   it('項目「資格」が無ければバッジもチップの選択も無い', () => {

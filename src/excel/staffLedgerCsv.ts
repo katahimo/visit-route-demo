@@ -15,7 +15,7 @@ import {
   type RosterTable,
   skippedColumns,
 } from './csvColumns';
-import { STAFF_COLS, STAFF_EMAIL_COL, STAFF_LAST_DAY_COL, TRAIT_PREFIX } from './layout';
+import { STAFF_COLS, STAFF_EMAIL_COL, STAFF_LAST_DAY_COL, traitCols } from './layout';
 import { NO, parseDateText, YES } from './text';
 
 /** 職員台帳の列名（読む列） */
@@ -85,9 +85,12 @@ export function qualificationCols(header: readonly string[], items: readonly Ite
   return items
     .filter((it) => it.target === 'staff' && it.kind === 'multi')
     .flatMap((item) => {
-      const cols = item.options.map((o) => ({
-        header: `${TRAIT_PREFIX}${item.name}：${o}`,
-        sources: [o, ...(QUALIFICATION_ALIASES[o] ?? [])].filter((h) => at.has(colKey(h))),
+      // 見出しは名簿の書き出しと同じ（layout の traitCols。選択肢ごとの列）
+      const cols = traitCols(item).map((c) => ({
+        header: c.header,
+        sources: [c.option ?? '', ...(QUALIFICATION_ALIASES[c.option ?? ''] ?? [])].filter(
+          (h) => h !== '' && at.has(colKey(h)),
+        ),
       }));
       return cols.some((c) => c.sources.length > 0) ? cols : [];
     });
