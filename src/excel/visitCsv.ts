@@ -9,7 +9,7 @@ import { CSV_BOM, CSV_MIME, toCsv, unguardCell } from '../lib/csv';
 import { oneOffVisitsIn } from '../lib/planCsv';
 import { BOOKING_MINUTES, BOOKING_NOTE_MAX, type Booking, type BookingTable, DAY_MINUTES } from './booking';
 import { cellOf, clip, columnsOf, hasColumns, isBlankRow, skippedColumns } from './csvColumns';
-import { hhmmToCell, parseDateText, parseTimeText } from './text';
+import { hhmmToCell, NO_TEXTS, parseDateText, parseTimeText, YES_TEXTS } from './text';
 
 /** 予定の CSV の列名（並びは書き出しの列の順） */
 export const VISIT_CSV_COLS = {
@@ -26,9 +26,16 @@ export const VISIT_CSV_COLS = {
 
 /** 形を見分ける列（どれも無ければこの形ではない） */
 const REQUIRED = [VISIT_CSV_COLS.date, VISIT_CSV_COLS.start, VISIT_CSV_COLS.minutes, VISIT_CSV_COLS.client];
-/** 取り消しの列に書く値（読むときは空・「0」・「いいえ」以外を取り消しとみなす） */
+/** 取り消しの列に書く値 */
 const CANCELLED_TEXT = '取り消し';
-const NOT_CANCELLED = new Set(['', '0', 'いいえ', '-', 'false']);
+
+/** 取り消しの列の値 → 取り消しか（「取り消し」・○・はい など／空・×・いいえ・なし など）。どちらでもなければ null */
+function readCancelled(text: string): boolean | null {
+  const t = text.normalize('NFKC').trim();
+  if (t === CANCELLED_TEXT || t === '取消' || YES_TEXTS.includes(t) || t === '1') return true;
+  if (t === '' || t === 'なし' || t === '0' || NO_TEXTS.includes(t)) return false;
+  return null;
+}
 /** 訪問ID の上限（contracts の idSchema と同じ） */
 const ID_MAX = 100;
 
@@ -54,17 +61,19 @@ function readRow(raw: (h: string) => string, row: number): Booking | string {
   if (clientName === '') return `${C.client}がありません`;
   const id = v(C.id);
   if (id.length > ID_MAX) return `${C.id}は ${ID_MAX}文字までにしてください`;
+  const cancelled = readCancelled(v(C.cancelled));
+  if (cancelled === null) return `${C.cancelled}「${v(C.cancelled)}」は「${CANCELLED_TEXT}」か空にしてください`;
   return {
-    // 訪問ID が無ければ、日付・開始・名前で決める（同じファイルを読み直しても二重に入れない）
+    // 訪問ID が無ければ、日付・開始・名前で今の単発の訪問に当てる（無ければ足し、同じファイルを読み直しても二重に入れない）
     ref: id !== '' ? id : `${date}_${start}_${nameKey(clientName)}`,
-    ...(id !== '' ? { visitId: id } : {}),
+    ...(id !== '' ? { visitId: id } : { matchSlot: true }),
     row,
     date,
     start,
-    latestStart: latest,
+    ...(v(C.latest) === '' ? {} : { latestStart: latest }),
     durationMinutes: minutes,
     clientName,
-    cancelled: !NOT_CANCELLED.has(v(C.cancelled).normalize('NFKC').toLowerCase()),
+    cancelled,
     note: clip(v(C.note), BOOKING_NOTE_MAX),
   };
 }
@@ -102,7 +111,7 @@ export function exportVisitsCsv(data: DemoData, from: string, to: string): Blob 
       v.id,
       v.date,
       hhmmToCell(v.earliestStart),
-      v.latestStart === v.earliestStart ? '' : hhmmToCell(v.latestStart),
+      v.windowKind === 'fixed' ? '' : hhmmToCell(v.latestStart),
       v.durationMinutes,
       client.get(v.clientId) ?? '',
       v.note,

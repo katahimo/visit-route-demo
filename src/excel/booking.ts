@@ -16,10 +16,12 @@ export interface Booking {
   date: string;
   /** 開始（HH:mm） */
   start: string;
-  /** 開始の上限（HH:mm。無ければ開始と同じ＝時刻固定） */
+  /** 開始の上限（HH:mm）。あれば時間帯の訪問（開始と同じでも）、無ければ時刻固定 */
   latestStart?: string;
   /** 訪問の ID（この形のファイルが今の訪問の ID を持つとき。無ければ形の ID と予約番号から決める） */
   visitId?: string;
+  /** ID の無い行：同じ日・開始・〈利用者さん〉の今の単発の訪問があれば、それを直す（2件以上なら読めない行） */
+  matchSlot?: boolean;
   /** 所要（分） */
   durationMinutes: number;
   /** 〈利用者さん〉の名前（名簿の表示名と突き合わせる） */

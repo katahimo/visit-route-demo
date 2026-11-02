@@ -1529,7 +1529,7 @@ async function addCsv(page) {
     .getByTestId('plan-csv-file')
     .locator('input[type=file]')
     .setInputFiles({ name: 'plan.csv', mimeType: 'text/csv', buffer: Buffer.from([...lines, added].join('\r\n')) });
-  // 確認（予約の CSV と同じ。PRD D408）：件数を見て「予約を読み込む」
+  // 確認（予約の CSV と同じ。PRD D408）：件数を見て「読み込む」
   const dlg = page.getByTestId('confirm-dialog');
   await dlg.waitFor({ timeout: 15000 });
   const body = await dlg.innerText();

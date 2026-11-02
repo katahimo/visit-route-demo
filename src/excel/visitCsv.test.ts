@@ -66,7 +66,6 @@ describe('予定の CSV の形', () => {
         row: 2,
         date: '2026-11-03',
         start: '09:00',
-        latestStart: '09:00',
         durationMinutes: 60,
         clientName: '架空 花子',
         cancelled: false,
@@ -74,6 +73,7 @@ describe('予定の CSV の形', () => {
       },
       {
         ref: '2026-11-04_10:00_架空次郎',
+        matchSlot: true,
         row: 3,
         date: '2026-11-04',
         start: '10:00',
@@ -191,15 +191,93 @@ describe('予定の CSV を読み込む', () => {
     expect(same).toMatchObject({ added: 0, updated: 0, unchanged: 1 });
   });
 
-  it('繰り返しの回の訪問ID は直さない', () => {
+  it('繰り返しの回の訪問ID は直さない（保存した回も、まだ保存していない計算した回も）', () => {
     const d = base();
-    const p = d.visits.find((v) => v.pattern !== null);
-    if (!p) return;
-    const name = d.clients.find((c) => c.id === p.clientId)?.displayName ?? '';
-    const t = [HEAD, row({ 訪問ID: p.id, 日付: p.date, 開始: '9:00', '所要(分)': '60', 訪問先: name })];
-    const r = importBookings(buf(t), d);
-    if ('code' in r) throw new Error(r.message);
-    expect(r.badRows).toEqual([`2行目：訪問ID「${p.id}」は繰り返しの回なので直せません`]);
+    const saved = d.visits.find((v) => v.pattern !== null);
+    const pat = d.patterns[0];
+    expect(saved).toBeDefined();
+    expect(pat).toBeDefined();
+    const name = (clientId: string) => d.clients.find((c) => c.id === clientId)?.displayName ?? '';
+    const computed = `2099-01-05_${pat!.id}`;
+    const t = [
+      HEAD,
+      row({ 訪問ID: saved!.id, 日付: saved!.date, 開始: '9:00', '所要(分)': '60', 訪問先: name(saved!.clientId) }),
+      row({ 訪問ID: computed, 日付: '2099-01-05', 開始: '9:00', '所要(分)': '60', 訪問先: name(pat!.clientId) }),
+    ];
+    const r = ok(importBookings(buf(t), d));
+    expect(r.badRows).toEqual([
+      `2行目：訪問ID「${saved!.id}」は繰り返しの回なので直せません`,
+      `3行目：訪問ID「${computed}」は繰り返しの回なので直せません`,
+    ]);
     expect(r.added + r.updated).toBe(0);
+  });
+
+  it('訪問ID が無い行は、同じ日・開始・訪問先の今の単発の訪問を直す（2件以上なら読めない行）', () => {
+    const d = withClients();
+    const a = d.clients[0]!;
+    const mk = (id: string): Visit => ({
+      id,
+      date: '2026-11-03',
+      clientId: a.id,
+      windowKind: 'fixed',
+      earliestStart: '09:00',
+      latestStart: '09:00',
+      durationMinutes: 60,
+      staffId: d.staff[0]?.id ?? null,
+      start: null,
+      pinned: false,
+      cancelled: false,
+      note: '',
+      typeId: null,
+      pattern: null,
+      cancelKind: null,
+    });
+    const t = [HEAD, row({ 日付: '2026/11/3', 開始: '9:00', '所要(分)': '90', 訪問先: '架空 花子' })];
+    const one: DemoData = { ...d, visits: [...d.visits, mk('v-app')] };
+    const r = ok(importBookings(buf(t), one));
+    expect(r).toMatchObject({ added: 0, updated: 1 });
+    expect(r.data.visits.find((v) => v.id === 'v-app')).toMatchObject({ durationMinutes: 90, staffId: d.staff[0]?.id });
+    const two: DemoData = { ...d, visits: [...d.visits, mk('v-a'), mk('v-b')] };
+    const r2 = ok(importBookings(buf(t), two));
+    expect(r2.badRows).toEqual(['2行目：同じ日・開始・訪問先の訪問が2件以上あるので、訪問ID を入れてください']);
+  });
+
+  it('別の人の訪問の訪問ID は直さない（訪問先は変えられない）', () => {
+    const d = withClients();
+    const first = ok(
+      importBookings(buf([HEAD, row({ 日付: '2026-11-03', 開始: '9:00', '所要(分)': '60', 訪問先: '架空 花子' })]), d),
+    ).data;
+    const id = first.visits.find((v) => v.pattern === null)!.id;
+    const r = ok(
+      importBookings(
+        buf([HEAD, row({ 訪問ID: id, 日付: '2026-11-03', 開始: '9:00', '所要(分)': '60', 訪問先: '架空 次郎' })]),
+        first,
+      ),
+    );
+    expect(r.badRows).toEqual([`2行目：訪問ID「${id}」は別の人の訪問です（訪問先は変えられません）`]);
+  });
+
+  it('取り消しの列：○・はい は取り消し、×・なし・空は取り消しでない、ほかは読めない行', () => {
+    const at = (x: string) =>
+      visitCsvToBookings([
+        HEAD,
+        row({ 日付: '2026-11-03', 開始: '9:00', '所要(分)': '60', 訪問先: 'A', 取り消し: x }),
+      ])!;
+    for (const x of ['取り消し', '○', 'はい', 'TRUE']) expect(at(x).bookings[0]?.cancelled, x).toBe(true);
+    for (const x of ['', '×', 'なし', 'いいえ', 'FALSE', '0']) expect(at(x).bookings[0]?.cancelled, x).toBe(false);
+    expect(at('たぶん').badRows).toEqual(['2行目：取り消し「たぶん」は「取り消し」か空にしてください']);
+  });
+
+  it('時間帯の訪問は開始の上限が開始と同じでも往復で変わらない。Excel で保存し直した形（2026/11/3・9:00:00）も読める', async () => {
+    const d = withClients();
+    const t = [
+      HEAD,
+      row({ 日付: '2026/11/3', 開始: '9:00:00', 開始の上限: '9:00', '所要(分)': '60', 訪問先: '架空 花子' }),
+    ];
+    const r = ok(importBookings(buf(t), d));
+    const v = r.data.visits.find((x) => x.pattern === null);
+    expect(v).toMatchObject({ windowKind: 'window', earliestStart: '09:00', latestStart: '09:00' });
+    const again = ok(importBookings(await blobBuf(exportVisitsCsv(r.data, '2026-11-01', '2026-11-30')), r.data));
+    expect(again).toMatchObject({ added: 0, updated: 0, unchanged: 1 });
   });
 });

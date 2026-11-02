@@ -28,20 +28,14 @@ export function PlanCsvSection({ clientTerm, onImported }: { clientTerm: string;
         {'に入れておきます。書き出したファイルを直して読むと、同じ訪問（訪問ID）を直します。'}
       </p>
       <div className="row" style={{ flexWrap: 'wrap' }}>
-        <button
-          type="button"
-          className="btn"
-          disabled={c.busy}
-          onClick={() => void c.template()}
-          data-testid="plan-csv-template"
-        >
+        <button type="button" className="btn" disabled={c.busy} onClick={c.template} data-testid="plan-csv-template">
           <WithIcon icon={FileText}>テンプレート</WithIcon>
         </button>
         <button
           type="button"
           className="btn"
           disabled={c.busy || c.count === 0}
-          onClick={() => void c.exportMonth()}
+          onClick={c.exportMonth}
           data-testid="plan-csv-export"
         >
           <WithIcon icon={Download}>{c.exportLabel}</WithIcon>
