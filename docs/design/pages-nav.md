@@ -58,7 +58,7 @@
 - `SETTINGS_TABS`・`settingsTabs(features)`：設定のタブ（訪問の種類 `/types`・特性の項目 `/items`・管理者設定 `/settings`・データ `/data`）。`isSettingsPath(pathname)`
 - `SCHEDULE_VIEWS`（`/month`・`/week`・`/plan`）・`isScheduleView(pathname)`（`#/schedule` も）・`SCHEDULE_DEFAULT`（`/plan`）・`scheduleHref(last)`（比較は覚えない）
 - `isNavAction(to)`：`?do=` を持つ＝操作の項目。日付・月だけのクエリは画面の項目
-- `ARRANGE_STEPS`：予定を組むの段（`ArrangeStepKey`＝`basics|proposals|register|arrange`。基本情報 `/basics`・案をくらべる・標準にする（どちらも `/standard`）・担当を組む `/arrange`。表で直すは標準にするの中。条件の重みは段に入れない）。`arrangeSteps(full)`：`full`（標準が無い・組み方の標準の画面）なら4段、標準があれば 基本情報 → 担当を組む の2段。`nextArrangeStep(steps, key)`・`prevArrangeStep(steps, key)`。部品は `components/SettingsTabs` の `ArrangeSteps({ current, full? })`（`nav`「予定を組むの段」の `ol.arrange-steps`。`full` を省くと標準の有無で決める。今の段は `aria-current="step"` の文字、ほかはリンクで、組み方の標準の段なら `setStandardStep`）。予定を組むのどの画面にも出す（基本情報の各タブ・組み方の標準・担当を組む・案を比べる。比較では担当を組むに印）
+- `ARRANGE_STEPS`：予定を組むの段（`ArrangeStepKey`＝`basics|proposals|register|arrange`。基本情報 `/basics`・案をくらべる・標準にする（どちらも `/standard`）・担当を組む `/arrange`。表で直すは標準にするの中。条件の重みは段に入れない）。`arrangeSteps(full)`：`full`（標準が無い・組み方の標準の画面）なら4段、標準があれば 基本情報 → 担当を組む の2段。`nextArrangeStep(steps, key)`・`prevArrangeStep(steps, key)`。部品は `components/SettingsTabs` の `ArrangeSteps({ current, full? })`（`nav`「予定を組むの段」の `ol.arrange-steps`。`full` を省くと標準の有無で決める。今の段は `aria-current="step"` の文字、ほかはリンクで、組み方の標準の段なら `setStandardStep`）。予定を組むのどの画面にも出す（基本情報の各タブ・組み方の標準・担当を組む）。寄り道の条件の重み・案を比べるには出さない（ADR-0088）
 - `activeNavPath(pathname)`：`#/schedule` は `/plan`、人の画面は一覧
 - `isActiveNav(item, pathname)`：操作の項目はいつも false。ほかは `match`（無ければ `to`）に今の画面が入るか
 - `tabLabel(item)`：`short`、無ければ `label`。`tabClick(item, pathname)`：今の画面そのものなら `stay`、ほかは `go`

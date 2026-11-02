@@ -498,8 +498,10 @@ async function narrowRules(page) {
     'プリセット：名前は1行（初期値に戻す・基準の重みを写して保存のボタンは無い。ADR-0065）',
     lines,
   );
-  await page.getByTestId('preset-edit').first().locator('summary').click();
-  const weights = page.getByTestId('preset-edit').first().getByTestId('preset-weights');
+  // 点数の基準でないプリセット（基準のプリセットの重みは下の条件の表に寄せた。ADR-0088）
+  const other = page.locator('[data-testid="preset-edit"]').nth(1);
+  await other.locator('summary').click();
+  const weights = other.getByTestId('preset-weights');
   await weights.waitFor();
   const wrow = await weights
     .locator('tbody > tr')
@@ -514,7 +516,7 @@ async function narrowRules(page) {
     'プリセット：重みの読み取り専用の一覧はカードで画面の中（入力欄なし。ADR-0065）',
     { wrow, wright },
   );
-  await page.getByTestId('preset-edit').first().locator('summary').click();
+  await other.locator('summary').click();
   await page.screenshot({ path: path.join(OUT_DIR, 'narrow-rules.png') });
   // 重みの下書き（PRD D286）：動かすと確定の帯が下のタブのすぐ上に出て、2つのボタンが画面の中・巻いても見える。取り消すと消える
   const range = page.getByTestId('narrow-rules').locator('input[type="range"]:not([disabled])').first();

@@ -112,7 +112,7 @@ PoC本体は「性別希望」と「NG」しか持たず、相性は登録のみ
 | 予定を組む・組み方の標準・定期パターン | [prd/arrange.md](prd/arrange.md) | D38〜D40 D64 D151〜D154 D165 D256 D257 D350〜D356 D358〜D363 D372 D373 D376 D378 D405〜D407 D416 |
 | 予定の形・日の予定・予定の共通の部品 | [prd/schedule.md](prd/schedule.md) | D4 D16 D18 D58 D63 D84 D217 D219 D224 D237 D269 D300〜D304 D306 D314〜D319 D321〜D332 D344〜D347 D417 |
 | 月・週の予定・訪問の札・時間帯のバー | [prd/schedule-views.md](prd/schedule-views.md) | D42 D49〜D51 D53〜D57 D60 D62 D69 D70 D75〜D78 D80〜D82 D85 D108 D136〜D140 D177 D188 D189 D201 D223 D228 D266 D295 D339〜D343 D410 D413 |
-| AI の提案・条件・点数 | [prd/ai.md](prd/ai.md) | D7 D9 D10 D12 D17 D20 D24 D25 D173 D229 D233 D235 D271 D286 |
+| AI の提案・条件・点数 | [prd/ai.md](prd/ai.md) | D7 D9 D10 D12 D17 D20 D25 D173 D229 D233 D235 D271 D286 |
 | 欠勤・キャンセル | [prd/absence.md](prd/absence.md) | D26〜D29 D31 D32 D34 D35 D74 D167 D169〜D172 D203 D244〜D246 D264 D265 D296 D414 D418 |
 | 空き状況・問い合わせ | [prd/vacancy.md](prd/vacancy.md) | D45〜D47 D67 D79 D184 D187 D204 D258 D411 D412 |
 | 人と決まり・人の画面・相性・退職 | [prd/people.md](prd/people.md) | D5 D6 D8 D36 D37 D61 D65 D66 D68 D71〜D73 D109〜D117 D122〜D126 D198〜D200 D202 D205〜D208 D285 D298 D299 D308〜D313 D370 |
@@ -133,6 +133,7 @@ PoC本体は「性別希望」と「NG」しか持たず、相性は登録のみ
 | D19 | D317 |
 | D21 | D315 |
 | D22 | D315 |
+| D24 | D286 |
 | D30 | D325 |
 | D41 | D328 |
 | D43 | D321 |

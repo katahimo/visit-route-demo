@@ -15,7 +15,6 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { WeightSlider } from '../components/parts';
 import { Term } from '../components/Term';
 import { Hint, IconButton, WithIcon } from '../components/ui';
@@ -40,7 +39,7 @@ export const RULE_ICONS: Record<RuleType, LucideIcon> = {
   wait: Hourglass,
 };
 
-/** 点のしくみの説明と、直している基準のプリセット・次の段の案内（予定を組むの3段。ADR-0065） */
+/** 点のしくみの説明と、直している基準のプリセット（次の段の案内は保存の確認と［組み方の標準へ戻る］に寄せる。ADR-0088） */
 export function RulesIntro({ basisName }: { basisName: string | undefined }) {
   return (
     <>
@@ -59,11 +58,7 @@ export function RulesIntro({ basisName }: { basisName: string | undefined }) {
         直しているのは
         <Term k="scoreBase" testId="term-score-base" />
         の「<strong>{basisName ?? '—'}</strong>
-        」の重みです。基準は上のプリセットの節で替えられます。同じ種類の条件は同じ重みになります。
-      </p>
-      <p className="sub" data-testid="rules-next-note">
-        重みを変えても今の担当は変わりません。標準の週を見直すなら「<Link to="/standard">組み方の標準</Link>
-        」で案を作り直し、標準で埋まらない所は「<Link to="/arrange">担当を組む</Link>」で提案を出して反映します
+        」の重みです。基準は上のプリセットの丸で替えられます。同じ種類の条件は同じ重みになります。
       </p>
     </>
   );

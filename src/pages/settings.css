@@ -381,29 +381,35 @@
 }
 
 /* 点数の基準のプリセット（ADR-0010） */
-.score-ruler {
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 8px 12px;
+/* プリセットの一覧（左の丸で点数の基準を選ぶ。ADR-0088） */
+.preset-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 0;
+  padding: 0;
   margin: 0;
+  min-width: 0;
 }
-.score-ruler legend {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 0 4px;
-  font-weight: 600;
+.preset-list legend {
+  padding: 0;
+  margin-bottom: 4px;
 }
-.score-ruler-option {
-  display: inline-flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 6px;
+.preset-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+.preset-row > input[type='radio'] {
+  width: auto;
+  margin: 14px 0 0;
+  flex: none;
   cursor: pointer;
 }
-.score-ruler-option input {
-  width: auto;
-  margin: 0;
+.preset-row > .preset-edit {
+  flex: 1;
+  min-width: 0;
 }
 
 /* ---- 定期パターン（〈利用者さん〉の欄の中。ADR-0012） ---- */

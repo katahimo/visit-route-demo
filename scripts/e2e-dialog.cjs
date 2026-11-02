@@ -239,10 +239,21 @@ async function rulesSave(page) {
       (await section.getByTestId('preset-remove').count()) === 0,
     'プリセットの節：初期の3つに「初期」の札・消すボタンは無い',
   );
+  // ADR-0088：点数の基準はプリセットの一覧の各行の丸で選ぶ（別の並びは無い）。基準のプリセットの重みは下の表に寄せる。
+  // 次の段の案内（rules-next-note）は保存の確認の本文と［組み方の標準へ戻る］に寄せた
+  const radios = section.getByTestId('score-ruler-radio');
   check(
-    (await page.getByTestId('rules-next-note').locator('a').count()) === 2 &&
+    (await radios.count()) === d0.presets.length &&
+      (await section.locator('input[type="radio"]').count()) === d0.presets.length &&
+      (await section
+        .locator(`[data-testid="preset-edit"][data-preset="${basis0.id}"] [data-testid="preset-weights"]`)
+        .count()) === 0 &&
+      (await section
+        .locator(`[data-testid="preset-edit"][data-preset="${basis0.id}"] [data-testid="preset-weights-basis"]`)
+        .count()) === 1 &&
+      (await page.getByTestId('rules-next-note').count()) === 0 &&
       (await page.getByTestId('rules-trial-note').count()) === 0,
-    '次の段の案内（組み方の標準・担当を組むへのリンク）',
+    'プリセットの一覧の各行に点数の基準の丸（プリセットの数だけ）・基準の重みは条件の表に寄せる・次の段の案内の文は無い',
   );
   // 表の重みを1つ動かす → 保存の帯
   const range = page.getByTestId('narrow-rules').locator('input[type="range"]:not([disabled])').first();
@@ -335,6 +346,23 @@ async function rulesSave(page) {
     'プリセットを消す：消えて基準はバランス',
     d2.scorePresetId,
   );
+  // 行の丸で点数の基準を替え、戻す（ADR-0088）
+  const second = d2.presets[1];
+  const waitRuler = (id) =>
+    page
+      .waitForFunction(
+        ([k, v]) => JSON.parse(localStorage.getItem(k) ?? 'null')?.scorePresetId === v,
+        [STORAGE_KEY, id],
+        {
+          timeout: 10000,
+        },
+      )
+      .then(() => true)
+      .catch(() => false);
+  await section.locator(`[data-testid="score-ruler-radio"][value="${second.id}"]`).check();
+  const switched = await waitRuler(second.id);
+  await section.locator('[data-testid="score-ruler-radio"][value="balance"]').check();
+  check(switched && (await waitRuler('balance')), '行の丸で点数の基準を替えられ、戻せる', second.id);
   // 6つあるときは保存できない
   await page.evaluate((k) => {
     const d = JSON.parse(localStorage.getItem(k));

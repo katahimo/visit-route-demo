@@ -417,15 +417,22 @@ async function basisRedo(page) {
 async function compare(page) {
   await markStandard(page);
   await open(page, `/arrange?ym=${YM}`);
-  const date = await page.getByTestId('arrange-compare-date').inputValue();
+  const href = (await page.getByTestId('arrange-compare-open').getAttribute('href')) ?? '';
+  const date = href.split('date=')[1] ?? '';
+  check(
+    /^\d{4}-\d{2}-\d{2}$/.test(date) &&
+      (await page.getByTestId('arrange-compare-date').count()) === 0 &&
+      (await page.getByTestId('arrange-day-open').count()) === 0,
+    '案を比べるのカードは［〈日〉の案を比べる］だけ（日付の欄・日の予定を見るは無い。ADR-0088）',
+    href,
+  );
   await page.getByTestId('arrange-compare-open').click();
   await page.waitForURL(/#\/compare/, { timeout: 10000 });
   check(hashOf(page) === `#/compare?date=${date}`, '「案を比べる」で比較の画面（その日）へ', hashOf(page));
   await page.locator('h1').filter({ hasText: '提案を比べる' }).waitFor({ timeout: 30000 });
   check(
-    (await page.locator('[data-testid="arrange-steps"] li').count()) === 2 &&
-      (await page.locator('[data-testid="arrange-steps"] li.is-current').getAttribute('data-step')) === 'arrange',
-    '標準があっても比較の画面に予定を組むの段（2段・今は担当を組む）を出す',
+    (await page.getByTestId('arrange-steps').count()) === 0 && (await page.getByTestId('compare-back').count()) === 1,
+    '比較の画面は担当を組むからの寄り道：段は出さず［担当を組むに戻る］だけ（ADR-0088）',
   );
   await page.getByTestId('compare-back').click();
   await page.waitForURL(/#\/arrange/, { timeout: 10000 });

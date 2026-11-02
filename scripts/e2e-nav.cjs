@@ -179,12 +179,12 @@ async function menu(page) {
   await side.locator('[data-parent="arrange"] [data-testid="nav-toggle"]').click();
   check(JSON.stringify(await current()) === '["arrange:assign"]', 'aria-current：組むを開き直すと子に印が戻る');
   // 組むの画面（ADR-0063・ADR-0066）：メニューの子は組み方の標準・担当を組む（条件の重みは組み方の標準に印）。
-  // 基本情報・組み方の標準・担当を組む・比較は見出しの下に4段（基本情報・案をくらべる・標準にする・担当を組む）、条件の重みは段を出さない
+  // 基本情報・組み方の標準・担当を組むは見出しの下に4段（基本情報・案をくらべる・標準にする・担当を組む）、条件の重み・比較は寄り道なので段を出さない（ADR-0088）
   const STEP_LABELS = ['基本情報', '案をくらべる', '標準にする', '担当を組む'];
   for (const [hash, h1, key] of [...ARRANGE, ['/compare', '提案を比べる', 'arrange:assign']]) {
     await open(page, hash, 'h1');
     const steps = page.getByTestId('arrange-steps');
-    const withSteps = hash !== '/rules';
+    const withSteps = hash !== '/rules' && hash !== '/compare';
     const names = withSteps
       ? (await steps.locator('li').allInnerTexts()).map((x) => x.replace(/^\d+\s*/, '').trim())
       : [];
@@ -365,7 +365,7 @@ async function menu(page) {
   await open(page, '/plan', '[data-testid="plan-more"]');
   check((await page.getByTestId('plan-menu').count()) === 0, '日の予定に「AI で組む ▾」は無い（ADR-0063）');
   await open(page, `/arrange?ym=${TODAY.slice(0, 7)}`, '[data-testid="arrange-compare-open"]');
-  const cmpDate = await page.getByTestId('arrange-compare-date').inputValue();
+  const cmpDate = ((await page.getByTestId('arrange-compare-open').getAttribute('href')) ?? '').split('date=')[1];
   await page.getByTestId('arrange-compare-open').click();
   await page.locator('h1').filter({ hasText: '提案を比べる' }).waitFor({ timeout: 30000 });
   check(
@@ -1117,7 +1117,7 @@ async function menuWithStandard(page) {
   const current = () => side.locator('[aria-current="page"]').evaluateAll((els) => els.map((e) => e.dataset.key));
   for (const [hash, stepCount] of [
     ['/arrange', 2],
-    ['/compare', 2],
+    ['/compare', 0],
     ['/standard', 4],
     ['/rules', 0],
   ]) {
@@ -1129,7 +1129,7 @@ async function menuWithStandard(page) {
     );
     check(
       (await page.locator('[data-testid="arrange-steps"] li').count()) === stepCount,
-      `標準がある：${hash} の組むの段は${stepCount === 0 ? '出さない（条件の重みは寄り道）' : `${stepCount}段（段の表示はいつも出す）`}`,
+      `標準がある：${hash} の組むの段は${stepCount === 0 ? '出さない（条件の重み・比較は寄り道）' : `${stepCount}段（段の表示はいつも出す）`}`,
     );
   }
   await open(page, '/basics');
@@ -1167,10 +1167,10 @@ async function menuWithStandard(page) {
     '標準が無い：担当を組むに予定を組むの4段を出し、［標準の組み方を変える］は出さない',
   );
   await open(page, '/compare');
-  await page.getByTestId('arrange-steps').waitFor({ timeout: 30000 });
+  await page.getByTestId('compare-back').waitFor({ timeout: 30000 });
   check(
-    (await page.locator('[data-testid="arrange-steps"] li.is-current').getAttribute('data-step')) === 'arrange',
-    '標準が無い：案を比べるにも予定を組むの段（4 担当を組むが今の段）',
+    (await page.getByTestId('arrange-steps').count()) === 0,
+    '標準が無い：案を比べるは寄り道なので段を出さない（ADR-0088）',
   );
   for (const t of await side.locator('[data-testid="nav-toggle"][aria-expanded="false"]').all()) await t.click();
   const kids0 = await side
