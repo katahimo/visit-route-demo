@@ -208,6 +208,7 @@
 | `ScheduleNav.tsx` | 予定の上のナビの行 | [pages-common.md](pages-common.md) |
 | `EdgeScroll.tsx` | 横に巻く格子の表の箱（右に続きがある印 `has-more-right`） | このファイル（狭い画面の表） |
 | `progressBand.tsx` | `ProgressBand`・`BandLive` | [pages-progress.md](pages-progress.md) |
+| `PastePanel.tsx`・`usePasteNotices.ts` | 連絡を貼り付けて入れる（読みは `lib/pasteNotices`・`lib/pasteRows`） | [pages-plan-absence.md](pages-plan-absence.md) |
 | `scheduleParts.tsx`・`undo.tsx` | 予定の共通の部品（`ScheduleToolbar`・`RangeProposalBand`・`confirmDropProposal`・`SelectionBar`）・全体の元に戻す（`UndoButtons`・`useUndoAction`・`HistoryKeys`） | [pages-common.md](pages-common.md) |
 | `visitParts.tsx`・`visitKeys.tsx`・`dayList.tsx` | 訪問の札の共通の部品（印 `VisitMarks`・選ぶ `useVisitSelection`・`useVisitItem`・`SelectToggle`・中の札＝1行1訪問の行 `VisitRow`・小の札 `VisitChip`・マスに積む `ChipStack`・ドラッグの `useVisitDrag`・`DropShadow`）・帯をキーで動かす（`useVisitKeys`）・スマホの日ごとのリスト | [pages-common.md](pages-common.md) |
 | `EmptyNext.tsx` | 空の画面の次の一手 | [pages-common.md](pages-common.md) |
@@ -234,7 +235,7 @@
 | `scheduleMode.ts` | 組む月（月の後半は来月）・担当なしの日の数・メニューの件数 | [pages-common.md](pages-common.md) |
 | `nav.ts`・`commandPalette.ts`・`confirmDialog.ts`・`inertLock.ts`・`scrollLock.ts`・`panelFit.ts`・`personPopover.ts`・`glossary.ts`・`emptyGuide.ts`・`tour.ts`・`firstRun.ts`・`startGuide.ts`・`links.ts`・`features.ts`・`mailto.ts`・`mail.ts`・`mapsLink.ts`・`clipboard.ts` | 画面横断 | このファイル（nav・パレット・確認・ロック・features）・[pages-common.md](pages-common.md)（ほか） |
 | `dayModel.ts`・`dayStatuses.ts`・`progressBand.ts` | 日のモデルの計算（`daySlotsOf`・`ownerMap`）・日の状態の覚え（`createDayStatusMemo`）・帯 | [pages-progress.md](pages-progress.md)・[pages-plan.md](pages-plan.md) |
-| `absences.ts`・`sudden.ts`・`contacts.ts`・`dayPlan.ts`・`confirmDay.ts`・`scoreReason.ts`・`routeView.ts`・`timeline.ts`・`visitEdit.ts`・`dragStart.ts` | 日の予定 | [pages-plan.md](pages-plan.md)・[pages-plan-absence.md](pages-plan-absence.md) |
+| `absences.ts`・`sudden.ts`・`pasteNotices.ts`・`pasteRows.ts`・`contacts.ts`・`dayPlan.ts`・`confirmDay.ts`・`scoreReason.ts`・`routeView.ts`・`timeline.ts`・`visitEdit.ts`・`dragStart.ts` | 日の予定 | [pages-plan.md](pages-plan.md)・[pages-plan-absence.md](pages-plan-absence.md) |
 | `month.ts`・`monthList.ts`・`monthGuide.ts`・`monthPrint.ts`・`requestedOff.ts` | 月 | [pages-month.md](pages-month.md) |
 | `week.ts`・`weekOps.ts`・`weekView.ts`・`timelineClients.ts`・`fold.ts` | 週（`weekOps` は動かす・空き時間に入れる操作） | [pages-week.md](pages-week.md) |
 | `barRows.ts`・`staffBar.ts`・`glance.ts`・`dayLine.ts` | 時間帯のバー | [pages-bars.md](pages-bars.md) |

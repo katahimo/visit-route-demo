@@ -1,0 +1,48 @@
+/* 「連絡を貼り付けて入れる」の右の欄（components/PastePanel。PRD D418） */
+.paste-panel {
+  gap: 10px;
+}
+.paste-text {
+  gap: 4px;
+}
+.paste-text textarea {
+  width: 100%;
+  min-height: 8em;
+}
+.paste-count {
+  margin: 0;
+  color: var(--sub);
+}
+.paste-count:empty {
+  display: none;
+}
+.paste-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+}
+.paste-row {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+.paste-row > label {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.paste-row > label > input {
+  margin-top: 3px;
+}
+.paste-row[data-state='ng'] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  padding-left: 24px;
+}
+.paste-row[data-state='ng'] .paste-row-text {
+  color: var(--sub);
+}
+.paste-row-reason {
+  color: var(--warn-ink);
+}
