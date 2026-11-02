@@ -16,9 +16,9 @@ import {
 } from './clientFilter';
 import {
   COMPAT_CHIPS,
-  clientFilterSummary,
   compatChipSets,
   compatChipTests,
+  compatFilterSummary,
   decodeStaffFilter,
   EMPTY_STAFF_FILTER,
   encodeStaffFilter,
@@ -30,7 +30,6 @@ import {
   staffChipKey,
   staffClientGroups,
   staffCompatCounts,
-  staffFilterSummary,
   toggleStaffChip,
   traitText,
   weeklyHours,
@@ -245,22 +244,27 @@ describe('吹き出しの中身', () => {
   });
 });
 
-describe('畳んだ欄の要約', () => {
-  it('〈スタッフ〉：絞っていなければ「絞り込みなし」、絞っていれば人数と中身', () => {
-    expect(staffFilterSummary(EMPTY_STAFF_FILTER, 8, 8, 'スタッフ')).toBe('スタッフ 8人・絞り込みなし');
-    expect(staffFilterSummary({ query: ' 市 ', chips: ['a', 'b'] }, 3, 8, 'スタッフ')).toBe(
+describe('畳んだ欄の要約（compatFilterSummary）', () => {
+  const terms = { staff: 'スタッフ', client: '利用者さん' };
+  const none = { state: EMPTY_STAFF_FILTER, shown: 8, total: 8 };
+  const noneC = { state: EMPTY_FILTER, shown: 20, total: 20 };
+  it('どちらも絞っていなければ「絞り込みなし」', () => {
+    expect(compatFilterSummary(none, noneC, terms)).toBe('絞り込みなし');
+  });
+  it('〈スタッフ〉だけ絞れば、その人数と中身だけ', () => {
+    expect(compatFilterSummary({ state: { query: ' 市 ', chips: ['a', 'b'] }, shown: 3, total: 8 }, noneC, terms)).toBe(
       'スタッフ 3人／8人・名前「市」・特性2',
     );
   });
-  it('〈利用者さん〉：地区は市区と町名の数、チップは相性のチップも数える', () => {
-    expect(clientFilterSummary(EMPTY_FILTER, 20, 20, '利用者さん')).toBe('利用者さん 20人・絞り込みなし');
-    expect(
-      clientFilterSummary(
-        { ...EMPTY_FILTER, cities: ['仙台市青葉区'], chips: ['period'], extra: ['ng'] },
-        2,
-        20,
-        '利用者さん',
-      ),
-    ).toBe('利用者さん 2人／20人・地区1・チップ2');
+  it('〈利用者さん〉：地区は市区と町名の数、チップは相性のチップも数える。両方なら並べる', () => {
+    const c = {
+      state: { ...EMPTY_FILTER, cities: ['仙台市青葉区'], chips: ['period' as const], extra: ['ng'] },
+      shown: 2,
+      total: 20,
+    };
+    expect(compatFilterSummary(none, c, terms)).toBe('利用者さん 2人／20人・地区1・チップ2');
+    expect(compatFilterSummary({ state: { query: '', chips: ['a'] }, shown: 8, total: 8 }, c, terms)).toBe(
+      'スタッフ 8人・特性1　利用者さん 2人／20人・地区1・チップ2',
+    );
   });
 });
