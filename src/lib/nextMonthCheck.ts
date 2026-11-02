@@ -1,7 +1,7 @@
 // 来月の確認（PRD D413。ADR-0081）：エキスパート機能が切で、今日が月の20日以降なら、予定の上の要対応の帯の下に
-// 「12月の予定 N件はできています」＋来月の担当なし・重なり・休みの人の数を1行で出す。純粋関数（データは書き換えない）。
-// 数え方は要対応の帯（lib/attentionBand の visitBandKind）と同じ。閉じたかは端末に覚える（store/navOpen の鍵 nextMonth:<今月>）
-import { type VisitBandKind, visitBandKind } from './attentionBand';
+// 「12月の予定 N件はできています」＋来月の担当なし・間に合わない・重なり・休みの人の数を1行で出す。純粋関数（データは書き換えない）。
+// 数え方は要対応の帯（lib/bandIssues の visitBandKind）と同じ。閉じたかは端末に覚える（store/navOpen の鍵 nextMonth:<今月>）
+import { type VisitBandKind, visitBandKind } from './bandIssues';
 import { monthLabel } from './dateText';
 import type { DayStatus } from './month';
 import { addMonths, ymOf } from './ym';
@@ -17,15 +17,16 @@ export type NextMonthCheck = {
   label: string;
   /** 来月の訪問の件数（取り消し・休みを除く。DayStatus.count の合計） */
   total: number;
-  /** 来月の担当なし・重なり・休みの人の訪問の件数（要対応の帯と同じ数え方） */
+  /** 来月の担当なし・間に合わない・重なり・休みの人の訪問の件数（要対応の帯と同じ数え方） */
   counts: Record<VisitBandKind, number>;
   /** 1行の文（「12月の予定 120件はできています・担当なし 2件・休みの人 1件」。0件の種類は書かない） */
   text: string;
 };
 
-/** 来月の要対応の並びと名前（要対応の帯の BAND_KINDS の先頭3つと同じ並び） */
+/** 来月の要対応の並びと名前（要対応の帯の BAND_KINDS の先頭4つと同じ並び） */
 const KINDS: readonly { kind: VisitBandKind; label: string }[] = [
   { kind: 'unassigned', label: '担当なし' },
+  { kind: 'late', label: '間に合わない' },
   { kind: 'overlap', label: '重なり' },
   { kind: 'off', label: '休みの人' },
 ];
@@ -46,9 +47,9 @@ export function nextMonthTarget(
   return addMonths(ymOf(today), 1);
 }
 
-/** 来月（ym）の日ごとの状態から、訪問の件数と担当なし・重なり・休みの人の件数を数える。来月に訪問が1件も無ければ null（出さない） */
+/** 来月（ym）の日ごとの状態から、訪問の件数と担当なし・間に合わない・重なり・休みの人の件数を数える。来月に訪問が1件も無ければ null（出さない） */
 export function nextMonthCheck(statuses: readonly DayStatus[], ym: string): NextMonthCheck | null {
-  const counts: Record<VisitBandKind, number> = { unassigned: 0, overlap: 0, off: 0 };
+  const counts: Record<VisitBandKind, number> = { unassigned: 0, late: 0, overlap: 0, off: 0 };
   let total = 0;
   for (const s of statuses) {
     if (ymOf(s.date) !== ym) continue;

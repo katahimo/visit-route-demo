@@ -51,9 +51,9 @@ export function bookingConfirmBody(x: {
   ].join('\n');
 }
 
-/** 担当の組み方の案内（エキスパート機能が入なら「担当を組む」、切なら予定の上の要対応の帯の「担当なしを組む」。ADR-0072・ADR-0077） */
+/** 担当の組み方の案内（エキスパート機能が入なら「担当を組む」、切なら予定の上の要対応の帯の「要対応を組む」。ADR-0072・ADR-0077・ADR-0089） */
 const arrangeHint = (features: Features): string =>
-  isOn(features, 'expert') ? '「担当を組む」' : '予定の上の要対応の帯の「担当なしを組む」';
+  isOn(features, 'expert') ? '「担当を組む」' : '予定の上の要対応の帯の「要対応を組む」';
 
 /** 読み込んだあとの知らせ */
 export const bookingDoneText = (

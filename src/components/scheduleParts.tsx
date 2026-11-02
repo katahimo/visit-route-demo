@@ -74,7 +74,7 @@ export function ScheduleToolbar({
   const today = jstDate(Date.now());
   const expert = !useExceptionsOnly();
   const navigate = useNavigate();
-  // 担当なしを組むは要対応の帯、空き状況はメニュー（PRD D403・D400）
+  // 要対応を組むのは要対応の帯、空き状況はメニュー（PRD D403・D400）
   const tool: AbsenceTool | null =
     absence &&
     ('onClick' in absence

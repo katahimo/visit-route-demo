@@ -41,7 +41,7 @@ export function AppHeader({
     <header ref={headerRef} className="app-header">
       {/* 範囲の AI で組む（担当を組む）の進み具合と［止める］（PRD D256。ほかの画面へ移っても続く。月の予定では画面の中に出す） */}
       <BatchBand />
-      {/* 欄の保存・要対応の帯の［担当なしを組む］の自動の組みの進み具合（長引いたときだけ。ADR-0072） */}
+      {/* 欄の保存・要対応の帯の［要対応を組む］の自動の組みの進み具合（長引いたときだけ。ADR-0072） */}
       <AutoArrangeBand />
       {/* スマホだけ：ロゴと今の画面の名前（PRD D132。広い画面では出さない。「メニュー」は下のタブ。PRD D401） */}
       <div className="m-head-title">

@@ -6,7 +6,7 @@ import type { DemoData } from '../contracts/data';
 import type { Features } from '../contracts/features';
 import { visitsOn } from '../patterns';
 import { absenceError, absenceText, saveAbsence } from './absences';
-import { visitBandKind } from './attentionBand';
+import { visitBandKind } from './bandIssues';
 import { dateTextFrom } from './dateText';
 import { activeDayVisits } from './dayPlan';
 import { isOn } from './features';
@@ -183,7 +183,7 @@ export function applyPasteRows(
   return out;
 }
 
-/** 入れたあとの要対応の件数：欠勤・取り消しの日（今日以降）の、担当なし・重なり・休みの人の訪問（要対応の帯と同じ数え方） */
+/** 入れたあとの要対応の件数：欠勤・取り消しの日（今日以降）の、担当なし・間に合わない・重なり・休みの人の訪問（要対応の帯と同じ数え方） */
 export function pasteCareCount(d: DemoData, rows: readonly PasteRow[], today: string): number {
   const dates = new Set<string>();
   for (const r of rows) if (r.action && r.action.kind !== 'leave' && r.action.date >= today) dates.add(r.action.date);
