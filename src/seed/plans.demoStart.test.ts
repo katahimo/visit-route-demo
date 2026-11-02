@@ -5,7 +5,7 @@ import type { DemoData } from '../contracts/data';
 import type { Problem, SolveOptions } from '../contracts/problem';
 import { addDays } from '../domain/time';
 import { bandDays, exceptionStatus } from '../lib/attentionBand';
-import { autoRange, unassignedTargets } from '../lib/autoArrange';
+import { autoRange, bandTargets } from '../lib/autoArrange';
 import { createAutoArrange } from '../lib/autoArrangeBatch';
 import { dayStatus } from '../lib/month';
 import { findVisit } from '../patterns';
@@ -28,7 +28,7 @@ const overlapsOrOff = (d: DemoData, today: string) =>
     [...s.issues].filter(([, list]) => list.some((x) => x.kind === 'late' || x.kind === 'off')).map(([id]) => id),
   );
 
-/** デモを作った直後の自動の組み（store の startArrange → requestUnassignedArrange と同じ依頼）を回したデータ */
+/** デモを作った直後の自動の組み（store の startArrange → requestBandArrange と同じ依頼）を回したデータ */
 async function demoStart(today: string): Promise<DemoData> {
   let data = createInitialData(today);
   const a = createAutoArrange(solveNow);
@@ -39,7 +39,7 @@ async function demoStart(today: string): Promise<DemoData> {
     },
   });
   const range = autoRange(today);
-  const targets = unassignedTargets(data, today, range);
+  const targets = bandTargets(data, today, range);
   expect(a.request({ targets, writeUsual: false, rangeTo: range.to, since: null, after: null, today })).toBe(true);
   for (let k = 0; k < 200 && a.running(); k++) await new Promise((r) => setTimeout(r, 0));
   expect(a.running()).toBe(false);
