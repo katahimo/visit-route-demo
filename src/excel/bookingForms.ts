@@ -4,6 +4,7 @@
 // ここの BOOKING_FORMS に1行足す
 import type { BookingTable } from './booking';
 import { reserveToBookings } from './reserveBookings';
+import { visitCsvToBookings } from './visitCsv';
 
 /** ほかのソフトの予約の形 */
 export interface BookingForm {
@@ -18,6 +19,8 @@ export interface BookingForm {
 /** 形の一覧（上から順に見分ける） */
 export const BOOKING_FORMS: readonly BookingForm[] = [
   { id: 'reserve', label: '予約システムの予約', toBookings: reserveToBookings },
+  // このアプリの予定の CSV（テンプレート・書き出しと同じ列。ADR-0090）
+  { id: 'visit', label: 'このアプリの予定', toBookings: visitCsvToBookings },
 ];
 
 /** CSV の表を予約の形として読む（どの形でもなければ null） */

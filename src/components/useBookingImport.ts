@@ -1,4 +1,4 @@
-// 予約の CSV の読み込み（ADR-0075。PRD D408。データの画面の「予約の CSV」から）：ほかのソフトの予約の CSV を読んで、
+// 予約の CSV の読み込み（ADR-0075・ADR-0090。PRD D408・D423。データの画面の「予約の CSV」と、予定の「予定を入れる」の引き出しから）：ほかのソフトの予約の CSV を読んで、
 // 件数（追加・更新・変更なし・入れなかった予約）を見せて確かめてから、store の update で訪問（単発・担当なし）として入れる。
 // 入れる手は usePendingImport（名簿の読み込みと同じ）
 import { useState } from 'react';
@@ -9,7 +9,8 @@ import { canKeepPrevious } from '../store';
 import { useConfirm } from './ConfirmDialog';
 import { IMPORT_CHANGED_TEXT, usePendingImport } from './usePendingImport';
 
-export function useBookingImport() {
+/** onDone：入れたあとに呼ぶ（引き出しを閉じるなど） */
+export function useBookingImport(onDone?: () => void) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const { data, toast, changedSince, commit } = usePendingImport(setError);
@@ -44,6 +45,7 @@ export function useBookingImport() {
       next: r.data,
       label: '予約の読み込み',
       done: (keep) => bookingDoneText(r, base.org.features, keep),
+      onDone,
     });
   };
 

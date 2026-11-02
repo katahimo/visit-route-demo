@@ -46,7 +46,7 @@ export function bookingConfirmBody(x: {
     ...(r.cancelledSkipped > 0 ? [`取り消し済みの予約 ${r.cancelledSkipped}件は入れません。`] : []),
     ...bookingProblems(r, x.clientTerm),
     otherFormSkippedText(r.otherForm),
-    '担当は決めません（担当なし）。同じ予約番号の訪問は日付・時刻・所要・メモをファイルに合わせ、担当・ピン・アプリでの取り消しは残します。ファイルに無い訪問はそのままです。',
+    '担当は決めません（担当なし）。同じ予約番号・訪問IDの訪問は日付・時刻・所要・メモをファイルに合わせ、担当・ピン・アプリでの取り消しは残します。ファイルに無い訪問はそのままです。',
     keepNote(x.keep),
   ].join('\n');
 }

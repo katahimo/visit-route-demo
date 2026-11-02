@@ -46,14 +46,16 @@ export function clientFinder(clients: readonly Client[]): (name: string) => Clie
  * アプリで取り消した訪問（当日キャンセルなど）は、ファイルが取り消していなくても取り消しのまま）
  */
 export function bookingToVisit(b: Booking, id: string, clientId: string, cur: Visit | undefined): Visit {
-  const sameSlot = cur !== undefined && cur.date === b.date && cur.earliestStart === b.start;
+  const latest = b.latestStart ?? b.start;
+  const sameSlot =
+    cur !== undefined && cur.date === b.date && cur.earliestStart === b.start && cur.latestStart === latest;
   return {
     id,
     date: b.date,
     clientId,
-    windowKind: 'fixed',
+    windowKind: latest === b.start ? 'fixed' : 'window',
     earliestStart: b.start,
-    latestStart: b.start,
+    latestStart: latest,
     durationMinutes: b.durationMinutes,
     staffId: cur?.staffId ?? null,
     start: sameSlot ? (cur?.start ?? null) : null,
@@ -104,13 +106,18 @@ export function importBookings(buf: ArrayBuffer, base: DemoData): BookingImportR
   let unchanged = 0;
   let cancelledSkipped = 0;
   for (const b of table.bookings) {
-    const id = bookingVisitId(form, b.ref);
+    const id = b.visitId ?? bookingVisitId(form, b.ref);
     const before = seen.get(id);
     if (before !== undefined) {
-      badRows.push(`${b.row}行目：予約番号「${b.ref}」が ${before}行目と重なっています`);
+      badRows.push(`${b.row}行目：${b.visitId ? '訪問ID' : '予約番号'}「${b.ref}」が ${before}行目と重なっています`);
       continue;
     }
     seen.set(id, b.row);
+    // 繰り返しの回は、繰り返しの欄で直す（ここで単発に変えない）
+    if (curOf.get(id)?.pattern) {
+      badRows.push(`${b.row}行目：訪問ID「${b.ref}」は繰り返しの回なので直せません`);
+      continue;
+    }
     const c = find(b.clientName);
     if (c === null || c === 'many') {
       unmatched.push(c === 'many' ? `${b.clientName}（同じ名前が2人以上）` : b.clientName);

@@ -131,6 +131,7 @@
 | [0087](adr/0087-compat-table-lighter.md) | 相性の表は残し、マスを押すと出る選ぶ欄1つにして凡例・絞り込みを畳む |
 | [0088](adr/0088-expert-trim-duplicates.md) | エキスパート機能の重なった入口・表示を1つに寄せる |
 | [0089](adr/0089-band-late-split-rearrange-exceptions-tell-clean-days.md) | 帯の重なりと間に合わないを分け・要対応も組み直し・要対応が残る日は伝えた扱いにしない |
+| [0090](adr/0090-plan-csv-template-export-import.md) | 予定の CSV（テンプレート・書き出し・読み込み）を「予定を入れる」から |
 
 ## 文書の保ち方
 
