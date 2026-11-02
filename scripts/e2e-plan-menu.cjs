@@ -452,7 +452,7 @@ async function moreMenus(page) {
     .locator('[role="menuitem"] .menu-item-label')
     .allInnerTexts();
   check(
-    mItems.length === 8 &&
+    mItems.length === 9 &&
       mItems[0] === 'カレンダーで見る' &&
       mItems[1] === '日ごとの一覧で見る' &&
       /^表示を選ぶ/.test(mItems[2]) &&
@@ -460,8 +460,9 @@ async function moreMenus(page) {
       mItems[4] === '勤務の見込み' &&
       mItems[5] === 'マスの見方の説明' &&
       mItems[6] === '元に戻す' &&
-      mItems[7] === '欠勤・キャンセルを登録',
-    '月の予定の「その他 ▾」：見せ方の切り替え・表示を選ぶ・印刷・勤務の見込み・マスの見方の説明・元に戻す・欠勤・キャンセルを登録（空き状況はメニュー。PRD D402・D401）',
+      mItems[7] === '欠勤・キャンセルを登録' &&
+      mItems[8] === '連絡を貼り付けて入れる',
+    '月の予定の「その他 ▾」：見せ方の切り替え・表示を選ぶ・印刷・勤務の見込み・マスの見方の説明・元に戻す・欠勤・キャンセルを登録・連絡を貼り付けて入れる（空き状況はメニュー。PRD D402・D401・D418）',
     mItems,
   );
   await page.getByTestId('month-more-help').click();
