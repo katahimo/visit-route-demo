@@ -178,6 +178,11 @@ async function firstRun(b) {
     f,
   );
   check(
+    f.patternMonthly === true && f.visitNotes === true,
+    'デモ・定期：「基本」は毎月の第N・決まりごとの機能が入（ADR-0086）',
+    f,
+  );
+  check(
     d.clients.length === 20 && d.patterns.some((p) => p.usualStaffId),
     'デモ・定期：今の初期データ（20人・繰り返しの担当あり）',
     { clients: d.clients.length },

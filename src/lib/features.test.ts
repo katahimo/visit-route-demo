@@ -51,15 +51,17 @@ const pathOf = (href: string) => href.split('?')[0]!;
 /** 行き先が土台か表のどれかの機能に属するか */
 const belongs = (href: string) => featureOfHref(href) !== null || BASE_PATHS.has(pathOf(href));
 
-/** ADR-0028 の「ひな形」の表（入れる機能） */
+/** ADR-0028 の「ひな形」の表（入れる機能。基本に毎月の第N・決まりごとを足したのは ADR-0086） */
 const TABLE: Record<TemplateId, FeatureId[]> = {
   oneOff: ['sudden', 'vacancy', 'compat', 'mapsLink', 'geocode'],
-  basic: ['patterns', 'sudden', 'vacancy', 'compat', 'mapsLink', 'geocode'],
+  basic: ['patterns', 'patternMonthly', 'sudden', 'vacancy', 'compat', 'visitNotes', 'mapsLink', 'geocode'],
   laborContract: [
     'patterns',
+    'patternMonthly',
     'sudden',
     'vacancy',
     'compat',
+    'visitNotes',
     'clientStage',
     'offboard',
     'workload',
@@ -237,20 +239,25 @@ describe('ひな形（ADR-0028 の表）', () => {
       expect([f.rules, f.compare, f.mail]).toEqual([false, false, false]);
     }
   });
-  it('単発のみ：基本から繰り返しだけを外した入り切り（第N曜日も依存で使えない）。基本・労務・月次・すべては繰り返しが入', () => {
+  it('単発のみ：基本から繰り返し・第N曜日・決まりごとを外した入り切り（ADR-0086）。基本・労務・月次・すべては繰り返し・第N曜日・決まりごとが入', () => {
     const f = applyTemplate('oneOff');
     expect(f.patterns).toBe(false);
+    expect(f.patternMonthly).toBe(false);
+    expect(f.visitNotes).toBe(false);
     expect(f.expert).toBe(false);
-    expect(isOn(f, 'patternMonthly')).toBe(false);
     expect(FEATURE_IDS.filter((x) => f[x] && !applyTemplate('basic')[x])).toEqual([]);
     for (const id of ['basic', 'laborContract', 'monthlyField', 'all'] as const) {
-      expect(applyTemplate(id).patterns).toBe(true);
+      const t = applyTemplate(id);
+      expect([t.patterns, isOn(t, 'patternMonthly'), t.visitNotes]).toEqual([true, true, true]);
     }
     expect(matchTemplate(f)).toBe('oneOff');
-    expect(matchTemplate({ ...applyTemplate('basic'), patterns: false })).toBe('oneOff');
-    expect(matchTemplate({ ...f, patterns: true })).toBe('basic');
+    // 基本から繰り返しを切ると第N曜日は依存で使えないが、決まりごとが残るので単発のみではない
+    expect(matchTemplate({ ...applyTemplate('basic'), patterns: false })).toBe('custom');
+    expect(matchTemplate({ ...applyTemplate('basic'), patterns: false, visitNotes: false })).toBe('oneOff');
+    expect(matchTemplate({ ...f, patterns: true, patternMonthly: true, visitNotes: true })).toBe('basic');
+    expect(matchTemplate({ ...f, patterns: true })).toBe('custom');
   });
-  it('繰り返しだけ切ると 単発のみ、{}（無い ID）は繰り返しが入。第N曜日を入のままにしても依存で切れた扱い', () => {
+  it('{}（無い ID）は繰り返しが入。第N曜日を入のままにしても依存で切れた扱い', () => {
     expect(isOn({}, 'patterns')).toBe(true);
     expect(isOn({ patterns: false, patternMonthly: true }, 'patternMonthly')).toBe(false);
   });
@@ -273,8 +280,14 @@ describe('ひな形（ADR-0028 の表）', () => {
   });
   it('templateDiff：入る機能・切れる機能（表の順）', () => {
     expect(templateDiff({}, 'all')).toEqual({ on: [], off: [] });
-    expect(templateDiff(applyTemplate('basic'), 'oneOff')).toEqual({ on: [], off: ['patterns'] });
-    expect(templateDiff(applyTemplate('oneOff'), 'basic')).toEqual({ on: ['patterns'], off: [] });
+    expect(templateDiff(applyTemplate('basic'), 'oneOff')).toEqual({
+      on: [],
+      off: ['patterns', 'patternMonthly', 'visitNotes'],
+    });
+    expect(templateDiff(applyTemplate('oneOff'), 'basic')).toEqual({
+      on: ['patterns', 'patternMonthly', 'visitNotes'],
+      off: [],
+    });
     expect(templateDiff({}, 'basic')).toEqual({
       on: [],
       off: FEATURE_IDS.filter((x) => !TABLE.basic.includes(x)),
@@ -284,16 +297,7 @@ describe('ひな形（ADR-0028 の表）', () => {
       off: [],
     });
     expect(templateDiff(applyTemplate('laborContract'), 'monthlyField')).toEqual({
-      on: [
-        'patternMonthly',
-        'clientLeave',
-        'requestedOff',
-        'monthPrint',
-        'vacancyNotice',
-        'allowedStaff',
-        'visitNotes',
-        'excel',
-      ],
+      on: ['clientLeave', 'requestedOff', 'monthPrint', 'vacancyNotice', 'allowedStaff', 'excel'],
       off: ['clientStage', 'offboard', 'workload', 'fare'],
     });
   });
