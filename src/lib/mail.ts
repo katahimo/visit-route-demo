@@ -38,20 +38,24 @@ export function sourceWord(source: PrintDay['source']): string {
 /** 1人あての1日の訪問（開始の順） */
 export type MailVisit = { start: number; end: number; client: Client | undefined; visit: Visit | undefined };
 
-/** その日の担当ごとの訪問（訪問の担当。printDay と同じ） */
-export function dayByStaff(data: MailInput, date: string): { day: PrintDay; byStaff: Map<string, MailVisit[]> } {
+/** その日の担当ごとの訪問（訪問の担当。printDay と同じ）と、担当の決まっていない訪問（unassigned。開始の順） */
+export function dayByStaff(
+  data: MailInput,
+  date: string,
+): { day: PrintDay; byStaff: Map<string, MailVisit[]>; unassigned: MailVisit[] } {
   const day = printDay(data, date, null);
   const visitById = new Map(visitsOn(data, date).map((v) => [v.id, v]));
   const clientById = new Map(data.clients.map((c) => [c.id, c]));
   const byStaff = new Map<string, MailVisit[]>();
+  const unassigned: MailVisit[] = [];
   for (const e of day.entries) {
-    if (e.staffId === null) continue;
     const visit = visitById.get(e.visitId);
     const client = visit ? clientById.get(visit.clientId) : undefined;
     const item = { start: e.start, end: e.start + (visit?.durationMinutes ?? 0), client, visit };
-    byStaff.set(e.staffId, [...(byStaff.get(e.staffId) ?? []), item]);
+    if (e.staffId === null) unassigned.push(item);
+    else byStaff.set(e.staffId, [...(byStaff.get(e.staffId) ?? []), item]);
   }
-  return { day, byStaff };
+  return { day, byStaff, unassigned };
 }
 
 /** 住所と決まりごとの行（空の項目は出さない。決まりごとは lib/visitRules の並び。鍵は includeKeys のときだけ） */
@@ -61,7 +65,8 @@ function ruleLines(c: Client | undefined, includeKeys: boolean): string[] {
   return [...address, ...visitRuleLines(c, includeKeys)].map((r) => `   ${r.label}：${r.text}`);
 }
 
-const nameOf = (c: Client | undefined) => (c ? `${c.displayName}様` : '（不明）');
+/** 本文の〈利用者さん〉の名前（「青葉様」。見つからなければ「（不明）」） */
+export const nameOf = (c: Client | undefined) => (c ? `${c.displayName}様` : '（不明）');
 
 /** 経路のリンクを作れない場所（〈利用者さん〉が見つからない） */
 const NO_PLACE = { address: '', lat: null, lng: null };

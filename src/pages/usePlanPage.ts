@@ -8,6 +8,8 @@ import { useToast } from '../components/Toast';
 import { useConfirmStep, useFeature } from '../components/useFeature';
 import { useRouteSelection } from '../components/useRouteSelection';
 import { useToldEntry } from '../components/useToldEntry';
+import { dayChatText } from '../lib/chatText';
+import { copyText } from '../lib/clipboard';
 import { dayContactWords, withFirstNotes } from '../lib/contacts';
 import { servedPairsBefore } from '../lib/firstVisit';
 import { contactMailText, mailTo } from '../lib/mail';
@@ -111,6 +113,11 @@ export function usePlanPage() {
       : undefined,
     onCopied: (ok: boolean, what: string) =>
       toast(ok ? `${what}をコピーしました` : 'コピーできませんでした。文を選んでコピーしてください'),
+    /** 日の予定をチャット用の文にしてコピーする（PRD D419。鍵はメールの欄と同じ「鍵の情報も入れる」のときだけ） */
+    copyChat: () => {
+      const text = dayChatText(d.data, date, { notesOn: f.notesOn, includeKeys: f.notesOn && v.includeKeys });
+      void copyText(text).then((ok) => contact.onCopied(ok, 'チャット用の文'));
+    },
   };
   // ---- 「欠勤・キャンセル」の欄（PRD D167〜D172）：選択肢・訪問の担当・2段目の振り直しの結果と連絡 ----
   const sudden = useSuddenFlow({

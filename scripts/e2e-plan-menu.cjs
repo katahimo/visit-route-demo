@@ -333,10 +333,12 @@ async function moreMenus(page) {
     return t;
   })();
   check(
-    ['欠勤・キャンセルを登録', '元に戻す', '使い方', '予定をメールで送る'].every((x) => inMore.includes(x)) &&
+    ['欠勤・キャンセルを登録', '元に戻す', '使い方', 'チャット用にコピー', 'メールで送る', '印刷'].every((x) =>
+      inMore.includes(x),
+    ) &&
       !inMore.includes('空き状況') &&
       /で見る|時間軸/.test(inMore),
-    '日の予定：「その他 ▾」に 欠勤・元に戻す・表示の切り替え・使い方・メール（空き状況はメニュー。PRD D401）',
+    '日の予定：「その他 ▾」に 欠勤・元に戻す・表示の切り替え・使い方・書き出し（チャット用にコピー・メールで送る・印刷。PRD D419）（空き状況はメニュー。PRD D401）',
     inMore,
   );
   // 操作の行は状態の1行（今の担当）のすぐ下（週・月と同じ位置。PRD D344）
@@ -351,11 +353,11 @@ async function moreMenus(page) {
     );
   });
   check(order, '日の予定：操作の行のすぐ下に「詳しく ▾」（「今の担当」の1行はその中。PRD D393）');
-  // 予定をメールで送るは操作の行の「その他 ▾」の中（PRD D306・D402）。ナビの行には出さない
+  // メールで送るは操作の行の「その他 ▾」の中（PRD D306・D402・D419）。ナビの行には出さない
   check(
     (await page.locator('[data-testid="sched-nav"] [data-testid="day-mail"]').count()) === 0 &&
       (await toolCount(page, 'day-mail')) === 1,
-    '日の予定：「予定をメールで送る」は操作の行の「その他 ▾」の中の1つ',
+    '日の予定：「メールで送る」は操作の行の「その他 ▾」の中の1つ',
   );
   check(
     (await page.locator('.btn-primary:visible').count()) === 2 &&

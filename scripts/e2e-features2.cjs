@@ -71,10 +71,10 @@ async function insideEntries(page, dlg, ctx) {
       (await page.locator('.absence-btn').count()) > 0 === on('sudden'),
       `${label}：列の見出しの「この人の欠勤を登録」`,
     );
-    // 予定をメールで送るは操作の行の「その他 ▾」の中（PRD D306・D402）
+    // メールで送るは操作の行の「その他 ▾」の中（PRD D306・D402・D419）
     check(
       (await toolCount(page, 'day-mail')) === (on('mail') ? 1 : 0),
-      `${label}：日の予定の「その他 ▾」の「予定をメールで送る」`,
+      `${label}：日の予定の「その他 ▾」の「メールで送る」`,
     );
     if (!on('rules')) check((await count('plan-reason')) === 0, `${label}：点数の横の理由を出さない`);
     check((await count('plan-menu')) === 0, `${label}：日の予定に「AI で組む ▾」は無い`);

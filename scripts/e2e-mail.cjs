@@ -1,7 +1,9 @@
 // 日・週の予定のメール（PRD D92・D93・D346・D366〜D369。ADR-0059・ADR-0069）を本物のブラウザで確かめる：
-// 日の予定の「予定をメールで送る」の欄で、送れる人（アドレスがあり、長すぎない）全員分の「メールを作る」を押すと、その日が確定（伝えた）になる。
+// 日の予定の「その他 ▾」の「メールで送る」の欄で、送れる人（アドレスがあり、長すぎない）全員分の「メールを作る」を押すと、その日が確定（伝えた）になる。
 // 作った人に「作成済み」、欄に「メールを作った人 N/M人」。知らせの「元に戻す」で確定が戻る。欄の「確定（伝えた）にする」は確認を出して確定する。
 // 区間ごとの道順のリンクは、長さの目安 2000字の端末でも訪問4件までは本文に残る（区間を外す前に、決まりごと・全行程・住所を外す）。
+// 日の予定の「その他 ▾」の書き出しは チャット用にコピー・メールで送る・印刷 の順。チャット用にコピーは見出し・■名前・訪問の行の形で、
+// 住所・鍵（既定）を入れない。「鍵の情報も入れる」はメールの欄と同じ選択で、選ぶと鍵の行だけが増える（クリップボードの権限で読む）。
 // 週の予定の「予定をメールで送る」は日と同じく操作の行の「その他 ▾」の中にあり、時間軸の表示でも出る。週のメールに「まだ確定していません」を日ごとに書かない。
 // 予約送信：つないでいなければ枠は管理者設定への案内だけ。管理者設定の「メールの予約送信」で URL・合言葉を入れて「接続を試す」→「保存」。
 // 日の予定のメールの欄の「N人分を予約して確定」で事業所の GAS に全員分を預け、その日が確定（伝えた）になる。「予約済み」「予約し直す」「予約を取り消す」。
@@ -12,7 +14,7 @@
 const path = require('node:path');
 const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, runSteps, settle } = require('./lib/env.cjs');
 const { sharedPage } = require('./lib/steps.cjs');
-const { openDetails, pressTool, toolCount } = require('./lib/ui.cjs');
+const { closeMore, openDetails, openMore, pressTool, toolCount } = require('./lib/ui.cjs');
 
 /** メールを作るボタン（a 要素）の本文（mailto の body） */
 async function bodies(page) {
@@ -162,6 +164,64 @@ const steps = sharedPage({
           (await page.getByTestId('confirm-state').innerText()).includes('確定済み'),
           '欄の「確定（伝えた）にする」→ 確認 → 確定',
         );
+      },
+    ],
+    [
+      'day-chat-copy',
+      async (page) => {
+        // コピーした文はクリップボードの権限を与えて読む（PRD D419。ADR-0085）
+        await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], { origin: new URL(BASE).origin });
+        await openDay(page);
+        const list = await openMore(page);
+        const names = (await list.getByRole('menuitem').allInnerTexts()).map((t) => t.split('\n')[0].trim());
+        await closeMore(page);
+        const at = (x) => names.indexOf(x);
+        check(
+          at('チャット用にコピー') >= 0 &&
+            at('チャット用にコピー') + 1 === at('メールで送る') &&
+            at('メールで送る') + 1 === at('印刷'),
+          '日の予定：「その他 ▾」の書き出しは チャット用にコピー・メールで送る・印刷 の順に1つずつ',
+          names,
+        );
+        const copy = async () => {
+          await page.evaluate(() => navigator.clipboard.writeText(''));
+          await pressTool(page, 'day-chat-copy', { where: 'more' });
+          await toastHas(page, 'チャット用の文をコピーしました').first().waitFor();
+          return page.evaluate(() => navigator.clipboard.readText());
+        };
+        const text = await copy();
+        const lines = text.split('\n');
+        check(/^\d+\/\d+（.）の予定$/.test(lines[0]), 'チャット用の文：見出し「11/3（火）の予定」', lines[0]);
+        check(lines[1]?.startsWith('■'), 'チャット用の文：見出しの次は「■〈名前〉」', lines[1]);
+        check(
+          lines.filter((l) => /^[ \d]\d:\d\d .+様（\d+分）$/.test(l)).length > 0 &&
+            lines.every((l) => l === lines[0] || l.startsWith('■') || /^[ \d]\d:\d\d /.test(l) || l.startsWith('   ')),
+          'チャット用の文：訪問は「 9:00 〈利用者さん〉様（60分）」、決まりごとは訪問の行の下に字下げ',
+          text.slice(0, 300),
+        );
+        const data = await page.evaluate((k) => JSON.parse(localStorage.getItem(k)), STORAGE_KEY);
+        const addresses = (data?.clients ?? []).map((c) => c.place?.address ?? '').filter((a) => a.length > 0);
+        check(addresses.length > 0 && addresses.every((a) => !text.includes(a)), 'チャット用の文に住所を入れない');
+        check(!text.includes('鍵：'), 'チャット用の文：鍵は既定で入れない');
+        // 「鍵の情報も入れる」はメールの欄と同じ選択（画面の中だけ）
+        await pressTool(page, 'day-mail', { where: 'more' });
+        await page.getByTestId('mail-include-keys').check();
+        await page
+          .locator('section.drawer', { has: page.getByTestId('day-mail-panel') })
+          .getByRole('button', { name: '閉じる' })
+          .first()
+          .click();
+        await settle(page, 200);
+        const withKeys = await copy();
+        check(
+          withKeys
+            .split('\n')
+            .filter((l) => !l.startsWith('   鍵：'))
+            .join('\n') === text,
+          '「鍵の情報も入れる」を選ぶと、鍵の行だけが増える（初めての訪問先の行の下）',
+          withKeys.slice(0, 300),
+        );
+        await page.screenshot({ path: path.join(OUT_DIR, 'day-chat-copy.png') });
       },
     ],
     [

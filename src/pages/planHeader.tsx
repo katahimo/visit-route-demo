@@ -239,7 +239,7 @@ export function PlanHelp({
         </li>
         {confirmStep ? (
           <li>
-            「予定をメールで送る」などで{staffTerm}
+            「その他 ▾」の「メールで送る」などで{staffTerm}
             に伝えたら「確定」を押します。確定のあとに変えた訪問は「未連絡の変更」に出ます。
           </li>
         ) : (

@@ -119,6 +119,9 @@ flowchart LR
   mail["lib/mail・lib/mailto（メールの件名・本文・mailto。ADR-0017）"]
   pages -->|担当ごとの件名・本文と mailto の URL を作らせる| mail
   mail -->|その日の担当（訪問の担当）と確定したか| monthPrint["lib/monthPrint（printDay）"]
+  chat["lib/chatText（日の予定のチャット用の文。ADR-0085）"]
+  pages -->|1日の全員分の文を作らせ、クリップボードへ| chat
+  chat -->|担当ごとの並び（dayByStaff）| mail
   features["features（機能の入り切りの表・ひな形。ADR-0028）"]
   pages -->|入っている機能だけ出す・URL を機能で見分ける| features
   matching -->|計算に効く入り切り（相性・担当を限る）| features
