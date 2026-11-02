@@ -2,11 +2,13 @@
 // スタッフ・訪問先は、仙台市の公共施設を擬人化した架空の人物（位置は施設のおおよその場所）。
 // 実在の個人の情報は使わない。
 import type { Condition, Item, Rule, Traits } from '../contracts/rules';
+import { QUALIFICATION_OPTIONS, TRAINING_OPTIONS } from './qualifications';
 
 /** 項目の ID（staff 側と client 側） */
 export const ITEM_ID = {
   gender: 'gender',
   qualification: 'qualification',
+  training: 'training',
   experience: 'experience',
   specialty: 'specialty',
   smoker: 'smoker',
@@ -23,8 +25,15 @@ export const INITIAL_ITEMS: Item[] = [
     name: '資格',
     target: 'staff',
     kind: 'multi',
-    // 理学療法士・作業療法士・言語聴覚士は訪問の種類「リハビリ」の担当に必要（ADR-0012）
-    options: ['介護福祉士', '看護師', '保育士', '初任者研修', '理学療法士', '作業療法士', '言語聴覚士'],
+    options: [...QUALIFICATION_OPTIONS],
+  },
+  // 研修（資格の選択肢は30までなので分ける。PRD D422）
+  {
+    id: ITEM_ID.training,
+    name: '研修',
+    target: 'staff',
+    kind: 'multi',
+    options: [...TRAINING_OPTIONS],
   },
   // 始めた年を持ち、条件は年数で比べる（ADR-0070）
   { id: ITEM_ID.experience, name: '経験年数', target: 'staff', kind: 'startYear', options: [] },

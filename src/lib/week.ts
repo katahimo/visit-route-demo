@@ -295,6 +295,20 @@ function hasOption(item: Item, s: Pick<Staff, 'traits'>, option: string): boolea
 }
 
 /**
+ * 資格のバッジの短い名前のうち、先頭2文字では重なるもの（初期の資格の選択肢。PRD D422）。ほかは先頭2文字。
+ * 例：介護福祉士「介護」と介護支援専門員「ケア」、社会福祉士「社会」と社会福祉主事「主事」
+ */
+const QUALIFICATION_SHORT: Readonly<Record<string, string>> = {
+  介護支援専門員: 'ケア',
+  社会福祉主事: '主事',
+  福祉住環境コーディネーター1級: '住1',
+  福祉住環境コーディネーター2級: '住2',
+  福祉住環境コーディネーター3級: '住3',
+  児童発達支援管理責任者: '児発',
+  児童指導員: '児指',
+};
+
+/**
  * 〈スタッフ〉の資格のバッジ（項目「資格」の選択肢の順）。項目が無い・値が無ければ []。
  * 選択肢に無い値（古いデータ）は出さない
  */
@@ -303,7 +317,7 @@ export function qualificationBadges(items: readonly Item[], s: Pick<Staff, 'trai
   if (!item) return [];
   return item.options
     .filter((o) => hasOption(item, s, o))
-    .map((o) => ({ short: [...o].slice(0, 2).join(''), name: o }));
+    .map((o) => ({ short: QUALIFICATION_SHORT[o] ?? [...o].slice(0, 2).join(''), name: o }));
 }
 
 /** その資格（項目「資格」の選択肢）を持つ稼働中の〈スタッフ〉の ID（staff の順）。項目が無ければ [] */
