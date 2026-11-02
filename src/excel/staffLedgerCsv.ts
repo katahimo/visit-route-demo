@@ -46,9 +46,6 @@ const LEFT = '退社済';
 /** 〈スタッフ〉の名簿の上限（contracts の staffSchema・placeSchema と同じ） */
 const MAX = { name: 50, address: 200 } as const;
 
-/** 資格を写す〈スタッフ〉の項目の名前（選択肢から複数） */
-const QUALIFICATION_ITEM = '資格';
-
 /**
  * 資格の選択肢 → 職員台帳の列（どれかに取得日か「取得日不明」などの値があれば、その資格あり）。
  * ここに無い選択肢は同じ名前の列だけを見る（介護福祉士・看護師・理学療法士 など）。
@@ -73,25 +70,27 @@ export function isStaffLedgerHeader(header: readonly string[]): boolean {
   );
 }
 
-/** 資格の列1つ：名簿の見出し（特性：資格：〈選択肢〉）と、見る職員台帳の列 */
+/** 資格の列1つ：名簿の見出し（特性：〈項目〉：〈選択肢〉）と、見る職員台帳の列 */
 interface QualificationCol {
   header: string;
   sources: string[];
 }
 
 /**
- * 〈スタッフ〉の項目「資格」（選択肢から複数）の選択肢ごとの列。項目が無い・職員台帳に合う列が1つも無ければ空（資格は今のまま）。
- * 名簿の読み込みは選択肢の列をすべて求めるので、台帳に列の無い選択肢（保育士など）も sources を空にして出す（セルは空＝持たない）
+ * 〈スタッフ〉の選択肢から複数の項目（初期は「資格」「研修」）の選択肢ごとの列。職員台帳に合う列が1つも無い項目は出さない（今のまま）。
+ * 名簿の読み込みは選択肢の列をすべて求めるので、合う項目では台帳に列の無い選択肢（保育士など）も sources を空にして出す（セルは空＝持たない）
  */
 export function qualificationCols(header: readonly string[], items: readonly Item[]): QualificationCol[] {
-  const item = items.find((it) => it.target === 'staff' && it.kind === 'multi' && it.name === QUALIFICATION_ITEM);
-  if (!item) return [];
   const at = columnsOf(header);
-  const cols = item.options.map((o) => ({
-    header: `${TRAIT_PREFIX}${item.name}：${o}`,
-    sources: [o, ...(QUALIFICATION_ALIASES[o] ?? [])].filter((h) => at.has(colKey(h))),
-  }));
-  return cols.some((c) => c.sources.length > 0) ? cols : [];
+  return items
+    .filter((it) => it.target === 'staff' && it.kind === 'multi')
+    .flatMap((item) => {
+      const cols = item.options.map((o) => ({
+        header: `${TRAIT_PREFIX}${item.name}：${o}`,
+        sources: [o, ...(QUALIFICATION_ALIASES[o] ?? [])].filter((h) => at.has(colKey(h))),
+      }));
+      return cols.some((c) => c.sources.length > 0) ? cols : [];
+    });
 }
 
 /** 名簿の列名 → 職員台帳の列名（誤りの文に使う） */
@@ -113,7 +112,7 @@ export const STAFF_LEDGER_KEEP_BLANK: readonly string[] = [STAFF_COLS.address, S
  * - 職員Eメールアドレス：形の違う値は読まず、skipped に「職員Eメールアドレス（形の違う値 N件）」
  * - 退社年月日：最終勤務日にする。在職状況が「退社済」か、退社年月日が today より前なら休止（×）、ほかは利用中（○）。
  *   読めない退社年月日はそのまま渡し、名簿の読み込みが『退社年月日』の誤りにする
- * - 資格：〈スタッフ〉の項目「資格」の選択肢に合う列（qualificationCols）に値（取得日・取得日不明など）があれば ○、無ければ ×。
+ * - 資格・研修：〈スタッフ〉の選択肢から複数の項目の選択肢に合う列（qualificationCols）に値（取得日・取得日不明など）があれば ○、無ければ ×。
  *   台帳に列の無い選択肢は空（読み込むと持たない）
  * - カナ・入社年月日・電話・雇用形態・所属・ほかの資格などは読まず、skipped に名前を挙げる（データに残さない）
  */

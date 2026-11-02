@@ -76,23 +76,30 @@ describe('職員台帳の形の見分け', () => {
   });
 });
 
-describe('資格の列', () => {
-  it('項目「資格」の選択肢のうち、台帳に列のあるもの（初任者研修は同等以上の研修も見る）', () => {
+/** 職員台帳の資格・研修の列（社会福祉主事などを含む40列。HEAD の17列目から） */
+const QUAL_HEAD = HEAD.slice(16);
+
+describe('資格・研修の列', () => {
+  it('初期の項目「資格」「研修」の選択肢は、職員台帳の資格・研修の列をすべて網羅する（介護職員初任者研修は「初任者研修」）', () => {
     const cols = qualificationCols(HEAD, items());
-    expect(cols.map((c) => c.header)).toEqual([
-      '特性：資格：介護福祉士',
-      '特性：資格：看護師',
-      '特性：資格：保育士',
-      '特性：資格：初任者研修',
-      '特性：資格：理学療法士',
-      '特性：資格：作業療法士',
-      '特性：資格：言語聴覚士',
+    const read = new Set(cols.flatMap((c) => c.sources));
+    expect(QUAL_HEAD).toHaveLength(40);
+    expect(QUAL_HEAD.filter((h) => !read.has(h))).toEqual([]);
+    expect(cols.filter((c) => c.header.startsWith('特性：資格：'))).toHaveLength(27);
+    expect(cols.filter((c) => c.header.startsWith('特性：研修：'))).toHaveLength(14);
+    expect(cols.find((c) => c.header === '特性：資格：初任者研修')?.sources).toEqual([
+      '介護職員初任者研修',
+      '居宅介護職員初任者研修課程',
+      '介護福祉士実務者研修',
+      '介護職員基礎研修',
+      'ホームヘルパー1級',
+      'ホームヘルパー2級',
     ]);
-    expect(cols.find((c) => c.header.endsWith('初任者研修'))?.sources).toContain('ホームヘルパー2級');
     // 台帳に列の無い選択肢も出す（名簿の読み込みは選択肢の列をすべて求める）。セルは空
-    expect(cols.find((c) => c.header.endsWith('保育士'))?.sources).toEqual([]);
+    expect(cols.filter((c) => c.sources.length === 0).map((c) => c.header)).toEqual(['特性：資格：保育士']);
   });
-  it('項目「資格」が無ければ資格は写さない', () => {
+  it('台帳に合う列の無い項目（得意など）・項目が無いときは写さない', () => {
+    expect(qualificationCols(HEAD, items()).some((c) => c.header.startsWith('特性：得意：'))).toBe(false);
     expect(qualificationCols(HEAD, [])).toEqual([]);
   });
 });
@@ -115,25 +122,33 @@ describe('職員台帳 → 名簿の列', () => {
     // 退社年月日が先なら、それまでは利用中
     expect(t.rows[3]?.slice(0, 5)).toEqual(['例 三郎', '', '', '○', '2026-12-31']);
   });
-  it('資格：値（取得日・取得日不明）があれば ○。准看護師は看護師にしない', () => {
+  it('資格・研修：値（取得日・取得日不明）があれば ○。准看護師は看護師と分ける', () => {
     expect(at(1, '特性：資格：介護福祉士')).toBe('○');
     expect(at(1, '特性：資格：初任者研修')).toBe('○');
     expect(at(1, '特性：資格：看護師')).toBe('×');
+    expect(at(1, '特性：研修：ホームヘルパー2級')).toBe('×');
     expect(at(2, '特性：資格：初任者研修')).toBe('○');
+    expect(at(2, '特性：研修：ホームヘルパー2級')).toBe('○');
     expect(at(3, '特性：資格：看護師')).toBe('×');
+    expect(at(3, '特性：資格：准看護師')).toBe('○');
     expect(at(1, '特性：資格：保育士')).toBe('');
   });
   it('職員名の無い行は空行にする', () => {
     expect(t.rows[4]?.every((c) => c === '')).toBe(true);
     expect(t.rows).toHaveLength(5);
   });
-  it('読まなかった列：電話・カナ・入社年月日・准看護師などと、形の違うメール・名前の無い行の件数', () => {
-    expect(t.skipped).toEqual(
-      expect.arrayContaining(['職員カナ', '入社年月日', '職員携帯電話番号', '雇用形態', '准看護師', '郵便番号']),
-    );
-    expect(t.skipped).not.toContain('介護福祉士');
-    expect(t.skipped).not.toContain('ホームヘルパー2級');
-    expect(t.skipped.slice(-2)).toEqual(['職員Eメールアドレス（形の違う値 1件）', '職員名（空の行 1件）']);
+  it('読まなかった列：所属・カナ・入社年月日・郵便番号・電話・雇用形態と、形の違うメール・名前の無い行の件数', () => {
+    expect(t.skipped).toEqual([
+      '所属',
+      '職員カナ',
+      '入社年月日',
+      '郵便番号',
+      '職員電話番号',
+      '職員携帯電話番号',
+      '雇用形態',
+      '職員Eメールアドレス（形の違う値 1件）',
+      '職員名（空の行 1件）',
+    ]);
   });
   it('同じ職員名の人は全員「職員名（社員番号）」', () => {
     const twin = rowOf({ 社員番号: '201', 職員名: '架空 一子' });
@@ -153,7 +168,12 @@ describe('職員台帳を〈スタッフ〉の名簿として読み込む', () =
     const qual = r.data.items.find((it) => it.name === '資格');
     expect(ichiko?.email).toBe('ichiko@example.com');
     expect(ichiko?.home.address).toBe('架空県架空市架空町1-2-3サンプル荘101');
+    const training = r.data.items.find((it) => it.name === '研修');
     expect(qual && ichiko?.traits[qual.id]).toEqual(['介護福祉士', '初任者研修']);
+    expect(training && ichiko?.traits[training.id]).toEqual([]);
+    const jiro = r.data.staff.find((s) => s.name === '見本 次郎');
+    expect(qual && jiro?.traits[qual.id]).toEqual(['初任者研修']);
+    expect(training && jiro?.traits[training.id]).toEqual(['ホームヘルパー2級']);
     expect(r.data.staff.find((s) => s.name === '見本 次郎')).toMatchObject({ active: false, lastDay: '2025-04-30' });
   });
   it('読み直すと同じ人に当てる（名前で）。空の住所・メールは今の値のまま', async () => {
