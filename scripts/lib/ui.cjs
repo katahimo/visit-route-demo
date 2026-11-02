@@ -138,7 +138,8 @@ const TOOLS = {
   担当を組む: { id: 'toolbar-assign', text: /担当を組む/ },
   確定: { id: 'adopt', text: /確定/ },
   使い方: { id: 'plan-more-help', text: /使い方/ },
-  メールで送る: { text: /予定をメールで送る/ },
+  // 日は「メールで送る」（書き出し。PRD D419）、週は「予定をメールで送る」
+  メールで送る: { text: /メールで送る/ },
 };
 
 /**

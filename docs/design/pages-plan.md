@@ -1,6 +1,6 @@
 # 日の予定（予定と手直し）
 
-> この画面のファイル：`src/pages/PlanPage.tsx`（区画を並べるだけ）・フック `usePlanPage.ts`（まとめ）・`usePlanData.ts`（計算）・`usePlanView.ts`（表示の状態）・`usePlanNav.ts`（移動・フォーカス・URL の入口）・`usePlanEdits.ts`（手直し・取り消し・確定）・`usePlanDrag.ts`（ドラッグ）・`usePlanShown.ts`（地図・日ごとのリスト・担当ごとの1日・一覧の行）・区画 `planLayout.tsx`・`planToolbar.tsx`（`PlanProgressText`）・`planColumns.tsx`（列・`PlanBoard`）・`planCards.tsx`（カード・帯・印）・`planReassignMenu.tsx`（`ReassignMenu`）・`visitList.tsx`（`VisitList`）・`planParts.tsx`・`planHeader.tsx`（`PlanConfirmActions`・`PlanOneLine`・`PlanHelp`）・`planBands.tsx`（`PlanBands`）・`planDetail.tsx`（`PlanDetailPanel`・`PlanSummary`・`BalanceChips`）・`cancelVisitPanel.tsx`・`mailPanels.tsx`（`DayMailPanel`）・`plan.css`、`src/components/routeView.tsx`・`routeTimeline.tsx`・`MapDock.tsx`・`MenuButton.tsx`・`dayLines.tsx`・`visitType.tsx`・`VisitRules.tsx`・`mapsLinks.tsx`・`useDayModel.ts`・`useRouteSelection.ts`・`PlanIssueCount.tsx`・`openTold.ts`、`src/lib/dayModel.ts`・`dayPlan.ts`・`planView.ts`（`planColumns`・`hardLabelsOf`・`toldMarksOf`・`unplacedReasons`・`droppedRowsOf`・`hardRowsOf`）・`dayMail.ts`（`dayMailRows`・`dayMailProgress`）・`reassignMenu.ts`・`scoreReason.ts`・`routeView.ts`・`timeline.ts`・`dayLine.ts`・`confirmDay.ts`・`settled.ts`・`settledView.ts`・`detailsHeading.ts`・`exceptionView.ts`、`src/components/Toast.tsx`。関連 ADR：0004・0007〜0010・0012・0013・0015・0017・0018・0030・0031・0051・0053・0054・0055・0058〜0060・0063・0073・0074。関連 PRD：D12・D16〜D18・D25・D58・D63・D84・D91〜D101・D173〜D174・D201〜D209・D217・D219・D224・D229・D237・D266・D269・D300・D307・D314〜D319・D323・D329・D330・D333・D334・D339〜D347・D382・D384・D385・D402・D403。
+> この画面のファイル：`src/pages/PlanPage.tsx`（区画を並べるだけ）・フック `usePlanPage.ts`（まとめ）・`usePlanData.ts`（計算）・`usePlanView.ts`（表示の状態）・`usePlanNav.ts`（移動・フォーカス・URL の入口）・`usePlanEdits.ts`（手直し・取り消し・確定）・`usePlanDrag.ts`（ドラッグ）・`usePlanShown.ts`（地図・日ごとのリスト・担当ごとの1日・一覧の行）・区画 `planLayout.tsx`・`planToolbar.tsx`（`PlanProgressText`）・`planColumns.tsx`（列・`PlanBoard`）・`planCards.tsx`（カード・帯・印）・`planReassignMenu.tsx`（`ReassignMenu`）・`visitList.tsx`（`VisitList`）・`planParts.tsx`・`planHeader.tsx`（`PlanConfirmActions`・`PlanOneLine`・`PlanHelp`）・`planBands.tsx`（`PlanBands`）・`planDetail.tsx`（`PlanDetailPanel`・`PlanSummary`・`BalanceChips`）・`cancelVisitPanel.tsx`・`mailPanels.tsx`（`DayMailPanel`）・`plan.css`、`src/components/routeView.tsx`・`routeTimeline.tsx`・`MapDock.tsx`・`MenuButton.tsx`・`dayLines.tsx`・`visitType.tsx`・`VisitRules.tsx`・`mapsLinks.tsx`・`useDayModel.ts`・`useRouteSelection.ts`・`PlanIssueCount.tsx`・`openTold.ts`、`src/lib/dayModel.ts`・`dayPlan.ts`・`planView.ts`（`planColumns`・`hardLabelsOf`・`toldMarksOf`・`unplacedReasons`・`droppedRowsOf`・`hardRowsOf`）・`dayMail.ts`（`dayMailRows`・`dayMailProgress`）・`chatText.ts`（`dayChatText`）・`clipboard.ts`・`reassignMenu.ts`・`scoreReason.ts`・`routeView.ts`・`timeline.ts`・`dayLine.ts`・`confirmDay.ts`・`settled.ts`・`settledView.ts`・`detailsHeading.ts`・`exceptionView.ts`、`src/components/Toast.tsx`。関連 ADR：0004・0007〜0010・0012・0013・0015・0017・0018・0030・0031・0051・0053・0054・0055・0058〜0060・0063・0073・0074。関連 PRD：D12・D16〜D18・D25・D58・D63・D84・D91〜D101・D173〜D174・D201〜D209・D217・D219・D224・D229・D237・D266・D269・D300・D307・D314〜D319・D323・D329・D330・D333・D334・D339〜D347・D382・D384・D385・D402・D403・D419。
 > 担当は訪問に持ち（`Visit` の `staffId`・`start`・`pinned`）、その日の担当の並び（今の担当）は `lib/dayPlan` の `dayRoutes`。
 > 欠勤・キャンセルの欄と振り直しは [pages-plan-absence.md](pages-plan-absence.md)、バーの塗りは [pages-bars.md](pages-bars.md)、操作の行・範囲の提案の帯・訪問の札・訪問の詳細の欄は [pages-common.md](pages-common.md)。
 
@@ -32,7 +32,7 @@
 
 - 「詳しく ▾」（`day-details`）：開け閉めは日の画面として端末に覚える（鍵 `details:day`）。中は1行のまとめ（訪問・入らない・守れない条件・移動・点数・理由）と担当ごとの1日。入は見出しの1行に「点数・移動 N分・入らない N・守れない条件 N」（0 は出さない。`lib/detailsHeading` の `dayHeading`）を出し、中の先頭に「要対応の訪問 N件」の帯（`band-care`。`CareBand`）。切は要対応の訪問の帯を出さない（上の要対応の帯が知らせる）
 - 操作の行（共通の部品は [pages-common.md](pages-common.md) の `ScheduleToolbar`）：入＝主「予定を入れる」（`plan-visit-add`。`ADD_VISIT_LABEL`。〈利用者さん〉がいなければ `aria-disabled` と title に理由。開く欄の見出しも同じ）＋「確定（伝えた）」（`adopt`。確定済みの日は枠）、切＝主「予定を入れる」＋「欠勤・キャンセルを登録」（`sudden-open`）。スマホは「予定を入れる」を「その他 ▾」に入れ（`tb-keep-label`）、入は主が「確定（伝えた）」、切は主ボタン無し。担当なしを組むは要対応の帯
-- 「その他 ▾」（`MenuButton`・`plan-more`）：予定を入れる（スマホ）・表示（`plan-view-〈k〉`。広い画面は時間軸・順番・一覧、スマホは日ごとのリスト・順番・一覧。訪問のある日だけ）・元に戻す・やり直す（`more-undo`・`more-redo`）・入は欠勤・キャンセルを登録・使い方（`plan-more-help`。操作の行の下に `plan-help` を開きフォーカスを移す。開いていれば「使い方を閉じる」）・予定をメールで送る（`day-mail`。`mail` が入で、訪問のある日・未連絡の変更のある日）
+- 「その他 ▾」（`MenuButton`・`plan-more`）：予定を入れる（スマホ）・表示（`plan-view-〈k〉`。広い画面は時間軸・順番・一覧、スマホは日ごとのリスト・順番・一覧。訪問のある日だけ）・元に戻す・やり直す（`more-undo`・`more-redo`）・入は欠勤・キャンセルを登録・使い方（`plan-more-help`。操作の行の下に `plan-help` を開きフォーカスを移す。開いていれば「使い方を閉じる」）・**書き出し**（見出し「書き出し」。行き先ごとに1つずつ。`planToolbar.tsx` の `exportItemsOf`。PRD D419・ADR-0085）：「チャット用にコピー」（`day-chat-copy`。訪問のある日）・「メールで送る」（`day-mail`。`mail` が入で、訪問のある日・未連絡の変更のある日）・「印刷」（`day-print`。訪問のある日。`window.print()` で今の日の予定を印刷。印刷では時間軸の代わりに順番）
 - 欠勤の振り直しの案B の計算中は、行に進み具合と止める（回数とバーは `PlanProgressText` が外の入れ物 `lib/valueStore` から `useValueStore` で読み、画面全体は描き直さない）
 
 #### エキスパート機能が切のとき
@@ -217,12 +217,18 @@
 
 #### 日の予定のメール（`pages/mailPanels.tsx` の `DayMailPanel`）
 
-- 「予定をメールで送る」（`day-mail`）→ 右の欄。訪問のある人と欠勤・希望休の人（`PrintDay.off`）を並べ、行に「欠勤」「希望休」。宛先ごとに `MailButton`
+- 「その他 ▾」の「メールで送る」（`day-mail`）→ 右の欄（見出し「〈日付〉の予定をメールで送る」）。訪問のある人と欠勤・希望休の人（`PrintDay.off`）を並べ、行に「欠勤」「希望休」。宛先ごとに `MailButton`
 - 確定：「メールを作る」を押した人に「作成済み」（`mail-sent`）、欄に「メールを作った人 N/M人」（`day-mail-progress`）。送れる人（アドレスがあり長すぎない）全員分を作ると1回だけ確定（`confirmByMail`。確認なし・知らせに「元に戻す」と要対応の件数）。欄の下に「確定（伝えた）にする」（`day-mail-confirm`。見出しの確定と同じ確認）。数えるのは欄を開いている間だけ。本文は「確定した担当」と書く。伝えたあとに訪問が無くなった人も行に出し「訪問はありません」を送れる。送れる人がいない日・元に戻したあとは自動で確定せず、欄の文で「確定（伝えた）にする」へ案内する
-- 「鍵の情報も入れる」は React の状態だけ
+- 「鍵の情報も入れる」（`mail-include-keys`）は React の状態だけ（保存しない）。日の予定では `usePlanView` の `includeKeys` に持ち、欄（`DayMailPanel` の `keys`）とチャット用にコピーで同じ選択（既定は入れない）
 - 行は `lib/dayMail.ts` の `dayMailRows`、確定の文は `dayMailProgress`、数えて確定するのは `useDayMailConfirm`
 - 本文に道順のリンク（`dayMailText`）。データは書き換えない
 - 予約送信は [mail-schedule.md](mail-schedule.md)
+
+#### チャット用にコピー（PRD D419。ADR-0085）
+
+- 「その他 ▾」の「チャット用にコピー」（`day-chat-copy`）→ その日の全員分の文をクリップボードへ（`lib/clipboard` の `copyText`）。知らせ「チャット用の文をコピーしました」、コピーできなければ「コピーできませんでした。文を選んでコピーしてください」（`usePlanPage` の `contact.copyChat`・`onCopied`）。送るのは人
+- 文は `lib/chatText.ts` の `dayChatText(data, date, { notesOn, includeKeys })`：「11/3（火）の予定」→ 担当ごとに「■〈名前〉」（名前の順）→「 9:00 〈利用者さん〉様（60分）」（時刻は5桁にそろえる）、最後に「■担当なし」。訪問の無い日は「訪問はありません」
+- 担当ごとの並びはメールと同じ `lib/mail` の `dayByStaff`（伝えた内容、無ければ今の担当。担当なしは `unassigned`）。決まりごと（入り方・駐車場・注意）は初めての訪問先（`lib/firstVisit` の `servedPairsBefore`・`isFirstVisit`）の行の下だけ「   入り方：…」（`lib/visitRules` の `visitRuleLines`。訪問先の決まりごとを切れば入れない）。鍵は「鍵の情報も入れる」のときだけ。住所は入れない
 
 #### 道順のリンク
 
@@ -258,3 +264,4 @@
 - [ ] 点数の理由・次の一手・訪問ごとの理由の言葉（入らなかった訪問の札も。符号・「費用」を出さない）（`lib/scoreReason` のテスト・`scripts/e2e-words.cjs`）
 - [ ] `?do=unassigned` で入らなかった訪問へ巻く（`scripts/e2e-links.cjs`）
 - [ ] 名前から開く詳細（列の見出しの i・訪問の詳細・担当ごとの1日・一覧・入らなかった訪問・受けられる人・休みの帯・拘束超えの帯）（`scripts/e2e-details.cjs`・`scripts/e2e-details2.cjs`）
+- [ ] 「その他 ▾」の書き出しは「チャット用にコピー」・「メールで送る」・「印刷」の順。コピーした文は見出し・■名前・時刻・様・所要・担当なし、決まりごとは初めての訪問先の行の下だけ、鍵は「鍵の情報も入れる」のときだけ、住所なし（`lib/chatText` のテスト・`scripts/e2e-mail.cjs`）

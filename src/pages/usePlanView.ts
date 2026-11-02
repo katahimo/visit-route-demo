@@ -58,6 +58,8 @@ export function usePlanView(date: string) {
   const [selecting, setSelecting] = useState(false);
   /** 右の欄（PRD D63）：'detail'＝詳しく、'mail'＝予定をメールで送る */
   const [panel, setPanel] = useState<'detail' | 'mail' | null>(null);
+  /** 鍵の情報も入れる（メールの欄とチャット用にコピーで同じ選択。既定はオフ。画面の中だけで保存しない。PRD D92・D419） */
+  const [includeKeys, setIncludeKeys] = useState(false);
   /** 地図は本体の下に全幅で大きく置く（PRD D300）。広い画面は地図を高くする */
   const wideMap = useMedia(WIDE_MAP_QUERY);
   /** ページの中の地図のカード（画面の外なら右下に浮かせる） */
@@ -89,6 +91,8 @@ export function usePlanView(date: string) {
     setSelecting,
     panel,
     setPanel,
+    includeKeys,
+    setIncludeKeys,
     wideMap,
     mapCardRef,
     noneColId,

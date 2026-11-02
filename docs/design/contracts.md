@@ -253,9 +253,10 @@ mailLimitFor(platform, userAgent) /* Windows・不明 2000、iOS・Android・mac
 mailtoHref({ to, bcc?, subject, body }); uniqueRecipients(list)
 BuiltMail = { href, mode: 'full' | 'short' | 'none', body, fullBody, length, tooLong }
 buildMail({ to, bcc?, subject, full, short? }, limit = MAILTO_LIMIT); buildBccMails({ bcc, subject, full, short? }, limit)
-dayByStaff(data, date); dayMailText(org, staff, date, source, visits, includeKeys) /* { subject, full, short[] } */; dayRouteLinks
+dayByStaff(data, date) /* { day, byStaff, unassigned } */; dayMailText(org, staff, date, source, visits, includeKeys) /* { subject, full, short[] } */; dayRouteLinks
 weekByStaff(data, dates); weekMailText(org, staff, days); contactMailText(org, date, message); vacancySubject; referrerRecipients
 mailTo(email, text, limit?) /* 宛先が '' なら null */
+dayChatText(data, date, { notesOn, includeKeys }) /* lib/chatText。日の予定のチャット用の文（PRD D419） */
 ```
 
 - URL：`mailto:宛先?bcc=…&subject=…&body=…`、`encodeURIComponent`（宛先の @ はそのまま）、改行は CRLF、空の件名・本文は付けない。担当の決め方は `printDay` と同じ
