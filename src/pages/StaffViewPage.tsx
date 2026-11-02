@@ -5,9 +5,11 @@ import { useDay } from '../components/day';
 import { RouteMap } from '../components/RouteMap';
 import { StaffMark } from '../components/StaffMark';
 import { Empty, WithIcon } from '../components/ui';
+import { useDateEntry } from '../components/useDateEntry';
 import { useDayModel } from '../components/useDayModel';
 import { useFeature } from '../components/useFeature';
 import { timesOf } from '../domain/scheduleModel';
+import { jstDate } from '../domain/time';
 import { colorOf, initialOf } from '../lib/colors';
 import { AI_LINE, attempt, hasLocation, own, r0, TRAVEL_MODE_LABELS } from '../lib/common';
 import { dateText } from '../lib/dateText';
@@ -16,16 +18,20 @@ import { dayStops, tripLinks } from '../lib/mapsLink';
 import { prevStopOf } from '../lib/prevStop';
 import type { MapPoint } from '../lib/routeView';
 import { scheduleRoute } from '../matching';
-import { StaffViewStop, type StaffViewTiming, StaffViewTrip } from './staffViewParts';
+import { StaffViewDayNav, StaffViewStop, type StaffViewTiming, StaffViewTrip } from './staffViewParts';
 import './schedule.css';
 
 /**
  * スタッフのスマホ画面風の「今日の順番」（D16。表示だけで記録はしない）。
- * その日の訪問の担当と開始の並び（版2）。まだ確定していない（伝えていない）日はそう添える
+ * その日の訪問の担当と開始の並び（版2）。まだ確定していない（伝えていない）日はそう添える。
+ * 日付は画面で共通の選んでいる日（useDay）。?date= で開いた日を選び、日付の横の日送りで前・次の日・今日へ（PRD D417）
  */
 export default function StaffViewPage() {
   const { staffId = '' } = useParams();
-  const { date } = useDay();
+  const { date, setDate } = useDay();
+  useDateEntry(date, setDate);
+  const today = jstDate(Date.now());
+  const isToday = date === today;
   const m = useDayModel(date);
   const { data, staffById, clientById, visitById, problem, slotsOf } = m;
   const me = staffById.get(staffId);
@@ -99,7 +105,7 @@ export default function StaffViewPage() {
         ) : (
           <>
             <div className="spread">
-              <h2>今日の訪問順</h2>
+              <h2>{isToday ? '今日の訪問順' : '訪問順'}</h2>
               <span className="chip">
                 <Car size={14} aria-hidden="true" />
                 {TRAVEL_MODE_LABELS[me.travelMode]}
@@ -111,6 +117,7 @@ export default function StaffViewPage() {
                 <StaffMark staff={me} size="sm" />
                 {me.name}さん・{dateText(date)}
               </span>
+              <StaffViewDayNav date={date} today={today} setDate={setDate} />
               {!told && ids.length > 0 && (
                 <span className="chip chip-warn">
                   <Sparkles size={13} aria-hidden="true" />
@@ -126,7 +133,7 @@ export default function StaffViewPage() {
               </p>
             )}
             <div className="card">
-              {ids.length === 0 && <Empty icon={MapPin}>今日の訪問はありません</Empty>}
+              {ids.length === 0 && <Empty icon={MapPin}>{isToday ? '今日' : 'この日'}の訪問はありません</Empty>}
               {ids.map((id) => {
                 const v = visitById.get(id);
                 return (

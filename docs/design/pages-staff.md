@@ -1,21 +1,21 @@
 # 〈スタッフ〉の一覧と画面・勤務時間（シフト）・勤務の見込み・スマホ画面
 
-> この画面のファイル：`src/pages/StaffPage.tsx`（行とカード `staffList.tsx`）・`StaffPersonPage.tsx`（見出しとタブ `staffPersonHeader.tsx`・タブ `staffSections.tsx`・`staffFields.tsx`・`staffScheduleTab.tsx`・節の編集と保存 `useStaffEdit.ts`・予定 `useStaffSchedule.ts`）・`OffboardPanel.tsx`（`offboardParts.tsx`・`useOffboardFlow.ts`）・`AvailabilityPage.tsx`（`availabilityParts.tsx`・`useAvailabilityEdit.ts`）・`WorkloadPage.tsx`（`workload.css`・`workloadHead.tsx`・`workloadTables.tsx`・`useWorkloadSettings.ts`）・`StaffViewPage.tsx`（`staffViewParts.tsx`）、`src/components/workBars.tsx`・`mapsLinks.tsx`・`personPage.tsx`・`PersonCalendar.tsx`・`personView.tsx`・`placeLookup.tsx`、`src/lib/offboard.ts`・`offboardView.ts`・`staffEdit.ts`・`workload.ts`・`workloadView.ts`・`links.ts`・`personPage.ts`・`peopleView.ts`・`visitLists.ts`・`visitOps.ts`・`viewMode.ts`。関連 ADR：0011・0014・0015・0016・0017・0018・0050・0052・0073。関連 PRD：D16・D68・D75〜D77・D91〜D101・D118〜D121・D201〜D209・D220・D221・D230・D241・D272・D275・D298・D299・D308〜D312・D326・D385・D394。
+> この画面のファイル：`src/pages/StaffPage.tsx`（行とカード `staffList.tsx`）・`StaffPersonPage.tsx`（見出しとタブ `staffPersonHeader.tsx`・タブ `staffSections.tsx`・`staffFields.tsx`・`staffScheduleTab.tsx`・節の編集と保存 `useStaffEdit.ts`・予定 `useStaffSchedule.ts`）・`OffboardPanel.tsx`（`offboardParts.tsx`・`useOffboardFlow.ts`）・`AvailabilityPage.tsx`（`availabilityParts.tsx`・`useAvailabilityEdit.ts`）・`WorkloadPage.tsx`（`workload.css`・`workloadHead.tsx`・`workloadTables.tsx`・`useWorkloadSettings.ts`）・`StaffViewPage.tsx`（`staffViewParts.tsx`）、`src/components/workBars.tsx`・`mapsLinks.tsx`・`personPage.tsx`・`PersonCalendar.tsx`・`personView.tsx`・`placeLookup.tsx`、`src/lib/offboard.ts`・`offboardView.ts`・`staffEdit.ts`・`workload.ts`・`workloadView.ts`・`links.ts`・`personPage.ts`・`peopleView.ts`・`visitLists.ts`・`visitOps.ts`・`viewMode.ts`。関連 ADR：0011・0014・0015・0016・0017・0018・0050・0052・0073・0083。関連 PRD：D16・D68・D75〜D77・D91〜D101・D118〜D121・D201〜D209・D220・D221・D230・D241・D272・D275・D298・D299・D308〜D312・D326・D385・D394・D417。
 > 画面の殻（ルート・見出し・タブ・節・変更の確認）と予定のカレンダーは [pages-clients.md](pages-clients.md) と共通。
 
 ### 〈スタッフ〉一覧（`#/staff`）
 
 - 題名「〈スタッフ〉」（「一覧」を付けない）。下に入切とも小さいタブ 一覧・勤務（勤務時間（シフト）・勤務の見込み）・相性（`PeopleTabs`。`lib/peopleTabs`。予定を組むの段・基本情報のタブは出さない）。右に主ボタン「〈スタッフ〉を追加」（`staff-add`。`#/staff/new`）。名前の前は〈スタッフ〉の印（`StaffMark` の md。[pages.md](pages.md) の「〈スタッフ〉の印」）
-- 行（`staff-row`）はどこを押してもその人の画面（`#/staff/:id`。行の中のボタン・リンク・文字の選択は除く）。右端に「〈名前〉を開く」（`Eye`・`staff-open`）とスマホ画面へのリンク。`?id=` はその人の画面へ移る
-- 列（`lib/peopleView` の `staffColumns(detailed)`）：名前・勤務日（`staff-days`）・勤務時間（`staff-hours`）と右端の「開く」「スマホ画面」（状態の列が無い間は休止中だけ名前のそばに印＝`staffNameNote`）。**エキスパート機能が入のときだけ**表の上に「くわしい列」のチェック（`people-columns-toggle`。`components/DetailColumns`）。入れると 特性・求めること・自宅の位置・状態の列を足す。一覧ごとに端末に覚える（`store/navOpen` の鍵 `columns:staff`）。切は見出しの下の説明を初回だけ（`useIntro('staff')`。`peopleIntro`）
+- 行（`staff-row`）はどこを押してもその人の画面（`#/staff/:id`。行の中のボタン・リンク・文字の選択は除く）。右端に文字のボタン「詳しく」（その人の画面。`Eye` を文字の前に。`staff-open`）と「今日の画面」（今日のスマホ画面 `staffViewHref(id, 今日)`。`Smartphone`。`staff-view-open`）。読み上げの名前は文字から始める（「詳しく（〈名前〉）」「今日の画面（〈名前〉）」。PRD D417）。`?id=` はその人の画面へ移る
+- 列（`lib/peopleView` の `staffColumns(detailed)`）：名前・勤務日（`staff-days`）・勤務時間（`staff-hours`）と右端の「詳しく」「今日の画面」（状態の列が無い間は休止中だけ名前のそばに印＝`staffNameNote`）。**エキスパート機能が入のときだけ**表の上に「くわしい列」のチェック（`people-columns-toggle`。`components/DetailColumns`）。入れると 特性・求めること・自宅の位置・状態の列を足す。一覧ごとに端末に覚える（`store/navOpen` の鍵 `columns:staff`）。切は見出しの下の説明を初回だけ（`useIntro('staff')`。`peopleIntro`）
 - 見出しの右に「Excel・CSV」（`roster-toggle`）。押すと名簿の欄（[pages-clients.md](pages-clients.md)「名簿の欄」。`kind="staff"`）
 - 一覧の上に「最終勤務日のある〈スタッフ〉」のカード（`leaving-card`。振り直しが残っているか。「担当の振り直しを開く」`leaving-open`）。名簿の読み込みで最終勤務日が入った人も出る（トーストでこの欄を指す）
 - 状態に「最終 M/D」（`staff-lastday`）
-- 狭い画面（600px 以下）：表（`narrow-staff`）は1人1枚のカード（[pages.md](pages.md) の「狭い画面の表」）。1行目に名前と状態、続けて「勤務日」・「勤務時間」（くわしい列なら「特性」・「〈利用者さん〉に求めること」・「自宅の位置」）、開く・スマホ画面は右下
+- 狭い画面（600px 以下）：表（`narrow-staff`）は1人1枚のカード（[pages.md](pages.md) の「狭い画面の表」）。1行目に名前と状態、続けて「勤務日」・「勤務時間」（くわしい列なら「特性」・「〈利用者さん〉に求めること」・「自宅の位置」）、「詳しく」「今日の画面」は右下（文字のまま）
 
 ### 〈スタッフ〉の画面（`#/staff/:staffId`。`pages/StaffPersonPage`）
 
-- 見出しは印（md）と名前、状態（`person-state`：利用中／休止中・「最終 M/D」（`staff-lastday`）・ふだんの勤務「月火水木金 08:00〜18:00」）、右に「〈名前〉さんの画面で見る」（`to-staff-view`）と一覧へ戻る
+- 見出しは印（md）と名前、状態（`person-state`：利用中／休止中・「最終 M/D」（`staff-lastday`）・ふだんの勤務「月火水木金 08:00〜18:00」）、右に「〈名前〉さんの画面で見る」（`to-staff-view`。`staffViewHref(id)`＝選んでいる日）と一覧へ戻る
 - タブ［予定｜基本情報｜勤務時間｜相性］（相性が切なら「担当」）
 
 #### 予定のタブ
@@ -83,6 +83,7 @@
 ### 〈スタッフ〉のスマホ画面（`#/staff-view/:staffId`。見本・表示だけ）
 
 - `AdminShell` の外（`Guarded`）。`.staff-shell` の上と左右を safe-area で避ける
+- 日付は画面で共通の選んでいる日（`useDay`）。`?date=` で開くとその日を選んで URL から消す（`components/useDateEntry`。日の予定の `?date=` と共通）。名前と日付の横に［‹ 前の日］（`sv-prev`）［次の日 ›］（`sv-next`）と［今日］（`sv-today`。今日のときは出さない）（`sv-day-nav`。`staffViewParts` の `StaffViewDayNav`。PRD D417）。見出しは今日なら「今日の訪問順」、ほかの日は「訪問順」
 - その日の順番（時刻は欠勤を差し引いた `slotsOf`）。休みの訪問は担当でも出さない
 - 各訪問の下に訪問先の決まりごと（`VisitRules`）。初めての訪問先（過去8週にその人が担当していない。`lib/firstVisit`）は名前のすぐ下に「初めて」の印と決まりごと（`visit-first`。PRD D415）
 - 道順のリンク：地図の下に「1日の全行程を開く」（`sv-trip`・`maps-trip`。分けたときは「全行程 1/2を開く」…）、各訪問に `VisitRouteLinks`（前の場所は前の訪問先、1件目は自宅）。全行程の横に未登録の人・自宅・自転車の一言（`sv-trip-skipped`）。公共交通は全行程を出さず「訪問ごとの…を使ってください」（`sv-transit`）

@@ -1,10 +1,11 @@
-// 〈スタッフ〉のスマホ画面の部品（D16。PRD D99・D100。ADR-0018）：1日の全行程のリンクの行と、訪問の1件（移動・時刻・道順のリンク）
-import { Car, Clock } from 'lucide-react';
+// 〈スタッフ〉のスマホ画面の部品（D16。PRD D99・D100・D417。ADR-0018・0083）：日送り、1日の全行程のリンクの行と、訪問の1件（移動・時刻・道順のリンク）
+import { Car, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
 import { MAPS_SR_TAIL, MapsLink, VisitRouteLinks } from '../components/mapsLinks';
+import { WithIcon } from '../components/ui';
 import { VisitRules } from '../components/VisitRules';
 import type { TravelMode } from '../contracts/codes';
 import type { Client, Visit } from '../contracts/documents';
-import { minutesToHhmm } from '../domain/time';
+import { addDays, minutesToHhmm } from '../domain/time';
 import { colorOf, initialOf } from '../lib/colors';
 import { r0 } from '../lib/common';
 import { BICYCLE_NOTE, HOME_LABEL, type TripLink } from '../lib/mapsLink';
@@ -12,6 +13,36 @@ import type { PrevStop } from '../lib/prevStop';
 
 /** 訪問の時刻（移動を入れた時刻なら移動の分も。目安なら travel は null） */
 export type StaffViewTiming = { start: number; end: number; travel: number | null };
+
+/** 日送り：［‹ 前の日］［次の日 ›］と［今日］（今日のときは出さない）。日付は画面で共通の選んでいる日（useDay） */
+export function StaffViewDayNav({
+  date,
+  today,
+  setDate,
+}: {
+  date: string;
+  today: string;
+  setDate: (d: string) => void;
+}) {
+  return (
+    <div className="row sv-day-nav" data-testid="sv-day-nav">
+      <button type="button" className="btn btn-small" onClick={() => setDate(addDays(date, -1))} data-testid="sv-prev">
+        <WithIcon icon={ChevronLeft} size={14}>
+          前の日
+        </WithIcon>
+      </button>
+      <button type="button" className="btn btn-small" onClick={() => setDate(addDays(date, 1))} data-testid="sv-next">
+        次の日
+        <ChevronRight size={14} aria-hidden="true" />
+      </button>
+      {date !== today && (
+        <button type="button" className="btn btn-small" onClick={() => setDate(today)} data-testid="sv-today">
+          今日
+        </button>
+      )}
+    </div>
+  );
+}
 
 /** 1日の全行程のリンクの行（経由地が多ければ分けたリンク）と、入らなかった場所の注記 */
 export function StaffViewTrip({

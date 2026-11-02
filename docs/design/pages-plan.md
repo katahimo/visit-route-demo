@@ -172,7 +172,7 @@
 
 #### `?do=unassigned`
 
-- `?date=` を読んで選び、`?date=`・`?do=` を消す（`usePlanNav` の `useUrlEntry`。巻く日は `pendingNone`）
+- `?date=` を読んで選び、`?date=`・`?do=` を消す（`usePlanNav` の `useUrlEntry`。`?date=` だけのリンクは `components/useDateEntry`＝〈スタッフ〉のスマホ画面と共通。巻く日は `pendingNone`）
 - その日の並びが出たら1回だけ `goToNone`（「入らなかった訪問」の列へ巻く。担当なしが無ければ巻かずに終える。ほかの日へ移ったら忘れる）
 - `?do=` 無しでは巻かない。同じ文書の中で hash を変えても同じ
 

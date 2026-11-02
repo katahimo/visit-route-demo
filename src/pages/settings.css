@@ -440,10 +440,7 @@
   font-weight: 700;
   padding: 0 6px;
 }
-/* 定期パターンの第N週・曜日ごとの時刻（ADR-0013） */
-.month-week-toggle {
-  min-width: 52px;
-}
+/* 定期パターンの曜日ごとの時刻（ADR-0013） */
 .pattern-daytimes {
   display: grid;
   gap: 6px;

@@ -8,6 +8,7 @@ import type { Staff } from '../contracts/documents';
 import type { Item } from '../contracts/rules';
 import { hasLocation } from '../lib/common';
 import { mdText } from '../lib/dateText';
+import { staffViewHref } from '../lib/links';
 import { narrowRole } from '../lib/narrowRoles';
 import { type StaffCol, shiftText, staffNameNote, workDaysText } from '../lib/peopleView';
 import { shouldOpenRow } from '../lib/rowOpen';
@@ -180,6 +181,7 @@ export function StaffRow({
   clientTerm,
   staffItems,
   itemById,
+  today,
   onOpen,
 }: {
   s: Staff;
@@ -189,6 +191,8 @@ export function StaffRow({
   /** 〈スタッフ〉の項目（特性のチップ） */
   staffItems: Item[];
   itemById: Map<string, Item>;
+  /** 今日（「今日の画面」はその日のスマホ画面を開く） */
+  today: string;
   /** その人の画面へ移る */
   onOpen: () => void;
 }) {
@@ -197,7 +201,7 @@ export function StaffRow({
       {...narrowRole.row}
       data-testid="staff-row"
       className="row-open"
-      // 行のどこを押してもその人の画面へ（PRD D308。ボタン・リンク・文字の選択は除く。キーボードは右端の「開く」）
+      // 行のどこを押してもその人の画面へ（PRD D308。ボタン・リンク・文字の選択は除く。キーボードは右端の「詳しく」）
       onClick={(e) => {
         const ok = shouldOpenRow({
           target: e.target as Element,
@@ -223,21 +227,24 @@ export function StaffRow({
       <td {...narrowRole.cell} className="nowrap narrow-act">
         <div className="actions">
           <Link
-            className="icon-btn tone-plain"
+            className="btn btn-small"
             to={`/staff/${encodeURIComponent(s.id)}`}
-            title={`${s.name}を開く`}
-            aria-label={`${s.name}を開く`}
+            aria-label={`詳しく（${s.name}）`}
             data-testid="staff-open"
           >
-            <Eye size={16} strokeWidth={2.2} aria-hidden="true" />
+            <WithIcon icon={Eye} size={14}>
+              詳しく
+            </WithIcon>
           </Link>
           <Link
-            className="icon-btn tone-plain"
-            to={`/staff-view/${s.id}`}
-            title={`${s.name}さんの画面で見る`}
-            aria-label={`${s.name}さんの画面で見る`}
+            className="btn btn-small"
+            to={staffViewHref(s.id, today)}
+            aria-label={`今日の画面（${s.name}）`}
+            data-testid="staff-view-open"
           >
-            <Smartphone size={16} strokeWidth={2.2} aria-hidden="true" />
+            <WithIcon icon={Smartphone} size={14}>
+              今日の画面
+            </WithIcon>
           </Link>
         </div>
       </td>

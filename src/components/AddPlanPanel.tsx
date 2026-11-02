@@ -1,15 +1,72 @@
 import { Check, Plus, X } from 'lucide-react';
-import { toggleWeekday } from '../lib/addPlan';
 import { WEEKDAY_LABELS } from '../lib/common';
-import { EVERY_WEEKS_LABELS } from '../lib/patternText';
+import {
+  isRepeatChoice,
+  repeatChoiceLabel,
+  repeatChoiceOf,
+  repeatChoices,
+  toggleNumber,
+  withRepeatChoice,
+} from '../lib/patternForm';
 import { FieldError, RequiredMark } from './FieldError';
+import { MonthWeekChips } from './MonthWeekChips';
 import { SidePanel, WithIcon } from './ui';
 import { useAddPlan } from './useAddPlan';
 import { COMPACT_QUERY, useMedia } from './useMedia';
 import './addPlan.css';
 import './weekdayToggles.css';
 
-/** 欄（〈利用者さん〉・定期は曜日とくり返し／単発は日付・時刻・所要） */
+/** 定期のくり返し（毎週〜4週ごと・毎月（第N））と第N のチップ（毎月のとき）と開始日（ADR-0083） */
+function RepeatFields({ a }: { a: ReturnType<typeof useAddPlan> }) {
+  const f = a.pform;
+  return (
+    <>
+      <label>
+        くり返し
+        <select
+          value={repeatChoiceOf(f)}
+          onChange={(e) => isRepeatChoice(e.target.value) && a.setPform(withRepeatChoice(f, e.target.value))}
+          data-testid="add-plan-repeat"
+        >
+          {repeatChoices(a.monthlyOn || f.repeat === 'monthly').map((c) => (
+            <option key={c} value={c}>
+              {repeatChoiceLabel(c)}
+            </option>
+          ))}
+        </select>
+      </label>
+      {f.repeat === 'monthly' && (
+        <fieldset className="add-plan-days" data-testid="add-plan-month-weeks" tabIndex={-1} {...a.bad('monthWeeks')}>
+          <legend>
+            第何週
+            <RequiredMark />
+          </legend>
+          <div className="weekday-toggles">
+            <MonthWeekChips weeks={f.monthWeeks} onChange={(monthWeeks) => a.setPform({ ...f, monthWeeks })} />
+          </div>
+          <span className="sub">第5は、その曜日が5回ある月だけ訪問を作ります。</span>
+        </fieldset>
+      )}
+      <label>
+        <span>
+          開始日
+          <RequiredMark />
+        </span>
+        <input
+          type="date"
+          required
+          {...a.bad('from')}
+          min={a.today}
+          value={f.from}
+          onChange={(e) => a.setPform({ ...f, from: e.target.value || f.from })}
+          data-testid="add-plan-from"
+        />
+      </label>
+    </>
+  );
+}
+
+/** 欄（〈利用者さん〉・定期は曜日・くり返し・開始日／単発は日付、と時刻・所要） */
 function AddPlanFields({ a }: { a: ReturnType<typeof useAddPlan> }) {
   return (
     <div className="form-grid">
@@ -46,27 +103,14 @@ function AddPlanFields({ a }: { a: ReturnType<typeof useAddPlan> }) {
                   type="button"
                   className={`weekday-toggle${a.pform.weekdays.includes(i) ? ' is-on' : ''}`}
                   aria-pressed={a.pform.weekdays.includes(i)}
-                  onClick={() => a.setPform({ ...a.pform, weekdays: toggleWeekday(a.pform.weekdays, i) })}
+                  onClick={() => a.setPform({ ...a.pform, weekdays: toggleNumber(a.pform.weekdays, i) })}
                 >
                   {w}
                 </button>
               ))}
             </div>
           </fieldset>
-          <label>
-            くり返し
-            <select
-              value={a.pform.everyWeeks}
-              onChange={(e) => a.setPform({ ...a.pform, everyWeeks: Number(e.target.value) })}
-              data-testid="add-plan-repeat"
-            >
-              {[1, 2, 3, 4].map((n) => (
-                <option key={n} value={n}>
-                  {EVERY_WEEKS_LABELS[n]}
-                </option>
-              ))}
-            </select>
-          </label>
+          <RepeatFields a={a} />
         </>
       ) : (
         <label>
@@ -121,7 +165,7 @@ function AddPlanFields({ a }: { a: ReturnType<typeof useAddPlan> }) {
 
 /**
  * 「予定を入れる」の引き出し（エキスパート機能が切のとき、月・週の主ボタン。PRD D402）：
- * 〈利用者さん〉を選び、定期は 曜日・くり返し・時刻・所要（〈利用者さん〉の繰り返しを足す）、単発は 日付・時刻・所要（その日の訪問を足す）を入れて「入れる」。
+ * 〈利用者さん〉を選び、定期は 曜日・くり返し（毎月なら第N）・開始日・時刻・所要（〈利用者さん〉の繰り返しを足す）、単発は 日付・時刻・所要（その日の訪問を足す）を入れて「入れる」。
  * 入れたら担当なしの分は自動で組む（ADR-0072）。入れ方は繰り返しを使うか（機能 patterns）で決まる。状態と保存は useAddPlan
  */
 export function AddPlanPanel({ onClose }: { onClose: () => void }) {

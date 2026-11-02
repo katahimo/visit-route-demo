@@ -110,7 +110,7 @@ export default function StaffPage() {
       {offboardOn && leaving.length > 0 && <StaffLeavingCard leaving={leaving} terms={terms} onOpen={setOffboardFor} />}
 
       <DetailColumnsToggle list="staff" />
-      {/* 狭い画面（600px 以下）では行をカードにする（PRD D220。名前と状態が1行目、ほかは見出し付きの行、開くは右下） */}
+      {/* 狭い画面（600px 以下）では行をカードにする（PRD D220。名前と状態が1行目、ほかは見出し付きの行、「詳しく」「今日の画面」は右下） */}
       <div className="card table-scroll">
         <table {...narrowRole.table} className="people-table narrow-cards" data-testid="narrow-staff">
           <thead {...narrowRole.rowgroup}>
@@ -125,6 +125,7 @@ export default function StaffPage() {
                 clientTerm={terms.client}
                 staffItems={staffItems}
                 itemById={itemById}
+                today={today}
                 onOpen={() => navigate(`/staff/${encodeURIComponent(s.id)}`)}
               />
             ))}

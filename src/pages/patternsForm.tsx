@@ -2,12 +2,22 @@
 // 曜日ごとの時刻・曜日ごとの標準の開始。欄の中身の確かめは lib/patternForm、保存の処理は usePatternsFlow
 import { CalendarClock, Check, Trash2, X } from 'lucide-react';
 import { enterToSave, FieldError } from '../components/FieldError';
+import { MonthWeekChips } from '../components/MonthWeekChips';
 import { WithIcon } from '../components/ui';
 import '../components/weekdayToggles.css';
 import type { Pattern, Staff, VisitType } from '../contracts/documents';
 import { WEEKDAY_LABELS } from '../lib/common';
-import { type PatternForm, sortedWeekdays } from '../lib/patternForm';
-import { EVERY_WEEKS_LABELS, typeOf } from '../lib/patternText';
+import {
+  isRepeatChoice,
+  type PatternForm,
+  repeatChoiceLabel,
+  repeatChoiceOf,
+  repeatChoices,
+  sortedWeekdays,
+  toggleNumber,
+  withRepeatChoice,
+} from '../lib/patternForm';
+import { typeOf } from '../lib/patternText';
 
 /** 欄の値と書き換え（どの区画も同じ） */
 type FieldsProps = { form: PatternForm; setForm: (f: PatternForm) => void };
@@ -26,11 +36,7 @@ function PatternRepeatFields({
   monthlyOffId: string;
   daysLocked: boolean;
 }) {
-  const toggleDay = (w: number) =>
-    setForm({
-      ...form,
-      weekdays: form.weekdays.includes(w) ? form.weekdays.filter((x) => x !== w) : [...form.weekdays, w],
-    });
+  const toggleDay = (w: number) => setForm({ ...form, weekdays: toggleNumber(form.weekdays, w) });
   return (
     <>
       <div className="form-grid">
@@ -61,22 +67,15 @@ function PatternRepeatFields({
           <select
             disabled={!monthlyOn && form.repeat === 'monthly'}
             aria-describedby={!monthlyOn && form.repeat === 'monthly' ? monthlyOffId : undefined}
-            value={form.repeat === 'monthly' ? 'monthly' : String(form.everyWeeks)}
-            onChange={(e) =>
-              setForm(
-                e.target.value === 'monthly'
-                  ? { ...form, repeat: 'monthly' }
-                  : { ...form, repeat: 'weekly', everyWeeks: Number(e.target.value) },
-              )
-            }
+            value={repeatChoiceOf(form)}
+            onChange={(e) => isRepeatChoice(e.target.value) && setForm(withRepeatChoice(form, e.target.value))}
             data-testid="pattern-repeat"
           >
-            {[1, 2, 3, 4].map((n) => (
-              <option key={n} value={n}>
-                {EVERY_WEEKS_LABELS[n]}
+            {repeatChoices(monthlyOn || form.repeat === 'monthly').map((c) => (
+              <option key={c} value={c}>
+                {repeatChoiceLabel(c)}
               </option>
             ))}
-            {(monthlyOn || form.repeat === 'monthly') && <option value="monthly">毎月（第N週）</option>}
           </select>
         </label>
       </div>
@@ -108,26 +107,11 @@ function PatternRepeatFields({
         <div className="stack" style={{ gap: 4 }}>
           <span className="sub">第何週（1つ以上。例：第3・第4の木曜）</span>
           <fieldset className="weekday-toggles" aria-label="第何週" data-testid="pattern-month-weeks">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <button
-                key={n}
-                type="button"
-                className={`weekday-toggle month-week-toggle${form.monthWeeks.includes(n) ? ' is-on' : ''}`}
-                aria-pressed={form.monthWeeks.includes(n)}
-                disabled={!monthlyOn}
-                title={n === 5 ? '第5の曜日がある月だけ' : undefined}
-                onClick={() =>
-                  setForm({
-                    ...form,
-                    monthWeeks: form.monthWeeks.includes(n)
-                      ? form.monthWeeks.filter((x) => x !== n)
-                      : [...form.monthWeeks, n],
-                  })
-                }
-              >
-                第{n}
-              </button>
-            ))}
+            <MonthWeekChips
+              weeks={form.monthWeeks}
+              onChange={(monthWeeks) => setForm({ ...form, monthWeeks })}
+              disabled={!monthlyOn}
+            />
           </fieldset>
           <span className="sub">第5は、その曜日が5回ある月だけ訪問を作ります。</span>
         </div>
