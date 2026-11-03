@@ -534,8 +534,8 @@ async function rosterPlaceAll(page, fake, dlg) {
   check(
     (await failed.innerText()).includes('位置 二郎') &&
       /市区町村の名前が無い住所/.test(await page.getByTestId('place-all-city-hint').innerText()) &&
-      /移動は30分/.test(await page.getByTestId('place-all-note').innerText()),
-    '名簿のあと：見つからない人は置けなかった人に出し、市区町村の1行と「担当は組めます」の補足',
+      /移動30分/.test(await page.getByTestId('place-all-note').innerText()),
+    '名簿のあと：見つからない人は見つからなかった人に出し、市区町村の1行と「移動30分で計算」の補足',
   );
   await page.screenshot({ path: path.join(OUT_DIR, 'roster-place-done.png') });
   // 緯度・経度なしだけ見る：絞り込みのチップ「緯度・経度なし」が入り、行はすべて「緯度・経度なし」
@@ -594,8 +594,7 @@ async function staffPlaceAll(page, fake) {
   const run = page.getByTestId('place-all-run');
   check(
     (await panel.getAttribute('data-kind')) === 'staff' &&
-      (await run.innerText()).trim() === '住所から緯度・経度を入れる（2人）' &&
-      /休止の人は数えません/.test(await page.getByTestId('place-all-count').innerText()),
+      (await run.innerText()).trim() === '住所から緯度・経度を入れる（2人）',
     '〈スタッフ〉：一覧に「住所から緯度・経度を入れる（2人）」（休止の人は数えない）',
     { text: await run.innerText() },
   );

@@ -232,7 +232,7 @@ export async function searchAddress(address: string, opts: LookupOptions = {}): 
 
 /** 失敗を利用者向けの短い文に（what：郵便番号の検索か住所の検索か） */
 export function lookupMessage(reason: LookupFail, what: 'postal' | 'address'): string {
-  const fallback = what === 'postal' ? '住所を手で入れてください' : '地図をクリックして入れてください';
+  const fallback = what === 'postal' ? '住所を手で入れてください' : '地図をクリックして緯度・経度を入れてください';
   switch (reason) {
     case 'invalid':
       return what === 'postal'
@@ -241,7 +241,7 @@ export function lookupMessage(reason: LookupFail, what: 'postal' | 'address'): s
     case 'notFound':
       return what === 'postal'
         ? '見つかりませんでした。郵便番号を確かめてください'
-        : '見つかりませんでした。住所の書き方（都道府県から）を確かめるか、地図をクリックして入れてください';
+        : '見つかりませんでした。住所の書き方（都道府県から）を確かめるか、地図をクリックして緯度・経度を入れてください';
     case 'timeout':
       return `時間内に応答がありませんでした（${GEOCODE_TIMEOUT_MS / 1000}秒）。少し待ってもう一度押すか、${fallback}`;
     case 'network':

@@ -59,7 +59,7 @@ export function ClientScheduleTab({
               onDirty={onPatternsDirty}
               readOnly={narrow}
             />
-            {narrow && <span className="sub">繰り返しを追加・直すのは広い画面でできます。</span>}
+            {narrow && <span className="sub">繰り返しの追加・編集は広い画面でできます。</span>}
           </div>
         )}
         {/* 休みは事実なので、休みの機能を切っても読むだけで出す（入れる・直すは休みのタブ） */}
@@ -92,7 +92,7 @@ export function ClientScheduleTab({
               className="btn btn-small btn-text"
               data-testid="to-leaves"
             >
-              休みを追加・直す
+              休みの追加・編集
             </Link>
           )}
         </div>
