@@ -2,7 +2,7 @@
 // その一覧の人だけを Excel のブックか CSV に書き出し、直したものを読み込む（CSV の文字コードは見分ける）。
 // 全体のブック（すべてのシート）はデータの画面に残す。状態と処理は useRosterCard
 import { FileSpreadsheet, FileText, RotateCcw, Sheet, X } from 'lucide-react';
-import { type ReactNode, useId } from 'react';
+import { useId } from 'react';
 import type { RosterKind } from '../contracts/data';
 import { EXCEL_STALE_TEXT } from '../lib/dataScreen';
 import { reloadPage } from '../lib/reloadPage';
@@ -35,25 +35,23 @@ export function RosterButton({ open, onToggle, controls }: { open: boolean; onTo
 /**
  * 名簿の欄。id は見出しのボタンの aria-controls が指す。閉じても消さずに隠す（読み込みの途中で閉じても、
  * 入ったかの見届け（トースト・控えを戻す）が続くように）。
- * onImported は名簿が入ったと見届けたときに呼ぶ。children は読み込みのすぐ下に出す（〈利用者さん〉一覧の
- * 「位置の無い N人を地図に置く」。PRD D399）
+ * onPlace を渡すと、読み込みの確認に「読み込んだあと、住所から地図の位置を探します」の1文を足し、名簿が入ったと
+ * 見届けたら呼ぶ（位置の無い人を自動でまとめて置き始める。PRD D427。ADR-0094）。郵便番号・住所の検索が切なら渡さない
  */
 export function RosterCard({
   kind,
   id,
   open,
   onClose,
-  onImported,
-  children,
+  onPlace,
 }: {
   kind: RosterKind;
   id: string;
   open: boolean;
   onClose: () => void;
-  onImported?: () => void;
-  children?: ReactNode;
+  onPlace?: () => void;
 }) {
-  const roster = useRosterCard(kind, onImported);
+  const roster = useRosterCard(kind, onPlace);
   const titleId = useId();
   const { term } = roster;
   return (
@@ -83,10 +81,9 @@ export function RosterCard({
         <span id={titleId}>{term}の名簿（Excel・CSV）</span>
       </SectionTitle>
       <Hint ariaLabel="名簿の説明">
-        {`${term}の一覧だけを書き出し・読み込みます。Excel が無いときは CSV を使えます（表計算のアプリやメモ帳で開けます）。列はデータの画面の全体のブックの「${term}」シートと同じで、全体のブックも名簿として読めます。`}
-        {
-          '読み込むと、ID か名前で同じ人を探して直し、いない人は足します。訪問の担当・確定（伝えた内容）・訪問は消えません。CSV の文字コード（UTF-8・Shift_JIS など）は自動で見分けます。'
-        }
+        {roster.empty
+          ? 'テンプレートをダウンロードし、1行に1人ずつ書き足して保存し、そのファイルを読み込みます。'
+          : `${term}の名簿を Excel・CSV で書き出し・読み込みます。読み込むと、同じ人は直し、新しい人は足します。訪問の予定は消えません。`}
       </Hint>
       <div className="row" style={{ flexWrap: 'wrap' }}>
         <button
@@ -96,7 +93,9 @@ export function RosterCard({
           onClick={() => void roster.download('xlsx')}
           data-testid="roster-export-xlsx"
         >
-          <WithIcon icon={FileSpreadsheet}>Excel に書き出す</WithIcon>
+          <WithIcon icon={FileSpreadsheet}>
+            {roster.empty ? 'テンプレートをダウンロード（Excel）' : 'Excel に書き出す'}
+          </WithIcon>
         </button>
         <button
           type="button"
@@ -105,7 +104,7 @@ export function RosterCard({
           onClick={() => void roster.download('csv')}
           data-testid="roster-export-csv"
         >
-          <WithIcon icon={FileText}>CSV に書き出す</WithIcon>
+          <WithIcon icon={FileText}>{roster.empty ? 'テンプレートをダウンロード（CSV）' : 'CSV に書き出す'}</WithIcon>
         </button>
       </div>
       <RosterModeFields roster={roster} />
@@ -128,7 +127,6 @@ export function RosterCard({
           <WithIcon icon={RotateCcw}>画面を読み直す</WithIcon>
         </button>
       )}
-      {children}
     </section>
   );
 }

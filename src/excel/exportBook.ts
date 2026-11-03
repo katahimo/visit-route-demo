@@ -4,6 +4,7 @@ import ExcelJS from 'exceljs';
 import type { DemoData, RosterKind } from '../contracts/data';
 import { nameKey, optionNameError } from '../lib/common';
 import { clientTable, staffTable } from './exportPersonTables';
+import { addRosterGuideSheets } from './exportRosterGuide';
 import {
   makeSheetCtx,
   writeAbsences,
@@ -86,7 +87,7 @@ export function exportProblem(data: DemoData): string | null {
 }
 
 /**
- * 名簿のブック（PRD D103。ADR-0020）：〈利用者さん〉か〈スタッフ〉のシート1枚だけ（全体のブックの同じシートと同じ列・書式）。
+ * 名簿のブック（PRD D103。ADR-0020）：〈利用者さん〉か〈スタッフ〉のシート（全体のブックの同じシートと同じ列・書式）に、「書き方」「記入例」のシートを付ける。
  * シート名は呼び方（personSheetNames）。書き出せないデータ（exportProblem）は全体と同じく止める
  */
 export async function exportRosterWorkbook(data: DemoData, kind: RosterKind): Promise<Blob> {
@@ -95,9 +96,11 @@ export async function exportRosterWorkbook(data: DemoData, kind: RosterKind): Pr
   const names = personSheetNames(data.org.terms);
   const wb = new ExcelJS.Workbook();
   wb.creator = '訪問ルートAI デモ版';
-  if (kind === 'staff') addTable(wb, staffTable(data, names.staff));
   // 〈スタッフ〉のシートが無いので、「いつもの担当」のプルダウンは名前の一覧（長すぎれば付けない）
-  else addTable(wb, clientTable(data, names.client));
+  const table = kind === 'staff' ? staffTable(data, names.staff) : clientTable(data, names.client);
+  // 開いたとき最初に出るのは人のシート。続けて「書き方」「記入例」（読み込みは人のシートだけ）
+  addTable(wb, table);
+  addRosterGuideSheets(wb, data, kind, table);
   const buf = await wb.xlsx.writeBuffer();
   return new Blob([buf as ArrayBuffer], { type: XLSX_MIME });
 }

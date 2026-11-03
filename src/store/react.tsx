@@ -70,10 +70,10 @@ export type DemoStore = {
   dismissBroken(): void;
   /**
    * 最初の2問を出すか（PRD D379〜D381。ADR-0073）：保存データが無く初めて開いたとき（印「all」が無ければ）と、
-   * 設定の「最初の設定をやり直す」（askFirstRun）のあと。答えるまでデータは書かない
+   * データの画面の「始め方を選び直す」（askFirstRun）のあと。答えるまでデータは書かない
    */
   needsFirstRun: boolean;
-  /** 2問が設定の「最初の設定をやり直す」のあとか（true なら画面は「やめる」を出せる。初めて開いたときは false） */
+  /** 2問がデータの画面の「始め方を選び直す」のあとか（true なら画面は「やめる」を出せる。初めて開いたときは false） */
   redoingFirstRun: boolean;
   /** やり直しをやめて、今のデータのまま2問から戻る（やり直しでないときは何もしない） */
   cancelFirstRun(): void;
@@ -82,7 +82,7 @@ export type DemoStore = {
    * やり直し（すでにデータがあったとき）は、先に1世代の控えに残す（「直前の状態に戻す」で戻せる）
    */
   startFirstRun(answer: FirstRunAnswer): void;
-  /** 最初の2問をもう一度出す（設定の「最初の設定をやり直す」。答えるまでは今のデータのまま） */
+  /** 最初の2問をもう一度出す（データの画面の「始め方を選び直す」。答えるまでは今のデータのまま） */
   askFirstRun(): void;
   /** 別のタブの変更で読み直した回数（画面が知らせを出すきっかけ） */
   externalReloads: number;
@@ -311,7 +311,7 @@ function useReplaceActions(st: StoreState) {
   /** 最初の2問の答えでデータを作り直す。やり直し（初めて開いたときでない）なら先にいまのデータを1世代の控えに残す */
   const startFirstRun = useCallback(
     (answer: FirstRunAnswer) => {
-      if (firstRun === 'redo') keepPrevious('最初の設定をやり直す');
+      if (firstRun === 'redo') keepPrevious('始め方を選び直す');
       setSaveError(null);
       swapIn(startWithAnswer(answer));
       replaced();

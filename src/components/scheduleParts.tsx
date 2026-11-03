@@ -64,7 +64,7 @@ export function ScheduleToolbar({
   /** その他 ▾ のあとに置くもの */
   after?: ReactNode;
   className?: string;
-  /** 日の「予定を入れる」（スマホ・出さないときは null） */
+  /** 日の「訪問を1件足す」（スマホ・出さないときは null） */
   add?: AddTool | null;
   /** 入の「担当を組む」の行き先（担当を組むの画面。切は無視する） */
   assignHref?: string | null;

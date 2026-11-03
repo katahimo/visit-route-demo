@@ -11,7 +11,7 @@ import { windowText } from '../domain/scheduleModel';
 
 /** 訪問の一覧の「注意」に出すもの */
 type VisitNotes = {
-  /** 計算に入れていない（訪問先が休止中・位置が未登録など） */
+  /** 計算に入れていない（訪問先が休止中など。位置が未登録の訪問は入れる。ADR-0093） */
   outside: boolean;
   /** 担当なし */
   dropped: boolean;

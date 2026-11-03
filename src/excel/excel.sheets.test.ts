@@ -838,13 +838,13 @@ describe('名簿のブック（PRD D103〜D107。ADR-0020）', () => {
     );
   };
 
-  it('名簿のブックはその人のシート1枚だけで、全体のブックの同じシートと同じ列', async () => {
+  it('名簿のブックは人のシート・書き方・記入例の順で、人のシートは全体のブックの同じシートと同じ列', async () => {
     const d = base();
     const names = personSheetNames(d.org.terms);
     for (const kind of ['client', 'staff'] as const) {
       const wb = new ExcelJS.Workbook();
       await wb.xlsx.load(await (await exportRosterWorkbook(d, kind)).arrayBuffer());
-      expect(wb.worksheets.map((w) => w.name)).toEqual([names[kind]]);
+      expect(wb.worksheets.map((w) => w.name)).toEqual([names[kind], '書き方', '記入例']);
       const full = new ExcelJS.Workbook();
       await full.xlsx.load(await toBuffer(d));
       expect(sheet(wb, names[kind]).getRow(1).values).toEqual(sheet(full, names[kind]).getRow(1).values);

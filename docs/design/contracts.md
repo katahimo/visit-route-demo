@@ -100,7 +100,7 @@ Problem = { date, staff: { id, name, point, slots /* 欠勤・最終勤務日を
   allowed, assignCost, reasons /* [visit][staff]。reasons は点の大きい順 */, waitPerMinute,
   balance: { perVisit, lo, hi, cap /* 必須なら hi+1、ほか null */ } | null, infeasible: { visit, reasons }[], stay? }
 Reason = { ruleId, label, points /* 可否の原因は Infinity */, level? /* 相性だけ 2|1|-1|-2 */ }
-  // ruleId：Rule.id・'travel'・'wait'・'slot'・'time'・'noPlace'・'visitType'・'allowedStaff'・'pin'
+  // ruleId：Rule.id・'travel'・'wait'・'slot'・'time'・'noPlace'（位置が未登録の点。可否にはしない。ADR-0093）・'visitType'・'allowedStaff'・'pin'
 ProblemStay = { staff /* [visit] 元の担当の添字 | null */, start /* [visit] 元の開始 | null */, keep: boolean[], movePoints, minutePoints }
 SolveOptions = { seed, iterations, initial?: Routes }
 SolveResult = { routes, unassigned, score /* evaluate.score と一致 */, seed, iterations, stopped }

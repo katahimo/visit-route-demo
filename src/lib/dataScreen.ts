@@ -8,6 +8,7 @@ import type {
   RosterMode,
   RosterSource,
 } from '../contracts/data';
+import { AUTO_PLACE_NOTE } from './placeAll';
 import type { TidyPreview } from './tidy';
 import { sizeText, tidyMonthLabel } from './tidy';
 
@@ -16,19 +17,18 @@ type KeepState = { kept: boolean; why: string | null };
 
 /**
  * 置き換える確認の本文に添える、1世代の控えの文（PRD D227。残せなければ理由）。
- * 控えは確認で OK になってから残すので、渡すのは見込み（canKeepPrevious）。place は「直前の状態に戻す」のある画面の呼び方
+ * 控えは確認で OK になってから残すので、渡すのは見込み（canKeepPrevious）。「直前の状態に戻す」はデータの画面にある。
+ * back は戻す操作の言い方（名簿なら「読み込む前の状態に戻す」）
  */
-export const keepNote = (k: KeepState, place = 'この画面'): string =>
-  k.kept
-    ? `いまのデータは控えとして1つだけ残し、${place}の「直前の状態に戻す」で戻せます。`
-    : `${k.why ?? '控えを残せません'}。`;
+export const keepNote = (k: KeepState, back = '元に戻す'): string =>
+  k.kept ? `${back}ときは、データの画面の［直前の状態に戻す］を押します。` : `${k.why ?? '控えを残せません'}。`;
 
 /** 操作のあとの知らせに添える文：見込みに反して控えを残せなかったら理由（操作は止めない） */
 export const keptSuffix = (k: KeepState): string => (k.kept ? '' : `（${k.why ?? '控えを残せません'}）`);
 
 /** 画面を開いたあとに新しい版が公開されて、Excel の部品を読めなかったとき */
 export const EXCEL_STALE_TEXT =
-  '新しい版が公開されたため、Excel の部品を読み込めませんでした。「画面を読み直す」を押してから、もう一度お試しください（データはそのままです）';
+  'アプリが新しくなったため、Excel を開けませんでした。「画面を読み直す」を押してから、もう一度試してください（データはそのままです）';
 
 /** 呼び方の入力の判定：2つが同じだと項目の対象・Excel のシートを区別できない（PRD D250） */
 export function termsCheck(
@@ -54,19 +54,30 @@ export function workbookCountsText(
 }
 
 /** 書き出す Excel（全体）のファイル名。英字だけ（呼び方の文字を入れると、Chromium で保存名が「download」になったため） */
-export const excelFileName = (date: string): string => `visit-route-demo-${date}.xlsx`;
+export const excelFileName = (date: string): string => `staff-assign-demo-${date}.xlsx`;
 
-/** 書き出す名簿のファイル名（Excel か CSV。ADR-0068）。英字だけ（excelFileName と同じ理由） */
-export const rosterFileName = (kind: RosterKind, format: RosterSource['format'], date: string): string =>
-  `visit-route-demo-${kind === 'staff' ? 'staff' : 'clients'}-${date}.${format}`;
+/**
+ * 書き出す名簿のファイル名（Excel か CSV。ADR-0068）。英字だけ（excelFileName と同じ理由）。
+ * template は一覧が0人のとき（列名だけのテンプレート）で、日付の代わりに template を付ける
+ */
+export const rosterFileName = (
+  kind: RosterKind,
+  format: RosterSource['format'],
+  date: string,
+  template = false,
+): string => `staff-assign-demo-${kind === 'staff' ? 'staff' : 'clients'}-${template ? 'template' : date}.${format}`;
 
-/** 読んだ名簿のファイルの形の文（確認の本文に添える。CSV なら見分けた文字コード） */
-const rosterSourceText = (s: RosterSource): string =>
-  s.format === 'xlsx' ? 'Excel のブックとして読みました。' : `CSV（文字コード ${s.encoding}）として読みました。`;
+/** 読んだ名簿のファイルの形の文（確認の本文に添える。ほかのソフトの形ならその名前。文字コードは出さない） */
+const rosterSourceText = (s: RosterSource, form: string | null): string =>
+  `${form ? `${form}の形の ` : ''}${s.format === 'xlsx' ? 'Excel' : 'CSV'} ファイルを読みました。`;
 
 /** ほかのソフトの形で読まなかった列の文（確認の本文に出す。ADR-0073・ADR-0075） */
 export const otherFormSkippedText = (l: OtherFormRead): string =>
   l.skippedColumns.length === 0 ? '読まなかった列：なし' : `読まなかった列：${l.skippedColumns.join('・')}`;
+
+/** その一覧（〈利用者さん〉か〈スタッフ〉）が0人か（名簿の書き出しはテンプレートになり、読み込みの確認は戻す話を省く） */
+export const rosterIsEmpty = (d: Pick<DemoData, 'staff' | 'clients'>, kind: RosterKind): boolean =>
+  (kind === 'staff' ? d.staff : d.clients).length === 0;
 
 /** 名簿の読み込みで、足す・直す・終了／休止にする人がいるか */
 export const rosterHasChanges = (r: Pick<RosterImportResult, 'added' | 'updated' | 'retired'>): boolean =>
@@ -75,7 +86,7 @@ export const rosterHasChanges = (r: Pick<RosterImportResult, 'added' | 'updated'
 /** 名簿の読み込み方の名前（確認の題・控えの理由） */
 export const rosterHowText = (mode: RosterMode): string => (mode === 'replace' ? '総入れ替え' : '追加・更新');
 
-/** 名簿の読み込みの確認の本文（気をつけることがあれば先頭に） */
+/** 名簿の読み込みの確認の本文（気をつけることがあれば先頭に。いまの一覧が0人なら、消えない・戻せるの文は出さない） */
 export function rosterConfirmBody(x: {
   warning: string | null;
   fileName: string;
@@ -85,16 +96,20 @@ export function rosterConfirmBody(x: {
   source: RosterSource;
   /** ほかのソフトの形で読んだときの結果（形の名前と読まなかった列を出す。ADR-0073・ADR-0075）。名簿の形は null */
   otherForm?: OtherFormRead | null;
+  /** いまの一覧が0人か（rosterIsEmpty） */
+  empty: boolean;
   keep: KeepState;
+  /** 読み込んだあと、位置の無い人を自動でまとめて置くか（PRD D427。ADR-0094。押す前に分かるように1文を足す） */
+  autoPlace?: boolean;
 }): string {
   return [
     ...(x.warning ? [x.warning, ''] : []),
-    `「${x.fileName}」の${x.term}の名簿を読み込みます（${x.how}）。${rosterSourceText(x.source)}${x.otherForm ? `${x.otherForm.label}の形として読みました。` : ''}`,
+    `「${x.fileName}」の${x.term}の名簿を読み込みます（${x.how}）。${rosterSourceText(x.source, x.otherForm?.label ?? null)}`,
     ...(x.otherForm ? [otherFormSkippedText(x.otherForm)] : []),
     x.summary,
-    '訪問の担当・確定（伝えた内容）・訪問はそのままです。',
-    // 名簿は一覧の画面から読むので、戻す場所はデータの画面
-    keepNote(x.keep, 'データの画面'),
+    // 0人なら消えるもの・戻すものが無いので省く
+    ...(x.empty ? [] : ['予定は消えません。', keepNote(x.keep, '読み込む前の状態に戻す')]),
+    ...(x.autoPlace ? [AUTO_PLACE_NOTE] : []),
   ].join('\n');
 }
 
@@ -156,12 +171,10 @@ export function workbookConfirmBody(x: {
   ];
   if (x.otherOrg) {
     lines.push(
-      `このファイルの事業所名「${x.otherOrg.read}」は、いまの「${x.otherOrg.current}」と違います。別の事業所のデータとして読み込み、いまの確定（伝えた内容）・振り直し・組み方の標準の記録は消します。`,
+      `このファイルの事業所名「${x.otherOrg.read}」は、いまの「${x.otherOrg.current}」と違います。別の事業所のデータとして読み込み、いまの確定した内容などの記録は消します。`,
     );
   } else {
-    lines.push(
-      '確定（伝えた内容）・振り直し・組み方の標準の記録はそのまま残します（Excel と違う所は「未連絡の変更」になります）。',
-    );
+    lines.push('確定した内容などの記録はそのまま残します（Excel と違う所は「未連絡の変更」になります）。');
   }
   lines.push(x.keep);
   return lines.join('\n');

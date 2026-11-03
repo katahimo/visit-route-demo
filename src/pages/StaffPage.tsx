@@ -8,6 +8,9 @@ import { useToast } from '../components/Toast';
 import { PageHeader, WithIcon } from '../components/ui';
 import { useFeature } from '../components/useFeature';
 import { useIntro } from '../components/useIntro';
+import { useNoPlaceRow } from '../components/useNoPlaceRow';
+import { usePlaceAllRun } from '../components/usePlaceAllRun';
+import { useRosterAutoPlace } from '../components/useRosterAutoPlace';
 import { jstDate } from '../domain/time';
 import { byName } from '../lib/common';
 import { narrowRole } from '../lib/narrowRoles';
@@ -15,14 +18,17 @@ import { offboardScope } from '../lib/offboard';
 import { peopleIntro, staffColumns } from '../lib/peopleView';
 import { useDemoData } from '../store';
 import { leavingStaff, OffboardPanel } from './OffboardPanel';
-import { StaffHead, type StaffLeaving, StaffLeavingCard, StaffRow } from './staffList';
+import { PlaceAllPanel } from './PlaceAllPanel';
+import { StaffHead, type StaffLeaving, StaffLeavingCard, StaffNoPlaceChip, StaffRow } from './staffList';
 import './settings.css';
 
 /**
  * 〈スタッフ〉一覧（PoC本体 StaffPage.tsx を写し、招待・メールを外して特性と条件を足した）。
  * 行を押すとその人の画面（`#/staff/:id`。StaffPersonPage）へ、「追加」は新しい人の画面（`#/staff/new`）へ（PRD D308）。
  * 最終勤務日のある人の担当の振り直しの欄（ADR-0015）はここからも開ける（名簿の読み込みで最終勤務日が入った人もここに出る。PRD D209）。
- * 「Excel・CSV」で名簿の欄（書き出し・読み込み。ADR-0068）を開く
+ * 「Excel・CSV」で名簿の欄（書き出し・読み込み。ADR-0068）を開く。自宅の位置の無い人（休止を除く）は、まとめて地図に置く欄・
+ * 絞り込みのチップ「位置なし」・行の「位置なし」（［住所から探す］［地図で置く］）で扱い、名簿が入ったら郵便番号・住所の検索が
+ * 入なら自動でまとめて置き始める（PRD D427。ADR-0094）
  */
 
 export default function StaffPage() {
@@ -41,7 +47,19 @@ export default function StaffPage() {
   /** 担当の振り直しの欄を開いている〈スタッフ〉（PRD D71。null：閉じている） */
   const [offboardFor, setOffboardFor] = useState<string | null>(null);
   const today = jstDate(Date.now());
-  const staff = useMemo(() => [...data.staff].sort(byName), [data.staff]);
+  const navigate = useNavigate();
+  // まとめて地図に置く（自宅。PRD D427）。名簿が入ったあと（自動で始める）・行の［住所から探す］も同じ処理を使う
+  const geocodeOn = useFeature('geocode');
+  const placeRun = usePlaceAllRun('staff');
+  const autoPlace = useRosterAutoPlace({ run: placeRun, geocodeOn, onStart: () => setRosterOpen(false) });
+  /** その人の画面の自宅の節を開く（まとめて置けなかった人の「編集」・行の［地図で置く］） */
+  const openHome = (id: string) => navigate(`/staff/${encodeURIComponent(id)}?tab=basic&edit=home`);
+  const noPlace = useNoPlaceRow({ run: placeRun, geocodeOn, onMap: openHome });
+  /** 絞り込み「位置なし」（画面の状態） */
+  const [onlyNoPlace, setOnlyNoPlace] = useState(false);
+  const noPlaceOnly = { on: onlyNoPlace, toggle: () => setOnlyNoPlace((v) => !v) };
+  const allStaff = useMemo(() => [...data.staff].sort(byName), [data.staff]);
+  const staff = onlyNoPlace ? allStaff.filter((s) => noPlace.missing.has(s.id)) : allStaff;
   /** 最終勤務日のある人と、振り直しが残っているもの（〈利用者さん〉の人数・訪問の件数） */
   const leaving = useMemo(
     (): StaffLeaving[] =>
@@ -54,7 +72,6 @@ export default function StaffPage() {
   const staffItems = data.items.filter((i) => i.target === 'staff');
   const itemById = new Map(data.items.map((i) => [i.id, i]));
   // ?id= で開いたら（古いリンク・ブックマーク）、その人の画面（`#/staff/:id`）へ移る（PRD D308。いない人なら URL から消すだけ）
-  const navigate = useNavigate();
   // いない人の画面（`/staff/:id`）から移ってきたときは知らせる（state.missing。1回だけ）
   const toastMissing = useToast();
   const location = useLocation();
@@ -105,9 +122,27 @@ export default function StaffPage() {
         }
       />
 
-      {excelOn && <RosterCard kind="staff" id={rosterId} open={rosterOpen} onClose={() => setRosterOpen(false)} />}
+      {excelOn && (
+        <RosterCard
+          kind="staff"
+          id={rosterId}
+          open={rosterOpen}
+          onClose={() => setRosterOpen(false)}
+          onPlace={autoPlace.onPlace}
+        />
+      )}
 
       {offboardOn && leaving.length > 0 && <StaffLeavingCard leaving={leaving} terms={terms} onOpen={setOffboardFor} />}
+
+      <PlaceAllPanel
+        model={placeRun}
+        geocodeOn={geocodeOn}
+        ref={autoPlace.panelRef}
+        onEdit={openHome}
+        only={noPlaceOnly}
+      />
+
+      <StaffNoPlaceChip only={noPlaceOnly} count={noPlace.missing.size} />
 
       <DetailColumnsToggle list="staff" />
       {/* 狭い画面（600px 以下）では行をカードにする（PRD D220。名前と状態が1行目、ほかは見出し付きの行、「詳しく」「今日の画面」は右下） */}
@@ -127,6 +162,7 @@ export default function StaffPage() {
                 itemById={itemById}
                 today={today}
                 onOpen={() => navigate(`/staff/${encodeURIComponent(s.id)}`)}
+                noPlace={noPlace}
               />
             ))}
           </tbody>

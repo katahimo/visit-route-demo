@@ -137,6 +137,14 @@ function pick<T>(ctx: RosterCtx, r: Row, h: string, read: () => T, keep: T): T {
 }
 
 /**
+ * 新しい人の空のセルは、画面で足すときと同じ既定値（keep）にする（テンプレートに名前だけ書いて読めるように。ADR-0092）。
+ * 今いる人の空のセルは今までどおり read に任せる（空にできない列はエラー）
+ */
+function pickNew<T>(ctx: RosterCtx, r: Row, h: string, isNew: boolean, read: () => T, keep: T): T {
+  return isNew && r.text(h) === '' ? keep : pick(ctx, r, h, read, keep);
+}
+
+/**
  * 名簿のシートを開き、名前の列と項目の列を確かめる（項目の列は今のデータの項目と照らす。知らない項目の列は止める。無い列は今のまま）。
  * 読めなければ ImportError
  */
@@ -228,10 +236,12 @@ export function readStaffRows(ctx: RosterCtx, rows: Row[], match: (r: Row) => Ma
   for (const r of rows) {
     const m = match(r);
     const cur = m.curId === undefined ? undefined : curOf.get(m.curId);
-    const travelMode = pick(
+    const isNew = cur === undefined;
+    const travelMode = pickNew(
       ctx,
       r,
       C.travelMode,
+      isNew,
       () => {
         const t = r.required(C.travelMode);
         const v = t === null ? null : lookup(travelModeLabels, t);
@@ -241,10 +251,11 @@ export function readStaffRows(ctx: RosterCtx, rows: Row[], match: (r: Row) => Ma
       },
       cur?.travelMode ?? 'DRIVE',
     );
-    const workDays = pick(
+    const workDays = pickNew(
       ctx,
       r,
       C.workDays,
+      isNew,
       () => {
         const v = parseWorkDays(r.text(C.workDays));
         if (v === null) r.err(C.workDays, '曜日は「月火水木金」のように書いてください');
@@ -252,8 +263,15 @@ export function readStaffRows(ctx: RosterCtx, rows: Row[], match: (r: Row) => Ma
       },
       cur?.workDays ?? [1, 2, 3, 4, 5],
     );
-    const shiftStart = pick(ctx, r, C.shiftStart, () => r.time(C.shiftStart) ?? '09:00', cur?.shiftStart ?? '09:00');
-    const shiftEnd = pick(ctx, r, C.shiftEnd, () => r.time(C.shiftEnd) ?? '18:00', cur?.shiftEnd ?? '18:00');
+    const shiftStart = pickNew(
+      ctx,
+      r,
+      C.shiftStart,
+      isNew,
+      () => r.time(C.shiftStart) ?? '09:00',
+      cur?.shiftStart ?? '09:00',
+    );
+    const shiftEnd = pickNew(ctx, r, C.shiftEnd, isNew, () => r.time(C.shiftEnd) ?? '18:00', cur?.shiftEnd ?? '18:00');
     // 新しい人の「利用中」が空なら利用中にする（名簿だけ。全体の読み込みは空＝休止のまま）
     const active = pick(
       ctx,
@@ -344,10 +362,11 @@ export function readClientRows(ctx: RosterCtx, rows: Row[], match: (r: Row) => M
   for (const r of rows) {
     const m = match(r);
     const cur = m.curId === undefined ? undefined : curOf.get(m.curId);
-    const color = pick(
+    const color = pickNew(
       ctx,
       r,
       C.color,
+      cur === undefined,
       () => {
         const v = r.num(C.color, { int: true, min: 1, max: 8, required: true });
         return typeof v === 'number' ? v - 1 : 0;
@@ -355,7 +374,7 @@ export function readClientRows(ctx: RosterCtx, rows: Row[], match: (r: Row) => M
       cur?.color ?? (base.clients.length + added) % 8,
     );
     if (!cur) added++;
-    const active = pick(ctx, r, C.active, () => r.yes(C.active), cur?.active ?? true);
+    const active = pickNew(ctx, r, C.active, cur === undefined, () => r.yes(C.active), cur?.active ?? true);
     const tentative = pick(ctx, r, CLIENT_TENTATIVE_COL, () => r.yes(CLIENT_TENTATIVE_COL), cur?.tentative ?? false);
     const stage = readStage(ctx, r, cur, { active, tentative });
     const place = {

@@ -15,14 +15,18 @@ describe('startGuideSteps（PRD D381：3段の登録の案内）', () => {
   it('①〈利用者さん〉②〈スタッフ〉③予定（呼び名は terms から引く）', () => {
     const s = startGuideSteps(terms);
     expect(s).toHaveLength(3);
-    expect(s.map((x) => x.title)).toEqual(['① 利用者さんを入れる', '② スタッフを入れる', '③ 予定を入れる']);
-    expect(startGuideSteps({ client: 'お客様', staff: 'シッター' })[0]?.title).toBe('① お客様を入れる');
+    expect(s.map((x) => x.title)).toEqual([
+      '① 利用者さんの名簿を読み込む',
+      '② スタッフの名簿を読み込む',
+      '③ 予定を登録する',
+    ]);
+    expect(startGuideSteps({ client: 'お客様', staff: 'シッター' })[0]?.title).toBe('① お客様の名簿を読み込む');
   });
 
-  it('①②は名簿の読み込みと1人ずつの追加の行き先を持ち、③は予定の段', () => {
+  it('①②は名簿の読み込みの段（〈利用者さん〉・〈スタッフ〉）、③は予定の段', () => {
     const [a, b, c] = startGuideSteps(terms);
-    expect(a).toMatchObject({ kind: 'roster', person: 'client', addTo: '/clients/new' });
-    expect(b).toMatchObject({ kind: 'roster', person: 'staff', addTo: '/staff/new' });
+    expect(a).toMatchObject({ kind: 'roster', person: 'client' });
+    expect(b).toMatchObject({ kind: 'roster', person: 'staff' });
     expect(c?.kind).toBe('plan');
   });
 });

@@ -1,7 +1,9 @@
 // 〈スタッフ〉一覧の部品（PRD D71・D220・D308。ADR-0015）：最終勤務日のある人の枠と、一覧の1行（狭い画面ではカード）
 import { CalendarX, Eye, MapPin, Smartphone, UserRoundCog } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { ChipButton } from '../components/ClientFilter';
 import { CondChips, TraitChips } from '../components/conditions';
+import { NoPlaceCell, type NoPlaceRow } from '../components/NoPlaceActions';
 import { StaffMark } from '../components/StaffMark';
 import { WithIcon } from '../components/ui';
 import type { Staff } from '../contracts/documents';
@@ -94,6 +96,7 @@ function StaffCell({
   clientTerm,
   staffItems,
   itemById,
+  noPlace,
 }: {
   col: StaffCol;
   cols: readonly StaffCol[];
@@ -101,6 +104,7 @@ function StaffCell({
   clientTerm: string;
   staffItems: Item[];
   itemById: Map<string, Item>;
+  noPlace: NoPlaceRow;
 }) {
   switch (col) {
     case 'name':
@@ -112,6 +116,8 @@ function StaffCell({
             {/* 状態の列を出さないときは、例外の休止中だけ名前のそばに残す */}
             {staffNameNote(s, cols) && <span className="chip">{staffNameNote(s, cols)}</span>}
           </span>
+          {/* 自宅の位置の無い人（休止を除く）は「位置なし」と［住所から探す］［地図で置く］（PRD D427） */}
+          <NoPlaceCell id={s.id} name={s.name} row={noPlace} />
         </td>
       );
     case 'days':
@@ -183,6 +189,7 @@ export function StaffRow({
   itemById,
   today,
   onOpen,
+  noPlace,
 }: {
   s: Staff;
   /** 出す列（名前・勤務日・勤務時間の3列と、くわしい列。lib/peopleView） */
@@ -195,6 +202,8 @@ export function StaffRow({
   today: string;
   /** その人の画面へ移る */
   onOpen: () => void;
+  /** 自宅の位置の無い人の行の印と操作（PRD D427） */
+  noPlace: NoPlaceRow;
 }) {
   return (
     <tr
@@ -222,6 +231,7 @@ export function StaffRow({
           clientTerm={clientTerm}
           staffItems={staffItems}
           itemById={itemById}
+          noPlace={noPlace}
         />
       ))}
       <td {...narrowRole.cell} className="nowrap narrow-act">
@@ -249,5 +259,26 @@ export function StaffRow({
         </div>
       </td>
     </tr>
+  );
+}
+
+/** 一覧の絞り込みのチップ「位置なし」（自宅の位置の無い人だけ。PRD D427）。位置の無い人がいないときは、押していなければ出さない */
+export function StaffNoPlaceChip({ only, count }: { only: { on: boolean; toggle: () => void }; count: number }) {
+  if (count === 0 && !only.on) return null;
+  return (
+    <fieldset className="pick-chips client-filter-row" data-testid="staff-filter-chips">
+      <legend className="pick-chips-legend">絞り込み</legend>
+      <ChipButton
+        on={only.on}
+        empty={false}
+        blocked={false}
+        title="自宅の地図の位置が未登録の人（休止を除く）"
+        onClick={only.toggle}
+        testId="staff-filter-chip"
+        data={{ 'data-chip': 'noPlace' }}
+        label="位置なし"
+        count={count}
+      />
+    </fieldset>
   );
 }

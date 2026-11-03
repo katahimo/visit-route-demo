@@ -23,11 +23,11 @@ export function oneOffVisitsIn(data: Pick<DemoData, 'visits' | 'clients'>, from:
     );
 }
 
-/** 書き出しのファイル名（visit-route-demo-visits-2026-11.csv） */
-export const planCsvFileName = (ym: string): string => `visit-route-demo-visits-${ym}.csv`;
+/** 書き出しのファイル名（staff-assign-demo-visits-2026-11.csv） */
+export const planCsvFileName = (ym: string): string => `staff-assign-demo-visits-${ym}.csv`;
 
 /** テンプレートのファイル名 */
-export const PLAN_CSV_TEMPLATE_NAME = 'visit-route-demo-visits-template.csv';
+export const PLAN_CSV_TEMPLATE_NAME = 'staff-assign-demo-visits-template.csv';
 
 /** 書き出しのボタンの文（「11月の単発の訪問を書き出す（3件）」） */
 export const planCsvExportLabel = (ym: string, count: number): string =>

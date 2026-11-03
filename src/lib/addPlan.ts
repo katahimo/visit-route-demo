@@ -1,4 +1,4 @@
-// 「予定を入れる」（エキスパート機能が切のとき、月・週の主ボタン。PRD D402。ADR-0073 第4段）の決まり：
+// 月・週の主ボタン（定期の予定を入れる／予約を入れる。エキスパート機能が切のとき。PRD D402。ADR-0073 第4段）の決まり：
 // 入れ方（定期＝〈利用者さん〉の繰り返しを足す／単発＝その日の訪問を足す）と、欄の初めの値。
 // 入力の確かめと保存は今ある仕組み（繰り返しは parsePatternForm、訪問は applyVisitEdit）で、ここは何を聞くかだけを決める。データは書き換えない
 import type { DemoData } from '../contracts/data';
@@ -14,6 +14,10 @@ export type AddPlanKind = 'recurring' | 'oneOff';
 
 /** 繰り返しを使う（定期）なら定期、使わない（単発）なら単発（最初の2問の答えで決まる機能の入り切り。lib/startGuide と同じ見分け方） */
 export const addPlanKind = (features: Features): AddPlanKind => (isOn(features, 'patterns') ? 'recurring' : 'oneOff');
+
+/** 月・週の主ボタンと引き出しの見出し：定期（繰り返しを使う）は「定期の予定を入れる」、単発は「予約を入れる」 */
+export const planAddLabel = (features: Features): string =>
+  addPlanKind(features) === 'recurring' ? '定期の予定を入れる' : '予約を入れる';
 
 /** 選べる〈利用者さん〉（利用中の人） */
 export const addPlanClients = (d: Pick<DemoData, 'clients'>) => d.clients.filter((c) => c.active);

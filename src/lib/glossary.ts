@@ -79,7 +79,7 @@ export const GLOSSARY: Record<GlossaryKey, GlossaryEntry> = {
   },
   backup: {
     label: '控え（バックアップ）',
-    text: 'データ一式を1つのファイル（JSON）に書き出したものです。読み込むと、そのときの状態に戻せます。',
+    text: '全部のデータを1つのファイルに書き出したものです。読み込むと、そのときの状態に戻せます。',
   },
   terms: {
     label: '画面での呼び方',

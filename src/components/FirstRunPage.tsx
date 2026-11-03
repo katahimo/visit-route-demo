@@ -1,7 +1,6 @@
 import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  FIRST_RUN_BOOKING_CHOICES,
   FIRST_RUN_CANCEL,
   FIRST_RUN_NOTE,
   FIRST_RUN_Q1,
@@ -9,17 +8,18 @@ import {
   FIRST_RUN_START_CHOICES,
   FIRST_RUN_SUBMIT,
   FIRST_RUN_TITLE,
+  FIRST_RUN_USE_CHOICES,
   type FirstRunAnswer,
-  type FirstRunBooking,
   type FirstRunChoice,
   type FirstRunStart,
+  type FirstRunUse,
   firstRunLanding,
 } from '../lib/firstRun';
 import { useDemoData } from '../store';
 import './firstRun.css';
 
 /**
- * 最初の2問の門（PRD D379〜D381。ADR-0073）：保存データが無く初めて開いたとき・設定の「最初の設定をやり直す」のあとは、
+ * 最初の2問の門（PRD D379〜D381。ADR-0073）：保存データが無く初めて開いたとき・データの画面の「始め方を選び直す」のあとは、
  * 本体の画面の代わりに2問の画面を出す。答えると store がデータを作って書き、最初の画面（デモ＝予定の週／月、
  * 自分のデータ＝登録の案内）へ移る。ルーターの中で使う
  */
@@ -28,13 +28,13 @@ export function FirstRunGate({ children }: { children: ReactNode }) {
   return needsFirstRun ? <FirstRunPage /> : children;
 }
 
-/** 1画面に2問と主ボタン「はじめる」（主ボタンは1つ）。選び直しは矢印（ネイティブのラジオ） */
+/** 1画面に2問（問2は使い方＝ひな形の4つ。ADR-0092）と主ボタン「はじめる」（主ボタンは1つ）。選び直しは矢印（ネイティブのラジオ） */
 function FirstRunPage() {
   const { startFirstRun, redoingFirstRun, cancelFirstRun } = useDemoData();
   const navigate = useNavigate();
-  // 初めに選んでおく：デモで試す・定期（今までの初期データと同じ。あとから設定でやり直せる）
+  // 初めに選んでおく：デモで試す・定期の訪問（基本）（今までの初期データと同じ。あとからデータの画面で選び直せる）
   const [start, setStart] = useState<FirstRunStart>('demo');
-  const [booking, setBooking] = useState<FirstRunBooking>('regular');
+  const [kind, setKind] = useState<FirstRunUse>('basic');
   const headingRef = useRef<HTMLHeadingElement>(null);
   const titleId = useId();
   useEffect(() => {
@@ -49,7 +49,7 @@ function FirstRunPage() {
     if (answer && landing === pathname) startFirstRun(answer);
   }, [answer, landing, pathname, startFirstRun]);
   const submit = () => {
-    const a: FirstRunAnswer = { start, booking };
+    const a: FirstRunAnswer = { start, use: kind };
     setAnswer(a);
     navigate(firstRunLanding(a), { replace: true });
   };
@@ -73,13 +73,7 @@ function FirstRunPage() {
           onPick={setStart}
           testKey="start"
         />
-        <ChoiceGroup
-          title={FIRST_RUN_Q2}
-          choices={FIRST_RUN_BOOKING_CHOICES}
-          value={booking}
-          onPick={setBooking}
-          testKey="booking"
-        />
+        <ChoiceGroup title={FIRST_RUN_Q2} choices={FIRST_RUN_USE_CHOICES} value={kind} onPick={setKind} testKey="use" />
         <p className="first-run-note">{FIRST_RUN_NOTE}</p>
         <div className="first-run-actions">
           {/* やり直しのときだけ：今のデータのまま戻る（従のボタン。主ボタンは「はじめる」1つ） */}

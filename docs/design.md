@@ -115,7 +115,7 @@ flowchart LR
   patterns -->|日付・曜日| domain
   matching -->|休みの訪問を外す（leaveOn）| domain
   geocode["lib/geocode・lib/placeAll（外部の検索。ADR-0016）"]
-  pages -->|ボタンを押したときだけ郵便番号・住所を探させる| geocode
+  pages -->|ボタンを押したとき（名簿の読み込みの確認を含む）だけ郵便番号・住所を探させる| geocode
   mail["lib/mail・lib/mailto（メールの件名・本文・mailto。ADR-0017）"]
   pages -->|担当ごとの件名・本文と mailto の URL を作らせる| mail
   mail -->|その日の担当（訪問の担当）と確定したか| monthPrint["lib/monthPrint（printDay）"]
@@ -164,7 +164,7 @@ flowchart LR
   - 訪問：無効な `typeId`・`pattern` は null（訪問は残す）。取り消していない訪問の `cancelKind` は null。いない・休止中の担当は null（ピンも外す）。担当の無い訪問のピンは外す
   - `allowedStaffIds`：いない・休止中の人と重なりを除く（空になれば限らない）。active・tentative を段階に合わせる（`stageFlags`）
 - 最初の2問を出さない印（PRD D276・D379）：`store/start.ts` の `startsWithAll(getStorage)`：`vrdemo:features:start` が `all` なら真（保存データが無いとき、2問を出さず今の初期データ＋すべて入の `{}` で始める）、ほか（無い・読めない）は偽。読むのは保存データが無いときだけ。画面からは書かない（e2e の `scripts/lib/startFeatures.cjs` と、全機能を見せるデモの前準備）
-- 最初の2問（PRD D379〜D381）：内部の state `firstRun`（`'first'`＝初めて開いたとき・`'redo'`＝設定からのやり直し・`null`＝出さない）のうち `null` 以外のあいだ、公開の `useDemoData().needsFirstRun: boolean` が真になり、画面は本体の代わりに2問の画面を出す（`components/FirstRunPage` の `FirstRunGate`）。`startFirstRun(answer)` は、やり直し（`redo`）なら先に `keepPrevious('最初の設定をやり直す')` で1世代の控えを残し、`startWithAnswer` で作って書き、`replace` と同じに履歴を捨てて `replacedCount` を増やす（元に戻す Ctrl+Z の対象外）。`askFirstRun()` は2問をもう一度出すだけ（答えるまで今のデータのまま）。`redoingFirstRun`（`firstRun === 'redo'`）のときだけ画面は従のボタン「やめる」を出し、`cancelFirstRun()` で今のデータのまま戻る。`first` のあいだは仮の空データを保存しない（保存の effect が `firstRun === 'first'` で書かない。StrictMode の2回実行でも）
+- 最初の2問（PRD D379〜D381）：内部の state `firstRun`（`'first'`＝初めて開いたとき・`'redo'`＝データの画面の「始め方を選び直す」のあと・`null`＝出さない）のうち `null` 以外のあいだ、公開の `useDemoData().needsFirstRun: boolean` が真になり、画面は本体の代わりに2問の画面を出す（`components/FirstRunPage` の `FirstRunGate`）。`startFirstRun(answer)` は、やり直し（`redo`）なら先に `keepPrevious('始め方を選び直す')` で1世代の控えを残し、`startWithAnswer` で作って書き、`replace` と同じに履歴を捨てて `replacedCount` を増やす（元に戻す Ctrl+Z の対象外）。`askFirstRun()` は2問をもう一度出すだけ（答えるまで今のデータのまま）。`redoingFirstRun`（`firstRun === 'redo'`）のときだけ画面は従のボタン「やめる」を出し、`cancelFirstRun()` で今のデータのまま戻る。`first` のあいだは仮の空データを保存しない（保存の effect が `firstRun === 'first'` で書かない。StrictMode の2回実行でも）
 - デモを作った直後の1回の組み（PRD D409。ADR-0079）：`persist` の `startWithAnswer`・`reset` は、`store/start.ts` の `arrangesAfterStart({ kind: 'answer', start } | { kind: 'reset' })`（「デモで試す」で始めた・初期状態に戻したときだけ真。「自分のデータで始める」・印 `all` のときは偽）が真なら、組む印を sessionStorage（`ARRANGE_PENDING_KEY`。`markArrangeAfterStart`）に書く（偽なら消す）。store は起動時と作り直した直後にその印を読み（`arrangePending`）、公開の `startArrange`（印のオブジェクト）を置く。例外の画面の「データを初期状態に戻す」（`main.tsx` の `reset` → 読み直し）からでも、読み直したあとの起動で組む。`components/autoArrangeHost` が差し替えで前の計算を捨てたあと、描いた新しいデータで `requestBandArrange`（要対応の帯の［要対応を組む］と同じ依頼・知らせ・［元に戻す］）を1回出し、`takeStartArrange` で印を消す（sessionStorage の印も `clearArrangePending` で消す）。開発中の StrictMode の付け直しでは、後片付けで「出した」を忘れ、つなぎ直したあとに依頼し直す。開いただけ・ふつうの読み直しでは組まない
 - 1世代の控え（PRD D227）：`keepPrevious(data, reason, at)` は置き換える前のデータを `vrdemo:data:prev` に書く（次に残すと上書き）。書けなければ前の世代を消して1回だけ試し直し、それでもだめなら残さず `{ kept: false, why: '控えを残せません：容量不足' }`（操作は止めない）。`cancel()` で前の世代に戻す（確認を取り消したとき）。画面は確認で OK になってから残す（確認の本文は見込みの `canKeepPrevious()`：保存が使えない・最後の保存が容量超過なら「容量不足」）。`previousInfo()`・`readPrevious()`（`importJson` を通す）・`samePreviousInfo(a, b)`（同じなら react の state を替えない）。`swapPrevious(now)` は控えを読み、いまのデータを「直前の状態に戻す」として控えてから控えのデータを返す（もう一度戻せる）。いまのデータを控えに残せなければ戻さず（控えは元のまま）「いまのデータを控えに残せないため戻せません：容量不足」。react の `restorePrevious()` はこれを使う。本体の保存（`writeNow`）が容量超過なら控えを捨ててもう1回書き（いまのデータが先）、捨てたら `previousDrops` を1つ増やす（画面がトースト「容量が足りないため、直前の状態の控えを消しました」）
 - 最後に書き出した日・控えの知らせ：`store/backup.ts` の `backupMemory`（`lastExport()`・`markExported(kind, date)`・`lastReminded()`・`markReminded(date)`。`createBackupMemory(getStorage)`）。DemoData の外。知らせるかは `lib/backupReminder` の `shouldRemindBackup`（純粋関数）
@@ -226,6 +226,7 @@ flowchart LR
   - 種類（`visitType`）：種類の `requirements` を満たさない条件ごとに「種類（〈名前〉）：〈条件の文〉 ✗」。満たせば ✓・0点。いない種類は無視
   - 担当を限る（`allowedStaff`）：`allowedStaffIds` のうち問題にいる人が1人以上いればその人たちだけ可。理由「担当を限る：山田、佐藤 ✗／✓」（問題にいる限った人を並べた順）
   - 種類と担当を限るは常に必須で、条件の重み・プリセット・達成の件数に関係しない
+- 移動の行列（`travelMatrices`）：位置が未登録の地点への移動は `UNPLACED_TRAVEL_MIN`（30分）・0 m とみる（ADR-0093）。ただし地点の鍵（訪問は `'c:'+clientId`、自宅は `'s:'+staffId`）が同じ地点どうしは位置が無くても 0 分（同じ〈利用者さん〉の続けた訪問を同じ担当が持てる）
 - 問題に入れない訪問：取り消し、休み（`leaveOn`）の〈利用者さん〉の訪問。AI で組む（担当を組む・組み方の標準・比較）・空き状況・振り直しはどれも compile を通る
 - いつもの担当（`continuity`）：訪問の `pattern` の繰り返しの `usualStaffId`（単発の訪問は無し）
 - 機能の入り切り：`compat` が切なら相性（値・条件・×）を、`allowedStaff` が切なら `allowedStaffIds` を読まない。切ったときの問題はデータが空のときと同じ。休み・欠勤・希望休・最終勤務日・繰り返しは常に読む
@@ -342,7 +343,7 @@ flowchart LR
 ### excel（Excel との変換。ADR-0006・ADR-0020・ADR-0068）
 - 責務：`DemoData` ⇔ Excel のブック（§5「Excel のブックの形」）と、〈利用者さん〉・〈スタッフ〉の名簿（Excel・CSV）の変換。書き出しは見出し・列幅・プルダウン付き。読み込みは名前を ID に直し、シート・行・列付きの日本語のエラーを返す。データは書き換えない
 - 持つデータ（持ち主）：なし
-- 提供するAPI：`exportWorkbook(data)`・`importWorkbook(buf, base)`（`base` からは版・基準日・機能の入り切り・伝えた内容（`snapshots`）・振り直しの情報（`reassigns`）など Excel に無いものだけ。最後に `migrate`。画面が件数を見せて `replace`）、`exportRosterWorkbook(data, kind)`（1シート。シート名 `personSheetNames`）・`exportRosterCsv(data, kind)`（同じ列の CSV。BOM 付きの UTF-8。同期）・`importRoster(buf, base, kind, mode)`（.xlsx か CSV を中身で見分け、CSV は文字コードを見分けて名簿のシート1枚のブックに写してから同じ読み方。結果の `source` に形と文字コード。列名がほかのソフトの形（`excel/rosterForms` の `ROSTER_FORMS`：顧客台帳・予約システムのスタッフ・顧客・職員台帳。PRD D386・D387・D396・D397・D421）なら、その形の `toRoster` で名簿の列に写してから同じ読み方。形が空なら今の値のままにする列（`keepBlank`）はセルが空なら今の値を残す（`rosterRows` の `pick`）、誤りの文は形の `errorMessage` でその形の列名に直す。結果の `otherForm` に形の名前 `label` と読まなかった列 `skippedColumns`。名簿の形・.xlsx は `otherForm: null`。退職日で休止を決めるため `importRoster` の5つ目の引数に今日。形には今日と今の項目（`RosterFormEnv`。職員台帳の資格を項目「資格」に写す）を渡す）・`importBookings(buf, base)`（予約の CSV → 単発の訪問。`bookingForms` の `BOOKING_FORMS` で形を見分け、どの形も `Booking` に写してから共通で〈利用者さん〉と名前で突き合わせ、ID `bk-〈形のID〉-〈予約番号〉` の訪問を足す・直す（形が `Booking.visitId` を持てばその ID。このアプリの形 `visitCsv` は訪問ID の列。繰り返しの回は直さない）。これだけ同期。PRD D408）・`exportVisitsCsv(data, from, to)`・`visitCsvTemplate()`（予定の CSV。単発の訪問・列名の行だけ。BOM 付きの UTF-8。同期。PRD D423）・`rosterSummary`・`rosterWarning`（総入れ替えで今の人の半分を超えて外すときの注意。無ければ null）。どれも非同期
+- 提供するAPI：`exportWorkbook(data)`・`importWorkbook(buf, base)`（`base` からは版・基準日・機能の入り切り・伝えた内容（`snapshots`）・振り直しの情報（`reassigns`）など Excel に無いものだけ。最後に `migrate`。画面が件数を見せて `replace`）、`exportRosterWorkbook(data, kind)`（人のシート1枚（シート名 `personSheetNames`）に、読み込まない「書き方」（手順と列ごとの説明・例・空のとき。新しい人で既定値が入る列は「新しい人で空なら …」。今いる人の行の空は今までどおり）「記入例」（同じ列に架空の2〜3行）を続ける。`excel/exportRosterGuide`。人がいても付く）・`exportRosterCsv(data, kind)`（同じ列の CSV。BOM 付きの UTF-8。同期）・`importRoster(buf, base, kind, mode)`（.xlsx か CSV を中身で見分け、CSV は文字コードを見分けて名簿のシート1枚のブックに写してから同じ読み方。結果の `source` に形と文字コード。列名がほかのソフトの形（`excel/rosterForms` の `ROSTER_FORMS`：顧客台帳・予約システムのスタッフ・顧客・職員台帳。PRD D386・D387・D396・D397・D421）なら、その形の `toRoster` で名簿の列に写してから同じ読み方。形が空なら今の値のままにする列（`keepBlank`）はセルが空なら今の値を残す（`rosterRows` の `pick`）、誤りの文は形の `errorMessage` でその形の列名に直す。結果の `otherForm` に形の名前 `label` と読まなかった列 `skippedColumns`。名簿の形・.xlsx は `otherForm: null`。退職日で休止を決めるため `importRoster` の5つ目の引数に今日。形には今日と今の項目（`RosterFormEnv`。職員台帳の資格を項目「資格」に写す）を渡す）・`importBookings(buf, base)`（予約の CSV → 単発の訪問。`bookingForms` の `BOOKING_FORMS` で形を見分け、どの形も `Booking` に写してから共通で〈利用者さん〉と名前で突き合わせ、ID `bk-〈形のID〉-〈予約番号〉` の訪問を足す・直す（形が `Booking.visitId` を持てばその ID。このアプリの形 `visitCsv` は訪問ID の列。繰り返しの回は直さない）。これだけ同期。PRD D408）・`exportVisitsCsv(data, from, to)`・`visitCsvTemplate()`（予定の CSV。単発の訪問・列名の行だけ。BOM 付きの UTF-8。同期。PRD D423）・`rosterSummary`・`rosterWarning`（総入れ替えで今の人の半分を超えて外すときの注意。無ければ null）。どれも非同期
 - 名簿の読み込み：
   - 全体のブックもそのシートだけ読む。必須の列は名前（表示名）だけ。無い列は今の値（新しい人は既定値）
   - 同じ人は ID（今に無ければその ID で足す。使えない・ブック内で重なる・ほかの ID は止める）、空なら名前（`nameKey`。全角半角・空白を同一視）。2行が同じ人・当てたあとの名前の重なりは止める
@@ -351,7 +352,7 @@ flowchart LR
   - 総入れ替え：ブックに無い〈利用者さん〉は `withStage(c, 'ended')`、〈スタッフ〉は休止。既に終了・休止の人は数えない。人の行が無いブックは止める
   - 件数は repair 後の人を今の人と比べる。訪問・伝えた内容・繰り返し・相性・稼働時間・欠勤・休みはそのまま。画面は確認中にデータが変われば入れず、`lastDaySet` があれば振り直しを促す
 - 依存するもの：ExcelJS（動的 import）、contracts、store（`migrate`）、matching、lib/clientStage・lib/csv（文字コードの見分け・CSV の読み書き）
-- 配置：`src/excel/`（名簿は `importRoster.ts`、名簿の CSV は `rosterCsv.ts`、ほかのソフトの名簿の形の一覧は `rosterForms.ts`（形ごとの読み替えは顧客台帳 `ledgerCsv.ts`・予約システム `reserveCsv.ts`・職員台帳 `staffLedgerCsv.ts`）、予約の CSV → 訪問は `importBookings.ts`（形の一覧 `bookingForms.ts`・予約システム `reserveBookings.ts`・このアプリの予定 `visitCsv.ts`）、形の共通の部品は `csvColumns.ts`、読み取りの部品は `importBook.ts`）
+- 配置：`src/excel/`（名簿は `importRoster.ts`、名簿の CSV は `rosterCsv.ts`、ほかのソフトの名簿の形の一覧は `rosterForms.ts`（形ごとの読み替えは顧客台帳 `ledgerCsv.ts`・予約システム `reserveCsv.ts`・職員台帳 `staffLedgerCsv.ts`・列名から読む形 `genericCsv.ts`（名前が空の行は飛ばし、件数を読まなかった列に「〈名前の列〉（空の行 N件）」。住所の先頭の郵便番号は外す。〈スタッフ〉は「名前」の列があっても、名簿にしか無い列（移動手段・勤務する曜日・勤務開始・勤務終了・利用中・アイコン・特性）が1つも無ければこの形））、予約の CSV → 訪問は `importBookings.ts`（形の一覧 `bookingForms.ts`・予約システム `reserveBookings.ts`・このアプリの予定 `visitCsv.ts`）、形の共通の部品は `csvColumns.ts`、読み取りの部品は `importBook.ts`）
 - 完了の条件：
   - [ ] 書き出し → 読み込みで同じ（ID・並びも。テスト）。ID の空の行は追加、消した行は消える
   - [ ] §5「止めるもの」はシート名・行番号付きで止め、データはそのまま。古いブックは既定で読める（テスト）
@@ -362,7 +363,7 @@ flowchart LR
 ### features（機能の入り切り。ADR-0028）
 - 責務：機能の表（ID・名前・説明・グループ・依存・URL（ルート・`?do=`）・隠れるもの・ひな形）と、入り切りの判定・ひな形・切るときの影響の数え方。純粋関数
 - 持つデータ（持ち主）：なし（入り切りは store の `org.features`）
-- 提供するAPI：`lib/features.ts` の `FEATURES`・`FEATURE_GROUPS`・`isOn`（依存先が切なら切）・`isSwitchOn`・`featureOfLocation(pathname, search)`・`featureOfHref`・`isHrefOn`（土台は null。パスは小文字・末尾の `/` を落とす）・`TEMPLATES`（`oneOff` 単発のみ／`basic` 基本／`laborContract` 労務・契約管理／`monthlyField` 月次予定・現場共有／`all` すべて）・`applyTemplate`・`matchTemplate`（違えば `custom`）・`templateDiff`・`turnOffImpact(data, id, today)`・`withFeature`。画面から読むのは `components/useFeature.ts` の `useFeatures()`・`useFeature(id)`（`isOn` で依存も見る。欄・ボタンを出すかを部品の中で決める）
+- 提供するAPI：`lib/features.ts` の `FEATURES`・`FEATURE_GROUPS`・`isOn`（依存先が切なら切）・`isSwitchOn`・`featureOfLocation(pathname, search)`・`featureOfHref`・`isHrefOn`（土台は null。パスは小文字・末尾の `/` を落とす）・`TEMPLATES`（`oneOff` 単発の予約／`basic` 定期の訪問（基本）／`laborContract` 定期＋勤務・契約／`monthlyField` 定期＋月の予定・現場共有／`all` すべての機能。名前・例・説明・入れる機能。ADR-0092）・`applyTemplate`・`matchTemplate`（違えば `custom`）・`templateDiff`・`templateBasicDelta`（基本との差）・`turnOffImpact(data, id, today)`・`withFeature`。画面から読むのは `components/useFeature.ts` の `useFeatures()`・`useFeature(id)`（`isOn` で依存も見る。欄・ボタンを出すかを部品の中で決める）
 - 表の `doParams`：`sudden` は `/plan?do=absence`
 - `turnOffImpact`（PRD D215）は計算に効くものだけ：相性は利用中の〈利用者さん〉×休止でない〈スタッフ〉、担当を限るは限った人に休止でない人がいる利用中の〈利用者さん〉、休み・希望休・欠勤は今日以降、空き状況は仮押さえの〈利用者さん〉
 - 出し分け：`menuSections(terms, today, features)`、`app/App.tsx` のルート（切った URL は予定の画面（`homePath`）へ移し、知らせと `#/settings` へのリンク）、`lib/commandPalette`・`lib/attentionBand`・`lib/tour`・`lib/links`（切なら null）、画面の欄・ボタン（`useFeature`）。`rules` を切っても AI で組むのは点数の基準のプリセットの重み（`data.rules` はいつも基準にそろっている）。事実の表示（休みの人に N・振り直しの差・連絡の一覧）は残し、入力・操作の入口だけ隠す
@@ -382,7 +383,7 @@ flowchart LR
 - 提供するAPI：なし（ルートは [design/pages.md](design/pages.md) の表）
 - 依存するもの：store・matching・solver（Worker）・evaluate・reassign・patterns・vacancy・features
 - 配置：`src/pages/`・`src/components/`（部品と React のフック `use*`）・画面用の純粋関数は `src/lib/`（React・store を import しない）。殻は `src/app/`
-- 実装の決まり（予定の共通の部品・自動の組み・例外だけ見せる・「詳しく ▾」・操作の行・来月の確認・「予定を入れる」（`AddPlanPanel`・`PlanCsvSection`）・人の画面・予定を組む・最初の2問・スマホ・キーボード・訪問の札と詳細の欄・読み込みの分け方・よく変わる値）：[design/pages.md](design/pages.md) の「pages の実装の決まり」
+- 実装の決まり（予定の共通の部品・自動の組み・例外だけ見せる・「詳しく ▾」・操作の行・来月の確認・「定期の予定を入れる」（`AddPlanPanel`・`PlanCsvSection`）・人の画面・予定を組む・最初の2問・スマホ・キーボード・訪問の札と詳細の欄・読み込みの分け方・よく変わる値）：[design/pages.md](design/pages.md) の「pages の実装の決まり」
 - 詳細（必要な画面のファイルだけ読む）：
   - 共通事項・ルート一覧・確認ダイアログ・機能の入り切り（画面側）：[design/pages.md](design/pages.md)。メニュー・コマンドパレット：[design/pages-nav.md](design/pages-nav.md)
   - 画面共通の部品（右の欄・訪問の詳細の欄・名前の詳細・用語・ツアー・リンク・メール・道順）：[design/pages-common.md](design/pages-common.md)
@@ -529,14 +530,14 @@ Worker 内の例外は `error` で返し、内部の文言は出さない（「A
 | 予定と担当の手直し | 日の予定の1画面で訪問の一覧と担当を直す。AI で組むのは予定を組む |  | 0009・0063 |
 | 欠勤と振り直し | 別の記録 `absences`。案A＝空きに入れるだけ、案B＝減点つき焼きなまし。コンポーネント reassign、結果は訪問に書き振り直す前の担当を `reassigns` に残す |  | 0011・0053 |
 | 欠勤・キャンセルの連絡 | 欄の2段目（連絡・確定）で、確定し直した差と取り消した訪問から1人に1行の連絡文。［連絡した］は欄の中だけ。〈利用者さん〉あては担当の姓と時刻だけ |  | 0038 |
-| 欠勤・キャンセルの欄の段 | 2段（何が起きたか → 連絡・確定）。選んだ時点で案A の見込みと担当が移る訪問を出し、［この案で決める］で登録と振り直しを1手で。初めての訪問先（過去8週に担当なし）は連絡文・訪問の詳細・スマホ画面に決まりごとを添える |  | 0082 |
-| 予定を入れるの開始日・第N、文字のボタン | 「予定を入れる」の定期に開始日（既定は今日）と毎月の第N（くり返しは1つの選択）。自動の組みは開始日から翌月末。〈スタッフ〉の一覧の行の端は文字のボタン「詳しく」「今日の画面」、スマホ画面は日付の横で日送り |  | 0083 |
+| 欠勤・キャンセルの欄の段 | 2段（休み・キャンセルを選ぶ → 連絡・確定）。選んだ時点で案A の見込みと担当が移る訪問を出し、［この案で決める］で登録と振り直しを1手で。初めての訪問先（過去8週に担当なし）は連絡文・訪問の詳細・スマホ画面に決まりごとを添える |  | 0082 |
+| 定期の予定を入れるの開始日・第N、文字のボタン | 「定期の予定を入れる」の定期に開始日（既定は今日）と毎月の第N（くり返しは1つの選択）。自動の組みは開始日から翌月末。〈スタッフ〉の一覧の行の端は文字のボタン「詳しく」「今日の画面」、スマホ画面は日付の横で日送り |  | 0083 |
 | 一月分の予定 | 繰り返し（定期パターン）の回は見るときに計算し、変えた回だけ保存する。種類の条件は常に必須、AI で組むのは1日ずつ |  | 0012・0053 |
 | 空き状況 | 元の案に他の人を変えずに仮の訪問を入れて数える。曜日・時間帯・所要のチップで聞き、答えのカードでコピー（表は「詳しく」） |  | 0012・0080 |
 | 第N曜日・休み・決まりごと・案内文 | パターンに項目を足す、休みは別の記録で派生、固定の4項目、空き状況から純粋関数で文 |  | 0013 |
 | 担当を限る・希望休・印刷 | compile が可否で外す、欠勤のメモで見分ける、印刷専用の経路 |  | 0014 |
 | 退職・拘束・段階 | 最終勤務日＋一括振り直し、上限は注意だけ、段階が正 |  | 0015 |
-| 住所から位置 | 押したときだけ外部の検索（郵便番号は fetch、だめなら JSONP）。〈利用者さん〉の名簿が入ったら名簿の欄に「位置の無い N人を地図に置く」（1回の押しでまとめて置く） |  | 0016・0076 |
+| 住所から位置 | 押したときだけ外部の検索（郵便番号は fetch、だめなら JSONP）。名簿の読み込みは、確認に「読み込んだあと、住所から地図の位置を探します」を足し、［名簿を読み込む］の続きで位置の無い人（〈利用者さん〉・〈スタッフ〉の自宅）を自動でまとめて置く。一覧に「位置なし」の絞り込み・行の［住所から探す］［地図で置く］ |  | 0016・0094 |
 | メール・道順 | `mailto:` と Maps URLs のリンク。日の予定のメールは事業所の GAS に預ける予約送信も（ひな型のシートをコピー） |  | 0017・0018・0069 |
 | メニュー・パレット | 6項目（予定・空き状況・〈利用者さん〉・〈スタッフ〉・組む・設定）。エキスパート機能が切なら「組む」を除いた5つ。ホームは無く、要対応は予定の上の帯（要対応を組むのも帯）。子の項目を持つのは組むだけ（基本情報・組み方の標準・担当を組む（作業の順。条件の重みは寄り道。標準があれば組み方の標準を出さない）。開け閉めは端末に覚える）。パレットは画面を1つずつ引ける（案を比べるは担当を組むから） |  | 0019・0027・0034・0045・0047・0054・0063・0065・0066・0067・0074・0077・0078 |
 | 見出し・ボタン | 見出しは `PageHeader` の1つの型（題名・1行の説明・右に主ボタン1つ・予定の3画面はすぐ下のナビの行に［月｜週｜日］）、ボタンは塗り＝主／枠＝副／文字＝ついでの3段 |  | 0036 |
@@ -545,7 +546,7 @@ Worker 内の例外は `error` で返し、内部の文言は出さない（「A
 | スマホ・確認 | 下のタブ（予定・〈利用者さん〉・〈スタッフ〉・組む・探す（パレット）・メニュー（引き出し）。エキスパート機能が切なら 予定・空き状況・〈利用者さん〉・〈スタッフ〉・探す・メニュー（空き状況が切なら空き状況の代わりに設定）。入の空き状況・設定は引き出しとパレット）、要対応の帯（入切とも。入は入だけの種類つき）と、切の月の20日以降はその下に来月の確認の1行、`useConfirm` |  | 0024〜0026・0045・0073・0074・0080・0081 |
 | スマホの予定・キーボード | スマホは日ごとのリストと下から出る欄（見る・取り消す・担当替えだけ）、週・月は「まとめて見る」。広い画面は帯を矢印キーで動かし、繰り返しの回は小さな帯で範囲 |  | 0055 |
 | 訪問の札の共通の部品 | 見た目・選ぶ・キー・落とし先の判定を共通の部品に。札は3段・入れ物は時間軸・表・リスト。月のマスは押すと右の欄にその日の行 |  | 0056・0057 |
-| 機能の入り切り | 機能ごと（22）を `org.features`、ひな形は一度書き込む、好み・決まりは計算からも外す。初めて開いたときは最初の2問の答えでひな形（単発＝「単発のみ」・定期＝「基本」。基本は毎月の第N・決まりごと・〈利用者さん〉の休み・退職・担当替え・Excel の入出力を含む。PRD D424）が決まる |  | 0028・0045・0073・0086・0091 |
+| 機能の入り切り | 機能ごと（22）を `org.features`、ひな形は一度書き込む、好み・決まりは計算からも外す。初めて開いたときは最初の2問の問2（使い方＝ひな形の4つ：単発の予約・定期の訪問（基本）・定期＋勤務・契約・定期＋月の予定・現場共有。中身は PRD D424）でひな形が決まる |  | 0028・0045・0073・0086・0091・0092 |
 | 決まった予定（expert 切） | 確定の段階を出さず、今日から1か月先は保存した訪問が変わった日に自動で伝えた記録（要対応が残る日は付けない。ADR-0089。`update` の1か所。止めるのは `tell: false`＝名簿の読み込み・予約の読み込み・古い記録を消す）。あとの変更は「変更あり」の印と連絡の一覧の「連絡した」 |  | 0073 |
 | 初期データ・まとめて確定 | 初期データは過去の日を伝えた状態にし、今日からは繰り返しの担当のまま（AI で組まない）。一度も確定していない・要対応に出ない日だけ1度に確定（日の予定と同じ書き方） |  | 0031 |
 | 読み込みの分け方 | 重い画面5つと地図を `React.lazy` で分け、画面が出たら残りを先に読む。進み具合は外の入れ物で子だけ描き直す |  | 0039 |

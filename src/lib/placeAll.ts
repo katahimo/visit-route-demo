@@ -1,39 +1,187 @@
-import type { DemoData } from '../contracts/data';
-import type { Client, Place } from '../contracts/documents';
-import { byDisplayName, hasLocation } from './common';
+import type { DemoData, RosterKind } from '../contracts/data';
+import type { ClientPlace, Place, Terms } from '../contracts/documents';
+import { UNPLACED_TRAVEL_MIN } from '../matching/compile';
+import { colorOf, initialOf } from './colors';
+import { byName, hasLocation } from './common';
 import type { GeoHit, LookupFail, LookupOptions, LookupResult, PostalHit } from './geocode';
+import { staffColorMap, staffMarkText } from './staffMark';
 
 /**
- * 位置の無い〈利用者さん〉をまとめて地図に置く（PRD D89。ADR-0016）。
+ * 位置の無い人をまとめて地図に置く（PRD D89・D427。ADR-0016・ADR-0094）。〈利用者さん〉は場所、〈スタッフ〉は自宅。
  * 1人ずつ順に、外部の検索を呼ぶたびに間隔をあける。結果は1人ごとに onResult で返し、書くのは画面（store の update）
  */
 
 /** 呼ぶたびにあける間隔の既定（ミリ秒） */
 export const PLACE_ALL_INTERVAL_MS = 400;
 
-/**
- * まとめて置く対象：位置が無く、段階が「終了」でない〈利用者さん〉（表示名の順）のうち、住所か郵便番号のある人。
- * skipped は住所も郵便番号もない人
- */
-export function placeAllTargets(clients: Client[]): { targets: Client[]; skipped: Client[] } {
-  const pool = clients.filter((c) => c.stage !== 'ended' && !hasLocation(c.place)).sort(byDisplayName);
-  const can = (c: Client) => c.place.address.trim() !== '' || c.place.postalCode !== '';
-  return { targets: pool.filter(can), skipped: pool.filter((c) => !can(c)) };
-}
+/** まとめて置く人の種類（名簿の種類と同じ） */
+export type PlaceKind = RosterKind;
 
 /**
- * 名簿を読み込んだあとの導線（PRD D399。ADR-0076）のボタンの文言。出さないときは null：
- * 名簿が入った後（asked）で、郵便番号・住所の検索が入（geocodeOn）、まとめて置いている最中でなく、
- * まとめて置く対象（placeAllTargets の targets。数え方は D89 と同じ）が1人以上いるときだけ出す
+ * まとめて置く人（種類をそろえた形）。place.postalCode は〈スタッフ〉では ''（自宅の郵便番号は保存しない。D121）。
+ * counted は数える人か（〈利用者さん〉は段階が「終了」でない人・〈スタッフ〉は休止でない人）。mark は地図の点の文字と色
  */
-export function placeAllLead(x: {
-  asked: boolean;
+export type PlacePerson = {
+  id: string;
+  name: string;
+  place: ClientPlace;
+  counted: boolean;
+  mark: { label: string; color: string };
+};
+
+/** 画面の文（種類ごと） */
+export type PlaceAllTexts = {
+  /** 欄の見出し（「位置が未登録の〈利用者さん〉」） */
+  heading: string;
+  /** 探す手がかりのある人（「住所か郵便番号あり」） */
+  has: string;
+  /** 手がかりの無い人（「どちらも無い」） */
+  hasNot: string;
+  /** 数えない人の注記 */
+  notCounted: string;
+  /** 置ける人がいないときの理由 */
+  none: string;
+  /** ボタンの説明 */
+  how: string;
+  /** 手がかりの無い人の見出し */
+  skipped: string;
+  /** 呼び方（〈利用者さん〉・〈スタッフ〉） */
+  term: string;
+};
+
+/** 種類ごとの違い（分岐はここ1か所） */
+type PlaceAccess = {
+  people: (d: Pick<DemoData, 'clients' | 'staff'>) => PlacePerson[];
+  /** id の人の場所（住所・位置）を書く。郵便番号はそのまま */
+  write: (d: DemoData, id: string, p: Place) => DemoData;
+  texts: (t: Terms) => PlaceAllTexts;
+};
+
+function placeAccess(kind: PlaceKind): PlaceAccess {
+  switch (kind) {
+    case 'client':
+      return {
+        people: (d) =>
+          d.clients.map((c) => ({
+            id: c.id,
+            name: c.displayName,
+            place: c.place,
+            counted: c.stage !== 'ended',
+            mark: { label: initialOf(c.displayName), color: colorOf(c.color) },
+          })),
+        write: (d, id, p) => ({
+          ...d,
+          clients: d.clients.map((c) => (c.id === id ? { ...c, place: { ...c.place, ...p } } : c)),
+        }),
+        texts: (t) => ({
+          heading: `位置が未登録の${t.client}`,
+          has: '住所か郵便番号あり',
+          hasNot: 'どちらも無い',
+          notCounted: '段階が「終了」の人は数えません',
+          none: '住所か郵便番号のある、位置の無い人がいません',
+          how: '住所（無ければ郵便番号）から1人ずつ位置を探して、地図に置きます',
+          skipped: `住所も郵便番号もない${t.client}`,
+          term: t.client,
+        }),
+      };
+    case 'staff':
+      return {
+        people: (d) => {
+          const colors = staffColorMap(d.staff);
+          return d.staff.map((s) => ({
+            id: s.id,
+            name: s.name,
+            place: { ...s.home, postalCode: '' },
+            counted: s.active,
+            mark: { label: staffMarkText(s), color: colors.get(s.id) ?? '#e8735f' },
+          }));
+        },
+        write: (d, id, p) => ({
+          ...d,
+          staff: d.staff.map((s) => (s.id === id ? { ...s, home: { ...s.home, ...p } } : s)),
+        }),
+        texts: (t) => ({
+          heading: `自宅の位置が未登録の${t.staff}`,
+          has: '住所あり',
+          hasNot: '住所の無い人',
+          notCounted: '休止の人は数えません',
+          none: '住所のある、自宅の位置の無い人がいません',
+          how: '自宅の住所から1人ずつ位置を探して、地図に置きます',
+          skipped: `自宅の住所が無い${t.staff}`,
+          term: t.staff,
+        }),
+      };
+    default: {
+      const _: never = kind;
+      return _;
+    }
+  }
+}
+
+/** その種類の人すべて（数えない人も。名前・地図の点を引くのに使う） */
+export const placePeople = (d: Pick<DemoData, 'clients' | 'staff'>, kind: PlaceKind): PlacePerson[] =>
+  placeAccess(kind).people(d);
+
+/** 画面の文 */
+export const placeAllTexts = (kind: PlaceKind, terms: Terms): PlaceAllTexts => placeAccess(kind).texts(terms);
+
+/**
+ * まとめて置く対象：位置が無く、数える人（〈利用者さん〉は終了でない・〈スタッフ〉は休止でない）のうち、
+ * 住所か郵便番号のある人（名前の順）。skipped は住所も郵便番号もない人（〈スタッフ〉は住所の無い人）
+ */
+export function placeAllTargets(
+  d: Pick<DemoData, 'clients' | 'staff'>,
+  kind: PlaceKind,
+): { targets: PlacePerson[]; skipped: PlacePerson[] } {
+  const pool = placePeople(d, kind)
+    .filter((p) => p.counted && !hasLocation(p.place))
+    .sort(byName);
+  const can = (p: PlacePerson) => p.place.address.trim() !== '' || p.place.postalCode !== '';
+  return { targets: pool.filter(can), skipped: pool.filter((p) => !can(p)) };
+}
+
+/** 位置の無い人（数える人のうち。住所の有無は問わない）。一覧の「位置なし」の絞り込みと行の印に使う（PRD D427） */
+export function noPlaceIds(d: Pick<DemoData, 'clients' | 'staff'>, kind: PlaceKind): Set<string> {
+  return new Set(
+    placePeople(d, kind)
+      .filter((p) => p.counted && !hasLocation(p.place))
+      .map((p) => p.id),
+  );
+}
+
+/** 〈利用者さん〉一覧の絞り込みに足すチップ「位置なし」のキー（lib/clientFilter の extra） */
+export const NO_PLACE_CHIP = 'noPlace';
+
+/** 位置が無くても担当は組めることの補足（ADR-0093） */
+export const NO_PLACE_NOTE = `位置が無くても担当は組めます（移動は${UNPLACED_TRAVEL_MIN}分とみます）`;
+
+/** 1人だけ探せるか：郵便番号・住所の検索が入で、住所か郵便番号があり、まとめて置いている最中でない */
+export const canSearchOne = (p: Pick<PlacePerson, 'place'>, x: { geocodeOn: boolean; running: boolean }): boolean =>
+  x.geocodeOn && !x.running && (p.place.address.trim() !== '' || p.place.postalCode !== '');
+
+/**
+ * まとめて置くボタンの文言（PRD D427）：一度探したあと（止めた・見つからない人が残った）は「続きを探す（N人）」、
+ * はじめは「位置の無い N人を地図に置く」。対象が0人なら「まとめて地図に置く」
+ */
+export function placeAllRunLabel(x: { targets: number; tried: boolean }): string {
+  if (x.targets <= 0) return 'まとめて地図に置く';
+  return x.tried ? `続きを探す（${x.targets}人）` : `位置の無い${x.targets}人を地図に置く`;
+}
+
+/** 名簿の読み込みの確認に足す1文（PRD D427。ADR-0094。この文を見て［名簿を読み込む］を押すのが送る同意） */
+export const AUTO_PLACE_NOTE =
+  '読み込んだあと、住所から地図の位置を探します（住所を郵便番号の検索と国土地理院の地図の検索に使います）';
+
+/**
+ * 名簿を読み込んだあと、自動でまとめて置き始めるか（PRD D427）：郵便番号・住所の検索が入（geocodeOn）で、
+ * 読み込んだあとのデータにまとめて置く対象が1人以上いるとき
+ */
+export function autoPlaceAfterRoster(x: {
   geocodeOn: boolean;
-  running: boolean;
-  targets: number;
-}): string | null {
-  if (!x.asked || !x.geocodeOn || x.running || x.targets <= 0) return null;
-  return `位置の無い${x.targets}人を地図に置く`;
+  next: Pick<DemoData, 'clients' | 'staff'>;
+  kind: PlaceKind;
+}): boolean {
+  return x.geocodeOn && placeAllTargets(x.next, x.kind).targets.length > 0;
 }
 
 /** 探したときの住所・郵便番号（書くときに、いまの値と違えば書かない） */
@@ -41,7 +189,7 @@ export type PlaceAllFrom = { address: string; postalCode: string };
 
 export type PlaceAllResult =
   | {
-      clientId: string;
+      personId: string;
       ok: true;
       lat: number;
       lng: number;
@@ -52,7 +200,7 @@ export type PlaceAllResult =
       from: PlaceAllFrom;
     }
   | {
-      clientId: string;
+      personId: string;
       ok: false;
       reason: LookupFail;
       /** どこで失敗したか（郵便番号から住所・住所から位置） */
@@ -73,7 +221,7 @@ export type PlaceAllOptions = {
 };
 
 /**
- * 住所から位置が見つからなかった人がいるか（PRD D399）。いれば結果に「市区町村の名前が無い住所は見つからないことがある」の1行を足す
+ * 住所から位置が見つからなかった人がいるか（PRD D427）。いれば結果に「市区町村の名前が無い住所は見つからないことがある」の1行を足す
  */
 export function hasAddressNotFound(results: PlaceAllResult[]): boolean {
   return results.some((r) => !r.ok && r.step === 'address' && r.reason === 'notFound');
@@ -100,7 +248,7 @@ export function sleep(ms: number, signal?: AbortSignal): Promise<void> {
  * 順に置く。住所が空の人は先に郵便番号から住所（先頭の候補）を探す。外部を呼ぶたびに intervalMs あける（最初の前はあけない）。
  * signal で止めたら、次の呼び出しから止める（stopped: true）。止めた呼び出しの結果は返さない
  */
-export async function placeAll(targets: Client[], opts: PlaceAllOptions): Promise<{ stopped: boolean }> {
+export async function placeAll(targets: PlacePerson[], opts: PlaceAllOptions): Promise<{ stopped: boolean }> {
   const { signal } = opts;
   const intervalMs = opts.intervalMs ?? PLACE_ALL_INTERVAL_MS;
   let calls = 0;
@@ -120,7 +268,7 @@ export async function placeAll(targets: Client[], opts: PlaceAllOptions): Promis
       const r = await call(() => opts.lookup(c.place.postalCode, { signal }));
       if (r === null) return { stopped: true };
       if (!r.ok) {
-        opts.onResult({ clientId: c.id, ok: false, reason: r.reason, step: 'postal', foundAddress: null, from });
+        opts.onResult({ personId: c.id, ok: false, reason: r.reason, step: 'postal', foundAddress: null, from });
         continue;
       }
       address = r.hits[0].address;
@@ -129,39 +277,40 @@ export async function placeAll(targets: Client[], opts: PlaceAllOptions): Promis
     const g = await call(() => opts.search(address, { signal }));
     if (g === null) return { stopped: true };
     if (!g.ok) {
-      opts.onResult({ clientId: c.id, ok: false, reason: g.reason, step: 'address', foundAddress, from });
+      opts.onResult({ personId: c.id, ok: false, reason: g.reason, step: 'address', foundAddress, from });
       continue;
     }
     const hit = g.hits[0];
-    opts.onResult({ clientId: c.id, ok: true, lat: hit.lat, lng: hit.lng, address, title: hit.title, from });
+    opts.onResult({ personId: c.id, ok: true, lat: hit.lat, lng: hit.lng, address, title: hit.title, from });
   }
   return { stopped: false };
 }
 
 /**
- * 見つけた位置・住所を〈利用者さん〉に書く（store の update(fn) に渡す純粋関数）。書くのは、まだ位置が無く、
+ * 見つけた位置・住所をその人に書く（store の update(fn) に渡す純粋関数）。書くのは、まだ位置が無く、
  * 住所・郵便番号が探したとき（from）のままの人だけ（その間に利用者が直した人は上書きしない）。
  * 住所が空だった人は見つけた住所も書く。lat・lng が null なら住所だけ書く（郵便番号で住所は見つかったが位置が見つからない人）。
  * 変えなければ同じ data を返す
  */
 export function withFoundPlace(
   data: DemoData,
-  clientId: string,
+  kind: PlaceKind,
+  personId: string,
   from: PlaceAllFrom,
   found: { lat: number | null; lng: number | null; address: string },
 ): DemoData {
-  const c = data.clients.find((x) => x.id === clientId);
-  if (!c || hasLocation(c.place)) return data;
-  if (c.place.address !== from.address || c.place.postalCode !== from.postalCode) return data;
-  const fillAddress = c.place.address.trim() === '' && found.address.trim() !== '';
+  const access = placeAccess(kind);
+  const now = access.people(data).find((x) => x.id === personId)?.place;
+  if (!now || hasLocation(now)) return data;
+  if (now.address !== from.address || now.postalCode !== from.postalCode) return data;
+  const fillAddress = now.address.trim() === '' && found.address.trim() !== '';
   const fillPin = found.lat !== null && found.lng !== null;
   if (!fillAddress && !fillPin) return data;
-  const place = {
-    ...c.place,
-    address: fillAddress ? found.address.slice(0, 200) : c.place.address,
-    ...(fillPin ? { lat: found.lat, lng: found.lng } : {}),
-  };
-  return { ...data, clients: data.clients.map((x) => (x.id === clientId ? { ...x, place } : x)) };
+  return access.write(data, personId, {
+    address: fillAddress ? found.address.slice(0, 200) : now.address,
+    lat: fillPin ? found.lat : now.lat,
+    lng: fillPin ? found.lng : now.lng,
+  });
 }
 
 /**

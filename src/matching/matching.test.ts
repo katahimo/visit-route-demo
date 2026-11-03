@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Pattern } from '../contracts/documents';
 import type { Problem } from '../contracts/problem';
 import { type Condition, type Item, isStartYear } from '../contracts/rules';
+import { UNPLACED_POINTS, UNPLACED_TRAVEL_MIN } from './compile';
 import { client, DATE, ITEMS, makeData, randomData, rule, staff, visit } from './fixtures.testkit';
 import { compile, conditionText, matches, routeCost, scheduleRoute, yearsSince } from './index';
 
@@ -150,7 +151,7 @@ describe('compile：可否と割当費用', () => {
     expect(p.infeasible[0]!.visit).toBe(0);
     expect(p.infeasible[0]!.reasons.map((r) => r.label)).toEqual(['休み（1人）', '働ける時間に収まらない（1人）']);
   });
-  it('位置がない訪問先は noPlace。キャンセル・休止中は入れない', () => {
+  it('位置がない訪問先も組める（noPlace は点だけ。移動は UNPLACED_TRAVEL_MIN 分。ADR-0093）。キャンセル・休止中は入れない', () => {
     const d = twoStaff();
     d.clients.push(client('c2', 0, 0, { place: { address: '', lat: null, lng: null, postalCode: '' } }));
     d.clients.push(client('c3', 38.2, 140.8, { active: false }));
@@ -160,9 +161,38 @@ describe('compile：可否と割当費用', () => {
     const p = compile(d, DATE);
     expect(p.visits.map((v) => v.id)).toEqual(['v1', 'v2']);
     expect(p.staff.map((s) => s.id)).toEqual(['s1', 's2']);
-    expect(p.allowed[1]).toEqual([false, false]);
-    expect(p.reasons[1]![0]![0]!.ruleId).toBe('noPlace');
+    expect(p.allowed[1]).toEqual([true, true]);
+    const r = p.reasons[1]![0]!.find((x) => x.ruleId === 'noPlace')!;
+    expect(r.points).toBe(UNPLACED_POINTS);
+    expect(r.label).toContain(`${UNPLACED_TRAVEL_MIN}分とみる`);
+    expect(p.assignCost[1]![0]).toBeGreaterThanOrEqual(UNPLACED_POINTS);
     expect(p.visits[1]!.point).toBe(3);
+    // 位置の無い訪問先への移動は、どこからでも見込みの分数
+    expect(p.travel[0]![p.staff.length + 1]).toBe(UNPLACED_TRAVEL_MIN);
+    expect(p.travel[p.staff.length + 1]![0]).toBe(UNPLACED_TRAVEL_MIN);
+  });
+  it('位置が未登録でも、同じ〈利用者さん〉の訪問どうしは移動0分、別の〈利用者さん〉なら見込みの分数（地点の鍵）', () => {
+    const d = twoStaff();
+    const noPlace = { place: { address: '', lat: null, lng: null, postalCode: '' } };
+    d.clients.push(client('c2', 0, 0, noPlace), client('c3', 0, 0, noPlace));
+    d.visits.push(
+      visit('v2', 'c2', '10:00', '11:00'),
+      visit('v3', 'c2', '12:00', '13:00'),
+      visit('v4', 'c3', '14:00', '15:00'),
+    );
+    const p = compile(d, DATE);
+    const pt = (id: string) => p.visits.find((v) => v.id === id)!.point;
+    expect(p.travel[pt('v2')]![pt('v3')]).toBe(0);
+    expect(p.travel[pt('v3')]![pt('v2')]).toBe(0);
+    expect(p.travel[pt('v3')]![pt('v4')]).toBe(UNPLACED_TRAVEL_MIN);
+    expect(UNPLACED_TRAVEL_MIN).toBe(30);
+  });
+  it('自宅の位置が未登録の担当も働く（訪問先の位置があれば組める。ADR-0093）', () => {
+    const d = twoStaff();
+    d.staff = d.staff.map((s) => ({ ...s, home: { ...s.home, lat: null, lng: null } }));
+    const p = compile(d, DATE);
+    expect(p.allowed[0]).toEqual([true, true]);
+    expect(p.infeasible).toEqual([]);
   });
   it('均等：可になる件数を稼働分に比例して配る。待ちは重み×0.1', () => {
     const d = randomData(3, 10, 1, [rule('bal', 'balance', 1), rule('w', 'wait', 3)]);

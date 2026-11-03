@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { DATA_VERSION, type DemoData, demoDataSchema, type ImportError, STORAGE_KEY } from '../contracts/data';
 import { type Features, featuresSchema } from '../contracts/features';
 import { jstDate } from '../domain/time';
-import { createFirstRunData, type FirstRunAnswer, firstRunSetup } from '../lib/firstRun';
+import { bookingOfUse, createFirstRunData, type FirstRunAnswer, firstRunSetup, firstRunUseOf } from '../lib/firstRun';
 import { createInitialData } from '../seed/plans';
 import { repair } from './repair';
 import { lastBooking, markArrangeAfterStart, rememberBooking, startsWithAll } from './start';
@@ -213,7 +213,7 @@ export function loadWithStatus(): {
       return { data: d, broken: false, outdated: false, brokenKept: false, firstRun: false };
     }
     // 最初の2問に答えるまでは書かない（読み直すとまた2問）。それまでの仮のデータは空（画面は2問の画面だけを出す）
-    const d = createFirstRunData({ start: 'own', booking: 'regular' }, todayDate);
+    const d = createFirstRunData({ start: 'own', use: 'basic' }, todayDate);
     current = d;
     return { data: d, broken: false, outdated: false, brokenKept: false, firstRun: true };
   }
@@ -486,8 +486,8 @@ export function reset(features?: Features): DemoData {
   // 印「all」か、最後の問2の答えの印が無いときは今までどおり（定期の初期データ。入り切りは今のまま、無ければすべて入）
   if (booking === null) return commitNew(createInitialData(today(), features ?? current?.org.features ?? {}));
   // 印があれば「デモ×その答え」で作り直す（呼び名・ひな形が答えと合う）。入り切りは今のまま、無ければ答えのひな形
-  const f = features ?? current?.org.features ?? firstRunSetup(booking).features;
-  return commitNew(createFirstRunData({ start: 'demo', booking }, today(), f));
+  const f = features ?? current?.org.features ?? firstRunSetup(firstRunUseOf(booking)).features;
+  return commitNew(createFirstRunData({ start: 'demo', use: firstRunUseOf(booking) }, today(), f));
 }
 
 /** 待っている保存を捨て、新しいデータを書いて画面が使うデータにする */
@@ -501,11 +501,11 @@ function commitNew(d: DemoData): DemoData {
 }
 
 /**
- * 最初の2問の答えでデータを作って書く（初めて開いたとき・設定の「最初の設定をやり直す」。PRD D379〜D381）。
+ * 最初の2問の答えでデータを作って書く（初めて開いたとき・データの画面の「始め方を選び直す」。PRD D379〜D381）。
  * 呼び名・ひな形・データは答えで決まる（lib/firstRun）。機能の入り切りも答えのひな形で決め直す
  */
 export function startWithAnswer(answer: FirstRunAnswer): DemoData {
-  rememberBooking(answer.booking);
+  rememberBooking(bookingOfUse(answer.use));
   markArrangeAfterStart({ kind: 'answer', start: answer.start });
   return commitNew(createFirstRunData(answer, today()));
 }

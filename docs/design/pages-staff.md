@@ -10,6 +10,7 @@
 - 列（`lib/peopleView` の `staffColumns(detailed)`）：名前・勤務日（`staff-days`）・勤務時間（`staff-hours`）と右端の「詳しく」「今日の画面」（状態の列が無い間は休止中だけ名前のそばに印＝`staffNameNote`）。**エキスパート機能が入のときだけ**表の上に「くわしい列」のチェック（`people-columns-toggle`。`components/DetailColumns`）。入れると 特性・求めること・自宅の位置・状態の列を足す。一覧ごとに端末に覚える（`store/navOpen` の鍵 `columns:staff`）。切は見出しの下の説明を初回だけ（`useIntro('staff')`。`peopleIntro`）
 - 見出しの右に「Excel・CSV」（`roster-toggle`）。押すと名簿の欄（[pages-clients.md](pages-clients.md)「名簿の欄」。`kind="staff"`）
 - 一覧の上に「最終勤務日のある〈スタッフ〉」のカード（`leaving-card`。振り直しが残っているか。「担当の振り直しを開く」`leaving-open`）。名簿の読み込みで最終勤務日が入った人も出る（トーストでこの欄を指す）
+- 一覧の上に「自宅の位置が未登録の〈スタッフ〉」のカード（[pages-clients.md](pages-clients.md)「まとめて地図に置く」。`usePlaceAllRun('staff')`。休止を除き、住所だけで探す）と、絞り込みのチップ「位置なし N」（`staff-filter-chip`。画面の状態）。名前のセルに、自宅の位置の無い人は「位置なし」と［住所から探す］［地図で置く］（`?edit=home` で自宅の節を開いた形で移る。PRD D427。ADR-0094）。名簿を読み込んだら、`geocode` が入なら自動でまとめて置き始める
 - 状態に「最終 M/D」（`staff-lastday`）
 - 狭い画面（600px 以下）：表（`narrow-staff`）は1人1枚のカード（[pages.md](pages.md) の「狭い画面の表」）。1行目に名前と状態、続けて「勤務日」・「勤務時間」（くわしい列なら「特性」・「〈利用者さん〉に求めること」・「自宅の位置」）、「詳しく」「今日の画面」は右下（文字のまま）
 

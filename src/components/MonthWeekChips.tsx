@@ -1,5 +1,5 @@
 // 毎月の第N（ADR-0013・0083）のチップ 第1〜第5（複数選べる）。〈利用者さん〉の繰り返しの欄（pages/patternsForm）と
-// 「予定を入れる」の引き出し（AddPlanPanel）で共通。囲み（fieldset・見出し・誤りの印）は使う側が持つ
+// 「定期の予定を入れる」の引き出し（AddPlanPanel）で共通。囲み（fieldset・見出し・誤りの印）は使う側が持つ
 import { toggleNumber } from '../lib/patternForm';
 import './weekdayToggles.css';
 

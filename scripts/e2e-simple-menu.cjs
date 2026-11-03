@@ -18,7 +18,7 @@
 //    〈スタッフ〉は名前・勤務日・勤務時間の3列。詳細は〈利用者さん〉＝名前・住所・予定（繰り返し）／〈スタッフ〉＝名前・勤務日・勤務時間を出し、
 //    段階・特性・決まりごと（「基本」は決まりごとの機能が入。ADR-0086）・担当・相性（〈スタッフ〉は自宅・特性・求めること・日ごとの勤務ほか）は「詳しく ▾」の中（閉じていると見えない・開くと見える）。
 //    日の予定の地図はふだん閉じ、「地図」のボタンで開く（1366px・390px）。月のマスは例外だけで吹き出しを出さず、読み方は見出しの ⓘ（帯の4種類と「変更あり」。PRD D410）、
-// 5f 「予定を入れる」と〈スタッフ〉・〈利用者さん〉のタブ（PRD D402）：月・週の主ボタンは「予定を入れる」（操作の行は2つまで。要対応を組むのは帯の［要対応を組む］）、
+// 5f 「定期の予定を入れる」（単発のみは「予約を入れる」）と〈スタッフ〉・〈利用者さん〉のタブ（PRD D402）：月・週の主ボタンは「定期の予定を入れる」（操作の行は2つまで。要対応を組むのは帯の［要対応を組む］）、
 //    押すと引き出し（定期＝〈利用者さん〉・曜日・くり返し・開始日（既定は今日・今日より前は誤り。PRD D416）・時刻・所要／単発＝〈利用者さん〉・日付・時刻・所要）で
 //    「入れる」→ 予定に出て開始日からの回に担当が自動で付く。くり返しは 毎週〜4週ごと・毎月（第N）（「基本」は毎月の第N の機能が入。ADR-0086）。
 //    5f3 最初の2問で定期を選んだデータ（「基本」）のままで、くり返しに「毎月（第N）」と第1〜第5 のチップ（選ばなければ誤り。入れた回に担当が自動で付き、組みの終わりまで待って次の段へ）、
@@ -550,7 +550,7 @@ async function open1(page, to) {
   await settle(page, 800);
 }
 
-/** 日の主ボタンを押すと新規の訪問の欄が開き、その見出しも主ボタンと同じ言葉（入切とも「予定を入れる」。PRD D402） */
+/** 日の主ボタンを押すと新規の訪問の欄が開き、その見出しも主ボタンと同じ言葉（入切とも「訪問を1件足す」。PRD D402） */
 async function dayAddOpens(page, label) {
   const btn = page.getByTestId('plan-visit-add');
   check((await btn.innerText()).trim() === label, `日の主ボタンの文字は「${label}」`);
@@ -577,12 +577,12 @@ async function exceptions(page) {
     [
       '/month',
       'month',
-      /予定を入れる/,
+      /^定期の予定を入れる$/,
       'month-details',
       ['band-next', 'band-plans', 'month-summary', 'month-legend-fold'],
     ],
-    ['/week', 'week', /予定を入れる/, 'week-details', ['week-status']],
-    ['/plan', 'plan', /^予定を入れる$/, 'day-details', ['plan-summary', 'plan-score']],
+    ['/week', 'week', /^定期の予定を入れる$/, 'week-details', ['week-status']],
+    ['/plan', 'plan', /^訪問を1件足す$/, 'day-details', ['plan-summary', 'plan-score']],
   ]) {
     await open1(page, to);
     const btns = await toolbarButtons(page);
@@ -617,7 +617,7 @@ async function exceptions(page) {
       );
     check(!BANNED.test(menu.join(' ')), `${to}：「その他 ▾」に禁句が出ない`, menu);
     if (to === '/month') await shot(page, 'simple-month-more-1366');
-    if (to === '/plan') await dayAddOpens(page, '予定を入れる');
+    if (to === '/plan') await dayAddOpens(page, '訪問を1件足す');
     await closeMore(page, zoom);
     // 禁句：開く前の画面全体
     const body = await page.locator('main, .content').first().innerText();
@@ -813,9 +813,9 @@ async function expertSame(page) {
   }, STORAGE_KEY);
   await page.evaluate((k) => localStorage.removeItem(k), INTRO_KEY);
   for (const [to, zoom, want, detailsId, hidden] of [
-    ['/month', 'month', ['予定を入れる', '担当を組む'], 'month-details', 'progress-band'],
-    ['/week', 'week', ['予定を入れる', '担当を組む'], 'week-details', 'week-status'],
-    ['/plan', 'plan', ['予定を入れる', '確定（伝えた）'], 'day-details', 'plan-summary'],
+    ['/month', 'month', ['定期の予定を入れる', '担当を組む'], 'month-details', 'progress-band'],
+    ['/week', 'week', ['定期の予定を入れる', '担当を組む'], 'week-details', 'week-status'],
+    ['/plan', 'plan', ['訪問を1件足す', '確定（伝えた）'], 'day-details', 'plan-summary'],
   ]) {
     await open1(page, to);
     const btns = await toolbarButtons(page);
@@ -824,7 +824,7 @@ async function expertSame(page) {
       `入 ${to}：操作の行は ${want.join('＋')} の2つ（その他 ▾ を除く）`,
       btns,
     );
-    check(btns[0].primary, `入 ${to}：1つ目（予定を入れる）が主ボタン`, btns);
+    check(btns[0].primary, `入 ${to}：1つ目（${want[0]}）が主ボタン`, btns);
     check((await page.getByTestId('undo-btn').count()) === 0, `入 ${to}：元に戻すは操作の行に出さない`);
     check(
       (await page.getByTestId('plan-help-btn').count()) === 0,
@@ -898,7 +898,7 @@ async function expertSame(page) {
   );
   await shot(page, 'simple-day-expert-details-1366');
   await open1(page, '/plan');
-  await dayAddOpens(page, '予定を入れる');
+  await dayAddOpens(page, '訪問を1件足す');
   await page.evaluate((k) => localStorage.removeItem(k), INTRO_KEY);
   await open1(page, '/plan');
 }
@@ -1326,12 +1326,12 @@ async function monthTip(page) {
 
 const SCORE = /点数|\d+\s*点/;
 
-/** 操作の行を確かめる：1つ目が主ボタン「予定を入れる」・2つ目が欠勤・キャンセル・合わせて2つまで・組むは帯の［要対応を組む］ */
-async function addToolbar(page, to, zoom, w) {
+/** 操作の行を確かめる：1つ目が主ボタン（text）・2つ目が欠勤・キャンセル・合わせて2つまで・組むは帯の［要対応を組む］ */
+async function addToolbar(page, to, zoom, w, text = '定期の予定を入れる') {
   await open1(page, to);
   const btns = await toolbarButtons(page);
   check(btns.length === 2, `${zoom}（${w}）：操作の行のボタンは2つ（その他 ▾ を除く）`, btns);
-  check(btns[0]?.primary && btns[0].text === '予定を入れる', `${zoom}（${w}）：1つ目は主ボタン「予定を入れる」`, btns);
+  check(btns[0]?.primary && btns[0].text === text, `${zoom}（${w}）：1つ目は主ボタン「${text}」`, btns);
   check(
     btns[1]?.text === '欠勤・キャンセルを登録' && !btns[1].primary,
     `${zoom}（${w}）：2つ目は欠勤・キャンセル`,
@@ -1356,7 +1356,7 @@ async function addToolbar(page, to, zoom, w) {
   await shot(page, `simple-add-${zoom}-toolbar-${page.viewportSize().width}`);
 }
 
-/** 「予定を入れる」を押して引き出しを開く（開いたら欄の中身を返す） */
+/** 月・週の主ボタン（定期の予定を入れる／予約を入れる）を押して引き出しを開く（開いたら欄の中身を返す） */
 async function openAdd(page, kind, label) {
   await page.getByTestId('toolbar-add-plan').click();
   const box = page.getByTestId('add-plan');
@@ -1464,7 +1464,7 @@ async function addRecurring(page, w) {
   );
   check(
     await page.getByTestId('toolbar-add-plan').evaluate((e) => e === document.activeElement),
-    `定期（${w}）：閉じたら「予定を入れる」へフォーカスが戻る`,
+    `定期（${w}）：閉じたら「定期の予定を入れる」へフォーカスが戻る`,
   );
   // 予定に出る：今日から先の金曜で、その〈利用者さん〉の13:15の訪問に担当が付く（自動の組み。ピンは付けない）
   const d2 = await until(async () => {
@@ -1491,7 +1491,7 @@ async function addRecurring(page, w) {
  * 確認のあと訪問が1件増え、引き出しが閉じる
  */
 async function addCsv(page) {
-  await fresh(page, '/week', NAV_READY, { start: 'demo', booking: 'oneOff' });
+  await fresh(page, '/week', NAV_READY, { start: 'demo', use: 'oneOff' });
   // 単発のみは Excel の入出力が入（ADR-0091）。切っても出ることを見るので excel だけ切って読み直す
   await page.evaluate((k) => {
     const d = JSON.parse(localStorage.getItem(k));
@@ -1524,7 +1524,7 @@ async function addCsv(page) {
     .trim()
     .split('\r\n');
   check(
-    lines.length > 1 && /^visit-route-demo-visits-\d{4}-\d{2}\.csv$/.test(exp[0].suggestedFilename()),
+    lines.length > 1 && /^staff-assign-demo-visits-\d{4}-\d{2}\.csv$/.test(exp[0].suggestedFilename()),
     'CSV：書き出しのファイル',
     lines.length,
   );
@@ -1541,7 +1541,7 @@ async function addCsv(page) {
   const dlg = page.getByTestId('confirm-dialog');
   await dlg.waitFor({ timeout: 15000 });
   const body = await dlg.innerText();
-  check(/このアプリの予定の形/.test(body) && /追加 1件/.test(body), 'CSV：確認に形と件数', body);
+  check(/このアプリの予定の CSV/.test(body) && /追加 1件/.test(body), 'CSV：確認に形と件数', body);
   await dlg.getByTestId('confirm-ok').click();
   await box.waitFor({ state: 'detached', timeout: 15000 });
   await settle(page, 600);
@@ -1625,10 +1625,10 @@ async function addMonthly(page) {
 
 /** 単発：週で押す → 〈利用者さん〉・日付・時刻・所要 → 入れる → 訪問が1件増え、予定に出る */
 async function addOneOff(page, w) {
-  await fresh(page, '/week', NAV_READY, { start: 'demo', booking: 'oneOff' });
+  await fresh(page, '/week', NAV_READY, { start: 'demo', use: 'oneOff' });
   const d0 = await data(page);
   check(d0.org.features.patterns === false, '前提：単発の答えは繰り返しを使わない');
-  await addToolbar(page, '/week', 'week', w);
+  await addToolbar(page, '/week', 'week', w, '予約を入れる');
   const box = await openAdd(page, 'oneOff', `単発（${w}）`);
   const labels = await texts(box.locator('label'));
   check(
@@ -1777,7 +1777,7 @@ async function peopleTabs(page, w) {
 }
 
 /**
- * 5f 切：「予定を入れる」（定期・単発）と〈スタッフ〉・〈利用者さん〉のタブ（幅ごとに段を分ける。デモで始めるたびに最初の組みを待つので、
+ * 5f 切：月・週の主ボタン（定期の予定を入れる・予約を入れる）と〈スタッフ〉・〈利用者さん〉のタブ（幅ごとに段を分ける。デモで始めるたびに最初の組みを待つので、
  * 1つの段に入れると段の時間を超える。落ちても幅は restoreWidth が戻す）
  */
 const addAndTabs = (width) => async (page) => {
@@ -1816,15 +1816,15 @@ const steps = sharedPage({
     ['5d 切：スマホの操作の行・詳しく', restoreWidth(mobileExceptions)],
     ['5e 切：人の画面は畳む・地図はボタンで開く・マスの読み方', restoreWidth(people)],
     [
-      '5f 切：「予定を入れる」（定期・単発）・〈スタッフ〉〈利用者さん〉のタブ（1366px）',
+      '5f 切：月・週の主ボタン（定期・単発）・〈スタッフ〉〈利用者さん〉のタブ（1366px）',
       restoreWidth(addAndTabs(1366)),
     ],
     [
-      '5f2 切：「予定を入れる」（定期・単発）・〈スタッフ〉〈利用者さん〉のタブ（390px）',
+      '5f2 切：月・週の主ボタン（定期・単発）・〈スタッフ〉〈利用者さん〉のタブ（390px）',
       restoreWidth(addAndTabs(390)),
     ],
-    ['5f3 切：「予定を入れる」の毎月（第N）・誤りの欄（「基本」のまま）', addMonthly],
-    ['5f4 切：「予定を入れる」の CSV でまとめて入れる（単発のみ）', addCsv],
+    ['5f3 切：「定期の予定を入れる」の毎月（第N）・誤りの欄（「基本」のまま）', addMonthly],
+    ['5f4 切：「予約を入れる」の CSV でまとめて入れる（単発のみ）', addCsv],
     ['6 入：メニュー6つ・ホームなし・帯の入の種類', expertOn],
     ['6b 入：操作の行（2つ＋その他）・「詳しく」の見出しの数と開け閉めの覚え・説明1行', expertSame],
     ['6c 入：人の一覧は3列＋「くわしい列」（覚える）・人のタブ・4段は組む画面だけ', restoreWidth(expertPeople)],

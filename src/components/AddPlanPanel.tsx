@@ -1,4 +1,5 @@
 import { Check, Plus, X } from 'lucide-react';
+import { planAddLabel } from '../lib/addPlan';
 import { WEEKDAY_LABELS } from '../lib/common';
 import {
   isRepeatChoice,
@@ -13,6 +14,7 @@ import { MonthWeekChips } from './MonthWeekChips';
 import { PlanCsvSection } from './PlanCsvSection';
 import { SidePanel, WithIcon } from './ui';
 import { useAddPlan } from './useAddPlan';
+import { useFeatures } from './useFeature';
 import { COMPACT_QUERY, useMedia } from './useMedia';
 import './addPlan.css';
 import './weekdayToggles.css';
@@ -165,19 +167,20 @@ function AddPlanFields({ a }: { a: ReturnType<typeof useAddPlan> }) {
 }
 
 /**
- * 「予定を入れる」の引き出し（エキスパート機能が切のとき、月・週の主ボタン。PRD D402）：
+ * 「定期の予定を入れる」（単発のみは「予約を入れる」）の引き出し（エキスパート機能が切のとき、月・週の主ボタン。PRD D402）：
  * 〈利用者さん〉を選び、定期は 曜日・くり返し（毎月なら第N）・開始日・時刻・所要（〈利用者さん〉の繰り返しを足す）、単発は 日付・時刻・所要（その日の訪問を足す）を入れて「入れる」。
  * 入れたら担当なしの分は自動で組む（ADR-0072）。入れ方は繰り返しを使うか（機能 patterns）で決まる。状態と保存は useAddPlan。
  * 下に「CSV でまとめて入れる」の欄（PlanCsvSection。単発の訪問のテンプレート・書き出し・読み込み。ADR-0090）
  */
 export function AddPlanPanel({ onClose }: { onClose: () => void }) {
   const a = useAddPlan(onClose);
+  const features = useFeatures();
   const narrow = useMedia(COMPACT_QUERY);
   const noClients = a.clients.length === 0;
   return (
     <SidePanel
       icon={Plus}
-      title="予定を入れる"
+      title={planAddLabel(features)}
       narrow
       sheet={narrow}
       onClose={onClose}

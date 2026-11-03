@@ -1,4 +1,4 @@
-// 「欠勤・キャンセル」の欄の1段目「何が起きたか」の中身と下の帯（PRD D167〜D172・D264・D265・D414。ADR-0044・ADR-0082）。
+// 「欠勤・キャンセル」の欄の1段目「休み・キャンセルを選ぶ」の中身と下の帯（PRD D167〜D172・D264・D265・D414。ADR-0044・ADR-0082）。
 // 種類・人（訪問）・時間を選んだ時点で見込みとおすすめの振り直しを出し、［この案で決める］で登録と振り直しを1手で書く。
 // 状態と処理は useSuddenSteps、2段目は suddenContactStep.tsx、欄の枠は SuddenPanel
 import { Ban, CalendarX2, Check, Trash2, UserRoundX, X } from 'lucide-react';
@@ -23,7 +23,7 @@ export const closeButton = (close: () => void) => (
   </button>
 );
 
-/** 何が起きたか（〈スタッフ〉が休む／〈利用者さん〉がキャンセル）。種類を変えると前の選択を消す */
+/** 休み・キャンセルを選ぶ（〈スタッフ〉が休む／〈利用者さん〉がキャンセル）。種類を変えると前の選択を消す */
 function KindChoice({
   terms,
   kind,
@@ -41,7 +41,7 @@ function KindChoice({
     { k: 'client', icon: CalendarX2, text: `${terms.client}がキャンセル` },
   ] as const;
   return (
-    <fieldset className="segmented sudden-kind" aria-label="何が起きたか">
+    <fieldset className="segmented sudden-kind" aria-label="休み・キャンセルを選ぶ">
       {items.map((x) => (
         <button
           key={x.k}
@@ -59,7 +59,7 @@ function KindChoice({
   );
 }
 
-/** 1段目：何が起きたか（種類・人（訪問）・時間）と、見込み・おすすめの振り直し */
+/** 1段目：休み・キャンセルを選ぶ（種類・人（訪問）・時間）と、見込み・おすすめの振り直し */
 export function whatStep(ctx: StepCtx): StepView {
   const { p, s } = ctx;
   const body = (

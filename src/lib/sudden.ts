@@ -5,13 +5,13 @@ import type { ReassignDiff, ReassignTarget } from '../contracts/reassign';
 import { type Slot, slotsText } from '../domain/availability';
 import { absenceError, absenceText } from './absences';
 
-/** 何が起きたか：〈スタッフ〉が休む／〈利用者さん〉がキャンセル */
+/** 休み・キャンセルを選ぶ：〈スタッフ〉が休む／〈利用者さん〉がキャンセル */
 export type SuddenKind = 'staff' | 'client';
-/** 段（1：何が起きたか（選ぶと見込みとおすすめ）2：連絡・確定。PRD D414） */
+/** 段（1：休み・キャンセルを選ぶ（選ぶと見込みとおすすめ）2：連絡・確定。PRD D414） */
 export type SuddenStep = 1 | 2;
 
 /** 段の見出し */
-export const SUDDEN_HEADINGS: Record<SuddenStep, string> = { 1: '何が起きたか', 2: '変更を伝えて確定する' };
+export const SUDDEN_HEADINGS: Record<SuddenStep, string> = { 1: '休み・キャンセルを選ぶ', 2: '変更を伝えて確定する' };
 
 /** URL の `?do=` で欄を開く値（「欠勤・キャンセルを登録」の入口。PRD D172） */
 export const SUDDEN_DO = 'absence';
