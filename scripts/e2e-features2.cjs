@@ -1,6 +1,6 @@
 // 機能の入り切り その2（PRD D211・D213〜D215）：ひな形の5通りごとに画面の中の入口（日の画面の欠勤・キャンセル・メール・点数の理由、
 // 担当を組むの「AI で組む」・考え方（プリセット）の数・「案を比べる」・予定を組むの段、〈利用者さん〉の欄の段階の選択・紹介元・担当できる人・休み・決まりごと・住所の検索・絞り込みのチップ、
-// 〈利用者さん〉の画面の紹介元・決まりごと・休みのタブ、〈スタッフ〉の画面のメールアドレス・最終勤務日、月の「休みを入れる」・印刷、空き状況の案内文、
+// 〈利用者さん〉の画面の紹介元・決まりごと・休みのタブ、〈スタッフ〉の画面のメールアドレス・最終勤務日、月の「休みを追加」・印刷、空き状況の案内文、
 // データの Excel、稼働の見込みの交通費の単価）。相性を切るときの独自の確認（件数と効き方。取り消すと変わらない）と、
 // 相性×の組は AI で組むと担当にならず、切ると担当に入ること（別のタブで×を書き、担当を組むの日の範囲（#/arrange?date=）で AI で組んで反映する）。
 // 切ったまま保存してもデータが残る（段階「契約」・担当できる人・〈スタッフ〉のメールアドレス・毎月のパターンの repeat と monthWeeks）。
@@ -190,14 +190,14 @@ async function insideEntries(page, dlg, ctx) {
       `${label}：〈スタッフ〉の相性`,
     );
 
-    // 月：〈スタッフ〉を選ぶと「休みを入れる」
+    // 月：〈スタッフ〉を選ぶと「休みを追加」
     await open(
       page,
       `/month?ym=${TODAY.slice(0, 7)}&staff=${encodeURIComponent(staff.id)}`,
       '[data-testid="month-focus"]',
     );
     await settle(page, 300);
-    check((await count('month-off-toggle')) === (on('requestedOff') ? 1 : 0), `${label}：月の「休みを入れる」`);
+    check((await count('month-off-toggle')) === (on('requestedOff') ? 1 : 0), `${label}：月の「休みを追加」`);
     // 印刷は「その他 ▾」の中（PRD D327）
     await page.getByTestId('month-more').click();
     await page.getByTestId('month-more-list').waitFor({ timeout: 5000 });

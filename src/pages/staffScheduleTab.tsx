@@ -101,7 +101,7 @@ export function StaffScheduleTab({
             </ul>
           )}
           <span className="sub">
-            急な欠勤は「欠勤・キャンセルを登録」、{REQUESTED_OFF_NOTE}は月の予定の「休みを入れる」で入れます。
+            急な欠勤は「欠勤・キャンセルを登録」、{REQUESTED_OFF_NOTE}は月の予定の「休みを追加」で入れます。
           </span>
           {linkIfOn(features, suddenHref(today, id)) && (
             <Link to={suddenHref(today, id)} className="btn btn-small btn-text" data-testid="to-sudden">

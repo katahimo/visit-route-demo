@@ -24,7 +24,7 @@
 //    5f3 最初の2問で定期を選んだデータ（「基本」）のままで、くり返しに「毎月（第N）」と第1〜第5 のチップ（選ばなければ誤り。入れた回に担当が自動で付き、組みの終わりまで待って次の段へ）、
 //    〈スタッフ〉の一覧の上のタブ（一覧・勤務・相性）と〈利用者さん〉のタブ（一覧・相性）で行き来でき、メニューの印は〈スタッフ〉／〈利用者さん〉に付き、
 //    相性・勤務の画面に禁句・点数が出ない。1366px・390px。幅は落ちても戻す、
-// 5f4 「CSV でまとめて入れる」（PRD D423）：Excel の入出力を切っても（単発のみで excel を切る）引き出しに畳んで出る。テンプレート・見ている月の書き出し・1件足したファイルの読み込み（確認のあと引き出しが閉じる）、
+// 5f4 「CSV でまとめて追加」（PRD D423）：Excel の入出力を切っても（単発のみで excel を切る）引き出しに畳んで出る。テンプレート・見ている月の書き出し・1件足したファイルの読み込み（確認のあと引き出しが閉じる）、
 // 6 エキスパート機能を入にすると帯に 組み方の標準が無い・未確定 N日 が足され［要対応を組む］は出ない（入のメニュー・ホームが無いことは e2e-nav・e2e-home）。
 // 6b 入の操作の行（主ボタン＋1つ＋「その他 ▾」）・「詳しく ▾」の見出しの数と開け閉めの覚え・説明1行。
 // 6c 入の人の一覧（PRD D394）：〈スタッフ〉・〈利用者さん〉の一覧は見出しがメニューの名前で、切と同じ人のタブ（一覧・勤務・相性／一覧・相性）と3列で始まり、
@@ -1012,7 +1012,7 @@ async function expertPeople(page) {
       row: '[data-testid="staff-row"]',
       heading: terms.staff,
       simple: ['名前', '勤務日', '勤務時間'],
-      extra: ['特性', `${terms.client}に求めること`, '自宅の位置', '状態'],
+      extra: ['特性', `${terms.client}に求めること`, '自宅の緯度・経度', '状態'],
     });
     // 一覧ごとに覚える：〈スタッフ〉を入れても〈利用者さん〉は入っていない
     check(
@@ -1034,7 +1034,7 @@ async function expertPeople(page) {
       heading: terms.client,
       simple: ['名前', '住所', 'いつもの予定'],
       postal: 'client-address',
-      extra: ['位置', '特性', `${terms.staff}に求めること`, 'いつもの担当', '状態'],
+      extra: ['緯度・経度', '特性', `${terms.staff}に求めること`, 'いつもの担当', '状態'],
     });
     check(
       /状態」の印/.test(await page.locator('main, .content').first().textContent()),
@@ -1485,7 +1485,7 @@ async function addRecurring(page, w) {
 }
 
 /**
- * 5f4 「CSV でまとめて入れる」（PRD D423。ADR-0090）：Excel の入出力を切っても（単発のデモ。「単発のみ」は Excel の入出力が入なので
+ * 5f4 「CSV でまとめて追加」（PRD D423。ADR-0090）：Excel の入出力を切っても（単発のデモ。「単発のみ」は Excel の入出力が入なので
  * ADR-0091 から excel だけ切って読み直す）引き出しに畳んで出る。
  * テンプレートは列名の行だけ、書き出しは見ている月の単発の訪問（件数がボタンに出る）。書き出した列で1件足したファイルを読むと、
  * 確認のあと訪問が1件増え、引き出しが閉じる
@@ -1674,7 +1674,7 @@ async function addOneOff(page, w) {
   await open1(page, `/plan?date=${date}`);
   const planText = await page.locator('main, .content').first().innerText();
   check(planText.includes(cname) && planText.includes('14:20'), `単発（${w}）：その日の予定に ${cname} 14:20 が出る`);
-  // 入れる前に閉じる：やめる
+  // 追加する前に閉じる
   await open1(page, '/week');
   await openAdd(page, 'oneOff', `単発（${w}）`);
   await page.getByTestId('add-plan-close').click();
@@ -1824,7 +1824,7 @@ const steps = sharedPage({
       restoreWidth(addAndTabs(390)),
     ],
     ['5f3 切：「定期の予定を追加」の毎月（第N）・誤りの欄（「基本」のまま）', addMonthly],
-    ['5f4 切：「予約を追加」の CSV でまとめて入れる（単発のみ）', addCsv],
+    ['5f4 切：「予約を追加」の CSV でまとめて追加（単発のみ）', addCsv],
     ['6 入：メニュー6つ・ホームなし・帯の入の種類', expertOn],
     ['6b 入：操作の行（2つ＋その他）・「詳しく」の見出しの数と開け閉めの覚え・説明1行', expertSame],
     ['6c 入：人の一覧は3列＋「くわしい列」（覚える）・人のタブ・4段は組む画面だけ', restoreWidth(expertPeople)],

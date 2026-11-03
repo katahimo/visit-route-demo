@@ -57,8 +57,8 @@ function staffDocs(t: DemoData['org']['terms']): [string, ColDoc][] {
     [S.shiftEnd, doc('勤務を終える時刻です', '18:00', newBlank(' 18:00'))],
     [S.active, doc('いま勤務している人に ○ を付けます', YES, newBlank('利用中'))],
     [S.address, doc('自宅の住所です', PLACES[0].address, '空のまま')],
-    [S.lat, doc('地図の位置（緯度）です。わからなければ空でかまいません', '38.2682', '空のまま')],
-    [S.lng, doc('地図の位置（経度）です。わからなければ空でかまいません', '140.8694', '空のまま')],
+    [S.lat, doc('緯度です。わからなければ空でかまいません', '38.2682', '空のまま')],
+    [S.lng, doc('経度です。わからなければ空でかまいません', '140.8694', '空のまま')],
     [STAFF_LAST_DAY_COL, doc('辞める人・担当を外れる人の最後の勤務日です', '2026-12-28', '空ならなし')],
     [STAFF_EMAIL_COL, doc('予定をメールで送るときの宛先です', 'hanako@example.com', '空のまま')],
     [STAFF_ICON_COL, doc('画面の印に出す1〜2文字です', '花', '空なら苗字の最初の1文字')],
@@ -78,8 +78,8 @@ function clientDocs(t: DemoData['org']['terms']): [string, ColDoc][] {
     [CLIENT_TENTATIVE_COL, doc('日程を仮に押さえている人に ○ を付けます', '', '空なら付けない')],
     [CLIENT_POSTAL_COL, doc('7桁の数字です（ハイフンは有っても無くてもかまいません）', PLACES[0].postal, '空のまま')],
     [C.address, doc('訪問先の住所です', PLACES[0].address, '空のまま')],
-    [C.lat, doc('地図の位置（緯度）です。わからなければ空でかまいません', '38.2682', '空のまま')],
-    [C.lng, doc('地図の位置（経度）です。わからなければ空でかまいません', '140.8694', '空のまま')],
+    [C.lat, doc('緯度です。わからなければ空でかまいません', '38.2682', '空のまま')],
+    [C.lng, doc('経度です。わからなければ空でかまいません', '140.8694', '空のまま')],
     [
       CLIENT_ALLOWED_COL,
       doc(

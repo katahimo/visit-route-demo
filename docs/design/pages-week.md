@@ -25,7 +25,7 @@ URL は `replace` で書く（表示の切り替えは除く）。
 - 「詳しく ▾」（`week-details`。閉じて始まり、開け閉めは端末に覚える＝鍵 `details:week`）：1行の状態（`week-status`。今日以降に訪問がある週だけ）「この週の今日以降：確定済み N日・まだ伝えていない N日・未連絡の変更 N日（あるときだけ）・要対応 N件」と時間軸の凡例・使い方。入は見出しの1行に「未確定 N日（まだ伝えていない日＋未連絡の変更のある日）・要対応 M件」（`weekHeading`）。進み具合の帯は出さない
 - 範囲の提案の帯（`RangeProposalBand`）
 - 表示の切り替え `week-views` は週のカードの1行目
-- 空の画面（`week-empty`。時間軸の上に横1行の帯 `compact`。主ボタンにしない）：`periodEmptyGuide({ period: 'この週', dates, today, visitDays })`（「この週には訪問がありません」と［日の予定で訪問を足す］）
+- 空の画面（`week-empty`。時間軸の上に横1行の帯 `compact`。主ボタンにしない）：`periodEmptyGuide({ period: 'この週', dates, today, visitDays })`（「この週には訪問がありません」と［日の予定で訪問を追加］）
 - 複数選択の帯（`SelectionBar`。時間軸の帯・表の札・「+N」の一覧の行を Shift・Ctrl＋クリック／Enter で選ぶ（スマホは長押し・「選ぶ」）。週を送ると外す）
 
 #### エキスパート機能が切のとき

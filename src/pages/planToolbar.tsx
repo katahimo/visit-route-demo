@@ -133,7 +133,7 @@ export function PlanToolbar({ p }: { p: PlanCtx }) {
     d.m.clients.length === 0
       ? `${d.terms.client}がいません`
       : compact
-        ? 'スマホの幅では訪問を足しません（パソコン・タブレットで）'
+        ? 'スマホの幅では訪問を追加しません（パソコン・タブレットで）'
         : false;
   /** 計算中の進み具合（操作の行） */
   const progressView = running && (

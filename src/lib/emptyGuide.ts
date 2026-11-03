@@ -35,8 +35,8 @@ export function periodEmptyGuide(input: PeriodInput): EmptyGuide | null {
   const at = dates.find((d) => d >= today) ?? dates[0]!;
   return {
     title: `${period}には訪問がありません`,
-    why: '繰り返しを足すか、日の予定で訪問を足すと、ここに出ます。',
-    actions: [{ kind: 'day', date: at, label: '日の予定で訪問を足す', primary: true }],
+    why: '繰り返しを追加するか、日の予定で訪問を追加すると、ここに出ます。',
+    actions: [{ kind: 'day', date: at, label: '日の予定で訪問を追加', primary: true }],
   };
 }
 
@@ -44,7 +44,7 @@ export function periodEmptyGuide(input: PeriodInput): EmptyGuide | null {
 export function compareEmptyGuide(input: { date: string }): EmptyGuide {
   return {
     title: 'この日には訪問がありません',
-    why: '訪問を足すと、ここで今の担当と提案を比べられます。',
-    actions: [{ kind: 'day', date: input.date, label: '日の予定で訪問を足す', primary: true }],
+    why: '訪問を追加すると、ここで今の担当と提案を比べられます。',
+    actions: [{ kind: 'day', date: input.date, label: '日の予定で訪問を追加', primary: true }],
   };
 }

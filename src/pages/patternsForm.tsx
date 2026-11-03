@@ -341,7 +341,7 @@ export function PatternEditForm({
 }) {
   return (
     <fieldset className="pattern-form stack" data-testid="pattern-form" onKeyDown={enterToSave(onSave)}>
-      <legend>{form.id ? '繰り返しを直す' : '繰り返しを足す'}</legend>
+      <legend>{form.id ? '繰り返しを直す' : '繰り返しを追加'}</legend>
       <PatternRepeatFields
         form={form}
         setForm={setForm}

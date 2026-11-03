@@ -118,7 +118,7 @@ export function MonthPickers({
           data-testid="month-off-toggle"
         >
           <WithIcon icon={CalendarOff} size={14}>
-            {off.on ? '休みの入力を終わる' : '休みを入れる'}
+            {off.on ? '休みの入力を終わる' : '休みを追加'}
           </WithIcon>
         </button>
       )}
@@ -194,7 +194,7 @@ export function MonthOffBar({
       <p>
         <strong>
           <WithIcon icon={CalendarOff} size={14}>
-            {name}さんの休みを入れる
+            {name}さんの休みを追加
           </WithIcon>
         </strong>
         ：勤務日のマスを押すと、その日を終日の{REQUESTED_OFF_NOTE}

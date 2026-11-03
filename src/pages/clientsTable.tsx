@@ -44,7 +44,7 @@ const COL_LABEL: Record<ClientCol, (staffTerm: string) => string> = {
   name: () => '名前',
   address: () => '住所',
   plan: () => 'いつもの予定',
-  place: () => '位置',
+  place: () => '緯度・経度',
   traits: () => '特性',
   requires: (staff) => `${staff}に求めること`,
   usual: () => 'いつもの担当',
@@ -255,9 +255,9 @@ function ClientCell({ col, c, ctx }: { col: ClientCol; c: Client; ctx: RowContex
       );
     case 'place':
       return (
-        <td {...narrowRole.cell} data-label="位置">
+        <td {...narrowRole.cell} data-label="緯度・経度">
           {hasLocation(c.place) ? (
-            <span className="chip chip-ok" title="位置あり">
+            <span className="chip chip-ok" title="緯度・経度あり">
               <MapPin size={13} strokeWidth={2.2} aria-hidden="true" />
               <span className="sr-only">あり</span>
             </span>

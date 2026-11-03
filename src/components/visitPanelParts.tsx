@@ -210,7 +210,7 @@ function BigRoute({ routeHref, clientName }: { routeHref: string | null; clientN
       type="button"
       className="btn vp-big-btn"
       disabled
-      title="場所（住所・地図の位置）が未登録のため、道順はありません"
+      title="場所（住所・緯度・経度）が未登録のため、道順はありません"
       data-testid="vp-big-route"
     >
       <Navigation size={22} aria-hidden="true" />

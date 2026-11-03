@@ -108,7 +108,7 @@ describe('autoPlaceAfterRoster（名簿のあと自動で置くか。PRD D427）
     // 住所の無い〈スタッフ〉しかいない → 送るものが無い
     expect(autoPlaceAfterRoster({ geocodeOn: true, next, kind: 'staff' })).toBe(false);
     expect(AUTO_PLACE_NOTE).toBe(
-      '読み込んだあと、住所から地図の位置を探します（住所を郵便番号の検索と国土地理院の地図の検索に使います）',
+      '読み込んだあと、住所から緯度・経度を探します（住所を郵便番号の検索と国土地理院の地図の検索に使います）',
     );
   });
 });

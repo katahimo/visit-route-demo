@@ -270,7 +270,7 @@ async function oneOff(page, dlg) {
   await page.getByTestId('pcal').waitFor({ timeout: 60000 });
   await settle(page, 400);
   check((await page.getByTestId('patterns-section').count()) === 0, '単発の予約：予定のタブから繰り返しの欄が消える');
-  check((await page.getByTestId('pattern-add').count()) === 0, '単発の予約：「繰り返しを足す」も出ない');
+  check((await page.getByTestId('pattern-add').count()) === 0, '単発の予約：「繰り返しを追加」も出ない');
 }
 
 /** 今日の最初の担当の列の最初の帯の訪問 ID */

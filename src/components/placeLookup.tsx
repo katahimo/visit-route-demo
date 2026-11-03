@@ -147,7 +147,7 @@ export function AddressField<T extends Place>({
       </output>
       {geoHits.length > 0 && (
         <Candidates
-          label="ほかの候補（押すとピンを置き直します）"
+          label="ほかの候補（押すと緯度・経度を入れ直します）"
           items={geoCandidates(geoHits, value)}
           onPick={(i) => putPin(geoHits[i])}
           testId={tid('geo-candidate', 'geo-candidate')}
@@ -229,7 +229,7 @@ function PostalRow({
   );
 }
 
-/** 「地図に置く」と「住所を元に戻す」のボタン */
+/** 「住所から緯度・経度を入れる」と「住所を元に戻す」のボタン */
 function PinActions({
   testId,
   why,
@@ -254,12 +254,12 @@ function PinActions({
         className="btn btn-small"
         aria-disabled={why ? true : undefined}
         aria-describedby={why ? whyId : undefined}
-        title={why ?? '住所から位置を探して、地図にピンを置きます'}
+        title={why ?? '住所から緯度・経度を探して入れます（地図にも出ます）'}
         onClick={onSearch}
         data-testid={`${testId}-geo-search`}
       >
         <WithIcon icon={MapPin} size={14}>
-          {placed ? '住所から置き直す' : '地図に置く'}
+          {placed ? '住所から入れ直す' : '住所から緯度・経度を入れる'}
         </WithIcon>
       </button>
       {why && (

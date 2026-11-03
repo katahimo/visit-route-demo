@@ -29,7 +29,7 @@ export type FirstRunChoice<T extends string> = { value: T; label: string; descri
 export const FIRST_RUN_TITLE = '最初の設定';
 export const FIRST_RUN_SUBMIT = 'はじめる';
 /** やり直しのときだけ出す従のボタン（今のデータのまま戻る） */
-export const FIRST_RUN_CANCEL = 'やめる';
+export const FIRST_RUN_CANCEL = '閉じる';
 export const FIRST_RUN_NOTE =
   'あとから「データ」の画面の「始め方を選び直す」で選び直せます。機能は「管理者設定」で変えられます。';
 export const FIRST_RUN_Q1 = '1. どちらで始めますか';

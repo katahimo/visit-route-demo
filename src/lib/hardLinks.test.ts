@@ -24,7 +24,7 @@ describe('必須の違反 → 関連の画面（PRD D345）', () => {
     expect(tos('担当を限る：山田、佐藤 ✗')).toEqual([clientPageHref('c1')]);
     expect(tos('希望✗ 性別 = 女性')).toEqual([clientPageHref('c1')]);
     expect(tos('いつもの担当でない')).toEqual([clientPageHref('c1')]);
-    expect(tos('利用者さんの位置が未登録')).toEqual([clientPageHref('c1')]);
+    expect(tos('利用者さんの緯度・経度が未登録')).toEqual([clientPageHref('c1')]);
     expect(hardLinks(na('必要条件：資格 ✗'), 'c1', T)[0]?.label).toBe('利用者さんの画面');
   });
   it('〈利用者さん〉が分からなければ〈利用者さん〉の画面は出さない', () => {
@@ -33,7 +33,7 @@ describe('必須の違反 → 関連の画面（PRD D345）', () => {
   it('〈スタッフ〉の条件：その人の画面（〈利用者さん〉の画面にしない）', () => {
     expect(tos('スタッフの必要条件：ペット = なし ✗')).toEqual([staffPageHref('s1')]);
     expect(tos('スタッフの希望✗ 地域 = 北')).toEqual([staffPageHref('s1')]);
-    expect(tos('スタッフの自宅の位置が未登録')).toEqual([staffPageHref('s1')]);
+    expect(tos('スタッフの自宅の緯度・経度が未登録')).toEqual([staffPageHref('s1')]);
     expect(tos(AFTER_LAST_DAY)).toEqual([staffPageHref('s1')]);
     expect(hardLinks(na('スタッフの必要条件：x ✗'), 'c1', T)[0]?.label).toBe('スタッフの画面');
   });

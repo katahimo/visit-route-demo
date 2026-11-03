@@ -102,7 +102,7 @@ export function PlaceAllPanel({
             data-testid="place-all-only"
           >
             <WithIcon icon={ListFilter} size={14}>
-              {only.on ? 'すべて見る' : '位置なしだけ見る'}
+              {only.on ? 'すべて見る' : '緯度・経度なしだけ見る'}
             </WithIcon>
           </button>
         )}
@@ -251,7 +251,9 @@ function PlacedMap({
   if (points.length === 0) return null;
   return (
     <div className="stack" style={{ gap: 4 }} data-testid="place-all-map">
-      <span className="sub">入れた{t.term}（ずれていれば、編集の欄で「位置を消す」→地図をクリックで直せます）</span>
+      <span className="sub">
+        入れた{t.term}（ずれていれば、編集の欄で「緯度・経度を消す」→地図をクリックで直せます）
+      </span>
       <RouteMap points={points} height={240} />
     </div>
   );

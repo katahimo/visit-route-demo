@@ -8,7 +8,7 @@
 - 題名「〈利用者さん〉」（「一覧」を付けない）。下に入切とも小さいタブ 一覧・相性（`PeopleTabs`。`lib/peopleTabs`。予定を組むの段・基本情報のタブは出さない）。右に「Excel・CSV」（`roster-toggle`。「名簿の欄」）と主ボタン「〈利用者さん〉を追加」（`client-add`。`#/clients/new`）
 - 一覧の上に `ClientFilter`（`clients-filter`。画面の状態。URL に残さない。既定 `EMPTY_FILTER`）。期間は選んでいる日（`useDay`）を含む週（月〜日）で、`weekDay` を7日分作って `filterFacts` に渡す。終了の人は「終了の人も出す」のときだけ
 - 狭い画面（600px 以下）：絞り込みの中身を「絞り込み（N）」のボタン（`narrow-filter-toggle`。`aria-expanded`・`aria-controls`）の下に畳み、横に「N人を表示」（`narrow-filter-count`）。N は `activeFilterCount`。はじめは畳み、開いたかは画面の中だけ。広い画面はいつも開いたまま
-- 一覧の上に「緯度・経度が未登録の〈利用者さん〉」のカード（下の「住所から緯度・経度をまとめて入れる」）。絞り込みに足すチップ「位置なし」（`extraChips`・`lib/placeAll` の `NO_PLACE_CHIP`。判定は `noPlaceIds`）。住所のセルに、位置の無い人（終了を除く）は「位置なし」の印と［住所から探す］（`no-place-search`）・［地図で置く］（`no-place-map`）（`components/NoPlaceActions` の `NoPlaceCell`・値は `useNoPlaceRow`。PRD D427）
+- 一覧の上に「緯度・経度が未登録の〈利用者さん〉」のカード（下の「住所から緯度・経度をまとめて入れる」）。絞り込みに足すチップ「緯度・経度なし」（`extraChips`・`lib/placeAll` の `NO_PLACE_CHIP`。判定は `noPlaceIds`）。住所のセルに、位置の無い人（終了を除く）は「緯度・経度なし」の印と［住所から探す］（`no-place-search`）・［緯度・経度を編集］（`no-place-map`）（`components/NoPlaceActions` の `NoPlaceCell`・値は `useNoPlaceRow`。PRD D427）
 - 列（`lib/peopleView` の `clientColumns(detailed)`）：名前・住所（`client-address`）・いつもの予定（`client-plan`。終わっていない繰り返しを `patternWhenText` でつないだ文）と右端の「開く」。名前のセルは仮の印と休み中の印（`clientNameNote`。状態の列があれば列に出す）。**エキスパート機能が入のときだけ**絞り込みの下に「くわしい列」のチェック（`people-columns-toggle`。`components/DetailColumns`）。入れると 位置・特性・求めること・いつもの担当・状態の列を足し（名前のセルによみ・紹介元も）、「状態の印で見分けられます」の説明。一覧ごとに端末に覚える（`store/navOpen` の鍵 `columns:clients`）。切は見出しの下の説明を初回だけ（`useIntro('clients')`）
 - 行（`client-row`）：状態に段階（`client-stage`）・「いつもの担当」の列に担当できる人の印「限 山田、佐藤」（`client-limit`。title に全員の名前）・「仮」の印。右端は「〈名前〉を開く」（`Eye`。`client-open`）
 - 行のどこを押してもその人の画面へ（`lib/rowOpen` の `shouldOpenRow`：行の中のボタン・リンク・入力欄・文字の選択・二度押しの2回目は除く。`.row-open` で指のカーソルと地の色）
@@ -23,7 +23,7 @@
 - 読み込み方 `roster-mode`：追加・更新（ファイルに無い人はそのまま）／総入れ替え（ファイルに無い人を〈スタッフ〉は休止、〈利用者さん〉は段階「終了」にする。消さない）。一覧が0人なら出さず、追加・更新で読む（PRD D104）
 - 読み込み `FilePick`（`roster-file`・caption「読み込む〈呼び方〉の名簿（Excel・CSV）」・.xlsx・.csv・.tsv・.txt）。.xlsx か CSV かは中身で、CSV の文字コードは `lib/csv` の `decodeText` で見分ける。列名がほかのソフトの形（`excel/rosterForms`。予約システムのスタッフ・顧客）なら、その形の列を名簿の列に写して読む。顧客台帳の形なら、名前・よみ（カタカナはひらがな・空白を詰める）・郵便番号・住所（都道府県＋市区町村＋町名以下＋建物名）・電話（備考の先頭に1行）・状態（利用中＝利用中、ほか＝終了）・備考だけを読み、請求・口座・生年月日・性別・続柄・顧客番号は読まずデータに残さない。確認の本文に読んだ形（ほかのソフトの形なら「〈形の名前〉の形として読みました」と「読まなかった列：…」も。`rosterConfirmBody`。控えの文は「データの画面の「直前の状態に戻す」」）。確認の後にデータが変わっていないかを見直す（入らなければ控えを前の世代に戻す）
 - 〈スタッフ〉の名簿で最終勤務日が入れば、トーストで「最終勤務日のある〈スタッフ〉」の欄を指す（`offboard` が切なら指さない）
-- 名簿を読み込むとき（PRD D427。ADR-0094）、`RosterCard` に `onPlace` を渡していれば（`components/useRosterAutoPlace`。`geocode` が切なら渡さない）、`useRosterImport` が `lib/placeAll` の `autoPlaceAfterRoster`（読み込んだあとのデータに `placeAllTargets` の対象がいるか）で決め、確認の本文（`rosterConfirmBody` の `autoPlace`）の最後に「読み込んだあと、住所から地図の位置を探します（住所を郵便番号の検索と国土地理院の地図の検索に使います）」を足す。入ったと見届けたら（`usePendingImport` の `onDone`）名簿の欄を閉じ、まとめて置く欄（`place-all`）へ移してフォーカスし、`run` を始める（［名簿を読み込む］を押した続き）。〈スタッフ〉一覧・登録の案内①②も同じ
+- 名簿を読み込むとき（PRD D427。ADR-0094）、`RosterCard` に `onPlace` を渡していれば（`components/useRosterAutoPlace`。`geocode` が切なら渡さない）、`useRosterImport` が `lib/placeAll` の `autoPlaceAfterRoster`（読み込んだあとのデータに `placeAllTargets` の対象がいるか）で決め、確認の本文（`rosterConfirmBody` の `autoPlace`）の最後に「読み込んだあと、住所から緯度・経度を探します（住所を郵便番号の検索と国土地理院の地図の検索に使います）」を足す。入ったと見届けたら（`usePendingImport` の `onDone`）名簿の欄を閉じ、まとめて置く欄（`place-all`）へ移してフォーカスし、`run` を始める（［名簿を読み込む］を押した続き）。〈スタッフ〉一覧・登録の案内①②も同じ
 
 ### 〈利用者さん〉・〈スタッフ〉の画面の殻
 
@@ -65,7 +65,7 @@
 - 回：`lib/personPage` の `clientCalItems`（`visitLists.clientVisitsIn`。取り消しも）・`staffCalItems`（`visitLists.staffVisitsIn`：担当がその人。取り消しは出さない）。様子（`CalState`）は 取り消し（`cancelled`・`sameDay`）→ 休みのため無し（`leave`）→ 担当あり（`assigned`）→ 担当なし（`unassigned`。赤）。時刻は開始（早）〜＋所要
 - 回のボタン（大の札。`pcal-visit`・`data-visit`・`data-date`・`data-state`・`data-pattern`・`data-size="l"`・`data-marks`）：時刻・種類の色の点・印（`useVisitLooks`・`VisitMarks`：要対応・資格✗／限✗・未連絡の変更・ピン・「変」・仮押さえ）、〈利用者さん〉の画面は担当の `StaffMark` と苗字（無ければ様子の文）、〈スタッフ〉の画面は〈利用者さん〉の名前。aria-label「10/28（水） 09:00〜10:00 〈名前〉（種類・…）・印の説明（選択中）（押すと訪問の詳細）」。押す・Enter で `useOpenVisit()`（閉じたらフォーカスはその回）
 - 強調：`highlight` の繰り返しの回は `is-hl`、ほかは `is-dim`（`aria-pressed` は選択を表す）。上に「選んだ繰り返しの回：この期間に N回」（`pcal-hl-note`）
-- 道具の行（`pcal-tools`）：前／次（`pcal-prev`・`pcal-next`。週は7日・月は1か月）・見出し（`pcal-title`。「10/26（月）〜11/1（日）」「2026年10月」。aria-live）・今日・［週｜月］（`pcal-view`・`data-view`）・〈利用者さん〉の広い画面は「訪問を足す」（`pcal-add`。期間の今日以降の最初の日の 09:00・60分）
+- 道具の行（`pcal-tools`）：前／次（`pcal-prev`・`pcal-next`。週は7日・月は1か月）・見出し（`pcal-title`。「10/26（月）〜11/1（日）」「2026年10月」。aria-live）・今日・［週｜月］（`pcal-view`・`data-view`）・〈利用者さん〉の広い画面は「訪問を追加」（`pcal-add`。期間の今日以降の最初の日の 09:00・60分）
 - 週（`data-layout="week"`）：見出しの行（日付・今日の印・`dayNote`）、左の時刻の目盛り（7:00〜20:00）、日ごとの列（`pcal-col`。1分 0.8px・1時間ごとの線。重なる回は `laneLayout` で横に並べる）。今日より前の列は薄い地
 - 月（`data-layout="month"`）：月曜はじまりの週（`monthWeeksMon`）のマス（`pcal-cell`。日付・`dayNote`・回のボタン）。〈利用者さん〉の広い画面は今日以降のマスに「＋」（`pcal-cell-add`。その日の 09:00・60分）
 - 足す（〈利用者さん〉の広い画面・今日以降の列）：空いている所を押すと押した枠（15分刻みに切り捨て）・所要60分。縦にドラッグすると影（`pcal-ghost`）を出し、押した枠と離した枠を両方含む長さ（`slotOf`）で `useOpenVisit({ newVisit: { date, clientId, start }, draft: { durationMinutes } })`。回の上で押したときは足さない
@@ -101,17 +101,17 @@
 
 #### 休みのタブ（`pages/ClientLeavesSection.tsx`）
 
-- 一覧（期間・理由・その期間の訪問 N件・確定した日の数・終わった休みは「（終わった休み）」）と「休みを入れる」（`leave-add`）・行の「直す」（`leave-edit`）
+- 一覧（期間・理由・その期間の訪問 N件・確定した日の数・終わった休みは「（終わった休み）」）と「休みを追加」（`leave-add`）・行の「直す」（`leave-edit`）
 - 入力（`leave-form`）：開始日（`leave-from`）・終了日（`leave-to`。初期値は今日〜今日）・理由（`leave-note`。100字まで）と「保存」（`leave-save`）・「取り消し」（`leave-cancel`）・直すときは「この休みを消す」（`leave-remove`。確認してから）
 - 休みと重なる確定した日（`leaveConfirmedDates`）があれば「確定した日（10/20・10/27）に〈名前〉の訪問があります。休みを入れた日が確定済みなら「未連絡の変更」になります。その日の「日の予定」の連絡の一覧で確かめてください」とその日へのリンク（`leave-warn`。注意。保存はできる）
 - 休みの訪問は AI で組む・空き状況・要対応の検査から外れる。スマホ画面は休みの訪問を出さない
 
 #### 繰り返し（`pages/PatternsSection.tsx`・`patternsList.tsx`・`patternsForm.tsx`・`usePatternsFlow.ts`、`lib/patternForm.ts`・`patternConfirm.ts`）
 
-- 見出し「繰り返し」と「繰り返しを足す」（`pattern-add`）。説明は箇条書き（押すとカレンダーで目立たせる・足すと作ってある最後の日まで作る・その先は月の予定）
+- 見出し「繰り返し」と「繰り返しを追加」（`pattern-add`）。説明は箇条書き（押すとカレンダーで目立たせる・足すと作ってある最後の日まで作る・その先は月の予定）
 - 行（`pattern-row`・`data-pattern`）：押せる文（`pattern-pick`。`aria-pressed`。種類・`patternWhenText`・所要・`periodText`・いつもの担当・「標準の開始：月 10:00・水 11:00」（無ければ出さない。`pattern-usual-starts`））と「直す」（`pattern-edit`）・「終わらせる」（`pattern-end`）
 - 入力（`pattern-form`）：種類（選ぶと所要の初期値）・繰り返し（毎週／隔週／3週ごと／4週ごと／毎月（第N）。選択肢と値の変換は `lib/patternForm` の `repeatChoices`・`withRepeatChoice`＝「定期の予定を追加」と共通。`pattern-repeat`）・曜日（`pattern-weekdays`）・第何週（`pattern-month-weeks`。チップは `components/MonthWeekChips`＝「定期の予定を追加」と共通）・時間の決め方・開始（早・遅）・曜日ごとの時刻（`pattern-per-day`・`pattern-daytimes`）・曜日ごとの標準の開始（`pattern-usual-starts-form`。開始（早）〜（遅）の外なら文を出して保存させない）・所要・開始日／いつから変えますか・終了日・いつもの担当・メモ。「保存」（`pattern-save`）・「取り消し」（`pattern-cancel`）・直すときは「この繰り返しを消す」（`pattern-remove`）
-- 足す：繰り返しを足し（回は見るときに計算する）、保存の直後に増えた担当なしの回を自動で組む（`lib/autoArrangeBatch` の `requestAutoArrange`。`usualStaffId` も書く。トースト「繰り返しを足しました（担当を自動で組みます）」。対象が無ければ「（担当なし）」。知らせ「N件の担当を組みました」と［元に戻す］は `AutoArrangeHost`）。直す：日時が変わった・増えた担当なしの回を同じく自動で組む（トースト「繰り返しを直しました（担当を自動で組みます）」）。`splitPattern`（`patternSplitConfirm`：繰り返しのとおりに戻る担当を組んだ回 N件・「未連絡の変更」になる確定した日 M日を確かめる）。消す：`removePattern`（`patternRemoveConfirm`。確定した日を確かめる）
+- 足す：繰り返しを足し（回は見るときに計算する）、保存の直後に増えた担当なしの回を自動で組む（`lib/autoArrangeBatch` の `requestAutoArrange`。`usualStaffId` も書く。トースト「繰り返しを追加しました（担当を自動で組みます）」。対象が無ければ「（担当なし）」。知らせ「N件の担当を組みました」と［元に戻す］は `AutoArrangeHost`）。直す：日時が変わった・増えた担当なしの回を同じく自動で組む（トースト「繰り返しを直しました（担当を自動で組みます）」）。`splitPattern`（`patternSplitConfirm`：繰り返しのとおりに戻る担当を組んだ回 N件・「未連絡の変更」になる確定した日 M日を確かめる）。消す：`removePattern`（`patternRemoveConfirm`。確定した日を確かめる）
 - 終わらせる（`pattern-end-form`）：最後の日（`pattern-end-last`。初期値は今日。終わっていればその終了日、まだ始まっていなければ開始日で「開始日の回も要らないときは「直す」の「この繰り返しを消す」で消します」（`pattern-end-before`））と「保存」（`pattern-end-save`）。`visitOps` の `endPatternOp`（終了日を入れ、最後の日より後で今日以降の、この回だけ変えていない・取り消していない回を消す。確定した日の数）を確かめてから入れる
 - `patternMonthly` が切でも `repeat` と `monthWeeks` を残し、読むだけと注記（`pattern-monthly-off`）
 - 入力の変更（終わらせるは最後の日を変えたとき）を `onDirty` で画面へ知らせる
@@ -151,11 +151,11 @@
 #### `components/placeLookup.tsx` の `AddressField`
 
 - 型の引数は場所の型 T。`value`・`onChange`。郵便番号は `postalCode`・`onPostalCodeChange` で渡す（渡さなければ部品の中だけで持つ）
-- 中身：郵便番号・住所・「住所を探す」「地図に置く」（この部品のボタン。まとめて入れる欄とは別）・注記・状態・候補・`PlacePin`（地図とピン）。`postalLabel`・`noticeNote`（注記の後ろ）
+- 中身：郵便番号・住所・「住所を探す」「住所から緯度・経度を入れる」（この部品のボタン。まとめて入れる欄とは別）・注記・状態・候補・`PlacePin`（地図とピン）。`postalLabel`・`noticeNote`（注記の後ろ）
 - 主ボタンではない。押せないときは aria-disabled＋理由（title と文字）
 - `testId`（`client`／`vacancy`／`staff-home`）。中の data-testid は `${testId}-notice`・`${testId}-status`・`${testId}-postal-candidate` などの頭付き。〈利用者さん〉だけは `client-postal`・`place-notice`・`place-lookup-status`・`postal-candidate`・`geo-candidate`
 - 探している途中に欄を書き換えた・ピンを動かしたら、呼び出しを止めて「探しています」を解く。応答のあとも送った値と今の欄の値（ref）を比べ、違えば捨てる（`sameQuery`）。押したことは ref でも持ち、連打しても1回だけ。途中で閉じたら書かない
-- ピンがある状態で郵便番号から住所を差し替えたら、ピンは残し、知らせに「位置は前のままです。『住所から置き直す』を押してください」を足す
+- ピンがある状態で郵便番号から住所を差し替えたら、ピンは残し、知らせに「緯度・経度は前のままです。『住所から入れ直す』を押してください」を足す
 - 郵便番号のエラーと押せない理由は aria-describedby で結ぶ（.sr-only）。郵便番号の欄は16文字まで（空白の多い貼り付けも7桁に直す）
 - 見つからない・つながらない・時間切れは知らせてデータを変えない
 - `ClientPlaceEditor`：`place.postalCode` を持たせた〈利用者さん〉用（住所の節を直すたびに作り直す）
@@ -163,11 +163,11 @@
 
 #### 住所から緯度・経度をまとめて入れる（`lib/placeAll.ts`・`pages/PlaceAllPanel.tsx`・`components/usePlaceAllRun.ts`）
 
-- 〈利用者さん〉一覧・〈スタッフ〉一覧（自宅）・登録の案内①②の上のカード（PRD D89・D427）。1行目は「緯度・経度が未登録の〈…〉：N人」（〈スタッフ〉は「自宅の緯度・経度が未登録の〈…〉」）・数え方（`place-all-count`。「住所・郵便番号あり N人・住所・郵便番号なし M人」、〈スタッフ〉は「住所あり／住所なし」。終了・休止を除くことは書かない）・ふつうのボタン［住所から緯度・経度を入れる（N人）］（`place-all-run`。0人のときは人数を付けない。一度探したあとは［続きを探す（N人）］。`placeAllRunLabel`。`geocode` が切なら出さない）・「止める」・［位置なしだけ見る］（`place-all-only`。押すと絞り込みの「位置なし」を付け外し。案内では出さない）。下に「緯度・経度が未登録の場合、移動30分で計算されます」（`place-all-note`。ADR-0093）・送る先の注記（「緯度・経度の検索は、国土地理院のサイトで行っています（住所のみ送信。住所が無い人は郵便番号を郵便番号検索へ送信）」。`geocode` が入のとき）・進み具合（「探しています… N／M人」。終わると「（入れた N人・見つからない M人）」）・結果（「見つからなかった〈…〉（編集の欄で住所を直すか、地図をクリックして入れてください）」「入れた〈…〉」）。位置の無い人がいなくなり結果も無ければ出さない。画面を離れたら止める
+- 〈利用者さん〉一覧・〈スタッフ〉一覧（自宅）・登録の案内①②の上のカード（PRD D89・D427）。1行目は「緯度・経度が未登録の〈…〉：N人」（〈スタッフ〉は「自宅の緯度・経度が未登録の〈…〉」）・数え方（`place-all-count`。「住所・郵便番号あり N人・住所・郵便番号なし M人」、〈スタッフ〉は「住所あり／住所なし」。終了・休止を除くことは書かない）・ふつうのボタン［住所から緯度・経度を入れる（N人）］（`place-all-run`。0人のときは人数を付けない。一度探したあとは［続きを探す（N人）］。`placeAllRunLabel`。`geocode` が切なら出さない）・「止める」・［緯度・経度なしだけ見る］（`place-all-only`。押すと絞り込みの「緯度・経度なし」を付け外し。案内では出さない）。下に「緯度・経度が未登録の場合、移動30分で計算されます」（`place-all-note`。ADR-0093）・送る先の注記（「緯度・経度の検索は、国土地理院のサイトで行っています（住所のみ送信。住所が無い人は郵便番号を郵便番号検索へ送信）」。`geocode` が入のとき）・進み具合（「探しています… N／M人」。終わると「（入れた N人・見つからない M人）」）・結果（「見つからなかった〈…〉（編集の欄で住所を直すか、地図をクリックして入れてください）」「入れた〈…〉」）。位置の無い人がいなくなり結果も無ければ出さない。画面を離れたら止める
 - 状態と処理（`usePlaceAllRun(kind)`）は一覧の画面（案内は〈利用者さん〉・〈スタッフ〉の2つを画面が持ち、段を替えても続く）が持ち、カード・名簿のあと・行の［住所から探す］（`run([id])`。その人だけ）に同じものを渡す。`run` は呼ばれたときのデータで対象を数える（名簿の直後でも）。走っている最中に呼ばれたら（名簿を読み込んだ）、終わったあと残り（この続きでまだ探していない人）を続けて探す予約を持つ（`lib/placeRunQueue` の `createPlaceRunGate`。止めたら予約を捨てる）。案内は `usePlaceAllRun(kind, lane)` に1本の列（`createPlaceLane`）を渡し、〈利用者さん〉・〈スタッフ〉を同時に走らせない（片方が走っていれば、もう片方は待って始める。待つ間は「ほかの名簿の緯度・経度を探し終わるのを待っています」と［止める］。外部の検索は同時に1本。ADR-0016）。カードは見せるだけ（`ref` で名簿のあとに移ってフォーカスする。`tabIndex=-1`）
 - 見つからなかった人のうち住所から緯度・経度が見つからなかった人（`hasAddressNotFound`）がいれば、見出しの下に1行「市区町村の名前が無い住所…」（`place-all-city-hint`）
 - 種類ごとの違い（数える人＝〈利用者さん〉は終了を除く・〈スタッフ〉は休止を除く／書く先＝場所・自宅／文）は `placeAccess` の1か所（switch を never で網羅）。`placePeople(data, kind)`（そろえた形 `PlacePerson`。〈スタッフ〉の郵便番号は ''）、`placeAllTargets(data, kind)`（対象・住所も郵便番号もない人）、`placeAll(targets, opts)`（1人ずつ順に・間隔をあける・止める・1人ごとに結果）、`withFoundPlace(data, kind, id, from, place)`（位置の無いときだけ書く）
-- 見つからなかった人の「編集」と行の［地図で置く］はその人の住所の節（`#/clients/:id?tab=basic&edit=place`。〈スタッフ〉は自宅の節 `#/staff/:id?tab=basic&edit=home`。畳んだ「詳しく ▾」は開く）
+- 見つからなかった人の「編集」と行の［緯度・経度を編集］はその人の住所の節（`#/clients/:id?tab=basic&edit=place`。〈スタッフ〉は自宅の節 `#/staff/:id?tab=basic&edit=home`。畳んだ「詳しく ▾」は開く）
 
 ### 絞り込み
 

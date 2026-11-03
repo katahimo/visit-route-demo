@@ -108,7 +108,7 @@ describe('短い文字', () => {
     expect(oneOrCount(['消防 まもる'])).toBe('消防');
     expect(oneOrCount(['a', 'b'])).toBe('2人');
   });
-  it('「休みを入れる」の説明はどの扱いにもある', () => {
+  it('「休みを追加」の説明はどの扱いにもある', () => {
     expect(OFF_STATE_TEXT.open).toBe('押すと希望休にします');
     expect(OFF_STATE_TEXT.past).toContain('押せません');
   });

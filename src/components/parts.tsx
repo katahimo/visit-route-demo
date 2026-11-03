@@ -63,18 +63,20 @@ export function PlacePin<T extends Place>({ value, onChange }: { value: T; onCha
     <div className="stack" data-testid="place-pin">
       <div className="row" style={{ flexWrap: 'wrap' }}>
         <span className="sub" data-testid="place-pin-text">
-          {hasLocation(value) ? `位置：${value.lat.toFixed(5)}, ${value.lng.toFixed(5)}` : '位置は未登録です'}
+          {hasLocation(value)
+            ? `緯度・経度：${value.lat.toFixed(5)}, ${value.lng.toFixed(5)}`
+            : '緯度・経度は未登録です'}
         </span>
         {hasLocation(value) && (
           <button type="button" className="btn btn-small" onClick={() => onChange({ ...value, lat: null, lng: null })}>
-            位置を消す
+            緯度・経度を消す
           </button>
         )}
       </div>
       <span className="sub">
         {hasLocation(value)
-          ? '位置を変えるときは「位置を消す」を押してから、地図をクリックしてください（うっかり動かさないため）'
-          : '地図をクリックした所にピンを置きます（位置は直線距離の概算に使います）'}
+          ? '緯度・経度を変えるときは「緯度・経度を消す」を押してから、地図をクリックしてください（うっかり動かさないため）'
+          : '地図をクリックした所の緯度・経度を入れます（直線距離の概算に使います）'}
       </span>
       <RouteMap
         height={220}

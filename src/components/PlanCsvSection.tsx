@@ -19,7 +19,7 @@ export function PlanCsvSection({ clientTerm, onImported }: { clientTerm: string;
   return (
     <details className="add-plan-csv" data-testid="plan-csv">
       <summary className="add-plan-csv-title" data-testid="plan-csv-open">
-        CSV でまとめて入れる
+        CSV でまとめて追加
       </summary>
       <p className="sub">
         {`単発の訪問を CSV で読み込みます。必ず入れる列は ${COLS_TEXT}（${clientTerm}の名前）。読める形：${FORM_LABELS}。`}

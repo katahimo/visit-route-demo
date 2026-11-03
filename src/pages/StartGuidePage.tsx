@@ -160,7 +160,9 @@ function PlanStep({
 }) {
   return (
     <>
-      <p>予約の CSV があれば読み込みます。無ければ、予定の画面で訪問を足します。足した訪問には自動で担当が付きます。</p>
+      <p>
+        予約の CSV があれば読み込みます。無ければ、予定の画面で訪問を追加します。追加した訪問には自動で担当が付きます。
+      </p>
       {/* データの画面の予約の CSV の欄をそのまま使う。Excel の入出力の入り切りにかかわらず、ここでは読み込める */}
       <BookingCard t={terms} />
       <p className="sub" data-testid="start-guide-visits">

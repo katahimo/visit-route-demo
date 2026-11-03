@@ -9,22 +9,22 @@ describe('periodEmptyGuide（版2。ADR-0053）', () => {
     expect(periodEmptyGuide({ ...base, visitDays: ['2026-10-21'] })).toBeNull();
     expect(periodEmptyGuide({ ...base, dates: [] })).toBeNull();
   });
-  it('訪問が無い：日の予定で訪問を足す（今日以降の最初の日）', () => {
+  it('訪問が無い：日の予定で訪問を追加（今日以降の最初の日）', () => {
     const g = periodEmptyGuide(base);
     expect(g?.title).toBe('この週には訪問がありません');
-    expect(g?.actions).toEqual([{ kind: 'day', date: '2026-10-21', label: '日の予定で訪問を足す', primary: true }]);
+    expect(g?.actions).toEqual([{ kind: 'day', date: '2026-10-21', label: '日の予定で訪問を追加', primary: true }]);
   });
   it('訪問が無い過ぎた期間：期間の最初の日', () => {
     const g = periodEmptyGuide({ ...base, period: 'この月', today: '2026-11-05' });
     expect(g?.title).toBe('この月には訪問がありません');
-    expect(g?.actions).toEqual([{ kind: 'day', date: '2026-10-19', label: '日の予定で訪問を足す', primary: true }]);
+    expect(g?.actions).toEqual([{ kind: 'day', date: '2026-10-19', label: '日の予定で訪問を追加', primary: true }]);
   });
 });
 
 describe('compareEmptyGuide', () => {
-  it('訪問が無い日：日の画面で訪問を足す', () => {
+  it('訪問が無い日：日の画面で訪問を追加', () => {
     const g = compareEmptyGuide({ date: '2026-10-22' });
     expect(g.title).toBe('この日には訪問がありません');
-    expect(g.actions).toEqual([{ kind: 'day', date: '2026-10-22', label: '日の予定で訪問を足す', primary: true }]);
+    expect(g.actions).toEqual([{ kind: 'day', date: '2026-10-22', label: '日の予定で訪問を追加', primary: true }]);
   });
 });

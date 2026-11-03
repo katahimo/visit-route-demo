@@ -72,7 +72,7 @@ function basicSections({ s, ed, mailOn, offboardOn, data }: StaffBasicArgs): { p
           view={
             <dl>
               <DlRow term="住所" value={orDash(s.home.address)} />
-              <DlRow term="地図の位置" value={placeText(s.home)} />
+              <DlRow term="緯度・経度" value={placeText(s.home)} />
             </dl>
           }
         >

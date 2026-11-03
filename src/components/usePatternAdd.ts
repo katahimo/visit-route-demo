@@ -21,7 +21,7 @@ export function usePatternAdd(): (form: PatternForm, clientId: string) => Patter
     const add = (d: DemoData): DemoData => ({ ...d, patterns: [...d.patterns, p] });
     // 保存後のデータは先に1回だけ作り、store にもそれを入れる（自動の組みが読むデータと参照をそろえる）
     const after = add(data);
-    update((d) => (d === data ? after : add(d)), '繰り返しを足す');
+    update((d) => (d === data ? after : add(d)), '繰り返しを追加');
     return { pattern: p, auto: requestAutoArrange({ before: data, after, today, writeUsual: true, from: p.from }) };
   };
 }
