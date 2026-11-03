@@ -173,7 +173,9 @@ function FailList({
 }) {
   return (
     <div className="stack" style={{ gap: 4 }} data-testid="place-all-failed">
-      <span className="sub">見つからなかった{t.term}（編集の欄で住所を直すか、地図をクリックして緯度・経度を入れてください）</span>
+      <span className="sub">
+        見つからなかった{t.term}（編集の欄で住所を直すか、地図をクリックして緯度・経度を入れてください）
+      </span>
       {hasAddressNotFound(fails) && (
         <span className="sub" data-testid="place-all-city-hint">
           市区町村の名前が無い住所（「〇〇区〇〇」など）は見つからないことがあります。編集の欄で市区町村から書き足してください
