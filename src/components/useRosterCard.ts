@@ -23,6 +23,8 @@ export function useRosterCard(kind: RosterKind, onPlace?: () => void) {
   const term = kind === 'staff' ? data.org.terms.staff : data.org.terms.client;
   /** 一覧が0人か（書き出しは列名だけのテンプレートになる。読み込み方は選ばせず追加・更新） */
   const empty = rosterIsEmpty(data, kind);
+  // 0人の間は選ばせないので既定に戻す（人が入って選択肢が出たとき、前の総入れ替えが残らないように）
+  if (empty && rosterMode !== 'merge') setRosterMode('merge');
   const loadRoster = useRosterImport({ rosterMode: empty ? 'merge' : rosterMode, offboardOn, setError, onPlace });
 
   /**
