@@ -5,7 +5,7 @@
 
 ## データの1件ずつ（`src/contracts/documents.ts`。ADR-0002・ADR-0011〜ADR-0017・ADR-0028・ADR-0050）
 
-PoC本体の documents.ts からログイン・事業所の分離（email・uid・orgId）を除き、特性と条件を足した（`requiredGender` は性別＋必要条件、`ngStaffIds` は相性 × に）。共通：`hhmmSchema`・`hhmm30Schema`（30分単位）・`dateSchema`・`idSchema`（1〜100字）・`placeSchema`＝`{ address ≤200, lat, lng（null 可） }`・`termsSchema`＝`{ client ≤10, staff ≤10 }`。（　）の既定は無い古いデータの読み方。
+ログイン・事業所の分離（email・uid・orgId）は持たない。PoC本体の `requiredGender` は性別＋必要条件、`ngStaffIds` は相性 × で表す。共通：`hhmmSchema`・`hhmm30Schema`（30分単位）・`dateSchema`・`idSchema`（1〜100字）・`placeSchema`＝`{ address ≤200, lat, lng（null 可） }`・`termsSchema`＝`{ client ≤10, staff ≤10 }`。（　）の既定は無い古いデータの読み方。
 
 | 型 | フィールド |
 |---|---|

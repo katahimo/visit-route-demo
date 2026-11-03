@@ -35,7 +35,7 @@
   - 中身は `nextMonthCheck(statuses, ym)`：来月の日ごとの状態（`useDayStatuses`。要対応の帯・月の画面と同じ覚え）の `count` の合計と、訪問ごとに `visitBandKind`（要対応の帯と同じ：担当なし → 休みの人 → 間に合わない → 重なり）で数えた件数。合計が0なら null（出さない）
   - 1行は「12月の予定 N件はできています・担当なし a件・間に合わない b件・重なり c件・休みの人 d件」（0件の種類は書かない。`next-month-check-text`）。右に［12月を見る ›］（`next-month-check-go`。`/month?ym=<来月>` へのリンク）と［×］（`next-month-check-close`。読み上げ「12月の確認を閉じる（今月は出しません）」）。箱は `section` で読み上げの名前「12月の確認」。色は地の文（急ぎではない）。狭い幅は折り返す
   - ［×］は `navOpenMemory.write(nextMonth:<今月>, false)`（端末に覚える。データ・書き出しに入れない）。閉じたらフォーカスを見出しへ移す。翌月の20日には鍵が変わるのでまた出す。ボタンは足さない（来月の要対応を組むのは帯の［要対応を組む］。今日〜翌月末）
-- 「訪問を1件追加」：日の主ボタン（`ADD_VISIT_LABEL`。開くのは訪問の欄）。月・週は別の言葉（`planAddLabel`＝「定期の予定を追加」／単発のみは「予約を追加」）で、 `ToolbarRow`（`mainTools` の `plan`）から `components/AddPlanPanel` を開く（[design.md](../design.md) の「定期の予定を追加」）
+- 「訪問を1件追加」：日の主ボタン（`ADD_VISIT_LABEL`。開くのは訪問の欄）。月・週は別の言葉（`planAddLabel`＝「定期の予定を追加」／単発のみは「予約を追加」）で、 `ToolbarRow`（`mainTools` の `plan`）から `components/AddPlanPanel` を開く（[pages.md](pages.md)「pages の実装の決まり」の「定期の予定を追加」）
 - 人の小さいタブ：`lib/peopleTabs`（`peopleTabs`・`peopleTabsLabel`・`peopleSideOf`・`rememberedSide`・`peopleMatch`）と `components/SettingsTabs` の `PeopleTabs`（一覧・相性・勤務の画面。`data-testid="people-tabs"`）。相性でどちらから来たかは `components/peopleSide`。予定と相性は別の `BasicsNav`
 - 予定の「その他 ▾」：画面ごとの項目（表示の切り替え・使い方・印刷など）と連絡を貼り付けて入れる（PRD D418）だけ
 
