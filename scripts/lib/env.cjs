@@ -147,9 +147,14 @@ const perfMs = (name, def) => Number(process.env[name] || process.env.PERF_MS ||
 const STORAGE_KEY = 'vrdemo:data:v1';
 
 let fails = 0;
+/** 直前に通った確かめの名前（段が時間切れになったとき、どこで止まったかを出すのに使う。新しい順に3つ） */
+const recentChecks = [];
+
 /** 1つの確かめの結果を `OK  ` か `NG  ` の行で出す。包みからは hooks.onCheck にも渡す（expect.soft） */
 function check(ok, name, info = '') {
   if (!ok) fails++;
+  recentChecks.unshift(name);
+  recentChecks.length = Math.min(recentChecks.length, 3);
   const text = info === '' ? '' : typeof info === 'string' ? info : JSON.stringify(info);
   console.log(`${ok ? 'OK  ' : 'NG  '} ${name}${text === '' ? '' : `  ${text}`}`);
   hooks.onCheck?.(!!ok, name, text);
@@ -343,6 +348,7 @@ async function runSteps(steps) {
 }
 
 module.exports = {
+  recentChecks,
   SCRIPT,
   NAME,
   loadPlaywright,
