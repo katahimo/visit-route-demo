@@ -905,6 +905,23 @@ async function monthList(b) {
     (await page.getByTestId('month-grid').count()) === 0,
     '390px：はじめは日ごとの一覧（カレンダーの表を出さない）',
   );
+  // 今日の行が画面に入る（上の帯・下のタブに隠れない。今月で行き先が無いとき）。「その他 ▾」を押すとボタンへ巻いて
+  // 一覧の位置が変わるので、開いた直後に測る
+  const inView = async (loc) => {
+    const r = await loc.boundingBox();
+    const head = await page.locator('.app-header').boundingBox();
+    const tb = await page.getByTestId('bottom-tabs').boundingBox();
+    return {
+      ok: r.y >= head.y + head.height - 1 && r.y + r.height <= tb.y + 1,
+      r: r.y,
+      head: head.y + head.height,
+      tabs: tb.y,
+    };
+  };
+  const today = page.getByTestId('month-list-day').filter({ has: page.locator('.month-today') });
+  await settle(page, 400);
+  const v1 = await inView(today);
+  check(v1.ok, '390px：開くと今日の行が画面に入る（上の帯・下のタブに隠れない）', v1);
   // 見せ方の切り替えは操作の行の「その他 ▾」の中（PRD D402）。今の見せ方に aria-current
   const layoutList = await openMore(page);
   const pressed = await layoutList
@@ -925,22 +942,6 @@ async function monthList(b) {
   check(sw <= 390 && widths === 0, '390px：一覧は横にはみ出さない', { sw, widths });
   const sat = await rows.filter({ hasText: '（土）' }).count();
   check(sat >= 4, '390px：土曜の行も見える', sat);
-  // 今日の行が画面に入る（上の帯・下のタブに隠れない。今月で行き先が無いとき）
-  const inView = async (loc) => {
-    const r = await loc.boundingBox();
-    const head = await page.locator('.app-header').boundingBox();
-    const tb = await page.getByTestId('bottom-tabs').boundingBox();
-    return {
-      ok: r.y >= head.y + head.height - 1 && r.y + r.height <= tb.y + 1,
-      r: r.y,
-      head: head.y + head.height,
-      tabs: tb.y,
-    };
-  };
-  const today = rows.filter({ has: page.locator('.month-today') });
-  await settle(page, 400);
-  const v1 = await inView(today);
-  check(v1.ok, '390px：開くと今日の行が画面に入る（上の帯・下のタブに隠れない）', v1);
   // 「今日へ」：上へ巻いてから押すと、今日の行へ巻いてフォーカス
   await page.evaluate(() => window.scrollTo(0, 0));
   await settle(page, 200);
