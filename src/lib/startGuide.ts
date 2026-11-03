@@ -1,5 +1,5 @@
 // 自分のデータで始めたあとの、1画面1項目の3段の登録の案内（PRD D381。ADR-0073）の純粋な部分：
-// ①〈利用者さん〉②〈スタッフ〉③予定、上に「1/3」、①②は「CSV・Excel を読み込む」、③は予定を入れる画面へ。
+// ①〈利用者さん〉②〈スタッフ〉③予定、上に「1/3」、①②は「CSV・Excel を読み込む」、③は予定の画面へ。
 // 画面は pages/StartGuidePage。呼び名は org.terms から引く（直書きしない）
 import type { Terms } from '../contracts/documents';
 import type { Features } from '../contracts/features';
@@ -57,6 +57,6 @@ export function startGuideNeighbors(index: 1 | 2 | 3): { prev: 1 | 2 | null; nex
 export const startGuideHref = (index: number): string =>
   index === 1 ? START_GUIDE_PATH : `${START_GUIDE_PATH}?step=${index}`;
 
-/** ③の「予定を入れる」で開く予定の画面：繰り返しを使う（定期）なら月、使わない（単発）なら週（最初に開く画面と同じ。lib/firstRun） */
+/** ③の「予定の画面へ」で開く予定の画面：繰り返しを使う（定期）なら月、使わない（単発）なら週（最初に開く画面と同じ。lib/firstRun） */
 export const startGuidePlanPath = (features: Features): '/month' | '/week' =>
   isOn(features, 'patterns') ? '/month' : '/week';

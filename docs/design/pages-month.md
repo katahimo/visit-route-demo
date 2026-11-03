@@ -18,7 +18,7 @@
 #### 並び
 
 1. 見出し：`lead`「一月の担当を見て、担当なしや要対応を手で直し、確定します」。すぐ下にナビの行（`ScheduleNav`）：「今日」・‹ 月を選ぶ欄（`month-title`）›・［月｜週｜日］。下に要対応の帯 `AttentionBand`
-2. 操作の行（`ScheduleToolbar zoom="month"`）：入＝主「予定を入れる」（`toolbar-add-plan`）＋「担当を組む」（`toolbar-assign`。`/arrange?ym=`）、切＝主「予定を入れる」＋「欠勤・キャンセルを登録」（`sudden-open`。選んでいる日（今日より前なら今日）の日の予定で欄を開くリンク）。「その他 ▾」（`month-more`）：見せ方（`month-layout-calendar`・`month-layout-list`）・元に戻す／やり直す・入は欠勤・キャンセルを登録・「表示を選ぶ」・「印刷」・「勤務の見込み」・「マスの見方の説明」・「連絡を貼り付けて入れる」（`paste-open`。[pages-plan-absence.md](pages-plan-absence.md)）（空き状況はメニュー。ADR-0078）
+2. 操作の行（`ScheduleToolbar zoom="month"`）：入＝主「定期の予定を入れる」（`toolbar-add-plan`）＋「担当を組む」（`toolbar-assign`。`/arrange?ym=`）、切＝主「定期の予定を入れる」＋「欠勤・キャンセルを登録」（`sudden-open`。選んでいる日（今日より前なら今日）の日の予定で欄を開くリンク）。「その他 ▾」（`month-more`）：見せ方（`month-layout-calendar`・`month-layout-list`）・元に戻す／やり直す・入は欠勤・キャンセルを登録・「表示を選ぶ」・「印刷」・「勤務の見込み」・「マスの見方の説明」・「連絡を貼り付けて入れる」（`paste-open`。[pages-plan-absence.md](pages-plan-absence.md)）（空き状況はメニュー。ADR-0078）
 3. 範囲の提案の帯（`RangeProposalBand`）
 4. 操作の欄 `month-head`：
    - 「その他 ▾」の項目：「表示を選ぶ（〈スタッフ〉・〈利用者さん〉・混み具合）」（`month-more-pickers`。開いていれば「表示の選択をたたむ」、選んでいる間・休みの入力中は押せず理由「表示を「全体」・混み具合を「すべて」に戻すと、たためます」）・「印刷」（`month-print`。選んでいる〈スタッフ〉があれば `&staff=`。`monthPrint` が入のとき）・「勤務の見込み」（`month-workload`。`/workload?ym=`。`workload` が入のとき）・「マスの見方の説明」（`month-more-help`。開いていれば「…を閉じる」）。印刷・勤務の見込みには1行の説明
@@ -124,7 +124,7 @@
 #### 右の欄（要対応・確定していない日。入のとき）
 
 - 確定していない日（`progress.unconfirmed`＝今日以降の訪問があって確定済みでない日）：
-  - 上に「問題の無い日をまとめて確定（N日）」（`month-confirm-bulk`・`data-count`。主ボタンにしない（主ボタンは操作の行の「予定を入れる」））。0日なら出さない
+  - 上に「問題の無い日をまとめて確定（N日）」（`month-confirm-bulk`・`data-count`。主ボタンにしない（主ボタンは操作の行の「定期の予定を入れる」））。0日なら出さない
   - 対象は `lib/confirmDay` の `bulkConfirmTargets(unconfirmed, statusOf, attention)`：まだ伝えていない日で、`care` が0で、`attentionList`（未連絡の変更は除く）に出ない日。残すのは問題のある日（`problem`）・未連絡の変更のある日（`changed`）
   - 押せなければ理由 `month-confirm-why`（aria-describedby。`bulkConfirmWhy`：問題のある日がある／未連絡の変更のある日がある／確定していない日は無い）。対象の決まりの1行（`month-confirm-note`）。組んでいる間は押せない。印刷では出さない
   - 押すと確認（`bulkConfirmDialog`）：「問題の無い N日を確定しますか？」、本文に日付（`datesText`：「10/22（水）・10/23（木）… 計 N日」。7日を超えたら先頭6日と「…」）・担当が書き換わる旨・「問題のある M日は残します（要対応で確認）：日付」・「前に確定した割当と違う M日も残します（日の予定で確定し直します）。」・「案の無い M日も残します。」、ボタン「N日を確定する」

@@ -23,7 +23,7 @@ import './settings.css';
 /**
  * 登録の案内（`#/start`。PRD D381。ADR-0073）：自分のデータで始めたあと、1画面1項目の3段で案内する。
  * 上に「1/3」。①〈利用者さん〉②〈スタッフ〉は「CSV・Excel を読み込む」（名簿の欄＝今の名簿の読み込み）と「1人ずつ入れる」（今の追加の画面）、
- * ③は予約の CSV の読み込み（データの画面の予約の CSV の欄と同じ）と予定を入れる画面へ。主ボタンは各段で1つ（①②は「次へ」、③は「予定を入れる」）。
+ * ③は予約の CSV の読み込み（データの画面の予約の CSV の欄と同じ）と予定の画面へ。主ボタンは各段で1つ（①②は「次へ」、③は「予定の画面へ」）。
  * 段は URL の `?step=`。名簿・予約の CSV を①→②→③の順に読み込めば、事業所の CSV でデモを始められる（ADR-0092）
  */
 export default function StartGuidePage() {
@@ -106,7 +106,7 @@ function RosterStep({ step, registered }: { step: Extract<StartGuideStep, { kind
   );
 }
 
-/** ③の本体：予約の CSV があれば読み込み（ADR-0075・ADR-0092）、予定を入れる画面へ（主ボタン）。入った訪問の数を添える */
+/** ③の本体：予約の CSV があれば読み込み（ADR-0075・ADR-0092）、予定の画面へ（主ボタン）。入った訪問の数を添える */
 function PlanStep({
   planPath,
   terms,
@@ -130,7 +130,7 @@ function PlanStep({
         style={{ alignSelf: 'flex-start' }}
         data-testid="start-guide-plan"
       >
-        予定を入れる
+        予定の画面へ
       </Link>
     </>
   );

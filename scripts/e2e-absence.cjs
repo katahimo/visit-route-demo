@@ -1,6 +1,6 @@
 // 急な欠勤・当日キャンセルを目立つ入口から登録して振り直すこと（PRD D167〜D172・D414・D415。ADR-0025・ADR-0011・ADR-0015・ADR-0082）を本物のブラウザで確かめる：
 // 月の予定の「欠勤・キャンセルを登録」で今日の日の予定の「欠勤・キャンセル」の欄が1段目で開き `?do=`・`?date=` が URL から消える、
-// 2段（1 何が起きたか → 2 連絡・確定）と段ごとのフォーカス（段の見出し）、〈スタッフ〉が休む → 人と時間を選んだ時点で見込み（入らなくなる訪問 N件）と
+// 2段（1 休み・キャンセルを選ぶ → 2 連絡・確定）と段ごとのフォーカス（段の見出し）、〈スタッフ〉が休む → 人と時間を選んだ時点で見込み（入らなくなる訪問 N件）と
 // 担当が移る訪問の一覧（PRD D265）が同じ段に出る → 主ボタンは［この案で決める］の1つ・ほかのやり方（もう一方の案・欠勤だけ登録・変更を減らす）は
 // 「ほかのやり方」に畳む（PRD D264・D414）→ 案A で決める → 2段目の振り直しの結果（案A・案B。案B を作って反映する）→
 // 連絡（人ごとの文・［文をコピー］・メール・［連絡した］の数・初めての訪問先の印と決まりごと。PRD D244〜D246・D415）→ 連絡したので確定 → 確定済み、
@@ -141,16 +141,16 @@ async function fromHome(page) {
     hashOf(page),
   );
   check((await page.locator('.date-switch select').inputValue()) === TODAY, '今日の日の予定');
-  check((await stepOf(page)) === '1', '1段目（何が起きたか）で開く');
+  check((await stepOf(page)) === '1', '1段目（休み・キャンセルを選ぶ）で開く');
   check(
     (await page.locator('.drawer').getAttribute('role')) === 'dialog' &&
       (await page.locator('.drawer').getAttribute('aria-modal')) === 'true',
     '右の欄（role=dialog・aria-modal）',
   );
   check(
-    (await page.locator('h3.sudden-step-title').textContent()) === '何が起きたか' &&
+    (await page.locator('h3.sudden-step-title').textContent()) === '休み・キャンセルを選ぶ' &&
       (await page.locator('.sudden-steps').count()) === 0,
-    '1段目の見出し「何が起きたか」（段の表示は無い。PRD D414）',
+    '1段目の見出し「休み・キャンセルを選ぶ」（段の表示は無い。PRD D414）',
   );
   check(
     await page.evaluate(() => !!document.activeElement?.closest('.drawer')),
@@ -745,7 +745,7 @@ async function mobile(page) {
     .evaluateAll((els) => els.filter((el) => el.scrollWidth > el.clientWidth).map((el) => el.textContent));
   check(
     kinds && kinds.x >= 0 && kinds.x + kinds.width <= 390 && clipped.length === 0,
-    '390px：何が起きたかの選び方が収まり、名前が切れない',
+    '390px：休み・キャンセルの選び方が収まり、名前が切れない',
     { kinds, clipped },
   );
   const dr = await page.locator('.drawer').boundingBox();

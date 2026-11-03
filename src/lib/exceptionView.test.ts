@@ -27,19 +27,19 @@ describe('exceptionsOnly', () => {
 });
 
 describe('ADD_VISIT_LABEL（日の主ボタンと新規の欄の見出し）', () => {
-  it('入切とも「予定を入れる」', () => {
-    expect(ADD_VISIT_LABEL).toBe('予定を入れる');
+  it('入切とも「訪問を1件足す」', () => {
+    expect(ADD_VISIT_LABEL).toBe('訪問を1件足す');
   });
 });
 
 describe('mainTools（操作の行は主ボタン1つ＋最大1つ）', () => {
-  it('日は 予定を入れる（主）＋欠勤・キャンセル（要対応を組むは要対応の帯。PRD D403）', () => {
+  it('日は 訪問を1件足す（主）＋欠勤・キャンセル（要対応を組むは要対応の帯。PRD D403）', () => {
     expect(mainTools('day', all)).toEqual({ primary: 'add', second: 'absence' });
   });
   it('日でスマホ（追加できない）は主ボタン無し＋欠勤・キャンセル', () => {
     expect(mainTools('day', { ...all, add: false })).toEqual({ primary: null, second: 'absence' });
   });
-  it('週・月は 予定を入れる（主）＋欠勤・キャンセル', () => {
+  it('週・月は 定期の予定を入れる・予約を入れる（主）＋欠勤・キャンセル', () => {
     for (const z of ['week', 'month'] as const)
       expect(mainTools(z, all)).toEqual({ primary: 'plan', second: 'absence' });
   });
@@ -53,13 +53,13 @@ describe('mainTools（操作の行は主ボタン1つ＋最大1つ）', () => {
 });
 
 describe('mainTools（入）', () => {
-  it('月・週は 予定を入れる（主）＋担当を組む。欠勤・キャンセルは「その他 ▾」へ（行に出さない）', () => {
+  it('月・週は 定期の予定を入れる・予約を入れる（主）＋担当を組む。欠勤・キャンセルは「その他 ▾」へ（行に出さない）', () => {
     for (const z of ['week', 'month'] as const) {
       expect(mainTools(z, all, true)).toEqual({ primary: 'plan', second: 'assign' });
       expect(mainTools(z, { ...all, assign: false }, true)).toEqual({ primary: 'plan', second: null });
     }
   });
-  it('日は 予定を入れる（主）＋確定（伝えた）', () => {
+  it('日は 訪問を1件足す（主）＋確定（伝えた）', () => {
     expect(mainTools('day', all, true)).toEqual({ primary: 'add', second: 'confirm' });
     expect(mainTools('day', { ...all, confirm: false }, true)).toEqual({ primary: 'add', second: null });
   });

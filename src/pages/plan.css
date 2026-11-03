@@ -762,7 +762,7 @@ p.plan-band.error {
   outline: 3px solid var(--focus);
   outline-offset: 2px;
 }
-/* 何が起きたか（PRD D414）：2つを欄の幅いっぱいに並べ、390px でも1行の名前 */
+/* 休み・キャンセルを選ぶ（PRD D414）：2つを欄の幅いっぱいに並べ、390px でも1行の名前 */
 .sudden-kind {
   display: flex;
   align-self: stretch;

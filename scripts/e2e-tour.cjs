@@ -405,14 +405,14 @@ async function firstRunOwn(b) {
   await page.getByTestId('start-guide-count').filter({ hasText: '3/3' }).waitFor();
   const btns = await page.getByTestId('start-guide').locator('.btn-primary').allInnerTexts();
   check(
-    (await count()).trim() === '3/3' && (await title()).includes('③ 予定を登録する') && btns.join() === '予定を入れる',
-    '案内 3/3：③ 予定。主ボタンは「予定を入れる」',
+    (await count()).trim() === '3/3' && (await title()).includes('③ 予定を登録する') && btns.join() === '予定の画面へ',
+    '案内 3/3：③ 予定。主ボタンは「予定の画面へ」',
     btns,
   );
   await page.screenshot({ path: path.join(OUT_DIR, 'start-guide-3.png') });
   await page.getByTestId('start-guide-plan').click();
   await page.waitForURL(/#\/month/);
-  check(true, '案内③：「予定を入れる」で予定の画面（定期は月）へ');
+  check(true, '案内③：「予定の画面へ」で予定の画面（定期は月）へ');
   // 空のデータで各画面が壊れない
   for (const [hash, label] of [
     ['/month', '月の予定'],
@@ -453,7 +453,7 @@ async function firstRunOwn(b) {
   await o.page.goto(`${BASE}#/start?step=3`);
   await o.page.getByTestId('start-guide-plan').click();
   await o.page.waitForURL(/#\/week/);
-  check(true, '自分のデータ・単発：③の「予定を入れる」は週の予定へ');
+  check(true, '自分のデータ・単発：③の「予定の画面へ」は週の予定へ');
   for (const [hash, label] of [
     ['/week', '週の予定'],
     ['/month', '月の予定'],

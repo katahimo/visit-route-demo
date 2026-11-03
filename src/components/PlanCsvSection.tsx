@@ -1,4 +1,4 @@
-// 「予定を入れる」の引き出しの「CSV でまとめて」の欄（ADR-0090。PRD D423）：テンプレート・見ている月の単発の訪問の書き出し・読み込み。
+// 「定期の予定を入れる」の引き出しの「CSV でまとめて」の欄（ADR-0090。PRD D423）：テンプレート・見ている月の単発の訪問の書き出し・読み込み。
 // 名簿の読み込み（登録の案内）と同じく、Excel の入出力（機能 excel）の入り切りにかかわらず出す。ふだんは畳む。状態と処理は usePlanCsv
 import { Download, FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
