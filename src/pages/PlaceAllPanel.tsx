@@ -4,7 +4,7 @@ import { RouteMap } from '../components/RouteMap';
 import { WithIcon } from '../components/ui';
 import type { PlaceAllRun } from '../components/usePlaceAllRun';
 import { hasLocation } from '../lib/common';
-import { EXTERNAL_NOTICE, lookupMessage } from '../lib/geocode';
+import { lookupMessage } from '../lib/geocode';
 import {
   hasAddressNotFound,
   NO_PLACE_NOTE,
@@ -18,8 +18,9 @@ import {
 import { useDemoData } from '../store';
 import '../components/placeLookup.css';
 
-/** 送る先と中身の注記（PRD D90） */
-const PLACE_ALL_NOTICE = `${EXTERNAL_NOTICE}（押したときだけ）`;
+/** 送る先と中身の注記（PRD D90。郵便番号だけの人は先に郵便番号検索で住所を引く） */
+const PLACE_ALL_NOTICE =
+  '緯度・経度の検索は、国土地理院のサイトで行っています（住所のみ送信。住所が無い人は郵便番号を郵便番号検索へ送信）';
 
 /** ほかの名簿の置く処理が終わるのを待っている間の文（外部の検索は同時に1本。ADR-0016） */
 const PLACE_WAITING = 'ほかの名簿の緯度・経度を探し終わるのを待っています';
@@ -69,7 +70,7 @@ export function PlaceAllPanel({
           </WithIcon>
         </strong>
         <span className="sub" data-testid="place-all-count">
-          {t.has} {targets.length}人{skipped.length > 0 ? `・${t.hasNot} ${skipped.length}人` : ''}（{t.notCounted}）
+          {t.has} {targets.length}人{skipped.length > 0 ? `・${t.hasNot} ${skipped.length}人` : ''}
         </span>
         {geocodeOn && (
           <button

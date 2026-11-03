@@ -33,12 +33,10 @@ export type PlacePerson = {
 export type PlaceAllTexts = {
   /** 欄の見出し（「緯度・経度が未登録の〈利用者さん〉」） */
   heading: string;
-  /** 探す手がかりのある人（「住所か郵便番号あり」） */
+  /** 探す手がかりのある人（「住所・郵便番号あり」） */
   has: string;
   /** 手がかりの無い人（「どちらも無い」） */
   hasNot: string;
-  /** 数えない人の注記 */
-  notCounted: string;
   /** 置ける人がいないときの理由 */
   none: string;
   /** ボタンの説明 */
@@ -75,9 +73,8 @@ function placeAccess(kind: PlaceKind): PlaceAccess {
         }),
         texts: (t) => ({
           heading: `緯度・経度が未登録の${t.client}`,
-          has: '住所か郵便番号あり',
-          hasNot: 'どちらも無い',
-          notCounted: '「終了」は除く',
+          has: '住所・郵便番号あり',
+          hasNot: '住所・郵便番号なし',
           none: '住所か郵便番号のある未登録の人がいません',
           how: '住所（無ければ郵便番号）から緯度・経度を探して入れます',
           skipped: `住所も郵便番号もない${t.client}`,
@@ -104,7 +101,6 @@ function placeAccess(kind: PlaceKind): PlaceAccess {
           heading: `自宅の緯度・経度が未登録の${t.staff}`,
           has: '住所あり',
           hasNot: '住所なし',
-          notCounted: '休止は除く',
           none: '住所のある未登録の人がいません',
           how: '自宅の住所から緯度・経度を探して入れます',
           skipped: `自宅の住所が無い${t.staff}`,
@@ -153,7 +149,7 @@ export function noPlaceIds(d: Pick<DemoData, 'clients' | 'staff'>, kind: PlaceKi
 export const NO_PLACE_CHIP = 'noPlace';
 
 /** 位置が無くても担当は組めることの補足（ADR-0093） */
-export const NO_PLACE_NOTE = `未登録でも担当は組めます（移動は${UNPLACED_TRAVEL_MIN}分で計算）`;
+export const NO_PLACE_NOTE = `緯度・経度が未登録の場合、移動${UNPLACED_TRAVEL_MIN}分で計算されます`;
 
 /** 1人だけ探せるか：郵便番号・住所の検索が入で、住所か郵便番号があり、まとめて置いている最中でない */
 export const canSearchOne = (p: Pick<PlacePerson, 'place'>, x: { geocodeOn: boolean; running: boolean }): boolean =>

@@ -92,13 +92,11 @@ describe('placeAllRunLabel・placeAllTexts（まとめて置く欄の文）', ()
   it('種類ごとの見出しと数えない人の注記。担当は組める補足（ADR-0093）', () => {
     const terms = { client: '利用者さん', staff: 'スタッフ' };
     expect(placeAllTexts('client', terms).heading).toBe('緯度・経度が未登録の利用者さん');
-    expect(placeAllTexts('client', terms).notCounted).toContain('終了');
     expect(placeAllTexts('staff', terms).heading).toBe('自宅の緯度・経度が未登録のスタッフ');
-    expect(placeAllTexts('staff', terms).notCounted).toContain('休止');
     expect(placeAllTexts('staff', terms).has).toBe('住所あり');
     // 分数は計算の見込み（UNPLACED_TRAVEL_MIN）から作る
-    expect(NO_PLACE_NOTE).toContain(`移動は${UNPLACED_TRAVEL_MIN}分`);
-    expect(NO_PLACE_NOTE).toContain('移動は30分');
+    expect(NO_PLACE_NOTE).toContain(`移動${UNPLACED_TRAVEL_MIN}分`);
+    expect(NO_PLACE_NOTE).toContain('移動30分');
   });
 });
 
