@@ -81,7 +81,7 @@ describe('名簿の CSV（ADR-0068）', () => {
     });
   });
 
-  it('0人のときの書き出しは列名の行だけ（テンプレート）。1行に1人書き足して（空にできない列も埋めて）読むと、その人が足される', async () => {
+  it('0人のときの書き出しは列名の行だけ（テンプレート）。名前だけ書き足して読むと、その人が既定値（画面で足すときと同じ）で足される（ADR-0092）', async () => {
     const blank: DemoData = createBlankData(
       '2026-10-30',
       { industry: 'care', terms: DEFAULT_TERMS.nursing, features: {} },
@@ -90,9 +90,8 @@ describe('名簿の CSV（ADR-0068）', () => {
     for (const kind of ['client', 'staff'] as const) {
       /** 名前の列の見出し（〈利用者さん〉は表示名） */
       const nameHead = kind === 'staff' ? '名前' : '表示名';
-      /** 空にできない列（書き足すときに名前のほかに要る値） */
-      const required: Record<string, string> =
-        kind === 'staff' ? { 移動手段: '車', 勤務開始: '8:00', 勤務終了: '18:00' } : { '色（1〜8）': '1' };
+      /** 名前のほかは空のまま（新しい人の空のセルは既定値） */
+      const required: Record<string, string> = {};
       // CSV：列名の1行だけ
       const { text } = decodeText(new Uint8Array(await exportRosterCsv(blank, kind).arrayBuffer()));
       const rows = parseCsv(text);
@@ -104,6 +103,18 @@ describe('名簿の CSV（ADR-0068）', () => {
       for (const [h, v] of Object.entries(required)) added[head.indexOf(h)] = v;
       const fromCsv = rok(await importRoster(csvBuf(toCsv([head, added])), blank, kind, 'merge'));
       expect(fromCsv.added).toEqual(['書き足した人']);
+      if (kind === 'staff') {
+        const st = fromCsv.data.staff.find((x) => x.name === '書き足した人')!;
+        expect([st.travelMode, st.shiftStart, st.shiftEnd, st.workDays, st.active]).toEqual([
+          'DRIVE',
+          '09:00',
+          '18:00',
+          [1, 2, 3, 4, 5],
+          true,
+        ]);
+      } else {
+        expect(fromCsv.data.clients.find((x) => x.displayName === '書き足した人')?.active).toBe(true);
+      }
 
       // Excel：名簿のシートの列名の1行だけ
       const wb = new ExcelJS.Workbook();
