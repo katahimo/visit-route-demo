@@ -13,6 +13,13 @@ import { conditionText, matches } from './conditions';
 import { EPS, fitStart } from './timing';
 
 const INF = Number.POSITIVE_INFINITY;
+/**
+ * 位置（緯度・経度）が未登録の訪問先・自宅への移動の見込み（分）。位置が無くても担当を組めるように、
+ * どこからでもこの分数とみる（ADR-0093。台帳 CSV を読んだだけで地図に置く前でも組める）
+ */
+export const UNPLACED_TRAVEL_MIN = 30;
+/** 位置が未登録の組に足す点（位置のある人・訪問先を先に選ぶ。可否にはしない） */
+export const UNPLACED_POINTS = 30;
 /** infeasible に載せる原因の数 */
 const INFEASIBLE_REASONS = 3;
 
@@ -196,9 +203,14 @@ function travelMatrices(places: (LatLng | null)[], staffDocs: Staff[]): { travel
     const tr = new Array<number>(P).fill(0);
     const me = new Array<number>(P).fill(0);
     const a = places[i];
-    for (let j = 0; j < P && a; j++) {
+    for (let j = 0; j < P; j++) {
       const b = places[j];
-      if (i === j || !b) continue;
+      if (i === j) continue;
+      // 位置が未登録の側があれば、見込みの分数（距離は分からないので 0 m。交通費には入らない）
+      if (!a || !b) {
+        tr[j] = UNPLACED_TRAVEL_MIN;
+        continue;
+      }
       const leg = estimateLeg(a, b, modeOf(i, j));
       tr[j] = leg.seconds / 60;
       me[j] = leg.meters;
@@ -319,7 +331,7 @@ type PairContext = {
   places: (LatLng | null)[];
   /** その日の問題にいる担当の ID */
   staffIds: Set<string>;
-  /** その日に働く（稼働時間帯があり自宅の位置がある）担当の ID */
+  /** その日に働く（稼働時間帯がある）担当の ID（自宅の位置が未登録でも働く。ADR-0093） */
   working: Set<string>;
   /** 相性×の理由の ruleId（最初の相性の条件） */
   firstCompat: string;
@@ -346,8 +358,19 @@ function pairReasons(ctx: PairContext, v: VisitSide, i: number): Reason[] {
   const ps = staff[i]!;
   const out: Reason[] = [];
   const look: CondLook = { items, date };
-  if (!places[S + j]) out.push({ ruleId: 'noPlace', label: `${terms.client}の位置が未登録`, points: INF });
-  if (!places[i]) out.push({ ruleId: 'noPlace', label: `${terms.staff}の自宅の位置が未登録`, points: INF });
+  // 位置が未登録でも組む（移動は UNPLACED_TRAVEL_MIN 分とみる。ADR-0093）。位置のある組を先に選ぶよう点を足す
+  if (!places[S + j])
+    out.push({
+      ruleId: 'noPlace',
+      label: `${terms.client}の位置が未登録（移動は${UNPLACED_TRAVEL_MIN}分とみる）`,
+      points: UNPLACED_POINTS,
+    });
+  if (!places[i])
+    out.push({
+      ruleId: 'noPlace',
+      label: `${terms.staff}の自宅の位置が未登録（移動は${UNPLACED_TRAVEL_MIN}分とみる）`,
+      points: UNPLACED_POINTS,
+    });
   if (pv.earliest > pv.latest) out.push({ ruleId: 'time', label: '時間の約束の幅が正しくない', points: INF });
   pushSlotReason(out, {
     s,
@@ -495,7 +518,7 @@ export function compile(data: CompileInput, date: string, pins?: Record<string, 
   const { travel, meters } = travelMatrices(places, staffDocs);
 
   // --- 可否・割当費用・理由 ---
-  const working = new Set(staff.filter((s, i) => s.slots.length > 0 && places[i]).map((s) => s.id));
+  const working = new Set(staff.filter((s) => s.slots.length > 0).map((s) => s.id));
   const ctx: PairContext = {
     data,
     date,

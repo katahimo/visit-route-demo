@@ -135,6 +135,7 @@
 | [0090](adr/0090-plan-csv-template-export-import.md) | 予定の CSV（テンプレート・書き出し・読み込み）を「予定を入れる」から |
 | [0091](adr/0091-basic-template-excel-offboard-client-leave.md) | 「基本」のひな形に Excel の入出力・退職・担当替え・〈利用者さん〉の休み |
 | [0092](adr/0092-demo-entry-three-uses-template-names-settings-layout.md) | 最初の2問の問2を使い方4つに・ひな形の名前と並び・機能のグループ・やり直しはデータの画面へ |
+| [0093](adr/0093-arrange-without-locations.md) | 位置が未登録でも担当を組む（移動は30分とみる） |
 
 ## 文書の保ち方
 
