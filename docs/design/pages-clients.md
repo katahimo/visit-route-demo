@@ -8,7 +8,7 @@
 - 題名「〈利用者さん〉」（「一覧」を付けない）。下に入切とも小さいタブ 一覧・相性（`PeopleTabs`。`lib/peopleTabs`。予定を組むの段・基本情報のタブは出さない）。右に「Excel・CSV」（`roster-toggle`。「名簿の欄」）と主ボタン「〈利用者さん〉を追加」（`client-add`。`#/clients/new`）
 - 一覧の上に `ClientFilter`（`clients-filter`。画面の状態。URL に残さない。既定 `EMPTY_FILTER`）。期間は選んでいる日（`useDay`）を含む週（月〜日）で、`weekDay` を7日分作って `filterFacts` に渡す。終了の人は「終了の人も出す」のときだけ
 - 狭い画面（600px 以下）：絞り込みの中身を「絞り込み（N）」のボタン（`narrow-filter-toggle`。`aria-expanded`・`aria-controls`）の下に畳み、横に「N人を表示」（`narrow-filter-count`）。N は `activeFilterCount`。はじめは畳み、開いたかは画面の中だけ。広い画面はいつも開いたまま
-- 一覧の上に「位置が未登録の〈利用者さん〉」のカード（下の「まとめて地図に置く」）。絞り込みに足すチップ「位置なし」（`extraChips`・`lib/placeAll` の `NO_PLACE_CHIP`。判定は `noPlaceIds`）。住所のセルに、位置の無い人（終了を除く）は「位置なし」の印と［住所から探す］（`no-place-search`）・［地図で置く］（`no-place-map`）（`components/NoPlaceActions` の `NoPlaceCell`・値は `useNoPlaceRow`。PRD D427）
+- 一覧の上に「緯度・経度が未登録の〈利用者さん〉」のカード（下の「住所から緯度・経度をまとめて入れる」）。絞り込みに足すチップ「位置なし」（`extraChips`・`lib/placeAll` の `NO_PLACE_CHIP`。判定は `noPlaceIds`）。住所のセルに、位置の無い人（終了を除く）は「位置なし」の印と［住所から探す］（`no-place-search`）・［地図で置く］（`no-place-map`）（`components/NoPlaceActions` の `NoPlaceCell`・値は `useNoPlaceRow`。PRD D427）
 - 列（`lib/peopleView` の `clientColumns(detailed)`）：名前・住所（`client-address`）・いつもの予定（`client-plan`。終わっていない繰り返しを `patternWhenText` でつないだ文）と右端の「開く」。名前のセルは仮の印と休み中の印（`clientNameNote`。状態の列があれば列に出す）。**エキスパート機能が入のときだけ**絞り込みの下に「くわしい列」のチェック（`people-columns-toggle`。`components/DetailColumns`）。入れると 位置・特性・求めること・いつもの担当・状態の列を足し（名前のセルによみ・紹介元も）、「状態の印で見分けられます」の説明。一覧ごとに端末に覚える（`store/navOpen` の鍵 `columns:clients`）。切は見出しの下の説明を初回だけ（`useIntro('clients')`）
 - 行（`client-row`）：状態に段階（`client-stage`）・「いつもの担当」の列に担当できる人の印「限 山田、佐藤」（`client-limit`。title に全員の名前）・「仮」の印。右端は「〈名前〉を開く」（`Eye`。`client-open`）
 - 行のどこを押してもその人の画面へ（`lib/rowOpen` の `shouldOpenRow`：行の中のボタン・リンク・入力欄・文字の選択・二度押しの2回目は除く。`.row-open` で指のカーソルと地の色）
@@ -151,7 +151,7 @@
 #### `components/placeLookup.tsx` の `AddressField`
 
 - 型の引数は場所の型 T。`value`・`onChange`。郵便番号は `postalCode`・`onPostalCodeChange` で渡す（渡さなければ部品の中だけで持つ）
-- 中身：郵便番号・住所・「住所を探す」「地図に置く」・注記・状態・候補・`PlacePin`（地図とピン）。`postalLabel`・`noticeNote`（注記の後ろ）
+- 中身：郵便番号・住所・「住所を探す」「地図に置く」（この部品のボタン。まとめて入れる欄とは別）・注記・状態・候補・`PlacePin`（地図とピン）。`postalLabel`・`noticeNote`（注記の後ろ）
 - 主ボタンではない。押せないときは aria-disabled＋理由（title と文字）
 - `testId`（`client`／`vacancy`／`staff-home`）。中の data-testid は `${testId}-notice`・`${testId}-status`・`${testId}-postal-candidate` などの頭付き。〈利用者さん〉だけは `client-postal`・`place-notice`・`place-lookup-status`・`postal-candidate`・`geo-candidate`
 - 探している途中に欄を書き換えた・ピンを動かしたら、呼び出しを止めて「探しています」を解く。応答のあとも送った値と今の欄の値（ref）を比べ、違えば捨てる（`sameQuery`）。押したことは ref でも持ち、連打しても1回だけ。途中で閉じたら書かない
@@ -161,13 +161,13 @@
 - `ClientPlaceEditor`：`place.postalCode` を持たせた〈利用者さん〉用（住所の節を直すたびに作り直す）
 - 使う所：〈利用者さん〉の住所の節・空き状況の場所（[pages-vacancy.md](pages-vacancy.md)）・〈スタッフ〉の自宅（[pages-staff.md](pages-staff.md)）
 
-#### まとめて地図に置く（`lib/placeAll.ts`・`pages/PlaceAllPanel.tsx`・`components/usePlaceAllRun.ts`）
+#### 住所から緯度・経度をまとめて入れる（`lib/placeAll.ts`・`pages/PlaceAllPanel.tsx`・`components/usePlaceAllRun.ts`）
 
-- 〈利用者さん〉一覧・〈スタッフ〉一覧（自宅）・登録の案内①②の上のカード（PRD D89・D427）。1行目は「位置が未登録の〈…〉：N人」・数え方（`place-all-count`）・ふつうのボタン［位置の無い N人を地図に置く］（`place-all-run`。一度探したあとは［続きを探す（N人）］。`placeAllRunLabel`。`geocode` が切なら出さない）・「止める」・［位置なしだけ見る］（`place-all-only`。押すと絞り込みの「位置なし」を付け外し。案内では出さない）。下に「位置が無くても担当は組めます（移動は30分とみます）」（`place-all-note`。ADR-0093）・送る先の注記（`geocode` が入のとき）・進み具合・結果。位置の無い人がいなくなり結果も無ければ出さない。画面を離れたら止める
-- 状態と処理（`usePlaceAllRun(kind)`）は一覧の画面（案内は〈利用者さん〉・〈スタッフ〉の2つを画面が持ち、段を替えても続く）が持ち、カード・名簿のあと・行の［住所から探す］（`run([id])`。その人だけ）に同じものを渡す。`run` は呼ばれたときのデータで対象を数える（名簿の直後でも）。走っている最中に呼ばれたら（名簿を読み込んだ）、終わったあと残り（この続きでまだ探していない人）を続けて探す予約を持つ（`lib/placeRunQueue` の `createPlaceRunGate`。止めたら予約を捨てる）。案内は `usePlaceAllRun(kind, lane)` に1本の列（`createPlaceLane`）を渡し、〈利用者さん〉・〈スタッフ〉を同時に走らせない（片方が走っていれば、もう片方は待って始める。待つ間は「ほかの名簿の位置を探し終わるのを待っています」と［止める］。外部の検索は同時に1本。ADR-0016）。カードは見せるだけ（`ref` で名簿のあとに移ってフォーカスする。`tabIndex=-1`）
-- 置けなかった人に住所から位置が見つからなかった人（`hasAddressNotFound`）がいれば、見出しの下に1行「市区町村の名前が無い住所…」（`place-all-city-hint`）
+- 〈利用者さん〉一覧・〈スタッフ〉一覧（自宅）・登録の案内①②の上のカード（PRD D89・D427）。1行目は「緯度・経度が未登録の〈…〉：N人」（〈スタッフ〉は「自宅の緯度・経度が未登録の〈…〉」）・数え方（`place-all-count`。「『終了』は除く」「休止は除く」「住所なし」）・ふつうのボタン［住所から緯度・経度を入れる（N人）］（`place-all-run`。0人のときは人数を付けない。一度探したあとは［続きを探す（N人）］。`placeAllRunLabel`。`geocode` が切なら出さない）・「止める」・［位置なしだけ見る］（`place-all-only`。押すと絞り込みの「位置なし」を付け外し。案内では出さない）。下に「未登録でも担当は組めます（移動は30分で計算）」（`place-all-note`。ADR-0093）・送る先の注記（`EXTERNAL_NOTICE` の後ろに「（押したときだけ）」。`geocode` が入のとき）・進み具合（「探しています… N／M人」。終わると「（入れた N人・見つからない M人）」）・結果（「見つからなかった〈…〉（編集の欄で住所を直すか、地図をクリックして入れてください）」「入れた〈…〉」）。位置の無い人がいなくなり結果も無ければ出さない。画面を離れたら止める
+- 状態と処理（`usePlaceAllRun(kind)`）は一覧の画面（案内は〈利用者さん〉・〈スタッフ〉の2つを画面が持ち、段を替えても続く）が持ち、カード・名簿のあと・行の［住所から探す］（`run([id])`。その人だけ）に同じものを渡す。`run` は呼ばれたときのデータで対象を数える（名簿の直後でも）。走っている最中に呼ばれたら（名簿を読み込んだ）、終わったあと残り（この続きでまだ探していない人）を続けて探す予約を持つ（`lib/placeRunQueue` の `createPlaceRunGate`。止めたら予約を捨てる）。案内は `usePlaceAllRun(kind, lane)` に1本の列（`createPlaceLane`）を渡し、〈利用者さん〉・〈スタッフ〉を同時に走らせない（片方が走っていれば、もう片方は待って始める。待つ間は「ほかの名簿の緯度・経度を探し終わるのを待っています」と［止める］。外部の検索は同時に1本。ADR-0016）。カードは見せるだけ（`ref` で名簿のあとに移ってフォーカスする。`tabIndex=-1`）
+- 見つからなかった人のうち住所から緯度・経度が見つからなかった人（`hasAddressNotFound`）がいれば、見出しの下に1行「市区町村の名前が無い住所…」（`place-all-city-hint`）
 - 種類ごとの違い（数える人＝〈利用者さん〉は終了を除く・〈スタッフ〉は休止を除く／書く先＝場所・自宅／文）は `placeAccess` の1か所（switch を never で網羅）。`placePeople(data, kind)`（そろえた形 `PlacePerson`。〈スタッフ〉の郵便番号は ''）、`placeAllTargets(data, kind)`（対象・住所も郵便番号もない人）、`placeAll(targets, opts)`（1人ずつ順に・間隔をあける・止める・1人ごとに結果）、`withFoundPlace(data, kind, id, from, place)`（位置の無いときだけ書く）
-- 置けなかった人の「編集」と行の［地図で置く］はその人の住所の節（`#/clients/:id?tab=basic&edit=place`。〈スタッフ〉は自宅の節 `#/staff/:id?tab=basic&edit=home`。畳んだ「詳しく ▾」は開く）
+- 見つからなかった人の「編集」と行の［地図で置く］はその人の住所の節（`#/clients/:id?tab=basic&edit=place`。〈スタッフ〉は自宅の節 `#/staff/:id?tab=basic&edit=home`。畳んだ「詳しく ▾」は開く）
 
 ### 絞り込み
 
