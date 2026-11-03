@@ -20,10 +20,10 @@ export function useRosterCard(kind: RosterKind, onPlace?: () => void) {
   const [busy, setBusy] = useState(false);
   /** 名簿の読み込み方（PRD D104）：追加・更新（既定）か総入れ替え */
   const [rosterMode, setRosterMode] = useState<RosterMode>('merge');
-  const loadRoster = useRosterImport({ rosterMode, offboardOn, setError, onPlace });
   const term = kind === 'staff' ? data.org.terms.staff : data.org.terms.client;
-  /** 一覧が0人か（書き出しは列名だけのテンプレートになる） */
+  /** 一覧が0人か（書き出しは列名だけのテンプレートになる。読み込み方は選ばせず追加・更新） */
   const empty = rosterIsEmpty(data, kind);
+  const loadRoster = useRosterImport({ rosterMode: empty ? 'merge' : rosterMode, offboardOn, setError, onPlace });
 
   /**
    * 名簿を Excel のブックか CSV（BOM 付きの UTF-8）で書き出す。名簿だけの書き出しは「最後に書き出した日」に数えない。
