@@ -24,7 +24,7 @@
 //    5f3 最初の2問で定期を選んだデータ（「基本」）のままで、くり返しに「毎月（第N）」と第1〜第5 のチップ（選ばなければ誤り。入れた回に担当が自動で付き、組みの終わりまで待って次の段へ）、
 //    〈スタッフ〉の一覧の上のタブ（一覧・勤務・相性）と〈利用者さん〉のタブ（一覧・相性）で行き来でき、メニューの印は〈スタッフ〉／〈利用者さん〉に付き、
 //    相性・勤務の画面に禁句・点数が出ない。1366px・390px。幅は落ちても戻す、
-// 5f4 「CSV でまとめて入れる」（PRD D423）：単発のみ（Excel は切）でも引き出しに畳んで出る。テンプレート・見ている月の書き出し・1件足したファイルの読み込み（確認のあと引き出しが閉じる）、
+// 5f4 「CSV でまとめて入れる」（PRD D423）：Excel の入出力を切っても（単発のみで excel を切る）引き出しに畳んで出る。テンプレート・見ている月の書き出し・1件足したファイルの読み込み（確認のあと引き出しが閉じる）、
 // 6 エキスパート機能を入にすると帯に 組み方の標準が無い・未確定 N日 が足され［要対応を組む］は出ない（入のメニュー・ホームが無いことは e2e-nav・e2e-home）。
 // 6b 入の操作の行（主ボタン＋1つ＋「その他 ▾」）・「詳しく ▾」の見出しの数と開け閉めの覚え・説明1行。
 // 6c 入の人の一覧（PRD D394）：〈スタッフ〉・〈利用者さん〉の一覧は見出しがメニューの名前で、切と同じ人のタブ（一覧・勤務・相性／一覧・相性）と3列で始まり、
@@ -1485,14 +1485,22 @@ async function addRecurring(page, w) {
 }
 
 /**
- * 5f4 「CSV でまとめて入れる」（PRD D423。ADR-0090）：単発のデモ（「単発のみ」＝Excel の入出力は切）でも引き出しに畳んで出る。
+ * 5f4 「CSV でまとめて入れる」（PRD D423。ADR-0090）：Excel の入出力を切っても（単発のデモ。「単発のみ」は Excel の入出力が入なので
+ * ADR-0091 から excel だけ切って読み直す）引き出しに畳んで出る。
  * テンプレートは列名の行だけ、書き出しは見ている月の単発の訪問（件数がボタンに出る）。書き出した列で1件足したファイルを読むと、
  * 確認のあと訪問が1件増え、引き出しが閉じる
  */
 async function addCsv(page) {
   await fresh(page, '/week', NAV_READY, { start: 'demo', booking: 'oneOff' });
+  // 単発のみは Excel の入出力が入（ADR-0091）。切っても出ることを見るので excel だけ切って読み直す
+  await page.evaluate((k) => {
+    const d = JSON.parse(localStorage.getItem(k));
+    d.org.features.excel = false;
+    localStorage.setItem(k, JSON.stringify(d));
+  }, STORAGE_KEY);
+  await open1(page, '/week');
   const d0 = await data(page);
-  check(d0.org.features.excel !== true, '前提：単発のみのひな形は Excel の入出力が切', d0.org.features.excel);
+  check(d0.org.features.excel === false, '前提：Excel の入出力が切', d0.org.features.excel);
   const box = await openAdd(page, 'oneOff', 'CSV');
   const csv = box.getByTestId('plan-csv');
   check((await csv.getAttribute('open')) === null, 'CSV：ふだんは畳む');

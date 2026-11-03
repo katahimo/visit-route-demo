@@ -51,23 +51,37 @@ const pathOf = (href: string) => href.split('?')[0]!;
 /** 行き先が土台か表のどれかの機能に属するか */
 const belongs = (href: string) => featureOfHref(href) !== null || BASE_PATHS.has(pathOf(href));
 
-/** ADR-0028 の「ひな形」の表（入れる機能。基本に毎月の第N・決まりごとを足したのは ADR-0086） */
+/** ADR-0028 の「ひな形」の表（入れる機能。基本に毎月の第N・決まりごとを足したのは ADR-0086、休み・退職・Excel を足したのは ADR-0091） */
 const TABLE: Record<TemplateId, FeatureId[]> = {
-  oneOff: ['sudden', 'vacancy', 'compat', 'mapsLink', 'geocode'],
-  basic: ['patterns', 'patternMonthly', 'sudden', 'vacancy', 'compat', 'visitNotes', 'mapsLink', 'geocode'],
-  laborContract: [
+  oneOff: ['clientLeave', 'sudden', 'vacancy', 'compat', 'offboard', 'mapsLink', 'geocode', 'excel'],
+  basic: [
     'patterns',
     'patternMonthly',
+    'clientLeave',
     'sudden',
     'vacancy',
     'compat',
     'visitNotes',
+    'offboard',
+    'mapsLink',
+    'geocode',
+    'excel',
+  ],
+  laborContract: [
+    'patterns',
+    'patternMonthly',
+    'clientLeave',
+    'sudden',
+    'vacancy',
+    'compat',
     'clientStage',
+    'visitNotes',
     'offboard',
     'workload',
     'fare',
     'mapsLink',
     'geocode',
+    'excel',
   ],
   monthlyField: [
     'patterns',
@@ -81,6 +95,7 @@ const TABLE: Record<TemplateId, FeatureId[]> = {
     'compat',
     'allowedStaff',
     'visitNotes',
+    'offboard',
     'mapsLink',
     'geocode',
     'excel',
@@ -293,12 +308,12 @@ describe('ひな形（ADR-0028 の表）', () => {
       off: FEATURE_IDS.filter((x) => !TABLE.basic.includes(x)),
     });
     expect(templateDiff(applyTemplate('basic'), 'laborContract')).toEqual({
-      on: ['clientStage', 'offboard', 'workload', 'fare'],
+      on: ['clientStage', 'workload', 'fare'],
       off: [],
     });
     expect(templateDiff(applyTemplate('laborContract'), 'monthlyField')).toEqual({
-      on: ['clientLeave', 'requestedOff', 'monthPrint', 'vacancyNotice', 'allowedStaff', 'excel'],
-      off: ['clientStage', 'offboard', 'workload', 'fare'],
+      on: ['requestedOff', 'monthPrint', 'vacancyNotice', 'allowedStaff'],
+      off: ['clientStage', 'workload', 'fare'],
     });
   });
   it('templateDiff は使えるか（依存）で比べる：空き状況が切なら案内文は入っていない扱い', () => {

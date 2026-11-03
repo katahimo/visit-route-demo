@@ -133,6 +133,7 @@
 | [0088](adr/0088-expert-trim-duplicates.md) | エキスパート機能の重なった入口・表示を1つに寄せる |
 | [0089](adr/0089-band-late-split-rearrange-exceptions-tell-clean-days.md) | 帯の重なりと間に合わないを分け・要対応も組み直し・要対応が残る日は伝えた扱いにしない |
 | [0090](adr/0090-plan-csv-template-export-import.md) | 予定の CSV（テンプレート・書き出し・読み込み）を「予定を入れる」から |
+| [0091](adr/0091-basic-template-excel-offboard-client-leave.md) | 「基本」のひな形に Excel の入出力・退職・担当替え・〈利用者さん〉の休み |
 
 ## 文書の保ち方
 
