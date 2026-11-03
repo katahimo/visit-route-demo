@@ -15,9 +15,9 @@ describe('bookingsOutsideHours', () => {
 
   it('勤務の終わりを越える予約を数え、例を添える', () => {
     const r = bookingsOutsideHours(base, dataOf({ staff: [s] }, [evening]));
-    expect(r).toEqual({ count: 1, example: '11/5（木）17:00〜20:00' });
+    expect(r).toEqual({ count: 1, example: '11/5（木）17:00〜20:00', dayOff: 0, hours: 1 });
     expect(outsideHoursNote(r, 'シッター')).toBe(
-      '1件はどのシッターの勤務日・時間にも入りません（例：11/5（木）17:00〜20:00）。シッターの勤務時間を広げると組めます',
+      '1件はどのシッターの勤務日・時間にも入りません（勤務時間外 1。例：11/5（木）17:00〜20:00）。シッターの勤務時間を広げると組めます',
     );
   });
 
@@ -31,6 +31,12 @@ describe('bookingsOutsideHours', () => {
   it('勤務日でない日（日曜）は入らない', () => {
     const sun = visit('v3', 'c1', '10:00', '10:00', { date: '2026-11-08', durationMinutes: 60 });
     expect(bookingsOutsideHours(base, dataOf({ staff: [s] }, [sun]))?.count).toBe(1);
+    // 内訳は担当なしの組めない理由と同じ言葉（勤務日外・勤務時間外。PRD D430）
+    const both = bookingsOutsideHours(base, dataOf({ staff: [s] }, [sun, evening]));
+    expect(both).toMatchObject({ count: 2, dayOff: 1, hours: 1 });
+    expect(outsideHoursNote(both, 'シッター')).toBe(
+      '2件はどのシッターの勤務日・時間にも入りません（勤務日外 1・勤務時間外 1。例：11/5（木）17:00〜20:00）。シッターの勤務する曜日・勤務時間を広げると組めます',
+    );
   });
 
   it('休止・最終勤務日後の人は数えない', () => {

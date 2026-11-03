@@ -197,54 +197,81 @@ const hm = (m: number) => `${Math.floor(m / 60)}:${String(Math.round(m % 60)).pa
 
 /**
  * 担当の候補はいるのに入らなかった訪問の理由（どの担当も可にならない訪問は Problem.infeasible が持つ）。
- * 候補ごとに、今の担当のその人の列に strict で入るかを試し、入らなければ重なる訪問の時刻を出す。
+ * 候補ごとに、今の担当のその人の列に strict で入るかを試し（staffCause）、入らなければ重なる訪問の時刻を出す。
  * 候補でない人は可否の原因ごとに人数をまとめる。例「さくら：14:00〜15:00・16:00〜16:45 と重なる」「必要条件：資格に保育士を含む ✗（6人）」
  */
 function whyUnassigned(problem: Problem, p: Placed, v: number): Reason[] {
-  const pv = problem.visits[v]!;
   const out: Reason[] = [];
   const blocked = new Map<string, number>();
   for (let s = 0; s < problem.staff.length; s++) {
-    const st = problem.staff[s]!;
     if (!problem.allowed[v]![s]) {
       const label = notAllowedLabel(problem.reasons[v]![s]!);
       blocked.set(label, (blocked.get(label) ?? 0) + 1);
       continue;
     }
-    const seq = p.seqs[s]!;
-    let fits = false;
-    for (let pos = 0; pos <= seq.length && !fits; pos++) {
-      const t = [...seq];
-      t.splice(pos, 0, v);
-      fits = scheduleRoute(problem, s, t, 'strict') !== null;
-    }
-    const cap = problem.balance?.cap?.[s];
-    const far = !fits && farTripBlocks(problem, seq, v);
-    if (far) {
-      out.push({ ruleId: FAR_TRIP_RULE_ID, label: `${st.name}：${FAR_TRIP_LABEL}`, points: INF });
-    } else if (!fits && scheduleRoute(problem, s, [v], 'strict') === null) {
-      // その訪問だけでも間に合わない：可否（稼働時間帯）は満たすので、家からの移動が原因（ADR-0096）
-      const minutes = problem.travel[st.point]![pv.point]!;
-      out.push({ ruleId: TRAVEL_TOO_FAR_RULE_ID, label: `${st.name}：${travelTooFarLabel(minutes)}`, points: INF });
-    } else if (fits && cap !== undefined && seq.length + 1 > cap) {
-      out.push({ ruleId: BALANCE_RULE_KEY, label: `${st.name}：件数の上限（${cap}件）`, points: INF });
-    } else if (fits) {
-      out.push({ ruleId: 'cost', label: `${st.name}：入れられるが、ほかの訪問との兼ね合いで外れた`, points: 0 });
-    } else {
-      // 約束の幅の前後に作業が重なる訪問（移動も要るので少し広めに見る）
-      const from = pv.earliest - 60;
-      const to = pv.latest + pv.duration + 60;
-      const near = p.timings[s]!.stops.filter((x) => x.end > from && x.start < to).map(
-        (x) => `${hm(x.start)}〜${hm(x.end)}`,
-      );
-      out.push({
-        ruleId: 'time',
-        label: `${st.name}：${near.length > 0 ? `${near.join('・')} の訪問と時間が合わない` : '時間が合わない'}`,
-        points: INF,
-      });
-    }
+    out.push(staffCause(problem, p, v, s));
   }
   for (const [label, n] of blocked) out.push({ ruleId: 'notAllowed', label: `${label}（${n}人）`, points: INF });
+  return out;
+}
+
+/**
+ * 可の担当 s の今の列に、入っていない訪問 v が入らない（入る）原因の1つ：遠方（出張）の日・移動が間に合わない・件数の上限・
+ * 入れられるが外れた（cost）・時間が合わない（time。重なる訪問の時刻）。文は「名前：…」
+ */
+function staffCause(problem: Problem, p: Placed, v: number, s: number): Reason {
+  const pv = problem.visits[v]!;
+  const st = problem.staff[s]!;
+  const seq = p.seqs[s]!;
+  let fits = false;
+  for (let pos = 0; pos <= seq.length && !fits; pos++) {
+    const t = [...seq];
+    t.splice(pos, 0, v);
+    fits = scheduleRoute(problem, s, t, 'strict') !== null;
+  }
+  const cap = problem.balance?.cap?.[s];
+  if (!fits && farTripBlocks(problem, seq, v))
+    return { ruleId: FAR_TRIP_RULE_ID, label: `${st.name}：${FAR_TRIP_LABEL}`, points: INF };
+  if (!fits && scheduleRoute(problem, s, [v], 'strict') === null) {
+    // その訪問だけでも間に合わない：可否（稼働時間帯）は満たすので、家からの移動が原因（ADR-0096）
+    const minutes = problem.travel[st.point]![pv.point]!;
+    return { ruleId: TRAVEL_TOO_FAR_RULE_ID, label: `${st.name}：${travelTooFarLabel(minutes)}`, points: INF };
+  }
+  if (fits && cap !== undefined && seq.length + 1 > cap)
+    return { ruleId: BALANCE_RULE_KEY, label: `${st.name}：件数の上限（${cap}件）`, points: INF };
+  if (fits) return { ruleId: 'cost', label: `${st.name}：入れられるが、ほかの訪問との兼ね合いで外れた`, points: 0 };
+  // 約束の幅の前後に作業が重なる訪問（移動も要るので少し広めに見る）
+  const from = pv.earliest - 60;
+  const to = pv.latest + pv.duration + 60;
+  const near = p.timings[s]!.stops.filter((x) => x.end > from && x.start < to).map(
+    (x) => `${hm(x.start)}〜${hm(x.end)}`,
+  );
+  return {
+    ruleId: 'time',
+    label: `${st.name}：${near.length > 0 ? `${near.join('・')} の訪問と時間が合わない` : '時間が合わない'}`,
+    points: INF,
+  };
+}
+
+/**
+ * どの列にも入っていない訪問ごとの、担当1人ずつの原因（PRD D430。担当なしの理由の型を lib/unassignedReason が決める）：
+ * 可の人は今の列に入れたときの原因（whyUnassigned と同じ staffCause の1件）、可でない人は null（原因は problem.reasons の Infinity の理由）。
+ * routes に入っている訪問は返さない（担当を替える候補を見るときは、その訪問を除いた routes を渡す）。only を渡せば、それが真の訪問だけ
+ */
+export function unplacedCauses(
+  problem: Problem,
+  routes: Record<string, string[]>,
+  only?: (v: number) => boolean,
+): Map<number, (Reason | null)[]> {
+  const p = place(problem, routes);
+  const out = new Map<number, (Reason | null)[]>();
+  for (let v = 0; v < problem.visits.length; v++) {
+    if (p.staffOf[v]! >= 0 || (only && !only(v))) continue;
+    out.set(
+      v,
+      problem.staff.map((_, s) => (problem.allowed[v]![s] ? staffCause(problem, p, v, s) : null)),
+    );
+  }
   return out;
 }
 

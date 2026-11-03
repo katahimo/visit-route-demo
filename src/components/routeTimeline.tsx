@@ -69,8 +69,6 @@ export type TimelineColumn = {
   bands: TimelineBand[];
   /** 移動・待ち・自宅まで（lib/timeline の legsOf） */
   legs: LegSpan[];
-  /** 移動を控えめに描く（点線・薄い文字・待ちの枠は出さない。エキスパート機能が切のとき。PRD D431） */
-  quietLegs?: boolean;
   /** ドラッグ中の影（その人へ入れたときに strict で回れるか） */
   shadow: (Span & { ok: boolean; allowed: boolean }) | null;
   /** 訪問が無いときの文 */
@@ -147,15 +145,7 @@ export function RouteTimeline({
               })}
               {c.bands.length === 0 && c.emptyText && <span className="tl-empty sub">{c.emptyText}</span>}
               {c.legs.map((leg) => (
-                <Leg
-                  key={`${leg.kind}-${leg.visitId}`}
-                  leg={leg}
-                  range={range}
-                  px={px}
-                  quiet={c.quietLegs === true}
-                  on={legOn(leg)}
-                  onLeg={onLeg}
-                />
+                <Leg key={`${leg.kind}-${leg.visitId}`} leg={leg} range={range} px={px} on={legOn(leg)} onLeg={onLeg} />
               ))}
               {c.bands.map((b) => (
                 <Band key={b.visitId} band={b} range={range} px={px} alignRight={ci >= columns.length - 1 && ci > 0} />
@@ -178,32 +168,29 @@ export function RouteTimeline({
 }
 
 /** 隙間がこれ（px）より狭い移動は、文字を出さず線だけにする（帯に重ならないように） */
-const QUIET_LABEL_MIN_PX = 14;
+const LEG_LABEL_MIN_PX = 14;
 
 /**
  * 帯のあいだの区間：移動・自宅から・自宅まで は細い線とボタン、待ちは点線の枠。
- * quiet（切）は点線と小さな薄い文字だけ（待ちの枠は出さない。隙間が狭ければ線だけ）。
+ * 入切とも同じ表示（PRD D431）。移動は次の帯に接し、待ちはその前。隙間が狭ければ文字を出さず線だけ。
  * 位置が未登録の区間は「（見込み）」、着く時刻が間に合わない区間は注意の色と三角の印（PRD D431）
  */
 function Leg({
   leg,
   range,
   px,
-  quiet,
   on,
   onLeg,
 }: {
   leg: LegSpan;
   range: Span;
   px: number;
-  quiet: boolean;
   on: boolean;
   onLeg: (leg: LegSpan) => void;
 }) {
   const box = boxOf(leg, range, px);
   const m = r0(leg.minutes);
   if (leg.kind === 'wait') {
-    if (quiet) return null;
     return (
       <div className="tl-wait" style={box} title={`待ち ${m}分`}>
         {box.height >= 14 && <span className="tl-wait-label">待ち {m}分</span>}
@@ -211,15 +198,15 @@ function Leg({
     );
   }
   const words = legWords(leg, m);
-  const short = quiet && box.height < QUIET_LABEL_MIN_PX;
+  const short = box.height < LEG_LABEL_MIN_PX;
   // 控えめな表示は「15分」「30分（見込み）」だけ（種類は印で分かる）。ふつうの表示は「移動 15分」
-  const text = legWords({ ...leg, late: false }, m, quiet);
+  const text = legWords({ ...leg, late: false }, m);
   const Icon = leg.late ? TriangleAlert : leg.kind === 'drive' ? Car : House;
-  const classes = ['tl-leg', `is-${leg.kind}`, on ? 'is-on' : '', quiet ? 'is-quiet' : '', short ? 'is-short' : '']
+  const classes = ['tl-leg', `is-${leg.kind}`, on ? 'is-on' : '', short ? 'is-short' : '']
     .concat(leg.estimated ? 'is-estimated' : '', leg.late ? 'is-late' : '')
     .join(' ');
   return (
-    <div className={classes} style={box} data-testid="tl-leg" data-quiet={quiet ? '' : undefined}>
+    <div className={classes} style={box} data-testid="tl-leg">
       <button
         type="button"
         className={`tl-leg-btn leg-btn ${on ? 'is-on' : ''}`}

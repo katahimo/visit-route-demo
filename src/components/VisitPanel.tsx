@@ -28,6 +28,7 @@ import {
   VisitRulesSection,
   VisitSummary,
 } from './visitPanelParts';
+import { VisitWhy } from './visitWhy';
 import './visitPanel.css';
 
 /**
@@ -215,6 +216,7 @@ function VisitPanel({
           />
         )}
 
+        {!isNew && <VisitWhy choices={choices} onLeave={onClose} />}
         {timeOn && !newBlocked && (
           <VisitTimeFields data={data} draft={draft} set={set} bad={bad} isNew={isNew} today={today} />
         )}

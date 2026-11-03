@@ -5,17 +5,26 @@ import type { Staff, Visit } from '../contracts/documents';
 import { afterLastDay, availabilityOf, timeText } from '../domain/availability';
 import { hhmmToMinutes } from '../domain/time';
 import { clockTime, dateText } from './dateText';
+import { UNASSIGNED_LABELS } from './unassignedReason';
 
-/** 勤務日・時間に入らない予約の見込み（件数と、いちばん早い日の例） */
-export type OutsideHours = { count: number; example: string };
+/**
+ * 勤務日・時間に入らない予約の見込み（件数と、いちばん早い日の例）。dayOff はその日にだれも勤務しない（勤務日外）、
+ * hours は勤務する人はいるが時間に収まらない（勤務時間外）。言葉は担当なしの組めない理由（PRD D430）とそろえる
+ */
+export type OutsideHours = { count: number; example: string; dayOff: number; hours: number };
 
 /** 担当できる〈スタッフ〉：利用中で、日の最終勤務日より前（休止・最終勤務日後の人は除く） */
 const canWorkOn = (s: Staff, date: string): boolean => s.active && !afterLastDay(s, date);
 
+/** その〈スタッフ〉のその日の勤務の時間帯 */
+function slotsOn(v: Visit, s: Staff, base: DemoData) {
+  const override = base.availability.find((a) => a.staffId === s.id && a.date === v.date);
+  return availabilityOf(s, v.date, override).slots;
+}
+
 /** その訪問が、その〈スタッフ〉のその日の勤務の時間帯のどれかに、窓（開始（早）〜（遅））と所要ごと収まるか */
 function fitsStaff(v: Visit, s: Staff, base: DemoData): boolean {
-  const override = base.availability.find((a) => a.staffId === s.id && a.date === v.date);
-  const { slots } = availabilityOf(s, v.date, override);
+  const slots = slotsOn(v, s, base);
   const earliest = hhmmToMinutes(v.earliestStart);
   const latest = hhmmToMinutes(v.latestStart);
   return slots.some(
@@ -37,11 +46,24 @@ export function bookingsOutsideHours(base: DemoData, next: DemoData): OutsideHou
   const first = out[0];
   if (!first) return null;
   const end = clockTime(hhmmToMinutes(first.earliestStart) + first.durationMinutes);
-  return { count: out.length, example: `${dateText(first.date)}${timeText(first.earliestStart)}〜${end}` };
+  const dayOff = out.filter(
+    (v) => !next.staff.some((s) => canWorkOn(s, v.date) && slotsOn(v, s, next).length > 0),
+  ).length;
+  return {
+    count: out.length,
+    example: `${dateText(first.date)}${timeText(first.earliestStart)}〜${end}`,
+    dayOff,
+    hours: out.length - dayOff,
+  };
 }
 
-/** 確認の本文に添える1文（無ければ null） */
-export const outsideHoursNote = (o: OutsideHours | null, staffTerm: string): string | null =>
-  o
-    ? `${o.count}件はどの${staffTerm}の勤務日・時間にも入りません（例：${o.example}）。${staffTerm}の勤務時間を広げると組めます`
-    : null;
+/** 確認の本文に添える1文（無ければ null）。内訳は担当なしの組めない理由と同じ言葉（勤務日外・勤務時間外。PRD D430） */
+export function outsideHoursNote(o: OutsideHours | null, staffTerm: string): string | null {
+  if (!o) return null;
+  const parts = [
+    o.dayOff > 0 ? `${UNASSIGNED_LABELS.dayOff} ${o.dayOff}` : '',
+    o.hours > 0 ? `${UNASSIGNED_LABELS.hours} ${o.hours}` : '',
+  ].filter(Boolean);
+  const fix = [o.dayOff > 0 ? '勤務する曜日' : '', o.hours > 0 ? '勤務時間' : ''].filter(Boolean).join('・');
+  return `${o.count}件はどの${staffTerm}の勤務日・時間にも入りません（${parts.join('・')}。例：${o.example}）。${staffTerm}の${fix}を広げると組めます`;
+}

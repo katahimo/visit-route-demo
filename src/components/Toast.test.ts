@@ -8,4 +8,8 @@ describe('toastMs（PRD D268）', () => {
     expect(toastMs('あ'.repeat(60), true)).toBe(7200);
     expect(toastMs('あ'.repeat(200), true)).toBe(10000);
   });
+  it('組めない理由の内訳を添えた知らせ（long）は20秒（PRD D430）', () => {
+    expect(toastMs('66件の担当を組みました。担当なしのまま 11件', true, true)).toBe(20000);
+    expect(toastMs('短い', false, true)).toBe(20000);
+  });
 });

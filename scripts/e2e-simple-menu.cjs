@@ -632,8 +632,8 @@ async function exceptions(page) {
     if (to === '/plan') {
       check(/点数/.test(inner) && /移動/.test(inner), '日：「詳しく」の中に点数・移動の分数がある');
       check(
-        (await page.locator('.tl-leg.is-quiet').count()) > 0 && (await page.locator('.tl-wait').count()) === 0,
-        '日：時間軸に移動の分数が控えめに出る（点線・小さな文字。待ちの枠は出さない。PRD D431）',
+        (await page.locator('.tl-leg').count()) > 0 && (await page.locator('.tl-wait').count()) > 0,
+        '日：時間軸に移動・待ちの分数が入と同じく出る（PRD D431）',
       );
       check((await page.getByTestId('unplaced-reason').count()) === 0, '日：担当なしの札に入れられない理由を出さない');
       check((await page.getByTestId('band-care').count()) === 0, '日：要対応の件数の内訳の帯を出さない');

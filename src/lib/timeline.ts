@@ -157,13 +157,12 @@ export function markLegs(
 }
 
 /**
- * 区間の言葉：「移動 15分」「自宅まで 30分（見込み）」。間に合わない区間は「・着く時刻が間に合わない」を添える。
- * bare は控えめな表示の文字（「15分」「30分（見込み）」。種類は印で分かるので言葉と添え書きを省く）
+ * 区間の言葉：「移動 15分」「自宅まで 30分（見込み）」。間に合わない区間は「・着く時刻が間に合わない」を添える
  */
-export function legWords(leg: LegSpan, minutes: number, bare = false): string {
+export function legWords(leg: LegSpan, minutes: number): string {
   const word = leg.kind === 'drive' ? '移動 ' : leg.kind === 'fromHome' ? '自宅から ' : '自宅まで ';
   const note = leg.estimated ? '（見込み）' : '';
-  return bare ? `${minutes}分${note}` : `${word}${minutes}分${note}${leg.late ? '・着く時刻が間に合わない' : ''}`;
+  return `${word}${minutes}分${note}${leg.late ? '・着く時刻が間に合わない' : ''}`;
 }
 
 /**

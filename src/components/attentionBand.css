@@ -99,3 +99,8 @@
     display: none;
   }
 }
+/* 担当なしの組めない理由の内訳（PRD D430） */
+.attention-band-why {
+  font-size: 0.85rem;
+  color: var(--muted, #7a6e64);
+}

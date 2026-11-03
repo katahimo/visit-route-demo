@@ -138,7 +138,6 @@ describe('移動の見込み・間に合わない・言葉', () => {
   it('言葉：ふつうは「移動 15分」、見込み・間に合わないを添える、控えめは分だけ', () => {
     const [leg] = markLegs(legsOf(stops, null), { ...base, visitPlaced: () => false });
     expect(legWords({ ...leg!, kind: 'drive', late: true }, 15)).toBe('移動 15分（見込み）・着く時刻が間に合わない');
-    expect(legWords(leg!, 30, true)).toBe('30分（見込み）');
     expect(legWords({ ...leg!, kind: 'toHome', estimated: false }, 8)).toBe('自宅まで 8分');
   });
 });

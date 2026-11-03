@@ -87,7 +87,7 @@
 
 - 基本（`basic`：表示名・よみ（`client-kana`）・メモ・色）
 - 段階と紹介元（`stage`：段階（`client-stage-select`）・枠を仮押さえする・紹介元（`client-referrer-name`）・連絡先・メールアドレス（任意。`client-referrer-email`。`normalizeEmail`）・メモ。`clientStage` が切なら段階は「利用中／終了」の2つ（ほかの段階の人はそのまま））。読むときに仮押さえの人は `tentative-box`：「本登録にする」（段階を利用中に）・「仮押さえを取り消す」（確認のうえ `store/tentative` の `cancelTentative` でその人の繰り返し・訪問・〈利用者さん〉を消し、一覧へ）
-- 住所（`place`：`ClientPlaceEditor` と、その下に `components/clientTravel` の `ClientTravelFields`（移動時間（片道・分）`client-travel-minutes`・遠方（出張）のチェック `client-far-trip`。PRD D429。ADR-0096）。読むときは郵便番号・住所・地区・位置・移動（`lib/clientTravel` の `travelNote`。無ければ「距離から見積もる」）と、位置があれば `RouteMap`（1点・高さ 180））
+- 住所（`place`：`ClientPlaceEditor` と、その下に `components/clientTravel` の `ClientTravelFields`（移動時間（片道・分）`client-travel-minutes`・遠方（出張）のチェック `client-far-trip`。PRD D429。ADR-0096。担当なしの理由・守れない条件の［移動時間・遠方を設定］（`lib/hardLinks` の `clientTravelHref`＝`?tab=basic&edit=place&focus=travel`）から来たら、欄が出たときに移動時間の欄へフォーカスして見える所へ巻き、URL の `focus` を消す。PRD D430）。読むときは郵便番号・住所・地区・位置・移動（`lib/clientTravel` の `travelNote`。無ければ「距離から見積もる」）と、位置があれば `RouteMap`（1点・高さ 180））
 - 特性（`traits`：`TraitsEditor`）
 - 訪問先の決まりごと（`rules`。`visitNotes` が入のとき：入り方・鍵・駐車場・注意（各200字。`visit-rules-form`）。注意書き「実在の人の名前・住所などの個人情報は入れないでください。」）。表示は `components/VisitRules.tsx`（スマホ画面・日の予定の帯の詳細・訪問の詳細の欄）
 - 新しい人（`#/clients/new`）は「基本」の節（`new`）に基本と段階の入力をまとめて開き、「住所・特性・担当・繰り返し・休みは、保存してから入れられます」。保存するとその人の基本情報へ（`replace`）、取り消すと一覧へ（何も入れていなければ確かめない）

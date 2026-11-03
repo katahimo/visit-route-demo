@@ -5,6 +5,9 @@ import { FAR_TRIP_LABEL, FAR_TRIP_RULE_ID, TRAVEL_TOO_FAR_RULE_ID, TRAVEL_TOO_FA
 /** 移動・遠方（出張）の理由のキー（Reason.ruleId と同じ） */
 export type TravelReasonKey = typeof TRAVEL_TOO_FAR_RULE_ID | typeof FAR_TRIP_RULE_ID;
 
+/** 移動時間・遠方（出張）の入れ方の例（PRD D430） */
+const TRAVEL_EXAMPLE = '例：東京へ新幹線で行くなら 片道 120〜180分、遠方（出張）に印';
+
 /** 呼び方（data.org.terms） */
 type Terms = { client: string; staff: string };
 
@@ -15,7 +18,7 @@ const TRAVEL_REASONS: Record<TravelReasonKey, { word: string; hint: (t: Terms) =
   [TRAVEL_TOO_FAR_RULE_ID]: {
     word: TRAVEL_TOO_FAR_WORD,
     hint: (t) =>
-      `距離から見積もった移動では、勤務の開始に家を出ても間に合いません。新幹線・飛行機などで行くときは、${t.client}の画面の場所の「移動時間（片道・分）」と「遠方（出張）」を入れてください`,
+      `距離から見積もった移動では、勤務の開始に家を出ても間に合いません。新幹線・飛行機などで行くときは、${t.client}の画面の場所の「移動時間（片道・分）」と「遠方（出張）」を入れてください（${TRAVEL_EXAMPLE}）`,
   },
   [FAR_TRIP_RULE_ID]: {
     word: FAR_TRIP_LABEL,

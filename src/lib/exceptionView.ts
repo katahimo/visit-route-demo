@@ -108,7 +108,7 @@ export const showUnfitLegend = (only: boolean): boolean => !only;
 
 /**
  * 日の予定の順番の表示で、移動の分数の行を出すか（切は出さない：移動の分数は例外ではない）。
- * 時間軸の移動は切でも控えめに出す（components/routeTimeline の quietLegs。PRD D431）
+ * 時間軸の移動・待ちは入切とも同じに出す（components/routeTimeline。PRD D431）
  */
 export const showLegs = (only: boolean): boolean => !only;
 

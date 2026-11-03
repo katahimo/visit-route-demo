@@ -20,7 +20,7 @@
 3. 案C：上の帯（ナビの行・状態の1行）に置く
 
 ## 決定
-- 移動：案B。D384 の「移動の分数は出さない」を、日の時間軸だけ覆す（札の中・順番・一覧・月・週は出さないまま）。分数は組みの結果の時刻から取り（`lib/timeline` の `legsOf`。距離は計算し直さない）、切は `quietLegs`（`components/routeTimeline`）で点線・`--sub` の薄い文字・小さなアイコンにする。位置が未登録の区間は「30分（見込み）」（ADR-0093 の見込み）、着く時刻が「いつまでに始める」を過ぎる区間は `--warn-ink` と三角の印（`lib/timeline` の `markLegs`）。隙間が狭い区間は文字を出さず線だけ（title・読み上げに分数）
+- 移動：案B。D384 の「移動の分数は出さない」を、日の時間軸だけ覆す（札の中・順番・一覧・月・週は出さないまま）。分数は組みの結果の時刻から取り（`lib/timeline` の `legsOf`。距離は計算し直さない）。入切とも同じ表示（「移動 15分」・待ちの点線の枠）で、移動は次の訪問の始まりに接して置く（担当ごとの1日の横棒と同じ並び。後日、ユーザーの確認で控えめな別表示をやめた）。位置が未登録の区間は「30分（見込み）」（ADR-0093 の見込み）、着く時刻が「いつまでに始める」を過ぎる区間は `--warn-ink` と三角の印（`lib/timeline` の `markLegs`）。隙間が狭い区間は文字を出さず線だけ（title・読み上げに分数）
 - 元に戻す・やり直す：案B。D402 に例外を足す（ボタン2つまでには数えない補助。主ボタンは1つのまま）。`UndoIconButtons`（`components/undo`）を `ToolbarRow` の「その他 ▾」の左に入切とも常に出す。aria-label・title は手の名前つき、戻せないときは `aria-disabled`。「その他 ▾」の中の項目は重ねて持たず外す（`useHistoryMenuItems` を消す）
 
 ## 理由とトレードオフ
@@ -32,4 +32,4 @@
 - 実装：`lib/timeline`（`markLegs`・`legWords`）・`lib/routeView`（`homeTravel` の `withEstimate`）・`pages/planColumns`・`components/routeTimeline`（`.css`）・`components/undo`・`components/toolbarRow`・`components/scheduleParts.css`
 - 文書：PRD D431・D432（D58・D329・D384・D393・D402 に追記）、設計書（pages-common・pages-plan・pages-nav・pages-month・pages-week・pages）、取扱説明書
 - e2e：`e2e-simple-menu`（切の時間軸に移動が出る・元に戻すが行にある）・`e2e-plan-menu`・`e2e-schedule-tools` ほか、`scripts/lib/ui.cjs` の `undoState`（行のボタンを読む）
-- 見直す条件：「切でも移動がうるさい」という声が出たら、`quietLegs` を『詳しく ▾』を開いたときだけに戻す
+- 見直す条件：「切でも移動がうるさい」という声が出たら、切だけ待ちの枠を省くなど控えめな表示を検討する

@@ -28,6 +28,7 @@ const {
   hashOf,
   stored,
   runSteps,
+  until,
 } = require('./lib/env.cjs');
 const { openContext, pagePerStep } = require('./lib/steps.cjs');
 const { clickMenu, goTo } = require('./lib/ui.cjs');
@@ -413,6 +414,18 @@ async function reviewFixes(page, dlg) {
       !urlOf(page).includes('edit=') &&
       (await sec(page, 'place').locator('input').count()) > 0,
     'タブの無い URL の edit= は節のあるタブ（基本情報）へ移って開く',
+    urlOf(page),
+  );
+  await sec(page, 'place').getByTestId('sec-cancel').click();
+  // 担当なしの理由の［移動時間・遠方を設定］の行き先（lib/hardLinks の clientTravelHref。PRD D430）：場所の節を開いて移動時間の欄へフォーカスし、focus を URL から消す
+  await open(page, '/clients/c2?tab=basic&edit=place&focus=travel', '[data-testid="person-sec"]');
+  const travelFocused = await until(
+    () => page.evaluate(() => document.activeElement?.getAttribute('data-testid') === 'client-travel-minutes' || null),
+    5000,
+  );
+  check(
+    !!travelFocused && !urlOf(page).includes('focus=') && !urlOf(page).includes('edit='),
+    '［移動時間・遠方を設定］の URL は場所の節を開いて移動時間（片道・分）の欄へフォーカスする',
     urlOf(page),
   );
   await sec(page, 'place').getByTestId('sec-cancel').click();

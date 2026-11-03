@@ -255,7 +255,7 @@ export function reassignOf(p: PlanCtx, id: string, ownerId: string | null) {
       pinned={!!own(pins, id)}
       staffIds={columns}
       staffName={staffName}
-      staffTerm={terms.staff}
+      terms={terms}
       busy={running ? '計算中は選べません' : false}
       onMove={(sid) => {
         moveTo(id, sid);

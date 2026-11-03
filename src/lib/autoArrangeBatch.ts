@@ -27,6 +27,7 @@ import {
 } from './autoArrange';
 import { type BatchHost, dayInputsOf } from './monthBatch';
 import { settleDates } from './settled';
+import { type ReasonTerms, reasonBreakdown, unassignedAcross } from './unassignedReason';
 import { createValueStore, type ReadableStore } from './valueStore';
 
 /** 全体の履歴（元に戻す）に出る手の名前 */
@@ -67,7 +68,44 @@ export type AutoDone = {
   error: string | null;
   /** 対象がすべて担当のある訪問（要対応の組み直しだけ）だったか。書けなかったときは知らせない（autoDoneText が null） */
   staffedOnly: boolean;
+  /** 組んだ日に担当なしのまま残った対象（件数・組めない理由の内訳・最初の1件。PRD D430） */
+  left: AutoLeft;
 };
+
+/** 担当なしのまま残った対象：件数・組めない理由の内訳（「勤務時間外 6・勤務日外 5」）・最初の1件（日付 → 開始の順） */
+export type AutoLeft = { count: number; why: string; first: { date: string; visitId: string } | null };
+
+/** 残りなし */
+export const NO_LEFT: AutoLeft = { count: 0, why: '', first: null };
+
+/**
+ * 書いたあとのデータで、組んだ日（applied）の対象のうち担当なしのまま残った訪問と、その組めない理由の内訳（lib/unassignedReason）。
+ * 理由はその日に解いた問題と、書いたあとの担当の列で見る
+ */
+export function autoLeftOf(
+  data: DemoData,
+  days: readonly AutoDay[],
+  applied: readonly string[],
+  terms: ReasonTerms,
+): AutoLeft {
+  const list = days
+    .filter((d) => d.problem && applied.includes(d.date))
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
+    .map((d) => {
+      const visits = visitsOn(data, d.date);
+      const target = new Set(d.targetIds);
+      const ids = visits.filter((v) => target.has(v.id) && v.staffId === null && !v.cancelled).map((v) => v.id);
+      return { date: d.date, problem: d.problem, visits, ids };
+    });
+  const count = list.reduce((n, d) => n + d.ids.length, 0);
+  if (count === 0) return NO_LEFT;
+  const firstDay = list.find((d) => d.ids.length > 0)!;
+  return {
+    count,
+    why: reasonBreakdown(unassignedAcross(list, terms).values()),
+    first: { date: firstDay.date, visitId: firstDay.ids[0]! },
+  };
+}
 
 type Solve = (
   problem: Problem,
@@ -97,8 +135,10 @@ export function autoDoneText(d: AutoDone, staffTerm: string): string | null {
   if (d.error)
     return `自動で組めませんでした（${d.error}）${d.written > 0 ? `。${d.written}件の担当は組みました` : ''}`;
   if (d.written === 0 && d.staffedOnly) return null;
-  if (d.written === 0) return `組める${staffTerm}がいませんでした。担当なしのまま${skipped}`;
-  return `${d.written}件の担当を組みました${skipped}`;
+  // 残った担当なしの件数と理由の内訳（PRD D430）
+  const left = d.left.count > 0 ? `担当なしのまま ${d.left.count}件${d.left.why ? `（${d.left.why}）` : ''}` : '';
+  if (d.written === 0) return `組める${staffTerm}がいませんでした。${left || '担当なしのまま'}${skipped}`;
+  return `${d.written}件の担当を組みました${skipped}${left ? `。${left}` : ''}`;
 }
 
 /** 進み具合の帯の文（「担当を自動で組んでいます 3/10日」。待っている依頼があれば添える） */
@@ -219,6 +259,7 @@ export function createAutoArrange(solve: Solve = runSolve): AutoArrange {
       skippedDays: r.skippedDays.length,
       error,
       staffedOnly,
+      left: autoLeftOf(r.data, days, r.appliedDays, now.org.terms),
     };
   };
 

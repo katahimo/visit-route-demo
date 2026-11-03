@@ -177,6 +177,7 @@ export function noneCol(p: PlanCtx) {
     placeCandidate,
     date,
     only,
+    whyOf,
   } = bv(p);
   return (
     <div
@@ -209,10 +210,17 @@ export function noneCol(p: PlanCtx) {
       )}
       {unassigned.map((id) => {
         const reasons = unplacedReasons(problem, explained, id);
+        const why = whyOf.get(id);
         const client = clientOf(id);
         return (
           <div key={id} className="stack" style={{ gap: 2 }}>
             {card(p, id)}
+            {/* 組めない理由の短い内訳（入切とも控えめに。押すと訪問の詳細の「組めない理由」で案内とリンク。PRD D430） */}
+            {why && (
+              <span className="sub unplaced-why" title={why.guide} data-testid="unplaced-why">
+                組めない理由：{why.summary}
+              </span>
+            )}
             {/* 〈利用者さん〉の名前はカード（押すと選ぶ・ドラッグ）の中なので、詳細は外の i から開く（PRD D205） */}
             <div className="row unplaced-reasons" style={{ flexWrap: 'wrap', gap: 4 }}>
               {client && <PersonInfo kind="client" id={client.id} name={client.displayName} testId="unplaced-info" />}
@@ -279,7 +287,7 @@ function columnLegs(p: PlanCtx, sid: string, ids: string[], stops: StopTiming[])
 
 /** 時間軸の列（PRD D58） */
 export function timelineCol(p: PlanCtx, sid: string): TimelineColumn {
-  const { problem, routes, owner, explained, slotsOf, colorOfStaff, dragging, dropTo, dropProps, only } = bv(p);
+  const { problem, routes, owner, explained, slotsOf, colorOfStaff, dragging, dropTo, dropProps } = bv(p);
   const ids = own(routes, sid) ?? [];
   const avail = slotsOf.get(sid);
   const stops = ids.flatMap((id) => {
@@ -300,7 +308,6 @@ export function timelineCol(p: PlanCtx, sid: string): TimelineColumn {
     slots: spansOf(avail?.slots ?? []),
     bands: ids.map((id) => bandOf(p, id, sid)),
     legs: columnLegs(p, sid, ids, stops),
-    quietLegs: only,
     shadow,
     emptyText: 'ここへドラッグすると移せます',
   };

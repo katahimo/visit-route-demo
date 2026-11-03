@@ -345,30 +345,6 @@
   cursor: pointer;
   white-space: nowrap;
 }
-/* 控えめな移動（切。PRD D431）：細い点線と小さな薄い文字。ボタンの枠・地は出さず、押したときの強調だけ色を付ける */
-.tl-leg.is-quiet {
-  border-left: 2px dotted var(--sub);
-  opacity: 0.85;
-}
-.tl-leg.is-quiet .tl-leg-btn.leg-btn {
-  margin-left: 2px;
-  padding: 0 4px;
-  max-width: calc(100% - 4px);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  border-color: transparent;
-  background: transparent;
-  color: var(--sub);
-  font-size: 0.64rem;
-}
-.tl-leg.is-quiet .tl-leg-btn.leg-btn.is-on {
-  border-color: var(--primary);
-  background: var(--primary-soft);
-  color: var(--primary-dark);
-}
-.tl-leg.is-quiet.is-on {
-  border-left-style: solid;
-}
 /* 隙間が狭い移動は文字を出さず、隙間いっぱいを押す所にする */
 .tl-leg.is-short .tl-leg-btn.leg-btn {
   width: 100%;

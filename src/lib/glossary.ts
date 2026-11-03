@@ -27,6 +27,7 @@ export type GlossaryKey =
   | 'confirmDiff'
   | 'preset'
   | 'attention'
+  | 'unassignedWhy'
   | 'score';
 
 export type GlossaryEntry = {
@@ -130,6 +131,11 @@ export const GLOSSARY: Record<GlossaryKey, GlossaryEntry> = {
   attention: {
     label: '要対応',
     text: '担当なし・担当が休み・条件に合わない・時間に間に合わない訪問のある日です。まとめて確定には入れません。',
+  },
+  // 担当なしの組めない理由（PRD D430）
+  unassignedWhy: {
+    label: '組めない理由',
+    text: 'その訪問にだれも入れない理由です。〈staff〉ごとの理由を数え、いちばん直しやすい理由の直し方と、直す画面を出します。',
   },
   // 点数の付け方（帯・説明の文から仕組みの説明をここへ寄せる。PRD D307）
   score: {

@@ -263,6 +263,7 @@ flowchart LR
 - 提供するAPI：`score`・`explain`・`diff`・`normalize`・`toHundred`・`hundredBreakdown`・`ruleLowerBounds`・`naivePlan`・`achievements`（§5「点数」）
 - stay は採点に入れない（案B も点数の基準で採点し、変更の数は `reassignDiff` で見せる）。条件の ID でない理由（`visitType`・`allowedStaff` など）は達成に数えない
 - 遠方（出張。ADR-0096）：手で遠方の訪問とほかの〈利用者さん〉の訪問を同じ列に入れたら、遠方の訪問を守れない条件（`notAllowed`・`FAR_TRIP_LABEL`）。担当なしの理由（explain）は候補の担当ごとに、遠方の日なら `farTrip`、その訪問だけでも家からの移動で間に合わなければ `travelTooFar`「移動が間に合わない（片道 約N分）」、ほかは今までどおり（重なる訪問の時刻・件数の上限・兼ね合い）
+- 担当なしの組めない理由（PRD D430。ADR-0098）：evaluate の `unplacedCauses(problem, routes, only?)` が、列に入っていない訪問ごとに担当1人ずつの原因（可の人は explain と同じ `staffCause` の1件、可でない人は null）を返す（判定は足さない）。`lib/unassignedReason` が、可でない人は problem.reasons の Infinity の理由（文の定数 `DAY_OFF`・`OUTSIDE_HOURS`・`AFTER_LAST_DAY`・欠勤の文、ruleId `allowedStaff`・相性の `level`）、可の人は原因の ruleId から型を決め、短い理由・内訳・案内・直す画面（`HardLink`）にまとめる。訪問の詳細・日の予定・「担当を変える ▾」・要対応の帯・自動の組みの知らせ・予約の読み込みの確認（`lib/bookingFit`）が同じ型と言葉を使う
 - 依存するもの：matching、domain
 - 配置：`src/evaluate/`
 - 完了の条件：

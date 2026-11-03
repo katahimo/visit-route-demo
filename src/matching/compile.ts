@@ -112,6 +112,10 @@ export const ABSENT_ALL_DAY = '欠勤（終日）';
 /** 途中の欠勤で、その日の稼働時間帯が全部なくなったとき */
 export const ABSENT_NO_HOURS = '欠勤で働ける時間がない';
 export const ABSENCE_OVERLAP = '欠勤の時間と重なる';
+/** その日に勤務が無い（勤務する曜日でない・その日だけの勤務を外した。ruleId は 'slot'） */
+export const DAY_OFF = '休み';
+/** 勤務の時間帯に、時間の約束と所要が収まらない（ruleId は 'slot'） */
+export const OUTSIDE_HOURS = '働ける時間に収まらない';
 /** 最終勤務日の後（PRD D71。ADR-0015。ruleId は 'slot'） */
 export const AFTER_LAST_DAY = '最終勤務日の後';
 
@@ -143,11 +147,11 @@ function pushSlotReason(
     const allDay = day.absence?.from === null && day.absence?.to === null;
     out.push({
       ruleId: 'slot',
-      label: afterLastDay(s, date) ? AFTER_LAST_DAY : absent ? (allDay ? ABSENT_ALL_DAY : ABSENT_NO_HOURS) : '休み',
+      label: afterLastDay(s, date) ? AFTER_LAST_DAY : absent ? (allDay ? ABSENT_ALL_DAY : ABSENT_NO_HOURS) : DAY_OFF,
       points: INF,
     });
   } else if (earliest <= latest && !fits(slots)) {
-    const label = day.absence && fits(day.base) ? ABSENCE_OVERLAP : '働ける時間に収まらない';
+    const label = day.absence && fits(day.base) ? ABSENCE_OVERLAP : OUTSIDE_HOURS;
     out.push({ ruleId: 'slot', label, points: INF });
   }
 }

@@ -6,6 +6,7 @@ import { useExceptionsOnly } from '../components/useFeature';
 import type { Problem } from '../contracts/problem';
 import { reassignWords } from '../lib/exceptionView';
 import { CURRENT_TEXT, reassignChoices } from '../lib/reassignMenu';
+import { type ReasonTerms, unassignedReasonOf } from '../lib/unassignedReason';
 
 /**
  * 訪問の詳細の「担当を変える ▾」（PRD D217。ADR-0030）：ドラッグと同じ手直しを、押す・キーボード・タッチで。
@@ -20,7 +21,7 @@ export function ReassignMenu({
   pinned,
   staffIds,
   staffName,
-  staffTerm,
+  terms,
   busy,
   onMove,
   onNone,
@@ -33,7 +34,7 @@ export function ReassignMenu({
   /** 列を出している人（ドラッグで落とせる人と同じ） */
   staffIds: string[];
   staffName: (id: string) => string;
-  staffTerm: string;
+  terms: ReasonTerms;
   /** 押せない理由（計算中）。無ければ false */
   busy: string | false;
   onMove: (staffId: string) => void;
@@ -48,6 +49,12 @@ export function ReassignMenu({
     const shown = new Set(staffIds);
     return reassignChoices(problem, routes, visitId, ownerId, (sid) => shown.has(sid)).filter((c) => !c.current);
   }, [open, problem, routes, visitId, ownerId, staffIds]);
+  const staffTerm = terms.staff;
+  /** 移せる人がいない担当なしの訪問の組めない理由（PRD D430。訪問の詳細の「組めない理由」と同じ） */
+  const why = useMemo(
+    () => (open && !ownerId && sorted.length === 0 ? unassignedReasonOf(problem, routes, visitId, terms) : null),
+    [open, ownerId, sorted, problem, routes, visitId, terms],
+  );
   if (!problem.visits.some((v) => v.id === visitId)) return null;
   const items: MenuItem[] = [
     ...(ownerId
@@ -83,6 +90,7 @@ export function ReassignMenu({
             key: 'empty',
             testId: 'plan-reassign-empty',
             label: `移せる${staffTerm}がいません`,
+            description: why ? `${why.summary}。${why.guide}` : undefined,
             disabled: true,
             onSelect: () => {},
           },
