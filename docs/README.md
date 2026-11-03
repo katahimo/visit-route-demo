@@ -17,6 +17,7 @@
 | なぜその案にしたか | [adr/](adr/)（下の一覧） |
 | まだ決まっていないこと | [design.md](design.md) §8・[prd.md](prd.md) §8 |
 | e2e の走らせ方・書き方 | [e2e.md](e2e.md) |
+| 事業所向けの取扱説明書（台帳 CSV の取り込み・デモ例） | [manual/取扱説明書.md](manual/取扱説明書.md)（Word 版 `manual/取扱説明書.docx`。サンプル CSV は `manual/samples/`） |
 
 ## 画面別の設計（design/）
 
