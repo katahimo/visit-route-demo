@@ -107,7 +107,8 @@ export function RosterCard({
           <WithIcon icon={FileText}>{roster.empty ? 'テンプレートをダウンロード（CSV）' : 'CSV に書き出す'}</WithIcon>
         </button>
       </div>
-      <RosterModeFields roster={roster} />
+      {/* 0人なら追加・更新と総入れ替えは同じ結果なので、読み込み方は出さない（PRD D104） */}
+      {!roster.empty && <RosterModeFields roster={roster} />}
       <FilePick
         caption={`読み込む${term}の名簿（Excel・CSV）`}
         accept={ROSTER_ACCEPT}
