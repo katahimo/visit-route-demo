@@ -4,7 +4,7 @@ import { RouteMap } from '../components/RouteMap';
 import { WithIcon } from '../components/ui';
 import type { PlaceAllRun } from '../components/usePlaceAllRun';
 import { hasLocation } from '../lib/common';
-import { lookupMessage } from '../lib/geocode';
+import { EXTERNAL_NOTICE, lookupMessage } from '../lib/geocode';
 import {
   hasAddressNotFound,
   NO_PLACE_NOTE,
@@ -17,10 +17,6 @@ import {
 } from '../lib/placeAll';
 import { useDemoData } from '../store';
 import '../components/placeLookup.css';
-
-/** 送る先と中身の注記（PRD D90。郵便番号だけの人は先に郵便番号検索で住所を引く） */
-const PLACE_ALL_NOTICE =
-  '緯度・経度の検索は、国土地理院のサイトで行っています（住所のみ送信。住所が無い人は郵便番号を郵便番号検索へ送信）';
 
 /** ほかの名簿の置く処理が終わるのを待っている間の文（外部の検索は同時に1本。ADR-0016） */
 const PLACE_WAITING = 'ほかの名簿の緯度・経度を探し終わるのを待っています';
@@ -110,7 +106,7 @@ export function PlaceAllPanel({
       <span className="sub" data-testid="place-all-note">
         {NO_PLACE_NOTE}
       </span>
-      {geocodeOn && <span className="sub place-notice">{PLACE_ALL_NOTICE}</span>}
+      {geocodeOn && <span className="sub place-notice">{EXTERNAL_NOTICE}</span>}
       {(running || stopped || results.length > 0) && (
         <div className="row" style={{ flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
           <progress className="place-all-progress" max={Math.max(total, 1)} value={results.length} aria-hidden="true" />

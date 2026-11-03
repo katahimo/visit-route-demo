@@ -57,7 +57,6 @@ export function PlaceStage({
           postalCode={place.postalCode}
           onPostalCodeChange={(postalCode) => setPlace((cur) => ({ ...cur, postalCode }))}
           testId="vacancy"
-          noticeNote="（押したときだけ。条件などほかの項目は送りません）"
         />
       </div>
     </details>

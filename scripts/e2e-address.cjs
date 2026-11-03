@@ -131,10 +131,7 @@ async function basics(page, fake) {
   ]) {
     check((await box.getByTestId(id).count()) === 1, `〈利用者さん〉：data-testid「${id}」がある`);
   }
-  check(
-    /名前などほかの項目は送りません/.test(await box.getByTestId('place-notice').textContent()),
-    '〈利用者さん〉：注記',
-  );
+  check(/郵便番号・住所のみ送信/.test(await box.getByTestId('place-notice').textContent()), '〈利用者さん〉：注記');
   const before = await page.getByTestId('client-address').inputValue();
   await page.getByTestId('client-postal').fill('  ９８０ －　０８１１  ');
   await page.getByTestId('client-address').fill(`${before}`);
@@ -349,10 +346,7 @@ async function vacancy(page) {
   const calcs = () => page.evaluate(() => window.__calc);
   const title = () => page.getByTestId('vacancy-table-card').locator('.section-title, h2, h3').first().textContent();
   check(/目安/.test(await title()), '場所が空なら目安');
-  check(
-    /条件などほかの項目は送りません/.test(await page.getByTestId('vacancy-notice').textContent()),
-    '空き状況：注記',
-  );
+  check(/郵便番号・住所のみ送信/.test(await page.getByTestId('vacancy-notice').textContent()), '空き状況：注記');
   await page.getByTestId('vacancy-postal').fill('980-0811');
   await settle(page, 700);
   check((await calcs()) === 0, '郵便番号を打っても計算し直さない');

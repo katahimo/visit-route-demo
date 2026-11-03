@@ -22,7 +22,7 @@
 
 #### 場所
 
-- 画面の状態に郵便番号つきの場所（`ClientPlace` の形＋ピンを置いたときの住所 `pinnedAddress`）を持ち、`AddressField`（testId `vacancy`。注記の後ろは「条件などほかの項目は送りません」）
+- 画面の状態に郵便番号つきの場所（`ClientPlace` の形＋ピンを置いたときの住所 `pinnedAddress`）を持ち、`AddressField`（testId `vacancy`。注記は1人ずつの欄と同じ `EXTERNAL_NOTICE`）
 - `pinnedAddress` は位置が変わったときだけ `pinnedAddressAfter` で入れ替える
 - `vacancyOf` などに渡すのは位置があるときの `pinnedAddress`・位置だけ（`Place`。郵便番号・住所を打っても計算し直さない）。見出し「〈住所〉への移動を含む」もこの住所
 - 場所をあとから足すと表が移動を含む値に変わり、畳んでも残る

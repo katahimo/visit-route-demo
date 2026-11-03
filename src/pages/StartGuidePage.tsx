@@ -19,6 +19,7 @@ import {
   startGuideNeighbors,
   startGuidePlanPath,
   startGuideSteps,
+  withGuideBack,
 } from '../lib/startGuide';
 import { useDemoData } from '../store';
 import { BookingCard } from './dataBookings';
@@ -110,11 +111,15 @@ function RosterStep({
   const geocodeOn = useFeature('geocode');
   const autoPlace = useRosterAutoPlace({ run, geocodeOn, onStart: () => setOpen(false) });
   const navigate = useNavigate();
+  // 人の画面に戻り先（この段）を付ける。案内はメニューに無いので、付けないと案内へ戻れない
   const openPlace = (id: string) =>
     navigate(
-      step.person === 'staff'
-        ? `/staff/${encodeURIComponent(id)}?tab=basic&edit=home`
-        : `/clients/${encodeURIComponent(id)}?tab=basic&edit=place`,
+      withGuideBack(
+        step.person === 'staff'
+          ? `/staff/${encodeURIComponent(id)}?tab=basic&edit=home`
+          : `/clients/${encodeURIComponent(id)}?tab=basic&edit=place`,
+        step.index,
+      ),
     );
   return (
     <>

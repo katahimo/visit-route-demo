@@ -35,8 +35,6 @@ type AddressFieldProps<T extends Place> = {
   testId?: AddressFieldId;
   /** 郵便番号の欄の見出し。既定「郵便番号（任意）」 */
   postalLabel?: string;
-  /** 注記の後ろの説明（何を送らないか）。既定「（押したときだけ。名前などほかの項目は送りません）」 */
-  noticeNote?: string;
 };
 
 /**
@@ -51,7 +49,6 @@ export function AddressField<T extends Place>({
   onPostalCodeChange,
   testId = 'client',
   postalLabel = '郵便番号（任意）',
-  noticeNote = '（押したときだけ。名前などほかの項目は送りません）',
 }: AddressFieldProps<T>) {
   const {
     postalText,
@@ -139,7 +136,6 @@ export function AddressField<T extends Place>({
       {geocodeOn && (
         <span className="sub place-notice" data-testid={tid('notice', 'place-notice')}>
           {EXTERNAL_NOTICE}
-          {noticeNote}
         </span>
       )}
       <output className={statusClass(status)} data-testid={tid('status', 'place-lookup-status')}>

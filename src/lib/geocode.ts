@@ -254,4 +254,6 @@ export function lookupMessage(reason: LookupFail, what: 'postal' | 'address'): s
 }
 
 /** ボタンの近くに常に出す注記（PRD D90） */
-export const EXTERNAL_NOTICE = '押すと、郵便番号・住所だけを外部（郵便番号検索・国土地理院）へ送ります';
+/** 1人ずつの住所の欄・まとめて入れる欄・空き状況で同じ文 */
+export const EXTERNAL_NOTICE =
+  '緯度・経度は国土地理院、住所は郵便番号検索のサイトで調べます（押したときだけ。郵便番号・住所のみ送信）';
