@@ -1,9 +1,11 @@
-import { ListChecks, Plus, Sheet } from 'lucide-react';
+import { ListChecks, Sheet, Undo2 } from 'lucide-react';
 import { useId, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { RosterCard } from '../components/RosterCard';
 import { PageHeader, WithIcon } from '../components/ui';
+import { useRestartFirstRun } from '../components/useRestartFirstRun';
 import type { Terms } from '../contracts/documents';
+import { RESTART_TITLE } from '../lib/firstRun';
 import {
   START_GUIDE_ROSTER_FORMS,
   type StartGuideStep,
@@ -30,6 +32,7 @@ export default function StartGuidePage() {
   const index = startGuideIndex(params.get('step'));
   const step = startGuideSteps(data.org.terms)[index - 1]!;
   const { prev, next } = startGuideNeighbors(index);
+  const restart = useRestartFirstRun();
   return (
     <div className="stack" style={{ maxWidth: 720 }} data-testid="start-guide" data-step={index}>
       <PageHeader
@@ -53,13 +56,17 @@ export default function StartGuidePage() {
         )}
       </section>
       <nav className="row" aria-label="案内の段" style={{ justifyContent: 'space-between' }}>
-        {prev ? (
-          <Link to={startGuideHref(prev)} className="btn" data-testid="start-guide-prev">
-            戻る
-          </Link>
-        ) : (
-          <span />
-        )}
+        <div className="row">
+          {prev && (
+            <Link to={startGuideHref(prev)} className="btn" data-testid="start-guide-prev">
+              戻る
+            </Link>
+          )}
+          {/* 始め方（デモか自分のデータか・使い方）を選び直す（ADR-0092） */}
+          <button type="button" className="btn" onClick={() => void restart()} data-testid="start-guide-restart">
+            <WithIcon icon={Undo2}>{RESTART_TITLE}</WithIcon>
+          </button>
+        </div>
         {next && (
           <Link to={startGuideHref(next)} className="btn btn-primary" data-testid="start-guide-next">
             次へ
@@ -76,7 +83,7 @@ function RosterStep({ step, registered }: { step: Extract<StartGuideStep, { kind
   const rosterId = useId();
   return (
     <>
-      <p>{step.term}を入れます。ファイルがあれば読み込み、少ないときは1人ずつ入れます。</p>
+      <p>{step.term}の名簿の CSV・Excel を読み込みます。</p>
       <p className="sub">{START_GUIDE_ROSTER_FORMS}</p>
       <div className="row" style={{ flexWrap: 'wrap' }}>
         <button
@@ -89,14 +96,11 @@ function RosterStep({ step, registered }: { step: Extract<StartGuideStep, { kind
         >
           <WithIcon icon={Sheet}>CSV・Excel を読み込む</WithIcon>
         </button>
-        <Link to={step.addTo} className="btn" data-testid="start-guide-add">
-          <WithIcon icon={Plus}>1人ずつ入れる</WithIcon>
-        </Link>
       </div>
       {/* 名簿の欄（ADR-0068）をそのまま使う。Excel の入出力の入り切りにかかわらず、ここでは読み込める */}
       <RosterCard kind={step.person} id={rosterId} open={open} onClose={() => setOpen(false)} />
       <p className="sub" data-testid="start-guide-registered">
-        いま入っているのは {registered}人です
+        いま登録されているのは {registered}人です
       </p>
     </>
   );
@@ -121,7 +125,7 @@ function PlanStep({
       {/* データの画面の予約の CSV の欄をそのまま使う。Excel の入出力の入り切りにかかわらず、ここでは読み込める */}
       <BookingCard t={terms} />
       <p className="sub" data-testid="start-guide-visits">
-        いま入っている訪問は {visits}件です
+        いま登録されている訪問は {visits}件です
       </p>
       <Link
         to={planPath}

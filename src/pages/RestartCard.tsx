@@ -1,16 +1,7 @@
 import { RotateCcw, Undo2 } from 'lucide-react';
-import { useConfirm } from '../components/ConfirmDialog';
 import { SectionTitle, WithIcon } from '../components/ui';
-import { keepNote } from '../lib/dataScreen';
-import {
-  RESTART_CONFIRM_LABEL,
-  RESTART_CONFIRM_TITLE,
-  RESTART_HINT,
-  RESTART_TITLE,
-  RESTART_WARN,
-  restartConfirmBody,
-} from '../lib/firstRun';
-import { canKeepPrevious, useDemoData } from '../store';
+import { useRestartFirstRun } from '../components/useRestartFirstRun';
+import { RESTART_HINT, RESTART_TITLE, RESTART_WARN } from '../lib/firstRun';
 
 /**
  * データの画面の「最初からやり直す」（PRD D3・D381。ADR-0073・ADR-0092）：データを作り直す2つの操作を1枚にまとめる。
@@ -19,17 +10,7 @@ import { canKeepPrevious, useDemoData } from '../store';
  *   （元に戻す Ctrl+Z の対象外。確認の文で先に書き出す案内を出す。1世代の控えは残す）
  */
 export function RestartCard({ onReset }: { onReset: () => void }) {
-  const { askFirstRun } = useDemoData();
-  const confirmDialog = useConfirm();
-  const onClick = async () => {
-    const ok = await confirmDialog({
-      title: RESTART_CONFIRM_TITLE,
-      body: restartConfirmBody(keepNote(canKeepPrevious(), 'データの画面')),
-      confirmLabel: RESTART_CONFIRM_LABEL,
-      tone: 'danger',
-    });
-    if (ok) askFirstRun();
-  };
+  const onClick = useRestartFirstRun();
   return (
     <section className="card stack" data-testid="restart-first-run">
       <SectionTitle icon={RotateCcw}>最初からやり直す</SectionTitle>
