@@ -230,7 +230,7 @@ export const FEATURES: readonly FeatureDef[] = [
     description: 'データを Excel のブックで、名簿を Excel・CSV で書き出し・読み込みします',
     group: '入力の補助',
     paths: [],
-    hides: 'データの画面の Excel の欄・一覧の名簿の欄（Excel・CSV）。控え（JSON）は残る',
+    hides: 'データの画面の Excel の欄・一覧の名簿の欄（Excel・CSV）。控えは残る',
   },
 ];
 

@@ -1,4 +1,4 @@
-// データの画面の区画の部品：保存の誤り・直前の状態に戻す・呼び方・控え（JSON）・古い訪問を片づける・使い方の案内（最初からやり直すは RestartCard）。
+// データの画面の区画の部品：保存の誤り・直前の状態に戻す・呼び方・控え（JSON のファイル）・古い訪問を片づける・使い方の案内（最初からやり直すは RestartCard）。
 // 状態と処理は画面専用のフック（useData*）が持ち、ここは表示と押したときだけ
 import { ArchiveRestore, CircleHelp, Download, Eraser, Save, Tags } from 'lucide-react';
 import { useId } from 'react';
@@ -43,9 +43,7 @@ export function PrevCard({ previous, onRestore }: { previous: { at: number; reas
       <p className="data-prev-text" data-testid="data-prev-text">
         {previousText(previous)}
       </p>
-      <Hint>
-        データを置き換える前の状態を、このブラウザに1つだけ残しています。戻すと、いまのデータが代わりに残ります。
-      </Hint>
+      <Hint>置き換える前のデータを1つだけ残しています。戻すと、いまのデータと入れ替わります。</Hint>
       <button
         type="button"
         className="btn"
@@ -69,7 +67,7 @@ export function TermsCard() {
       <SectionTitle icon={Tags}>
         <Term k="terms" testId="term-terms" />
       </SectionTitle>
-      <Hint>画面に出る呼び方です（各10文字まで）。呼び方もデータに保存され、書き出しに入ります。</Hint>
+      <Hint>画面に出る呼び方です（10文字まで）。</Hint>
       {/* Enter で「変える」（PRD D251。押せないときは何もしない） */}
       <form
         className="row"
@@ -121,20 +119,12 @@ export function BackupCard(x: {
     <div className="card stack">
       <SectionTitle icon={Save}>
         <Term k="backup" testId="term-backup" />
-        （JSON）
       </SectionTitle>
       <Hint>
         <ul className="hint-list">
-          <li>
-            訪問の担当・確定（伝えた内容）・振り直し・組み方の標準の記録も含めて、データ一式を1つのファイル（JSON）にします。
-          </li>
-          <li>別の端末や人へ渡すとき、控えに使います。中身を直すためのファイルではありません。</li>
-          {x.excelOn && (
-            <li>人が見て直すなら、下の「Excel」を使います（一覧で直せる代わりに、確定などの記録は入りません）。</li>
-          )}
-          <li>
-            「ファイルを選ぶ」で書き出したファイルを選ぶと、いまのデータと置き換えます。置き換える前に確かめます。
-          </li>
+          <li>全部のデータを1つのファイルに書き出します。控えや、別の端末へ移すときに使います。</li>
+          {x.excelOn && <li>中身を見て直すときは、下の「Excel」を使います。</li>}
+          <li>書き出したファイルを読み込むと、いまのデータと置き換わります。</li>
         </ul>
       </Hint>
       <button type="button" className="btn btn-primary" style={{ alignSelf: 'flex-start' }} onClick={x.onDownload}>
@@ -144,7 +134,12 @@ export function BackupCard(x: {
         最後に書き出した日：{exportAgoText(x.lastExport?.date ?? null, jstDate(Date.now()))}
         {x.lastExport?.kind === 'excel' ? '（Excel 全体）' : ''}
       </p>
-      <FilePick caption="読み込む控え（JSON）" accept="application/json,.json" onPick={x.onPick} testId="backup-file" />
+      <FilePick
+        caption="読み込む控えのファイル"
+        accept="application/json,.json"
+        onPick={x.onPick}
+        testId="backup-file"
+      />
       <FieldError>{x.error}</FieldError>
     </div>
   );

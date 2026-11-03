@@ -5,7 +5,7 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { RosterKind, RosterMode } from '../contracts/data';
 import { jstDate } from '../domain/time';
-import { rosterConfirmBody, rosterDoneText, rosterHasChanges, rosterHowText } from '../lib/dataScreen';
+import { rosterConfirmBody, rosterDoneText, rosterHasChanges, rosterHowText, rosterIsEmpty } from '../lib/dataScreen';
 import { canKeepPrevious } from '../store';
 import { useConfirm } from './ConfirmDialog';
 import { IMPORT_CHANGED_TEXT, usePendingImport } from './usePendingImport';
@@ -51,6 +51,7 @@ export function useRosterImport(x: {
         summary: rosterSummary(r, kind, terms),
         source: r.source,
         otherForm: r.otherForm,
+        empty: rosterIsEmpty(base, kind),
         keep: canKeepPrevious(),
       }),
       confirmLabel: '名簿を読み込む',

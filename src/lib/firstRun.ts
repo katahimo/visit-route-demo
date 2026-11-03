@@ -31,7 +31,7 @@ export const FIRST_RUN_SUBMIT = 'はじめる';
 /** やり直しのときだけ出す従のボタン（今のデータのまま戻る） */
 export const FIRST_RUN_CANCEL = 'やめる';
 export const FIRST_RUN_NOTE =
-  'あとから「設定」の「データ」の「始め方を選び直す」で、もう一度選べます。機能は「管理者設定」のひな形で入れ替えられます。';
+  'あとから「データ」の画面の「始め方を選び直す」で選び直せます。機能は「管理者設定」で変えられます。';
 export const FIRST_RUN_Q1 = '1. どちらで始めますか';
 export const FIRST_RUN_Q2 = '2. 使い方の近いものはどれですか';
 
@@ -40,7 +40,7 @@ export const FIRST_RUN_START_CHOICES: readonly FirstRunChoice<FirstRunStart>[] =
   {
     value: 'own',
     label: '自分のデータで始める',
-    description: '空の状態から、名簿・予約の CSV（Excel）を順に読み込むか、1人ずつ登録します',
+    description: '空の状態から始めます。名簿や予約の Excel・CSV を読み込むか、1人ずつ入れます',
   },
 ];
 
@@ -128,12 +128,11 @@ export function firstRunLanding(answer: FirstRunAnswer): string {
 
 /** データの画面の「始め方を選び直す」（確認のあと2問へ戻り、答えでデータを作り直す。PRD D381。ADR-0092） */
 export const RESTART_TITLE = '始め方を選び直す';
-export const RESTART_HINT =
-  '最初の2つの質問（デモか自分のデータか・使い方）に答え直し、呼び名・機能のひな形・データを作り直します。';
+export const RESTART_HINT = '最初の2つの質問に答え直して、データを作り直します。';
 /** 畳まずに出す注意（答えたあとデータが作り直される） */
 export const RESTART_WARN = 'いまのデータは消えます。';
 export const RESTART_CONFIRM_TITLE = '始め方を選び直しますか？';
 /** 確認の本文：元に戻す（Ctrl+Z）の対象外なので、先にデータを書き出す案内（keep は1世代の控えの文） */
 export const restartConfirmBody = (keep: string): string =>
-  `最初の2つの質問へ戻り、答えでデータを作り直します。いまのデータはすべて消えます。\n「元に戻す」（Ctrl+Z）の対象外です。必要なら、先にデータの画面でデータを書き出して控えを残してください。\n${keep}`;
+  `最初の2つの質問へ戻り、データを作り直します。いまのデータはすべて消え、「元に戻す」でも戻せません。\n必要なら、先にデータの画面で控えを書き出してください。\n${keep}`;
 export const RESTART_CONFIRM_LABEL = '2つの質問へ戻る';

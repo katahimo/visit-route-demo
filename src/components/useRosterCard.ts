@@ -4,7 +4,7 @@ import { useState } from 'react';
 import type { RosterKind, RosterMode, RosterSource } from '../contracts/data';
 import { jstDate } from '../domain/time';
 import { formError, isStaleBuild } from '../lib/common';
-import { EXCEL_STALE_TEXT, rosterFileName } from '../lib/dataScreen';
+import { EXCEL_STALE_TEXT, rosterFileName, rosterIsEmpty } from '../lib/dataScreen';
 import { saveBlob } from '../lib/download';
 import { useDemoData } from '../store';
 import { useToast } from './Toast';
@@ -22,16 +22,26 @@ export function useRosterCard(kind: RosterKind, onImported?: () => void) {
   const [rosterMode, setRosterMode] = useState<RosterMode>('merge');
   const loadRoster = useRosterImport({ rosterMode, offboardOn, setError, onImported });
   const term = kind === 'staff' ? data.org.terms.staff : data.org.terms.client;
+  /** 一覧が0人か（書き出しは列名だけのテンプレートになる） */
+  const empty = rosterIsEmpty(data, kind);
 
-  /** 名簿を Excel のブックか CSV（BOM 付きの UTF-8）で書き出す。名簿だけの書き出しは「最後に書き出した日」に数えない */
+  /**
+   * 名簿を Excel のブックか CSV（BOM 付きの UTF-8）で書き出す。名簿だけの書き出しは「最後に書き出した日」に数えない。
+   * 0人なら列名だけのテンプレート（書き足して読み込む）
+   */
   const download = async (format: RosterSource['format']) => {
     setError(null);
     setBusy(true);
     try {
       const { exportRosterCsv, exportRosterWorkbook } = await import('../excel');
       const blob = format === 'csv' ? exportRosterCsv(data, kind) : await exportRosterWorkbook(data, kind);
-      saveBlob(blob, rosterFileName(kind, format, jstDate(Date.now())));
-      toast(`${term}の名簿を ${format === 'csv' ? 'CSV' : 'Excel'} に書き出しました`);
+      saveBlob(blob, rosterFileName(kind, format, jstDate(Date.now()), empty));
+      const label = format === 'csv' ? 'CSV' : 'Excel';
+      toast(
+        empty
+          ? `${term}の名簿のテンプレート（${label}）をダウンロードしました`
+          : `${term}の名簿を ${label} に書き出しました`,
+      );
     } catch (e) {
       setError(isStaleBuild(e) ? EXCEL_STALE_TEXT : `書き出せませんでした（${formError(e)}）`);
     } finally {
@@ -54,7 +64,7 @@ export function useRosterCard(kind: RosterKind, onImported?: () => void) {
     }
   };
 
-  return { kind, term, rosterMode, setRosterMode, busy, error, download, load };
+  return { kind, term, empty, rosterMode, setRosterMode, busy, error, download, load };
 }
 
 export type RosterCardModel = ReturnType<typeof useRosterCard>;

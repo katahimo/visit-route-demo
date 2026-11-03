@@ -110,7 +110,7 @@ export default function SettingsPage() {
         nav={<SettingsTabs />}
         icon={Settings}
         title="管理者設定"
-        lead="使う機能だけを入れると、メニューと画面がすっきりします。切った機能のデータは消えません"
+        lead="使う機能を選びます。切った機能のデータは消えません"
       />
 
       <TemplatesCard features={features} terms={terms} onApply={(t) => void apply(t)} />

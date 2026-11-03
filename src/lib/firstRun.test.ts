@@ -123,9 +123,9 @@ describe('firstRunLanding（最初に開く画面）', () => {
 });
 
 describe('restartConfirmBody（始め方を選び直す）', () => {
-  it('元に戻す（Ctrl+Z）の対象外で、先にデータを書き出す案内と、控えの文を含む', () => {
+  it('「元に戻す」で戻せないことと、先に控えを書き出す案内と、控えの文を含む', () => {
     const body = restartConfirmBody('控えの文。');
-    expect(body).toContain('「元に戻す」（Ctrl+Z）の対象外');
+    expect(body).toContain('「元に戻す」でも戻せません');
     expect(body).toContain('書き出して');
     expect(body.endsWith('控えの文。')).toBe(true);
   });

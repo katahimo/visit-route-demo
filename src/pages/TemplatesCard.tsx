@@ -38,7 +38,7 @@ export function TemplatesCard({
         </span>
       </h2>
       <DetailsFold testId="feature-templates-fold" heading="5つから選んで適用">
-        <p className="sub">よく使う組み合わせを一度に適用します。適用したあとも、下のスイッチで1つずつ直せます。</p>
+        <p className="sub">機能の組み合わせをまとめて入れます。あとから下のスイッチで1つずつ変えられます。</p>
         <ul className="feature-templates">
           {TEMPLATES.map((t) => {
             const text = templateCardText(t, terms);

@@ -476,8 +476,8 @@ async function firstRunRestart(b) {
   await page.getByTestId('restart-first-run-button').click();
   const body = await page.getByTestId('confirm-body').innerText();
   check(
-    body.includes('Ctrl+Z') && body.includes('対象外') && body.includes('書き出して'),
-    '確認の文：元に戻す（Ctrl+Z）の対象外なので、先にデータを書き出す案内',
+    body.includes('「元に戻す」でも戻せません') && body.includes('書き出して'),
+    '確認の文：元に戻すでも戻せないので、先に控えを書き出す案内',
     body,
   );
   await page.getByTestId('confirm-cancel').click();
@@ -824,15 +824,15 @@ async function filePick(b) {
     shape.map((x) => [x.input, x.btnBox]),
   );
   check(
-    shape[0].label === '読み込む控え（JSON） ファイルを選ぶ' && shape[0].desc === 'ファイルを選んでいません',
+    shape[0].label === '読み込む控えのファイル ファイルを選ぶ' && shape[0].desc === 'ファイルを選んでいません',
     '入力欄の名前は「何を読み込むか＋ファイルを選ぶ」、説明は選んだファイルの文',
     shape[0],
   );
   check(/読み込む Excel/.test(shape[1].label), 'Excel の入力欄の名前', shape[1].label);
   check(/読み込む予約の CSV/.test(shape[2].label), '予約の CSV の入力欄の名前', shape[2].label);
   check(
-    (await page.getByRole('button', { name: '読み込む控え（JSON） ファイルを選ぶ', exact: true }).count()) === 1,
-    '読み上げの木で入力欄が名前付きのボタン（「読み込む控え（JSON） ファイルを選ぶ」）',
+    (await page.getByRole('button', { name: '読み込む控えのファイル ファイルを選ぶ', exact: true }).count()) === 1,
+    '読み上げの木で入力欄が名前付きのボタン（「読み込む控えのファイル ファイルを選ぶ」）',
   );
   // キーボード：「ファイルに書き出す」から Tab で入力欄へ・枠が見える・Space で選ぶ画面
   await page.getByRole('button', { name: 'ファイルに書き出す' }).focus();
@@ -882,8 +882,8 @@ async function filePick(b) {
   );
   // 名簿は各一覧の「Excel・CSV」へ案内する（ADR-0068）
   check(
-    (await page.locator('[data-testid="excel-file"] .file-pick-caption').innerText()) === '読み込む Excel（全体）' &&
-      (await page.getByTestId('excel-roster-note').getByRole('link').count()) === 2,
+    (await page.locator('[data-testid="excel-file"] .file-pick-caption').innerText()) ===
+      '読み込む Excel（全部のデータ）' && (await page.getByTestId('excel-roster-note').getByRole('link').count()) === 2,
     'Excel：全体だけを読み、名簿は一覧へのリンク',
   );
   await page.screenshot({ path: path.join(OUT_DIR, 'data-file-pick.png'), fullPage: true });
@@ -1095,7 +1095,7 @@ async function dataProtect(b) {
   await page.getByTestId('confirm-dialog').waitFor();
   const body = await page.getByTestId('confirm-body').innerText();
   check(
-    /控えとして1つだけ残し/.test(body) && /直前の状態に戻す/.test(body),
+    /元に戻すときは、データの画面の［直前の状態に戻す］を押します/.test(body) && /直前の状態に戻す/.test(body),
     '初期状態に戻す：確認の本文に控えの文',
     body,
   );

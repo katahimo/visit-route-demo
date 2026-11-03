@@ -22,17 +22,13 @@ export function ExcelCard({ excel, t }: { excel: DataExcel; t: TermsPair }) {
         <span id={titleId}>Excel</span>
       </SectionTitle>
       <Hint>
-        {t.staff}・{t.client}
-        ・項目・条件・相性・勤務時間・繰り返し・訪問（担当を含む）を、シートごとの一覧（Excel）にします。 Excel
-        で見て直し、読み込むと、いまのデータがその内容に置き換わります。確定（伝えた内容）・振り直し・
-        組み方の標準の記録は Excel
-        に入らず、読み込んでもいまのものが残ります（別の事業所のブックなら確かめてから消します）。
-        データを丸ごと控える・別の端末へ移すときは、上の「控え（JSON）」を使います。書き方は、ブックの「使い方」のシートにあります。
+        全部のデータを1つの Excel に書き出します。Excel
+        で直して読み込むと、いまのデータがその内容に置き換わります。確定した内容などの記録は Excel
+        に入らず、読み込んでも消えません。書き方は Excel の中の「使い方」にあります。
       </Hint>
       <p className="sub" data-testid="excel-roster-note">
-        {t.client}・{t.staff}の名簿だけを出し入れするときは、
-        <Link to="/clients">{t.client}一覧</Link>・<Link to="/staff">{t.staff}一覧</Link>
-        の「Excel・CSV」から（CSV も使えます。訪問の担当・確定は消えません）
+        名簿だけなら、<Link to="/clients">{t.client}一覧</Link>・<Link to="/staff">{t.staff}一覧</Link>
+        の「Excel・CSV」から出し入れできます。
       </p>
       <div className="row" style={{ flexWrap: 'wrap' }}>
         <button type="button" className="btn" disabled={excel.busy} onClick={() => void excel.download()}>
@@ -40,7 +36,7 @@ export function ExcelCard({ excel, t }: { excel: DataExcel; t: TermsPair }) {
         </button>
       </div>
       <FilePick
-        caption="読み込む Excel（全体）"
+        caption="読み込む Excel（全部のデータ）"
         accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         disabled={excel.busy}
         onPick={(f) => void excel.load(f)}

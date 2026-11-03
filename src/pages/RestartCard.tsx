@@ -18,9 +18,7 @@ export function RestartCard({ onReset }: { onReset: () => void }) {
         {RESTART_WARN}
       </p>
       <div className="restart-row">
-        <p className="sub">
-          デモの架空の事業所のデータに戻します。始め方（デモの種類）と管理者設定の機能の入り切りは、そのままです。
-        </p>
+        <p className="sub">デモのデータに戻します。機能の入り切りはそのままです。</p>
         <button type="button" className="btn" onClick={onReset} data-testid="reset-demo-button">
           <WithIcon icon={RotateCcw}>デモの初期状態に戻す</WithIcon>
         </button>

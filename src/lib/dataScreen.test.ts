@@ -11,6 +11,7 @@ import {
   rosterFileName,
   rosterHasChanges,
   rosterHowText,
+  rosterIsEmpty,
   termsCheck,
   tidyConfirmBody,
   tidyHasAny,
@@ -23,7 +24,10 @@ import { tidyMonthLabel } from './tidy';
 
 describe('keepNote・keptSuffix（1世代の控えの文）', () => {
   it('残せるなら戻せることを書き、知らせには何も添えない', () => {
-    expect(keepNote({ kept: true, why: null })).toContain('「直前の状態に戻す」で戻せます');
+    expect(keepNote({ kept: true, why: null })).toBe('元に戻すときは、データの画面の［直前の状態に戻す］を押します。');
+    expect(keepNote({ kept: true, why: null }, '読み込む前の状態に戻す')).toBe(
+      '読み込む前の状態に戻すときは、データの画面の［直前の状態に戻す］を押します。',
+    );
     expect(keptSuffix({ kept: true, why: null })).toBe('');
   });
   it('残せないなら理由（無ければ既定の文）', () => {
@@ -63,6 +67,9 @@ describe('workbookCountsText・excelFileName・rosterFileName', () => {
     expect(excelFileName('2026-10-12')).toBe('staff-assign-demo-2026-10-12.xlsx');
     expect(rosterFileName('staff', 'xlsx', '2026-10-12')).toBe('staff-assign-demo-staff-2026-10-12.xlsx');
     expect(rosterFileName('client', 'csv', '2026-10-12')).toBe('staff-assign-demo-clients-2026-10-12.csv');
+    // 0人のとき（テンプレート）は日付の代わりに template
+    expect(rosterFileName('client', 'xlsx', '2026-10-12', true)).toBe('staff-assign-demo-clients-template.xlsx');
+    expect(rosterFileName('staff', 'csv', '2026-10-12', true)).toBe('staff-assign-demo-staff-template.csv');
   });
 });
 
@@ -84,18 +91,39 @@ describe('名簿の読み込みの文', () => {
       how: '追加・更新',
       summary: '追加 1人',
       source: { format: 'xlsx' } as const,
+      empty: false,
       keep: { kept: true, why: null },
     };
     const without = rosterConfirmBody({ ...base, warning: null });
     expect(without.split('\n')).toEqual([
-      '「a.xlsx」のスタッフの名簿を読み込みます（追加・更新）。Excel のブックとして読みました。',
+      '「a.xlsx」のスタッフの名簿を読み込みます（追加・更新）。Excel ファイルを読みました。',
       '追加 1人',
-      '訪問の担当・確定（伝えた内容）・訪問はそのままです。',
-      'いまのデータは控えとして1つだけ残し、データの画面の「直前の状態に戻す」で戻せます。',
+      '予定は消えません。',
+      '読み込む前の状態に戻すときは、データの画面の［直前の状態に戻す］を押します。',
     ]);
     expect(rosterConfirmBody({ ...base, warning: '注意' })).toBe(`注意\n\n${without}`);
   });
-  it('読んだファイルの形：CSV なら見分けた文字コード', () => {
+  it('いまの一覧が0人なら、消えない・戻せるの文は出さない（控えを残せない理由も出さない）', () => {
+    const base = {
+      warning: null,
+      fileName: 'a.xlsx',
+      term: 'スタッフ',
+      how: '追加・更新',
+      summary: '追加 1人',
+      source: { format: 'xlsx' } as const,
+      empty: true,
+    };
+    const lines = ['「a.xlsx」のスタッフの名簿を読み込みます（追加・更新）。Excel ファイルを読みました。', '追加 1人'];
+    expect(rosterConfirmBody({ ...base, keep: { kept: true, why: null } }).split('\n')).toEqual(lines);
+    expect(rosterConfirmBody({ ...base, keep: { kept: false, why: '容量が足りません' } }).split('\n')).toEqual(lines);
+  });
+  it('rosterIsEmpty：その一覧が0人か', () => {
+    const d = createDemoData('2026-10-13');
+    expect(rosterIsEmpty(d, 'staff')).toBe(false);
+    expect(rosterIsEmpty({ ...d, clients: [] }, 'client')).toBe(true);
+    expect(rosterIsEmpty({ ...d, clients: [] }, 'staff')).toBe(false);
+  });
+  it('読んだファイルの形：CSV なら CSV と書く（文字コードは出さない）', () => {
     const body = rosterConfirmBody({
       warning: null,
       fileName: 'a.csv',
@@ -103,11 +131,10 @@ describe('名簿の読み込みの文', () => {
       how: '追加・更新',
       summary: '追加 1人',
       source: { format: 'csv', encoding: 'Shift_JIS' },
+      empty: false,
       keep: { kept: true, why: null },
     });
-    expect(body.split('\n')[0]).toBe(
-      '「a.csv」の利用者の名簿を読み込みます（追加・更新）。CSV（文字コード Shift_JIS）として読みました。',
-    );
+    expect(body.split('\n')[0]).toBe('「a.csv」の利用者の名簿を読み込みます（追加・更新）。CSV ファイルを読みました。');
   });
   it('顧客台帳の形なら、読んだ形と読まなかった列を出す（ADR-0073）', () => {
     const body = rosterConfirmBody({
@@ -118,10 +145,11 @@ describe('名簿の読み込みの文', () => {
       summary: '追加 1人',
       source: { format: 'csv', encoding: 'UTF-8' },
       otherForm: { label: '顧客台帳', skippedColumns: ['請求方法', '口座番号'] },
+      empty: false,
       keep: { kept: true, why: null },
     });
     expect(body.split('\n').slice(0, 3)).toEqual([
-      '「a.csv」の利用者の名簿を読み込みます（追加・更新）。CSV（文字コード UTF-8）として読みました。顧客台帳の形として読みました。',
+      '「a.csv」の利用者の名簿を読み込みます（追加・更新）。顧客台帳の形の CSV ファイルを読みました。',
       '読まなかった列：請求方法・口座番号',
       '追加 1人',
     ]);

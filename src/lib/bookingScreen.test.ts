@@ -39,13 +39,12 @@ describe('予約の読み込みの文', () => {
     ]);
   });
 
-  it('確認の本文に形・文字コード・読まなかった列・担当なしを出す', () => {
+  it('確認の本文に形・読まなかった列・担当なしを出す（文字コードは出さない）', () => {
     const body = bookingConfirmBody({ fileName: 'Reserve.csv', r: result(), clientTerm: 'お客様', keep });
-    expect(body).toContain(
-      '「Reserve.csv」を訪問として読み込みます。CSV（文字コード UTF-16LE）・予約システムの予約の形として読みました。',
-    );
+    expect(body).toContain('「Reserve.csv」を訪問として読み込みます（予約システムの予約の CSV）。');
+    expect(body).not.toContain('文字コード');
     expect(body).toContain('読まなかった列：支払金額');
-    expect(body).toContain('担当は決めません');
+    expect(body).toContain('担当は空のままです');
     expect(body).not.toContain('取り消し済みで');
     expect(
       bookingConfirmBody({ fileName: 'a.csv', r: result({ cancelledSkipped: 2 }), clientTerm: 'お客様', keep }),

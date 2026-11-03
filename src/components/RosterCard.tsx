@@ -83,10 +83,9 @@ export function RosterCard({
         <span id={titleId}>{term}の名簿（Excel・CSV）</span>
       </SectionTitle>
       <Hint ariaLabel="名簿の説明">
-        {`${term}の一覧だけを書き出し・読み込みます。Excel が無いときは CSV を使えます（表計算のアプリやメモ帳で開けます）。列はデータの画面の全体のブックの「${term}」シートと同じで、全体のブックも名簿として読めます。`}
-        {
-          '読み込むと、ID か名前で同じ人を探して直し、いない人は足します。訪問の担当・確定（伝えた内容）・訪問は消えません。CSV の文字コード（UTF-8・Shift_JIS など）は自動で見分けます。'
-        }
+        {roster.empty
+          ? 'テンプレートをダウンロードし、1行に1人ずつ書き足して保存し、そのファイルを読み込みます。'
+          : `${term}の名簿を Excel・CSV で書き出し・読み込みます。読み込むと、同じ人は直し、新しい人は足します。訪問の予定は消えません。`}
       </Hint>
       <div className="row" style={{ flexWrap: 'wrap' }}>
         <button
@@ -96,7 +95,9 @@ export function RosterCard({
           onClick={() => void roster.download('xlsx')}
           data-testid="roster-export-xlsx"
         >
-          <WithIcon icon={FileSpreadsheet}>Excel に書き出す</WithIcon>
+          <WithIcon icon={FileSpreadsheet}>
+            {roster.empty ? 'テンプレートをダウンロード（Excel）' : 'Excel に書き出す'}
+          </WithIcon>
         </button>
         <button
           type="button"
@@ -105,7 +106,7 @@ export function RosterCard({
           onClick={() => void roster.download('csv')}
           data-testid="roster-export-csv"
         >
-          <WithIcon icon={FileText}>CSV に書き出す</WithIcon>
+          <WithIcon icon={FileText}>{roster.empty ? 'テンプレートをダウンロード（CSV）' : 'CSV に書き出す'}</WithIcon>
         </button>
       </div>
       <RosterModeFields roster={roster} />

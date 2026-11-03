@@ -13,7 +13,7 @@ export function useRestartFirstRun(): () => Promise<void> {
   return async () => {
     const ok = await confirmDialog({
       title: RESTART_CONFIRM_TITLE,
-      body: restartConfirmBody(keepNote(canKeepPrevious(), 'データの画面')),
+      body: restartConfirmBody(keepNote(canKeepPrevious())),
       confirmLabel: RESTART_CONFIRM_LABEL,
       tone: 'danger',
     });
