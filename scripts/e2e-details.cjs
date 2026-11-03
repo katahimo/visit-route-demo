@@ -22,6 +22,7 @@ const {
   settle,
 } = require('./lib/env.cjs');
 const { sharedPage } = require('./lib/steps.cjs');
+const { openScreenDetails, pressTool } = require('./lib/ui.cjs');
 
 const PERF_MS = perfMs('PERF_MS_DETAILS', 100);
 const pop = (page) => page.getByTestId('person-pop');
@@ -32,6 +33,8 @@ async function open(page, hash, ready) {
   await page.reload();
   await page.locator(ready).first().waitFor({ timeout: 30000 });
   await settle(page, 500);
+  // 担当ごとの1日・今の担当の1行などは「詳しく ▾」の中（PRD D393）。読む前に開く
+  if (/^\/(month|week|plan)/.test(hash)) await openScreenDetails(page);
 }
 
 /**
@@ -100,11 +103,10 @@ async function link(page, btn, where, to) {
   );
 }
 
-/** 月の予定の表示の選択を出す（「その他 ▾」の「表示を選ぶ」。PRD D278） */
+/** 月の予定の表示の選択を出す（「その他 ▾」の「表示を選ぶ」。PRD D327） */
 async function openMonthPickers(page) {
   await open(page, '/month', '[data-testid="month-more"]');
-  await page.getByTestId('month-more').click();
-  await page.getByTestId('month-more-pickers').click();
+  await pressTool(page, 'month-more-pickers', { where: 'more' });
   await page.getByTestId('month-focus').waitFor();
 }
 
@@ -273,7 +275,7 @@ async function plan(page) {
   );
   await page.keyboard.press('Escape');
   // 順番の表示：カードの詳細の名前
-  await page.getByRole('button', { name: '順番', exact: true }).click();
+  await pressTool(page, 'plan-view-order', { where: 'more' });
   await settle(page, 400);
   const card = page.locator('.route-grid .route-col[data-staff] .route-btn').first();
   await card.click();
@@ -287,7 +289,7 @@ async function plan(page) {
   check(true, '日・順番：列の見出しの i');
   await page.keyboard.press('Escape');
   // 一覧の表示
-  await page.getByRole('button', { name: '一覧', exact: true }).click();
+  await pressTool(page, 'plan-view-list', { where: 'more' });
   await settle(page, 400);
   const list = page.getByTestId('visit-list');
   const lc = list.locator('[data-testid="person-btn"][data-kind="client"]').first();

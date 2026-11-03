@@ -4,7 +4,7 @@ import type { Pattern, Visit } from '../contracts/documents';
 import { client, DATE, makeData, staff, visit } from '../matching/fixtures.testkit';
 import { findVisit, putVisits, visitsIn } from '../patterns';
 import { draftOf, newDraft, occurrenceChanges, scopeTexts, timeChanged, visitInfo } from './visitDraft';
-import { clientVisitsIn, dayVisitRows, staffVisitsIn, unassignedVisits } from './visitLists';
+import { clientVisitsIn, staffVisitsIn } from './visitLists';
 import { applyVisitEdit, cancelVisitOp, endPatternOp, restoreOccurrenceOp, uncancelVisitOp } from './visitOps';
 import { assignOnDays, staffChoices, staffPickError } from './visitStaff';
 
@@ -311,7 +311,7 @@ describe('担当の候補', () => {
 });
 
 describe('一覧', () => {
-  it('担当なしの訪問・その日の行・〈利用者さん〉の期間の回', () => {
+  it('〈利用者さん〉の期間の回', () => {
     const a = '2026-10-19_p1';
     const d0 = put(data([pattern('p1', [1], { usualStaffId: 's1' })]), a, { staffId: null });
     const extra: Visit = visit('v2', 'c1', '08:00', '08:00', {
@@ -320,10 +320,6 @@ describe('一覧', () => {
       staffId: 's1',
     });
     const d = { ...d0, visits: [...d0.visits, extra] };
-    expect(unassignedVisits(d, DATE, '2026-10-31').map((v) => v.id)).toEqual([a]);
-    const rows = dayVisitRows(d, '2026-10-19', '07:00', 1);
-    expect(rows.rows.map((r) => [r.visit.id, r.mark])).toEqual([[a, 'unassigned']]);
-    expect(rows.rest).toBe(1);
     expect(clientVisitsIn(d, 'c1', '2026-10-19', '2026-10-19').map((v) => v.id)).toEqual(['v2', a]);
   });
 });

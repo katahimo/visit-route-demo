@@ -1,4 +1,4 @@
-/* 予定（月・週・日）に共通の進み具合の帯（PRD D151〜D155。ADR-0025） */
+/* 予定（月・週・日）に共通の進み具合の帯（PRD D151〜D154・D316。ADR-0025） */
 /* 行の高さは帯の中で固定する（本文の line-height: 1.5 や書体の既定の行の高さで帯が太らない。390px で1行・高さ 50px 以内） */
 .progress-band {
   display: flex;
@@ -101,6 +101,16 @@
   color: var(--sub);
 }
 
+/* 「詳しく ▾」の中（月。PRD D393）：外枠が既にあるので、帯の枠・横の余白は外して幅を取る（390px で1行に収める） */
+.details-fold-body .progress-band {
+  padding-left: 0;
+  padding-right: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: none;
+}
+
 /* 狭い画面（390px）：1行に収める。訪問・この日・「日」「件」を省き、ボタンは短い文 */
 @media (max-width: 600px) {
   .progress-band {
@@ -139,6 +149,14 @@
     left: 10px;
     right: 10px;
     bottom: 2px;
+  }
+  .details-fold-body .progress-band {
+    padding-left: 0;
+    padding-right: 0;
+  }
+  .details-fold-body .pb-bar {
+    left: 0;
+    right: 0;
   }
 }
 

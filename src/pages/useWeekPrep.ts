@@ -10,7 +10,7 @@ import { weekNext, weekPrepOf } from '../lib/weekPrep';
 import type { CompileInput } from '../matching';
 
 /**
- * この週の準備（PRD D280・D282。ADR-0046・ADR-0053）：担当なしを組む → 確定 → 済み の主ボタン1つと、1行の状態（PRD D332）。
+ * この週の準備（PRD D328・D314。ADR-0046・ADR-0053）：担当なしを組む → 確定 → 済み の主ボタン1つと、1行の状態（PRD D332）。
  * 数えるのは週の今日以降の日（月をまたぐ週も1度に）
  */
 export function useWeekPrep(x: {
@@ -22,7 +22,7 @@ export function useWeekPrep(x: {
   const { data, compileInput, dates, today } = x;
   /** 週の今日以降の日（組む・確定するのはこの日だけ。月をまたぐ週も1度に） */
   const futureDates = useMemo(() => dates.filter((d) => d >= today), [dates, today]);
-  /** 日の状態（月の予定・ホームと同じ数え方。lib/useDayStatuses） */
+  /** 日の状態（月の予定と同じ数え方。lib/useDayStatuses） */
   const weekStatuses = useDayStatuses(data, compileInput, futureDates);
   const prep = useMemo(() => {
     const statusOf = (d: string) => weekStatuses.get(d)?.status;
@@ -37,7 +37,7 @@ export function useWeekPrep(x: {
   /** 押せない理由の文の id（主ボタンの aria-describedby） */
   const whyId = useId();
   /**
-   * この週の問題の無い日をまとめて確定（PRD D280）：月の「問題の無い日をまとめて確定」（D223）と同じ決まり・同じ確認の型で、
+   * この週の問題の無い日をまとめて確定（PRD D328）：月の「問題の無い日をまとめて確定」（D223）と同じ決まり・同じ確認の型で、
    * 範囲をこの週の今日以降にする。1回の update で日ごとに「確定（伝えた）」と同じ書き方（lib/confirmDay）
    */
   const confirmBulk = useBulkConfirm(

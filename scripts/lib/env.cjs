@@ -293,6 +293,16 @@ async function withRealClock(browser, errors, fn, viewport = { width: 1400, heig
   }
 }
 
+/** 保存したデータが pred を満たすまで待つ（満たせば真。timeout を過ぎたら偽） */
+const waitStored = (page, pred, timeout = 8000) =>
+  until(async () => pred(await stored(page)), timeout, 100).catch(() => false);
+
+/** 修飾キー（Ctrl＋クリック・Ctrl+Z。macOS は Meta） */
+const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
+
+/** スクリーンショット（OUT_DIR の <name>.png） */
+const shot = (page, name) => page.screenshot({ path: path.join(OUT_DIR, `${name}.png`) });
+
 /** 止まったときのスクリーンショット（<名前>-fail-<段階>.png。OUT_DIR を共有してもぶつからない） */
 const failShot = (page, step) =>
   page.screenshot({ path: path.join(OUT_DIR, `${NAME}-fail-${step}.png`) }).catch(() => {});
@@ -359,6 +369,9 @@ module.exports = {
   urlOf,
   isFocused,
   stored,
+  waitStored,
+  MOD,
+  shot,
   withRealClock,
   failShot,
   finish,

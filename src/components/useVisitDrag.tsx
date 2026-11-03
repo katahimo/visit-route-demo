@@ -1,4 +1,4 @@
-// 訪問のドラッグ（PRD D339〜D341。ADR-0056）：落とし先の判定（lib/visitDrop）と影 DropShadow（visitParts から分けた）
+// 訪問のドラッグ（PRD D339〜D341。ADR-0056）：落とし先の判定（lib/visitDrop）と影 DropShadow
 import { type CSSProperties, type DragEvent, useMemo, useRef, useState } from 'react';
 import { deferredDragStart } from '../lib/dragStart';
 import { type DropTarget, type DropVerdict, dropShadowText, dropTone, dropVerdict } from '../lib/visitDrop';
@@ -20,7 +20,7 @@ export function useVisitDrag(opts: {
   fit?: boolean;
   staffWhy?: (visitId: string, date: string, staffId: string) => string | null;
   onDrop: (visitId: string, v: Extract<DropVerdict, { ok: true }>) => void;
-  /** 動かさない（予定のモード「確認」。PRD D348）：どの札もつかめない */
+  /** 動かさない（予定のモード「確認」。PRD D355）：どの札もつかめない */
   readOnly?: boolean;
 }) {
   const { data } = useDemoData();

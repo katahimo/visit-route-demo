@@ -19,19 +19,6 @@
   padding: 0;
   list-style: none;
 }
-.person-view-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 6px;
-}
-.person-view-list li {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 10px;
-  align-items: baseline;
-}
 /* 相手の名前の並び（PRD D198〜D200）：折り返して横に並べ、名前は詳細の吹き出しを開くボタン */
 .person-view .person-view-names {
   display: flex;

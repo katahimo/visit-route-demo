@@ -22,15 +22,15 @@ import {
   startWithAnswer,
   swapPrevious,
 } from './persist';
+import { arrangePending, clearArrangePending } from './start';
 
 /**
  * update の扱い：history が false なら履歴に積まず履歴を捨てる（戻せない操作）。group を渡すと、同じ group の続けての update を
  * 1手にまとめる（1回の操作で何度も書くとき。住所をまとめて探すなど）。tell が false なら、エキスパート機能が切のときの
  * 「決まった予定」の自動の伝えた記録（lib/settled の autoTell。ADR-0073）を付けない（名簿の読み込み・古い記録を消すなど、
- * 予定を直す操作ではない update）。settleNow が true なら、自動の組みの依頼が出る訪問（今回増えた・日時が変わった担当なし）があっても待たずに
- * 記録する（依頼を出さない保存・まとめて直すなど。待ちが終わらないため）
+ * 予定を直す操作ではない update）
  */
-export type UpdateOptions = { history?: boolean; group?: object; tell?: false; settleNow?: true };
+export type UpdateOptions = { history?: boolean; group?: object; tell?: false };
 
 export type DemoStore = {
   data: DemoData;
@@ -93,6 +93,13 @@ export type DemoStore = {
   replacedCount: number;
   /** 保存の容量が足りず1世代の控えを捨てた回数（画面が知らせを出すきっかけ。ADR-0032） */
   previousDrops: number;
+  /**
+   * デモを作った直後に要対応を1回自動で組む依頼の印（PRD D409。ADR-0079。「デモで試す」で始めた・初期状態に戻した直後。無ければ null）。
+   * 印の元は sessionStorage（store/start の ARRANGE_PENDING_KEY）で、起動時にも読む（例外の画面から戻して読み直しても組む）。
+   * 受けた画面（components/autoArrangeHost）は組む依頼を出して takeStartArrange で消す（sessionStorage の印も消す）
+   */
+  startArrange: object | null;
+  takeStartArrange(token: object): void;
 };
 
 const Ctx = createContext<DemoStore | null>(null);
@@ -115,6 +122,8 @@ function useStoreState() {
   const [replacedCount, setReplacedCount] = useState(0);
   const replaced = useCallback(() => setReplacedCount((n) => n + 1), []);
   const [previousDrops, setPreviousDrops] = useState(0);
+  // 組む印（sessionStorage）は起動時にも読む（例外の画面から初期状態に戻して読み直したときも組む。PRD D409）
+  const [startArrange, setStartArrange] = useState<object | null>(() => (arrangePending() ? {} : null));
   // 別タブから読み直したデータは、書き戻さない（往復で上書き合戦にしない）
   const skipSave = useRef(true);
   const latest = useRef(data);
@@ -137,6 +146,8 @@ function useStoreState() {
     replaced,
     previousDrops,
     setPreviousDrops,
+    startArrange,
+    setStartArrange,
     skipSave,
     latest,
   };
@@ -246,7 +257,8 @@ function useHistoryActions(st: StoreState) {
 
 /** 丸ごと差し替える操作（読み込み・初期状態に戻す）と、1世代の控え（PRD D227。ADR-0032） */
 function useReplaceActions(st: StoreState) {
-  const { setData, setSaveError, setPrevious, setBroken, setFirstRun, firstRun, replaced, latest } = st;
+  const { setData, setSaveError, setPrevious, setBroken, setFirstRun, setStartArrange, firstRun, replaced, latest } =
+    st;
   /** 丸ごと差し替える（履歴は捨てる。差し替えの前のデータへは「直前の状態に戻す」で戻る） */
   const swapIn = useCallback(
     (d: DemoData) => {
@@ -267,8 +279,9 @@ function useReplaceActions(st: StoreState) {
       setSaveError(null);
       swapIn(resetStore(features ?? latest.current.org.features));
       replaced();
+      setStartArrange(arrangePending() ? {} : null);
     },
-    [replaced, swapIn, setSaveError, latest],
+    [replaced, swapIn, setSaveError, setStartArrange, latest],
   );
   const keepPrevious = useCallback(
     (reason: string): PreviousKeep => {
@@ -303,11 +316,19 @@ function useReplaceActions(st: StoreState) {
       swapIn(startWithAnswer(answer));
       replaced();
       setFirstRun(null);
+      setStartArrange(arrangePending() ? {} : null);
     },
-    [firstRun, keepPrevious, replaced, swapIn, setSaveError, setFirstRun],
+    [firstRun, keepPrevious, replaced, swapIn, setSaveError, setFirstRun, setStartArrange],
   );
   const askFirstRun = useCallback(() => setFirstRun('redo'), [setFirstRun]);
   const cancelFirstRun = useCallback(() => setFirstRun((k) => (k === 'redo' ? null : k)), [setFirstRun]);
+  const takeStartArrange = useCallback(
+    (token: object) => {
+      clearArrangePending();
+      setStartArrange((cur) => (cur === token ? null : cur));
+    },
+    [setStartArrange],
+  );
   return {
     replace,
     reset,
@@ -317,6 +338,7 @@ function useReplaceActions(st: StoreState) {
     startFirstRun,
     askFirstRun,
     cancelFirstRun,
+    takeStartArrange,
     firstRun,
   };
 }
@@ -335,9 +357,11 @@ export function DemoDataProvider({ children }: { children: ReactNode }): ReactNo
     startFirstRun,
     askFirstRun,
     cancelFirstRun,
+    takeStartArrange,
     firstRun,
   } = useReplaceActions(st);
-  const { initial, data, saveError, previous, broken, externalReloads, replacedCount, previousDrops } = st;
+  const { initial, data, saveError, previous, broken, externalReloads, replacedCount, previousDrops, startArrange } =
+    st;
 
   const value = useMemo(
     () => ({
@@ -364,6 +388,8 @@ export function DemoDataProvider({ children }: { children: ReactNode }): ReactNo
       externalReloads,
       replacedCount,
       previousDrops,
+      startArrange,
+      takeStartArrange,
     }),
     [
       data,
@@ -387,6 +413,8 @@ export function DemoDataProvider({ children }: { children: ReactNode }): ReactNo
       externalReloads,
       replacedCount,
       previousDrops,
+      startArrange,
+      takeStartArrange,
       st.latest,
     ],
   );

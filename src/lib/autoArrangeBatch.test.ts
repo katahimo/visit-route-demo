@@ -3,10 +3,11 @@ import type { DemoData } from '../contracts/data';
 import type { Pattern } from '../contracts/documents';
 import type { Problem, SolveResult } from '../contracts/problem';
 import { addDays } from '../domain/time';
-import { findVisit } from '../patterns';
+import { findVisit, putVisits, visitsOn } from '../patterns';
 import { createDemoData } from '../seed';
 import { solve } from '../solver';
 import { AUTO_ARRANGE_LABEL, autoBandText, autoDoneText, createAutoArrange } from './autoArrangeBatch';
+import { dayBandIssues } from './bandIssues';
 
 const TODAY = '2026-10-21';
 
@@ -228,7 +229,29 @@ describe('createAutoArrange（自動の組みの入れ物。ADR-0072）', () => 
     expect(a.request(job(1))).toBe(true);
   });
 
-  it('expert 切：何も書かなくても、仕事が終わったら対象の日を決まった扱いにする（同じ1手。ADR-0073）', async () => {
+  it('expert 切：何も書かなくても、仕事が終わったら要対応の無い対象の日を決まった扱いにする（同じ1手。ADR-0073）', async () => {
+    const s = fakeSolve();
+    const a = createAutoArrange(s.fn);
+    // 初期データ（担当あり）の今日・明日から担当なしの回を取り消し、要対応の無い日にする。対象の訪問（pn）は無いので組まない
+    const d0 = createDemoData(TODAY);
+    const cancelled = days(2).flatMap((date) =>
+      visitsOn(d0, date)
+        .filter((v) => v.staffId === null || dayBandIssues(d0, date).has(v.id))
+        .map((v) => ({ ...v, cancelled: true })),
+    );
+    const clean = { ...d0, visits: putVisits(d0.visits, cancelled) };
+    for (const date of days(2)) expect(dayBandIssues(clean, date).size).toBe(0);
+    const h = hostOf(clean);
+    a.connect(h.host);
+    a.request(job(2));
+    await tick();
+    await tick();
+    expect(s.calls).toHaveLength(0);
+    expect(h.labels).toEqual([AUTO_ARRANGE_LABEL]);
+    expect(Object.keys(h.data().snapshots).filter((d) => d >= TODAY)).toEqual(days(2));
+  });
+
+  it('expert 切：組めずに担当なしが残る日は決まった扱いにしない（ADR-0089）', async () => {
     const s = fakeSolve();
     const a = createAutoArrange(s.fn);
     const none = { ...start(), staff: start().staff.map((x) => ({ ...x, active: false })) };
@@ -238,8 +261,8 @@ describe('createAutoArrange（自動の組みの入れ物。ADR-0072）', () => 
     await tick();
     await tick();
     expect(s.calls).toHaveLength(0);
-    expect(h.labels).toEqual([AUTO_ARRANGE_LABEL]);
-    expect(Object.keys(h.data().snapshots).filter((d) => d >= TODAY)).toEqual(days(2));
+    expect(h.labels).toEqual([]);
+    expect(Object.keys(h.data().snapshots).filter((d) => d >= TODAY)).toEqual([]);
   });
 
   it('外すと捨てる。組めた担当が無ければ書かず、知らせは0件', async () => {
@@ -282,11 +305,16 @@ describe('createAutoArrange（自動の組みの入れ物。ADR-0072）', () => 
 
 describe('知らせ・帯の文', () => {
   it('件数があれば「N件の担当を組みました」、無ければ〈スタッフ〉の呼び方で「組める…がいませんでした」', () => {
-    const d = { written: 4, appliedDays: 2, skippedDays: 0, error: null };
+    const d = { written: 4, appliedDays: 2, skippedDays: 0, error: null, staffedOnly: false };
     expect(autoDoneText(d, 'スタッフ')).toBe('4件の担当を組みました');
     expect(autoDoneText({ ...d, written: 0 }, 'シッター')).toBe('組めるシッターがいませんでした。担当なしのまま');
     expect(autoDoneText({ ...d, skippedDays: 1 }, 'スタッフ')).toContain('変わった日は組んでいません');
     expect(autoDoneText({ ...d, error: '失敗' }, 'スタッフ')).toContain('失敗');
+  });
+  it('対象がすべて担当のある訪問（要対応の組み直しだけ）で何も書かなかったときは知らせない', () => {
+    const d = { written: 0, appliedDays: 1, skippedDays: 0, error: null, staffedOnly: true };
+    expect(autoDoneText(d, 'スタッフ')).toBeNull();
+    expect(autoDoneText({ ...d, written: 2 }, 'スタッフ')).toBe('2件の担当を組みました');
   });
   it('進み具合の帯の文', () => {
     expect(autoBandText({ index: 2, total: 10, waiting: 0 })).toBe('担当を自動で組んでいます 3/10日');

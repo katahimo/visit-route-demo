@@ -10,7 +10,7 @@ import { useDemoData } from '../store';
 /** 足した結果：誤り（文）か、足した繰り返しと自動の組みを頼んだか */
 export type PatternAddResult = { error: string } | { pattern: Pattern; auto: boolean };
 
-/** 繰り返しを足す関数（開始日は form.from。足したあと保存前後のデータで増えた担当なしの回を自動で組む。繰り返しの担当も書く） */
+/** 繰り返しを足す関数（開始日は form.from。足したあと保存前後のデータで増えた担当なしの回を、開始日（今日より前なら今日）から翌月末まで自動で組む。繰り返しの担当も書く） */
 export function usePatternAdd(): (form: PatternForm, clientId: string) => PatternAddResult {
   const { data, update } = useDemoData();
   return (form, clientId) => {
@@ -22,6 +22,6 @@ export function usePatternAdd(): (form: PatternForm, clientId: string) => Patter
     // 保存後のデータは先に1回だけ作り、store にもそれを入れる（自動の組みが読むデータと参照をそろえる）
     const after = add(data);
     update((d) => (d === data ? after : add(d)), '繰り返しを足す');
-    return { pattern: p, auto: requestAutoArrange({ before: data, after, today, writeUsual: true }) };
+    return { pattern: p, auto: requestAutoArrange({ before: data, after, today, writeUsual: true, from: p.from }) };
   };
 }

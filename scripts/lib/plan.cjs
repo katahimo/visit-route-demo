@@ -18,7 +18,7 @@ function addDays(d, n) {
 
 /** 組み方の標準を消す（planDays が登録したものを戻す）。読み直して store に取り込む */
 async function clearStandard(page) {
-  await page.goto(`${BASE}#/home`);
+  await page.goto(`${BASE}#/data`);
   await page.reload();
   await page.locator('h1').waitFor();
   await page.evaluate((key) => {
@@ -125,7 +125,7 @@ async function arrangeDays(page, days, keepStandard) {
   }
   if (!keepStandard && !hadStandard) await clearStandard(page);
   else {
-    await page.goto(`${BASE}#/home`);
+    await page.goto(`${BASE}#/data`);
     await page.locator('h1').waitFor();
   }
 }
@@ -139,7 +139,7 @@ async function writeData(page, json) {
 
 /**
  * 今日から days 日（既定7日）を含む週を AI で組んで反映し、訪問に担当を保存する（今日より前の日は組まない）。
- * 終わったらホーム（#/home）を開いた状態で返る。keepStandard を true にすると標準を残す
+ * 終わったらデータの画面（#/data）を開いた状態で返る。keepStandard を true にすると標準を残す
  * @param {import('playwright').Page} page
  * cache を true にすると、2回目からは1回目の結果のデータをそのまま書き込む（速い）。同じプロセスの中と、
  * E2E_PLAN_CACHE_DIR があれば同じ実行のほかのスクリプトとも分け合う（同じビルド・同じ今日のときだけ。
@@ -149,8 +149,8 @@ async function writeData(page, json) {
  */
 async function planDays(page, { days = 7, keepStandard = false, cache = false } = {}) {
   const key = `${TODAY}:${days}:${keepStandard}`;
-  // 最初の文書が about:blank でも localStorage を読めるように、先にホームを開く
-  await page.goto(`${BASE}#/home`);
+  // 最初の文書が about:blank でも localStorage を読めるように、先にデータの画面を開く
+  await page.goto(`${BASE}#/data`);
   await page.locator('h1').waitFor();
   if (!cache) {
     await arrangeDays(page, days, keepStandard);

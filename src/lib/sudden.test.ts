@@ -4,18 +4,20 @@ import type { ReassignDiff } from '../contracts/reassign';
 import {
   absenceOfDraft,
   absenceSummary,
+  absenceTimeOf,
   cancelImpact,
   confirmNote,
   draftError,
   draftOf,
+  draftOfTime,
   impactText,
   noPlanText,
+  previewLine,
   reassignBlocked,
   reassignMoveRows,
   recommendAnneal,
   staffChoices,
-  suddenHeading,
-  suddenSteps,
+  suddenPrimary,
   visitChoices,
 } from './sudden';
 
@@ -29,23 +31,47 @@ const absence = (x: Partial<Absence> = {}): Absence => ({
   ...x,
 });
 
-describe('suddenSteps・suddenHeading（段階の名前と見出し）', () => {
-  it('〈スタッフ〉の流れ（選ぶ前も同じ）と〈利用者さん〉の流れ（短い名前）', () => {
-    expect(suddenSteps(null)).toEqual(['起きたこと', '休む人', '影響', '選ぶ', '連絡・確定']);
-    expect(suddenSteps('staff')).toEqual(suddenSteps(null));
-    expect(suddenSteps('client')).toEqual(['起きたこと', '訪問', '影響', '確認', '連絡・確定']);
+describe('absenceTimeOf・draftOfTime（欠勤の時間の選び方。PRD D414）', () => {
+  const d = { allDay: true, from: '', to: '', note: 'メモ' };
+  it('終日・午前だけ（始業から12:00）・午後だけ（12:00から終業）・ほかは時間帯', () => {
+    expect(absenceTimeOf(d)).toBe('allDay');
+    expect(absenceTimeOf({ ...d, allDay: false, to: '12:00' })).toBe('am');
+    expect(absenceTimeOf({ ...d, allDay: false, from: '12:00' })).toBe('pm');
+    expect(absenceTimeOf({ ...d, allDay: false, from: '10:00', to: '12:00' })).toBe('range');
+    expect(absenceTimeOf({ ...d, allDay: false })).toBe('range');
   });
-  it('見出しは段階の名前と重ねない', () => {
-    expect(suddenHeading(null, 1, 'スタッフ')).toBe('何が起きましたか？');
-    expect(suddenHeading('staff', 2, 'スタッフ')).toBe('休むスタッフと時間帯を選ぶ');
-    expect(suddenHeading('staff', 3, 'スタッフ')).toBe('影響を確かめて振り直す');
-    expect(suddenHeading('staff', 4, 'スタッフ')).toBe('振り直し方を選ぶ');
-    expect(suddenHeading('client', 2, 'スタッフ')).toBe('キャンセルの訪問を選ぶ');
-    expect(suddenHeading('client', 4, 'スタッフ')).toBe('取り消した結果を確かめる');
-    expect(suddenHeading('staff', 5, 'スタッフ')).toBe('変更を伝えて確定する');
-    expect(suddenHeading('client', 5, 'スタッフ')).toBe('変更を伝えて確定する');
-    for (const k of ['staff', 'client'] as const)
-      for (const st of [1, 2, 3, 4, 5] as const) expect(suddenSteps(k)).not.toContain(suddenHeading(k, st, 'スタッフ'));
+  it('押すと入力を変える（メモは残す。時間帯は今の開始・終了のまま）', () => {
+    for (const t of ['allDay', 'am', 'pm'] as const) expect(absenceTimeOf(draftOfTime(d, t))).toBe(t);
+    expect(draftOfTime({ ...d, allDay: false, from: '10:00', to: '11:00' }, 'range')).toEqual({
+      allDay: false,
+      from: '10:00',
+      to: '11:00',
+      note: 'メモ',
+    });
+    expect(draftOfTime(d, 'am').note).toBe('メモ');
+  });
+});
+
+describe('suddenPrimary（1段目の主ボタンとメモの Enter。PRD D251）', () => {
+  it('担当のある訪問がある日は［この案で決める］', () => {
+    expect(suddenPrimary({ kind: 'staff', staffId: 's1', hasBase: true })).toBe('reassign');
+  });
+  it('担当のある訪問が無い日は［欠勤だけ登録］（人を選んでいれば）', () => {
+    expect(suddenPrimary({ kind: 'staff', staffId: 's1', hasBase: false })).toBe('saveOnly');
+    expect(suddenPrimary({ kind: 'staff', staffId: '', hasBase: false })).toBeNull();
+  });
+  it('キャンセル・種類を選ぶ前は何もしない', () => {
+    expect(suddenPrimary({ kind: 'client', staffId: '', hasBase: false })).toBeNull();
+    expect(suddenPrimary({ kind: null, staffId: '', hasBase: false })).toBeNull();
+  });
+});
+
+describe('previewLine（見込みの1行の読み上げ）', () => {
+  it('見込みを出す前は空・作れなければその旨・担当のある訪問が無い日・入らなくなる件数', () => {
+    expect(previewLine(undefined, false)).toBe('');
+    expect(previewLine(null, false)).toBe('見込みを出せませんでした');
+    expect(previewLine({ hasBase: false, targets: [] }, true)).toBe(noPlanText(true));
+    expect(previewLine({ hasBase: true, targets: [{ reason: 'absence' }] }, false)).toBe('入らなくなる訪問 1件');
   });
 });
 
@@ -152,7 +178,7 @@ describe('impactText（影響の見出し）', () => {
   });
 });
 
-describe('reassignBlocked（登録して振り直すを押せない理由）', () => {
+describe('reassignBlocked（この案で決めるを押せない理由）', () => {
   const ok = { error: null, running: false, hasPreview: true, hasBase: true };
   it('押せる', () => {
     expect(reassignBlocked(ok)).toBeNull();

@@ -2,43 +2,24 @@
 
 - 日付：2026-10-20
 - 状態：採用
-- 関連：PRD D253・D254、ADR-0029（@playwright/test で包んで CI で回す）、AGENTS.md のコマンド、design.md §4 deploy
+- 関連：ADR-0029
 
 ## 背景
-ADR-0029 の最初の形は、スクリプト1本を1つの test にして子のプロセスで走らせ、終了コードと `NG  ` の行で合否を決めていた。困っていたこと：
-
-- 報告が1本単位で、どの確かめが落ちたかは記録を開かないと分からない。trace・動画も無い
-- 固定の待ち（`waitForTimeout`）が多数・合計約130秒。速いときは無駄で、負荷のあるときは足りずに落ちる
-- 相性の画面の速さの関門（セルを押して描き終わるまでの中央値の上限）が、負荷のあるときに落ちることがあった
-- `npm test`（vitest）が負荷のあるときに `Timeout calling "onTaskUpdate"` で、全部通っても終了コード1になった
-- main に競合の印（`<<<<<<<`）がコミットされる事故があった
-
-制約：確かめの名前（check の文字）は変えない。`node scripts/e2e-xxx.cjs` の単独の実行も今どおり。スクリプトに段・確かめを足し続ける並行の PR があるので、書き方は機械的で再現しやすい形にする。
-
-## 選択肢
-- 報告：A スクリプトを spec に書き直す／B スクリプトは残し、段を出させて包みが同じプロセスで `test.step` で回し、確かめは `expect.soft` に写す／C 記録の `NG  ` の行を注記に出すだけ
-- 待ち：a 1か所ずつ locator の待ちに書き換える／b 共通の `settle` を「画面が落ち着くまで」の待ちにして、固定の待ちを機械的に寄せる
+報告が1本単位でどの確かめが落ちたか見えず、固定の待ちで負荷のあるときに落ちていた。スクリプトは残し、単独の実行も続ける。
 
 ## 決定
-B と b。spec への書き直しは書き換えが大きく、並行の PR とぶつかるので見送る。
+- 段の型（`scripts/lib/steps.cjs`）：スクリプトは `module.exports = { steps }` と、末尾で `if (require.main === module) runSteps(steps)`。`sharedPage`・`pagePerStep`・`guard`
+- 1つの段は最長3分。時間切れは NG にして次へ（`sharedPage` では残りの段も NG）
+- 包み（`e2e/legacy.spec.ts`）：test ごとにスクリプトを読み直し、段を `test.step`、`check` を `expect.soft` に写す
+- trace・動画は落ちたときだけ（`retain-on-failure`。perf は取らない）。`actionTimeout`・`navigationTimeout` は30秒
+- 待ち（`settle`）：描画2回のあと、DOM の変化が 50ms 無く、CSS の動きと近いタイマーが残っていないこと。固定の待ちは計測の条件など必要な所だけ
+- 相性の速さの関門：ならし3回のあと9回の中央値。超えたら最大3回りまで測り直し一番よい回りで比べる。1回り目が上限の2倍超は落とす。上限は手元 100ms・CI 300ms
+- vitest：各 test の前にイベントループを1回まわす（`src/testSetup.ts`）
+- 競合の印：`scripts/check-conflict-markers.cjs` を `npm run lint` の最後と e2e.yml の先頭で走らせる
 
-- 段の型（`scripts/lib/steps.cjs`）：スクリプトは `module.exports = { steps }` を出し、末尾で `if (require.main === module) runSteps(steps)`。`sharedPage`（1つのページを段で使い回す）・`pagePerStep`（段ごとに新しい文脈）・`guard`（段の中で投げたら NG とスクリーンショットにして続きの段は走らせる）
-- 1つの段は最長3分。ページが固まると Playwright の待ちも戻らず test が10分で止まったことがあるため、段を時間切れの NG にして次へ進む。`sharedPage` は文脈を閉じ、残りの段は「前の段が時間切れ」の NG にする（固まったページで走らせない）
-- 包み（`e2e/legacy.spec.ts`）：test ごとにスクリプトを読み直して状態を持ち越さず、段を `test.step`、`check` を `expect.soft` に写す。console の出力と落ちたときのスクリーンショットは添付。`steps` を出さない形は子のプロセスで走らせる
-- trace・動画は落ちたときだけ残す（`retain-on-failure`）。速さを見る project `perf` は記録の手間で計測が揺れるので両方取らない。`actionTimeout`・`navigationTimeout` は単独の実行と同じ 30秒（test の中の既定は「無し」で、固まった段が進まない）
-- 待ち（`settle`）：描画2回のあと、DOM の変化が 50ms 無く、終わりのある CSS の動きが走っておらず、期限が近いタイマーが残っていないことを待つ。ページの `setTimeout` を包んで数える（入力の間引き・保存・帯の数え直しを待てる）。固定の待ちは、速さの計測の条件・Node 側の偽の検索サービスの遅れ・時間そのものを見る所だけ残す。巻く動きは DOM を変えないので目印（条件が真になるまで待つ）で待つ
-- 相性の速さの関門：ならし3回（JIT・GC の立ち上がり）のあと9回の中央値。上限を超えたら最大3回りまで測り直し、一番よい回りの中央値で比べる（負荷の回りは外し、どの回りも遅いコードは落とす）。回りを足して通ったら注記に出す。1回り目が上限の2倍を超えたら負荷では説明できないので落とす。上限は手元 100ms・CI 300ms
-- vitest：各 test の前にイベントループを1回まわす（`src/testSetup.ts`）。同期の重い test が Promise だけでつながると、worker が親からの返事（IPC）を読まず時間切れになる
-- 競合の印：`scripts/check-conflict-markers.cjs`（行頭の `<<<<<<< `・`>>>>>>> `）を `npm run lint` の最後と e2e.yml の先頭で走らせる。`=======` は Markdown の見出しの下線にも使うので見ない
+## 捨てた案
+spec に書き直す（書き換えが大きい）・1か所ずつ locator の待ちに書き換える。
 
-## 理由とトレードオフ
-- 得るもの：報告で段ごと・確かめごとに合否が見え、落ちた test に trace・動画・記録が付く。待ちが画面の状態に合い、負荷で足りずに落ちる所が減る。vitest の終了コードが負荷で揺れない。段・確かめの足し方がそろう
-- 失うもの：スクリプトが包みと同じプロセスで動くので、共通の部品（`env.cjs`）の状態は test ごとに読み直して捨てる前提になる。trace で e2e が約2割遅くなる。`settle` は Worker の計算・ネットワークの遅れ・CSS の長い動きを待てない（その所は目印で待つ）
-- 見直す条件：
-  - 否定の確かめ（出ない・変わらない）は `settle` が早く戻ると通ってしまうので、「起きるならここまでに起きる」目印で待つ形に寄せる
-  - 「最長まで待っても落ち着かない」所が増えたら、目印の待ちに替える
-  - trace で長くなりすぎたら `on-first-retry` に替える
-  - spec への書き直し（fixture）をするとき、スクリプトと段の型を消す
-
-## 影響
-- `scripts/lib/{steps,env}.cjs`・`e2e/legacy.spec.ts`・`playwright.config.ts`・`src/testSetup.ts`・`scripts/check-conflict-markers.cjs`。AGENTS.md の e2e の節、design.md §4 deploy
+## トレードオフ
+- 失うもの：trace で約2割遅い。`settle` は Worker の計算・ネットワークを待てない（目印で待つ）
+- 見直す条件：否定の確かめは目印の待ちに寄せる。spec に書き直すとき段の型を消す

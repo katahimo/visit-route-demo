@@ -1,4 +1,4 @@
-// 日の予定の欠勤の振り直し（ADR-0011。PRD D26〜D35）の状態と処理：登録して振り直す・差の欄・案A／案B・連絡の一覧・
+// 日の予定の欠勤の振り直し（ADR-0011。PRD D26〜D35）の状態と処理：この案で決める（登録して振り直す）・差の欄・案A／案B・連絡の一覧・
 // 振り直す前に戻す。計算は lib/planReassign と reassign、Worker は usePlanRun。データを書くのは update（store）だけ
 import { type ComponentProps, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useConfirm } from '../components/ConfirmDialog';
@@ -338,7 +338,7 @@ export function useReassignFlow(x: FlowArgs) {
 
   /**
    * 「登録して振り直す」：欠勤を足したデータで compile し、今の担当の並びから振り直して訪問に書く（1回の update で書く）。
-   * stay：「欠勤・キャンセル」の欄から押した（欄は閉じず4段目へ進むので、差の欄へは移らない）。振り直せたら true
+   * stay：「欠勤・キャンセル」の欄から押した（欄は閉じず2段目（連絡・確定）へ進むので、差の欄へは移らない）。振り直せたら true
    */
   const registerAndReassign = async (absence: Absence, anneal = false, stay = false): Promise<boolean> => {
     if (planRun.running) return false;
@@ -385,7 +385,7 @@ export function useReassignFlow(x: FlowArgs) {
   const revertToBase = async (): Promise<boolean> => {
     if (!problem || !view.info || planRun.busy()) return false;
     // 近道：直前の手がこの日の「欠勤の振り直し」で、その手の前にこの日の振り直しが無く、手のあとに何も変わっていないときだけ
-    // 全体の「元に戻す」で1手戻す（別の日の振り直し・案A/案B の切り替えのあとで誤って戻さない。PR #81 のレビュー）
+    // 全体の「元に戻す」で1手戻す（別の日の振り直し・案A/案B の切り替えのあとで誤って戻さない）
     const last = appHistory.peek();
     if (
       last &&

@@ -1,9 +1,9 @@
-// 予定（月・週・日）に共通の進み具合の帯（PRD D151〜D155。ADR-0025。design.md §4 pages「進み具合の帯」）の決まり。
-// 見ている月の「今月の準備」（lib/month の monthProgress。ホーム・月の画面と同じ数え方）から、帯に出す次の一手を1つ決める純粋関数。
+// 予定（月・週・日）に共通の進み具合の帯（PRD D151〜D154・D316。ADR-0025。design.md §4 pages「進み具合の帯」）の決まり。
+// 見ている月の「今月の準備」（lib/month の monthProgress。月の画面と同じ数え方）から、帯に出す次の一手を1つ決める純粋関数。
 // データは書き換えない
 import type { Attention, AttentionKind, MonthProgress } from './month';
 
-/** 帯から行う操作：batch＝担当を組むの画面（#/arrange）、attention・unconfirmed＝月の画面の欄（?do=。PRD D143） */
+/** 帯から行う操作：batch＝担当を組むの画面（#/arrange）、attention・unconfirmed＝月の画面の欄（?do=。PRD D404） */
 export type BandOp = 'batch' | 'attention' | 'unconfirmed';
 
 /**
@@ -28,7 +28,7 @@ export function urgentCount(list: readonly Pick<Attention, 'kind'>[]): number {
 }
 
 export type BandInput = {
-  /** 見ている月の今日以降の進み具合（monthProgress。月の画面・ホームと同じ数え方） */
+  /** 見ている月の今日以降の進み具合（monthProgress。月の画面と同じ数え方） */
   progress: Pick<MonthProgress, 'visits' | 'days' | 'planned' | 'confirmed' | 'unconfirmed' | 'attention'>;
   /** 担当なしの訪問がある日の数（担当を AI で組む日） */
   emptyTargets: number;

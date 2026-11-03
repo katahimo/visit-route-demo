@@ -15,6 +15,7 @@ const { answerConfirms } = require('./lib/confirmDialog.cjs');
 const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, hashOf, runSteps, settle, until } = require('./lib/env.cjs');
 const { markStandard } = require('./lib/standard.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
+const { pressTool } = require('./lib/ui.cjs');
 
 const YM = TODAY.slice(0, 7);
 /** 日付の曜日（0＝日曜。JST の日付として） */
@@ -32,9 +33,9 @@ async function open(page, hash, ready = '[data-testid="arrange-start"]') {
   await page.locator(ready).first().waitFor({ timeout: 30000 });
   await settle(page, 300);
 }
-/** 保存したデータを書き換える（ホームはデータを書かないので、ホームで書き換えてから読み直す） */
+/** 保存したデータを書き換える（データの画面は開くだけではデータを書かないので、そこで書き換えてから読み直す） */
 async function editData(page, fn, arg) {
-  await page.goto(`${BASE}#/home`);
+  await page.goto(`${BASE}#/data`);
   await page.reload();
   await page.locator('h1').waitFor();
   await page.evaluate(fn, arg);
@@ -234,7 +235,7 @@ async function runApply(page) {
     '反映すると範囲の担当なしが減る',
   );
   // 全体の「元に戻す」で1手戻る
-  await page.getByTestId('undo-btn').click();
+  await pressTool(page, '元に戻す', { where: 'row' });
   await page.waitForFunction(
     ({ k, d }) => !JSON.parse(localStorage.getItem(k)).visits.some((v) => v.date === d && v.staffId),
     { k: STORAGE_KEY, d: TODAY },
@@ -385,10 +386,14 @@ async function basisRedo(page) {
     '基本情報を直すと担当を組むに「変わりました」の知らせ',
   );
   const badge = await page
-    .locator('.side-nav [data-key="arrange:assign"] .nav-badge')
+    .locator('.side-nav [data-key="arrange"] .nav-badge')
     .innerText()
     .catch(() => '');
-  check(badge.includes('変更'), 'メニューの担当を組むの印は「変更」（担当なしの日数より先）', badge);
+  check(
+    badge.includes('変更'),
+    'メニューの「組む」の印は「変更」（担当なしの日数より先。印は組むの1つ。PRD D401）',
+    badge,
+  );
   await page.getByTestId('arrange-basis-redo').click();
   await waitBand(page);
   check(
@@ -412,15 +417,22 @@ async function basisRedo(page) {
 async function compare(page) {
   await markStandard(page);
   await open(page, `/arrange?ym=${YM}`);
-  const date = await page.getByTestId('arrange-compare-date').inputValue();
+  const href = (await page.getByTestId('arrange-compare-open').getAttribute('href')) ?? '';
+  const date = href.split('date=')[1] ?? '';
+  check(
+    /^\d{4}-\d{2}-\d{2}$/.test(date) &&
+      (await page.getByTestId('arrange-compare-date').count()) === 0 &&
+      (await page.getByTestId('arrange-day-open').count()) === 0,
+    '案を比べるのカードは［〈日〉の案を比べる］だけ（日付の欄・日の予定を見るは無い。ADR-0088）',
+    href,
+  );
   await page.getByTestId('arrange-compare-open').click();
   await page.waitForURL(/#\/compare/, { timeout: 10000 });
   check(hashOf(page) === `#/compare?date=${date}`, '「案を比べる」で比較の画面（その日）へ', hashOf(page));
   await page.locator('h1').filter({ hasText: '提案を比べる' }).waitFor({ timeout: 30000 });
   check(
-    (await page.locator('[data-testid="arrange-steps"] li').count()) === 2 &&
-      (await page.locator('[data-testid="arrange-steps"] li.is-current').getAttribute('data-step')) === 'arrange',
-    '標準があっても比較の画面に予定を組むの段（2段・今は担当を組む）を出す',
+    (await page.getByTestId('arrange-steps').count()) === 0 && (await page.getByTestId('compare-back').count()) === 1,
+    '比較の画面は担当を組むからの寄り道：段は出さず［担当を組むに戻る］だけ（ADR-0088）',
   );
   await page.getByTestId('compare-back').click();
   await page.waitForURL(/#\/arrange/, { timeout: 10000 });

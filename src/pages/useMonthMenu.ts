@@ -1,4 +1,4 @@
-// 月の画面の「その他 ▾」（PRD D278）：月送り・今月と主ボタン（進み具合の帯）のほかの、ときどき使う操作をたたむ。
+// 月の画面の「その他 ▾」（PRD D327）：月送り・今月と主ボタン（進み具合の帯）のほかの、ときどき使う操作をたたむ。
 // 表示の選択の段・マスの見方の説明を開く（保存しない）と、印刷・勤務の見込みの画面へ
 import { Info, Printer, SlidersHorizontal, Timer } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -6,9 +6,9 @@ import type { MenuItem } from '../components/MenuButton';
 
 /** 「その他 ▾」の開け閉めの状態（表示の選択の段・マスの見方の説明）と、開いたときのフォーカスの置き場所 */
 export function useMonthPanels() {
-  /** 「その他 ▾」の「表示を選ぶ」で開いた表示の選択の段（PRD D278。保存しない） */
+  /** 「その他 ▾」の「表示を選ぶ」で開いた表示の選択の段（PRD D327。保存しない） */
   const [pickersOpen, setPickersOpen] = useState(false);
-  /** 「その他 ▾」の「マスの見方」で開いた説明（PRD D278。保存しない） */
+  /** 「その他 ▾」の「マスの見方」で開いた説明（PRD D327。保存しない） */
   const [helpOpen, setHelpOpen] = useState(false);
   /** 表示の選択の段の最初の欄（開いたらここへフォーカス） */
   const focusSelectRef = useRef<HTMLSelectElement>(null);

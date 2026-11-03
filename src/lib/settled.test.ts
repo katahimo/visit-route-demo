@@ -1,4 +1,5 @@
-// 決まった予定（ADR-0073。PRD D382）：expert 切のとき、visits が変わった日（今日〜1か月先）に自動で伝えた記録を付ける
+// 決まった予定（ADR-0073。PRD D382）：expert 切のとき、visits が変わった日と、訪問を変えない直しで要対応が消えた日（今日〜1か月先）に
+// 自動で伝えた記録を付ける
 import { describe, expect, it } from 'vitest';
 import type { DemoData } from '../contracts/data';
 import { addDays } from '../domain/time';
@@ -65,6 +66,27 @@ describe('autoTell', () => {
     const none = makeData({ ...before, org: { ...before.org, features: {} } });
     expect(autoTell(none, { ...none, visits: after.visits }, TODAY, AT).snapshots).toEqual({});
   });
+  it('visits が変わらない直し（欠勤を消すなど）で帯の種類が無くなった日は付ける。要対応が変わらない日・前から無い日は付けない（ADR-0089）', () => {
+    const absence = {
+      id: 'ab1',
+      staffId: 's1',
+      date: DATE,
+      from: null,
+      to: null,
+      note: '',
+    } as DemoData['absences'][number];
+    const off = base({
+      visits: [fixed('a', '09:00', { staffId: 's1' }), fixed('b', '11:00', { staffId: 's2' })],
+      absences: [absence],
+    });
+    // s1 が欠勤の日に s1 の訪問＝休みの人。欠勤を消すと要対応が無くなり、その操作で付く
+    expect(autoTell(off, { ...off, absences: [] }, TODAY, AT).snapshots[DATE]).toMatchObject({ at: AT });
+    // 要対応が残るままの直し（名前だけ変える）は付けない
+    expect(autoTell(off, { ...off, staff: off.staff.map((x) => ({ ...x })) }, TODAY, AT).snapshots).toEqual({});
+    // 前から要対応の無い日は、訪問の外の直しでは付けない（直した日ではない）
+    const clean = { ...off, absences: [] };
+    expect(autoTell(clean, { ...clean, staff: [...clean.staff] }, TODAY, AT).snapshots).toEqual({});
+  });
   it('visits が変わらない操作（visits の外だけ・同じ中身の作り直し）は記録しない', () => {
     const before = base();
     expect(autoTell(before, { ...before, staff: [...before.staff] }, TODAY, AT).snapshots).toEqual({});
@@ -113,12 +135,33 @@ describe('autoTell', () => {
       visits: putVisits(added.visits, [{ ...added.visits[1]!, staffId: 's2', start: '11:00' }]),
     };
     expect(autoTell(added, arranged, TODAY, AT).snapshots[DATE]!.visits.map((x) => x.staffId)).toEqual(['s1', 's2']);
-    // 前からある担当なしの訪問（b）は待たず、別の訪問（a）を手で直せば付く
+    // 前からある担当なしの訪問（b）が残る日は、別の訪問（a）を手で直しても付けない（要対応が残る日。ADR-0089）
     const edited = {
       ...added,
       visits: putVisits(added.visits, [{ ...added.visits[0]!, staffId: 's2', start: '09:00' }]),
     };
-    expect(autoTell(added, edited, TODAY, AT).snapshots[DATE]!.visits.map((x) => x.staffId)).toEqual(['s2', null]);
+    expect(autoTell(added, edited, TODAY, AT).snapshots).toEqual({});
+  });
+  it('帯の種類（担当なし・間に合わない・重なり・休みの人）の訪問が残る日は付けず、直して無くなったときに付ける（ADR-0089）', () => {
+    const before = base({ visits: [fixed('a', '09:00', { staffId: 's1' }), fixed('b', '11:00', { staffId: 's2' })] });
+    // b を a と同じ 9:00・同じ s1 にする＝重なり
+    const overlap = {
+      ...before,
+      visits: putVisits(before.visits, [
+        { ...before.visits[1]!, staffId: 's1', earliestStart: '09:00', latestStart: '09:00', start: null },
+      ]),
+    };
+    const out = autoTell(before, overlap, TODAY, AT);
+    expect(out.snapshots[DATE]).toBeUndefined();
+    // 担当を s2 に直すと重なりが無くなり、その操作で付く
+    const fixedDay = {
+      ...out,
+      visits: putVisits(out.visits, [{ ...overlap.visits[1]!, staffId: 's2', start: '09:00' }]),
+    };
+    expect(autoTell(out, fixedDay, TODAY, AT + 1).snapshots[DATE]).toMatchObject({ at: AT + 1 });
+    // すでに伝えた日は、あとで重なりができても記録はそのまま（その後の変更は「変更あり」）
+    const told = autoTell(out, fixedDay, TODAY, AT + 1);
+    expect(autoTell(told, { ...told, visits: overlap.visits }, TODAY, AT + 2).snapshots[DATE]!.at).toBe(AT + 1);
   });
   it('まとめて直す（multiEdit）の結果も拾う', () => {
     const before = base();
@@ -133,29 +176,28 @@ describe('autoTell', () => {
   });
 });
 
-describe('待ちの条件（自動の組みの依頼が出る訪問だけ待つ）', () => {
-  it('担当を外した（担当なしの列へ）・日時が同じ担当なしへの変更は待たない', () => {
+describe('担当なしが残る日（自動の組みを待つ日）は付けない', () => {
+  it('担当を外した（担当なしの列へ）日は、担当なしが残るので付けない（ADR-0089）', () => {
     const before = base({ visits: [fixed('a', '09:00', { staffId: 's1' }), fixed('b', '11:00', { staffId: 's2' })] });
     const none = {
       ...before,
       visits: putVisits(before.visits, [{ ...before.visits[1]!, staffId: null, start: null }]),
     };
-    expect(autoTell(before, none, TODAY, AT).snapshots[DATE]).toBeTruthy();
+    expect(autoTell(before, none, TODAY, AT).snapshots[DATE]).toBeUndefined();
   });
-  it('別の日へ移した担当なしの訪問は待つ。依頼を出さない保存（wait:false）は待たない', () => {
+  it('別の日へ移した担当なしの訪問の日は、担当なしが残るので付けない（元の日は付く）', () => {
     const before = base({ visits: [fixed('a', '09:00', { staffId: 's1' }), fixed('b', '11:00')] });
     const day = addDays(TODAY, 1);
     const moved = { ...before, visits: putVisits(before.visits, [{ ...before.visits[1]!, date: day }]) };
-    // 元の日（a だけ残る）は付き、移した先は待つ
+    // 元の日（a だけ残る）は付き、移した先は付かない
     expect(Object.keys(autoTell(before, moved, TODAY, AT).snapshots)).toEqual([TODAY]);
-    expect(Object.keys(autoTell(before, moved, TODAY, AT, { wait: false }).snapshots).sort()).toEqual([TODAY, day]);
   });
 });
 
 describe('settleDates（自動の組みが終わったとき。待っていた日を終わらせる）', () => {
   it('範囲内で伝えた記録の無い日に付ける。付いている日・範囲外・今日より前は変えない', () => {
     const d = base({
-      visits: [fixed('a', '09:00', { staffId: 's1' }), fixed('b', '09:00', { date: addDays(TODAY, 1) })],
+      visits: [fixed('a', '09:00', { staffId: 's1' }), fixed('b', '09:00', { date: addDays(TODAY, 1), staffId: 's2' })],
     });
     const out = settleDates(
       d,
@@ -171,6 +213,10 @@ describe('settleDates（自動の組みが終わったとき。待っていた�
   it('expert 入なら何もしない', () => {
     const d = base({ org: { ...makeData().org, features: { expert: true } } });
     expect(settleDates(d, [TODAY], TODAY, AT)).toBe(d);
+  });
+  it('組めずに要対応（担当なし）が残る日は付けない（ADR-0089）', () => {
+    const d = base({ visits: [fixed('a', '09:00', { staffId: 's1' }), fixed('b', '11:00')] });
+    expect(settleDates(d, [TODAY], TODAY, AT).snapshots).toEqual({});
   });
 });
 

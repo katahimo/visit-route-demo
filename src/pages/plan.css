@@ -105,6 +105,19 @@
   max-width: 100%;
   white-space: normal;
 }
+/* 担当なしの札ごとの「理由 N ▾」（入。閉じて始める） */
+.unplaced-reasons-fold > summary {
+  cursor: pointer;
+  list-style: none;
+  font-size: 0.8rem;
+  color: var(--sub);
+}
+.unplaced-reasons-fold > summary::-webkit-details-marker {
+  display: none;
+}
+.unplaced-reasons-fold[open] > summary {
+  margin-bottom: 4px;
+}
 /* 拘束が上限を超える人の1人ぶん（狭い画面でも名前・拘束・リンクを同じ行に） */
 .over-span-item {
   display: inline-block;
@@ -150,7 +163,7 @@ p.plan-band.error {
 .plan-progress progress {
   width: 160px;
 }
-/* 比較の画面の「もう1案作って比べる」（PRD D159）。狭い画面では縦に並べ、ボタンは幅いっぱい */
+/* 比較の画面の「もう1案作って比べる」（PRD D317）。狭い画面では縦に並べ、ボタンは幅いっぱい */
 .compare-another {
   align-items: center;
   text-align: center;
@@ -577,7 +590,7 @@ p.plan-band.error {
     max-width: none;
   }
 }
-/* スマホのメニューの幅（下のタブ（--bottom-tabs-h）の上に出す。PRD D134） */
+/* スマホのメニューの幅（下のタブ（--bottom-tabs-h）の上に出す。PRD D401） */
 @media (max-width: 860px) {
   .reassign-dock {
     left: 8px;
@@ -707,17 +720,7 @@ p.plan-band.error {
   }
 }
 
-/* 表示の切り替え（時間軸／順番／一覧。PRD D58・D63）。狭い幅・印刷では時間軸の代わりに順番なので、時間軸のボタンを出さない */
-@media (max-width: 900px) {
-  .plan-view-toggle .plan-view-timeline {
-    display: none;
-  }
-  .plan-view-toggle .plan-view-timeline + button {
-    border-left: 0;
-  }
-}
 @media print {
-  .plan-view-toggle,
   .plan-toolbar .menu-wrap {
     display: none;
   }
@@ -748,52 +751,6 @@ p.plan-band.error {
     display: none;
   }
 }
-/* 段階の表示は1行（番号の丸＋短い名前）。狭い画面では今の段階だけ名前を出し、ほかは番号だけ（名前は読み上げに残す） */
-.sudden-steps {
-  display: flex;
-  flex-wrap: nowrap;
-  white-space: nowrap;
-  position: relative;
-  gap: 4px 12px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-size: 0.8rem;
-  color: var(--sub);
-}
-.sudden-steps li {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-.sudden-steps li.is-current {
-  color: var(--ink);
-  font-weight: 700;
-}
-@media (max-width: 480px) {
-  .sudden-steps li:not(.is-current) .sudden-step-name {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-  }
-}
-.sudden-step-no {
-  display: inline-grid;
-  place-items: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: 1.5px solid currentColor;
-  font-size: 0.7rem;
-}
-.sudden-steps li.is-current .sudden-step-no {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
-}
 .sudden-step-title {
   margin: 0;
   font-size: 1.05rem;
@@ -805,32 +762,27 @@ p.plan-band.error {
   outline: 3px solid var(--focus);
   outline-offset: 2px;
 }
-.sudden-choices {
-  display: grid;
-  gap: 10px;
-}
-.sudden-choice {
+/* 何が起きたか（PRD D414）：2つを欄の幅いっぱいに並べ、390px でも1行の名前 */
+.sudden-kind {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  text-align: left;
-  cursor: pointer;
-  font: inherit;
-  color: inherit;
+  align-self: stretch;
 }
-.sudden-choice:hover {
-  border-color: var(--primary);
+.sudden-kind button {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 8px 6px;
+  white-space: nowrap;
 }
-.sudden-choice > svg:first-child {
-  flex: none;
-  color: var(--danger);
+@media (max-width: 480px) {
+  .sudden-kind svg {
+    display: none;
+  }
 }
-.sudden-choice-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
+/* 欠勤の時間とメモ（AbsenceFields）。計算中はまとめて押せなくするため fieldset にしている（枠は付けない） */
+fieldset.absence-fields {
+  margin: 0;
+  padding: 0;
+  border: 0;
   min-width: 0;
 }
 .sudden-targets {
@@ -843,33 +795,24 @@ p.plan-band.error {
 .sudden-impact {
   font-size: 1.05rem;
 }
-.sudden-option {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--soft);
-}
-/* おすすめの案（主ボタンで作る方。PRD D264）：太い縁で示す（色だけに頼らず札「おすすめ」も付ける） */
-.sudden-option.is-recommended {
-  border: 2px solid var(--primary);
-  background: var(--card);
-}
 .sudden-recommend {
   margin: 0;
   font-weight: 700;
 }
-/* ほかのやり方（控えめな文字のボタン。PRD D264） */
-.sudden-alt {
-  align-items: center;
+/* ほかのやり方（PRD D414）：もう一方の案・欠勤だけ登録・変更を減らすを畳む。中のボタンは控えめな文字のボタン */
+.sudden-alt > summary {
+  cursor: pointer;
+  color: var(--sub);
 }
 .sudden-alt .btn {
   padding: 6px 8px;
   font-size: 0.9rem;
 }
-/* 4段目：誰のどの訪問が誰へ移るか（PRD D265）。390px でも1行ずつ折り返して見える */
+.sudden-result-box > summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+/* 担当が移る訪問の一覧（PRD D265。欄の1段目・差の欄）。390px でも1行ずつ折り返して見える */
 .reassign-moves {
   margin: 0;
   padding: 0;
@@ -905,7 +848,7 @@ p.plan-band.error {
   color: var(--danger);
   font-weight: 700;
 }
-/* 5段目の連絡の一覧（PRD D244）：1人に1枚。上に宛名と種類の印、文、下に［文をコピー］・メール・［連絡した］ */
+/* 2段目の連絡の一覧（PRD D244）：1人に1枚。上に宛名と種類の印、文、下に［文をコピー］・メール・［連絡した］ */
 .sudden-contacts-count {
   margin: 0;
   font-weight: 700;
@@ -953,7 +896,7 @@ p.plan-band.error {
 .sudden-contact-sent {
   margin-left: auto;
 }
-/* 4段目の案A・案B の表は欄の幅に収め、はみ出す分は表だけ横に巻く */
+/* 2段目の案A・案B の表は欄の幅に収め、はみ出す分は表だけ横に巻く */
 .sudden-panel .anneal-box {
   overflow-x: auto;
 }
@@ -1007,7 +950,7 @@ p.plan-band.error {
 .anneal-more[open] > summary {
   margin-bottom: 4px;
 }
-/* 差の欄の「担当が変わった訪問を見る」（PRD D296）。はじめ畳み、開くと4段目と同じ一覧 */
+/* 差の欄の「担当が変わった訪問を見る」（PRD D296）。はじめ畳み、開くと欄と同じ一覧 */
 .reassign-moves-box > summary {
   cursor: pointer;
   font-weight: 600;

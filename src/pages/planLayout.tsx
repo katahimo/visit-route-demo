@@ -13,13 +13,15 @@ import { useExceptionsOnly } from '../components/useFeature';
 import { jstDate } from '../domain/time';
 import { own } from '../lib/common';
 import { dateText } from '../lib/dateText';
-import { foldedParts } from '../lib/exceptionView';
+import { dayHeading } from '../lib/detailsHeading';
+import { ADD_VISIT_LABEL, foldedParts } from '../lib/exceptionView';
 import { typeOf } from '../lib/patternText';
 import { showContactedButton } from '../lib/settledView';
 import { ReassignBar } from './absenceParts';
 import { CancelVisitPanel } from './cancelVisitPanel';
 import { ContactPanel } from './contactPanel';
 import { DayMailPanel } from './mailPanels';
+import { CareBand } from './planBands';
 import { visitNode } from './planCards';
 import { PlanBoard } from './planColumns';
 import { PlanDetailPanel } from './planDetail';
@@ -31,11 +33,9 @@ import { planIssueRows } from './usePlanShown';
 import { EMPTY_CONTACTS } from './useSuddenFlow';
 import { VisitList } from './visitList';
 
-/** 上のナビの行（日・週・月で同じ。PRD D347。ADR-0060）。日送り・今日・［月｜週｜日］・状態の印・メールで送る・確定 */
+/** 上のナビの行（日・週・月で同じ。PRD D347。ADR-0060）。日送り・今日・［月｜週｜日］・状態の印（メールで送る・確定は操作の行。planToolbar） */
 export function PlanNavRow({ p }: { p: PlanCtx }) {
   const { date, setDate, dates, d, confirm } = p;
-  /** 切（例外だけ見せる）はメールで送るを「その他 ▾」へ（PRD D384。planToolbar） */
-  const only = useExceptionsOnly();
   /** 上のナビの行の日付（PRD D347）：データの日付から選ぶ。今日はデータに無くても選べる（setDate は選んだ日を足す） */
   const todayDate = jstDate(Date.now());
   const dayOptions = [...new Set([...dates, date])].sort().map((x) => ({ value: x, text: dateText(x) }));
@@ -55,13 +55,9 @@ export function PlanNavRow({ p }: { p: PlanCtx }) {
             toldState={d.toldState}
             toldCount={d.toldCount}
             date={date}
-            mailOn={p.f.mailOn && !only}
             confirmStep={p.f.confirmStep}
-            running={p.running}
             onPickDate={setDate}
             onOpenTold={() => confirm.setToldOpen(true)}
-            onMail={() => p.v.setPanel('mail')}
-            onAdopt={confirm.adopt}
           />
         )
       }
@@ -70,7 +66,7 @@ export function PlanNavRow({ p }: { p: PlanCtx }) {
 }
 
 /** 「今の担当」の1行（訪問・入らない・守れない条件・移動・点数・理由・詳しく。PRD D63・D345）。訪問のある日だけ */
-export function PlanOneLineBlock({ p }: { p: PlanCtx }) {
+function PlanOneLineBlock({ p }: { p: PlanCtx }) {
   const { date, d, f, nav, v } = p;
   const { hasPlan, cs } = d;
   const issueRows = planIssueRows(d);
@@ -97,7 +93,7 @@ export function PlanOneLineBlock({ p }: { p: PlanCtx }) {
 }
 
 /** 担当ごとの1日（PRD D84）。訪問のある日だけ。狭い幅では畳む */
-export function PlanDayLines({ p }: { p: PlanCtx }) {
+function PlanDayLines({ p }: { p: PlanCtx }) {
   const { d, v, nav } = p;
   if (!d.hasPlan || !d.cs || v.compact) return null;
   return (
@@ -113,13 +109,34 @@ export function PlanDayLines({ p }: { p: PlanCtx }) {
   );
 }
 
-/** 「詳しく」（エキスパート機能が切のとき。畳んでおく。PRD D384）：今の担当の1行（点数・理由・移動）と担当ごとの1日 */
+/**
+ * 「詳しく」（入切とも。畳んでおく。開け閉めは端末に覚える。PRD D384・D393）：今の担当の1行（点数・理由・移動）・担当ごとの1日。
+ * 入はさらに要対応の訪問の帯を入れ、見出しの1行に「点数・移動・入らない・守れない条件」を出す
+ */
 export function PlanDetails({ p }: { p: PlanCtx }) {
-  const has = p.d.hasPlan && !!p.d.cs;
-  const parts = foldedParts('day', useExceptionsOnly(), { oneLine: has, dayLines: has && !p.v.compact });
+  const only = useExceptionsOnly();
+  const { d, nav } = p;
+  const has = d.hasPlan && !!d.cs;
+  const parts = foldedParts('day', only, {
+    oneLine: has,
+    dayLines: has && !p.v.compact,
+    care: has && d.careCount > 0,
+  });
   if (parts.length === 0) return null;
+  const heading =
+    only || !d.cs
+      ? undefined
+      : dayHeading({
+          hundred: d.hundredNow,
+          travelMinutes: d.cs.travelMinutes,
+          dropped: d.cs.dropped,
+          hard: d.cs.hardViolations.length,
+        });
   return (
-    <DetailsFold testId="day-details">
+    <DetailsFold testId="day-details" screen="day" heading={heading}>
+      {parts.includes('care') && (
+        <CareBand count={d.careCount} parts={d.careParts} unassigned={d.unassigned.length} onGoNone={nav.goToNone} />
+      )}
       {parts.includes('oneLine') && <PlanOneLineBlock p={p} />}
       {parts.includes('dayLines') && <PlanDayLines p={p} />}
     </DetailsFold>
@@ -222,7 +239,7 @@ export function PlanMain({ p }: { p: PlanCtx }) {
       <div className="card">
         <Empty icon={CalendarDays}>
           この日の訪問はまだありません。
-          {compact ? 'パソコン・タブレットで足せます。' : '操作の行の「訪問を追加」で足せます。'}繰り返しは
+          {compact ? 'パソコン・タブレットで足せます。' : `操作の行の「${ADD_VISIT_LABEL}」で足せます。`}繰り返しは
           {d.terms.client}の画面で足せます。
         </Empty>
       </div>
@@ -360,6 +377,7 @@ export function PlanPanels({ p }: { p: PlanCtx }) {
           data={data}
           date={date}
           onClose={() => v.setPanel(null)}
+          keys={{ on: v.includeKeys, set: v.setIncludeKeys }}
           confirm={{
             state: d.toldState,
             onConfirm: (by, note) => {

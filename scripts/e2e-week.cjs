@@ -1,5 +1,5 @@
 // 週間の時間軸の「〈利用者さん〉で見る」のつなぎこみ（PRD D136〜D140。ADR-0024）を本物のブラウザで確かめる：
-// 表示の切り替えは1つ（PRD D188：4つの表示・古い ?view=・?by= の URL で同じ表示・押したときの URL・390px で2段まで）、
+// 表示の切り替えは1つ（PRD D188：4つの表示・?view=・?by= の組の URL で同じ表示・押したときの URL・390px で2段まで）、
 // 表からの引き継ぎ（絞り込みなし＝書かない・あり＝先頭8人）、9人目の上限の文、戻るボタンで選択が戻り上限の文が消える、
 // 畳む・「あと N人」（1400px・390px。選んでいる人はいつも見え、選んでいない人は2行まで。開いた状態は週を送っても表と行き来しても残る）、
 // 週を送ると その週の先頭8人（データを作って確かめる）、「ほかの人を探す」で選んだ この週に訪問の無い人がチップの後ろに出る。
@@ -39,7 +39,7 @@ async function expandChips(page) {
   await settle(page, 100);
 }
 
-/** 表示の切り替えは1つ（PRD D188）：4つの表示・古い URL で同じ表示・押すと今までのクエリで書く・390px で2段まで */
+/** 表示の切り替えは1つ（PRD D188）：4つの表示・?view=・?by= の組の URL で同じ表示・押したときのクエリ・390px で2段まで */
 const VIEW_IDS = ['by-staff', 'by-client', 'tab-table', 'tab-clients'];
 const pressedView = (page) =>
   page
@@ -73,7 +73,7 @@ async function views(page) {
     '「見る人」の2つ目の切り替えは無い',
   );
   check((await page.getByTestId('week-views').getAttribute('aria-label')) === '表示', '切り替えの名前は「表示」');
-  // 古い URL（?view= と ?by= の組み合わせ）で開いても今までと同じ表示
+  // ?view= と ?by= の組み合わせの URL で開いても同じ表示
   for (const [hash, want] of [
     ['/week', 'by-staff'],
     ['/week?by=client', 'by-client'],
@@ -96,12 +96,12 @@ async function views(page) {
     await settle(page, 300);
     const pressed = await pressedView(page);
     const shown = await shownView(page);
-    check(JSON.stringify(pressed) === JSON.stringify([want]) && shown === want, `古い URL ${hash} → ${want}`, {
+    check(JSON.stringify(pressed) === JSON.stringify([want]) && shown === want, `URL ${hash} → ${want}`, {
       pressed,
       shown,
     });
   }
-  // 押すと今までのクエリで書く（時間軸は ?view= を書かない・表では ?by= を消す）。?d= は残す
+  // 押すとクエリを書く（時間軸は ?view= を書かない・表では ?by= を消す）。?d= は残す
   await open(page, `/week?d=${NEXT_MON}`);
   const want = {
     'by-client': (u) => /by=client/.test(u) && !/view=/.test(u) && !/client=/.test(u.replace('by=client', '')),
@@ -137,7 +137,7 @@ async function views(page) {
   check((await shownView(page)) === 'tab-clients', '戻るで1つ前の表示に戻る');
   await page.screenshot({ path: path.join(OUT_DIR, 'week-views-1400.png') });
 
-  // 390px：切り替えは幅に収まり2段まで（前は 表示・見る人 で3段）
+  // 390px：切り替えは幅に収まり2段まで
   await page.setViewportSize({ width: 390, height: 844 });
   await open(page, '/week?by=client');
   const boxes = await page
@@ -194,7 +194,7 @@ async function handoff(page) {
   );
 }
 
-/** 表から「時間軸：スタッフ」へ移っても ?client= を書き、そのあと「時間軸：利用者さん」で引き継がれる（D139。PR #44 のレビュー） */
+/** 表から「時間軸：スタッフ」へ移っても ?client= を書き、そのあと「時間軸：利用者さん」で引き継がれる（D139） */
 async function handoffViaStaff(page) {
   await page.setViewportSize({ width: 1400, height: 1000 });
   await open(page, '/week?view=clients');
@@ -278,11 +278,40 @@ async function back(page) {
   check((await page.getByTestId('week-client-chips-message').count()) === 1, '上限の文の枠は空でも残る');
 }
 
+/** 「あと N人」が出ないときの記録：幅・チップ数・行の位置・書体の状態・aria-expanded・「あと N人」の数 */
+async function diagnoseMore(page, where) {
+  if ((await page.getByTestId('week-client-chips').count()) === 0) {
+    console.log(`  ${where} チップの欄（week-client-chips）が無い ${urlOf(page)}`);
+    return;
+  }
+  const diag = await page.getByTestId('week-client-chips').evaluate((root) => {
+    const more = root.querySelectorAll('[data-testid="week-client-chips-more"]');
+    return {
+      width: root.clientWidth,
+      chips: root.querySelectorAll('[data-fold-item]').length,
+      tops: [
+        ...new Set(
+          [...root.querySelectorAll('[data-fold-item]')].map((e) => Math.round(e.getBoundingClientRect().top)),
+        ),
+      ],
+      fonts: document.fonts?.status,
+      expanded: more[0]?.getAttribute('aria-expanded') ?? null,
+      more: more.length,
+    };
+  });
+  console.log(`  ${where} ${JSON.stringify(diag)}`);
+}
+
 /** 畳む・あと N人：選んでいる人はいつも見え、開いた状態は週を送っても表との行き来でも残る */
 async function fold(page, w, h) {
   await page.setViewportSize({ width: w, height: h });
   await open(page, '/week?by=client');
   const more = page.getByTestId('week-client-chips-more');
+  // 「あと N人」は畳みの計測のあとに出る。出なかったときは、あとで原因を読めるよう幅・行・チップの数などを記録して止める（2倍待たない）
+  await more.waitFor({ timeout: 30000 }).catch(async (e) => {
+    await diagnoseMore(page, `${w}px：「あと N人」が出ない（開いたとき）`);
+    throw e;
+  });
   const shown = await allIds(page);
   const pressed = await pressedIds(page);
   const n = Number(((await more.innerText()).match(/\d+/) ?? ['0'])[0]);
@@ -312,9 +341,14 @@ async function fold(page, w, h) {
   );
   await page.getByLabel('次の週').click();
   await settle(page, 400);
+  // 表に切り替わった（押した印が付いた）あとで時間軸を押す。描き直す前に押すと、画面はまだ時間軸のままなので押しが無視される（CPU を絞ると再現）
   await page.getByTestId('tab-clients').click();
+  await page.locator('[data-testid="tab-clients"][aria-pressed="true"]').waitFor();
   await page.getByTestId('by-client').click();
+  await page.locator('[data-testid="by-client"][aria-pressed="true"]').waitFor();
   await settle(page, 300);
+  if ((await more.count()) === 0)
+    await diagnoseMore(page, `${w}px：週を送って表と行き来したあと、「あと N人」が消えた`);
   check((await more.getAttribute('aria-expanded')) === 'true', `${w}px：開いた状態は週を送っても表と行き来しても残る`);
   const gridTop = () => page.getByTestId('week-grid').evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
   const grid = { y: await gridTop() };
@@ -340,7 +374,7 @@ async function nextWeek(page) {
       const to = new Date(`${from}T00:00:00Z`);
       to.setUTCDate(to.getUTCDate() + 6);
       const end = to.toISOString().slice(0, 10);
-      // 版2：繰り返しの回は保存せず計算するので、その人の繰り返しを次の週の前の日で終わらせ、保存した回は取り消す
+      // 繰り返しの回は保存せず計算するので、その人の繰り返しを次の週の前の日で終わらせ、保存した回は取り消す
       const prev = new Date(`${from}T00:00:00Z`);
       prev.setUTCDate(prev.getUTCDate() - 1);
       const last = prev.toISOString().slice(0, 10);
@@ -365,7 +399,7 @@ async function nextWeek(page) {
   );
 }
 
-// ---- この週の担当を組む（担当を組むの画面。ADR-0063）・確定（PRD D280。ADR-0046・ADR-0053）：月をまたぐ週で、担当なし → 組む → 確定 → 済み ----
+// ---- この週の担当を組む（担当を組むの画面。ADR-0063）・確定（PRD D328。ADR-0046・ADR-0053）：月をまたぐ週で、担当なし → 組む → 確定 → 済み ----
 const md = (d) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
 const WD = ['日', '月', '火', '水', '木', '金', '土'];
 const dayLabel = (d) => `${md(d)}（${WD[new Date(`${d}T00:00:00Z`).getUTCDay()]}）`;
@@ -585,6 +619,12 @@ async function weekConfirm(page) {
     '確定したあとは「済み」（残る日があれば日の予定で）。主ボタンは無くなる',
     kind,
   );
+  const status = (await page.getByTestId('week-next-status').innerText()).trim();
+  check(
+    kind === 'done' ? status === '確定済み' : /^未確定 \d+日$/.test(status),
+    'ナビの行の状態は短い事実だけ（確定済み／未確定 N日）',
+    status,
+  );
   check(
     (await page.evaluate(() => document.activeElement?.dataset.testid)) === 'week-next',
     '確定したあと、フォーカスは主ボタンの場所（body に落とさない）',
@@ -728,12 +768,12 @@ async function weekDoneElsewhere(page) {
   check((await rangeBand(page).innerText()).includes(W2_LABEL), '別の週の画面にも組んだ週の提案の帯', W2_LABEL);
   // ホームでは帯が見えないので、終わった知らせに［担当を組むを開く］（次の組む）
   await rangeBand(page).getByTestId('proposal-discard').click();
-  await page.goto(`${BASE}#/home`);
+  await page.goto(`${BASE}#/data`);
   await page.locator('h1').waitFor();
   await open(page, `/week?d=${W2}`);
   await startWeek(page, W2, null);
   await page.evaluate(() => {
-    location.hash = '#/home';
+    location.hash = '#/data';
   });
   await page.getByTestId('batch-band').waitFor({ timeout: 10000 });
   const toast2 = page.locator('.toast').filter({ hasText: `${W2_LABEL}の提案を出しました` });
@@ -844,7 +884,7 @@ const steps = sharedPage({
     // データを書き換えるので後ろに
     ['next-week', nextWeek],
     ['search', search],
-    // この週の担当を AI で組む・確定（PRD D280）。データを書き換えるので最後に
+    // この週の担当を AI で組む・確定（PRD D328）。データを書き換えるので最後に
     ['week-prep', weekPrep],
     ['week-make', weekMake],
     ['week-confirm', weekConfirm],

@@ -476,12 +476,13 @@ const KIND_ORDER: Record<AttentionKind, number> = { care: 0, changed: 1, overSpa
 
 /** 要対応の内訳（「担当なし 2」「担当が休み 1」。検査の種類の順） */
 export function issueBreakdown(issues: ReadonlyMap<string, readonly VisitIssue[]>): string[] {
-  const order: VisitIssue['kind'][] = ['unassigned', 'off', 'notAllowed', 'late'];
+  const order: VisitIssue['kind'][] = ['unassigned', 'off', 'notAllowed', 'late', 'overlap'];
   const label: Record<VisitIssue['kind'], string> = {
     unassigned: '担当なし',
     off: '担当が休み',
     notAllowed: '条件に合わない',
     late: '時間に間に合わない',
+    overlap: '前の訪問と重なる',
   };
   const count = new Map<VisitIssue['kind'], number>();
   for (const list of issues.values()) {
@@ -493,7 +494,7 @@ export function issueBreakdown(issues: ReadonlyMap<string, readonly VisitIssue[]
 
 /**
  * 要対応の一覧（今日以降の日。日付の順、同じ日は 要対応の訪問 → 未連絡の変更 → 拘束）。
- * マスの赤（needsCare）はどれも行になるので、マスの札とホーム・進み具合の帯の数がそろう
+ * マスの赤（needsCare）はどれも行になるので、マスの札と進み具合の帯の数がそろう
  */
 export function attentionList(
   data: Pick<DemoData, 'staff'>,

@@ -1,6 +1,6 @@
 // 決まった予定（ADR-0073。PRD D382）の見せ方の決まり（純粋関数）：エキスパート機能（expert）が切のときは、確定（伝えた）の段階を
 // 促す所（確定のボタン・「まだ伝えていない」「確定済み」の印・確定していない日の欄・まとめて確定・次の確定していない日へ・
-// ホームの「確定していない日」のカード）を出さず、決まったあとの変更だけ「変更あり」で見せる。入のときは今の作りのまま。
+// 要対応の帯の「未確定 N日」）を出さず、決まったあとの変更だけ「変更あり」で見せる。入のときは今の作りのまま。
 // 画面はここを読み、expert の判定を画面ごとに持たない。データは書き換えない
 import type { Features } from '../contracts/features';
 import type { ToldState } from './dayPlan';
@@ -33,7 +33,3 @@ export const showContactedButton = (state: ToldState, confirmStep: boolean): boo
 /** 未連絡の変更の件数の文（日・マスの読み上げ・一覧）。expert 切は「変更あり N件」 */
 export const changesText = (n: number, confirmStep: boolean): string =>
   confirmStep ? `未連絡の変更 ${n}件` : `${CHANGED_WORD} ${n}件`;
-
-/** 月のマスの札の文（入は「未連絡 N」、切は「変更あり N」。PRD D382） */
-export const changedFlagText = (n: number, confirmStep: boolean): string =>
-  confirmStep ? `未連絡 ${n}` : `${CHANGED_WORD} ${n}`;

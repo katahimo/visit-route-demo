@@ -1,13 +1,16 @@
 // 決まった予定（ADR-0073。PRD D382）：エキスパート機能（expert）が切のとき、自動で組んだ日・手で直した日は、
 // 今日から1か月先まで決まった（伝えた）扱いにする＝自動で伝えた記録（snapshots[日]。tellDay と同じ書き方）を付ける。
+// ただし帯の種類（担当なし・間に合わない・重なり・休みの人。lib/bandIssues）の訪問が残る日は付けず、無くなった時点で付ける（ADR-0089）。
 // 「どの操作のあとに記録するか」はこの autoTell の1か所だけが決める（呼ぶのは store の update の1か所）。
-// 純粋関数（データは書き換えず新しい DemoData を返す。at は引数）
+// データは書き換えず新しい DemoData を返す（at は引数）。日の問題と帯の種類はアプリで1つの日ごとの覚え（lib/dayStatuses の dayStatusMemo）
+// から引く（覚えを書き足すが、結果は覚えの有無で変わらない）
 import type { DemoData } from '../contracts/data';
 import type { Visit } from '../contracts/documents';
 import { addDays, jstDate } from '../domain/time';
-import { autoRange, autoTargets, isFree } from './autoArrange';
+import { rangeDays } from './autoArrange';
 import { own } from './common';
-import { dayProblemOf, tellDay } from './dayPlan';
+import { tellDay } from './dayPlan';
+import { bandIssueIds, dayBandOf } from './dayStatuses';
 import { isOn } from './features';
 import { addMonths, ymOf } from './ym';
 
@@ -49,15 +52,47 @@ function diffVisits(before: readonly Visit[], after: readonly Visit[]): { change
   return { changed, removed: before.some((v) => !now.has(v.id)) };
 }
 
-/** その日に伝えた記録を付ける（付いている日・計算に入れる訪問が無い日は変えない） */
+/**
+ * その日に伝えた記録を付ける（付いている日・計算に入れる訪問が無い日は変えない）。帯の種類の訪問が残る日も付けない
+ * （連絡していない日に「未連絡の変更」を出さない。直して無くなったときの操作で付く。ADR-0089）
+ */
 function tellIfNeeded(data: DemoData, date: string, at: number): DemoData {
   if (own(data.snapshots, date)) return data;
-  const problem = dayProblemOf(data, date);
-  return problem && problem.visits.length > 0 ? tellDay(data, date, problem, at) : data;
+  // その日の問題と帯の種類の訪問は、要対応の帯と同じ日ごとの覚え（lib/dayStatuses の dayStatusMemo）から引く
+  const day = dayBandOf(data, [date]).get(date);
+  const problem = day?.problem;
+  if (!day || !problem || problem.visits.length === 0 || day.ids.size > 0) return data;
+  return tellDay(data, date, problem, at);
+}
+
+/** compile が読むデータのうち訪問以外のどれかが before と after で違うか（欠勤・休み・勤務・人などの直し） */
+const inputsChanged = (before: DemoData, after: DemoData): boolean =>
+  before.org !== after.org ||
+  before.items !== after.items ||
+  before.rules !== after.rules ||
+  before.staff !== after.staff ||
+  before.clients !== after.clients ||
+  before.compat !== after.compat ||
+  before.availability !== after.availability ||
+  before.absences !== after.absences ||
+  before.visitTypes !== after.visitTypes ||
+  before.patterns !== after.patterns ||
+  before.clientLeaves !== after.clientLeaves;
+
+/**
+ * 範囲 [today, until] の伝えた記録の無い日のうち、before では帯の種類の訪問があり after では無くなった日（訪問を変えない直しで要対応が消えた日）。
+ * 帯の種類は日ごとの覚え（dayStatusMemo）から引くので、変わっていない日は数え直さない
+ */
+function clearedDays(before: DemoData, after: DemoData, today: string, until: string): string[] {
+  const days = rangeDays(today, { from: today, to: until }).filter((d) => !own(after.snapshots, d));
+  if (days.length === 0) return [];
+  const was = bandIssueIds(before, days);
+  const now = bandIssueIds(after, days);
+  return days.filter((d) => (was.get(d)?.size ?? 0) > 0 && (now.get(d)?.size ?? 0) === 0);
 }
 
 /**
- * 日のリストを決まった扱いにする（expert 切のとき。範囲内で伝えた記録の無い日に、その日の問題で tellDay）。
+ * 日のリストを決まった扱いにする（expert 切のとき。範囲内で伝えた記録の無い日に、その日の問題で tellDay。帯の種類の訪問が残る日は除く）。
  * 自動の組みの仕事が終わったとき（反映した・何も書かなかったに関わらず）に、その仕事の対象の日へ呼ぶ（待っていた日を終わらせる。
  * 繰り返しの保存からの自動の組みで visits が変わらない日もここで拾う）
  */
@@ -74,55 +109,43 @@ export function settleDates(
 
 /**
  * 操作のあとの自動の伝えた記録。エキスパート機能が切のとき、範囲 [today, today の1か月後の同じ日]（両端を含む）の日のうち、
- * 保存した訪問（data.visits のその日の分）が before と after で変わり、after にその日の伝えた記録が無い日を、
- * その日の問題で tellDay する（at は記録の時刻）。呼ぶのは store の update の1か所。
- * - 拾う：data.visits を変える操作すべて（入れた分の自動の組み・AI の提案の反映・手の直し・まとめて直す（multiEdit）・ドラッグ・
- *   取り消し・欠勤の振り直し・空き時間に入れる・訪問の追加・〈利用者さん〉の終了・仮押さえの取り消しなど）。
- *   自動の組みも担当・開始を visits に書くだけなので同じ規則で拾える
- * - 拾わない（待つ）：その update のあとに自動の組みの依頼が出る訪問（autoTargets と同じ条件＝今回増えた・日時が変わった担当なし・ピンなしの訪問）が
- *   ある日。先に記録すると組む前の担当なしが伝えた内容に入るので、組んだあとの update（または自動の組みの終わりの settleDates）で記録する。
- *   opts.wait が false の update（settleNow。依頼を出さない保存）は待たない
- * - 拾わない：今日より前の日・範囲の外の日、すでに伝えた記録がある日（書き換えない。その後の変更は未連絡の変更＝「変更あり」になる）、
- *   expert 入のとき、訪問が変わらない操作（〈スタッフ〉の勤務・繰り返しパターン・〈利用者さん〉の休みなど visits の外だけを変える操作。
- *   繰り返しの回は上書きするまで保存した訪問にならない）、計算に入れる訪問が無い日
- * - 止める update（UpdateOptions.tell:false）：名簿の読み込み・古い記録を消す・設定の操作（訪問の種類を消す・項目・条件・プリセット・呼び名・
- *   機能の入り切りなど、予定の直しでないもの）
+ * after にその日の伝えた記録が無く、次のどちらかに当たる日を、その日の問題で tellDay する（at は記録の時刻）。呼ぶのは store の update の1か所。
+ * - 保存した訪問（data.visits のその日の分）が before と after で変わった日：data.visits を変える操作すべて（入れた分の自動の組み・
+ *   AI の提案の反映・手の直し・まとめて直す（multiEdit）・ドラッグ・取り消し・欠勤の振り直し・空き時間に入れる・訪問の追加・
+ *   〈利用者さん〉の終了・仮押さえの取り消しなど）。自動の組みも担当・開始を visits に書くだけなので同じ規則で拾える
+ * - 訪問の外（〈スタッフ〉の勤務・休み・欠勤・〈利用者さん〉の休み・繰り返しなど）を変える操作で、before では帯の種類の訪問があり
+ *   after で無くなった日（clearedDays。要対応が消えた時点で付ける。ADR-0089）
+ * 拾わない：今日より前の日・範囲の外の日、すでに伝えた記録がある日（書き換えない。その後の変更は未連絡の変更＝「変更あり」になる）、
+ * 帯の種類（担当なし・間に合わない・重なり・休みの人）の訪問が残る日（その日を直して無くなったときに付く。ADR-0089。保存のあとの
+ * 自動の組みを待つ担当なしの訪問がある日もこれで待つ）、expert 入のとき、計算に入れる訪問が無い日。
+ * 止める update（UpdateOptions.tell:false）：名簿の読み込み・古い記録を消す・設定の操作（訪問の種類を消す・項目・条件・プリセット・呼び名・
+ * 機能の入り切りなど、予定の直しでないもの）
  */
-export function autoTell(
-  before: DemoData,
-  after: DemoData,
-  today: string,
-  at: number = Date.now(),
-  opts: { wait?: boolean } = {},
-): DemoData {
-  if (before.visits === after.visits || isOn(after.org.features, 'expert')) return after;
+export function autoTell(before: DemoData, after: DemoData, today: string, at: number = Date.now()): DemoData {
+  if (before === after || isOn(after.org.features, 'expert')) return after;
   const until = settledUntil(today);
-  const was = savedByDate(before.visits, today, until);
-  const now = savedByDate(after.visits, today, until);
-  const dates = [...new Set([...was.keys(), ...now.keys()])].sort();
-  let out = after;
-  for (const date of dates) {
-    if (own(after.snapshots, date)) continue;
-    const { changed, removed } = diffVisits(was.get(date) ?? [], now.get(date) ?? []);
-    if (changed.length === 0 && !removed) continue;
-    if (opts.wait !== false && changed.some((v) => !v.staffId && isFree(after, v, today))) {
-      // 組む対象になる訪問がある日だけ、依頼が出る条件（autoTargets）で確かめる
-      const day = { from: date, to: date };
-      if (autoTargets(before, after, today, day).length > 0 && autoRange(today).to >= date) continue;
+  const dates = new Set<string>();
+  if (before.visits !== after.visits) {
+    const was = savedByDate(before.visits, today, until);
+    const now = savedByDate(after.visits, today, until);
+    for (const date of new Set([...was.keys(), ...now.keys()])) {
+      if (own(after.snapshots, date)) continue;
+      const { changed, removed } = diffVisits(was.get(date) ?? [], now.get(date) ?? []);
+      if (changed.length > 0 || removed) dates.add(date);
     }
-    out = tellIfNeeded(out, date, at);
   }
-  return out;
+  if (inputsChanged(before, after)) for (const date of clearedDays(before, after, today, until)) dates.add(date);
+  return [...dates].sort().reduce((d, date) => tellIfNeeded(d, date, at), after);
 }
 
 /** store の update が使う設定（UpdateOptions のうち決まった予定に関わるもの） */
-export type SettleOptions = { tell?: false; settleNow?: true };
+export type SettleOptions = { tell?: false };
 
 /**
  * update の1回の結果に自動の伝えた記録を付ける（store の update から呼ぶ1か所。now は今の時刻 ms）。
- * tell が false の update（名簿の読み込み・古い記録を消す・設定の操作）は付けない。settleNow は待たずに付ける
+ * tell が false の update（名簿の読み込み・古い記録を消す・設定の操作）は付けない
  */
 export function settleUpdate(before: DemoData, made: DemoData, opts: SettleOptions | undefined, now: number): DemoData {
   if (opts?.tell === false) return made;
-  return autoTell(before, made, jstDate(now), now, { wait: !opts?.settleNow });
+  return autoTell(before, made, jstDate(now), now);
 }

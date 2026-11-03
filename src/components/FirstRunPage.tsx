@@ -41,7 +41,7 @@ function FirstRunPage() {
     headingRef.current?.focus();
   }, []);
   // 答えたら、先に最初の画面へ移ってから（ルーターの移動が済んでから）データを作る。
-  // 逆にすると、本体の画面が今の URL（`#/`）のまま先に出て、知らない URL のホームへの移動に上書きされる
+  // 逆にすると、本体の画面が今の URL（`#/`）のまま先に出て、知らない URL の予定への移動に上書きされる
   const [answer, setAnswer] = useState<FirstRunAnswer | null>(null);
   const { pathname } = useLocation();
   const landing = answer ? firstRunLanding(answer) : null;

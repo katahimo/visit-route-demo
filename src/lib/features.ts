@@ -1,13 +1,13 @@
 // 機能の入り切り（PRD D210〜D213・D216。ADR-0028。design.md §4 features）の表と、入り切りの判定・ひな形を決める純粋関数。
 // 機能の名前・説明・グループ・依存・その機能の URL・切ると隠れるもの・ひな形の入り切りはここの1か所。
-// メニュー（lib/nav）・ルート（app/App）・パレット（lib/commandPalette）・ホーム（lib/home）・ツアー（lib/tour）・
+// メニュー（lib/nav）・ルート（app/App）・パレット（lib/commandPalette）・ツアー（lib/tour）・
 // 行き先（lib/links）はここから引く。データは書き換えない（入り切りを書くのは画面の update(fn)）
 import type { DemoData } from '../contracts/data';
 import type { Pattern, Terms } from '../contracts/documents';
 import { FEATURE_IDS, type FeatureId, type Features, isFeatureId } from '../contracts/features';
 import { isRequestedOff } from './requestedOff';
 
-/** 機能のグループ（管理者設定のスイッチの並びと見出し。PRD D232。予定・当日・人・AI の条件の順で、連絡・データは後ろ） */
+/** 機能のグループ（管理者設定のスイッチの並びと見出し。PRD D326。予定・当日・人・AI の条件の順で、連絡・データは後ろ） */
 export const FEATURE_GROUPS = ['予定', '当日・問い合わせ', '人', 'AI の条件', '連絡', 'データ'] as const;
 export type FeatureGroup = (typeof FEATURE_GROUPS)[number];
 
@@ -32,7 +32,7 @@ export type FeatureDef = {
 };
 
 /**
- * 機能の表（22。ADR-0028 の「機能の一覧」）。土台（ホーム・月の予定・週の予定・日の予定・〈利用者さん〉一覧・〈スタッフ〉一覧・
+ * 機能の表（22。ADR-0028 の「機能の一覧」）。土台（月の予定・週の予定・日の予定・〈利用者さん〉一覧・〈スタッフ〉一覧・
  * 勤務時間（シフト）・訪問の種類・データ・管理者設定）は表に入れず、切れない
  */
 export const FEATURES: readonly FeatureDef[] = [
@@ -59,7 +59,7 @@ export const FEATURES: readonly FeatureDef[] = [
     description: '入院などで{client}が休む期間を入れ、その間は訪問を入れません',
     group: '予定',
     paths: [],
-    hides: '{client}の欄の休み、休みの帯・点、月の要対応の「休みの人に訪問」',
+    hides: '{client}の欄の休み、休みの帯・点',
   },
   {
     id: 'requestedOff',
@@ -80,12 +80,11 @@ export const FEATURES: readonly FeatureDef[] = [
   {
     id: 'expert',
     label: 'エキスパート機能（組み方の標準・案を比べる・条件の重み）',
-    description:
-      '予定を組む（4段・担当を組む）・組み方の標準・案を比べる・条件の重みの入口を出します。切ると、入れた人・希望日時から組むふだんの道だけになります',
+    description: '「組む」（4段・担当を組む）・組み方の標準・案を比べる・条件の重みの入口を出します',
     group: 'AI の条件',
     paths: ['/standard'],
     hides:
-      'メニューの「予定を組む」・組み方の標準・案を比べる・条件の重みの入口（切るとメニューは 予定・〈利用者さん〉・〈スタッフ〉・設定 の4つになりホームは無くなる。担当を組むは基準のプリセットで組む）',
+      'メニューの「組む」・組み方の標準・案を比べる・条件の重みの入口（切るとメニューは 予定・〈利用者さん〉・〈スタッフ〉・設定 の4つになり、予定の上の帯の未確定・組み直し・標準が無いも出ない。担当を組むは基準のプリセットで組む。入れた人・希望日時から組むふだんの道だけになる）',
   },
   {
     id: 'compare',
@@ -283,7 +282,7 @@ export function isHrefOn(features: Features, href: string): boolean {
   return id === null || isOn(features, id);
 }
 
-/** 切った機能の URL からホームへ移したときに、ルートの state に載せるもの（ホームの上の知らせ。PRD D213） */
+/** 切った機能の URL から起動する画面（予定）へ移したときに、ルートの state に載せるもの（その画面の上の知らせ。PRD D213） */
 export type FeatureOffState = { featureOff: FeatureId };
 
 /** ルートの state が FeatureOffState か（知らない値・古い履歴の state は違う） */
@@ -300,11 +299,25 @@ export type TemplateId = (typeof TEMPLATE_IDS)[number];
 /** ひな形：名前・1行の説明・入れる機能（ほかは切） */
 export type TemplateDef = { id: TemplateId; label: string; description: string; on: readonly FeatureId[] };
 
-/** 基本のひな形で入れる機能（予定・繰り返し・欠勤・キャンセル・空き状況・相性・道順のリンク・住所の検索） */
-const BASIC_ON: readonly FeatureId[] = ['patterns', 'sudden', 'vacancy', 'compat', 'mapsLink', 'geocode'];
+/** 基本のひな形で入れる機能（予定・繰り返し・毎月の第N・曜日ごとの時刻・〈利用者さん〉の休み・欠勤・キャンセル・空き状況・相性・決まりごと・退職・担当替え・道順のリンク・住所の検索・Excel の入出力。ADR-0086・ADR-0091） */
+const BASIC_ON: readonly FeatureId[] = [
+  'patterns',
+  'patternMonthly',
+  'clientLeave',
+  'sudden',
+  'vacancy',
+  'compat',
+  'visitNotes',
+  'offboard',
+  'mapsLink',
+  'geocode',
+  'excel',
+];
 
-/** 単発のみのひな形で入れる機能：基本から繰り返し（patterns）だけを外したもの（ADR-0072 第2段。PRD D378） */
-const ONE_OFF_ON: readonly FeatureId[] = BASIC_ON.filter((f) => f !== 'patterns');
+/** 単発のみのひな形で入れる機能：基本から繰り返し（patterns・patternMonthly）と決まりごと（visitNotes）を外したもの（ADR-0072 第2段・ADR-0086・ADR-0091。PRD D378） */
+const ONE_OFF_ON: readonly FeatureId[] = BASIC_ON.filter(
+  (f) => f !== 'patterns' && f !== 'patternMonthly' && f !== 'visitNotes',
+);
 
 /** ひな形の5つ（ADR-0028 の表に、ADR-0072 の単発のみを足したもの） */
 export const TEMPLATES: readonly TemplateDef[] = [
@@ -319,32 +332,20 @@ export const TEMPLATES: readonly TemplateDef[] = [
     id: 'basic',
     label: '基本',
     description:
-      '予定（月・週・日）と欠勤・キャンセル・空き状況・相性・道順・住所の検索だけ。まず割当と当日の対応を見たいとき',
+      '予定（月・週・日。毎月の第N・曜日ごとの時刻も）と休み・欠勤・キャンセル・空き状況・相性・決まりごと・退職・担当替え・道順・住所の検索・Excel の入出力。まず割当と当日の対応を見たいとき',
     on: BASIC_ON,
   },
   {
     id: 'laborContract',
     label: '労務・契約管理',
-    description:
-      '基本に、勤務の見込み・交通費・退職・担当替え・段階・紹介元。拘束時間・交通費・人の入れ替わりを見たいとき',
-    on: [...BASIC_ON, 'clientStage', 'offboard', 'workload', 'fare'],
+    description: '基本に、勤務の見込み・交通費・段階・紹介元。拘束時間・交通費・契約の段階を見たいとき',
+    on: [...BASIC_ON, 'clientStage', 'workload', 'fare'],
   },
   {
     id: 'monthlyField',
     label: '月次予定・現場共有',
-    description:
-      '基本に、第N曜日・曜日ごとの時刻・休み・希望休・月の印刷・案内文・担当を限る・決まりごと・Excel。月の予定が複雑なとき',
-    on: [
-      ...BASIC_ON,
-      'patternMonthly',
-      'clientLeave',
-      'requestedOff',
-      'monthPrint',
-      'vacancyNotice',
-      'allowedStaff',
-      'visitNotes',
-      'excel',
-    ],
+    description: '基本に、希望休・月の印刷・案内文・担当を限る。月の予定が複雑なとき',
+    on: [...BASIC_ON, 'requestedOff', 'monthPrint', 'vacancyNotice', 'allowedStaff'],
   },
   {
     id: 'all',

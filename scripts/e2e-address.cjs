@@ -9,16 +9,16 @@
 //   7 空き状況：郵便番号を打っても計算し直さない・ピンで見出しが切り替わる・ピンがあれば住所を打っても計算し直さない・
 //     郵便番号で住所を差し替えてもピンは残る・仮押さえで postalCode が入る
 //   8 〈スタッフ〉の自宅：郵便番号を保存しない
-//   9 〈利用者さん〉の回帰：data-testid がそろっている・保存で postalCode が入る
+//   9 〈利用者さん〉の欄：data-testid がそろっている・保存で postalCode が入る
+//  10 名簿を読み込んだあとの「位置の無い N人を地図に置く」（PRD D399。ADR-0076）：読み込みだけでは送らない・押すのは1回・
+//     見つからない人は結果に市区町村の1行
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-address.cjs
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）
 // 終了コード：全部通れば 0、通らないものがあれば 1。ページのエラー（pageerror）も失敗に数える
 const path = require('node:path');
-const { skipTour } = require('./lib/tourSeen.cjs');
-const { answerConfirms } = require('./lib/confirmDialog.cjs');
-const { BASE, OUT_DIR, NOW, check, stored, runSteps, settle, until: untilTrue } = require('./lib/env.cjs');
-const { pagePerStep } = require('./lib/steps.cjs');
+const { BASE, OUT_DIR, check, stored, runSteps, settle, until: untilTrue } = require('./lib/env.cjs');
+const { openContext, pagePerStep } = require('./lib/steps.cjs');
 
 const ZIP_ONE = {
   status: 200,
@@ -46,6 +46,7 @@ const GSI_ONE = [feature(140.8716, 38.2601, '宮城県仙台市青葉区一番�
 
 /**
  * 偽の検索サービス。mode：ok（応答を返す）・notFound・abort（つながらない）・hang（応答しない）。delay で応答を遅らせる。
+ * notFoundIf（URL → 真偽）が真の呼び出しは、mode が ok でも見つからないを返す。
  * 呼ばれた URL（デコード済み）を calls に残し、応答を返し終えた（つながらないも含む）数を answered に数える
  */
 async function fakeServices(page) {
@@ -63,7 +64,7 @@ async function fakeServices(page) {
     if (f.delay) await new Promise((r) => setTimeout(r, f.delay));
     try {
       if (f.mode === 'abort') return await route.abort('failed');
-      const body = f.mode === 'notFound' ? notFoundBody : f.body;
+      const body = f.mode === 'notFound' || f.notFoundIf?.(url) ? notFoundBody : f.body;
       // JSONP で呼び直されたときは callback で包む
       const cb = new URL(route.request().url()).searchParams.get('callback');
       await route.fulfill({
@@ -113,7 +114,7 @@ async function openClient(page, id = 'c1') {
 /** 直している節の「取り消し」（変更があれば確認に「捨てる」で答える） */
 const cancelSection = (page) => page.getByTestId('sec-cancel').click();
 
-/** 1・2・3・9：送るもの・正規化・候補・元に戻す・〈利用者さん〉の回帰 */
+/** 1・2・3・9：送るもの・正規化・候補・元に戻す・〈利用者さん〉の欄 */
 async function basics(page, fake) {
   await openClient(page);
   const box = page.getByTestId('client-place');
@@ -239,7 +240,7 @@ async function failures(page, fake) {
   check(c2.place.address === addr0, '失敗しても store は変えない');
 }
 
-/** 空き状況の「2 場所（任意）」を開く（PRD D185。はじめは畳んで要約の行だけ） */
+/** 空き状況の「2 場所（任意）」を開く（PRD D184。はじめは畳んで要約の行だけ） */
 async function openVacancyPlace(page) {
   const stage = page.getByTestId('vacancy-step-place');
   await stage.waitFor();
@@ -454,22 +455,98 @@ async function staffHome(page) {
   check((await page.getByTestId('staff-home-postal').inputValue()) === '', '自宅：開き直すと郵便番号は空');
 }
 
-const errors = [];
+/** 顧客台帳の形（ADR-0073）の列名。名簿の読み込みで住所のある〈利用者さん〉を足すのに使う（値は架空） */
+const LEDGER_HEAD =
+  '利用者名,利用者カナ,利用者生年月日,性別,郵便番号,都道府県,市区町村,町名以下,建物名,利用者電話番号,利用者携帯電話番号,請求方法,請求送付先,請求先氏名,続柄,請求先郵便番号,請求先都道府県,請求先市区町村,請求先町名以下,請求先建物名,請求先電話番号,顧客番号,銀行番号,支店番号,口座種別,口座番号,口座名義名カナ,利用者状態,備考'.split(
+    ',',
+  );
+const ledgerTsv = (rows) =>
+  [LEDGER_HEAD, ...rows.map((v) => LEDGER_HEAD.map((h) => v[h] ?? ''))].map((r) => r.join('\t')).join('\r\n');
+/** まとめて置く対象の数（lib/placeAll の placeAllTargets と同じ数え方） */
+const placeTargets = (clients) =>
+  clients.filter(
+    (c) =>
+      c.stage !== 'ended' &&
+      (c.place.lat === null || c.place.lng === null) &&
+      (c.place.address.trim() !== '' || c.place.postalCode !== ''),
+  );
+
+/** 10：名簿を読み込んだあとの「位置の無い N人を地図に置く」（PRD D399。ADR-0076） */
+async function rosterPlaceAll(page, fake) {
+  await page.goto('about:blank');
+  await page.goto(`${BASE}#/clients`);
+  await page.getByTestId('client-row').first().waitFor();
+  await page.getByTestId('roster-toggle').click();
+  await page.getByTestId('roster-card').waitFor();
+  // 市の名前の無い住所（「架空区…」）は国土地理院で見つからない
+  fake.gsi = { mode: 'ok', body: GSI_ONE, delay: 0, notFoundIf: (u) => u.includes('架空区') };
+  const sent = fake.calls.length;
+  await page.getByTestId('roster-file-input').setInputFiles({
+    name: 'ledger.tsv',
+    mimeType: 'text/tab-separated-values',
+    buffer: Buffer.from(
+      `${ledgerTsv([
+        { 利用者名: '位置 一郎', 都道府県: '架空県', 市区町村: '架空市', 町名以下: '架空町1-1', 利用者状態: '利用中' },
+        { 利用者名: '位置 二郎', 町名以下: '架空区架空町2-2', 利用者状態: '利用中' },
+      ])}\r\n`,
+      'utf8',
+    ),
+  });
+  await page.locator('.toast').filter({ hasText: '名簿を読み込みました' }).waitFor({ timeout: 20000 });
+  const lead = page.getByTestId('roster-place-all');
+  await lead.waitFor({ timeout: 5000 });
+  // 保存は間引いているので、読み込んだ人が保存に入るまで待つ
+  await untilTrue(async () => (await stored(page)).clients.some((c) => c.displayName === '位置 二郎'));
+  const n = placeTargets((await stored(page)).clients).length;
+  check(
+    n >= 2 && (await lead.innerText()).trim() === `位置の無い${n}人を地図に置く`,
+    '名簿のあと：名簿の欄に「位置の無い N人を地図に置く」（N はまとめて置く対象の数）',
+    { n, text: await lead.innerText() },
+  );
+  check(fake.calls.length === sent, '名簿のあと：読み込みだけでは送らない', fake.calls.slice(sent));
+  check(
+    /外部のサービス/.test(await page.getByTestId('roster-place-lead').innerText()) &&
+      !(await lead.getAttribute('class')).includes('btn-primary') &&
+      (await page.locator('.btn-primary:visible').count()) === 1,
+    '名簿のあと：導線は従のボタンで送る先の注記つき（主ボタンは画面に1つ）',
+  );
+  await page.screenshot({ path: path.join(OUT_DIR, 'roster-place-lead.png') });
+  await lead.click();
+  const progress = page.getByTestId('place-all-progress');
+  await until(progress, /終わりました/, n * 1000 + 8000);
+  await untilTrue(async () =>
+    (await stored(page)).clients.some((c) => c.displayName === '位置 一郎' && c.place.lat !== null),
+  );
+  const after = (await stored(page)).clients;
+  const ichiro = after.find((c) => c.displayName === '位置 一郎');
+  const jiro = after.find((c) => c.displayName === '位置 二郎');
+  check(
+    ichiro?.place.lat !== null && jiro?.place.lat === null && fake.calls.length - sent === n,
+    '名簿のあと：1回押すとまとめて置く（もう一度「まとめて地図に置く」を押さない）',
+    { ichiro: ichiro?.place, jiro: jiro?.place, calls: fake.calls.slice(sent) },
+  );
+  check(
+    (await page.getByTestId('roster-card').isHidden()) &&
+      (await page.getByTestId('roster-place-all').count()) === 0 &&
+      (await page.evaluate(() => document.activeElement?.getAttribute('data-testid'))) === 'place-all',
+    '名簿のあと：押すと名簿の欄を閉じ、導線を消し、まとめて置く欄へフォーカス',
+  );
+  const failed = page.getByTestId('place-all-failed');
+  check(
+    (await failed.innerText()).includes('位置 二郎') &&
+      /市区町村の名前が無い住所/.test(await page.getByTestId('place-all-city-hint').innerText()),
+    '名簿のあと：見つからない人は置けなかった人に出し、市区町村の1行を足す',
+  );
+  await page.screenshot({ path: path.join(OUT_DIR, 'roster-place-done.png') });
+}
+
 const steps = pagePerStep({
   open: async (browser) => {
-    const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
-    // 初回の案内ツアーを見た扱いにする（PRD D193）
-    await skipTour(ctx);
-    const page = await ctx.newPage();
-    // ページの時計を止める（ほかの e2e と同じ。タイマーは止めないので時間切れの待ちはそのまま）
-    await page.clock.setFixedTime(NOW);
-    page.on('pageerror', (e) => errors.push(String(e)));
-    // 確認は独自のダイアログで受ける（ネイティブのダイアログが出たら失敗。PRD D146）
-    const dlg = await answerConfirms(page);
-    return { ctx, page, dlg, fake: await fakeServices(page) };
+    const s = await openContext(browser);
+    return { ...s, fake: await fakeServices(s.page) };
   },
   call: (fn, s) => fn(s.page, s.fake),
-  steps: [basics, failures, races, vacancy, holdNote, staffHome],
+  steps: [basics, failures, races, vacancy, holdNote, staffHome, rosterPlaceAll],
   label: (name) => `${name} が止まった`,
   after: (name, { dlg, fake }) => {
     check(dlg.native.length === 0, `${name}：ブラウザのダイアログを出さない`, dlg.native);
@@ -483,7 +560,6 @@ const steps = pagePerStep({
       `${name}：送り先は郵便番号検索・国土地理院だけ`,
     );
   },
-  end: () => check(errors.length === 0, 'ページのエラーなし', errors.join(' / ')),
 });
 
 module.exports = { steps };

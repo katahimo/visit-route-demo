@@ -295,6 +295,20 @@ function hasOption(item: Item, s: Pick<Staff, 'traits'>, option: string): boolea
 }
 
 /**
+ * 資格のバッジの短い名前のうち、先頭2文字では重なるもの（初期の資格の選択肢。PRD D422）。ほかは先頭2文字。
+ * 例：介護福祉士「介護」と介護支援専門員「ケア」、社会福祉士「社会」と社会福祉主事「主事」
+ */
+const QUALIFICATION_SHORT: Readonly<Record<string, string>> = {
+  介護支援専門員: 'ケア',
+  社会福祉主事: '主事',
+  福祉住環境コーディネーター1級: '住1',
+  福祉住環境コーディネーター2級: '住2',
+  福祉住環境コーディネーター3級: '住3',
+  児童発達支援管理責任者: '児発',
+  児童指導員: '児指',
+};
+
+/**
  * 〈スタッフ〉の資格のバッジ（項目「資格」の選択肢の順）。項目が無い・値が無ければ []。
  * 選択肢に無い値（古いデータ）は出さない
  */
@@ -303,7 +317,7 @@ export function qualificationBadges(items: readonly Item[], s: Pick<Staff, 'trai
   if (!item) return [];
   return item.options
     .filter((o) => hasOption(item, s, o))
-    .map((o) => ({ short: [...o].slice(0, 2).join(''), name: o }));
+    .map((o) => ({ short: QUALIFICATION_SHORT[o] ?? [...o].slice(0, 2).join(''), name: o }));
 }
 
 /** その資格（項目「資格」の選択肢）を持つ稼働中の〈スタッフ〉の ID（staff の順）。項目が無ければ [] */
@@ -372,7 +386,7 @@ export function fitCountAt(data: DayInput, visitId: string, date: string, start:
   return fitsOf(problem, routes, visitId).length;
 }
 
-// ---- 〈利用者さん〉×曜日の表（D56。マスの3段の帯は PRD D83） ----
+// ---- 〈利用者さん〉×曜日の表（D56。マスの3段の帯は PRD D342） ----
 
 /** 表のマスの訪問1件（時刻は帯と同じ。lenient の開始〜終了、案に無い・取り消し・休みは開始（早）〜＋所要） */
 export type ClientWeekItem = {
@@ -385,7 +399,7 @@ export type ClientWeekItem = {
   staffId: string | null;
   /** 〈利用者さん〉の休み（ADR-0013）のため無し */
   leave?: boolean;
-  /** 取り消した訪問（PRD D83。動かさない） */
+  /** 取り消した訪問（PRD D342。動かさない） */
   cancelled?: boolean;
   /** 取り消しのうち当日キャンセル（ADR-0015） */
   sameDay?: boolean;
@@ -408,7 +422,7 @@ export type ClientWeekRow = {
 };
 
 /**
- * 〈利用者さん〉×曜日の表（D56・PRD D83）。行＝clientIds の〈利用者さん〉（表示名の順。いない ID は除く）。
+ * 〈利用者さん〉×曜日の表（D56・PRD D342）。行＝clientIds の〈利用者さん〉（表示名の順。いない ID は除く）。
  * clientIds が null・空なら全員（利用中の〈利用者さん〉と、休止中でもその週に訪問がある〈利用者さん〉）。
  * マスは days の帯（weekDay。取り消しでない訪問）と、その日の取り消した訪問（訪問の開始（早）〜＋所要）を、
  * その〈利用者さん〉の分だけ開始の順に
@@ -448,7 +462,7 @@ export function clientWeekTable(
       });
     }
   }
-  // 取り消した訪問（帯には無い）も、その日の印として入れる（PRD D83）
+  // 取り消した訪問（帯には無い）も、その日の印として入れる（PRD D342）
   for (const v of dayVisitList) {
     if (!v.cancelled || !dates.has(v.date)) continue;
     const start = hhmmToMinutes(v.earliestStart);
@@ -478,7 +492,7 @@ export function clientWeekTable(
   }));
 }
 
-/** マスの訪問の印の種類（PRD D83）：形と短い文字で分ける（色だけにしない） */
+/** マスの訪問の印の種類（PRD D342）：形と短い文字で分ける（色だけにしない） */
 export type ClientItemKind = 'visit' | 'leave' | 'cancelled' | 'sameDay' | 'unassigned';
 
 /**

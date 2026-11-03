@@ -68,7 +68,7 @@ export default function BasicsPage() {
   return (
     <div className="stack basics-page">
       <PageHeader
-        // 切は基本情報のタブを出さない（旧画面。〈利用者さん〉・〈スタッフ〉の小さいタブに予定と相性は無い。PRD D389）
+        // 予定を組むの段と基本情報のタブは入だけ（切は予定と相性を人のタブに入れない旧画面。PRD D394）
         nav={expert ? <BasicsNav /> : undefined}
         icon={CalendarRange}
         title="予定と相性"

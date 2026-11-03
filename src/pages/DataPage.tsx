@@ -5,6 +5,7 @@ import { useFeature } from '../components/useFeature';
 import { useDemoData } from '../store';
 import './settings.css';
 import { SettingsTabs } from '../components/SettingsTabs';
+import { BookingCard } from './dataBookings';
 import { ExcelCard } from './dataExcel';
 import { BackupCard, PrevCard, ResetCard, SaveErrorCard, TermsCard, TidyCard, TourCard } from './dataParts';
 import { useDataBackup, useDataRestore, useLastExport } from './useDataBackup';
@@ -57,6 +58,9 @@ export default function DataPage() {
 
       {/* Excel の入出力を切っていれば欄ごと出さない（控え（JSON）は残す。ADR-0028 の excel） */}
       {excelOn && <ExcelCard excel={excel} t={data.org.terms} />}
+
+      {/* ほかのソフトの予約の CSV（ADR-0075）。Excel・CSV の入出力と一緒に入り切りする */}
+      {excelOn && <BookingCard t={data.org.terms} />}
 
       <TidyCard tidy={tidy} />
 

@@ -18,7 +18,7 @@
   min-width: 0;
 }
 /* input は見えない形で残す（Tab で届き、Space・Enter で開ける）。見た目のボタン（label）と同じ大きさで上に重ね、
-   押す・VoiceOver で触れるのは input（PR #45 のレビュー） */
+   押す・VoiceOver で触れるのは input */
 .file-pick-hit {
   position: relative;
   display: inline-flex;

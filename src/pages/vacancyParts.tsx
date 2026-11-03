@@ -1,4 +1,4 @@
-import { type RefObject, useMemo } from 'react';
+import { type ReactNode, type RefObject, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { EdgeScroll } from '../components/EdgeScroll';
 import { LevelLegend } from '../components/glance';
@@ -122,27 +122,25 @@ export function InquiryWeeks({ rows, exact }: { rows: InquiryRow[]; exact: boole
   );
 }
 
-/** 答え（PRD D258）：結果の1枚目のカード。受けられるか・曜日と開始の時間・人数 */
-export function AnswerBox({ answer }: { answer: AnswerCard }) {
+/** 答え（PRD D258・D412）：結果の一番上のカード。受けられるか・曜日と開始の時間・人数。children に答える文と［要約をコピー］ */
+export function AnswerBox({ answer, children }: { answer: AnswerCard; children?: ReactNode }) {
   return (
-    // 条件を変えると答えが変わるので読み上げる（role="status"）
-    // biome-ignore lint/a11y/useSemanticElements: 中に段落があるので output ではなく div
-    <div
-      role="status"
-      className={`vacancy-answer is-${answer.tone}`}
-      data-testid="vacancy-answer"
-      data-tone={answer.tone}
-    >
-      <p className="vacancy-answer-main">
-        <strong className="vacancy-answer-head">{answer.head}</strong>
-        {answer.body && <span className="vacancy-answer-body">：{answer.body}</span>}
-      </p>
-      <p className="sub vacancy-answer-note">{answer.note}</p>
+    <div className={`vacancy-answer is-${answer.tone}`} data-testid="vacancy-answer" data-tone={answer.tone}>
+      {/* 条件を変えると答えが変わるので読み上げる（role="status"。ボタンは入れない） */}
+      {/* biome-ignore lint/a11y/useSemanticElements: 中に段落があるので output ではなく div */}
+      <div role="status" className="vacancy-answer-status">
+        <p className="vacancy-answer-main">
+          <strong className="vacancy-answer-head">{answer.head}</strong>
+          {answer.body && <span className="vacancy-answer-body">：{answer.body}</span>}
+        </p>
+        <p className="sub vacancy-answer-note">{answer.note}</p>
+      </div>
+      {children}
     </div>
   );
 }
 
-/** 数えなかった日・担当なしの訪問がある日の注意はここ1か所（PRD D176）。担当なしは担当を組むの画面か日の予定で入れる（PRD D259） */
+/** 数えなかった日・担当なしの訪問がある日の注意はここ1か所（PRD D176）。担当なしは担当を組むの画面か日の予定で入れる（PRD D328） */
 export function NoPlanNote({ noPlan, missing }: { noPlan: string[]; missing: string[] }) {
   if (noPlan.length === 0 && missing.length === 0) return null;
   return (

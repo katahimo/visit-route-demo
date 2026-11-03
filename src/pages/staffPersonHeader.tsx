@@ -8,6 +8,7 @@ import { PageHeader, WithIcon } from '../components/ui';
 import type { Staff } from '../contracts/documents';
 import { WEEKDAY_LABELS } from '../lib/common';
 import { mdText } from '../lib/dateText';
+import { staffViewHref } from '../lib/links';
 import { staffTabKeys } from '../lib/peopleView';
 import type { StaffTab } from '../lib/personPage';
 
@@ -81,7 +82,7 @@ export function StaffPersonHeader({
       actions={
         <>
           {!isNew && (
-            <Link className="btn btn-text" to={`/staff-view/${encodeURIComponent(id)}`} data-testid="to-staff-view">
+            <Link className="btn btn-text" to={staffViewHref(id)} data-testid="to-staff-view">
               <WithIcon icon={Smartphone}>{s.name}さんの画面で見る</WithIcon>
             </Link>
           )}

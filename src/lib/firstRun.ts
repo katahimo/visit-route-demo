@@ -24,7 +24,7 @@ export type FirstRunAnswer = { start: FirstRunStart; booking: FirstRunBooking };
 export type FirstRunChoice<T extends string> = { value: T; label: string; description: string };
 
 /** 画面の見出し・問い・主ボタン（主ボタンは1つ） */
-export const FIRST_RUN_TITLE = '最初に2つだけ教えてください';
+export const FIRST_RUN_TITLE = '最初の設定';
 export const FIRST_RUN_SUBMIT = 'はじめる';
 /** やり直しのときだけ出す従のボタン（今のデータのまま戻る） */
 export const FIRST_RUN_CANCEL = 'やめる';
@@ -98,8 +98,9 @@ export function firstRunLanding(answer: FirstRunAnswer): string {
 
 /** 設定の「最初の設定をやり直す」（確認のあと2問へ戻り、答えでデータを作り直す。PRD D381） */
 export const RESTART_TITLE = '最初の設定をやり直す';
-export const RESTART_HINT =
-  '最初の2つの質問に答え直します。呼び名・機能のひな形・データが、答えで作り直されます（いまのデータは消えます）。';
+export const RESTART_HINT = '最初の2つの質問に答え直し、呼び名・機能のひな形・データを作り直します。';
+/** 畳まずに出す注意（答えたあとデータが作り直される） */
+export const RESTART_WARN = 'いまのデータは消えます。';
 export const RESTART_CONFIRM_TITLE = '最初の設定をやり直しますか？';
 /** 確認の本文：元に戻す（Ctrl+Z）の対象外なので、先にデータを書き出す案内（keep は1世代の控えの文） */
 export const restartConfirmBody = (keep: string): string =>

@@ -31,7 +31,7 @@ import {
   startWithAnswer,
   swapPrevious,
 } from './index';
-import { LAST_BOOKING_KEY } from './start';
+import { ARRANGE_PENDING_KEY, LAST_BOOKING_KEY } from './start';
 
 /** 環境は node なので localStorage の簡単なモック */
 function mockStorage() {
@@ -118,8 +118,8 @@ describe('load・save', () => {
     const d = load();
     expect(d.version).toBe(DATA_VERSION);
     expect(mem.has(STORAGE_KEY)).toBe(true);
-    // 今日からの日は AI で組まない（繰り返しの担当のまま。保存した回は無い。PRD D322。ADR-0064）
-    expect(d.visits).toEqual([]);
+    // 今日からの日は AI で組まない（繰り返しの担当のまま。保存した回はその日に担当できない回の担当なしだけ。PRD D322。ADR-0064）
+    expect(d.visits.every((v) => v.staffId === null && v.start === null && !v.pinned)).toBe(true);
   });
 
   it('壊れた JSON は退避して初期データを返す', () => {
@@ -247,6 +247,41 @@ describe('初期状態に戻す（最後の問2の答え。PRD D216）', () => {
     startWithAnswer({ start: 'demo', booking: 'oneOff' });
     mem.set(FEATURES_START_KEY, FEATURES_START_ALL);
     expect(reset().org.terms?.client).toBe('利用者さん');
+  });
+});
+
+describe('デモを作った直後に組む印（PRD D409）', () => {
+  /** sessionStorage の簡単なモック */
+  function mockSession() {
+    const m = new Map<string, string>();
+    const ss = {
+      getItem: (k: string) => m.get(k) ?? null,
+      setItem: (k: string, v: string) => {
+        m.set(k, v);
+      },
+      removeItem: (k: string) => {
+        m.delete(k);
+      },
+    };
+    Object.defineProperty(globalThis, 'sessionStorage', { value: ss, configurable: true });
+    return m;
+  }
+
+  it('reset（設定・例外の画面のどちらから戻しても）は読み直しをまたぐ印を sessionStorage に書く', () => {
+    const ss = mockSession();
+    reset();
+    expect(ss.get(ARRANGE_PENDING_KEY)).toBe('1');
+  });
+
+  it('「デモで試す」は書き、「自分のデータで始める」・印「all」は書かない', () => {
+    const ss = mockSession();
+    startWithAnswer({ start: 'demo', booking: 'regular' });
+    expect(ss.get(ARRANGE_PENDING_KEY)).toBe('1');
+    startWithAnswer({ start: 'own', booking: 'regular' });
+    expect(ss.has(ARRANGE_PENDING_KEY)).toBe(false);
+    mem.set(FEATURES_START_KEY, FEATURES_START_ALL);
+    reset();
+    expect(ss.has(ARRANGE_PENDING_KEY)).toBe(false);
   });
 });
 

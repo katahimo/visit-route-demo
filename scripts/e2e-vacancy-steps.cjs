@@ -1,10 +1,12 @@
-// 空き状況の段階（PRD D184〜D187。ADR-0025。UI/UX 改善の区切り8a）を本物のブラウザで確かめる：
+// 空き状況の段階（PRD D184・D187。ADR-0025。UI/UX 改善の区切り8a）を本物のブラウザで確かめる：
 // 段階の並び（1 いつ・何を → 2 場所（任意。畳む）→ 3 受けられる曜日・時間帯 → 4 次の一手）、開いてすぐ結果（PERF_MS 以内）、
 // 1段目を変えるとすぐ結果が変わる、場所をあとから足すと表が移動を含む値になり、畳んでも入力・ピンが残る、
 // 主ボタンは段階ごとに1つ（4段目の「要約をコピー」だけ）、マスの読み方（凡例・用語の説明・×に「約0」を出さない・読み上げ）、
 // × のマスは薄い灰で赤くしない・色の凡例「0人（受けられない）」（PRD D228）、
 // 案の無い日の注意は1か所、案内文ははじめ畳み開くまで計算しない、仮押さえ、390px で収まる、ブラウザの確認を出さない。
-// 答えのカードが結果の1枚目・凡例は1か所・「指定なし」・入力はタブの間だけ残る・担当なしの日の注意から担当を組むの画面へ（PRD D258・D259。ADR-0063）。
+// 答えのカードが結果の1枚目・凡例は1か所・「指定なし」・入力はタブの間だけ残る・担当なしの日の注意から担当を組むの画面へ（PRD D258・D328。ADR-0063）。
+// 段階1は 曜日・時間帯・所要のチップで、ほかは「くわしい条件 ▾」（閉じて始める。開始の幅を変えると時間帯は指定なし）。答えのカードの中に主ボタン［要約をコピー］、
+// 週ごとのマス・凡例・表は「詳しく ▾」（閉じて始め、開け閉めを覚える）（PRD D411・D412。ADR-0080）。
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-vacancy-steps.cjs
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）。PERF_MS_VACANCY で結果が出るまでの上限（既定 5000ms。PRD §5。無ければ PERF_MS）
@@ -24,9 +26,11 @@ const {
   watchErrors,
   runSteps,
   settle,
+  until,
 } = require('./lib/env.cjs');
 const { planDays } = require('./lib/plan.cjs');
 const { guard, closeContext, firstLine, message } = require('./lib/steps.cjs');
+const { reveal } = require('./lib/ui.cjs');
 
 const PERF_MS = perfMs('PERF_MS_VACANCY', 5000);
 
@@ -60,21 +64,31 @@ const gridText = (page) => page.getByTestId('vacancy-grid').textContent();
 const primaries = (loc) =>
   loc.locator('.btn-primary').evaluateAll((els) => els.filter((e) => e.offsetParent !== null).length);
 
-/** 開いて、表と要約が出るまでの時間（ms） */
+/** 開いて、答えのカードと要約が出るまでの時間（ms）。表は「詳しく ▾」の中なので有るかだけ待つ */
 async function openVacancy(page) {
   await page.goto(`${BASE}#/`);
   const t0 = Date.now();
   await page.evaluate(() => {
     location.hash = '#/vacancy';
   });
-  await page.getByTestId('vacancy-grid').waitFor({ timeout: 30000 });
   await page.getByTestId('inquiry-summary').waitFor({ timeout: 30000 });
+  await page.getByTestId('vacancy-grid').waitFor({ state: 'attached', timeout: 30000 });
   return Date.now() - t0;
 }
 
+/** くわしい条件 ▾ を開く（開いていれば何もしない） */
+async function openMore(page) {
+  if ((await page.getByTestId('vacancy-more').getAttribute('open')) === null)
+    await page.getByTestId('vacancy-more-toggle').click();
+  await page.getByTestId('vacancy-duration').waitFor();
+}
+/** チップ（曜日・時間帯・所要の行の中の名前の部分一致） */
+const chip = (page, row, name) => page.getByTestId(row).getByRole('button', { name });
+const pressed = async (loc) => (await loc.getAttribute('aria-pressed')) === 'true';
+
 async function steps(page) {
   const ms = await openVacancy(page);
-  check(ms <= PERF_MS, `開いて受けられる曜日・時間帯が出るまで ${PERF_MS}ms 以内（PRD §5）`, `${ms}ms`);
+  check(ms <= PERF_MS, `開いて答えが出るまで ${PERF_MS}ms 以内（PRD §5）`, `${ms}ms`);
   // 段階の並び
   const order = await page.evaluate(() =>
     [...document.querySelectorAll('.vacancy-page > .vacancy-stage')].map((e) => e.dataset.testid),
@@ -89,15 +103,35 @@ async function steps(page) {
     [...document.querySelectorAll('.vacancy-step-no')].map((e) => e.textContent.replace('.', '')),
   );
   check(JSON.stringify(heads) === '["1","2","3","4"]', '段階の番号 1〜4', heads);
-  // 1段目に いつ・何を の入力がまとまっている
+  // 1段目は 曜日・時間帯・所要のチップ。ほかはくわしい条件（閉じて始める。PRD D411）
   const when = page.getByTestId('vacancy-step-when');
+  const bands = await when
+    .getByTestId('wish-bands')
+    .getByRole('button')
+    .evaluateAll((els) => els.map((e) => e.textContent));
+  const durs = await when
+    .getByTestId('duration-chips')
+    .getByRole('button')
+    .evaluateAll((els) => els.map((e) => e.textContent));
   check(
-    (await when.getByTestId('vacancy-type').count()) === 1 &&
-      (await when.getByTestId('vacancy-duration').count()) === 1 &&
-      (await when.getByTestId('wish-days').count()) === 1 &&
-      (await when.getByTestId('wish-from').count()) === 1 &&
-      (await when.locator('input[type="date"]').count()) === 1,
-    '1段目に 種類・所要・曜日・時間帯・開始日',
+    (await visible(when.getByTestId('wish-days'))) &&
+      JSON.stringify(bands) ===
+        JSON.stringify(['指定なし', '午前 8:00〜12:00', '午後 12:00〜17:00', '夕方 17:00〜20:00']) &&
+      JSON.stringify(durs) === JSON.stringify(['30分', '45分', '60分', '90分']),
+    '1段目のチップ：曜日・時間帯（指定なし／午前／午後／夕方）・所要（30／45／60／90分）',
+    { bands, durs },
+  );
+  check(
+    (await pressed(chip(page, 'wish-bands', '指定なし'))) && (await pressed(chip(page, 'duration-chips', '60分'))),
+    '既定は 時間帯「指定なし」・所要「60分」',
+  );
+  check(
+    (await page.getByTestId('vacancy-more').getAttribute('open')) === null &&
+      !(await visible(page.getByTestId('vacancy-type'))) &&
+      (await when.getByTestId('vacancy-more').getByTestId('vacancy-type').count()) === 1 &&
+      (await when.getByTestId('vacancy-more').getByTestId('wish-from').count()) === 1 &&
+      (await when.getByTestId('vacancy-more').locator('input[type="date"]').count()) === 1,
+    '種類・所要のほかの分・開始の幅・開始日は「くわしい条件 ▾」（閉じて始める）',
   );
   check((await primaries(when)) === 0, '1段目は自動で計算するので主ボタンなし');
   // 2段目は畳んで要約の行
@@ -107,12 +141,22 @@ async function steps(page) {
   const line = await page.getByTestId('vacancy-place-line').textContent();
   check(/場所を入れると移動も含めて絞り込めます/.test(line), '場所の要約の行', line);
   check(/目安/.test(await title3(page)), '場所が空なら結果は目安', await title3(page));
-  // 4段目：主ボタンは「要約をコピー」の1つ。仮押さえ・案内文のコピーは主ボタンにしない
+  // 主ボタンは答えのカードの中の「要約をコピー」の1つ（PRD D412）。仮押さえ・案内文のコピーは主ボタンにしない
   const next = page.getByTestId('vacancy-step-next');
-  check((await primaries(next)) === 1, '4段目の主ボタンは1つ');
+  check((await primaries(next)) === 0, '4段目に主ボタンは無い');
   check(
-    (await page.getByTestId('copy-summary').getAttribute('class')).includes('btn-primary'),
-    '主ボタンは「要約をコピー」',
+    (await page.getByTestId('vacancy-answer').getByTestId('copy-summary').count()) === 1 &&
+      (await page.getByTestId('copy-summary').getAttribute('class')).includes('btn-primary'),
+    '主ボタン「要約をコピー」は答えのカードの中',
+  );
+  // 表・凡例・週ごとのマスは「詳しく ▾」（閉じて始める）
+  const fold = page.getByTestId('vacancy-details');
+  check(
+    (await fold.getAttribute('open')) === null &&
+      !(await visible(page.getByTestId('vacancy-grid'))) &&
+      (await fold.getByTestId('vacancy-grid').count()) === 1 &&
+      (await fold.getByTestId('vacancy-legend').count()) === 1,
+    '表・凡例は「詳しく ▾」の中で、閉じて始める',
   );
   if ((await page.getByTestId('hold-open').count()) > 0) {
     check(
@@ -135,12 +179,12 @@ async function steps(page) {
     '案内文のコピー・紹介元へメールは開いた中（主ボタンにしない）',
   );
   check((await primaries(page.locator('.vacancy-page'))) === 1, '案内文を開いても主ボタンは1つ');
-  // 古い案内文を出さない（PR #44 のレビュー）：開く → 畳む → 条件を変える → 開き直すと、前の文は出さず計算し直してから押せる
+  // 古い案内文を出さない：開く → 畳む → 条件を変える → 開き直すと、前の文は出さず計算し直してから押せる
   const oldText = await page.getByTestId('notice-text').textContent();
   await page.getByTestId('notice-toggle').click();
   await settle(page, 100);
   check((await page.getByTestId('notice-text').count()) === 0, '畳んだら古い案内文を捨てる');
-  await page.getByTestId('vacancy-duration').fill('120');
+  await chip(page, 'duration-chips', '90分').click();
   await settle(page, 500);
   await page.getByTestId('notice-toggle').click();
   const early = await page.evaluate(() => ({
@@ -155,7 +199,7 @@ async function steps(page) {
   await page.getByTestId('notice-text').waitFor({ timeout: 10000 });
   const newText = await page.getByTestId('notice-text').textContent();
   check(
-    newText !== oldText && /120分/.test(await page.getByTestId('notice-line').textContent()),
+    newText !== oldText && /90分/.test(await page.getByTestId('notice-line').textContent()),
     '開き直すと今の条件で作り直す',
   );
   check(!(await page.getByTestId('copy-notice').isDisabled()), '作り直したらコピーを押せる');
@@ -172,9 +216,9 @@ async function steps(page) {
     timeout: 10000,
   });
   check(true, '計算し直したらコピーを押せる');
-  await page.getByTestId('vacancy-duration').fill('60');
+  await chip(page, 'duration-chips', '60分').click();
   await page.getByTestId('notice-toggle').click();
-  // 見出しの並び（PR #44 のレビュー）：段階は h2 で4つ、「開く ▾」は読み上げに入れない
+  // 見出しの並び：段階は h2 で4つ、「開く ▾」は読み上げに入れない
   const hs = await page.evaluate(() => ({
     h2: [...document.querySelectorAll('.vacancy-page .vacancy-stage h2')].map((e) => e.textContent.trim().slice(0, 4)),
     h3: !!document.querySelector('[data-testid="notice-toggle"] h3'),
@@ -200,13 +244,93 @@ async function steps(page) {
   );
   const ms2 = Date.now() - t0;
   check(ms2 <= PERF_MS, `曜日を選ぶと ${PERF_MS}ms 以内に結果が変わる`, `${ms2}ms`);
-  check(/火/.test(await page.getByTestId('vacancy-when-line').textContent()), '結果の上に いつ・何を の要約（火）');
+  check(/火/.test(await page.getByTestId('vacancy-when-line').textContent()), '答えの下に いつ・何を の要約（火）');
   await page.screenshot({ path: path.join(OUT_DIR, 'vacancy-steps-1280.png'), fullPage: true });
+}
+
+/** 時間帯のチップ（複数可）とくわしい条件の開始の幅（PRD D411）・「詳しく ▾」の開け閉めを覚える（PRD D412） */
+async function bandsAndFold(page) {
+  await openVacancy(page);
+  await settle(page, 500);
+  const line = () => page.getByTestId('vacancy-when-line').textContent();
+  check(
+    /8:00〜19:00に始める/.test(await line()),
+    '時間帯が指定なしなら、くわしい条件の開始の幅（既定は 8:00 から、所要 60分を足して 20:00 に収まる 19:00 まで）',
+    await line(),
+  );
+  await chip(page, 'wish-bands', '午前').click();
+  await until(async () => /8:00〜12:00に始める/.test(await line()));
+  check(
+    (await pressed(chip(page, 'wish-bands', '午前'))) && !(await pressed(chip(page, 'wish-bands', '指定なし'))),
+    '午前を押すと「指定なし」が外れる',
+  );
+  check(/8:00〜12:00に始める/.test(await line()), '午前：8:00〜12:00 に始める', await line());
+  await chip(page, 'wish-bands', '夕方').click();
+  check(
+    await until(async () => /8:00〜12:00・17:00〜20:00に始める/.test(await line())),
+    '午前と夕方：つながらない帯は分けて書く',
+    await line(),
+  );
+  // 計算し直すのを待ってから、答えに午後（13:00〜16:30 の開始）が入らないことを見る
+  await until(async () => !(await visible(page.getByText('計算しています…'))));
+  await settle(page, 300);
+  const text = await page.getByTestId('vacancy-answer').innerText();
+  check(!/1[3-6]:\d\d/.test(text), '午前と夕方なら答え・要約に 13:00〜16:30 の開始は出ない', text);
+  // くわしい条件で開始の幅を変えると時間帯は指定なしに戻る
+  await openMore(page);
+  await page.getByTestId('wish-from').selectOption('10:00');
+  await until(async () => /10:00〜19:00に始める/.test(await line()));
+  check(
+    (await pressed(chip(page, 'wish-bands', '指定なし'))) && !(await pressed(chip(page, 'wish-bands', '午前'))),
+    'くわしい条件で開始の幅を変えると時間帯は「指定なし」',
+  );
+  // 「詳しく ▾」を開くと表。開け閉めは端末に覚え、読み直しても開いたまま
+  await reveal(page, 'vacancy-grid');
+  check((await page.getByTestId('vacancy-details').getAttribute('open')) !== null, '「詳しく ▾」を開くと表が見える');
+  // 開け閉めは details の toggle の事件で覚える（少し遅れて届く）。覚えたのを確かめてから読み直す
+  await until(
+    () =>
+      page.evaluate(
+        () => JSON.parse(localStorage.getItem('visit-route-demo:nav-open') || '{}')['details:vacancy'] === true,
+      ),
+    5000,
+  );
+  await page.reload();
+  await page.getByTestId('inquiry-summary').waitFor({ timeout: 30000 });
+  await page.getByTestId('vacancy-grid').waitFor({ timeout: 30000 });
+  check(
+    (await page.getByTestId('vacancy-details').getAttribute('open')) !== null &&
+      (await page.getByTestId('vacancy-more').getAttribute('open')) === null,
+    '読み直すと「詳しく ▾」は開いたまま（くわしい条件は閉じて始める）',
+  );
+  check(
+    /10:00〜19:00に始める/.test(await line()) && (await pressed(chip(page, 'wish-bands', '指定なし'))),
+    '読み直しても開始の幅と時間帯が残る',
+    await line(),
+  );
+  // くわしい条件の入力に誤り（開始の幅の「から」が「まで」より後）があれば、読み直しても くわしい条件 が開く
+  await openMore(page);
+  await page.getByTestId('wish-from').selectOption('19:30');
+  await settle(page, 400);
+  await page.reload();
+  await page.getByTestId('vacancy-more').waitFor({ timeout: 30000 });
+  check(
+    await until(async () => (await page.getByTestId('vacancy-more').getAttribute('open')) !== null),
+    'くわしい条件の入力に誤りがあれば くわしい条件 が開く',
+  );
+  await page.getByTestId('wish-from').selectOption('10:00');
+  await page.getByTestId('inquiry-summary').waitFor({ timeout: 30000 });
+  await chip(page, 'wish-bands', '午後').click();
+  await settle(page, 400);
+  await page.reload();
+  await page.getByTestId('inquiry-summary').waitFor({ timeout: 30000 });
+  check(await pressed(chip(page, 'wish-bands', '午後')), '時間帯のチップも同じタブの間は残る');
 }
 
 async function marks(page) {
   await openVacancy(page);
   await settle(page, 500);
+  await reveal(page, 'vacancy-grid');
   const legend = await page
     .getByTestId('vacancy-mark-legend')
     .locator('li')
@@ -275,7 +399,7 @@ async function marks(page) {
 /** YYYY-MM-DD に n 日足す */
 const plusDays = (d, n) => new Date(Date.parse(`${d}T00:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
 
-// ---- 答えのカード・凡例・指定なし・入力の保持・担当なしを AI で組む（PRD D258・D259）----
+// ---- 答えのカード・凡例・指定なし・入力の保持・担当なしを AI で組む（PRD D258・D328）----
 async function answer(page) {
   // 初期データは今日からの日を繰り返しの担当のままにするので、保存した担当の入った訪問を用意する（のちに2日の担当を外す）
   await planDays(page);
@@ -290,13 +414,14 @@ async function answer(page) {
   );
   const order = await page.evaluate(() => {
     const box = document.querySelector('[data-testid="vacancy-table-card"]');
+    const first = box.querySelector(':scope > :not(.section-title)');
     const a = box.querySelector('[data-testid="vacancy-answer"]');
-    const s = box.querySelector('[data-testid="inquiry-summary"]');
     const g = box.querySelector('[data-testid="vacancy-grid"]');
-    const F = Node.DOCUMENT_POSITION_FOLLOWING;
-    return !!a && !!s && !!g && (a.compareDocumentPosition(s) & F) !== 0 && (a.compareDocumentPosition(g) & F) !== 0;
+    return (
+      first === a && !!a.querySelector('[data-testid="inquiry-summary"]') && (a.compareDocumentPosition(g) & 4) !== 0
+    );
   });
-  check(order, '答えのカードは要約・表より前');
+  check(order, '答えのカードは結果の一番上で、中に答える文。表より前');
   if ((await card.getAttribute('data-tone')) === 'ok') {
     check(/^受けられます：.+ に (約)?\d+(〜\d+)?人/.test(text), '答え：曜日・時間と人数', text);
   }
@@ -315,22 +440,22 @@ async function answer(page) {
     legends,
   );
   // 「種類なし」→「指定なし」
-  const first = await page.getByTestId('vacancy-type').locator('option').first().innerText();
+  const first = (await page.getByTestId('vacancy-type').locator('option').first().textContent()).trim();
   check(first === '指定なし', '種類を選ばないときは「指定なし」', first);
   await page.screenshot({ path: path.join(OUT_DIR, 'vacancy-answer-1280.png'), fullPage: true });
 
   // 入力はタブの間だけ残る（画面を移って戻る・読み直す。新しいタブは既定）
-  await page.getByTestId('vacancy-duration').fill('90');
+  await chip(page, 'duration-chips', '90分').click();
   await page.getByTestId('wish-days').getByRole('button', { name: '木' }).click();
   await settle(page, 400);
   await page.evaluate(() => {
-    location.hash = '#/home';
+    location.hash = '#/data';
   });
   await page.locator('h1').first().waitFor();
   await page.evaluate(() => {
     location.hash = '#/vacancy';
   });
-  await page.getByTestId('vacancy-duration').waitFor();
+  await page.getByTestId('vacancy-duration').waitFor({ state: 'attached' });
   const kept = {
     duration: await page.getByTestId('vacancy-duration').inputValue(),
     thu: await page.getByTestId('wish-days').getByRole('button', { name: '木' }).getAttribute('aria-pressed'),
@@ -339,14 +464,15 @@ async function answer(page) {
   const other = await page.context().newPage();
   await other.clock.setFixedTime(NOW);
   await other.goto(`${BASE}#/vacancy`);
-  await other.getByTestId('vacancy-duration').waitFor({ timeout: 30000 });
+  await other.getByTestId('vacancy-duration').waitFor({ state: 'attached', timeout: 30000 });
   check(
     (await other.getByTestId('vacancy-duration').inputValue()) === '60',
     '新しいタブ（閉じて開き直す）は既定の入力',
   );
   await other.close();
 
-  // その場で担当なしの日を組む（PRD D259）：1週だけ見て、2日の訪問の担当を外す
+  // その場で担当なしの日を組む（PRD D328）：1週だけ見て（くわしい条件）、2日の訪問の担当を外す
+  await openMore(page);
   await page.getByLabel('見る週の数').selectOption('1');
   // 外す2日は、今日から1週の中で担当のある保存した訪問がある日から選ぶ（FAKE_NOW の曜日・月末に依らない）
   const gone = await page.evaluate(
@@ -495,6 +621,7 @@ const allSteps = [
   ],
   ...[
     ['steps', steps],
+    ['bands-fold', bandsAndFold],
     ['marks', marks],
     ['answer', answer],
     ['place-later', placeLater],

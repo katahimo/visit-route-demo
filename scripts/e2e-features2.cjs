@@ -3,7 +3,7 @@
 // 〈利用者さん〉の画面の紹介元・決まりごと・休みのタブ、〈スタッフ〉の画面のメールアドレス・最終勤務日、月の「休みを入れる」・印刷、空き状況の案内文、
 // データの Excel、稼働の見込みの交通費の単価）。相性を切るときの独自の確認（件数と効き方。取り消すと変わらない）と、
 // 相性×の組は AI で組むと担当にならず、切ると担当に入ること（別のタブで×を書き、担当を組むの日の範囲（#/arrange?date=）で AI で組んで反映する）。
-// レビューの反映：切ったまま保存してもデータが残る（段階「契約」・担当できる人・〈スタッフ〉のメールアドレス・毎月のパターンの repeat と monthWeeks）。
+// 切ったまま保存してもデータが残る（段階「契約」・担当できる人・〈スタッフ〉のメールアドレス・毎月のパターンの repeat と monthWeeks）。
 // その1（メニュー・管理者設定・ひな形・切った機能の URL・行き止まり）は e2e-features.cjs。
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-features2.cjs
@@ -15,6 +15,7 @@ const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, runSteps, settle } = require('
 const { markStandard } = require('./lib/standard.cjs');
 const { planDays } = require('./lib/plan.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
+const { toolCount } = require('./lib/ui.cjs');
 const {
   same,
   TEMPLATE_ON,
@@ -62,13 +63,19 @@ async function insideEntries(page, dlg, ctx) {
     await open(page, `/plan?date=${TODAY}`, '.date-switch select');
     await page.getByTestId('plan-summary').waitFor({ state: 'attached', timeout: 60000 });
     await settle(page, 500);
-    check((await count('sudden-open')) === (on('sudden') ? 1 : 0), `${label}：日の予定の「欠勤・キャンセルを登録」`);
+    check(
+      (await toolCount(page, 'sudden-open')) === (on('sudden') ? 1 : 0),
+      `${label}：日の予定の「欠勤・キャンセルを登録」`,
+    );
     check(
       (await page.locator('.absence-btn').count()) > 0 === on('sudden'),
       `${label}：列の見出しの「この人の欠勤を登録」`,
     );
-    // 予定をメールで送るは見出しの主ボタンの隣（PRD D306）
-    check((await count('day-mail')) === (on('mail') ? 1 : 0), `${label}：日の予定の見出しの「予定をメールで送る」`);
+    // メールで送るは操作の行の「その他 ▾」の中（PRD D306・D402・D419）
+    check(
+      (await toolCount(page, 'day-mail')) === (on('mail') ? 1 : 0),
+      `${label}：日の予定の「その他 ▾」の「メールで送る」`,
+    );
     if (!on('rules')) check((await count('plan-reason')) === 0, `${label}：点数の横の理由を出さない`);
     check((await count('plan-menu')) === 0, `${label}：日の予定に「AI で組む ▾」は無い`);
     // 担当を組む（週の範囲）：AI で組む・考え方（点数の基準。選ぶ欄は無い）・案を比べる（ADR-0063・ADR-0065）
@@ -191,7 +198,7 @@ async function insideEntries(page, dlg, ctx) {
     );
     await settle(page, 300);
     check((await count('month-off-toggle')) === (on('requestedOff') ? 1 : 0), `${label}：月の「休みを入れる」`);
-    // 印刷は「その他 ▾」の中（PRD D278）
+    // 印刷は「その他 ▾」の中（PRD D327）
     await page.getByTestId('month-more').click();
     await page.getByTestId('month-more-list').waitFor({ timeout: 5000 });
     check((await count('month-print')) === (on('monthPrint') ? 1 : 0), `${label}：月の「その他 ▾」の印刷`);
@@ -329,7 +336,7 @@ async function keepData(page, dlg, ctx) {
 }
 
 /**
- * 担当を組む（#/arrange?date=。日の範囲）で「AI で組む」の提案を出して反映する（版2：提案は反映するまで担当を変えない。
+ * 担当を組む（#/arrange?date=。日の範囲）で「AI で組む」の提案を出して反映する（提案は反映するまで担当を変えない。
  * ADR-0053・ADR-0063）。担当の入った訪問も組み直すので、組む日は「伝えていない日をすべて組み直す」。
  * 組み方の標準が無いと組めない（ADR-0065）ので、先に標準を登録したデータにする
  */

@@ -29,3 +29,38 @@ export function foldHidden(
   };
   return new Set(items.filter((it) => rowOf(it.top) >= rows && !keep.has(it.id)).map((it) => it.id));
 }
+
+/** 畳みの測り直しの鍵に入れる、チップの表示に関わるもの（mark は中身を比べられないので有無だけ） */
+export type FoldChip = {
+  id: string;
+  name: string;
+  color?: string;
+  mark?: unknown;
+  badges?: readonly { short: string; name: string }[];
+};
+
+/**
+ * 測り直す鍵：幅・中身の高さ・書体の読み込み・見出し・チップの表示（id・名前・色・印の有無・バッジ・選んでいるか）が変われば変わる。
+ * ドラッグ中の強調（highlight）は入れない（行の数が変わらないので）
+ */
+export function chipFoldKey(
+  x: { width: number; height: number; epoch: number; label: string },
+  people: readonly FoldChip[],
+  isOn: (id: string) => boolean,
+): string {
+  const chips = people
+    .map((p) => {
+      const badges = (p.badges ?? []).map((b) => `${b.short}/${b.name}`).join('+');
+      return `${p.id}:${isOn(p.id) ? 1 : 0}:${p.name}:${p.color ?? ''}:${p.mark ? 1 : 0}:${badges}`;
+    })
+    .join(',');
+  return `${x.width}|${x.height}|${x.epoch}|${x.label}|${chips}`;
+}
+
+/**
+ * 覚えておく中身の高さ。全員を並べているとき（full）の高さだけ採る。畳んだ状態の高さは畳んだ結果なので、
+ * 採ると「畳む → 高さが変わる → 測り直す → 畳む …」と回り続ける
+ */
+export function nextFullHeight(prev: number, now: number, full: boolean): number {
+  return full ? Math.round(now) : prev;
+}

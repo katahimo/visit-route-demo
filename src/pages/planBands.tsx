@@ -14,9 +14,40 @@ import { hmText } from '../lib/workload';
 /** 拘束が上限を超える人（稼働の見込み。PRD D72。ADR-0015） */
 type OverSpan = { staffId: string; span: number };
 
+/**
+ * 要対応の訪問の件数の帯（PRD D63）：「要対応の訪問 N件（内訳）」と担当なしを見るボタン。入は「詳しく ▾」の中に置く
+ * （上の要対応の帯が同じことを知らせるので、ふだんは出さない。PRD D393）。切は出さない
+ */
+export function CareBand({
+  count,
+  parts,
+  unassigned,
+  onGoNone,
+}: {
+  count: number;
+  parts: string[];
+  unassigned: number;
+  onGoNone: () => void;
+}) {
+  if (count === 0) return null;
+  return (
+    <div className="plan-band is-warn row" data-testid="band-care">
+      <WithIcon icon={TriangleAlert} size={16}>
+        <span className="band-text">
+          <Term k="attention">要対応</Term>の訪問 <strong>{count}</strong>件（{parts.join('・')}）
+        </span>
+      </WithIcon>
+      {unassigned > 0 && (
+        <button type="button" className="btn btn-small" onClick={onGoNone} data-testid="band-unassigned">
+          担当なしを見る
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function PlanBands({
   errors,
-  care,
   toldCount,
   reassign,
   leave,
@@ -28,8 +59,6 @@ export function PlanBands({
 }: {
   /** 問題を作れない・計算のエラー・採点できない（無ければ null） */
   errors: { problem: string | null; run: string | null; score: string | null };
-  /** 要対応の件数・内訳・担当なしの件数 */
-  care: { count: number; parts: string[]; unassigned: number };
   /** 未連絡の変更の件数（伝えたあとに変わっていなければ null） */
   toldCount: number | null;
   /** 欠勤の振り直し（入らない・欠勤の人のまま。振り直していなければ null） */
@@ -41,12 +70,11 @@ export function PlanBands({
   terms: Terms;
   date: string;
   staffName: (id: string) => string;
-  on: { goNone: () => void; openTold: () => void; goBar: () => void; showList: () => void };
+  on: { openTold: () => void; goBar: () => void; showList: () => void };
 }) {
   const { problem: problemError, run: error, score: scoreError } = errors;
-  const { count: careCount, parts: careParts, unassigned: unassignedCount } = care;
   const { count: leaveCount, names: leaveNames } = leave;
-  const { goNone: onGoNone, openTold: onOpenTold, goBar: onGoBar, showList: onShowList } = on;
+  const { openTold: onOpenTold, goBar: onGoBar, showList: onShowList } = on;
   return (
     <>
       {/* あるときだけの帯（PRD D63）。ドラッグ中には増減しない（移したあとに変わる） */}
@@ -67,20 +95,6 @@ export function PlanBands({
       )}
       {/* 担当を組むの画面で組んだ範囲の提案（日・週・月の予定で同じもの） */}
       <RangeProposalBand />
-      {careCount > 0 && (
-        <div className="plan-band is-warn row" data-testid="band-care">
-          <WithIcon icon={TriangleAlert} size={16}>
-            <span className="band-text">
-              <Term k="attention">要対応</Term>の訪問 <strong>{careCount}</strong>件（{careParts.join('・')}）
-            </span>
-          </WithIcon>
-          {unassignedCount > 0 && (
-            <button type="button" className="btn btn-small" onClick={onGoNone} data-testid="band-unassigned">
-              担当なしを見る
-            </button>
-          )}
-        </div>
-      )}
       {toldCount !== null && (
         <div className="plan-band row" data-testid="band-told">
           <WithIcon icon={MessageSquareText} size={16}>

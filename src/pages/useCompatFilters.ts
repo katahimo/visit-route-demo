@@ -1,5 +1,5 @@
 // 相性の画面の絞り込み（PRD D116）：列（〈スタッフ〉。?sf=）と行（〈利用者さん〉。?cf=。期間は選んでいる日を含む週）。
-// URL を読み書きし、相性のチップの判定に使う相性の写しを持つ。畳める欄の開け閉めも持つ
+// URL を読み書きし、相性のチップの判定に使う相性の写しを持つ。畳んだ欄の開け閉めも持つ
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useDay } from '../components/day';
@@ -50,7 +50,7 @@ export function useCompatFilters(data: DemoData) {
   // ---- 行（〈利用者さん〉）の絞り込み（?cf=。期間は選んでいる日を含む週）----
   const { date } = useDay();
   const dates = useMemo(() => weekDates(date), [date]);
-  // 週の帯は、相性のセルを押すたびに作り直さない（チップの判定に使うのは帯の担当・訪問の有無だけ。担当は訪問にある）
+  // 週の帯は、相性のマスを変えるたびに作り直さない（チップの判定に使うのは帯の担当・訪問の有無だけ。担当は訪問にある）
   // biome-ignore lint/correctness/useExhaustiveDependencies: 相性（compat）が変わっただけでは作り直さない
   const days = useMemo(
     () => dates.map((d) => weekDay(data, d)),
@@ -88,8 +88,8 @@ export function useCompatFilters(data: DemoData) {
     [days, clients, data.patterns, data.clientLeaves, data.visitTypes, data.staff],
   );
   /**
-   * 相性のチップの判定に使う相性の写し（PRD D116）。絞り込みを変えたときの相性に止め、セルを押しても行を消さない
-   * （押した行が消えて、次の人のセルを押してしまわないように）。「表を並べ直す」でいまの相性に合わせる
+   * 相性のチップの判定に使う相性の写し（PRD D116）。絞り込みを変えたときの相性に止め、マスの相性を変えても行を消さない
+   * （変えた行が消えて、次の人のマスを押してしまわないように）。「表を並べ直す」でいまの相性に合わせる
    */
   const filterKey = `${cfParam ?? ''}|${sfParam ?? ''}`;
   const [snap, setSnap] = useState({ key: filterKey, compat: data.compat });
@@ -105,7 +105,7 @@ export function useCompatFilters(data: DemoData) {
     [clients, clientFilter, facts, staff],
   );
   const usesCompatChips = (clientFilter.extra?.length ?? 0) > 0;
-  /** 写しが古い（相性のチップを押していて、そのあとセルを押した） */
+  /** 写しが古い（相性のチップを押していて、そのあとマスの相性を変えた） */
   const stale = usesCompatChips && snapCompat !== data.compat;
   /** 写しをいまの相性に合わせる（表を並べ直す） */
   const resort = () => setSnap({ key: filterKey, compat: data.compat });
@@ -152,9 +152,8 @@ export function useCompatFilters(data: DemoData) {
     }
   }, [cfParam, clientFilter, go]);
 
-  // ---- 絞り込みの欄（畳める。URL に絞り込みがあるときだけ開いておく）----
-  const [sfOpen, setSfOpen] = useState(() => sfParam !== null);
-  const [cfOpen, setCfOpen] = useState(() => cfParam !== null);
+  // ---- 絞り込みの欄（1つに畳む。URL に絞り込みがあるときだけ開いておく。PRD D420）----
+  const [open, setOpen] = useState(() => sfParam !== null || cfParam !== null);
 
   return {
     clients,
@@ -172,10 +171,8 @@ export function useCompatFilters(data: DemoData) {
     extraChips,
     filterTerms,
     periodLabel,
-    sfOpen,
-    setSfOpen,
-    cfOpen,
-    setCfOpen,
+    open,
+    setOpen,
   };
 }
 

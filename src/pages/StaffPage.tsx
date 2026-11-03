@@ -1,11 +1,12 @@
 import { Plus, UserRound } from 'lucide-react';
 import { useEffect, useId, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { DetailColumnsToggle, useDetailColumns } from '../components/DetailColumns';
 import { RosterButton, RosterCard } from '../components/RosterCard';
-import { BasicsNav } from '../components/SettingsTabs';
+import { PeopleTabs } from '../components/SettingsTabs';
 import { useToast } from '../components/Toast';
 import { PageHeader, WithIcon } from '../components/ui';
-import { useExceptionsOnly, useFeature } from '../components/useFeature';
+import { useFeature } from '../components/useFeature';
 import { useIntro } from '../components/useIntro';
 import { jstDate } from '../domain/time';
 import { byName } from '../lib/common';
@@ -32,9 +33,9 @@ export default function StaffPage() {
   const offboardOn = useFeature('offboard');
   // 名簿の欄（Excel・CSV。ADR-0068）。Excel の入出力を切っていれば出さない（ADR-0028 の excel）
   const excelOn = useFeature('excel');
-  // エキスパート機能が切なら一覧の列は名前・勤務日・勤務時間の3列だけ（PRD D385）
-  const only = useExceptionsOnly();
-  const cols = staffColumns(only);
+  // 一覧の列は名前・勤務日・勤務時間の3列。入は表の上の「くわしい列」で専門の列を足せる（PRD D385・D394）
+  const { detailed } = useDetailColumns('staff');
+  const cols = staffColumns(detailed);
   const [rosterOpen, setRosterOpen] = useState(false);
   const rosterId = useId();
   /** 担当の振り直しの欄を開いている〈スタッフ〉（PRD D71。null：閉じている） */
@@ -86,10 +87,11 @@ export default function StaffPage() {
   return (
     <div className="stack">
       <PageHeader
-        // 切は一覧・相性（〈スタッフ〉は勤務も）の小さいタブ（PRD D389）。入は基本情報のタブ
-        nav={<BasicsNav />}
+        // 一覧・勤務・相性の小さいタブ（入切とも。PRD D394）
+        nav={<PeopleTabs />}
         icon={UserRound}
-        title={`${terms.staff}一覧`}
+        // 見出しはメニューの名前と同じ（PRD D230）
+        title={terms.staff}
         lead={lead}
         actions={
           <>
@@ -107,7 +109,8 @@ export default function StaffPage() {
 
       {offboardOn && leaving.length > 0 && <StaffLeavingCard leaving={leaving} terms={terms} onOpen={setOffboardFor} />}
 
-      {/* 狭い画面（600px 以下）では行をカードにする（PRD D220。名前と状態が1行目、ほかは見出し付きの行、開くは右下） */}
+      <DetailColumnsToggle list="staff" />
+      {/* 狭い画面（600px 以下）では行をカードにする（PRD D220。名前と状態が1行目、ほかは見出し付きの行、「詳しく」「今日の画面」は右下） */}
       <div className="card table-scroll">
         <table {...narrowRole.table} className="people-table narrow-cards" data-testid="narrow-staff">
           <thead {...narrowRole.rowgroup}>
@@ -122,6 +125,7 @@ export default function StaffPage() {
                 clientTerm={terms.client}
                 staffItems={staffItems}
                 itemById={itemById}
+                today={today}
                 onOpen={() => navigate(`/staff/${encodeURIComponent(s.id)}`)}
               />
             ))}

@@ -1,12 +1,13 @@
-// 「欠勤・キャンセル」の欄の5段目：連絡（宛先ごとの文・コピー・メール・［連絡した］）と確定（PRD D243〜D246。ADR-0038）
-import { Check, CircleCheck, ClipboardCopy } from 'lucide-react';
+// 「欠勤・キャンセル」の欄の2段目「連絡・確定」：済んだこと・振り直しの結果（案A・案B）・連絡（宛先ごとの文・コピー・メール・
+// ［連絡した］）と確定（PRD D244〜D246・D414・D415。ADR-0038・ADR-0082）
+import { Check, CircleCheck, ClipboardCopy, Undo2, UserRoundCheck } from 'lucide-react';
 import { MailButton, MailLengthNote } from '../components/mailParts';
 import { StaffMarkById } from '../components/StaffMark';
 import { WithIcon } from '../components/ui';
-import { CONTACT_KIND_LABEL, type ContactKind } from '../lib/contacts';
+import { CONTACT_KIND_LABEL, type ContactKind, type ContactRow } from '../lib/contacts';
 import { NO_EMAIL } from '../lib/mail';
-import { confirmNote, suddenHeading } from '../lib/sudden';
-import { backButton, stepHeading } from './suddenSteps';
+import { confirmNote, SUDDEN_HEADINGS } from '../lib/sudden';
+import { stepHeading } from './suddenSteps';
 import { type Done, type StepCtx, type StepView, sentKey } from './useSuddenSteps';
 
 /** 種類の印の色（担当が外れる・中止は灰、新しく入るは移る色、時刻は注意の色） */
@@ -18,7 +19,7 @@ const KIND_CHIP: Record<ContactKind, string> = {
   client: 'chip',
 };
 
-/** 4段目の確定の文（空なら出さない） */
+/** 確定の文（空なら出さない） */
 function ConfirmNote({ text }: { text: string }) {
   return text ? (
     <p className="sub" data-testid="sudden-confirm-note">
@@ -27,26 +28,142 @@ function ConfirmNote({ text }: { text: string }) {
   ) : null;
 }
 
-/** 5段目：連絡（宛先ごとの文・コピー・メール・［連絡した］）と確定 */
-export function contactStep({ p, s }: StepCtx, done: Done): StepView {
-  const {
-    terms,
-    contacts,
-    confirmState,
-    confirmStep,
-    leftCount = 0,
-    contactMail,
-    hasPlan,
-    running,
-    onAdopt,
-    onClose,
-  } = p;
-  const { sent, copyRow, toggleSent, busy, guarded } = s;
+/** 済んだこと・振り直す前に戻す・日の予定で差を見る・振り直しの結果（案B も作るときは開いておく） */
+function doneHead({ p, s }: StepCtx, done: Done) {
+  const { result, onRevert, onClose, running } = p;
+  const { busy, guarded } = s;
+  return (
+    <>
+      <p className="row" style={{ gap: 6 }} data-testid="sudden-done">
+        <Check size={16} aria-hidden="true" />
+        {done.kind === 'staff'
+          ? `${done.text}を登録して振り直しました`
+          : `${done.text} を${done.sameDay ? '当日キャンセルとして' : ''}取り消しました`}
+      </p>
+      {done.kind === 'staff' && (
+        <>
+          <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+            {onRevert && (
+              <button
+                type="button"
+                className="btn btn-small"
+                disabled={running || busy}
+                onClick={() =>
+                  void guarded(async () => {
+                    if (await onRevert()) onClose(false);
+                  })
+                }
+                data-testid="sudden-revert"
+              >
+                <WithIcon icon={Undo2} size={14}>
+                  振り直す前に戻す
+                </WithIcon>
+              </button>
+            )}
+            <button type="button" className="btn btn-small" onClick={() => onClose(true)} data-testid="sudden-to-bar">
+              <WithIcon icon={UserRoundCheck} size={14}>
+                日の予定で差を見る
+              </WithIcon>
+            </button>
+          </div>
+          <details className="sudden-result-box" open={done.anneal} data-testid="sudden-result-box">
+            <summary>振り直しの結果（案A・案B）</summary>
+            {result ?? (
+              <p className="sub" aria-live="polite">
+                振り直しを出しています…
+              </p>
+            )}
+          </details>
+        </>
+      )}
+    </>
+  );
+}
+
+/** 連絡の1行（宛名・種類・初めての印・文・コピー・メール・［連絡した］） */
+function ContactItem({ ctx, r }: { ctx: StepCtx; r: ContactRow }) {
+  const { terms, contactMail } = ctx.p;
+  const { sent, copyRow, toggleSent } = ctx.s;
+  const mail = r.to === 'staff' && contactMail ? contactMail(r) : null;
+  return (
+    <li
+      className={`sudden-contact${sent.has(sentKey(r)) ? ' is-sent' : ''}`}
+      data-testid="sudden-contact"
+      data-to={r.to}
+      data-kinds={r.kinds.join(' ')}
+    >
+      <div className="sudden-contact-head">
+        {r.to === 'staff' && <StaffMarkById id={r.id} size="xs" />}
+        <strong>{r.name}</strong>
+        {r.to === 'client' ? (
+          <span className="chip">{terms.client}あて</span>
+        ) : (
+          r.kinds.map((k) => (
+            <span key={k} className={KIND_CHIP[k]}>
+              {CONTACT_KIND_LABEL[k]}
+            </span>
+          ))
+        )}
+        {r.first && (
+          <span className="chip chip-warn" data-testid="sudden-contact-first">
+            初めて
+          </span>
+        )}
+      </div>
+      <pre className="sudden-contact-text" data-testid="sudden-contact-text">
+        {r.text}
+      </pre>
+      <div className="sudden-contact-acts">
+        <button
+          type="button"
+          className="btn btn-small"
+          onClick={() => copyRow(r)}
+          aria-label={`${r.name}への文をコピー`}
+          data-testid="sudden-contact-copy"
+        >
+          <WithIcon icon={ClipboardCopy} size={14}>
+            文をコピー
+          </WithIcon>
+        </button>
+        {r.to === 'staff' && contactMail && (
+          <>
+            <MailButton
+              mail={mail}
+              label="メール"
+              why={NO_EMAIL}
+              srLabel={`${r.name}へのメールを作る`}
+              testId="sudden-contact-mail"
+            />
+            <MailLengthNote mail={mail} />
+          </>
+        )}
+        <label className="check sudden-contact-sent">
+          <input
+            type="checkbox"
+            checked={sent.has(sentKey(r))}
+            onChange={(e) => toggleSent(sentKey(r), e.target.checked)}
+            style={{ width: 'auto' }}
+            aria-label={`${r.name}に連絡した`}
+            data-testid="sudden-contact-sent"
+          />
+          連絡した
+        </label>
+      </div>
+    </li>
+  );
+}
+
+/** 2段目：済んだこと・連絡（宛先ごとの文・コピー・メール・［連絡した］）と確定 */
+export function contactStep(ctx: StepCtx, done: Done): StepView {
+  const { p, s } = ctx;
+  const { terms, contacts, confirmState, confirmStep, leftCount = 0, hasPlan, running, onAdopt, onClose } = p;
+  const { sent, busy, guarded } = s;
   const rows = contacts ?? [];
   const sentCount = rows.filter((r) => sent.has(sentKey(r))).length;
   const body = (
     <>
-      {stepHeading(suddenHeading(done.kind, 5, terms.staff))}
+      {stepHeading(SUDDEN_HEADINGS[2])}
+      {doneHead(ctx, done)}
       <p className="sub">
         {done.kind === 'staff'
           ? '振り直す前と後で担当が変わった人への連絡です。'
@@ -73,71 +190,9 @@ export function contactStep({ p, s }: StepCtx, done: Done): StepView {
             連絡した {sentCount}/{rows.length}人
           </p>
           <ul className="sudden-contacts" data-testid="sudden-contacts">
-            {rows.map((r) => {
-              const mail = r.to === 'staff' && contactMail ? contactMail(r) : null;
-              return (
-                <li
-                  key={r.key}
-                  className={`sudden-contact${sent.has(sentKey(r)) ? ' is-sent' : ''}`}
-                  data-testid="sudden-contact"
-                  data-to={r.to}
-                  data-kinds={r.kinds.join(' ')}
-                >
-                  <div className="sudden-contact-head">
-                    {r.to === 'staff' && <StaffMarkById id={r.id} size="xs" />}
-                    <strong>{r.name}</strong>
-                    {r.to === 'client' ? (
-                      <span className="chip">{terms.client}あて</span>
-                    ) : (
-                      r.kinds.map((k) => (
-                        <span key={k} className={KIND_CHIP[k]}>
-                          {CONTACT_KIND_LABEL[k]}
-                        </span>
-                      ))
-                    )}
-                  </div>
-                  <pre className="sudden-contact-text" data-testid="sudden-contact-text">
-                    {r.text}
-                  </pre>
-                  <div className="sudden-contact-acts">
-                    <button
-                      type="button"
-                      className="btn btn-small"
-                      onClick={() => copyRow(r)}
-                      aria-label={`${r.name}への文をコピー`}
-                      data-testid="sudden-contact-copy"
-                    >
-                      <WithIcon icon={ClipboardCopy} size={14}>
-                        文をコピー
-                      </WithIcon>
-                    </button>
-                    {r.to === 'staff' && contactMail && (
-                      <>
-                        <MailButton
-                          mail={mail}
-                          label="メール"
-                          why={NO_EMAIL}
-                          srLabel={`${r.name}へのメールを作る`}
-                          testId="sudden-contact-mail"
-                        />
-                        <MailLengthNote mail={mail} />
-                      </>
-                    )}
-                    <label className="check sudden-contact-sent">
-                      <input
-                        type="checkbox"
-                        checked={sent.has(sentKey(r))}
-                        onChange={(e) => toggleSent(sentKey(r), e.target.checked)}
-                        style={{ width: 'auto' }}
-                        aria-label={`${r.name}に連絡した`}
-                        data-testid="sudden-contact-sent"
-                      />
-                      連絡した
-                    </label>
-                  </div>
-                </li>
-              );
-            })}
+            {rows.map((r) => (
+              <ContactItem key={r.key} ctx={ctx} r={r} />
+            ))}
           </ul>
         </>
       )}
@@ -170,7 +225,6 @@ export function contactStep({ p, s }: StepCtx, done: Done): StepView {
       >
         <WithIcon icon={Check}>{canAdopt ? 'あとで確定する' : '終わる'}</WithIcon>
       </button>
-      {backButton(s.go, 4)}
     </>
   );
   return { body, footer };

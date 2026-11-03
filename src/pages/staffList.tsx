@@ -1,13 +1,14 @@
 // 〈スタッフ〉一覧の部品（PRD D71・D220・D308。ADR-0015）：最終勤務日のある人の枠と、一覧の1行（狭い画面ではカード）
-import { CalendarX, Clock, Eye, MapPin, Smartphone, UserRoundCog } from 'lucide-react';
+import { CalendarX, Eye, MapPin, Smartphone, UserRoundCog } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { CondChips, TraitChips } from '../components/conditions';
 import { StaffMark } from '../components/StaffMark';
 import { WithIcon } from '../components/ui';
 import type { Staff } from '../contracts/documents';
 import type { Item } from '../contracts/rules';
-import { hasLocation, WEEKDAY_LABELS } from '../lib/common';
+import { hasLocation } from '../lib/common';
 import { mdText } from '../lib/dateText';
+import { staffViewHref } from '../lib/links';
 import { narrowRole } from '../lib/narrowRoles';
 import { type StaffCol, shiftText, staffNameNote, workDaysText } from '../lib/peopleView';
 import { shouldOpenRow } from '../lib/rowOpen';
@@ -65,7 +66,6 @@ const COL_LABEL: Record<StaffCol, (clientTerm: string) => string> = {
   name: () => '名前',
   days: () => '勤務日',
   hours: () => '勤務時間',
-  work: () => '勤務',
   traits: () => '特性',
   requires: (client) => `${client}に求めること`,
   home: () => '自宅の位置',
@@ -109,7 +109,7 @@ function StaffCell({
           <span className="with-staff-mark">
             <StaffMark staff={s} size="md" />
             {s.name}
-            {/* 切は状態の列を出さないので、例外の休止中だけ名前のそばに残す */}
+            {/* 状態の列を出さないときは、例外の休止中だけ名前のそばに残す */}
             {staffNameNote(s, cols) && <span className="chip">{staffNameNote(s, cols)}</span>}
           </span>
         </td>
@@ -124,14 +124,6 @@ function StaffCell({
       return (
         <td {...narrowRole.cell} className="nowrap" data-label="勤務時間" data-testid="staff-hours">
           {shiftText(s)}
-        </td>
-      );
-    case 'work':
-      return (
-        <td {...narrowRole.cell} className="nowrap" data-label="勤務">
-          <WithIcon icon={Clock} size={14}>
-            {s.workDays.map((d) => WEEKDAY_LABELS[d]).join('')} {s.shiftStart}〜{s.shiftEnd}
-          </WithIcon>
         </td>
       );
     case 'traits':
@@ -189,15 +181,18 @@ export function StaffRow({
   clientTerm,
   staffItems,
   itemById,
+  today,
   onOpen,
 }: {
   s: Staff;
-  /** 出す列（切は名前・勤務日・勤務時間。lib/peopleView） */
+  /** 出す列（名前・勤務日・勤務時間の3列と、くわしい列。lib/peopleView） */
   cols: readonly StaffCol[];
   clientTerm: string;
   /** 〈スタッフ〉の項目（特性のチップ） */
   staffItems: Item[];
   itemById: Map<string, Item>;
+  /** 今日（「今日の画面」はその日のスマホ画面を開く） */
+  today: string;
   /** その人の画面へ移る */
   onOpen: () => void;
 }) {
@@ -206,7 +201,7 @@ export function StaffRow({
       {...narrowRole.row}
       data-testid="staff-row"
       className="row-open"
-      // 行のどこを押してもその人の画面へ（PRD D308。ボタン・リンク・文字の選択は除く。キーボードは右端の「開く」）
+      // 行のどこを押してもその人の画面へ（PRD D308。ボタン・リンク・文字の選択は除く。キーボードは右端の「詳しく」）
       onClick={(e) => {
         const ok = shouldOpenRow({
           target: e.target as Element,
@@ -232,21 +227,24 @@ export function StaffRow({
       <td {...narrowRole.cell} className="nowrap narrow-act">
         <div className="actions">
           <Link
-            className="icon-btn tone-plain"
+            className="btn btn-small"
             to={`/staff/${encodeURIComponent(s.id)}`}
-            title={`${s.name}を開く`}
-            aria-label={`${s.name}を開く`}
+            aria-label={`詳しく（${s.name}）`}
             data-testid="staff-open"
           >
-            <Eye size={16} strokeWidth={2.2} aria-hidden="true" />
+            <WithIcon icon={Eye} size={14}>
+              詳しく
+            </WithIcon>
           </Link>
           <Link
-            className="icon-btn tone-plain"
-            to={`/staff-view/${s.id}`}
-            title={`${s.name}さんの画面で見る`}
-            aria-label={`${s.name}さんの画面で見る`}
+            className="btn btn-small"
+            to={staffViewHref(s.id, today)}
+            aria-label={`今日の画面（${s.name}）`}
+            data-testid="staff-view-open"
           >
-            <Smartphone size={16} strokeWidth={2.2} aria-hidden="true" />
+            <WithIcon icon={Smartphone} size={14}>
+              今日の画面
+            </WithIcon>
           </Link>
         </div>
       </td>

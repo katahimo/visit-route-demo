@@ -4,17 +4,15 @@ import { useToast } from '../components/Toast';
 import { PageHeader } from '../components/ui';
 import { useFeature } from '../components/useFeature';
 import type { VacancyCell } from '../contracts/vacancy';
-import { timeText } from '../domain/availability';
-import { hhmmToMinutes, jstDate } from '../domain/time';
+import { jstDate } from '../domain/time';
 import { copyText } from '../lib/clipboard';
 import { WEEKDAY_LABELS } from '../lib/common';
 import { mdText } from '../lib/dateText';
 import { unassignedDays } from '../lib/dayPlan';
-import { holdSlots } from '../lib/hold';
 import { typeOf } from '../lib/patternText';
-import { answerCard, whenWhatLine } from '../lib/vacancyView';
+import { bandInquiry, startRangeText } from '../lib/vacancyBands';
+import { whenWhatLine } from '../lib/vacancyView';
 import { useDemoData } from '../store';
-import { inquirySummary } from '../vacancy';
 import { useVacancyHold } from './useVacancyHold';
 import { useVacancyInput, useVacancyQuery } from './useVacancyInput';
 import { useVacancyNotice } from './useVacancyNotice';
@@ -22,15 +20,16 @@ import { useNarrowGridScroll, useVacancyResult } from './useVacancyResult';
 import { NoticeCard } from './vacancyNotice';
 import { HoldPanel, PickedPanel } from './vacancyPanels';
 import { ROW_WEEKDAYS } from './vacancyParts';
-import { NextStage, PlaceStage, TableStage, WhenStage } from './vacancyStages';
+import { NextStage, PlaceStage, TableStage } from './vacancyStages';
+import { WhenStage } from './vacancyWhen';
 import './settings.css';
 import './vacancy.css';
 
 /**
- * 空き状況と問い合わせの試算（ADR-0012。段階3＝PRD D45〜D48。design.md §4 pages「空き状況と問い合わせの試算」）。
- * 条件の欄 → 曜日×開始時刻の表（人数と ○△×？）→ マスを押すと日付ごとの人 → 問い合わせの試算の要約・コピー → 仮押さえ。
+ * 空き状況と問い合わせの試算（ADR-0012。段階3＝PRD D45〜D47・D54。design.md §4 pages「空き状況と問い合わせの試算」）。
+ * チップ（曜日・時間帯・所要）とくわしい条件 → 答えのカードと要約のコピー → 「詳しく ▾」の曜日×開始時刻の表（マスを押すと日付ごとの人）→ 仮押さえ（PRD D411・D412）。
  * データは読むだけ。仮押さえだけが1回の update で〈利用者さん〉（仮）と定期パターンを入れる（lib/hold の holdData）。
- * 入力は useVacancyInput、計算は useVacancyResult、案内文は useVacancyNotice、仮押さえは useVacancyHold、段階の見た目は vacancyStages
+ * 入力は useVacancyInput、計算は useVacancyResult、案内文は useVacancyNotice、仮押さえは useVacancyHold、段階の見た目は vacancyWhen・vacancyStages
  */
 export default function VacancyPage() {
   const { data, update } = useDemoData();
@@ -43,17 +42,17 @@ export default function VacancyPage() {
   const today = jstDate(Date.now());
 
   const input = useVacancyInput(today, data.visitTypes);
-  const { typeId, duration, requirements, place, weeks, from, wishDays, wishFrom, wishTo, perWeek } = input;
+  const { typeId, duration, requirements, place, weeks, from, wishDays, wishFrom, wishTo, wishBands, perWeek } = input;
   const { durationNum, durationOk, fromOk, exactPlace, query, range } = useVacancyQuery(input);
   const [picked, setPicked] = useState<VacancyCell | null>(null);
   const { result, busy } = useVacancyResult(data, query, range);
   const gridRef = useNarrowGridScroll(!!result && result.times.length > 0);
   const staffName = useMemo(() => new Map(data.staff.map((s) => [s.id, s.name])), [data.staff]);
 
-  const wish = { weekdays: wishDays, from: wishFrom, to: wishTo, perWeek, startDate: from };
-  const wishOk = hhmmToMinutes(wishFrom) <= hhmmToMinutes(wishTo);
-  const summary = result && wishOk ? inquirySummary(result, wish, terms) : null;
-  const slots = result && wishOk ? holdSlots(result, wishDays, wishFrom, wishTo, perWeek) : [];
+  // 時間帯のチップ（PRD D411）：帯の外のマスは答え・要約・仮押さえから除く（lib/vacancyBands）
+  const detailRange = { from: wishFrom, to: wishTo };
+  const ask = { weekdays: wishDays, ...detailRange, bands: wishBands, perWeek, startDate: from };
+  const { wish, wishOk, answerResult, answer, summary, slots } = bandInquiry(result, ask, terms);
   const vType = typeOf(data.visitTypes, typeId);
 
   const notice = useVacancyNotice(data, {
@@ -81,9 +80,7 @@ export default function VacancyPage() {
   };
 
   const noPlan = result?.noPlanDates ?? [];
-  /** 答えのカード（PRD D258） */
-  const answer = result && wishOk ? answerCard(result, wish) : null;
-  /** 担当の足りない日（範囲の今日以降の、担当なしの訪問がある・伝えていない日。PRD D259）。担当は担当を組むの画面か日の予定で入れる（ADR-0063） */
+  /** 担当の足りない日（範囲の今日以降の、担当なしの訪問がある・伝えていない日。PRD D328）。担当は担当を組むの画面か日の予定で入れる（ADR-0063） */
   const rangeKey = result ? result.dates.join(',') : '';
   // biome-ignore lint/correctness/useExhaustiveDependencies: 範囲は日付の並び（rangeKey）で見る
   const missing = useMemo(() => (result ? unassignedDays(data, result.dates, today) : []), [data, rangeKey, today]);
@@ -93,8 +90,7 @@ export default function VacancyPage() {
     typeName: vType?.name ?? null,
     duration,
     weekdayLabels: ROW_WEEKDAYS.filter((w) => wishDays.includes(w)).map((w) => WEEKDAY_LABELS[w]!),
-    from: timeText(wishFrom),
-    to: timeText(wishTo),
+    startRange: startRangeText(wishBands, detailRange),
     perWeek,
     startMd: fromOk ? mdText(from) : '—',
     weeks,
@@ -105,13 +101,14 @@ export default function VacancyPage() {
       <PageHeader
         icon={CalendarSearch}
         title="空き状況"
-        lead={`いつ・何をを入れると、受けられる曜日・時間帯と${terms.staff}の人数がすぐに出ます。場所はあとから足せます`}
+        lead={`曜日・時間帯・所要を選ぶと、受けられる時刻と${terms.staff}の人数が出ます。場所はあとから足せます`}
       />
       <WhenStage data={data} input={input} durationOk={durationOk} fromOk={fromOk} wishOk={wishOk} />
       <PlaceStage input={input} hasPin={exactPlace !== null} />
       <TableStage
         view={{
           result,
+          answerResult,
           busy,
           exactPlace,
           whenLine,
@@ -125,6 +122,7 @@ export default function VacancyPage() {
         }}
         picked={picked}
         onPick={setPicked}
+        onCopy={copy}
         gridRef={gridRef}
       />
       <NextStage
@@ -133,7 +131,6 @@ export default function VacancyPage() {
         perWeek={perWeek}
         hasPlace={!!exactPlace}
         clientWord={terms.client}
-        onCopy={copy}
         onHoldOpen={() => setHold({ name: '', error: null })}
       >
         {/* 空き枠の案内文（ADR-0028 の vacancyNotice）を切っていれば欄ごと出さない。メールを切っていれば紹介元へのメールを出さない */}

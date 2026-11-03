@@ -1,8 +1,8 @@
-// スマホ（幅860px以下）のメニュー（PRD D132・D133・D135・D336。ADR-0024・0045・0055）を本物のブラウザ（390×844）で確かめる：
-// 上の帯（ロゴと今の画面の名前・日付の切り替え。「探す」は下のタブ。〈利用者さん〉一覧と〈スタッフ〉一覧を見分ける。PRD D179・D336）、
+// スマホ（幅860px以下）のメニュー（PRD D132・D133・D135・D401。ADR-0024・0045・0055）を本物のブラウザ（390×844）で確かめる：
+// 上の帯（ロゴと今の画面の名前・日付の切り替え。「探す」は下のタブ。〈利用者さん〉一覧と〈スタッフ〉一覧を見分ける。PRD D179・D401）、
 // 引き出し（下のタブの「メニュー」で開く。role="dialog"・aria-modal・名前、ボタンの aria-expanded・aria-controls、グループの見出し付きの縦並び、
 // 画面を選ぶ・外を押す・Esc で閉じてフォーカスが「メニュー」へ、Tab・Shift+Tab が中で回る、開いているあいだ裏を巻かない）、
-// 下のタブ（ホーム・予定・欠勤・探す・メニュー（PRD D336）、active と aria-current、月・週・日では「予定」（比較は予定を組むなのでどれも付けない）、本文の最後がタブに隠れない）、
+// 下のタブ（予定・〈利用者さん〉・〈スタッフ〉・組む・探す・メニュー（PRD D401）、active と aria-current、月・週・日では「予定」（比較は組むの続きなので「組む」）、本文の最後がタブに隠れない）、
 // 浮いている部品（地図の MapDock・欠勤の振り直しの ReassignDock・トースト）がタブに重ならない、
 // 本物の地図のボタンと本物のトースト（PRD D190。ボタンはタブのすぐ上・トーストが出ても互いに隠れない・本文の下を空ける・safe-area）、印刷で上の帯・下のタブ・引き出しを出さない、
 // 広い画面（1400px）では今の左のメニューのままで、上の帯の部品・下のタブを出さない。
@@ -15,11 +15,12 @@
 // 終了コード：全部通れば 0、通らないものがあれば 1。ページのエラー（pageerror）も失敗に数える
 const path = require('node:path');
 const { skipTour } = require('./lib/tourSeen.cjs');
-const { BASE, OUT_DIR, NOW, STORAGE_KEY, check, isFocused, runSteps, settle } = require('./lib/env.cjs');
+const { OUT_DIR, NOW, STORAGE_KEY, check, isFocused, runSteps, settle } = require('./lib/env.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
+const { goTo, reveal } = require('./lib/ui.cjs');
 
 const drawer = (page) => page.getByTestId('nav-drawer');
-/** メニューの最上位の項目（子の無い項目と、畳める親の行の項目。PRD D349） */
+/** メニューの最上位の項目（子の無い項目と、畳める親の行の項目。PRD D401） */
 const TOP_LINKS =
   '.nav-groups > .nav-group > .nav-link, .nav-groups > .nav-group > .nav-parent > .nav-parent-row > .nav-link';
 const menuBtn = (page) => page.getByTestId('menu-btn');
@@ -29,14 +30,8 @@ const visible = (loc) => loc.isVisible().catch(() => false);
 const overlaps = (a, b) =>
   a.x < b.x + b.width - 1 && b.x < a.x + a.width - 1 && a.y < b.y + b.height - 1 && b.y < a.y + a.height - 1;
 
-async function open(page, hash, ready) {
-  // 同じ文書の中で hash を移してから読み直すと、読み直す前に `?id=` が処理されて URL から消えることがあるので、
-  // about:blank を挟んで開く（e2e-home と同じ）
-  await page.goto('about:blank');
-  await page.goto(`${BASE}#${hash}`);
-  await page.locator(ready).first().waitFor({ timeout: 30000 });
-  await settle(page, 400);
-}
+// 画面を新しく開く（共通の手 goTo。待つ長さ・見出し・落ち着くまでの待ちはこの画面の e2e の既定）
+const open = (page, hash, ready) => goTo(page, hash, { ready: ready, timeout: 30000, h1: false, settleMs: 400 });
 
 async function header(page) {
   await open(page, '/clients', '[data-testid="screen-name"]');
@@ -44,8 +39,8 @@ async function header(page) {
   await open(page, '/staff', '[data-testid="screen-name"]');
   const name2 = await page.getByTestId('screen-name').innerText();
   check(
-    name === '基本情報・利用者さん一覧' && name2 === '基本情報・スタッフ一覧',
-    '上の帯：〈利用者さん〉一覧と〈スタッフ〉一覧を見分ける',
+    name === '利用者さん' && name2 === 'スタッフ',
+    '上の帯：〈利用者さん〉と〈スタッフ〉を見分ける（呼び名そのまま。PRD D401）',
     {
       name,
       name2,
@@ -70,11 +65,11 @@ async function header(page) {
     '上の帯とナビの行が画面の幅に収まる（横に巻かない）',
     { hb, nb, db },
   );
-  check(!(await visible(page.getByTestId('cmdk-open'))), '上の帯に「探す」は出さない（下のタブ。PRD D336）');
+  check(!(await visible(page.getByTestId('cmdk-open'))), '上の帯に「探す」は出さない（下のタブ。PRD D401）');
   check(
     (await page.locator('.app-header [data-testid="menu-btn"]').count()) === 0 &&
       (await tabs(page).locator('[data-testid="menu-btn"]').count()) === 1,
-    '「メニュー」は上の帯でなく下のタブの最後（PRD D336）',
+    '「メニュー」は上の帯でなく下のタブの最後（PRD D401）',
   );
   const scrollW = await page.evaluate(() => document.documentElement.scrollWidth);
   check(scrollW <= 390, 'ページが横にはみ出さない', scrollW);
@@ -103,7 +98,7 @@ async function drawerOpenClose(page) {
   check(
     (await page.evaluate(() => document.getElementById('root').inert)) &&
       (await d.locator('h2.nav-group-title').count()) === 0,
-    '引き出し：後ろの画面は inert・グループの見出しは無い（最上位5項目と子の項目。PRD D349）',
+    '引き出し：後ろの画面は inert・グループの見出しは無い（最上位5項目と子の項目。PRD D401）',
   );
   check(
     (await btn.getAttribute('aria-expanded')) === 'true' &&
@@ -112,30 +107,29 @@ async function drawerOpenClose(page) {
   );
   const titles = await d.locator('.nav-group-title').allInnerTexts();
   check(titles.length === 0, '引き出し：見出しの無い1つの並び', titles);
-  // 最上位は5項目（ホーム・予定を組む・予定・空き状況・設定。ADR-0067）。開いている親の子の項目も含めて、全部の項目を縦に並べる
+  // 最上位は6項目（予定・空き状況・〈利用者さん〉・〈スタッフ〉・組む・設定。ADR-0074・ADR-0078）。開いている親の子の項目も含めて、全部の項目を縦に並べる
   const top = await d.locator(TOP_LINKS).evaluateAll((els) => els.map((el) => el.dataset.key));
   const links = d.locator('.nav-link');
   const n = await links.count();
   const boxes = [];
   for (let i = 0; i < n; i++) boxes.push(await links.nth(i).boundingBox());
   check(
-    JSON.stringify(top) === JSON.stringify(['home', 'arrange', 'schedule', 'vacancy', 'settings']) &&
+    JSON.stringify(top) === JSON.stringify(['schedule', 'vacancy', 'clients', 'staff', 'arrange', 'settings']) &&
       n > top.length &&
       boxes.every((b, i) => i === 0 || b.y > boxes[i - 1].y),
-    '引き出し：最上位5項目のメニューと開いた子の項目を縦に並べる',
+    '引き出し：最上位6項目のメニュー（空き状況を含む）と開いた子の項目を縦に並べる',
     { top, n },
   );
   await settle(page, 400); // 出てくる動きが終わるまで
   const db = await d.boundingBox();
   check(db.x === 0 && db.width < 390, '引き出し：左から出る', db);
-  // 週の予定では、予定の子の「◯月の予定」（月・週の子）に印が付く（親の予定は has-current）
+  // 週の予定では、「予定」に印が付く（子は無い）
   const current = d.locator('[aria-current="page"]');
   check(
     (await current.count()) === 1 &&
-      (await current.getAttribute('data-key')) === 'month-view' &&
-      (await d.locator('[data-parent="schedule"] > .nav-parent-row > .nav-link.has-current').count()) === 1 &&
+      (await current.getAttribute('data-key')) === 'schedule' &&
       (await isFocused(current)),
-    '引き出し：開いたら今の画面の項目（週の予定は予定の子「◯月の予定」）へフォーカス',
+    '引き出し：開いたら今の画面の項目（週の予定は「予定」）へフォーカス',
   );
   await page.screenshot({ path: path.join(OUT_DIR, 'mobile-drawer.png') });
 
@@ -186,19 +180,17 @@ async function drawerOpenClose(page) {
   await d.waitFor({ state: 'detached' });
   await page.waitForURL(/#\/basics/);
   check(
-    (await isFocused(btn)) && /基本情報・予定と相性$/.test(await page.getByTestId('screen-name').innerText()),
+    (await isFocused(btn)) && /組む・予定と相性$/.test(await page.getByTestId('screen-name').innerText()),
     '画面を選ぶと移って閉じ、フォーカスが「メニュー」へ',
   );
-  // 今の画面を選んでも閉じるだけ（URL のクエリ＝画面の状態を消さない）。予定を開いていると印はモードの子（別の画面へ移る入口）に
-  // 付くので、予定を畳んで、今の画面そのもの（週の予定）を指す親の「予定」に印を移してから押す
+  // 今の画面を選んでも閉じるだけ（URL のクエリ＝画面の状態を消さない）。今の画面そのもの（週の予定）を指す「予定」に印がある
   await open(page, '/week?view=table', '[data-testid="menu-btn"]');
   await btn.click();
   await d.waitFor();
-  await d.locator('[data-parent="schedule"] [data-testid="nav-toggle"]').click();
   const parent = d.locator('[aria-current="page"]');
   check(
     (await parent.count()) === 1 && (await parent.getAttribute('data-key')) === 'schedule',
-    '予定を畳むと今の画面の印は親の「予定」に付く',
+    '週の予定では今の画面の印は「予定」に付く',
   );
   await parent.click();
   await d.waitFor({ state: 'detached' });
@@ -216,8 +208,8 @@ async function bottom(page) {
   const t = tabs(page);
   const labels = (await t.locator('.bottom-tab').allInnerTexts()).map((x) => x.trim());
   check(
-    JSON.stringify(labels) === JSON.stringify(['ホーム', '予定', '欠勤', '探す', 'メニュー']),
-    '下のタブ：ホーム・予定・欠勤・探す・メニュー（PRD D336）',
+    JSON.stringify(labels) === JSON.stringify(['予定', '利用者さん', 'スタッフ', '組む', '探す', 'メニュー']),
+    '下のタブ：予定・〈利用者さん〉・〈スタッフ〉・組む・探す・メニュー（PRD D401）',
     labels,
   );
   const tb = await t.boundingBox();
@@ -236,10 +228,10 @@ async function bottom(page) {
     '下のタブ：今の画面のタブは何もしない',
     page.url(),
   );
-  await t.getByTestId('bottom-tab').filter({ hasText: 'ホーム' }).click();
-  await page.waitForURL(/#\/home/);
+  await t.getByTestId('bottom-tab').filter({ hasText: 'スタッフ' }).click();
+  await page.waitForURL(/#\/staff/);
   await settle(page, 300);
-  check(JSON.stringify(await active()) === '["ホーム"]', '下のタブ：押すと移る（ホーム）', await active());
+  check(JSON.stringify(await active()) === '["スタッフ"]', '下のタブ：押すと移る（スタッフ）', await active());
   // 「探す」はパレットを開く（印は付けない）
   await t.getByTestId('bottom-search').click();
   await page.getByTestId('cmdk-input').waitFor();
@@ -247,14 +239,30 @@ async function bottom(page) {
   await page.keyboard.press('Escape');
   await page.getByTestId('cmdk-input').waitFor({ state: 'detached' });
   await open(page, '/compare', '[data-testid="bottom-tabs"]');
-  check((await active()).length === 0, '下のタブ：比較（予定を組む）ではどれも active にしない');
+  check(
+    JSON.stringify(await active()) === '["組む"]',
+    '下のタブ：比較（組むの続き）は「組む」が active',
+    await active(),
+  );
   await open(page, '/clients', '[data-testid="bottom-tabs"]');
-  check((await active()).length === 0, '下のタブ：タブに無い画面ではどれも active にしない');
+  check(
+    JSON.stringify(await active()) === '["利用者さん"]',
+    '下のタブ：〈利用者さん〉の一覧は「利用者さん」が active',
+    await active(),
+  );
+  await open(page, '/vacancy', '[data-testid="bottom-tabs"]');
+  check(
+    (await active()).length === 0,
+    '下のタブ：入の空き状況は引き出しの項目で下のタブには無い（どれも active にしない。PRD D401）',
+    await active(),
+  );
+  await open(page, '/types', '[data-testid="bottom-tabs"]');
+  check((await active()).length === 0, '下のタブ：タブに無い画面（設定）ではどれも active にしない');
   // 「メニュー」のボタンもタブと同じ大きさで並ぶ
   const boxes = await t.locator('.bottom-tab').evaluateAll((els) => els.map((el) => el.getBoundingClientRect().width));
   check(
-    boxes.length === 5 && boxes.every((w) => Math.abs(w - 78) <= 1),
-    '下のタブ：5つが全幅を等分する（探す・メニューも同じ幅）',
+    boxes.length === 6 && boxes.every((w) => Math.abs(w - 65) <= 1),
+    '下のタブ：6つが全幅を等分する（探す・メニューも同じ幅）',
     boxes,
   );
   // 本文の最後がタブに隠れない（いちばん下まで巻いて、本文の下の端がタブより上）
@@ -312,7 +320,7 @@ async function floating(page) {
   });
   // 本物の地図のボタン：地図のカードが画面の外に出るまで巻いたとき（出れば重ならないかを見る）。
   // 狭い画面の地図のカードは本体の下（ページの終わり）なので、カードの上端が画面の下より下になる所まで巻く
-  // （初期データに今日の案がある（PRD D225）ので、開いた時点で地図のカードまで描かれている。いちばん下へ巻くとカードが見えてボタンは出ない）
+  // （初期データに今日の案がある（PRD D322）ので、開いた時点で地図のカードまで描かれている。いちばん下へ巻くとカードが見えてボタンは出ない）
   await page.locator('.plan-map').first().waitFor({ timeout: 30000 });
   await page.evaluate(() => {
     const card = document.querySelector('.plan-map');
@@ -490,8 +498,10 @@ async function narrowRules(page) {
     'プリセット：名前は1行（初期値に戻す・基準の重みを写して保存のボタンは無い。ADR-0065）',
     lines,
   );
-  await page.getByTestId('preset-edit').first().locator('summary').click();
-  const weights = page.getByTestId('preset-edit').first().getByTestId('preset-weights');
+  // 点数の基準でないプリセット（基準のプリセットの重みは下の条件の表に寄せた。ADR-0088）
+  const other = page.locator('[data-testid="preset-edit"]').nth(1);
+  await other.locator('summary').click();
+  const weights = other.getByTestId('preset-weights');
   await weights.waitFor();
   const wrow = await weights
     .locator('tbody > tr')
@@ -506,7 +516,7 @@ async function narrowRules(page) {
     'プリセット：重みの読み取り専用の一覧はカードで画面の中（入力欄なし。ADR-0065）',
     { wrow, wright },
   );
-  await page.getByTestId('preset-edit').first().locator('summary').click();
+  await other.locator('summary').click();
   await page.screenshot({ path: path.join(OUT_DIR, 'narrow-rules.png') });
   // 重みの下書き（PRD D286）：動かすと確定の帯が下のタブのすぐ上に出て、2つのボタンが画面の中・巻いても見える。取り消すと消える
   const range = page.getByTestId('narrow-rules').locator('input[type="range"]:not([disabled])').first();
@@ -716,7 +726,7 @@ async function narrowWeek(page) {
   p2.on('pageerror', (e) => check(false, '週（訪問の無い週）：ページのエラー', String(e)));
   await p2.clock.setFixedTime(NOW);
   try {
-    await open(p2, '/home', 'h1');
+    await open(p2, '/data', 'h1');
     await p2.evaluate((k) => {
       const d = JSON.parse(localStorage.getItem(k));
       d.visits = d.visits.map((v) => ({ ...v, cancelled: true }));
@@ -741,9 +751,11 @@ async function narrowWeek(page) {
   }
 }
 
-/** 空き状況（PRD D221）：表ははじめ 9:00 の列から（曜日の列のすぐ右）。右に続きがある印は端まで巻くと消える */
+/** 空き状況（PRD D221）：表は「詳しく ▾」を開くと 9:00 の列から（曜日の列のすぐ右）。右に続きがある印は端まで巻くと消える */
 async function narrowVacancy(page) {
-  await open(page, '/vacancy', '[data-testid="vacancy-grid"]');
+  await open(page, '/vacancy', '[data-testid="vacancy-answer"]');
+  // 表は「詳しく ▾」の中（PRD D412）。開いたときに 9:00 の列まで巻く
+  await reveal(page, 'vacancy-grid');
   await settle(page, 300);
   const st = await page.getByTestId('vacancy-grid').evaluate((t) => {
     const box = t.parentElement;
@@ -886,9 +898,9 @@ async function wide(page) {
   check(nav.width === 232 && nav.height === 1000, '広い画面：左のメニューは今のまま（幅232px・縦いっぱい）', nav);
   check(
     (await page.locator('.side-nav .nav-group-title').count()) === 0 &&
-      (await page.locator(`.side-nav :is(${TOP_LINKS})`).count()) === 5 &&
+      (await page.locator(`.side-nav :is(${TOP_LINKS})`).count()) === 6 &&
       (await page.locator('.app-header').boundingBox()).height === 72,
-    '広い画面：最上位5項目のメニュー・上の帯の高さ 72px',
+    '広い画面：最上位6項目のメニュー・上の帯の高さ 72px',
   );
   const pad = await page.evaluate(() => getComputedStyle(document.querySelector('.app-main')).paddingBottom);
   check(pad === '48px', '広い画面：本文の下の余白は今のまま', pad);

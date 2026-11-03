@@ -1,9 +1,11 @@
 // 空き状況の入力をタブの間だけ覚える（PRD D258。design.md §4 pages「空き状況と問い合わせの試算」）。
 // sessionStorage に置く：ほかの画面へ移って戻っても残り、タブ・ブラウザを閉じれば消える。データ（DemoData）・書き出しには入れない。
-// 読めない値（壊れた・古い形）は既定に戻す（例外を投げない）
+// 読めない値（壊れた・古い形）は項目ごとに既定に戻す（例外を投げない。時間帯のチップ（D411）を足す前の入力も読める。
+// 前の既定の開始の幅 9:00〜17:00 で覚えた入力もそのまま読む）
 import { z } from 'zod';
 import { conditionSchema } from '../contracts/rules';
 import { VACANCY_WEEKS_DEFAULT, VACANCY_WEEKS_MAX, VACANCY_WEEKS_MIN } from '../contracts/vacancy';
+import { defaultWishRange, WISH_BAND_IDS } from './vacancyBands';
 
 export const VACANCY_INPUT_KEY = 'vrdemo:vacancy:input';
 
@@ -27,6 +29,8 @@ const inputSchema = z.object({
   wishDays: z.array(z.number().int().min(0).max(6)).max(7),
   wishFrom: hhmm,
   wishTo: hhmm,
+  /** 時間帯のチップ（PRD D411。空＝指定なし。足す前に覚えた入力には無いので既定の空になる） */
+  wishBands: z.array(z.enum(WISH_BAND_IDS)).max(3),
   perWeek: z.number().int().min(1).max(7),
   noticePeriod: z.enum(['thisWeek', 'nextWeek', 'fourWeeks']),
   noticeTypeId: z.string().max(100),
@@ -34,18 +38,23 @@ const inputSchema = z.object({
 
 export type VacancyInput = z.infer<typeof inputSchema>;
 
-/** 既定の入力（開始日は今日） */
+/** 既定の所要（分） */
+const DEFAULT_DURATION = 60;
+
+/** 既定の入力（開始日は今日。開始の幅は時間帯のチップの全体で、所要を足して 20:00 に収まる開始まで。PRD D411） */
 export function defaultVacancyInput(today: string): VacancyInput {
+  const range = defaultWishRange(DEFAULT_DURATION);
   return {
     typeId: '',
-    duration: '60',
+    duration: String(DEFAULT_DURATION),
     requirements: [],
     place: { address: '', lat: null, lng: null, postalCode: '', pinnedAddress: '' },
     weeks: VACANCY_WEEKS_DEFAULT,
     from: today,
     wishDays: [],
-    wishFrom: '09:00',
-    wishTo: '17:00',
+    wishFrom: range.from,
+    wishTo: range.to,
+    wishBands: [],
     perWeek: 1,
     noticePeriod: 'nextWeek',
     noticeTypeId: '',

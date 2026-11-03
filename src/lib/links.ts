@@ -14,7 +14,7 @@ export const UNASSIGNED_DO = 'unassigned';
 
 /**
  * 日の画面で「欠勤・キャンセル」の欄を開く URL（PRD D172・D201・D203）。
- * staffId を渡すと、その人の欠勤（2段目：人と時間帯）で開く（列の見出しの「欠勤を直す」と同じ）
+ * staffId を渡すと、その人を選んで開く（列の見出しの「欠勤を直す」と同じ）
  */
 export function suddenHref(date: string, staffId?: string): string {
   const q = new URLSearchParams({ date, do: SUDDEN_DO });
@@ -30,6 +30,12 @@ export const TOLD_DO = 'told';
 
 /** その日の日の画面で、連絡の一覧（未連絡の変更）を開いた状態にする URL（週・月の「変更あり」の印の行き先。日の画面が1回で URL から消す） */
 export const toldHref = (date: string): string => `/plan?date=${date}&do=${TOLD_DO}`;
+
+/**
+ * 〈スタッフ〉のスマホ画面（PRD D16・D417）の URL。date を渡すとその日で開く（画面が ?date= を読んで消す。〈スタッフ〉の一覧の「今日の画面」）
+ */
+export const staffViewHref = (staffId: string, date?: string): string =>
+  `/staff-view/${encodeURIComponent(staffId)}${date ? `?date=${date}` : ''}`;
 
 /**
  * 日の画面の URL の入口 `?do=told`：受けたら移る先の日（?date= が正しければその日、無ければ今の日）。`?do=told` でなければ null。

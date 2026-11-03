@@ -136,8 +136,11 @@ export type RosterMode = 'merge' | 'replace';
 export type RosterSource =
   | { format: 'xlsx' }
   | { format: 'csv'; encoding: 'UTF-8' | 'UTF-16LE' | 'UTF-16BE' | 'Shift_JIS' | 'EUC-JP' };
-/** 顧客台帳の形で読んだときの結果（ADR-0073。PRD D386・D387）：読まなかった列の名前（請求・口座・生年月日など。データに残さない） */
-export type LedgerRead = { skippedColumns: string[] };
+/**
+ * ほかのソフトの形（顧客台帳・予約システムなど）で読んだときの結果（ADR-0073・ADR-0075。PRD D386・D387・D396・D397）：
+ * 形の名前（確認の文に出す。例「顧客台帳」）と、読まなかった列の名前（請求・口座・生年月日など。データに残さない）
+ */
+export type OtherFormRead = { label: string; skippedColumns: string[] };
 /**
  * 名簿の読み込みの結果（PRD D106）。data は名簿を当てた新しいデータ（store の migrate を通したもの。画面が store の update で入れる）。
  * 件数は migrate のあとの結果を ID で引き、今の人と比べて数える（repair で元に戻る違いは変更とみなさない）
@@ -162,6 +165,30 @@ export type RosterImportResult = {
   activeBefore: number;
   /** 読んだファイルの形（.xlsx か CSV と文字コード。ADR-0068） */
   source: RosterSource;
-  /** 顧客台帳の形で読んだときだけ（名簿の形・.xlsx は null。ADR-0073） */
-  ledger: LedgerRead | null;
+  /** ほかのソフトの形で読んだときだけ（名簿の形・.xlsx は null。ADR-0073・ADR-0075） */
+  otherForm: OtherFormRead | null;
+};
+
+/**
+ * 予約の CSV の読み込みの結果（ADR-0075。PRD D408）。data は予約を訪問（単発）として入れた新しいデータ（store の migrate を通したもの。
+ * 画面が確かめてから store の update で入れる）。同じ予約番号の訪問は直し、ファイルに無い訪問はそのまま
+ */
+export type BookingImportResult = {
+  data: DemoData;
+  /** 足した訪問の数 */
+  added: number;
+  /** 直した訪問の数（日付・時刻・所要・取り消し・メモが変わった） */
+  updated: number;
+  /** 変わらなかった訪問の数 */
+  unchanged: number;
+  /** まだ入れていない取り消し済みの予約で、足さなかった数 */
+  cancelledSkipped: number;
+  /** 名前が〈利用者さん〉に無い・同じ名前が2人いて入れなかった予約（「名前（N件）」。名簿を先に読み込む） */
+  unmatched: string[];
+  /** 読めなかった行（「N行目：理由」） */
+  badRows: string[];
+  /** 読んだファイルの形（CSV と文字コード） */
+  source: RosterSource;
+  /** 見分けた形の名前と読まなかった列 */
+  otherForm: OtherFormRead;
 };

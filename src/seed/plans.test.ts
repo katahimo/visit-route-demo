@@ -12,8 +12,9 @@ const data = createInitialData(TODAY);
 const days = Array.from({ length: SEED_PLAN_DAYS }, (_, i) => addDays(TODAY, i));
 
 describe('createInitialData（PRD D322。ADR-0064）', () => {
-  it('今日からの日は AI で組まない（保存した回は無く、繰り返しの担当のまま）', () => {
-    expect(data.visits).toEqual([]);
+  it('今日からの日は AI で組まない（繰り返しの担当のまま。保存した回はその日に担当できない回の担当なしだけ）', () => {
+    expect(data.visits.length).toBeGreaterThan(0);
+    expect(data.visits.every((v) => v.date >= TODAY && v.staffId === null && v.start === null && !v.pinned)).toBe(true);
     for (const d of days) {
       const placed = visitsOn(data, d).filter((v) => !v.cancelled);
       expect(placed.some((v) => v.staffId !== null)).toBe(true);
@@ -24,7 +25,10 @@ describe('createInitialData（PRD D322。ADR-0064）', () => {
   it('withSeedPlans：今日から7日分の担当・開始を訪問に書き、8日目からは書かない（テストのデータを作る部品）', () => {
     const planned = withSeedPlans(data, TODAY);
     expect(SEED_PLAN_DAYS).toBe(7);
-    expect([...new Set(planned.visits.map((v) => v.date))].sort()).toEqual(days);
+    // 8日目からは初期データの担当なしの回（その日に担当できない回）だけ
+    const later = planned.visits.filter((v) => v.date > days.at(-1)!);
+    expect([...new Set(planned.visits.map((v) => v.date))].filter((d) => d <= days.at(-1)!).sort()).toEqual(days);
+    expect(later).toEqual(data.visits.filter((v) => v.date > days.at(-1)!));
     for (const d of days) {
       const placed = visitsOn(planned, d).filter((v) => !v.cancelled);
       expect(placed.every((v) => v.start !== null || v.staffId === null)).toBe(true);
@@ -38,7 +42,7 @@ describe('createInitialData（PRD D322。ADR-0064）', () => {
     expect(createInitialData(TODAY)).toEqual(data);
   });
 
-  it('訪問・伝えた内容のほかは createDemoData と同じ', () => {
+  it('訪問・伝えた内容のほかは createDemoData と同じ（繰り返しの担当も変えない）', () => {
     const base = createDemoData(TODAY);
     expect({ ...data, visits: [], snapshots: {} }).toEqual(base);
   });

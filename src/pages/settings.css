@@ -261,6 +261,38 @@
   background: #fbe1dd;
   color: var(--danger);
 }
+.compat-legend-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--sub);
+}
+.compat-legend-mark {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  white-space: nowrap;
+}
+.compat-legend-mark b,
+.compat-choice-mark {
+  font-size: 0.95rem;
+}
+.compat-legend-mark .lv2,
+.compat-legend-mark .lv1,
+.compat-choice.lv2 .compat-choice-mark,
+.compat-choice.lv1 .compat-choice-mark {
+  color: var(--ok-ink);
+}
+.compat-legend-mark .lvm1,
+.compat-choice.lvm1 .compat-choice-mark {
+  color: var(--warn-ink);
+}
+.compat-legend-mark .lvm2,
+.compat-choice.lvm2 .compat-choice-mark {
+  color: var(--danger);
+}
 .compat-table .compat-head {
   vertical-align: bottom;
   padding-bottom: 6px;
@@ -381,29 +413,35 @@
 }
 
 /* 点数の基準のプリセット（ADR-0010） */
-.score-ruler {
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 8px 12px;
+/* プリセットの一覧（左の丸で点数の基準を選ぶ。ADR-0088） */
+.preset-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 0;
+  padding: 0;
   margin: 0;
+  min-width: 0;
 }
-.score-ruler legend {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 0 4px;
-  font-weight: 600;
+.preset-list legend {
+  padding: 0;
+  margin-bottom: 4px;
 }
-.score-ruler-option {
-  display: inline-flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 6px;
+.preset-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+.preset-row > input[type='radio'] {
+  width: auto;
+  margin: 14px 0 0;
+  flex: none;
   cursor: pointer;
 }
-.score-ruler-option input {
-  width: auto;
-  margin: 0;
+.preset-row > .preset-edit {
+  flex: 1;
+  min-width: 0;
 }
 
 /* ---- 定期パターン（〈利用者さん〉の欄の中。ADR-0012） ---- */
@@ -440,10 +478,7 @@
   font-weight: 700;
   padding: 0 6px;
 }
-/* 定期パターンの第N週・曜日ごとの時刻（ADR-0013） */
-.month-week-toggle {
-  min-width: 52px;
-}
+/* 定期パターンの曜日ごとの時刻（ADR-0013） */
 .pattern-daytimes {
   display: grid;
   gap: 6px;
@@ -577,62 +612,86 @@
   background: #ece7f6;
   color: #5b4a8a;
 }
-/* 列の見出し（PRD D113・D114）：押すと詳細の吹き出し。名前は名字と名の2行（空白が無ければ4文字ごと）で全部出す */
-.compat-head-btn {
+/* 列の見出し・行の名前（PRD D113〜D115・D420）：欄そのものを押すと詳細の吹き出し（ボタンにしない。表の中は矢印で動く）。
+   名前は名字と名の2行（空白が無ければ4文字ごと）で全部出す */
+.compat-table th[data-kind] {
+  cursor: pointer;
+  border-radius: 8px;
+}
+.compat-table th[data-kind]:hover,
+.compat-table th[data-kind][aria-expanded='true'] {
+  background: var(--primary-soft);
+}
+.compat-table th[data-kind]:focus-visible,
+.compat-table td.compat-cell:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: -3px;
+}
+.compat-head-inner {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  min-width: 44px;
-  margin: 0 auto;
+  min-width: 40px;
   padding: 2px 2px 3px;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  background: none;
-  font: inherit;
-  color: inherit;
-  cursor: pointer;
-}
-.compat-head-btn:hover,
-.compat-head-btn[aria-expanded='true'] {
-  border-color: var(--line);
-  background: var(--primary-soft);
-}
-.compat-head-btn:focus-visible,
-.compat-client-btn:focus-visible {
-  outline: 3px solid var(--focus);
-  outline-offset: 1px;
 }
 .compat-head-line {
   display: block;
   white-space: nowrap;
 }
-/* 行の名前（PRD D115）：押すと詳細の吹き出し。見た目は ClientName と同じ */
-.compat-client-btn {
+.compat-client-name {
   display: flex;
   align-items: center;
   gap: 8px;
   min-width: 0;
   max-width: 100%;
-  padding: 2px 6px 2px 2px;
-  border: 1px solid transparent;
-  border-radius: 8px;
+  padding-right: 6px;
+}
+/* 相性を選ぶ欄（PRD D420）：5段を縦に並べ、今の相性に印 */
+.compat-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 200px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.compat-choice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
   background: none;
   font: inherit;
-  color: inherit;
+  color: var(--ink);
   text-align: left;
   cursor: pointer;
 }
-.compat-client-btn:hover,
-.compat-client-btn[aria-expanded='true'] {
-  border-color: var(--line);
-  background: var(--primary-soft);
+.compat-choice:hover {
+  background: var(--soft);
 }
-/* 絞り込みの欄（PRD D116）：2つを畳める欄にし、広い画面では横に並べる */
+.compat-choice[aria-pressed='true'] {
+  border: 2px solid var(--primary);
+  background: var(--primary-soft);
+  font-weight: 700;
+}
+.compat-choice:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 1px;
+}
+.compat-choice-mark {
+  width: 1.4em;
+  text-align: center;
+}
+/* 絞り込みの欄（PRD D116・D420）：列と行の2つを1つの畳んだ欄に入れ、広い画面では横に並べる */
 .compat-filters {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 12px;
+  gap: 16px;
   align-items: start;
 }
 @media (min-width: 1100px) {
@@ -657,6 +716,10 @@
 .compat-filter-title {
   font-weight: 700;
   font-size: 0.95rem;
+}
+.compat-filter-part-title {
+  margin: 0 0 6px;
+  font-size: 0.85rem;
 }
 .compat-resort {
   margin-left: auto;
@@ -727,14 +790,14 @@
     word-break: keep-all;
     overflow-wrap: anywhere;
   }
-  .compat-client-btn {
+  .compat-client-name {
     gap: 4px;
     padding-right: 2px;
   }
-  .compat-client-btn .dot {
+  .compat-client-name .dot {
     display: none;
   }
-  .compat-client-btn .ellipsis {
+  .compat-client-name .ellipsis {
     white-space: normal;
     overflow: visible;
     word-break: keep-all;
@@ -742,3 +805,17 @@
   }
 }
 
+/* 一覧の表の上の「くわしい列」の切り替え（入のとき。PRD D394） */
+.people-columns-bar {
+  justify-content: flex-end;
+}
+
+/* くわしい列を入れても住所・いつもの予定が細く折れ返らないように（狭い画面はカードなので当てない） */
+@media (min-width: 601px) {
+  .people-table td[data-label='住所'] {
+    min-width: 15em;
+  }
+  .people-table td[data-label='いつもの予定'] {
+    min-width: 9em;
+  }
+}

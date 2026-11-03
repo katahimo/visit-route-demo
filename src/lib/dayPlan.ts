@@ -1,7 +1,7 @@
 // 版2の日の割当（ADR-0053。design.md §5「訪問と日の割当」）。担当・開始・ピンは訪問が持ち、その日の割当は
 // 「その日の訪問の担当と開始の並び」から決まる（routesOf）。AI の提案・手で替えた担当は writeRoutes で訪問に書く。
 // 確定＝〈スタッフ〉に伝えた内容（DaySnapshot）で、確定したあとの変更は toldChanges で「未連絡の変更」になる。
-// 要対応は訪問ごとの検査（visitIssues：担当なし・担当が休み・必須の条件に合わない・時間の約束に間に合わない）。
+// 要対応は訪問ごとの検査（visitIssues：担当なし・担当が休み・必須の条件に合わない・時間の約束に間に合わない・前の訪問と重なる）。
 // どれも純粋関数（DemoData を書き換えない。今の時刻は引数）
 import type { DaySnapshot, DemoData, ToldVisit } from '../contracts/data';
 import type { Visit } from '../contracts/documents';
@@ -114,7 +114,7 @@ export function unassignedOf(problem: Problem, routes: Routes): string[] {
 }
 
 /**
- * 担当の足りない日（空き状況の注意。PRD D259）：dates のうち今日以降で、伝えていない、担当なしの訪問がある日（昇順）
+ * 担当の足りない日（空き状況の注意。PRD D328）：dates のうち今日以降で、伝えていない、担当なしの訪問がある日（昇順）
  */
 export function unassignedDays(data: DemoData, dates: readonly string[], today: string): string[] {
   return dates
@@ -210,8 +210,11 @@ export function settleDay(data: DemoData, date: string): DemoData {
 
 // ---- 訪問ごとの検査（要対応。ADR-0053）----
 
-/** 要対応の種類：担当なし／担当が休み（休み・欠勤・最終勤務日の後・休止）／必須の条件に合わない／時間の約束に間に合わない */
-export type IssueKind = 'unassigned' | 'off' | 'notAllowed' | 'late';
+/**
+ * 要対応の種類：担当なし／担当が休み（休み・欠勤・最終勤務日の後・休止）／必須の条件に合わない／
+ * 時間の約束・働ける時間に間に合わない（その訪問だけでも収まらない）／前の訪問と重なる（その訪問だけなら収まるが、前の訪問のあとでは間に合わない。ADR-0089）
+ */
+export type IssueKind = 'unassigned' | 'off' | 'notAllowed' | 'late' | 'overlap';
 export type VisitIssue = { kind: IssueKind; label: string };
 
 export const ISSUE_LABELS: Record<IssueKind, string> = {
@@ -219,11 +222,25 @@ export const ISSUE_LABELS: Record<IssueKind, string> = {
   off: '担当が休み',
   notAllowed: '条件に合わない',
   late: '時間に間に合わない',
+  overlap: '前の訪問と重なる',
 };
 
 /**
+ * 時間の違反の種類：その担当がその訪問だけを回っても違反するなら「間に合わない」（時間の約束・働ける時間に収まらない。label は違反の言葉）、
+ * その訪問だけなら収まるなら、前の訪問のあとで遅れた「重なり」（ADR-0089）
+ */
+function timeIssue(problem: Problem, si: number | undefined, vi: number | undefined, label: string): VisitIssue {
+  if (si === undefined || vi === undefined) return { kind: 'late', label };
+  const alone = scheduleRoute(problem, si, [vi], 'lenient');
+  return alone && alone.violations.length === 0
+    ? { kind: 'overlap', label: ISSUE_LABELS.overlap }
+    : { kind: 'late', label };
+}
+
+/**
  * 訪問ごとの検査（問題の訪問だけ）。担当なし（担当が休止中・いない人も「担当が休み」）、担当の人がその日に働かない（休み・欠勤・
- * 最終勤務日の後）、必須の条件・相性×・種類・担当を限るに合わない、時間の約束・働ける時間に収まらない（前の訪問と重なるときも）
+ * 最終勤務日の後）、必須の条件・相性×・種類・担当を限るに合わない、時間の約束・働ける時間に収まらない（間に合わない）、
+ * 前の訪問のあとでは収まらない（重なり。その訪問だけなら収まる）
  */
 export function visitIssues(problem: Problem, routes: Routes, visits: readonly Visit[]): Map<string, VisitIssue[]> {
   const out = new Map<string, VisitIssue[]>();
@@ -258,15 +275,16 @@ export function visitIssues(problem: Problem, routes: Routes, visits: readonly V
         add(h.visitId, { kind: 'notAllowed', label: h.label });
       }
     } else {
-      add(h.visitId, { kind: 'late', label: h.label });
+      add(h.visitId, timeIssue(problem, staffIndex.get(h.staffId), vIndex.get(h.visitId), h.label));
     }
   }
-  // 担当が休みの訪問は、時間に間に合わない（働ける時間が無い）を重ねて出さない
+  // 担当が休みの訪問は、時間に間に合わない・重なり（働ける時間が無い）を重ねて出さない
+  const timed = (x: VisitIssue) => x.kind === 'late' || x.kind === 'overlap';
   for (const [id, list] of out)
-    if (list.some((x) => x.kind === 'off') && list.some((x) => x.kind === 'late'))
+    if (list.some((x) => x.kind === 'off') && list.some(timed))
       out.set(
         id,
-        list.filter((x) => x.kind !== 'late'),
+        list.filter((x) => !timed(x)),
       );
   return out;
 }

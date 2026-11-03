@@ -1,6 +1,6 @@
 // 名前から詳細を開く場所を足した所（PRD D205〜D209。ADR-0022）を本物のブラウザで確かめる：
 // 日の画面の「入らなかった訪問」の〈利用者さん〉の i（カードの外・ボタンの入れ子にしない）／「受けられる人」の候補の名前（「この人に入れる」とは別）／
-// 欠勤の人に残る訪問の〈利用者さん〉の名前／拘束が上限を超える帯の名前（2人以上なら名前ごとの稼働の見込みのリンク、1人なら今までのボタン）／
+// 欠勤の人に残る訪問の〈利用者さん〉の名前／拘束が上限を超える帯の名前（2人以上なら名前ごとの稼働の見込みのリンク、1人なら帯のボタン）／
 // 〈利用者さん〉の休みの帯の名前／担当の振り直しの欄の〈利用者さん〉の名前／〈スタッフ〉一覧の名簿の欄（Excel・CSV。読み込みで最終勤務日が入った人は「最終勤務日のある〈スタッフ〉」の欄に出る。ADR-0068）。
 // それぞれ、名前を押すと吹き出しが出て、リンクでその人の画面へ移る。印刷で i と稼働の見込みのリンクを出さない・390px で横にはみ出さない。
 // 入らない訪問・欠勤・休み・上限を超える拘束・最終勤務日のデータは、別のタブで localStorage を書き換えて作る（e2e-view の names() と同じ）。
@@ -10,11 +10,10 @@
 // 終了コード：全部通れば 0、通らないものがあれば 1。ページのエラー（pageerror）も失敗に数える
 const fs = require('node:fs');
 const path = require('node:path');
-const { skipTour } = require('./lib/tourSeen.cjs');
-const { answerConfirms } = require('./lib/confirmDialog.cjs');
-const { BASE, OUT_DIR, NOW, TODAY, STORAGE_KEY, check, settle, urlOf, stored, runSteps } = require('./lib/env.cjs');
+const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, settle, urlOf, stored, runSteps } = require('./lib/env.cjs');
 const { planDays } = require('./lib/plan.cjs');
-const { pagePerStep } = require('./lib/steps.cjs');
+const { openContext, pagePerStep } = require('./lib/steps.cjs');
+const { pressTool } = require('./lib/ui.cjs');
 
 /** 最終勤務日に入れる日（今日の30日後） */
 const LAST_DAY = new Date(Date.parse(`${TODAY}T00:00:00Z`) + 30 * 86400000).toISOString().slice(0, 10);
@@ -111,7 +110,7 @@ async function fitsNarrow(page, where, sel) {
  * 2件目を欠勤の人に残す。ほかの人の訪問の〈利用者さん〉を今日休みにする。拘束の上限を 0.5時間にする
  */
 function makeDay(d, today) {
-  // 版2：担当は訪問に持つ。保存した今日の訪問（単発・この回だけ変えた回）の担当ごとにまとめる
+  // 担当は訪問に持つ。保存した今日の訪問（単発・この回だけ変えた回）の担当ごとにまとめる
   const by = {};
   for (const v of d.visits) {
     if (v.date !== today || v.cancelled || !v.staffId) continue;
@@ -210,8 +209,7 @@ async function day(page) {
   await page.setViewportSize({ width: 390, height: 844 });
   await openPlan(page);
   // 390px の既定は日ごとのリスト（ADR-0055）。入らなかった訪問のカードは「その他 ▾」の「表示」で順番にして見る
-  await page.getByTestId('plan-more').click();
-  await page.getByTestId('plan-view-order').click();
+  await pressTool(page, 'plan-view-order', { where: 'more' });
   await page.locator('.route-col-none .candidate-box button', { hasText: '受けられる人' }).first().click();
   await page.getByTestId('candidate-list').waitFor({ timeout: 10000 });
   const list = page.getByTestId('candidate-list');
@@ -341,7 +339,7 @@ async function day(page) {
   await page.getByTestId('band-leave').screenshot({ path: path.join(OUT_DIR, 'day-390-leave.png') });
 }
 
-// ---- 拘束が上限を超える人が1人なら、今までどおり帯の「稼働の見込み」ボタン ----
+// ---- 拘束が上限を超える人が1人なら、帯の「稼働の見込み」ボタン ----
 async function overOne(page) {
   // 新しい文脈（初期データ）から組むので day の結果の写し
   await planDays(page, { cache: true });
@@ -371,7 +369,7 @@ async function overOne(page) {
   const btn = band.locator('button.btn', { hasText: '勤務の見込み' });
   check(
     (await name.count()) === 1 && (await band.getByTestId('over-span-link').count()) === 0 && (await btn.count()) === 1,
-    '上限を超える帯：1人なら名前のボタンと今までの「勤務の見込み」ボタン（リンクは出さない）',
+    '上限を超える帯：1人なら名前のボタンと帯の「勤務の見込み」ボタン（リンクは出さない）',
     { only, n: await name.count() },
   );
   const id = await name.getAttribute('data-id');
@@ -579,25 +577,12 @@ async function roster(page, dlg) {
   );
 }
 
-const errors = [];
 const steps = pagePerStep({
-  open: async (browser) => {
-    const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, acceptDownloads: true });
-    // 初回の案内ツアーを見た扱いにする（PRD D193）
-    await skipTour(ctx);
-    // 地図のタイルは外へ取りに行かない
-    await ctx.route(/cyberjapandata\.gsi\.go\.jp/, (r) => r.fulfill({ status: 204, body: '' }));
-    const page = await ctx.newPage();
-    // ページの時計を止める（e2e-details と同じ）
-    await page.clock.setFixedTime(NOW);
-    page.on('pageerror', (e) => errors.push(String(e)));
-    return { ctx, page, dlg: await answerConfirms(page) };
-  },
+  open: (browser) => openContext(browser, { context: { acceptDownloads: true } }),
   steps: [day, overOne, roster],
   call: (fn, s) => fn(s.page, s.dlg),
   label: (name) => `${name}：途中で止まった`,
   after: (name, { dlg }) => check(dlg.native.length === 0, `${name}：ブラウザのダイアログを出さない`, dlg.native),
-  end: () => check(errors.length === 0, 'ページのエラーが無い', errors),
 });
 
 module.exports = { steps };

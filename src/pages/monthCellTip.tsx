@@ -93,7 +93,7 @@ export function MonthCellTip({ gridRef, tipStore }: { gridRef: RefObject<HTMLEle
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
   }, [at]);
-  // 文は日付で引く（描画中に DOM の data-* を読まない。休みを切り替えたら新しい文。PR #42 のレビュー）
+  // 文は日付で引く（描画中に DOM の data-* を読まない。休みを切り替えたら新しい文）
   const date = at?.date ?? null;
   const tip = useSyncExternalStore(tipStore.subscribe, () => (date ? tipStore.get(date) : null));
   // 置く先は日付でいまのマスを引く（描き直しで要素が替わっても同じ日のマス）

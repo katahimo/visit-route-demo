@@ -1,4 +1,4 @@
-// 月の画面の日ごとの数（PRD D53・D59・D151〜D155・D223・D295）：日ごとの訪問・状態・数える案・印・要対応・今月の準備・
+// 月の画面の日ごとの数（PRD D53・D59・D151〜D154・D316・D223・D295）：日ごとの訪問・状態・数える案・印・要対応・今月の準備・
 // 進み具合の帯・まとめて確定の対象。表示の選択（〈スタッフ〉・〈利用者さん〉）に依る数は useMonthFocusDays
 import { useMemo } from 'react';
 import type { BandModel } from '../components/progressBand';
@@ -34,7 +34,7 @@ export function useMonthDays(data: DemoData, compileInput: CompileInput, ym: str
     return out;
   }, [data, days]);
 
-  // ---- 日の問題と状態（lib/useDayStatuses。月とホームで共通）----
+  // ---- 日の問題と状態（lib/useDayStatuses。月・週・要対応の帯で共通）----
   const perDay = useDayStatuses(data, compileInput, days);
   // 切（例外だけ見せる。PRD D384）は要対応を帯と同じ分け方に絞る（lib/attentionBand の exceptionStatus）。マス・右の欄・進み具合の数が帯とそろう
   const only = useExceptionsOnly();
@@ -70,11 +70,11 @@ export function useMonthDays(data: DemoData, compileInput: CompileInput, ym: str
 
   /**
    * 見出しの下の要約（月全体。今日より前の日も数える）：帯に無いものだけ（入らない訪問・当日キャンセル）。
-   * 訪問・案のある日は帯（今日以降）に出すので、同じ言葉で違う範囲の数を並べない（PR #38 のレビュー。PRD D154）
+   * 訪問・案のある日は帯（今日以降）に出すので、同じ言葉で違う範囲の数を並べない（PRD D154）
    */
   const summary = useMemo(() => monthSummary(days, statuses, visitsByDate), [days, statuses, visitsByDate]);
 
-  /** 進み具合の帯（PRD D151〜D155）：今月の準備と同じ数え方。週・日の画面の帯と同じもの */
+  /** 進み具合の帯（PRD D151〜D154・D316）：今月の準備と同じ数え方。週・日の画面の帯と同じもの */
   const band = useMemo(
     (): BandModel => ({
       ym,

@@ -8,6 +8,7 @@ import { findVisit } from '../patterns';
 import { useDemoData } from '../store';
 import { useConfirm } from './ConfirmDialog';
 import { useToast } from './Toast';
+import { focusUndo } from './undo';
 import { COMPACT_QUERY, useMedia } from './useMedia';
 
 type Edit = (d: DemoData) => { data: DemoData; done: number; failed: { why: string }[] };
@@ -40,8 +41,7 @@ export function useSelectionBar(ids: readonly string[], dates: readonly string[]
   const run = (what: string, fn: Edit) => {
     // 結果の数は今のデータで見るが、書くのは store の最新のデータに反映し直す（確認を待つ間の別のタブの変更を消さない）
     const r = fn(data);
-    // 選んだ訪問のまとめ直しは自動の組みを依頼しないので、決まった扱いは待たずに付ける（ADR-0073）
-    if (r.done > 0) update((d) => fn(d).data, what, { settleNow: true });
+    if (r.done > 0) update((d) => fn(d).data, what);
     toast(multiResultText(what, { done: r.done, failed: r.failed.map((f) => ({ visitId: '', why: f.why })) }));
     return r.done;
   };
@@ -71,7 +71,7 @@ export function useSelectionBar(ids: readonly string[], dates: readonly string[]
     // 1件も移せなければ選んだまま（選び直さなくてよい）。移したら帯が消えるので、フォーカスは「元に戻す」へ
     if (done === 0) return;
     onClear();
-    requestAnimationFrame(() => document.querySelector<HTMLElement>('[data-testid="undo-btn"]')?.focus());
+    focusUndo();
   };
 
   /** 「取り消す」：確かめてから選んだ訪問を取り消す */

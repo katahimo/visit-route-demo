@@ -27,16 +27,16 @@
 ```
 src/
   contracts/   … 型と Worker メッセージ（境界の契約）
-  store/       … localStorage（データのほか、メニューの開け閉め・組み直しの知らせの鍵の覚え）・JSON入出力・版の確かめ・最初の2問の答えでデータを作り直す（データの持ち主。古い版は移さず初期データで始める。ADR-0053）
-  seed/        … デモの初期データ（PoC本体 scripts/seedDemo.ts から写す）・単発のデモ（oneOff）・空のデータ（blank。ADR-0073）
+  store/       … localStorage・JSON入出力・版の確かめ（データの持ち主。古い版は移さず初期データで始める。ADR-0053）
+  seed/        … デモの初期データ（PoC本体 scripts/seedDemo.ts から写す）・単発のデモ・空のデータ
   domain/      … PoC本体 packages/shared 等から写した純粋関数（先頭に写した元のコミットを書く）
   matching/    … 項目・条件 → Problem（可否・費用表）と理由
   solver/      … 焼きなまし（solve 純粋関数 ＋ worker.ts）
   evaluate/    … 採点・説明・差分
   excel/       … DemoData と Excel のブックの変換（ADR-0006。データは書き換えない）
-  patterns/    … 繰り返しの回を見るときに計算する純粋関数（visitsOn・visitsIn・putVisits。ADR-0012・ADR-0053）
-  lib/         … 画面から使う純粋関数（React・store・画面の部品を import しない。最初の2問の答え → 呼び名・ひな形・データ firstRun・登録の案内の3段 startGuide、日の割当と確定 dayPlan・confirmDay、日のモデルの計算 dayModel・日ごとの状態の覚え dayStatuses、月・週の状態 month・week（週のデータを書く操作は weekOps）、組む月 scheduleMode、AI で組む monthBatch（担当を組む）、入れた分の自動の組み autoArrange（計算）・autoArrangeBatch（解く入れ物。ADR-0072）、組み方の標準 standard、訪問の札の見た目・選ぶ・落とし先の判定・キーの読み方 visitLook・visitSelect・visitDrop・visitKeys、訪問を直す visitOps・選んだ訪問をまとめて直す multiEdit、地図の点・線と選び方の遷移 routeView など）
-  components/  … 画面の部品と React のフック（use*。日のモデル useDayModel・日の状態 useDayStatuses・機能の入り切り useFeature・useMedia・useScrollEdge・地図の選択 useRouteSelection・入れ物を読む valueStore・自動の組みの知らせと帯 autoArrangeHost・編集中の印 dirtyForms・別のチャンクの部品 lazyComponent・選んでいる日付 day など）
+  patterns/    … 繰り返しの回を見るときに計算する純粋関数（ADR-0012・ADR-0053）
+  lib/         … 画面から使う純粋関数（React・store・画面の部品を import しない）
+  components/  … 画面の部品と React のフック（use*）
   pages/       … 画面（components と lib を組み合わせる）
   app/         … 殻（App・ErrorBoundary・ルートと分けた画面 lazyPages）
 .github/workflows/deploy.yml … test → build → Cloudflare Workers（wrangler。ADR-0071）
@@ -69,6 +69,7 @@ docs/ … README.md（索引）/ prd.md・prd/（テーマ別の要件の表） 
 - 同梱するデータは架空のものだけ。公開リポジトリに実在の人・住所・パスワード・キーを置かない
 - 要件（PRD）：要件の表は `docs/prd/<テーマ>.md` に置き、`docs/prd.md` には置かない。足すときは該当テーマの表に `npm run check:prd` が示す次の D番号で行を足す（ADR 単位・追加順の節は作らない）。置き換えた要件は表から消し、`docs/prd.md` の「廃止した D番号」に置き換え先を足す。D番号は振り直さない・使い回さない。索引は手で直さず `npm run check:prd -- --fix` で作る（手順は `.claude/skills/solo-architecture-design/SKILL.md`「設計書を育てる」）
 - 画面：主ボタン（濃い朱）は画面に1つ（多くて2つ）。呼び方は `org.terms` から引き、「お客様」「シッター」を直書きしない。表記は常用漢字
+- 文言：事実を短く。AI っぽい言い回し（「〜だけ教えてください」「かんたん」「すぐに」「〜しましょう」）や大げさな形容を使わない
 
 ## 完了の定義
 - [ ] テスト・リント・型チェック・ビルド・コードの検査・PRD の検査がすべて通る

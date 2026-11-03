@@ -5,30 +5,23 @@
 // 帯の下に隠れた入力欄へ Tab で入ると帯の上まで巻く（scroll-padding-bottom）、Tab が中で回る・Esc で閉じて戻る、
 // 390px：2つまでは横に並べ主ボタンが先、3つ以上は主ボタンを1行目に全幅・残りは2つずつ、
 // 下のタブ・safe-area に隠れない、キーボード（visualViewport が縮む）が出ても帯が見える、印刷（連絡の一覧）で帯を出さない。
-// 代表の欄：欠勤・キャンセル（1〜4段目・キャンセルの3段目）、訪問の詳細の欄（〈利用者さん〉の画面の予定の回から）、日の差の欄の「連絡の一覧」。
+// 代表の欄：欠勤・キャンセル（1段目・見込み・2段目・キャンセルの1段目）、訪問の詳細の欄（〈利用者さん〉の画面の予定の回から）、日の差の欄の「連絡の一覧」。
 // 1400×1000 と 390×844 の両方で見る。
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-panel-foot.cjs
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）
 // 終了コード：全部通れば 0、通らないものがあれば 1。ページのエラー（pageerror）も失敗に数える
-const path = require('node:path');
 const { skipTour } = require('./lib/tourSeen.cjs');
 const { answerConfirms } = require('./lib/confirmDialog.cjs');
-const { launch, BASE, OUT_DIR, NOW, TODAY, STORAGE_KEY, check, settle, runSteps } = require('./lib/env.cjs');
+const { launch, BASE, NOW, TODAY, STORAGE_KEY, check, settle, runSteps, shot } = require('./lib/env.cjs');
 const { guard, closeContext, firstLine } = require('./lib/steps.cjs');
+const { goTo, pressTool } = require('./lib/ui.cjs');
 
 const drawer = (page) => page.locator('.drawer');
 const sudden = (page) => page.getByTestId('sudden-panel');
-const shot = (page, name) => page.screenshot({ path: path.join(OUT_DIR, `${name}.png`) });
 
-async function open(page, hash, ready) {
-  // 同じ文書の中で hash を移してから読み直すと、読み直す前に `?id=` が処理されて URL から消えることがあるので、
-  // about:blank を挟んで開く（e2e-home と同じ）
-  await page.goto('about:blank');
-  await page.goto(`${BASE}#${hash}`);
-  await page.locator(ready).first().waitFor({ timeout: 60000 });
-  await settle(page, 400);
-}
+// 画面を新しく開く（共通の手 goTo。待つ長さ・見出し・落ち着くまでの待ちはこの画面の e2e の既定）
+const open = (page, hash, ready) => goTo(page, hash, { ready: ready, timeout: 60000, h1: false, settleMs: 400 });
 /** 今の担当が出て計算が終わるまで待つ */
 async function waitPlan(page) {
   await page.getByTestId('confirm-state').waitFor({ state: 'attached', timeout: 60000 });
@@ -37,7 +30,7 @@ async function waitPlan(page) {
 }
 /** データを初期状態に戻して今日の日の画面を開く */
 async function freshPlan(page) {
-  await page.goto(`${BASE}#/home`);
+  await page.goto(`${BASE}#/data`);
   await page.evaluate((k) => localStorage.removeItem(k), STORAGE_KEY);
   await page.goto(`${BASE}#/plan?date=${TODAY}`);
   await page.reload();
@@ -243,10 +236,10 @@ async function expectMobileRow(page, label) {
   );
 }
 
-// ---- 欠勤・キャンセルの欄の各段階 ----
+// ---- 欠勤・キャンセルの欄の各段（1 何が起きたか・2 連絡・確定。PRD D414） ----
 async function suddenSteps(page, w) {
   await freshPlan(page);
-  await page.getByTestId('sudden-open').click();
+  await pressTool(page, '欠勤', { where: 'more' });
   await sudden(page).waitFor();
   await settle(page, 300);
   const m1 = await expectShort(page, `${w}・欠勤・キャンセル 1段目`);
@@ -278,26 +271,27 @@ async function suddenSteps(page, w) {
     return b;
   });
   await page.getByTestId('sudden-staff').selectOption(best.value);
-  await settle(page, 300);
-  await expectFits(page, `${w}・〈スタッフ〉が休む 2段目`);
-  if (w === '390') await expectMobileRow(page, `${w}・2段目`);
-  await shot(page, `${w}-sudden-step2`);
-  await page.getByTestId('sudden-next').click();
+  await page.getByTestId('absence-preview').waitFor({ timeout: 30000 });
   await settle(page, 500);
-  await expectFits(page, `${w}・〈スタッフ〉が休む 3段目`);
-  if (w === '390') await expectMobileRow(page, `${w}・3段目（ボタンが3つ以上）`);
-  await shot(page, `${w}-sudden-step3`);
-  // フォーカス：段階の見出しへ（focusKey）。Tab は欄の中で回る
+  await expectFits(page, `${w}・〈スタッフ〉が休む 1段目（見込み）`);
+  if (w === '390') await expectMobileRow(page, `${w}・1段目（見込み）`);
+  await shot(page, `${w}-sudden-step1-plan`);
   const inStep = await page.evaluate(() => !!document.activeElement?.closest('.drawer'));
-  check(inStep, `${w}・段階が進んでもフォーカスは欄の中`);
-  await page.getByTestId('sudden-reassign').click();
+  check(inStep, `${w}・選んでもフォーカスは欄の中`);
+  // 案A で決める（おすすめが案B なら「ほかのやり方」の「案A だけで振り直す」）
+  if ((await page.getByTestId('sudden-recommend').textContent()).includes('案B')) {
+    await page.getByTestId('sudden-alt').locator(':scope > summary').click();
+    await page.getByTestId('sudden-reassign').click();
+  } else {
+    await page.getByTestId('sudden-decide').click();
+  }
   await page.getByTestId('sudden-done').waitFor({ timeout: 15000 });
   await settle(page, 500);
-  await expectFits(page, `${w}・4段目（済んだこと）`);
-  if (w === '390') await expectMobileRow(page, `${w}・4段目`);
-  await shot(page, `${w}-sudden-step4`);
+  await expectFits(page, `${w}・2段目（連絡・確定）`);
+  if (w === '390') await expectMobileRow(page, `${w}・2段目`);
+  await shot(page, `${w}-sudden-step2`);
   // 差の欄の「連絡の一覧」（日の差の欄から開く右の欄）
-  await page.getByTestId('sudden-close').click();
+  await page.keyboard.press('Escape');
   await sudden(page).waitFor({ state: 'detached' });
   await settle(page, 300);
   const contact = page.getByRole('button', { name: /^連絡の一覧/ }).first();
@@ -319,8 +313,8 @@ async function suddenSteps(page, w) {
   } else {
     check(false, `${w}・差の欄に「連絡の一覧」がある`);
   }
-  // 当日キャンセルの3段目
-  await page.getByTestId('sudden-open').click();
+  // 当日キャンセルの1段目（訪問を選ぶと影響）
+  await pressTool(page, '欠勤', { where: 'more' });
   await sudden(page).waitFor();
   await page.getByTestId('sudden-kind-client').click();
   await settle(page);
@@ -328,20 +322,17 @@ async function suddenSteps(page, w) {
     .getByTestId('sudden-visit')
     .evaluate((sel) => [...sel.options].find((o) => o.value)?.value ?? '');
   await page.getByTestId('sudden-visit').selectOption(first);
-  await settle(page);
-  await expectFits(page, `${w}・キャンセル 2段目`);
-  await page.getByTestId('sudden-next').click();
   await settle(page, 300);
-  await expectFits(page, `${w}・キャンセル 3段目`);
-  if (w === '390') await expectMobileRow(page, `${w}・キャンセル 3段目（ボタン2つ）`);
-  await shot(page, `${w}-cancel-step3`);
+  await expectFits(page, `${w}・キャンセル 1段目（影響）`);
+  if (w === '390') await expectMobileRow(page, `${w}・キャンセル 1段目（ボタン2つ）`);
+  await shot(page, `${w}-cancel-step1`);
   // Esc で閉じて入口へ戻る
   await page.keyboard.press('Escape');
   await sudden(page).waitFor({ state: 'detached' });
   await settle(page, 200);
   check(
-    (await page.evaluate(() => document.activeElement?.getAttribute('data-testid'))) === 'sudden-open',
-    `${w}・Esc で閉じてフォーカスが入口に戻る`,
+    (await page.evaluate(() => document.activeElement?.getAttribute('data-testid'))) === 'plan-more',
+    `${w}・Esc で閉じてフォーカスが入口（「その他 ▾」）に戻る`,
   );
 }
 
@@ -380,7 +371,7 @@ async function otherTabToast(page) {
 
 /**
  * 欄を開いたまま知らせを出す（訪問の詳細の欄を開いたまま、別のタブの変更の知らせ。文だけ）：
- * 390px は見出しに重ならず、知らせの下（欄の中）を押せる。1400px は欄をまたがない（PR #46 のレビュー）
+ * 390px は見出しに重ならず、知らせの下（欄の中）を押せる。1400px は欄をまたがない
  */
 async function toastWhileOpen(page, w) {
   await otherTabToast(page);
@@ -422,7 +413,7 @@ async function toastWhileOpen(page, w) {
 
 // ---- 訪問の詳細の欄（長い。〈利用者さん〉の画面の予定の回から開く。PRD D309） ----
 async function visitPanel(page, w) {
-  await page.goto(`${BASE}#/home`);
+  await page.goto(`${BASE}#/data`);
   await page.evaluate((k) => localStorage.removeItem(k), STORAGE_KEY);
   await open(page, '/clients/c1', '[data-testid="pcal-visit"]');
   const item = page.locator(`[data-testid="pcal-visit"]:not([data-state="cancelled"]):not([data-state="sameDay"])`);

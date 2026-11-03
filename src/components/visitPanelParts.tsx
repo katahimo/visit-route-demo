@@ -17,11 +17,12 @@ import { dateText } from '../lib/dateText';
 import type { PrevStop } from '../lib/prevStop';
 import type { VisitInfo } from '../lib/visitDraft';
 import { windowShown } from '../lib/visitPanelText';
+import { hasVisitRules } from '../lib/visitRules';
 import { MAPS_TITLE, VisitRouteLinks } from './mapsLinks';
 import { PersonButton } from './PersonPopover';
 import { StaffMark } from './StaffMark';
 import { WithIcon } from './ui';
-import { hasVisitRules, VisitRules } from './VisitRules';
+import { VisitRules } from './VisitRules';
 import { TypeMark } from './visitType';
 
 /** スマホの下から出る欄で開いている操作（大きな4つのボタンの「担当を替える」「取り消す」。PRD D334） */

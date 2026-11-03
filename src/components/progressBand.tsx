@@ -1,6 +1,6 @@
-// 月の予定の進み具合の帯（PRD D151〜D155・D332。ADR-0025。週・日は1行の状態にした。ADR-0054）。
+// 月の予定の進み具合の帯（PRD D151〜D154・D316・D332。ADR-0025。週・日は1行の状態にした。ADR-0054）。
 // 見ている月の今日以降について「訪問・担当が全部入った日・確定した日・要対応」と次の一手のボタンを1つ。
-// 数え方は月の画面の「今月の準備」・ホームと同じ（lib/useDayStatuses と lib/month の monthProgress・attentionList）。データは書き換えない
+// 数え方は月の画面の「今月の準備」と同じ（lib/useDayStatuses と lib/month の monthProgress・attentionList）。データは書き換えない
 import { Check, CircleAlert, Lock, type LucideIcon, Repeat, Sparkles } from 'lucide-react';
 import { type MouseEvent, memo, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -50,13 +50,10 @@ const PART_LABEL_SETTLED: Record<PrepPart['kind'], string> = {
 export const ProgressBand = memo(function ProgressBand({
   ym,
   model,
-  primary = false,
   onOp,
 }: {
   ym: string;
   model: BandModel | null;
-  /** 次の一手を主ボタンにする（月の画面） */
-  primary?: boolean;
   onOp?: (op: BandOp) => void;
 }) {
   const month = monthLabel(ym);
@@ -187,7 +184,7 @@ export const ProgressBand = memo(function ProgressBand({
           <Link
             to={bandHref(ym, next.kind)}
             onClick={click(next.kind)}
-            className={`btn btn-small${primary ? ' btn-primary' : ''}`}
+            className="btn btn-small"
             data-testid="band-next"
             data-kind={next.kind}
             aria-label={`${month}：${next.label}`}

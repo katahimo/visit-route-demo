@@ -1,9 +1,10 @@
-// 日の予定の「欠勤・キャンセル」の欄（PRD D167〜D172・D243〜D246）の状態と処理：開け閉め・ホームなどの入口（?do=absence）・
-// 欠勤だけ登録・欠勤の取り消し・欄からの訪問の取り消し・5段目の連絡の差。振り直しは useReassignFlow
+// 日の予定の「欠勤・キャンセル」の欄（PRD D167〜D172・D244〜D246・D325）の状態と処理：開け閉め・パレットや週・月の操作の行などの入口（?do=absence）・
+// 欠勤だけ登録・欠勤の取り消し・欄からの訪問の取り消し・2段目の連絡の差。振り直しは useReassignFlow
 import { type ComponentProps, type RefObject, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useConfirm } from '../components/ConfirmDialog';
 import { useToast } from '../components/Toast';
+import { undoFocusTarget } from '../components/undo';
 import type { DemoData } from '../contracts/data';
 import type { Absence, Client, Staff, Terms, Visit } from '../contracts/documents';
 import type { Problem } from '../contracts/problem';
@@ -26,15 +27,15 @@ import type { SuddenInit } from './useSuddenSteps';
 /** 連絡の一覧が出せない（差を出せない）ときでも、欠勤の人に残る訪問だけで開くための空の一覧 */
 export const EMPTY_CONTACTS: ContactList = { staffChanged: [], timeChanged: [], staff: [] };
 
-/** 欄で取り消した訪問（5段目の連絡の「中止」。PRD D244）と、取り消す前の担当の並び・問題（連絡の差の「前」） */
+/** 欄で取り消した訪問（2段目の連絡の「中止」。PRD D244）と、取り消す前の担当の並び・問題（連絡の差の「前」） */
 type SuddenCancel = {
   cancelled: CancelledContact;
   before: { problem: Problem; routes: Routes } | null;
 };
 
 /**
- * 「欠勤・キャンセル」の欄の開け閉め（null：閉じている）。日の画面の入口・ホーム（`?do=absence`）からは1段目、
- * 列の見出しの「この人の欠勤を登録」「欠勤を直す」からはその人を選んだ2段目で開く。日付を変えたら閉じる
+ * 「欠勤・キャンセル」の欄の開け閉め（null：閉じている）。日の画面の入口・パレット・週・月の操作の行（`?do=absence`）からは1段目、
+ * 列の見出しの「この人の欠勤を登録」「欠勤を直す」からはその人を選んで開く。日付を変えたら閉じる
  */
 export function useSuddenState(date: string) {
   const [sudden, setSudden] = useState<SuddenInit | null>(null);
@@ -60,15 +61,15 @@ export function useSuddenState(date: string) {
 type SuddenState = ReturnType<typeof useSuddenState>;
 
 /**
- * ホームの「急な欠勤・キャンセルを登録」（?date=今日&do=absence。PRD D172）：その日を選び、「欠勤・キャンセル」の欄を1段目で開き、
- * URL から ?date= と ?do= を消す（1回だけ。戻るで繰り返さない）。稼働時間の右の欄から（PRD D203）は `&staff=` の人の欠勤（2段目）
+ * パレット・週・月の操作の行の「欠勤・キャンセルを登録」（?date=…&do=absence。PRD D172）：その日を選び、「欠勤・キャンセル」の欄を1段目で開き、
+ * URL から ?date= と ?do= を消す（1回だけ。戻るで繰り返さない）。稼働時間の右の欄から（PRD D203）は `&staff=` の人を選んで開く
  */
 export function useSuddenEntry(x: {
   date: string;
   setDate: (d: string) => void;
   /** データにいる〈スタッフ〉か */
   knownStaff: (id: string) => boolean;
-  /** その日に働く人か（休みの日・最終勤務日の後の人は選択肢に無く2段目が壊れるので1段目。PR #48 のレビュー） */
+  /** その日に働く人か（休みの日・最終勤務日の後の人は選択肢に無いので人を選ばずに開く） */
   works: (id: string) => boolean;
   open: (init: SuddenInit) => void;
 }) {
@@ -85,7 +86,7 @@ export function useSuddenEntry(x: {
     const target = raw && isDate(raw) ? raw : date;
     if (target !== date) x.setDate(target);
     pending.current = target;
-    // 知らない人・その日に働かない人なら1段目
+    // 知らない人・その日に働かない人なら人を選ばずに開く
     const sid = params.get('staff');
     pendingStaff.current = sid && x.knownStaff(sid) ? sid : null;
     setParams(
@@ -187,7 +188,7 @@ export function useSuddenFlow(x: SuddenArgs): {
     [sudden, day.visits, day.clientById, day.visitById, plan.owner],
   );
   /**
-   * 5段目の連絡の差（PRD D244）：欠勤は振り直しの差（振り直す前 → 今）。キャンセルは取り消す前の並び → 今
+   * 2段目の連絡の差（PRD D244）：欠勤は振り直しの差（振り直す前 → 今）。キャンセルは取り消す前の並び → 今
    * （取り消した訪問は「中止」として別に出す）
    */
   const list = useMemo((): ContactList | null => {
@@ -231,6 +232,8 @@ export function useSuddenFlow(x: SuddenArgs): {
       confirmState: plan.toldState,
       confirmStep: x.confirmStep,
       result: suddenResult(x),
+      weight: flow.anneal.stayWeight,
+      onWeight: flow.anneal.setStayWeight,
       onReassign: (a, anneal) => flow.registerAndReassign(a, anneal, true),
       ...suddenActions(x, toast, confirmDialog),
       onAdopt: x.adopt,
@@ -239,13 +242,13 @@ export function useSuddenFlow(x: SuddenArgs): {
       leftCount: flow.left.length,
       contactMail: x.staffMail ? (row) => x.staffMail?.(row.id, row.text) ?? null : undefined,
       onCopied: x.onCopied,
-      fallbackFocus: () => (sudden.staffId ? x.colHeadOf(sudden.staffId) : state.btnRef.current),
+      fallbackFocus: () => (sudden.staffId ? x.colHeadOf(sudden.staffId) : (state.btnRef.current ?? undoFocusTarget())),
       returnFocus: () => (state.toBar.current ? document.getElementById(flow.barId) : null),
     },
   };
 }
 
-/** 4段目：今の担当の振り直しのまとめと、案A・案B を選ぶ欄（差の欄と同じ部品・同じ操作） */
+/** 2段目の振り直しの結果：今の担当の振り直しのまとめと、案A・案B を選ぶ欄（差の欄と同じ部品・同じ操作） */
 function suddenResult(x: SuddenArgs) {
   const { flow } = x;
   if (!x.plan.hasPlan || !flow.info) return null;
@@ -286,7 +289,7 @@ function suddenActions(
       if (!ok) return false;
       x.update((d) => removeAbsence(d, absence.id), '欠勤を取り消す');
       state.setSudden(null);
-      // 担当は変えない。振り直したあとなら「振り直す前に戻す」で担当を戻せる（「元に戻す」だと欠勤が戻ってしまう。PR #81 のレビュー）
+      // 担当は変えない。振り直したあとなら「振り直す前に戻す」で担当を戻せる（「元に戻す」だと欠勤が戻ってしまう）
       if (flow.info)
         toast('欠勤を取り消しました。担当を戻すには「振り直す前に戻す」を押してください', {
           action: { label: '振り直す前に戻す', onClick: () => void flow.revertLatest(), testId: 'toast-revert' },
@@ -295,7 +298,7 @@ function suddenActions(
       return true;
     },
     // 欄からの取り消し：取り消す前の担当・開始と、取り消す前の担当の並び（取り消す訪問を除く）を覚えてから取り消す
-    // （5段目の連絡の「中止」と差の「前」。PRD D244）
+    // （2段目の連絡の「中止」と差の「前」。PRD D244）
     onCancelVisit: (visitId, sameDay) => {
       const v = day.visitById.get(visitId);
       const sid = plan.owner.get(visitId) ?? null;

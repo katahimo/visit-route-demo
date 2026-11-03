@@ -1,8 +1,4 @@
 /* 月間カレンダー（#/month。ADR-0012） */
-.month-nav {
-  flex-wrap: wrap;
-  gap: 8px;
-}
 .month-title {
   margin: 0 4px;
   font-size: 1.2rem;
@@ -261,7 +257,7 @@
   color: var(--danger);
   font-weight: 700;
 }
-/* 欠勤の手当てが済んだ日（確定済みで手当ての要らない日。PRD D281）：情報なので赤くしない */
+/* 欠勤の手当てが済んだ日（確定済みで手当ての要らない日。PRD D321）：情報なので赤くしない */
 .month-mark.is-absent.is-done {
   color: var(--sub);
   font-weight: 400;
@@ -452,76 +448,15 @@
   gap: 4px;
 }
 
-/* 今月の準備（PRD D59）：①②③と要対応を横に。済んだものは✓と緑の縁（色だけに頼らない） */
-.month-prep {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  padding: 10px 14px;
-}
-.month-prep-title {
-  margin: 0;
-  font-size: 1rem;
-}
-.month-prep-steps {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  flex: 1;
-}
-.month-prep-step {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  padding: 6px 10px;
-  border: 2px solid var(--line);
-  border-radius: 12px;
-  background: var(--card);
-}
-.month-prep-step.is-done {
-  border-color: var(--ok);
-  background: #eef7f1;
-}
-.month-prep-head {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.month-prep-no {
-  font-weight: 700;
-  color: var(--sub);
-}
-.month-prep-mark {
-  display: inline-flex;
-  align-items: center;
-  color: var(--ok-ink);
-}
-.month-prep-value {
-  font-variant-numeric: tabular-nums;
-}
 .month-aside:focus {
   outline: none;
 }
 .month-aside:focus-visible {
   outline: 3px solid var(--focus);
 }
-@media (max-width: 600px) {
-  .month-prep-title {
-    width: 100%;
-  }
-}
 /* カレンダーと日ごとの一覧の切り替え・日ごとの一覧（PRD D189。600px 以下ははじめ一覧） */
 .month-list-today {
   margin-bottom: 8px;
-}
-.month-layout button {
-  display: inline-flex;
-  align-items: center;
 }
 .month-list {
   list-style: none;
@@ -780,7 +715,6 @@
 }
 @media print {
   .month-legend-open,
-  .month-layout,
   .month-list-today {
     display: none;
   }
@@ -854,9 +788,4 @@
 }
 .month-day-sheet .vrow {
   min-height: 56px;
-}
-/* 「変更あり」の印（expert 切。押すとその日の連絡の一覧） */
-.month-told-btn {
-  display: inline-flex;
-  cursor: pointer;
 }

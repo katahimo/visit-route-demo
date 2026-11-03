@@ -10,8 +10,8 @@ import {
   addPlanPatternForm,
   addPlanSaveError,
   addPlanVisitDraft,
+  FROM_ERROR,
   STALE_ERROR,
-  toggleWeekday,
 } from './addPlan';
 import { applyTemplate } from './features';
 
@@ -40,13 +40,15 @@ describe('addPlanClients・addPlanDate', () => {
 });
 
 describe('初めの欄', () => {
-  it('定期：開始日は初めの日・曜日は初めの日の曜日・10:00・60分・毎週・種類なし', () => {
+  it('定期：開始日は今日・曜日は初めの日の曜日・10:00・60分・毎週・種類なし', () => {
     // 2026-11-05 は木曜
     const f = addPlanPatternForm('2026-11-05', '2026-10-30');
     expect(f).toMatchObject({
       id: null,
       weekdays: [4],
-      from: '2026-11-05',
+      from: '2026-10-30',
+      repeat: 'weekly',
+      monthWeeks: [],
       earliestStart: '10:00',
       durationMinutes: '60',
       everyWeeks: 1,
@@ -66,11 +68,7 @@ describe('初めの欄', () => {
   });
 });
 
-describe('toggleWeekday・addPlanDone', () => {
-  it('曜日は入れる・外す。日曜はじまりの順', () => {
-    expect(toggleWeekday([4], 1)).toEqual([1, 4]);
-    expect(toggleWeekday([1, 4], 4)).toEqual([1]);
-  });
+describe('addPlanDone', () => {
   it('知らせ：自動で組む依頼を出したときだけ書く', () => {
     expect(addPlanDone('月 10:00', true)).toBe('予定を入れました（月 10:00・担当を自動で組みます）');
     expect(addPlanDone('月 10:00', false)).toBe('予定を入れました（月 10:00）');
@@ -78,11 +76,30 @@ describe('toggleWeekday・addPlanDone', () => {
 });
 
 describe('addPlanError・addPlanFieldOf', () => {
-  const ok = { clientId: 'a', weekdays: [4], duration: 60 };
+  const TODAY = '2026-11-02';
+  const form = { weekdays: [4], repeat: 'weekly' as const, monthWeeks: [], from: TODAY };
+  const ok = { clientId: 'a', duration: 60, form, today: TODAY };
+  const withForm = (f: Partial<typeof form> | { repeat: 'monthly'; monthWeeks: number[] }) => ({
+    ...ok,
+    form: { ...form, ...f },
+  });
   it('よければ null。定期の曜日なしは曜日の欄、単発は曜日を見ない', () => {
     expect(addPlanError('recurring', ok, '利用者さん')).toBeNull();
-    expect(addPlanError('recurring', { ...ok, weekdays: [] }, '利用者さん')).toMatchObject({ field: 'weekdays' });
-    expect(addPlanError('oneOff', { ...ok, weekdays: [] }, 'お客様')).toBeNull();
+    expect(addPlanError('recurring', withForm({ weekdays: [] }), '利用者さん')).toMatchObject({ field: 'weekdays' });
+    expect(addPlanError('oneOff', withForm({ weekdays: [] }), 'お客様')).toBeNull();
+  });
+  it('毎月は第N を1つ以上（無ければ第N の欄）', () => {
+    expect(addPlanError('recurring', withForm({ repeat: 'monthly', monthWeeks: [] }), 'x')).toEqual({
+      text: '第何週かを1つ以上選んでください',
+      field: 'monthWeeks',
+    });
+    expect(addPlanError('recurring', withForm({ repeat: 'monthly', monthWeeks: [3, 4] }), 'x')).toBeNull();
+  });
+  it('開始日は今日以降の日付（今日より前・空・ありえない日は開始日の欄）。単発は見ない', () => {
+    expect(addPlanError('recurring', withForm({ from: '2026-12-01' }), 'x')).toBeNull();
+    for (const from of ['2026-11-01', '', '2026-02-30'])
+      expect(addPlanError('recurring', withForm({ from }), 'x')).toEqual({ text: FROM_ERROR, field: 'from' });
+    expect(addPlanError('oneOff', withForm({ from: '2026-11-01' }), 'x')).toBeNull();
   });
   it('〈利用者さん〉未選択は呼び名つき。所要の誤りの文は定期・単発で同じ', () => {
     expect(addPlanError('oneOff', { ...ok, clientId: '' }, 'お客様')).toEqual({
@@ -95,12 +112,14 @@ describe('addPlanError・addPlanFieldOf', () => {
     expect(a?.field).toBe('duration');
     expect(addPlanError('oneOff', { ...ok, duration: 721 }, 'x')?.field).toBe('duration');
   });
-  it('今ある仕組みの文から欄を結ぶ', () => {
-    expect(addPlanFieldOf('開始（遅）は開始（早）以降にしてください')).toBe('start');
-    expect(addPlanFieldOf('時刻を正しく入れてください')).toBe('start');
-    expect(addPlanFieldOf('日付を入れてください')).toBe('date');
-    expect(addPlanFieldOf('今日より前の日にはできません')).toBe('date');
-    expect(addPlanFieldOf('入力を確かめてください')).toBeUndefined();
+  it('今ある仕組みの文から欄を結ぶ（日付の誤りは定期なら開始日、単発なら日付）', () => {
+    expect(addPlanFieldOf('開始（遅）は開始（早）以降にしてください', 'recurring')).toBe('start');
+    expect(addPlanFieldOf('時刻を正しく入れてください', 'oneOff')).toBe('start');
+    expect(addPlanFieldOf('日付を入れてください', 'oneOff')).toBe('date');
+    expect(addPlanFieldOf('今日より前の日にはできません', 'oneOff')).toBe('date');
+    expect(addPlanFieldOf('日付を正しく入れてください', 'recurring')).toBe('from');
+    expect(addPlanFieldOf(FROM_ERROR, 'recurring')).toBe('from');
+    expect(addPlanFieldOf('入力を確かめてください', 'recurring')).toBeUndefined();
   });
 });
 

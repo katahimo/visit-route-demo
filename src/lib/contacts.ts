@@ -4,6 +4,8 @@ import type { Client, Visit } from '../contracts/documents';
 import type { ContactList, ContactVisit, StaffContact } from '../contracts/reassign';
 import { hhmmToMinutes, weekday } from '../domain/time';
 import { clockTime } from './dateText';
+import { firstVisitNotes, type ServedPairs } from './firstVisit';
+import type { VisitRuleKey, VisitRuleLine } from './visitRules';
 
 /**
  * 連絡文に使う名前・呼び方。敬称（訪問先の「様」・スタッフの「さん」）は固定で、呼び方（「スタッフ」など）が出る箇所は
@@ -27,6 +29,11 @@ export type ContactWords = {
    * 約束の開始でどの訪問かを書く（D245）。無ければ元の案の開始
    */
   promised?: (visitId: string) => { from: number; to: number } | null;
+  /**
+   * 初めての訪問先（D415）：その〈スタッフ〉がその〈利用者さん〉を過去8週に担当していなければ決まりごとの行（空もある）、
+   * 担当していれば null。無ければ印も決まりごとも添えない（添えるのは欠勤・キャンセルの欄の連絡だけ。withFirstNotes で付ける）
+   */
+  firstNotes?: (clientId: string, staffId: string) => VisitRuleLine[] | null;
 };
 
 const WEEK = ['日', '月', '火', '水', '木', '金', '土'];
@@ -76,9 +83,12 @@ export function staffMessage(c: StaffContact, w: ContactWords, cancelled: readon
     const addr = w.clientAddress(x.clientId);
     const min = w.visitMinutes?.(x.visitId) ?? null;
     const extra = [addr, min ? `${min}分` : ''].filter(Boolean).join('・');
+    const head = `・${clock(x.toStart)} ${w.clientName(x.clientId)}様の訪問をお願いします${extra ? `（${extra}）` : ''}。`;
+    // 初めての訪問先なら印と決まりごと（入っている項目だけ）を行の下に添える（D415）
+    const notes = w.firstNotes?.(x.clientId, c.staffId) ?? null;
     lines.push({
       at: x.toStart ?? 0,
-      text: `・${clock(x.toStart)} ${w.clientName(x.clientId)}様の訪問をお願いします${extra ? `（${extra}）` : ''}。`,
+      text: notes ? [`${head}初めての訪問先です。`, ...notes.map((n) => `　${n.label}：${n.text}`)].join('\n') : head,
     });
   }
   for (const x of c.removed) {
@@ -157,7 +167,7 @@ export function allContactsText(list: ContactList, w: ContactWords): string {
   return [...list.staff.map((c) => staffMessage(c, w)), ...clientMessages(list, w).map((c) => c.text)].join('\n\n');
 }
 
-// ---- 欠勤・キャンセルの欄の5段目「連絡」（PRD D244。ADR-0038） ----
+// ---- 欠勤・キャンセルの欄の2段目「連絡・確定」（PRD D244。ADR-0038） ----
 
 /** 連絡の種類：担当が外れる・新しく入る・時刻が変わる・中止（キャンセル）・〈利用者さん〉あて */
 export type ContactKind = 'removed' | 'added' | 'shifted' | 'cancelled' | 'client';
@@ -183,6 +193,8 @@ export type ContactRow = {
   /** 種類（並びは 外れる → 入る → 時刻 → 中止） */
   kinds: ContactKind[];
   text: string;
+  /** 〈スタッフ〉あての「お願いします」の行に初めての訪問先がある（D415） */
+  first: boolean;
 };
 
 /**
@@ -225,6 +237,7 @@ export function contactRows(list: ContactList, cancelled: readonly CancelledCont
       name: `${w.staffName(c.staffId)}さん`,
       kinds,
       text: staffMessage(c, w, cancelled),
+      first: c.added.some((x) => !!w.firstNotes?.(x.clientId, c.staffId)),
     });
   }
   for (const c of clientMessages(clean, w)) {
@@ -235,6 +248,7 @@ export function contactRows(list: ContactList, cancelled: readonly CancelledCont
       name: `${w.clientName(c.clientId)}様`,
       kinds: ['client'],
       text: c.text,
+      first: false,
     });
   }
   return rows;
@@ -285,5 +299,26 @@ export function dayContactWords(x: {
       return { from, to: v.windowKind === 'window' ? hhmmToMinutes(v.latestStart) : from };
     },
     orgName: x.orgName,
+  };
+}
+
+/**
+ * 欠勤・キャンセルの欄の連絡（振り直しで新しく入る人。D415）に、初めての訪問先の印と決まりごと（鍵を含む）を添える言葉にする。
+ * 日の予定の連絡の一覧・すべての連絡文・メールには添えない（dayContactWords のまま使う）
+ */
+export function withFirstNotes(
+  w: ContactWords,
+  x: {
+    /** 過去8週に担当した組（servedPairsBefore） */
+    served: ServedPairs;
+    clientById: ReadonlyMap<string, Pick<Client, VisitRuleKey>>;
+    /** 決まりごとを載せるか（訪問先の決まりごとの機能。切なら印だけ） */
+    notesOn: boolean;
+  },
+): ContactWords {
+  return {
+    ...w,
+    firstNotes: (clientId, staffId) =>
+      firstVisitNotes(x.served, { clientId, staffId, client: x.clientById.get(clientId), notesOn: x.notesOn }),
   };
 }

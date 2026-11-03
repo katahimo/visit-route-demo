@@ -10,6 +10,10 @@ export const mdText = (date: string): string => `${Number(date.slice(5, 7))}/${N
 /** 日付と曜日（「10/12（月）」） */
 export const dateText = (date: string): string => `${mdText(date)}（${WEEKDAY_LABELS[weekday(date)]}）`;
 
+/** 日付と曜日。base（今日など）と年が違えば年も付ける（「2027/1/5（火）」） */
+export const dateTextFrom = (date: string, base: string): string =>
+  date.slice(0, 4) === base.slice(0, 4) ? dateText(date) : `${date.slice(0, 4)}/${dateText(date)}`;
+
 /** 年月の文（「2026年11月」。日付 YYYY-MM-DD を渡してもその月） */
 export const ymText = (ym: string): string => `${ym.slice(0, 4)}年${Number(ym.slice(5, 7))}月`;
 

@@ -6,6 +6,7 @@ import { BatchBand } from '../components/batchBand';
 import { IS_MAC } from '../components/CommandPalette';
 import { useDay } from '../components/day';
 import { FullscreenButton } from '../components/FullscreenButton';
+import type { Features } from '../contracts/features';
 import { dateText } from '../lib/dateText';
 import {
   bottomTabs,
@@ -40,9 +41,9 @@ export function AppHeader({
     <header ref={headerRef} className="app-header">
       {/* 範囲の AI で組む（担当を組む）の進み具合と［止める］（PRD D256。ほかの画面へ移っても続く。月の予定では画面の中に出す） */}
       <BatchBand />
-      {/* 欄の保存・予定の「その他 ▾」の［担当なしの訪問を組む］の自動の組みの進み具合（長引いたときだけ。ADR-0072） */}
+      {/* 欄の保存・要対応の帯の［要対応を組む］の自動の組みの進み具合（長引いたときだけ。ADR-0072） */}
       <AutoArrangeBand />
-      {/* スマホだけ：ロゴと今の画面の名前（PRD D132。広い画面では出さない。「メニュー」は下のタブ。PRD D336） */}
+      {/* スマホだけ：ロゴと今の画面の名前（PRD D132。広い画面では出さない。「メニュー」は下のタブ。PRD D401） */}
       <div className="m-head-title">
         <span className="brand-mark" aria-hidden="true">
           <RouteIcon size={18} strokeWidth={2.4} />
@@ -85,10 +86,13 @@ export function AppHeader({
   );
 }
 
-/** スマホだけ：よく使うタブ（ホーム・予定・欠勤。エキスパート機能が切ならメニューの4つ）と「探す」「メニュー」（PRD D336・D383。印刷では出さない） */
+/**
+ * スマホだけ：よく使うタブ（入は 予定・〈利用者さん〉・〈スタッフ〉・組む、切は 予定・空き状況・〈利用者さん〉・〈スタッフ〉。
+ * 切で空き状況を切れば空き状況の代わりに設定。lib/nav の bottomTabKeys）と「探す」「メニュー」（PRD D401・D400。印刷では出さない）
+ */
 export function BottomTabs({
   groups,
-  simple,
+  features,
   pathname,
   paletteOpen,
   openPalette,
@@ -98,8 +102,8 @@ export function BottomTabs({
   openMenu,
 }: {
   groups: readonly NavSection<MenuItem>[];
-  /** エキスパート機能が切（メニューの4つを並べる。PRD D383） */
-  simple: boolean;
+  /** 機能の入り切り（下のタブの項目が変わる。PRD D400・D401） */
+  features: Features;
   pathname: string;
   paletteOpen: boolean;
   openPalette: () => void;
@@ -110,7 +114,7 @@ export function BottomTabs({
 }) {
   return (
     <nav className="bottom-tabs" aria-label="よく使う画面" data-testid="bottom-tabs">
-      {bottomTabs(groups, simple).map((item) => {
+      {bottomTabs(groups, features).map((item) => {
         const { key, to, icon } = item;
         const Icon = NAV_ICONS[icon];
         // 「予定」は月・週・日の予定で印（PRD D273）。欠勤は操作なので印を付けない
@@ -134,7 +138,7 @@ export function BottomTabs({
           </Link>
         );
       })}
-      {/* 「探す」：コマンドパレットを開く（PRD D336。上の帯から下のタブへ移した。空き状況はメニューと探すから） */}
+      {/* 「探す」：コマンドパレットを開く（PRD D401） */}
       <button
         type="button"
         className="bottom-tab"
@@ -147,7 +151,7 @@ export function BottomTabs({
         <Search size={20} strokeWidth={2.1} aria-hidden="true" />
         <span>探す</span>
       </button>
-      {/* 「メニュー」：全部の画面の引き出し（PRD D133・D336。上の帯から下のタブの最後へ移した） */}
+      {/* 「メニュー」：全部の画面の引き出し（PRD D133・D401） */}
       <button
         ref={menuBtnRef}
         type="button"

@@ -11,9 +11,9 @@
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）
 // 終了コード：全部通れば 0、通らないものがあれば 1。ページのエラー（pageerror）も失敗に数える
 const path = require('node:path');
-const { skipTour } = require('./lib/tourSeen.cjs');
-const { BASE, OUT_DIR, NOW, STORAGE_KEY, check, settle, stored, runSteps } = require('./lib/env.cjs');
-const { pagePerStep } = require('./lib/steps.cjs');
+const { BASE, OUT_DIR, STORAGE_KEY, check, settle, stored, runSteps } = require('./lib/env.cjs');
+const { openContext, pagePerStep } = require('./lib/steps.cjs');
+const { goTo } = require('./lib/ui.cjs');
 
 const dialog = (page) => page.getByTestId('confirm-dialog');
 /** いまフォーカスのある要素の data-testid・読み上げ名 */
@@ -23,14 +23,8 @@ const focused = (page) =>
     return el ? `${el.getAttribute('data-testid') ?? ''}|${el.getAttribute('aria-label') ?? el.textContent ?? ''}` : '';
   });
 
-async function open(page, hash, ready) {
-  // 同じ文書の中で hash を移してから読み直すと、読み直す前に `?id=` が処理されて URL から消えることがあるので、
-  // about:blank を挟んで開く（e2e-home と同じ）
-  await page.goto('about:blank');
-  await page.goto(`${BASE}#${hash}`);
-  await page.locator(ready).first().waitFor({ timeout: 30000 });
-  await settle(page, 400);
-}
+// 画面を新しく開く（共通の手 goTo。待つ長さ・見出し・落ち着くまでの待ちはこの画面の e2e の既定）
+const open = (page, hash, ready) => goTo(page, hash, { ready: ready, timeout: 30000, h1: false, settleMs: 400 });
 
 /** 出ているダイアログの形（ARIA・フォーカス・裏の inert とスクロールのロック・中央） */
 async function shape(page, where) {
@@ -245,10 +239,21 @@ async function rulesSave(page) {
       (await section.getByTestId('preset-remove').count()) === 0,
     'プリセットの節：初期の3つに「初期」の札・消すボタンは無い',
   );
+  // ADR-0088：点数の基準はプリセットの一覧の各行の丸で選ぶ（別の並びは無い）。基準のプリセットの重みは下の表に寄せる。
+  // 次の段の案内（rules-next-note）は保存の確認の本文と［組み方の標準へ戻る］に寄せた
+  const radios = section.getByTestId('score-ruler-radio');
   check(
-    (await page.getByTestId('rules-next-note').locator('a').count()) === 2 &&
+    (await radios.count()) === d0.presets.length &&
+      (await section.locator('input[type="radio"]').count()) === d0.presets.length &&
+      (await section
+        .locator(`[data-testid="preset-edit"][data-preset="${basis0.id}"] [data-testid="preset-weights"]`)
+        .count()) === 0 &&
+      (await section
+        .locator(`[data-testid="preset-edit"][data-preset="${basis0.id}"] [data-testid="preset-weights-basis"]`)
+        .count()) === 1 &&
+      (await page.getByTestId('rules-next-note').count()) === 0 &&
       (await page.getByTestId('rules-trial-note').count()) === 0,
-    '次の段の案内（組み方の標準・担当を組むへのリンク）',
+    'プリセットの一覧の各行に点数の基準の丸（プリセットの数だけ）・基準の重みは条件の表に寄せる・次の段の案内の文は無い',
   );
   // 表の重みを1つ動かす → 保存の帯
   const range = page.getByTestId('narrow-rules').locator('input[type="range"]:not([disabled])').first();
@@ -341,6 +346,23 @@ async function rulesSave(page) {
     'プリセットを消す：消えて基準はバランス',
     d2.scorePresetId,
   );
+  // 行の丸で点数の基準を替え、戻す（ADR-0088）
+  const second = d2.presets[1];
+  const waitRuler = (id) =>
+    page
+      .waitForFunction(
+        ([k, v]) => JSON.parse(localStorage.getItem(k) ?? 'null')?.scorePresetId === v,
+        [STORAGE_KEY, id],
+        {
+          timeout: 10000,
+        },
+      )
+      .then(() => true)
+      .catch(() => false);
+  await section.locator(`[data-testid="score-ruler-radio"][value="${second.id}"]`).check();
+  const switched = await waitRuler(second.id);
+  await section.locator('[data-testid="score-ruler-radio"][value="balance"]').check();
+  check(switched && (await waitRuler('balance')), '行の丸で点数の基準を替えられ、戻せる', second.id);
   // 6つあるときは保存できない
   await page.evaluate((k) => {
     const d = JSON.parse(localStorage.getItem(k));
@@ -412,7 +434,7 @@ async function dataReset(page) {
   );
 }
 
-// ---- 日の画面の「確定（伝えた）」（#/plan。版2）：取り消しでは未確定のまま、確定で「確定済み」 ----
+// ---- 日の画面の「確定（伝えた）」（#/plan）：取り消しでは未確定のまま、確定で「確定済み」 ----
 async function adopt(page) {
   await open(page, '/plan', '.date-switch select');
   await page.getByTestId('confirm-state').waitFor({ timeout: 60000 });
@@ -496,31 +518,12 @@ async function narrow(page) {
   check((await dialog(page).count()) === 0, '390px：取り消すで閉じる');
 }
 
-const errors = [];
 const steps = pagePerStep({
-  open: async (browser) => {
-    const ctx = await browser.newContext({ viewport: { width: 1400, height: 1000 } });
-    // 初回の案内ツアーを見た扱いにする（PRD D193）
-    await skipTour(ctx);
-    // 地図のタイルは外へ取りに行かない
-    await ctx.route(/cyberjapandata\.gsi\.go\.jp|tile\.openstreetmap\.org/, (r) =>
-      r.fulfill({ status: 204, body: '' }),
-    );
-    const page = await ctx.newPage();
-    await page.clock.setFixedTime(NOW);
-    page.on('pageerror', (e) => errors.push(String(e)));
-    // ブラウザのネイティブのダイアログ（confirm・alert・prompt）が出たら失敗
-    const native = [];
-    page.on('dialog', (d) => {
-      native.push(`${d.type()}: ${d.message()}`);
-      d.dismiss().catch(() => {});
-    });
-    return { ctx, page, native };
-  },
+  // 確認には答えず、ネイティブのダイアログ（confirm・alert・prompt）が出たら失敗
+  open: (browser) => openContext(browser, { viewport: { width: 1400, height: 1000 }, confirms: false }),
   steps: [ruleNames, rules, rulesSave, backWhileAsking, dataReset, adopt, staffDiscard, narrow],
   label: (name) => `${name}：途中で止まった`,
-  after: (name, { native }) => check(native.length === 0, `${name}：ブラウザのダイアログを出さない`, native),
-  end: () => check(errors.length === 0, 'ページのエラーが無い', errors),
+  after: (name, { dlg }) => check(dlg.native.length === 0, `${name}：ブラウザのダイアログを出さない`, dlg.native),
 });
 
 module.exports = { steps };

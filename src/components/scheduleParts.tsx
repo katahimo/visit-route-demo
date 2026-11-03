@@ -17,19 +17,17 @@ import type { useConfirm } from './ConfirmDialog';
 import { MenuButton, type MenuItem } from './MenuButton';
 import { ProposalChanges } from './proposalChanges';
 import { StaffMark } from './StaffMark';
-import { type AddTool, SimpleToolbar } from './simpleToolbar';
 import { useToast } from './Toast';
+import { type AbsenceTool, type AddTool, ToolbarRow } from './toolbarRow';
 import { WithIcon } from './ui';
-import { UndoButtons } from './undo';
 import { saveAppliedBasis } from './useArrangeBasis';
 import { useExceptionsOnly } from './useFeature';
 import { useSelectionBar } from './useSelectionBar';
-import { useSimpleMore } from './useSimpleMore';
 import { useValueStore } from './valueStore';
 import './scheduleParts.css';
 
 /**
- * 新しく組み始める前に、反映していない範囲の提案があれば捨ててよいか確かめる（提案は1つだけ。PR #81 のレビュー）。
+ * 新しく組み始める前に、反映していない範囲の提案があれば捨ててよいか確かめる（提案は1つだけ）。
  * 提案が無ければ確かめずに true
  */
 export async function confirmDropProposal(confirmDialog: ReturnType<typeof useConfirm>): Promise<boolean> {
@@ -46,87 +44,96 @@ export async function confirmDropProposal(confirmDialog: ReturnType<typeof useCo
 // ---- 操作の行 ----
 
 /**
- * 予定の操作の行（日・週・月で同じ並び。PRD D327）：欠勤・キャンセルを登録／元に戻す・やり直す／（表示の切り替えなど）／その他 ▾。
- * 欠勤・キャンセルは日の予定では欄を開き（onAbsence）、週・月ではその日の日の予定で欄を開く（リンク）。absence が null なら出さない
+ * 予定の操作の行（日・週・月で同じ作り。PRD D327・D384・D402）：主ボタン1つ＋ボタン1つ＋その他 ▾（ToolbarRow。何を残すかは lib/exceptionView の mainTools）。
+ * 欠勤・キャンセルは日の予定では欄を開き（onAbsence）、週・月ではその日の日の予定で欄を開く（リンク）。切は操作の行のボタン、入は「その他 ▾」の項目。
+ * absence が null なら出さない。表示の切り替え・元に戻す・使い方・メールで送るなどは moreItems と履歴の項目として「その他 ▾」へ
  */
 export function ScheduleToolbar({
   zoom,
   absence,
   moreItems,
-  children,
   after,
   className = '',
   add = null,
+  assignHref = null,
+  confirm = null,
 }: {
   zoom: ScheduleZoom;
   absence: { onClick: () => void; disabled?: boolean; ref?: Ref<HTMLButtonElement> } | { date: string } | null;
   moreItems: MenuItem[];
-  /** 元に戻すのあとに置くもの（表示の切り替え・計算の進み具合） */
-  children?: ReactNode;
   /** その他 ▾ のあとに置くもの */
   after?: ReactNode;
   className?: string;
-  /** 日の「訪問を追加」（エキスパート機能が切のとき主ボタンにする。入のときは呼ぶ側が children に置く）。スマホ・出さないときは null */
+  /** 日の「予定を入れる」（スマホ・出さないときは null） */
   add?: AddTool | null;
+  /** 入の「担当を組む」の行き先（担当を組むの画面。切は無視する） */
+  assignHref?: string | null;
+  /** 入の日の「確定（伝えた）」のボタン（切は無視する） */
+  confirm?: ReactNode;
 }) {
   const today = jstDate(Date.now());
-  const only = useExceptionsOnly();
-  // エキスパート機能が切のときは、メニューから外した空き状況と担当なしの［組む］を足す（PRD D383）。切は操作の行を主ボタン1つ＋1つにする（PRD D384）
-  const more = useSimpleMore();
-  const absenceNode =
+  const expert = !useExceptionsOnly();
+  const navigate = useNavigate();
+  // 要対応を組むのは要対応の帯、空き状況はメニュー（PRD D403・D400）
+  const tool: AbsenceTool | null =
     absence &&
-    ('onClick' in absence ? (
-      <button
-        ref={absence.ref}
-        type="button"
-        className="btn plan-sudden-btn"
-        onClick={absence.onClick}
-        disabled={absence.disabled}
-        data-testid="sudden-open"
-      >
-        <WithIcon icon={UserRoundX}>
-          <span className="tb-label">欠勤・キャンセルを登録</span>
-        </WithIcon>
-      </button>
-    ) : (
-      <Link
-        to={absenceHref(absence.date < today ? today : absence.date)}
-        className="btn plan-sudden-btn"
-        data-testid="sudden-open"
-      >
-        <WithIcon icon={UserRoundX}>
-          <span className="tb-label">欠勤・キャンセルを登録</span>
-        </WithIcon>
-      </Link>
-    ));
-  if (only)
-    return (
-      <SimpleToolbar
-        zoom={zoom}
-        className={className}
-        absence={absenceNode}
-        add={add}
-        moreItems={moreItems}
-        more={more}
-        after={after}
-      />
-    );
-  const items = [...moreItems, ...more.items];
+    ('onClick' in absence
+      ? {
+          node: (
+            <button
+              ref={absence.ref}
+              type="button"
+              className="btn plan-sudden-btn"
+              onClick={absence.onClick}
+              disabled={absence.disabled}
+              data-testid="sudden-open"
+            >
+              <WithIcon icon={UserRoundX}>
+                <span className="tb-label">欠勤・キャンセルを登録</span>
+              </WithIcon>
+            </button>
+          ),
+          item: {
+            key: 'sudden',
+            label: '欠勤・キャンセルを登録',
+            icon: UserRoundX,
+            disabled: absence.disabled,
+            onSelect: absence.onClick,
+            testId: 'sudden-open',
+          },
+        }
+      : {
+          node: (
+            <Link
+              to={absenceHref(absence.date < today ? today : absence.date)}
+              className="btn plan-sudden-btn"
+              data-testid="sudden-open"
+            >
+              <WithIcon icon={UserRoundX}>
+                <span className="tb-label">欠勤・キャンセルを登録</span>
+              </WithIcon>
+            </Link>
+          ),
+          item: {
+            key: 'sudden',
+            label: '欠勤・キャンセルを登録',
+            icon: UserRoundX,
+            onSelect: () => navigate(absenceHref(absence.date < today ? today : absence.date)),
+            testId: 'sudden-open',
+          },
+        });
   return (
-    <div className={`row schedule-toolbar ${className}`} data-testid="schedule-toolbar" data-zoom={zoom}>
-      {absenceNode}
-      <UndoButtons />
-      {children}
-      {items.length > 0 && (
-        <MenuButton
-          label="その他"
-          items={items}
-          testId={`${zoom === 'day' ? 'plan' : zoom}-more`}
-          className="plan-more"
-        />
-      )}
-      {after}
-    </div>
+    <ToolbarRow
+      zoom={zoom}
+      className={className}
+      expert={expert}
+      absence={tool}
+      add={add}
+      assignHref={expert ? assignHref : null}
+      confirm={expert ? confirm : null}
+      moreItems={moreItems}
+      after={after}
+    />
   );
 }
 

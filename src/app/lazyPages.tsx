@@ -1,4 +1,4 @@
-// 重い画面を別のチャンクに分ける（PRD D248。ADR-0039）。ホームの初回表示で読む JS を減らす。
+// 重い画面を別のチャンクに分ける（PRD D248。ADR-0039）。最初の画面（予定）の初回表示で読む JS を減らす。
 // 分けるのは日の予定・空き状況・案を比べる・相性・月の予定（地図 Leaflet は components/RouteMap で別に分ける）
 import { Hourglass } from 'lucide-react';
 import { useEffect } from 'react';

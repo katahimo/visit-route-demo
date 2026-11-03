@@ -31,7 +31,7 @@ export function useWeekModel(date: string, dates: readonly string[], tab: WeekTa
     [activeStaff, data.items],
   );
   const staffName = (id: string | null) => (id ? (staffById.get(id)?.name ?? '（不明）') : '担当なし');
-  /** 〈利用者さん〉の帯の下の担当の呼び方（名字。重なればフルネーム。印刷と同じ）と、読み上げのフルネーム（PRD D83） */
+  /** 〈利用者さん〉の帯の下の担当の呼び方（名字。重なればフルネーム。印刷と同じ）と、読み上げのフルネーム（PRD D342） */
   const labels = useMemo(() => staffLabels(staff), [staff]);
   const markNames = {
     short: (id: string) => labels.get(id) ?? staffName(id),

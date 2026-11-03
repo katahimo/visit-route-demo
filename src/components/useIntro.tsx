@@ -1,5 +1,5 @@
-// 画面の上の説明（見出しの下の1行）の出し分け：エキスパート機能が入は今のまま。切は初回だけ出し、閉じたら端末に覚えて出さない
-// （PRD D384。覚えるのは store/navOpen の開け閉めの鍵 intro:<画面>。判定は lib/exceptionView）
+// 画面の上の説明（見出しの下の1行）：入切とも初回だけ出し、閉じたら端末に覚えて出さない
+// （PRD D384・D402。覚えるのは store/navOpen の開け閉めの鍵 intro:<画面>。判定は lib/exceptionView）
 import { X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useSyncExternalStore } from 'react';
@@ -9,13 +9,12 @@ import './intro.css';
 import { IconButton } from './ui';
 import { useExceptionsOnly } from './useFeature';
 
-/** 見出しの下に出す説明（出さないときは undefined）。expertText は入のときの今の文（simpleText は切の一覧の文。月・週・日は lib/exceptionView が持つ） */
-export function useIntro(zoom: IntroScreen, expertText: string, simpleText?: string): ReactNode {
+/** 見出しの下に出す説明（出さないときは undefined）。expertText は入の文（exceptionText は切の一覧の文。月・週・日の切の文は lib/exceptionView が持つ） */
+export function useIntro(zoom: IntroScreen, expertText: string, exceptionText?: string): ReactNode {
   const only = useExceptionsOnly();
   const stored = useSyncExternalStore(navOpenMemory.subscribe, navOpenMemory.read, navOpenMemory.cached);
-  if (!introShown(stored, zoom, only)) return undefined;
-  const text = introText(zoom, only, expertText, simpleText);
-  if (!only) return text;
+  if (!introShown(stored, zoom)) return undefined;
+  const text = introText(zoom, only, expertText, exceptionText);
   return (
     <span className="page-lead-row" data-testid="page-intro">
       <span className="page-intro-text" title={text}>

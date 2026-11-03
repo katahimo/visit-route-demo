@@ -1,4 +1,4 @@
-// 月の画面の見出しの欄の部品（PRD D53〜D55・D61・D69・D177・D189・D256・D278）：見せ方の切り替え・表示の選択の段・
+// 月の画面の見出しの欄の部品（PRD D53〜D55・D61・D69・D177・D189・D256・D327）：見せ方の切り替え・表示の選択の段・
 // マスの見方の説明・「休みを入れる」の帯・凡例・範囲の AI で組む（担当を組む）の進み具合
 import { CalendarOff, LayoutGrid, List, Lock, PencilLine, Square } from 'lucide-react';
 import { type RefObject, useId } from 'react';
@@ -7,49 +7,21 @@ import { LoadLegend, LoadRowsSample } from '../components/loadBar';
 import type { MenuItem } from '../components/MenuButton';
 import { StaffLegend } from '../components/staffBar';
 import { Term } from '../components/Term';
-import { WithIcon } from '../components/ui';
-import { useConfirmStep } from '../components/useFeature';
+import { Hint, WithIcon } from '../components/ui';
 import type { Client, Staff, VisitType } from '../contracts/documents';
-import { BAR_ROWS, barEdgeNote, barRangeText, barRowsText, edgeLabel } from '../lib/barRows';
+import { barEdgeNote, barRowsText } from '../lib/barRows';
 import { mdText } from '../lib/dateText';
 import type { DayStatus } from '../lib/month';
 import type { BatchRun } from '../lib/monthBatch';
+import { monthCellHint, monthHelpLines } from '../lib/monthGuide';
 import { DAY_STATE_TEXT, type MonthLayout } from '../lib/monthList';
 import { batchProgressValue, type MonthFocus } from '../lib/monthView';
 import { REQUESTED_OFF_NOTE } from '../lib/requestedOff';
-import { CHANGED_WORD } from '../lib/settledView';
 import type { OffNote } from './useMonthOff';
 
 const STATE_ORDER: DayStatus['state'][] = ['none', 'told', 'changed'];
 
-/** カレンダーと日ごとの一覧の切り替え（PRD D189。600px 以下ははじめ一覧。URL の ?layout=） */
-export function MonthLayoutSwitch({ layout, onPick }: { layout: MonthLayout; onPick: (next: MonthLayout) => void }) {
-  return (
-    <fieldset className="segmented seg-sm month-layout" aria-label="月の見せ方" data-testid="month-layout">
-      {(
-        [
-          ['calendar', 'カレンダー', LayoutGrid],
-          ['list', '日ごとの一覧', List],
-        ] as const
-      ).map(([k, label, Icon]) => (
-        <button
-          key={k}
-          type="button"
-          className={layout === k ? 'is-on' : undefined}
-          aria-pressed={layout === k}
-          onClick={() => onPick(k)}
-          data-layout={k}
-        >
-          <WithIcon icon={Icon} size={14}>
-            <span className="tb-label">{label}</span>
-          </WithIcon>
-        </button>
-      ))}
-    </fieldset>
-  );
-}
-
-/** 見せ方の切り替えを「その他 ▾」の項目で（エキスパート機能が切のとき。操作の行のボタンを2つまでにするため。PRD D384） */
+/** カレンダーと日ごとの一覧の切り替えを「その他 ▾」の項目で（操作の行のボタンを2つまでにするため。PRD D189・D384・D402。600px 以下ははじめ一覧。URL の ?layout=） */
 export function monthLayoutItems(layout: MonthLayout, onPick: (next: MonthLayout) => void): MenuItem[] {
   return (
     [
@@ -70,7 +42,7 @@ export function monthLayoutItems(layout: MonthLayout, onPick: (next: MonthLayout
 }
 
 /**
- * 表示の選択の段（PRD D55・D61・D278）：表示（全体・〈スタッフ〉・〈利用者さん〉の検索欄）・「休みを入れる」（〈スタッフ〉を
+ * 表示の選択の段（PRD D55・D61・D327）：表示（全体・〈スタッフ〉・〈利用者さん〉の検索欄）・「休みを入れる」（〈スタッフ〉を
  * 選んでいるとき）・混み具合で数える人（全体のとき）
  */
 export function MonthPickers({
@@ -151,7 +123,7 @@ export function MonthPickers({
         </button>
       )}
       {focus.kind === 'all' && (
-        // 用語の説明（ボタン）は label の中に置かない（入力欄の名前が用語のボタンへ移るため。PR #42 のレビュー）。
+        // 用語の説明（ボタン）は label の中に置かない（入力欄の名前が用語のボタンへ移るため）。
         // 選ぶ欄の名前は aria-labelledby で「混み具合：」と用語をつなぐ
         <div className="month-picker">
           <span>
@@ -177,41 +149,24 @@ export function MonthPickers({
   );
 }
 
-/** 「その他 ▾」の「マスの見方の説明」（PRD D278） */
+/** 「その他 ▾」の「マスの見方の説明」（PRD D327。文は lib/monthGuide の monthHelpLines。切は切のマスに出る印だけ） */
 export function MonthHelp({
   helpRef,
   staffTerm,
+  only,
   onClose,
 }: {
   helpRef: RefObject<HTMLDivElement | null>;
   staffTerm: string;
+  only: boolean;
   onClose: () => void;
 }) {
   return (
     <div ref={helpRef} className="hint-body month-help" tabIndex={-1} data-testid="month-help">
       <ul className="plan-help-list">
-        <li>
-          日のマスを押すと、その日の訪問を右の欄（スマホは下から出る欄）に出します。もう一度押すと、その日の「日の予定」を開きます。マスの色と印は日の状態です（下の凡例）。
-        </li>
-        <li>
-          右の欄の訪問の行は、押すと訪問の詳細、Shift・Ctrl＋クリックで選べます。行を別の日のマスへドラッグするか、選んで「別の日へ」を押すと日付を移せます（時刻はそのまま）。
-        </li>
-        <li>
-          赤い枠や「要対応 N」の札の日は、担当なし・担当が休み・条件に合わない・時間に間に合わない訪問がある日です。N
-          は右の「要対応」の欄の行の数です。
-        </li>
-        <li>
-          「未連絡 N」は、確定（伝えた）あとに担当・時刻が変わった訪問の件数です。日の予定の連絡の一覧で確かめます。
-        </li>
-        <li>
-          混み具合のバーは、{barRangeText()} を3段（
-          {BAR_ROWS.map(([a, b]) => `${a}〜${b}時`).join('・')}）に分け、30分ごとに空いている{staffTerm}
-          の人数で色を付けます。
-        </li>
-        <li>
-          {edgeLabel('early')}・{edgeLabel('late')}
-          に働く人がいる日は、段の端に「◀」「▶」が付きます。マウスを乗せると時刻が出ます。
-        </li>
+        {monthHelpLines(staffTerm, only).map((l) => (
+          <li key={l}>{l}</li>
+        ))}
       </ul>
       <div>
         <button type="button" className="btn btn-small btn-text" onClick={onClose}>
@@ -317,25 +272,35 @@ export function MonthLegend({ bar }: { bar: 'load' | 'staff' | null }) {
   );
 }
 
-/** 凡例の中身（開いたとき） */
+/** マスの読み方（エキスパート機能が切。見出しの ⓘ。マスに吹き出しは出さない。PRD D410） */
+export function MonthCellHint({ staffTerm }: { staffTerm: string }) {
+  return (
+    <Hint label="マスの読み方">
+      <ul className="hint-list" data-testid="month-cell-hint">
+        {monthCellHint(staffTerm).map((l) => (
+          <li key={l}>{l}</li>
+        ))}
+      </ul>
+    </Hint>
+  );
+}
+
+/** 凡例の中身（開いたとき。凡例はエキスパート機能が入のときだけ。切はマスの読み方を見出しの ⓘ に出す。PRD D410） */
 function MonthLegendBody({ bar }: { bar: 'load' | 'staff' | null }) {
-  // expert 切は確定の段階が無いので、日の状態の凡例は「変更あり」だけ（ADR-0073）
-  const confirmStep = useConfirmStep();
-  const states = confirmStep ? STATE_ORDER : STATE_ORDER.filter((st) => st === 'changed');
   return (
     <div className="month-legend" data-testid="month-legend">
       <span className="month-legend-group">
-        {states.map((st) => (
+        {STATE_ORDER.map((st) => (
           <span key={st} className="month-legend-item">
             <span className={`month-swatch is-state-${st}`} aria-hidden="true">
               {st === 'told' && <Lock size={9} />}
               {st === 'changed' && <PencilLine size={9} />}
             </span>
-            {/* 確定済み・未連絡の変更ありは説明つき（PRD D242） */}
+            {/* 確定済み・未連絡の変更ありは説明つき（PRD D323） */}
             {st === 'told' ? (
               <Term k="confirmed">{DAY_STATE_TEXT[st]}</Term>
             ) : st === 'changed' ? (
-              <Term k="confirmDiff">{confirmStep ? DAY_STATE_TEXT[st] : CHANGED_WORD}</Term>
+              <Term k="confirmDiff">{DAY_STATE_TEXT[st]}</Term>
             ) : (
               DAY_STATE_TEXT[st]
             )}

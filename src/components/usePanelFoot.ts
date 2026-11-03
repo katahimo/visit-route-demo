@@ -92,7 +92,7 @@ export function useVisualViewportFit(wrap: RefObject<HTMLElement | null>): void 
 }
 
 /**
- * 欄が開いている間の知らせ（トースト）の置き場所（PRD D197。PR #46 のレビュー）。欄の見出しの実際の高さ（2段になることがある）と
+ * 欄が開いている間の知らせ（トースト）の置き場所（PRD D197）。欄の見出しの実際の高さ（2段になることがある）と
  * 欄の幅を html の CSS 変数（--drawer-head-h・--drawer-w）に入れ、置き場所（`toastPlace`）を html の data-drawer-toast に書く。
  * styles.css は 'top' なら見出しのすぐ下、'side' なら欄の外（幕の側）の真ん中に出す
  */

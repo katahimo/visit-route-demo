@@ -26,6 +26,7 @@ import { useDay } from './day';
 import { invalidAttrs } from './FieldError';
 import { useToast } from './Toast';
 import { useUndoAction } from './undo';
+import { useFeature } from './useFeature';
 import { usePatternAdd } from './usePatternAdd';
 
 /** 訪問の入力の欄 → 引き出しの欄（無いものは文から探す） */
@@ -45,6 +46,8 @@ export function useAddPlan(onClose: () => void) {
   const { date: shown } = useDay();
   const today = jstDate(Date.now());
   const kind = addPlanKind(data.org.features);
+  /** くり返しに毎月（第N）を出すか（機能 patternMonthly。〈利用者さん〉の繰り返しの欄と同じ） */
+  const monthlyOn = useFeature('patternMonthly');
   const clients = addPlanClients(data);
   const first = addPlanDate(shown, today);
   const [clientId, setClientId] = useState(clients[0]?.id ?? '');
@@ -52,7 +55,8 @@ export function useAddPlan(onClose: () => void) {
   const [draft, setDraft] = useState(() => addPlanVisitDraft(data, first, clients[0]?.id));
   const [errorState, setErrorState] = useState<AddPlanError | null>(null);
   const errorId = useId();
-  const fail = (text: string, field?: AddPlanField) => setErrorState({ text, field: field ?? addPlanFieldOf(text) });
+  const fail = (text: string, field?: AddPlanField) =>
+    setErrorState({ text, field: field ?? addPlanFieldOf(text, kind) });
   /** 入力の欄の誤りの印（aria-invalid・aria-describedby） */
   const bad = (f: AddPlanField) => invalidAttrs(errorState?.field === f, errorId);
 
@@ -94,7 +98,7 @@ export function useAddPlan(onClose: () => void) {
     setErrorState(null);
     const e = addPlanError(
       kind,
-      { clientId, weekdays: pform.weekdays, duration: draft.durationMinutes },
+      { clientId, duration: draft.durationMinutes, form: pform, today },
       data.org.terms.client,
     );
     if (e) return fail(e.text, e.field);
@@ -104,6 +108,7 @@ export function useAddPlan(onClose: () => void) {
 
   return {
     kind,
+    monthlyOn,
     clients,
     clientId,
     setClientId,

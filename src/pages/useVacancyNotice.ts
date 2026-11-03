@@ -39,16 +39,16 @@ export function useVacancyNotice(
   const noticeSpan = useMemo(() => noticeRange(noticePeriod, today), [noticePeriod, today]);
   /**
    * 案内文を作る元の条件（変わるたびに新しい物）。作った文にはこれを付けておき、今の条件と違えば古い文として
-   * コピー・メールを押せなくする（描いた時点で決まるので、計算し直すまでの間にも古い文で動かない。PR #44 のレビュー）
+   * コピー・メールを押せなくする（描いた時点で決まるので、計算し直すまでの間にも古い文で動かない）
    */
   const noticeInputs = useMemo(
     () => ({ data, noticeType, noticeDuration, requirements, exactPlace, noticeSpan, noticePeriod, terms }),
     [data, noticeType, noticeDuration, requirements, exactPlace, noticeSpan, noticePeriod, terms],
   );
   const [notice, setNotice] = useState<{ text: string; noPlan: string[]; inputs: typeof noticeInputs } | null>(null);
-  /** 案内文の欄を開いているか（畳んでいる間は計算しない。問い合わせの即答の速さを落とさない。PRD D185） */
+  /** 案内文の欄を開いているか（畳んでいる間は計算しない。問い合わせの即答の速さを落とさない。PRD D184） */
   const [noticeOpen, setNoticeOpen] = useState(false);
-  /** 条件を変えてから案内文を計算し直すまで（古い文でコピー・メールさせない。PR #44 のレビュー） */
+  /** 条件を変えてから案内文を計算し直すまで（古い文でコピー・メールさせない） */
   const noticeStale = notice === null || notice.inputs !== noticeInputs;
   // 紹介元へ BCC で一斉に（PRD D95。ADR-0017）：宛先は紹介元のメールを重複なく。外した宛先（小文字）だけを画面の中で持つ
   const referrers = useMemo(() => referrerRecipients(data.clients), [data.clients]);

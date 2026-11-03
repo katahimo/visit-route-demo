@@ -17,6 +17,7 @@ import { hhmmToMinutes, jstDate } from '../domain/time';
 import { colorOf } from '../lib/colors';
 import { own } from '../lib/common';
 import { exceptionsOnly } from '../lib/exceptionView';
+import { isFirstVisit } from '../lib/firstVisit';
 import { HOME_LABEL } from '../lib/mapsLink';
 import { typeOf } from '../lib/patternText';
 import { bandTone, cardTone } from '../lib/visitLook';
@@ -172,7 +173,7 @@ export function whoOf(p: PlanCtx, id: string, sid: string | null, withClient = t
  */
 export function tagsOf(p: PlanCtx, id: string, pinHint = true) {
   const { pins, staffName, hardOf, toldMarks, running, reassignMarks, leftById, unpin, only } = bv(p);
-  // 例外だけ見せる（切）：ピン・条件に合わない印は出さない（担当なし・重なり・休みの人と「変更あり」だけ目立たせる）
+  // 例外だけ見せる（切）：ピン・条件に合わない印は出さない（担当なし・間に合わない・重なり・休みの人と「変更あり」だけ目立たせる）
   const pin = only ? undefined : own(pins, id);
   const hard = only ? undefined : hardOf.get(id);
   const subFrom = reassignMarks.substitute.get(id);
@@ -267,6 +268,12 @@ export function reassignOf(p: PlanCtx, id: string, ownerId: string | null) {
   );
 }
 
+/** 初めての訪問先か（今の担当がその〈利用者さん〉を過去8週に担当していない。PRD D415） */
+function firstOf(p: PlanCtx, id: string, sid: string | null): boolean {
+  const v = bv(p).visitById.get(id);
+  return !!v && !!sid && isFirstVisit(p.served, v.clientId, sid);
+}
+
 /** 順番の表示で最初（入らなかった訪問 → 列の順）の固定の訪問。「固定」の説明はこのカードだけ（PRD D241） */
 export function firstPinnedCard(p: PlanCtx) {
   const { routes, pins, unassigned, columns } = bv(p);
@@ -296,6 +303,7 @@ export function card(p: PlanCtx, id: string) {
   const tone = cardTone({ only, look: looks.get(id), hard: !!hard, pinned: !!pin });
   const ownerId = owner.get(id) ?? null;
   const x = { id, set: PLAN_SET };
+  const isFirst = firstOf(p, id, ownerId);
   return (
     <VisitCard
       key={id}
@@ -316,10 +324,11 @@ export function card(p: PlanCtx, id: string) {
       dragging={dragging === id}
       detail={
         <>
+          {isFirst && <VisitRules client={clientOf(id)} first />}
           {openOf(p, id)}
           {whoOf(p, id, ownerId)}
           {reassignOf(p, id, ownerId)}
-          <VisitRules client={clientOf(id)} />
+          {!isFirst && <VisitRules client={clientOf(id)} />}
           {routeLinksOf(p, id, ownerId)}
           {reasonOf(p, id)}
         </>
@@ -414,13 +423,14 @@ export function bandOf(p: PlanCtx, id: string, sid: string): TimelineBand {
     mark('shift', 'is-warn', `振り直す前の開始時刻からの変化 ${txt}`, txt, 'shifted');
   }
   const x = { id, set: PLAN_SET };
+  const isFirst = firstOf(p, id, sid);
   return {
     visitId: id,
     start,
     end,
     name: client?.displayName ?? '（不明）',
     color: type ? colorOf(type.color) : null,
-    // 今日より前の日は要対応の赤にしない（印と同じ。月・ホームと同じ決まり）
+    // 今日より前の日は要対応の赤にしない（印と同じ。月と同じ決まり）
     tone: bandTone({ only, look, hard: !!hard, pinned: !!pin, upcoming: date >= jstDate(Date.now()) }),
     kinds: look?.kinds ?? '',
     picked: sel.isPicked(x),
@@ -434,6 +444,7 @@ export function bandOf(p: PlanCtx, id: string, sid: string): TimelineBand {
     note: notes.join('・') || undefined,
     detail: (
       <>
+        {isFirst && <VisitRules client={client} first />}
         {openOf(p, id)}
         <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
           <strong>
@@ -444,7 +455,7 @@ export function bandOf(p: PlanCtx, id: string, sid: string): TimelineBand {
         {whoOf(p, id, sid, false)}
         {reassignOf(p, id, sid)}
         {tagsOf(p, id)}
-        <VisitRules client={client} />
+        {!isFirst && <VisitRules client={client} />}
         {routeLinksOf(p, id, sid)}
         {reasonOf(p, id)}
       </>

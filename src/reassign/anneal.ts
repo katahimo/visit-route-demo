@@ -1,5 +1,5 @@
 // 案B「少し動かしてよい」（PRD D34。ADR-0011）：焼きなましの準備・費用・結果のまとめと確かめ。
-// どれも純粋関数で決定的（関数本体は index.ts から移しただけ）。DemoData は読まない・書かない
+// どれも純粋関数で決定的。DemoData は読まない・書かない
 import type { Problem } from '../contracts/problem';
 import type {
   AnnealCost,

@@ -1,4 +1,4 @@
-/* 「予定を入れる」の引き出し（components/AddPlanPanel。PRD D388） */
+/* 「予定を入れる」の引き出し（components/AddPlanPanel。PRD D402） */
 .add-plan {
   gap: 12px;
 }
@@ -15,4 +15,22 @@
 /* 引き出しは狭いので1列（〈利用者さん〉・曜日・くり返し・時刻・所要を上から） */
 .add-plan .form-grid {
   grid-template-columns: minmax(0, 1fr);
+}
+/* CSV でまとめて入れる（components/PlanCsvSection。ADR-0090）：入力の欄と線で分け、ふだんは畳む */
+.add-plan-csv {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.add-plan-csv[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.add-plan-csv-title {
+  cursor: pointer;
+  font-weight: 600;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
 }

@@ -1,5 +1,5 @@
 // 焼きなましの状態（列・費用・未割当・件数・作業領域）と、それを直す小さな操作。
-// createSolver のクロージャで共有していた状態を1つのオブジェクトにまとめたもの（挙動・計算の順は元のまま）
+// createSolver が共有する状態を1つのオブジェクトにまとめたもの
 import type { Problem } from '../contracts/problem';
 import { balanceOff, balancePoints, dropPointsOf, overCap } from '../matching/cost';
 import { routeCost } from '../matching/timing';

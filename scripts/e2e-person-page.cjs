@@ -10,14 +10,9 @@
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-person-page.cjs
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）
 // 終了コード：全部通れば 0、通らないものがあれば 1。ページのエラー（pageerror）も失敗に数える
-const path = require('node:path');
-const { skipTour } = require('./lib/tourSeen.cjs');
-const { answerConfirms } = require('./lib/confirmDialog.cjs');
 const { visitsIn } = require('./lib/visits.cjs');
 const {
   BASE,
-  OUT_DIR,
-  NOW,
   TODAY,
   STORAGE_KEY,
   check,
@@ -28,10 +23,11 @@ const {
   stored,
   runSteps,
   withTimeout,
+  shot,
 } = require('./lib/env.cjs');
-const { pagePerStep } = require('./lib/steps.cjs');
+const { openContext, pagePerStep } = require('./lib/steps.cjs');
+const { clickMenu, goTo } = require('./lib/ui.cjs');
 
-const shot = (page, name) => page.screenshot({ path: path.join(OUT_DIR, `${name}.png`) });
 const panel = (page) => page.getByTestId('visit-panel');
 const cal = (page) => page.getByTestId('pcal');
 const visitBtn = (page, id) => page.locator(`[data-testid="pcal-visit"][data-visit="${id}"]`);
@@ -57,12 +53,8 @@ const weekStart = (d) => addDays(d, -((new Date(`${d}T00:00:00Z`).getUTCDay() + 
 const PX = 0.8;
 const DAY_START = 7 * 60;
 
-async function open(page, hash, ready) {
-  await page.goto('about:blank');
-  await page.goto(`${BASE}#${hash}`);
-  await page.locator(ready).first().waitFor({ timeout: 30000 });
-  await settle(page, 400);
-}
+// 画面を新しく開く（共通の手 goTo。待つ長さ・見出し・落ち着くまでの待ちはこの画面の e2e の既定）
+const open = (page, hash, ready) => goTo(page, hash, { ready: ready, timeout: 30000, h1: false, settleMs: 400 });
 
 /** c1 の、今日より後の繰り返しの回（今週の中。無ければ来週）と、そのとき開く週の基準の日 */
 async function futureSeries(page, clientId = 'c1') {
@@ -421,7 +413,7 @@ async function patterns(page, dlg) {
   // 入力があるまま離れようとすると確かめる（断れば留まる）
   dlg.answer = false;
   dlg.messages.length = 0;
-  await page.locator('.side-nav').getByRole('link', { name: 'ホーム' }).click();
+  await clickMenu(page, '予定');
   await settle(page);
   check(
     dlg.messages.length === 1 && hashOf(page).startsWith('#/clients/c1') && (await form.count()) === 1,
@@ -453,16 +445,24 @@ async function patterns(page, dlg) {
   let d = await dataWhen(page, (x) => x.patterns.filter((p) => p.clientId === 'c1').length === p0 + 1);
   const added = d.patterns.find((p) => p.clientId === 'c1' && p.earliestStart === '17:00');
   check(!!added && added.weekdays.join() === '4', '「繰り返しを足す」→ 保存で繰り返しが増える', added);
-  // 版2：繰り返しの回は保存せず、見るときに計算する（ADR-0053）。カレンダーに足した繰り返しの回が出る
+  // 繰り返しの回は保存せず、見るときに計算する（ADR-0053）。カレンダーに足した繰り返しの回が出る
   await page
     .locator(`[data-testid="pcal-visit"][data-visit$="_${added?.id}"]`)
     .first()
     .waitFor({ timeout: 5000 })
     .catch(() => {});
+  // 足した直後に保存の側で回を作らない。ただし繰り返しの保存は自動の組み（ADR-0072・D376）を頼み、これが「今日〜翌月末」の
+  // 担当を付けた回を保存する。組み終わる速さは端末の速さで変わる（保存の直後に読むか、組んだあとに読むか）ので、
+  // どちらでも成り立つ形で確かめる：保存した回は、自動の組みの範囲（翌月末まで）の中で担当が付いたものだけ（範囲の外は計算のまま）
+  const rangeTo = new Date(Date.UTC(Number(TODAY.slice(0, 4)), Number(TODAY.slice(5, 7)) + 1, 0))
+    .toISOString()
+    .slice(0, 10);
+  const savedOf = d.visits.filter((v) => v.pattern?.id === added?.id);
   check(
     (await page.locator(`[data-testid="pcal-visit"][data-visit$="_${added?.id}"]`).count()) > 0 &&
-      !d.visits.some((v) => v.pattern?.id === added?.id),
+      savedOf.every((v) => v.staffId !== null && v.date <= rangeTo),
     '足した繰り返しの回がカレンダーに出る（回は保存しない）',
+    JSON.stringify(savedOf.map((v) => `${v.date} ${v.staffId}`)),
   );
   // 直す：時刻を変えて保存 → 確認→ 受ける
   const row = page.locator(`[data-testid="pattern-row"][data-pattern="${added.id}"]`);
@@ -643,7 +643,7 @@ async function staffPage(page) {
   const id = await first.getAttribute('data-visit');
   const d = await stored(page);
   const date = await first.getAttribute('data-date');
-  // 版2：担当は訪問に持つ（保存した回は staffId、計算した回は繰り返しの担当）
+  // 担当は訪問に持つ（保存した回は staffId、計算した回は繰り返しの担当）
   const own = d.visits.find((x) => x.id === id);
   const pat = d.patterns.find((p) => id === `${date}_${p.id}`);
   check(own ? own.staffId === 's1' : pat?.usualStaffId === 's1', '出す回はその日にこの人が担当の回', {
@@ -722,23 +722,12 @@ async function print(page) {
   await page.emulateMedia({ media: 'screen' });
 }
 
-const errors = [];
 const steps = pagePerStep({
-  open: async (browser) => {
-    const ctx = await browser.newContext({ viewport: { width: 1400, height: 1000 } });
-    await skipTour(ctx);
-    // 地図のタイルは外へ取りに行かない
-    await ctx.route(/cyberjapandata\.gsi\.go\.jp/, (r) => r.fulfill({ status: 204, body: '' }));
-    const page = await ctx.newPage();
-    await page.clock.setFixedTime(NOW);
-    page.on('pageerror', (e) => errors.push(String(e)));
-    return { ctx, page, dlg: await answerConfirms(page) };
-  },
+  open: (browser) => openContext(browser, { viewport: { width: 1400, height: 1000 } }),
   call: (fn, s) => fn(s.page, s.dlg),
   steps: [fromList, highlightAndMonth, slotNew, dragMove, patterns, leaves, monthLink, staffPage, narrow, print],
   label: (name) => `${name}：途中で止まった`,
   after: (name, { dlg }) => check(dlg.native.length === 0, `${name}：ブラウザのダイアログを出さない`, dlg.native),
-  end: () => check(errors.length === 0, 'ページのエラーが無い', errors),
 });
 
 module.exports = { steps };

@@ -3,7 +3,7 @@
 // 用語の説明（マウスを重ねると出て離れると消える・Tab のフォーカスで出て Esc で消える（フォーカスは用語のまま）・Tab で外れると消える・
 // aria-describedby の先が role="tooltip" で説明の文・タッチで押すと開き、もう一度押すと閉じる・外を押すと閉じる・画面に収まる）、
 // 言い換え（稼働の見込みの「出勤〜退勤（拘束）」「空き時間（待ち）」、乱数の種は「詳細設定」に畳む）、
-// 空の画面（週：訪問が無い、稼働の見込み、比較：なぜ空かと次の一手。ボタンは日の予定だけで、押すとその日の日の画面）、空き状況の案の無い日の注意は1か所、
+// 空の画面（週：訪問が無い、稼働の見込み、比較：なぜ空かと次の一手。ボタンは日の予定だけで、押すとその日の日の画面）、
 // 月の凡例（はじめは畳む・開く・読み直すと畳む（保存しない）・マスにマウスを重ねる／フォーカスで読み方・Esc で消す）、
 // 相性のセルの記号の意味（title・aria-label）、390px で収まる・印刷で用語の説明・ボタン・凡例の開け閉めを出さない、ブラウザの確認を出さない。
 // 理由の見せ方と警告の色（PRD D228・D229）：訪問ごとの理由は「✓ 相性◎（選ばれやすい）」のような符号の無い言葉で「費用」を出さず内部の値は title、
@@ -19,6 +19,7 @@ const { skipTour } = require('./lib/tourSeen.cjs');
 const { BASE, OUT_DIR, NOW, TODAY, STORAGE_KEY, check, settle, hashOf, runSteps } = require('./lib/env.cjs');
 const { planDays } = require('./lib/plan.cjs');
 const { sharedPage, openPage, guard } = require('./lib/steps.cjs');
+const { goTo, openScreenDetails, pressTool } = require('./lib/ui.cjs');
 
 const YM = TODAY.slice(0, 7);
 const MONTH = Number(YM.slice(5, 7));
@@ -34,15 +35,14 @@ function addDays(d, n) {
  * 画面を新しく開く（e2e-home と同じ。about:blank を挟み、同じ文書の中で hash を移したときに読み直す前の `?do=` の処理で
  * 消えるのを避ける）。wait の要素が出るまで待つ
  */
-async function open(page, hash, wait) {
-  await page.goto('about:blank');
-  await page.goto(`${BASE}#${hash}`);
-  await page.locator(wait).first().waitFor({ timeout: 60000 });
-  await settle(page, 300);
-}
-/** 初期データに戻す（ホームはデータを書かないので、ホームで消してから読み直す） */
+const open = async (page, hash, wait) => {
+  await goTo(page, hash, { ready: wait, timeout: 60000, h1: false, settleMs: 300 });
+  // 点数・凡例・進み具合は「詳しく ▾」の中（PRD D393）。読む前に開く
+  if (/^\/(month|week|plan)/.test(hash)) await openScreenDetails(page);
+};
+/** 初期データに戻す（データの画面は開くだけではデータを書かないので、そこで消してから読み直す） */
 async function resetData(page) {
-  await open(page, '/home', 'h1');
+  await open(page, '/data', 'h1');
   await page.evaluate((k) => localStorage.removeItem(k), STORAGE_KEY);
   await page.reload();
   await page.locator('h1').waitFor();
@@ -226,7 +226,7 @@ async function rename(page) {
   check(/出勤〜退勤（拘束）/.test(lead) && /空き時間（待ち）/.test(lead), '勤務の見込み：見出しの文の言い換え', lead);
   const span = page.getByTestId('term-span');
   check((await span.innerText()) === '出勤〜退勤（拘束）', '勤務の見込み：上限の設定の用語', await span.innerText());
-  // 入力欄の名前（PR #42 のレビュー：用語のボタンを label の中に置かない。aria-labelledby か labels で名前が付く）
+  // 入力欄の名前（用語のボタンを label の中に置かない。aria-labelledby か labels で名前が付く）
   for (const [tid, want] of [
     ['work-limit', /出勤〜退勤（拘束）の上限/],
     ['work-fare', /交通費の単価/],
@@ -272,7 +272,7 @@ async function rename(page) {
   check((await page.getByTestId('term-terms').innerText()) === '画面での呼び方', 'データ：画面での呼び方');
 }
 
-// ---- 空の画面（版2：訪問の無いとき。繰り返しの回は計算するので「未作成」は無い） ----
+// ---- 空の画面（訪問の無いとき。繰り返しの回は計算するので「未作成」は無い） ----
 async function empties(page) {
   await resetData(page);
   // 週：訪問が1件も無い（訪問を取り消し、繰り返しを消す）
@@ -340,20 +340,7 @@ async function empties(page) {
     '週：ずっと先の週も繰り返しの回が出る（未作成は無い）',
     heads,
   );
-  // 空き状況：担当なし・数えなかった日の注意は1か所（表の上）
-  await open(page, '/vacancy', 'h1');
-  await page.getByTestId('vacancy-table-card').waitFor();
-  await page.waitForFunction(() => document.querySelector('[data-testid="vacancy-grid"]'), null, { timeout: 30000 });
-  const notes = await page.locator('.vacancy-noplan').count();
-  check(notes <= 1, '空き状況：担当なし・数えなかった日の注意は1か所', notes);
-  const mk = page.getByTestId('vacancy-noplan-arrange');
-  if ((await mk.count()) === 1) {
-    check(
-      /^#\/arrange\?ym=\d{4}-\d{2}$/.test((await mk.getAttribute('href')) ?? ''),
-      '空き状況：注意から担当を組むの画面へ（その場では組まない。ADR-0063）',
-      await mk.getAttribute('href'),
-    );
-  }
+  // 空き状況の注意が1か所であることは e2e-vacancy-steps
 }
 
 // ---- 月の凡例・マスの読み方 ----
@@ -364,13 +351,12 @@ async function legend(page) {
   check(!(await page.getByTestId('month-legend').isVisible()), '月：凡例の中身は畳んだ中');
   const line = await page.locator('.month-legend-line').innerText();
   check(/色＝日の状態/.test(line), '月：1行の要約', line);
-  // 混み具合の選択は「その他 ▾」の「表示を選ぶ」の中（PRD D278）
+  // 混み具合の選択は「その他 ▾」の「表示を選ぶ」の中（PRD D327）
   check(
     (await page.getByTestId('month-load-type').count()) === 0,
     '月：表示の選択（混み具合）ははじめ「その他 ▾」にたたむ',
   );
-  await page.getByTestId('month-more').click();
-  await page.getByTestId('month-more-pickers').click();
+  await pressTool(page, 'month-more-pickers', { where: 'more' });
   await page.getByTestId('month-load-type').waitFor();
   check(
     await page.getByTestId('month-focus').evaluate((el) => document.activeElement === el),
@@ -435,7 +421,7 @@ async function legend(page) {
   await page.locator('h1').click();
   await settle(page, 150);
   check(!(await tip.isVisible()), 'フォーカスが外れると消える');
-  // 休みを切り替えたら、出ている読み方も新しい文になる（文は日付で引く。PR #42 のレビュー）
+  // 休みを切り替えたら、出ている読み方も新しい文になる（文は日付で引く）
   // 月末に実行すると今月に休みを入れられる日が無いことがあるので、無ければ来月で見る
   const nextYm = (() => {
     const [y, m] = YM.split('-').map(Number);
@@ -471,15 +457,15 @@ async function legend(page) {
   } else {
     check(false, '休みを入れられる日がある（読み方の更新の確かめ）');
   }
-  // 相性のセルの記号の意味
+  // 相性のマスの記号の意味
   await open(page, '/compat', '[data-testid="compat-table"]');
-  const x = page.locator('.compat-btn', { hasText: '×' }).first();
+  const x = page.locator('[data-testid="compat-cell"]', { hasText: '×' }).first();
   if ((await x.count()) > 0) {
-    check(/担当にしない/.test((await x.getAttribute('aria-label')) ?? ''), '相性：× のセルの読み上げに意味');
-    check(/× 担当にしない/.test((await x.getAttribute('title')) ?? ''), '相性：× のセルの title に意味');
+    check(/担当にしない/.test((await x.getAttribute('aria-label')) ?? ''), '相性：× のマスの読み上げに意味');
+    check(/× 担当にしない/.test((await x.getAttribute('title')) ?? ''), '相性：× のマスの title に意味');
   }
-  const blank = page.locator('.compat-btn:not(.lv2):not(.lv1):not(.lvm1):not(.lvm2)').first();
-  check(/未入力/.test((await blank.getAttribute('aria-label')) ?? ''), '相性：空のセルは「未入力」');
+  const blank = page.locator('[data-testid="compat-cell"].lv0').first();
+  check(/未入力/.test((await blank.getAttribute('aria-label')) ?? ''), '相性：空のマスは「未入力」');
 }
 
 // ---- 理由の見せ方と警告の色（PRD D228・D229）----
@@ -531,7 +517,7 @@ async function reasonWords(page) {
     check(key !== 'dropped', '入らないが理由なら次の一手がある', key);
   }
   await page.screenshot({ path: path.join(OUT_DIR, 'plan-reason-lines.png'), fullPage: false });
-  // 比較の画面：AI の記録は残さない（版2。提案はその場だけ）ので、乱数の種は出さない
+  // 比較の画面：AI の記録は残さない（提案はその場だけ）ので、乱数の種は出さない
   await open(page, '/compare', 'h1');
   await page.getByTestId('compare-another').waitFor({ timeout: 10000 });
   check(!(await page.locator('main').innerText()).includes('乱数の種'), '比較：乱数の種を出さない');
@@ -543,12 +529,12 @@ async function unplacedWords(page) {
   await planDays(page);
   await openPlan(page);
   await page.goto('about:blank');
-  await page.goto(`${BASE}#/home`);
+  await page.goto(`${BASE}#/data`);
   await page.locator('h1').waitFor();
   const moved = await page.evaluate(
     ({ k, today }) => {
       const d = JSON.parse(localStorage.getItem(k));
-      // 版2：担当は訪問に持つ。保存した今日の訪問1件を担当なしにする
+      // 担当は訪問に持つ。保存した今日の訪問1件を担当なしにする
       const v = d.visits.find((x) => x.date === today && !x.cancelled && x.staffId);
       if (!v) return null;
       v.staffId = null;
@@ -586,7 +572,7 @@ async function unplacedWords(page) {
 }
 
 async function warnColors(page) {
-  // 月：要対応（担当なし・担当が休み など）の日だけ赤。まだ伝えていないだけの日は赤くしない（版2：「案なし」の注意は無い）
+  // 月：要対応（担当なし・担当が休み など）の日だけ赤。まだ伝えていないだけの日は赤くしない（「案なし」の注意は無い）
   await resetData(page);
   // 週の確認で今日の訪問の担当を外すので、保存した担当の入った訪問を用意する（初期データからなので写しを使える）
   await planDays(page, { cache: true });
@@ -724,7 +710,7 @@ async function mobile(browser) {
   check(!(await tip.isVisible()), '印刷：用語の説明を出さない');
   await page.emulateMedia({ media: 'screen' });
   // 月：凡例の要約が1行で収まる
-  await open(page, `/month?ym=${YM}`, '[data-testid="month-legend-toggle"]');
+  await open(page, `/month?ym=${YM}`, '[data-testid="month-more"]');
   const lb = await page.getByTestId('month-legend-toggle').boundingBox();
   check(lb && lb.x + lb.width <= 390 && lb.height < 40, '390px：凡例の要約は1行で収まる', lb);
   await page.screenshot({ path: path.join(OUT_DIR, 'mobile-month.png') });

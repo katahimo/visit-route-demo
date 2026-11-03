@@ -1,20 +1,20 @@
-// 相性の画面（PRD D113〜D117。ADR-0022）を本物のブラウザで確かめる：
-// 列の見出しの名前が全部出る／吹き出しの開閉・キーボード・フォーカスの戻り・Tab で外へ出ると閉じる・中を巻ける・画面の端で切れない／
+// 相性の画面（PRD D113〜D117・D420。ADR-0022・ADR-0087）を本物のブラウザで確かめる：
+// 列の見出しの名前が全部出る／画面の中の操作の数（マス・見出しはボタンにせず、表は Tab の止まり所1つ）・凡例は1行・絞り込みは1つに畳む／
+// 表の中を矢印で動く／マスを押すと相性を選ぶ欄（今の相性に印・選ぶと入る・フォーカスはマスへ戻る・Esc で閉じる）／
+// 吹き出しの開閉・キーボード・フォーカスの戻り・Tab で外へ出ると閉じる・中を巻ける・画面の端で切れない／
 // 〈スタッフ〉・〈利用者さん〉の画面で開く（#/staff/:id・#/clients/:id）／列（?sf=）と行（?cf=）の絞り込みと再読込での復元・履歴を増やさない・
 // 日本語の変換（IME）／0人の表示と「絞り込みを戻す」／最初に表の行が10行以上見える／
-// 回帰：相性のチップを押したままセルを押しても行が消えない（「表を並べ直す」で並べ直す）、絞り込みで見出しが消えたら吹き出しを閉じる／
-// 性能：〈利用者さん〉300人×〈スタッフ〉60人で、セルを1回押してから描き終わるまでの時間（目安 100ms 以下）。
+// 相性のチップを押したままマスの相性を変えても行が消えない（「表を並べ直す」で並べ直す）、絞り込みで見出しが消えたら吹き出しを閉じる／
+// 性能：〈利用者さん〉300人×〈スタッフ〉60人で、選ぶ欄で相性を1回選んでから描き終わるまでの時間（目安 100ms 以下）。
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-compat.cjs
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）。ほかに
-//   PERF_MS_COMPAT … セルを押してから描き終わるまでの上限（ミリ秒。既定 100。ならし3回のあと9回の中央値で比べ、
+//   PERF_MS_COMPAT … 相性を選んでから描き終わるまでの上限（ミリ秒。既定 100。ならし3回のあと9回の中央値で比べ、
 //                    超えたら最大3回りまで測り直して一番よい回りの中央値を使う。PRD D253。無ければ PERF_MS）
 // 終了コード：全部通れば 0、通らないものがあれば 1。ページのエラー（pageerror）も失敗に数える
 const path = require('node:path');
-const { skipTour } = require('./lib/tourSeen.cjs');
-const { answerConfirms } = require('./lib/confirmDialog.cjs');
-const { BASE, OUT_DIR, NOW, perfMs, check, note, settle, runSteps } = require('./lib/env.cjs');
-const { pagePerStep } = require('./lib/steps.cjs');
+const { BASE, OUT_DIR, perfMs, check, note, settle, runSteps } = require('./lib/env.cjs');
+const { openContext, pagePerStep } = require('./lib/steps.cjs');
 
 const PERF_MS = perfMs('PERF_MS_COMPAT', 100);
 /** 速さの計測：ならしの回数・1回りの回数・回りの最大・回りの合間（PRD D253） */
@@ -33,14 +33,22 @@ async function openCompat(page, query = '') {
   await page.getByTestId('compat-filters').waitFor();
   await settle(page, 300);
 }
-/** 絞り込みの欄を開く（畳んであれば） */
-async function openBox(page, which) {
-  const box = page.getByTestId(`compat-${which}-box`);
+/** 絞り込みの欄（列と行の2つを入れた1つの「絞り込み」）を開く（畳んであれば） */
+async function openBox(page) {
+  const box = page.getByTestId('compat-filters');
   if (!(await box.evaluate((el) => el.open))) await box.locator('summary').click();
 }
 const heads = (page) => page.getByTestId('compat-head-btn');
 const rows = (page) => page.getByTestId('compat-client-btn');
 const pop = (page) => page.getByTestId('compat-pop');
+const choicePop = (page) => page.getByTestId('compat-choice-pop');
+/** マスを押して、選ぶ欄で相性（2・1・0・−1・−2）を選ぶ */
+async function pickLevel(page, cell, level) {
+  await cell.click();
+  await choicePop(page).waitFor();
+  await choicePop(page).locator(`[data-level="${level}"]`).click();
+  await choicePop(page).waitFor({ state: 'detached' });
+}
 const label = async (loc) => ((await loc.getAttribute('aria-label')) ?? '').replace(/の詳細$/, '');
 
 async function namesAndLayout(page) {
@@ -70,12 +78,39 @@ async function namesAndLayout(page) {
     `${Math.max(...info.map((h) => h.width))}px`,
   );
   // 畳んだ欄の要約と、最初に見える行の数
-  check(!(await page.getByTestId('compat-sf-box').evaluate((el) => el.open)), 'URL に絞り込みが無ければ欄は畳んである');
   check(
-    /人・絞り込みなし$/.test(await page.getByTestId('compat-sf-summary').textContent()),
-    '要約に今の状態',
-    await page.getByTestId('compat-sf-summary').textContent(),
+    !(await page.getByTestId('compat-filters').evaluate((el) => el.open)),
+    'URL に絞り込みが無ければ欄は畳んである',
   );
+  check(
+    (await page.getByTestId('compat-filter-summary').textContent()) === '絞り込みなし',
+    '要約に今の状態',
+    await page.getByTestId('compat-filter-summary').textContent(),
+  );
+  // 操作の数（PRD D420）：マス・見出し・名前はボタンにしない。表は Tab の止まり所1つ。凡例は1行、休止中の注記は出さない
+  const ops = await page.evaluate(() => {
+    const main = document.querySelector('main');
+    const folded = (e) => {
+      const d = e.closest('details:not([open])');
+      return !!d && !d.querySelector(':scope > summary')?.contains(e);
+    };
+    const table = document.querySelector('[data-testid="compat-table"]');
+    return {
+      buttonsInTable: table.querySelectorAll('button').length,
+      tableStops: [...table.querySelectorAll('[tabindex]')].filter((e) => e.tabIndex >= 0).length,
+      shown: [...main.querySelectorAll('button, summary, a[href], input, select')].filter((e) => !folded(e)).length,
+      role: table.getAttribute('role'),
+      legendLines: document.querySelectorAll('[data-testid="compat-legend"] .compat-legend-line').length,
+      pauseNote: main.innerText.includes('は出していません'),
+    };
+  });
+  check(
+    ops.buttonsInTable === 0 && ops.tableStops === 1 && ops.role === 'grid',
+    '表にボタンが無く、Tab の止まり所は1つ（grid）',
+    ops,
+  );
+  check(ops.shown <= 6, '表の外の見えている操作は6つ以下（タブ・絞り込み・説明）', ops);
+  check(ops.legendLines === 1 && !ops.pauseNote, '凡例は1行・休止中の注記は出さない', ops);
   const visible = await page.$$eval(
     '[data-testid="compat-client-btn"]',
     (bs) => bs.filter((b) => b.getBoundingClientRect().bottom <= window.innerHeight).length,
@@ -169,6 +204,101 @@ async function popover(page) {
   await page.keyboard.press('Escape');
 }
 
+/** 表の中を矢印で動く・マスを押すと相性を選ぶ欄（PRD D420） */
+async function gridAndChoice(page) {
+  await openCompat(page);
+  const cells = page.getByTestId('compat-cell');
+  // Tab で表に入ると最初のマス、矢印で動く（止まり所は1つのまま）
+  // 絞り込みの要約から Tab で進み、表に入るまで（間に説明の「点のしくみ」がある）
+  await page.getByTestId('compat-filters').locator('summary').focus();
+  for (let i = 0; i < 4; i++) {
+    await page.keyboard.press('Tab');
+    if (await page.evaluate(() => !!document.activeElement?.closest('[data-testid="compat-table"]'))) break;
+  }
+  const at = () =>
+    page.evaluate(() => {
+      const el = document.activeElement;
+      const tr = el?.closest('tr');
+      return {
+        kind: el?.getAttribute('data-kind'),
+        row: tr?.parentElement?.tagName === 'THEAD' ? -1 : tr?.sectionRowIndex,
+        col: el?.cellIndex - 1,
+        stops: [...document.querySelectorAll('[data-testid="compat-table"] [tabindex="0"]')].length,
+      };
+    });
+  check(
+    JSON.stringify(await at()) === JSON.stringify({ kind: 'cell', row: 0, col: 0, stops: 1 }),
+    'Tab で最初のマス',
+    await at(),
+  );
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowDown');
+  check(
+    JSON.stringify(await at()) === JSON.stringify({ kind: 'cell', row: 1, col: 1, stops: 1 }),
+    '矢印で動く',
+    await at(),
+  );
+  await page.keyboard.press('Home');
+  check((await at()).kind === 'client', 'Home で行の名前', await at());
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowUp');
+  check(
+    JSON.stringify(await at()) === JSON.stringify({ kind: 'staff', row: -1, col: 0, stops: 1 }),
+    '上で列の見出し（角には入らない）',
+    await at(),
+  );
+  await page.keyboard.press('ArrowDown');
+  // Enter で選ぶ欄。今の相性に印、フォーカスはその選択肢
+  const cell = cells.nth(
+    await page.evaluate(() => {
+      const all = [...document.querySelectorAll('[data-testid="compat-cell"]')];
+      return all.indexOf(document.activeElement);
+    }),
+  );
+  const before = (await cell.textContent()) ?? '';
+  await page.keyboard.press('Enter');
+  await choicePop(page).waitFor();
+  const st = await choicePop(page).evaluate((el) => ({
+    role: el.getAttribute('role'),
+    title: el.querySelector('h3')?.textContent ?? '',
+    n: el.querySelectorAll('[data-testid="compat-choice"]').length,
+    pressed: [...el.querySelectorAll('[aria-pressed="true"]')].map((b) => b.getAttribute('data-level')),
+    focus: document.activeElement?.getAttribute('aria-pressed'),
+  }));
+  check(
+    st.role === 'dialog' && st.n === 5 && st.pressed.length === 1 && st.focus === 'true' && st.title.includes(' × '),
+    '選ぶ欄：5段・今の相性に印・フォーカスはその段・見出しは「〈利用者さん〉 × 〈スタッフ〉」',
+    st,
+  );
+  await page.keyboard.press('Escape');
+  await choicePop(page).waitFor({ state: 'detached' });
+  check(await cell.evaluate((el) => document.activeElement === el), 'Esc で閉じてフォーカスがマスへ');
+  // 選ぶと入って閉じる（× を選ぶ → 元に戻す）
+  await page.keyboard.press(' ');
+  await choicePop(page).waitFor();
+  await page.keyboard.press('End');
+  await page.keyboard.press('Enter');
+  await choicePop(page).waitFor({ state: 'detached' });
+  await settle(page, 200);
+  check(
+    (await cell.textContent()) === '×' && /担当にしない/.test((await cell.getAttribute('aria-label')) ?? ''),
+    'End と Enter で × を選ぶとマスが × になる',
+    await cell.textContent(),
+  );
+  check(await cell.evaluate((el) => document.activeElement === el), '選んだあとフォーカスがマスへ');
+  const back = { '◎': 2, '○': 1, '': 0, '△': -1, '×': -2 }[before] ?? 0;
+  await pickLevel(page, cell, back);
+  check((await cell.textContent()) === before, '押して選ぶと元の相性に戻る', before);
+  // もう一度押すと閉じる
+  await cell.click();
+  await choicePop(page).waitFor();
+  await cell.click();
+  await choicePop(page).waitFor({ state: 'detached' });
+  check(true, 'マスをもう一度押すと選ぶ欄が閉じる');
+}
+
 async function openById(page) {
   for (const [kind, sel, to] of [
     ['client', 'compat-client-btn', '#/clients'],
@@ -205,7 +335,7 @@ async function filters(page) {
   const hist0 = await page.evaluate(() => history.length);
   const cols0 = await heads(page).count();
   const rows0 = await rows(page).count();
-  await openBox(page, 'sf');
+  await openBox(page);
   const chip = page.getByTestId('compat-sf-chip').filter({ hasText: '性別：女性' });
   const n = await countOf(chip);
   await chip.click();
@@ -220,7 +350,6 @@ async function filters(page) {
   await sfIn.fill(first);
   await settle(page, 500);
   check((await heads(page).count()) === 1, '名前で探す');
-  await openBox(page, 'cf');
   const ng = page.locator('[data-testid="compat-cf-chip"][data-chip="ng"]');
   const ngN = await countOf(ng);
   await ng.click();
@@ -232,20 +361,16 @@ async function filters(page) {
     urlOf(page),
   );
   check(
-    (await page.getByTestId('compat-cf-summary').textContent()).includes(`${ngN}人／${rows0}人`),
-    '行の要約',
-    await page.getByTestId('compat-cf-summary').textContent(),
+    (await page.getByTestId('compat-filter-summary').textContent()).includes(`${ngN}人／${rows0}人`),
+    '要約に絞った行の人数',
+    await page.getByTestId('compat-filter-summary').textContent(),
   );
   const hist1 = await page.evaluate(() => history.length);
   await page.reload();
   await page.getByTestId('compat-filters').waitFor();
   await settle(page, 300);
   check((await heads(page).count()) === 1 && (await rows(page).count()) === ngN, '再読込で絞り込みが戻る');
-  check(
-    (await page.getByTestId('compat-sf-box').evaluate((el) => el.open)) &&
-      (await page.getByTestId('compat-cf-box').evaluate((el) => el.open)),
-    'URL に絞り込みがあれば欄を開いておく',
-  );
+  check(await page.getByTestId('compat-filters').evaluate((el) => el.open), 'URL に絞り込みがあれば欄を開いておく');
   check(
     (await ng.getAttribute('aria-pressed')) === 'true' && (await sfIn.inputValue()) === first,
     'チップ・検索の文字が戻る',
@@ -296,17 +421,22 @@ async function filters(page) {
   check(!urlOf(page).includes('sf=') && !urlOf(page).includes('cf='), '捨てたチップは URL を書き直す', urlOf(page));
 }
 
-/** 回帰：相性のチップを押したままセルを押しても行が消えない。絞り込みで見出しが消えたら吹き出しを閉じる */
+/** 相性のチップを押したままマスの相性を変えても行が消えない。絞り込みで見出しが消えたら吹き出しを閉じる */
 async function regressions(page) {
   await openCompat(page, '?cf=chip:;x:ng');
   const n0 = await rows(page).count();
-  const cell = page.locator('tbody tr').first().locator('.compat-btn', { hasText: '×' }).first();
+  const row0 = page.locator('tbody tr').first();
   const who = await label(rows(page).first());
-  await cell.click();
+  // その行の × をすべて ◎ にする（× がある人の絞り込みからは外れるが、行は消さない）
+  for (let i = 0; i < 10; i++) {
+    const x = row0.locator('[data-testid="compat-cell"]', { hasText: '×' }).first();
+    if ((await x.count()) === 0) break;
+    await pickLevel(page, x, 2);
+  }
   await settle(page);
   check(
     (await rows(page).count()) === n0 && (await label(rows(page).first())) === who,
-    'セルを押しても行が消えない',
+    'マスの相性を変えても行が消えない',
     `${n0}行`,
   );
   const resort = page.getByTestId('compat-resort');
@@ -323,7 +453,7 @@ async function regressions(page) {
   );
 
   await openCompat(page);
-  await openBox(page, 'sf');
+  await openBox(page);
   const b = heads(page).first();
   const name = await label(b);
   await b.click();
@@ -342,7 +472,7 @@ async function regressions(page) {
   );
 }
 
-/** 性能：300人×60人で、セルを押して描き終わるまで（中央値） */
+/** 性能：300人×60人で、選ぶ欄で相性を選んでから描き終わるまで（中央値。マスを押して欄が開くまでは注記） */
 async function perf(page) {
   await openCompat(page);
   await page.evaluate(() => {
@@ -384,24 +514,38 @@ async function perf(page) {
   // 速さの計測の前に、読み込み直後の仕事（先読み・GC）が引くのを待つ。計測の条件なので固定の待ちのまま（ADR-0041）
   await page.waitForTimeout(1500);
   const size = { rows: await rows(page).count(), cols: await heads(page).count() };
-  // 1回ぶんの計測：押してから次の描画が終わるまで（ms）。押す前に1フレーム置き、前の回の描画を持ち込まない
+  // 1回ぶんの計測：マスを押して選ぶ欄を開き（開くまでも測る）、相性を選んでから次の描画が終わるまで（ms）。
+  // 押す前に1フレーム置き、前の回の描画を持ち込まない。選ぶ相性は回ごとに替える
+  const openTimes = [];
   const clickTimes = (from, n) =>
-    page.evaluate(
-      async ([from, n]) => {
-        const out = [];
-        const btns = document.querySelectorAll('tbody tr:nth-child(5) .compat-btn');
-        for (let i = 0; i < n; i++) {
-          await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
-          const b = btns[(from + i) % btns.length];
-          const t0 = performance.now();
-          b.click();
-          await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
-          out.push(Math.round(performance.now() - t0));
-        }
-        return out;
-      },
-      [from, n],
-    );
+    page
+      .evaluate(
+        async ([from, n]) => {
+          const out = [];
+          const opens = [];
+          const frame = () => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+          const cells = document.querySelectorAll('tbody tr:nth-child(5) [data-testid="compat-cell"]');
+          for (let i = 0; i < n; i++) {
+            await frame();
+            const o0 = performance.now();
+            cells[(from + i) % cells.length].click();
+            await frame();
+            opens.push(Math.round(performance.now() - o0));
+            const level = [2, 1, 0, -1, -2][(from + i) % 5];
+            const b = document.querySelector(`[data-testid="compat-choice-pop"] [data-level="${level}"]`);
+            const t0 = performance.now();
+            b.click();
+            await frame();
+            out.push(Math.round(performance.now() - t0));
+          }
+          return { out, opens };
+        },
+        [from, n],
+      )
+      .then((r) => {
+        openTimes.push(...r.opens);
+        return r.out;
+      });
   const medianOf = (xs) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
   // ならし：最初の数回は JIT・GC の立ち上がりで遅いので数えない
   const warmup = await clickTimes(0, PERF_WARMUP);
@@ -426,27 +570,16 @@ async function perf(page) {
   const median = Math.min(...rounds.map((x) => x.median));
   const times = rounds.map((x) => x.times);
   check(size.rows >= 300 && size.cols >= 60, '300人×60人の表', size);
-  check(median <= PERF_MS, `セルを1回押して描き終わるまで（中央値 ${PERF_MS}ms 以下）`, { median, times, warmup });
+  check(median <= PERF_MS, `相性を1回選んで描き終わるまで（中央値 ${PERF_MS}ms 以下）`, { median, times, warmup });
+  note(`相性の速さ：マスを押して選ぶ欄が開くまでの中央値 ${medianOf(openTimes)}ms`);
 }
 
-const errors = [];
 const steps = pagePerStep({
-  open: async (browser, step) => {
-    const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
-    // 初回の案内ツアーを見た扱いにする（PRD D193）
-    await skipTour(ctx);
-    const page = await ctx.newPage();
-    // ページの時計を止める（ほかの e2e と同じ）。
-    // 速さは時計を止めない文脈で測る（setFixedTime は requestAnimationFrame・performance.now も差し替える。scripts/lib/env.cjs の withRealClock）
-    if (step !== perf) await page.clock.setFixedTime(NOW);
-    page.on('pageerror', (e) => errors.push(String(e)));
-    // 確認は独自のダイアログで受ける（ネイティブのダイアログが出たら失敗。PRD D146）
-    return { ctx, page, dlg: await answerConfirms(page) };
-  },
-  steps: [namesAndLayout, popover, openById, filters, regressions, perf],
+  // 速さは時計を止めない文脈で測る（setFixedTime は requestAnimationFrame・performance.now も差し替える）
+  open: (browser, step) => openContext(browser, { clock: step !== perf }),
+  steps: [namesAndLayout, popover, gridAndChoice, openById, filters, regressions, perf],
   label: (name) => `${name} が止まった`,
   after: (name, { dlg }) => check(dlg.native.length === 0, `${name}：ブラウザのダイアログを出さない`, dlg.native),
-  end: () => check(errors.length === 0, 'ページのエラーなし', errors.join(' / ')),
 });
 
 module.exports = { steps };

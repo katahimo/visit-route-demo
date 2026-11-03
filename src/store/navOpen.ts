@@ -1,4 +1,4 @@
-// メニューの畳める項目の開け閉め（PRD D349）を覚える。この端末に残す（左のメニューと引き出しで1つ）。
+// メニューの畳める項目の開け閉め（PRD D401）を覚える。この端末に残す（左のメニューと引き出しで1つ）。
 // DemoData とは別のキー（データの版・書き出し・読み込み・初期状態に戻すに入れない）。
 // localStorage を触るのは store の中だけ（AGENTS.md）。使えないブラウザでも、開いている間は覚える
 
@@ -59,6 +59,19 @@ export function createNavOpenMemory(getStorage: () => KeyStore | null) {
     },
   };
 }
+
+/**
+ * 画面ごとの「詳しく ▾」の開け閉めの鍵（予定の月・週・日（PRD D393）と空き状況（PRD D412）。入切で同じ）。開いて読み直すと開いたまま。
+ * 値が true なら開く（無ければ閉じて始める）。メニューの項目の鍵（nav 項目の key）とも、説明の鍵（intro:<画面>）とも重ならない
+ */
+export type DetailsScreen = 'month' | 'week' | 'day' | 'vacancy';
+export const detailsOpenKey = (screen: DetailsScreen): string => `details:${screen}`;
+
+/**
+ * 〈利用者さん〉・〈スタッフ〉の一覧の「くわしい列」の切り替えの鍵（エキスパート機能が入のとき。PRD D394）。一覧ごとに端末に覚える。
+ * 値が true なら専門の列を出す（無ければ出さない）。ほかの鍵（nav 項目の key・intro:・details:）と重ならない
+ */
+export const columnsOpenKey = (list: 'clients' | 'staff'): string => `columns:${list}`;
 
 /** 画面全体で1つ（このブラウザの localStorage） */
 export const navOpenMemory = createNavOpenMemory(() => globalThis.localStorage ?? null);

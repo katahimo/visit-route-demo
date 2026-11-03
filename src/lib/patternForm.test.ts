@@ -3,13 +3,20 @@ import { describe, expect, it } from 'vitest';
 import type { DaySnapshot } from '../contracts/data';
 import type { Pattern } from '../contracts/documents';
 import {
+  isRepeatChoice,
+  MONTH_WEEKS_ERROR,
   type PatternForm,
   parsePatternForm,
   patternConfirmedDays,
   patternEndDefault,
   patternFormOf,
   patternSinceError,
+  repeatChoiceLabel,
+  repeatChoiceOf,
+  repeatChoices,
   sortedWeekdays,
+  toggleNumber,
+  withRepeatChoice,
 } from './patternForm';
 
 const TODAY = '2026-10-12';
@@ -157,6 +164,42 @@ describe('parsePatternForm', () => {
     expect(p).toMatchObject({ clientId: 'c1', typeId: null, everyWeeks: 1, monthWeeks: [2, 4], from: TODAY });
     expect(p).toMatchObject({ to: null, usualStaffId: null });
     expect('usualStarts' in p).toBe(false);
+  });
+});
+
+describe('くり返しの選択肢（ADR-0083）', () => {
+  it('並びは 毎週・隔週・3週ごと・4週ごと（毎月は機能が入のときだけ）', () => {
+    expect(repeatChoices(true).map(repeatChoiceLabel)).toEqual(['毎週', '隔週', '3週ごと', '4週ごと', '毎月（第N）']);
+    expect(repeatChoices(false)).toEqual(['1', '2', '3', '4']);
+  });
+  it('欄の値 → 選択肢（1〜4 の外の間隔は毎週に寄せる）', () => {
+    expect(repeatChoiceOf({ repeat: 'weekly', everyWeeks: 1 })).toBe('1');
+    expect(repeatChoiceOf({ repeat: 'weekly', everyWeeks: 3 })).toBe('3');
+    expect(repeatChoiceOf({ repeat: 'weekly', everyWeeks: 6 })).toBe('1');
+    expect(repeatChoiceOf({ repeat: 'monthly', everyWeeks: 2 })).toBe('monthly');
+  });
+  it('選択肢 → 欄の値（毎月は repeat だけ、毎週系は repeat と everyWeeks）。契約の値になる', () => {
+    const f = addForm({ everyWeeks: 2, monthWeeks: [3] });
+    expect(withRepeatChoice(f, 'monthly')).toMatchObject({ repeat: 'monthly', everyWeeks: 2, monthWeeks: [3] });
+    expect(withRepeatChoice({ ...f, repeat: 'monthly' }, '4')).toMatchObject({ repeat: 'weekly', everyWeeks: 4 });
+    const p = parsePatternForm(withRepeatChoice(f, 'monthly'), TODAY, 'c1', TYPES);
+    expect(p).toMatchObject({ repeat: 'monthly', everyWeeks: 1, monthWeeks: [3] });
+    const w = parsePatternForm(withRepeatChoice(f, '3'), TODAY, 'c1', TYPES);
+    expect(w).toMatchObject({ repeat: 'weekly', everyWeeks: 3, monthWeeks: [] });
+  });
+  it('毎月で第N なしは誤りの文', () => {
+    expect(parsePatternForm(addForm({ repeat: 'monthly', monthWeeks: [] }), TODAY, 'c1', TYPES)).toBe(
+      MONTH_WEEKS_ERROR,
+    );
+  });
+  it('select の値か', () => {
+    expect(['1', '4', 'monthly'].every(isRepeatChoice)).toBe(true);
+    expect(['0', '5', ''].some(isRepeatChoice)).toBe(false);
+  });
+  it('toggleNumber：入れる・外す。小さい順', () => {
+    expect(toggleNumber([4], 1)).toEqual([1, 4]);
+    expect(toggleNumber([1, 4], 4)).toEqual([1]);
+    expect(toggleNumber([5, 3], 1)).toEqual([1, 3, 5]);
   });
 });
 

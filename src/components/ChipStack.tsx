@@ -1,4 +1,4 @@
-// 表のマスに札を積む入れ物（PRD D342。ADR-0057）：残りは「+N」で、押すとそのマスの札の一覧（visitParts から分けた）
+// 表のマスに札を積む入れ物（PRD D342。ADR-0057）：残りは「+N」で、押すとそのマスの札の一覧
 import { type ReactNode, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import './visitParts.css';

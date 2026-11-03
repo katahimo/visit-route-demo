@@ -1,5 +1,5 @@
 // 〈スタッフ〉・〈利用者さん〉の画面（全画面。PRD D308〜D312。ADR-0052）の節を本物のブラウザで確かめる：
-// 一覧の「開く」・`?id=`（その人の画面へ移る）・相性の吹き出しのリンクでその人の画面が開き、節は読むだけ（入力欄・主ボタンが無い。中身・地図・節の見出しは h2）／
+// 一覧の「開く」（〈スタッフ〉は「詳しく」）・`?id=`（その人の画面へ移る）・相性の吹き出しのリンクでその人の画面が開き、節は読むだけ（入力欄・主ボタンが無い。中身・地図・節の見出しは h2）／
 // 節の「直す」で入力欄（最初の入力欄へフォーカス・主ボタンは「保存」）、保存・取り消しで読むだけに戻りフォーカスは「直す」／
 // 変更があるまま取り消す・Esc・タブを替える・メニューで移る・別の人の URL で確認が出て、断れば編集が続く／
 // 変更が無い・特性を未確認に戻しただけ・担当できる人を限るを入れて外しただけなら確認しない／変更があるときだけ beforeunload／
@@ -8,14 +8,13 @@
 // 相性・担当の名前（PRD D198〜D200）：〈スタッフ〉の相性のタブにいつもの担当・相性の記号ごとの〈利用者さん〉の名前（人数・利用中だけ・
 // 13人目から「あと N人」）、名前で詳細の吹き出し（Tab は吹き出しの中を進み端で閉じて名前へ・Esc は吹き出しだけ閉じる）、リンクで相手の画面、
 // 〈利用者さん〉の担当できる人・いつもの担当も名前から。一覧の行を押すとその人の画面（1280px・390px。文字をドラッグで選んでも移らない）。
+// 〈スタッフ〉の一覧の行の端は文字のボタン「詳しく」「今日の画面」、スマホ画面の日送り（前の日・次の日・今日。PRD D417）。
 // 〈スタッフ〉のアイコン（PRD D299）：「訪」を保存すると一覧・日の予定の印が「訪」、3文字は保存しない、空に戻すと苗字の最初の1文字。
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-view.cjs
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）
 // 終了コード：全部通れば 0、通らないものがあれば 1。ページのエラー（pageerror）も失敗に数える
 const path = require('node:path');
-const { skipTour } = require('./lib/tourSeen.cjs');
-const { answerConfirms } = require('./lib/confirmDialog.cjs');
 const {
   BASE,
   OUT_DIR,
@@ -30,7 +29,8 @@ const {
   stored,
   runSteps,
 } = require('./lib/env.cjs');
-const { pagePerStep } = require('./lib/steps.cjs');
+const { openContext, pagePerStep } = require('./lib/steps.cjs');
+const { clickMenu, goTo } = require('./lib/ui.cjs');
 
 /** その人の画面（全画面）の外枠 */
 const view = (page) => page.getByTestId('person-view');
@@ -50,13 +50,8 @@ const goHash = (page, hash) =>
     location.hash = h;
   }, hash);
 
-async function open(page, hash, ready) {
-  // 同じ文書の中で hash を移してから読み直すと、読み直す前に `?id=` が処理されることがあるので、about:blank を挟んで開く
-  await page.goto('about:blank');
-  await page.goto(`${BASE}#${hash}`);
-  await page.locator(ready).first().waitFor({ timeout: 30000 });
-  await settle(page, 400);
-}
+// 画面を新しく開く（共通の手 goTo。待つ長さ・見出し・落ち着くまでの待ちはこの画面の e2e の既定）
+const open = (page, hash, ready) => goTo(page, hash, { ready: ready, timeout: 30000, h1: false, settleMs: 400 });
 async function goTab(page, key) {
   await tab(page, key).click();
   await settle(page, 300);
@@ -187,7 +182,7 @@ async function clients(page, dlg) {
     dlg.messages,
   );
   dlg.messages.length = 0;
-  await page.locator('.side-nav').getByRole('link', { name: 'ホーム' }).click();
+  await clickMenu(page, '予定');
   await settle(page);
   check(
     dlg.messages.length === 1 && /移りますか/.test(dlg.messages[0]) && hashOf(page).startsWith('#/clients/c1'),
@@ -241,7 +236,7 @@ async function clients(page, dlg) {
     '〈利用者さん〉：保存すると読むだけに戻り、保存した中身が出る（フォーカスは「直す」）',
   );
 
-  // ?id=（古いリンク）：その人の画面へ移る
+  // ?id=：その人の画面へ移る
   await open(page, '/clients?id=c2', '[data-testid="person-view"]');
   check(
     hashOf(page) === '#/clients/c2' && (await view(page).getAttribute('data-id')) === 'c2',
@@ -311,7 +306,7 @@ async function clientsMore(page, dlg) {
   );
   // 別の節を直すと、変更が無ければそのまま替わる・あれば確かめる
   await editSec(page, 'staffing');
-  // いつもの担当は繰り返しの担当（版2。ADR-0053）なので、担当できる人を限るで変更を作る
+  // いつもの担当は繰り返しの担当（ADR-0053）なので、担当できる人を限るで変更を作る
   await sec(page, 'staffing').getByLabel('担当できる人を限る').check();
   dlg.answer = false;
   dlg.messages.length = 0;
@@ -335,7 +330,7 @@ async function clientsMore(page, dlg) {
 }
 
 /**
- * レビューの直し（PR #79）：タブを替えて捨てたら戻っても直していない／吹き出しのリンクで捨てて移ると移る／
+ * 編集の画面の細かい振る舞い：タブを替えて捨てたら戻っても直していない／吹き出しのリンクで捨てて移ると移る／
  * 誤りの文と入力欄の aria-describedby が合う／ほかの節の古い値で保存を止めない／予定のタブで edit= を開くと節のタブへ／
  * いない人の URL は一覧で知らせる
  */
@@ -502,10 +497,10 @@ async function seeded(page) {
 
 async function staff(page, dlg) {
   await open(page, '/staff', '.people-table tbody tr');
-  await page.getByRole('link', { name: '市役所 まち子を開く' }).click();
+  await page.getByRole('link', { name: '詳しく（市役所 まち子）' }).click();
   await view(page).waitFor();
   await settle(page, 400);
-  check(hashOf(page) === '#/staff/s1', '〈スタッフ〉：一覧の「開く」でその人の画面（#/staff/s1）', hashOf(page));
+  check(hashOf(page) === '#/staff/s1', '〈スタッフ〉：一覧の「詳しく」でその人の画面（#/staff/s1）', hashOf(page));
   await goTab(page, 'basic');
   await isReading(page, '〈スタッフ〉・基本情報', ['特性', '自宅', '最終勤務日', 'メールアドレス', '移動手段']);
   await goTab(page, 'hours');
@@ -630,7 +625,7 @@ async function links(page) {
   );
 }
 
-/** その〈利用者さん〉のいつもの担当（版2：繰り返しの担当。今日以降も続く繰り返しを先に、開始の遅いものを先に。lib/usualStaff と同じ） */
+/** その〈利用者さん〉のいつもの担当（繰り返しの担当。今日以降も続く繰り返しを先に、開始の遅いものを先に。lib/usualStaff と同じ） */
 function usualOf(d, clientId) {
   let best = null;
   for (const p of d.patterns) {
@@ -654,7 +649,7 @@ async function names(page) {
     for (const c of d.clients) d.compat[c.id] = { ...(d.compat[c.id] ?? {}), s1: 2 };
     d.clients[0].active = false;
     d.clients[0].stage = 'ended';
-    // 版2：いつもの担当は繰り返しの担当
+    // いつもの担当は繰り返しの担当
     for (const p of d.patterns) if (p.clientId === d.clients[1].id) p.usualStaffId = 's1';
     localStorage.setItem(k, JSON.stringify(d));
   }, STORAGE_KEY);
@@ -747,6 +742,73 @@ async function names(page) {
   await page.screenshot({ path: path.join(OUT_DIR, 'names.png') });
 }
 
+/** 1日ずらした日付（YYYY-MM-DD） */
+const shiftDay = (date, n) => new Date(Date.parse(`${date}T00:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
+/** 「M/D（」（月・日の先頭の 0 を落とす。曜日の括弧まで見て 11/2 と 11/20 を分ける） */
+const mdOf = (date) => `${Number(date.slice(5, 7))}/${Number(date.slice(8, 10))}（`;
+
+/**
+ * 〈スタッフ〉のスマホ画面の日送り（PRD D417）：一覧の「今日の画面」で今日のスマホ画面（?date= は消える）、
+ * ［次の日 ›］［‹ 前の日］で日が移り、今日でなければ［今日］が出て押すと今日へ戻る（今日のときは出さない）。390px
+ */
+async function staffViewDays(page) {
+  await page.setViewportSize({ width: 390, height: 844 });
+  // 日の予定で別の日を選んでいても「今日の画面」は今日で開く（読み直さずに hash だけ移る）
+  await open(page, '/staff', '[data-testid="staff-row"]');
+  const later = shiftDay(TODAY, 3);
+  await page.evaluate((d) => {
+    location.hash = `#/plan?date=${d}`;
+  }, later);
+  await page.waitForFunction((d) => document.querySelector('.app-shell')?.getAttribute('data-date') === d, later);
+  await page.evaluate(() => {
+    location.hash = '#/staff';
+  });
+  await page.getByTestId('staff-row').first().waitFor();
+  const srow = page.getByTestId('staff-row').filter({ hasText: '市役所 まち子' }).first();
+  await srow.getByTestId('staff-view-open').click();
+  const nav = page.getByTestId('sv-day-nav');
+  await nav.waitFor({ timeout: 5000 });
+  await settle(page, 300);
+  const meta = () => page.locator('.sv-meta').innerText();
+  const heading = () => page.locator('.staff-shell h2').first().innerText();
+  check(hashOf(page) === '#/staff-view/s1', '「今日の画面」：その人のスマホ画面（?date= は読んで消す）', hashOf(page));
+  check(
+    (await meta()).includes(mdOf(TODAY)) && (await heading()) === '今日の訪問順',
+    '「今日の画面」：今日の日付と「今日の訪問順」',
+    await meta(),
+  );
+  check((await page.getByTestId('sv-today').count()) === 0, 'スマホ画面：今日のときは［今日］を出さない');
+  await page.getByTestId('sv-next').click();
+  await settle(page, 300);
+  check(
+    (await meta()).includes(mdOf(shiftDay(TODAY, 1))) && (await heading()) === '訪問順',
+    'スマホ画面：［次の日 ›］で次の日（見出しは「訪問順」）',
+    await meta(),
+  );
+  check((await page.getByTestId('sv-today').count()) === 1, 'スマホ画面：今日でなければ［今日］が出る');
+  await page.getByTestId('sv-prev').click();
+  await page.getByTestId('sv-prev').click();
+  await settle(page, 300);
+  check((await meta()).includes(mdOf(shiftDay(TODAY, -1))), 'スマホ画面：［‹ 前の日］で前の日', await meta());
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+  check(!overflow, 'スマホ画面（390px）：日送りで横にはみ出さない');
+  await page.screenshot({ path: path.join(OUT_DIR, 'staff-view-days-390.png') });
+  await page.getByTestId('sv-today').click();
+  await settle(page, 300);
+  check(
+    (await meta()).includes(mdOf(TODAY)) && (await page.getByTestId('sv-today').count()) === 0,
+    'スマホ画面：［今日］で今日へ戻る',
+    await meta(),
+  );
+  const focused = await page.evaluate(() => document.activeElement?.getAttribute('data-testid') ?? '');
+  check(focused === 'sv-next', 'スマホ画面：［今日］が消えたらフォーカスは［次の日 ›］（body に落とさない）', focused);
+  check(
+    (await page.getByTestId('sv-date').getAttribute('aria-live')) === 'polite',
+    'スマホ画面：名前と日付は aria-live="polite"',
+  );
+  await page.setViewportSize({ width: 1280, height: 900 });
+}
+
 /** 一覧の行を押すとその人の画面（PRD D308）：名前の文字・特性の欄を押しても移り、1280px と 390px で同じ */
 async function rowClick(page) {
   for (const width of [1280, 390]) {
@@ -779,6 +841,22 @@ async function rowClick(page) {
     check(hashOf(page) === '#/clients', `〈利用者さん〉・${width}px：戻ると一覧`);
     await open(page, '/staff', '[data-testid="staff-row"]');
     const srow = page.getByTestId('staff-row').filter({ hasText: '市役所 まち子' }).first();
+    // 行の端は文字のボタン（PRD D417）：「詳しく」「今日の画面」の文字が見え、読み上げの名前も文字から始まる（390px のカードも）
+    const btns = await srow
+      .locator('td.narrow-act a')
+      .evaluateAll((els) =>
+        els.map((e) => ({ text: e.innerText.trim(), label: e.getAttribute('aria-label') ?? '', w: e.clientWidth })),
+      );
+    check(
+      btns.length === 2 &&
+        btns[0].text === '詳しく' &&
+        btns[0].label.startsWith('詳しく') &&
+        btns[1].text === '今日の画面' &&
+        btns[1].label.startsWith('今日の画面') &&
+        btns.every((b) => b.w > 40),
+      `〈スタッフ〉・${width}px：行の端は文字のボタン「詳しく」「今日の画面」`,
+      btns,
+    );
     await srow.locator('td').nth(2).click();
     await view(page).waitFor({ timeout: 5000 });
     check(hashOf(page) === '#/staff/s1', `〈スタッフ〉・${width}px：行の特性の欄を押すとその人の画面`);
@@ -838,24 +916,24 @@ async function staffIcon(page) {
   );
 }
 
-const errors = [];
 const steps = pagePerStep({
-  open: async (browser) => {
-    const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
-    // 初回の案内ツアーを見た扱いにする（PRD D193）
-    await skipTour(ctx);
-    // 地図のタイルは外へ取りに行かない
-    await ctx.route(/cyberjapandata\.gsi\.go\.jp/, (r) => r.fulfill({ status: 204, body: '' }));
-    const page = await ctx.newPage();
-    await page.clock.setFixedTime(NOW);
-    page.on('pageerror', (e) => errors.push(String(e)));
-    return { ctx, page, dlg: await answerConfirms(page) };
-  },
+  open: (browser) => openContext(browser),
   call: (fn, s) => fn(s.page, s.dlg),
-  steps: [clients, clientsMore, reviewFixes, seeded, staff, staffMore, links, names, rowClick, staffIcon],
+  steps: [
+    clients,
+    clientsMore,
+    reviewFixes,
+    seeded,
+    staff,
+    staffMore,
+    links,
+    names,
+    rowClick,
+    staffViewDays,
+    staffIcon,
+  ],
   label: (name) => `${name}：途中で止まった`,
   after: (name, { dlg }) => check(dlg.native.length === 0, `${name}：ブラウザのダイアログを出さない`, dlg.native),
-  end: () => check(errors.length === 0, 'ページのエラーが無い', errors),
 });
 
 module.exports = { steps };

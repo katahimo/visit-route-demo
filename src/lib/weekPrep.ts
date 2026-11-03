@@ -1,4 +1,4 @@
-// 週の予定の準備（PRD D280・D282・D328。ADR-0046・ADR-0053・ADR-0054）の純粋関数：見出しの主ボタン（この週の問題の無い日を
+// 週の予定の準備（PRD D328・D314。ADR-0046・ADR-0053・ADR-0054）の純粋関数：見出しの主ボタン（この週の問題の無い日を
 // まとめて確定 → 済み）を状態から1つ決める決まり・この週の準備のまとめと、日の見出しの件数の文。週の予定では AI で組まない（手で直す。ADR-0063）。
 // データは書き換えない。画面は pages/WeekPage.tsx
 import { type BulkConfirm, bulkConfirmTargets } from './confirmDay';
@@ -34,7 +34,7 @@ export type WeekNextInput = {
 export const weekConfirmLabel = (n: number): string => `この週の問題の無い日をまとめて確定（${n}日）`;
 
 /**
- * 週の主ボタン（PRD D280）。仕事の順（確定 → 済み）で最初に残っているもの：
+ * 週の主ボタン（PRD D328）。仕事の順（確定 → 済み）で最初に残っているもの：
  * 1. 今日以降に訪問が無い → ボタンなし
  * 2. 問題の無い伝えていない日がある → この週の問題の無い日をまとめて確定（月の予定で担当を組んでいる間は押せず理由）
  * 3. 確定していない日が残る（要対応の日・未連絡の変更のある日）→ ボタンなし（日の予定で確かめて確定）
@@ -50,20 +50,22 @@ export function weekNext(x: WeekNextInput): WeekNext {
       kind: 'confirm',
       label: weekConfirmLabel(x.bulk.targets.length),
       short: `この週をまとめて確定（${x.bulk.targets.length}日）`,
-      why: busy ? '担当を組んでいる間は確定できません。終わってから押せます' : null,
+      why: busy ? '担当を組んでいる間は確定できません' : null,
     };
   const rest = x.bulk.problem.length + x.bulk.changed.length;
   if (rest > 0) {
     const why =
-      x.bulk.problem.length > 0
-        ? '要対応のある日は確かめてから、日の予定で確定します'
-        : '未連絡の変更のある日は、日の予定の連絡の一覧で確かめて確定します';
-    return { kind: 'rest', label: `確定していない ${rest}日は日の予定で`, short: `残り ${rest}日`, why };
+      x.bulk.problem.length > 0 && x.bulk.changed.length > 0
+        ? '要対応・未連絡の変更の日は日の予定で確かめて確定'
+        : x.bulk.problem.length > 0
+          ? '要対応の日は日の予定で確かめて確定'
+          : '未連絡の変更の日は日の予定で確かめて確定';
+    return { kind: 'rest', label: `未確定 ${rest}日`, short: `未確定 ${rest}日`, why };
   }
-  return { kind: 'done', label: 'この週は確定済みです', short: '済み', why: null };
+  return { kind: 'done', label: '確定済み', short: '確定済み', why: null };
 }
 
-/** 日の見出しの件数の文（PRD D282）：「N件」、担当なしがあれば「N件・担当なしM」 */
+/** 日の見出しの件数の文（PRD D314）：「N件」、担当なしがあれば「N件・担当なしM」 */
 export function weekDayCountText(x: { count: number; unassigned: number }): string {
   return `${x.count}件${x.unassigned > 0 ? `・担当なし${x.unassigned}` : ''}`;
 }
@@ -75,7 +77,7 @@ export function weekStatusText(line: WeekPrep['line'], confirmStep: boolean): st
   return `${line.changed > 0 ? `変更あり ${line.changed}日・` : ''}要対応 ${line.care}件`;
 }
 
-/** この週の準備のまとめ（PRD D280・D332）：まとめて確定の振り分け・今日以降の訪問のある日の数・1行の状態 */
+/** この週の準備のまとめ（PRD D328・D332）：まとめて確定の振り分け・今日以降の訪問のある日の数・1行の状態 */
 export type WeekPrep = {
   bulk: BulkConfirm;
   futureDays: number;

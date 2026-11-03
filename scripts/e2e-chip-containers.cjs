@@ -1,7 +1,7 @@
 // 札の3段の大きさと入れ物（PRD D342・D343）を本物のブラウザで確かめる：
 // 週の〈スタッフ〉×曜日の表の小さな札（「時刻 頭文字」・1マス3件まで・「+N」と一覧・Esc でフォーカスは「+N」・選ぶ・
 // ←→ で曜日・↓ で隣の担当・Enter で欄・Ctrl+Z・別のマスへのドラッグ）、〈利用者さん〉×曜日の表の札（時刻と担当の印・3件まで・
-// 同じ行の別の日へのドラッグ）、月のマスの1回目は右の欄の一覧・2回目で日の予定・マスのキー・一覧の行のドラッグ・
+// 同じ行の別の日へのドラッグ）、月のマスの1回目は右の欄の一覧・2回目で日の予定（マスのキーは e2e-shared-parts）・一覧の行のドラッグ・
 // 選んだ行の「別の日へ」（時刻はそのまま・Ctrl+Z 1回で戻る・確定した日は確認）、印（data-marks）が3段（l・s・m）で同じ、
 // 390px の週の表の長押しと月の下から出る欄、印刷で「+N」の一覧と選択の帯を出さない。
 // スクリーンショット week-chips-1400・week-more-1400・week-drag-1400・month-list-1400・week-chips-390・month-sheet-390
@@ -9,10 +9,8 @@
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-chip-containers.cjs
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）。FAKE_NOW は週の途中（既定の水曜）にする
 // 終了コード：全部通れば 0、通らないものがあれば 1。ページのエラー（pageerror）も失敗に数える
-const path = require('node:path');
 const {
   BASE,
-  OUT_DIR,
   TODAY,
   STORAGE_KEY,
   check,
@@ -22,14 +20,16 @@ const {
   runSteps,
   withTimeout,
   hashOf,
+  waitStored,
+  MOD,
+  shot,
 } = require('./lib/env.cjs');
 const { planDays } = require('./lib/plan.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
 const { answerConfirms } = require('./lib/confirmDialog.cjs');
+const { undoState } = require('./lib/ui.cjs');
 
-const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
 const WD = '日月火水木金土';
-const shot = (page, name) => page.screenshot({ path: path.join(OUT_DIR, `${name}.png`) });
 const visitOf = (d, id) => d?.visits?.find((v) => v.id === id) ?? null;
 const addDays = (d, n) => {
   const t = new Date(`${d}T00:00:00Z`);
@@ -53,12 +53,9 @@ const countText = (page) =>
     .innerText()
     .catch(() => '');
 
-async function waitStored(page, pred, timeout = 8000) {
-  return until(async () => pred(await stored(page)), timeout, 100).catch(() => false);
-}
 /** 初期データで開き直す。mutate があれば初期データを書き換えて（別のタブで書き換えたのと同じ）読み直す */
 async function fresh(page, hash, ready, mutate = null, arg = null) {
-  await page.goto(`${BASE}#/home`);
+  await page.goto(`${BASE}#/data`);
   await page.locator('h1').waitFor();
   await page.evaluate((k) => localStorage.removeItem(k), STORAGE_KEY);
   await page.reload();
@@ -399,10 +396,7 @@ async function weekKeys(page) {
   check(movedDay, '週の表：札で → で次の日（データの日付が1日後・時刻はそのまま）', v0);
   await settle(page, 300);
   check((await focusedVisit(page)) === id, '週の表：→ で動かしたあともフォーカスは札');
-  check(
-    /訪問を次の日へ/.test((await page.getByTestId('undo-btn').getAttribute('title')) ?? ''),
-    '週の表：→ は全体の元に戻すの1手（手の名前）',
-  );
+  check(/訪問を次の日へ/.test((await undoState(page)).text), '週の表：→ は全体の元に戻すの1手（手の名前）');
   await page.locator('h1').click();
   await page.keyboard.press(`${MOD}+z`);
   check(
@@ -754,7 +748,7 @@ async function weekClientKeys(page) {
     { from: v0.staffId, to: v1.staffId, order },
   );
   check(
-    /担当を.+さんへ/.test((await page.getByTestId('undo-btn').getAttribute('title')) ?? ''),
+    /担当を.+さんへ/.test((await undoState(page)).text),
     '〈利用者さん〉の表：↓ は全体の元に戻すの1手（担当を〜さんへ）',
   );
   await settle(page, 300);
@@ -775,7 +769,7 @@ async function weekClientKeys(page) {
   );
 }
 
-// ---- 月：マスの1回目は右の欄・2回目で日の予定・キー ----
+// ---- 月：マスの1回目は右の欄・2回目で日の予定（マスのキーは e2e-shared-parts の month） ----
 async function monthCells(page) {
   await fresh(page, `/month?ym=${TODAY.slice(0, 7)}&layout=calendar`, '[data-testid="month-grid"]');
   // 今日より後の、取り消しの無い訪問のある日
@@ -816,51 +810,11 @@ async function monthCells(page) {
     (await page.locator('.date-switch select').inputValue()) === day,
     '月：右の欄に出している日のマスをもう一度押すと日の予定',
   );
-  // キー：←→ 日・↑↓ 週・Enter で一覧（最初の行へフォーカス）
-  await page.goto(`${BASE}#/month?ym=${TODAY.slice(0, 7)}&layout=calendar`);
-  await page.getByTestId('month-grid').waitFor({ timeout: 30000 });
-  await settle(page, 300);
-  const focusedDate = () => page.evaluate(() => document.activeElement?.dataset?.date ?? null);
-  const YM = TODAY.slice(0, 7);
-  const moves = [
-    ['ArrowRight', 1],
-    ['ArrowLeft', -1],
-    ['ArrowDown', 7],
-    ['ArrowUp', -7],
-  ];
-  const got = {};
-  for (const [key, step] of moves) {
-    // 月の中に収まる向きだけ
-    if (addDays(day, step).slice(0, 7) !== YM) continue;
-    await cell(day).focus();
-    await page.keyboard.press(key);
-    await settle(page, 150);
-    got[key] = (await focusedDate()) === addDays(day, step);
-  }
-  check(
-    Object.keys(got).length >= 2 && Object.values(got).every(Boolean),
-    '月：マスで ←→ は1日・↑↓ は1週のマスへ',
-    got,
-  );
-  await cell(day).focus();
-  await page.keyboard.press('Enter');
-  await list.waitFor({ timeout: 5000 });
-  await settle(page, 200);
-  check(
-    (await list.getAttribute('data-date')) === day &&
-      (await page.evaluate(() => document.activeElement?.dataset?.testid === 'month-visit')) &&
-      (await page.evaluate(
-        () =>
-          document.activeElement ===
-          document.querySelector('[data-testid="month-day-visits"] [data-testid="month-visit"]'),
-      )),
-    '月：マスで Enter でその日の一覧、フォーカスは最初の行',
-  );
 }
 
 // ---- 月：一覧の行のドラッグ・「別の日へ」・確定した日の確認 ----
 async function monthMove(page, { confirms }) {
-  await fresh(page, '/home', 'h1');
+  await fresh(page, '/data', 'h1');
   const d0 = await stored(page);
   // 保存した訪問が2件以上ある今日より後の日（同じ月）と、移す先（同じ月の今日より後の別の日）
   const byDay = new Map();
@@ -941,12 +895,12 @@ async function monthMove(page, { confirms }) {
   );
   check(moved, '月の移す：「移す」で2件の日付が移る（時刻はそのまま）', { to, two });
   await settle(page, 300);
-  const title = (await page.getByTestId('undo-btn').getAttribute('title')) ?? '';
-  check(title.includes(`${dateText(to)}へ移しました`), '月の移す：手の名前は「M/D（曜）へ移しました」', title);
   check(
-    await until(() => page.evaluate(() => document.activeElement?.dataset?.testid === 'undo-btn'), 3000),
-    '月の移す：移したあとフォーカスは「元に戻す」',
+    await until(() => page.evaluate(() => document.activeElement?.dataset?.testid === 'month-more'), 3000),
+    '月の移す：移したあとフォーカスは操作の行の「その他 ▾」（元に戻すの入口）',
   );
+  const title = (await undoState(page)).text;
+  check(title.includes(`${dateText(to)}へ移しました`), '月の移す：手の名前は「M/D（曜）へ移しました」', title);
   await page.locator('h1').click();
   await page.keyboard.press(`${MOD}+z`);
   check(
@@ -1031,7 +985,7 @@ async function monthMove(page, { confirms }) {
 // ---- 印が3段（l・s・m）で同じ ----
 async function sameMarks(page) {
   // 今日より後の保存した訪問を1件ピンにし、その〈利用者さん〉の担当できる人をほかの1人に限る（限✗・要対応）
-  const fx = await fresh(page, '/home', 'h1', ({ k, today, week }) => {
+  const fx = await fresh(page, '/data', 'h1', ({ k, today, week }) => {
     const d = JSON.parse(localStorage.getItem(k));
     const v = d.visits.find((x) => x.date > today && week.includes(x.date) && x.staffId && !x.cancelled);
     if (!v) return null;

@@ -6,6 +6,7 @@ import { isOnLeave } from '../domain/leaves';
 import { normalize } from '../evaluate';
 import { attempt, byDisplayName, byName } from '../lib/common';
 import { daySlotsOf } from '../lib/dayModel';
+import { compileInputOf } from '../lib/dayStatuses';
 import { staffColorMap } from '../lib/staffMark';
 import { type CompileInput, compile } from '../matching';
 import { visitsOn } from '../patterns';
@@ -92,24 +93,12 @@ export function useDayModel(date: string) {
 
 /**
  * compile が読むデータだけを取り出す（伝えた内容・プリセットの更新では変わらない）。
- * その日の問題を compile しないので、日を選ばない画面（ホーム。PRD D141）はこれだけを使う
+ * その日の問題を compile しないので、日を選ばない画面（要対応の帯など）はこれだけを使う
  */
 export function useCompileInput(data: DemoData): CompileInput {
+  // biome-ignore lint/correctness/useExhaustiveDependencies: compile が読むフィールドが変わったときだけ作り直す
   return useMemo(
-    () => ({
-      org: data.org,
-      items: data.items,
-      rules: data.rules,
-      staff: data.staff,
-      clients: data.clients,
-      compat: data.compat,
-      visits: data.visits,
-      availability: data.availability,
-      absences: data.absences,
-      visitTypes: data.visitTypes,
-      patterns: data.patterns,
-      clientLeaves: data.clientLeaves,
-    }),
+    () => compileInputOf(data),
     [
       data.org,
       data.items,

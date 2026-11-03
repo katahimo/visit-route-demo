@@ -28,6 +28,10 @@
   border-color: var(--ink);
   font-weight: 600;
 }
+/* まとめて置く欄。名簿のあとの導線から移るとき、上の帯の裏に隠さない（PRD D399） */
+.place-all {
+  scroll-margin-top: calc(var(--header-h) + 8px);
+}
 .place-all-progress {
   accent-color: var(--primary-dark);
   width: min(320px, 100%);
