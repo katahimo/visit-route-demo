@@ -37,6 +37,8 @@ export function bookingConfirmBody(x: {
   r: BookingImportResult;
   clientTerm: string;
   keep: KeepState;
+  /** 勤務日・時間に入らない予約の文（lib/bookingFit の outsideHoursNote。PRD D428）。無ければ null */
+  outsideNote?: string | null;
 }): string {
   const { r } = x;
   return [
@@ -44,6 +46,7 @@ export function bookingConfirmBody(x: {
     bookingSummary(r),
     ...(r.cancelledSkipped > 0 ? [`取り消し済みで、まだ入れていない ${r.cancelledSkipped}件は入れません。`] : []),
     ...bookingProblems(r, x.clientTerm),
+    ...(x.outsideNote ? [x.outsideNote] : []),
     otherFormSkippedText(r.otherForm),
     '担当は空のままです。すでに入っている予約は、日時・所要時間・メモをファイルに合わせます（担当は残ります）。ファイルに無い訪問はそのままです。',
     keepNote(x.keep),

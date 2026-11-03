@@ -3,7 +3,7 @@
 // 単独の実行では `if (require.main === module) runSteps(steps)`、包み（e2e/legacy.spec.ts）では段ごとに test.step で回す。
 // 段の中身（guard の中）で投げたら、段の名前の確かめ（NG）とスクリーンショットにして続ける。
 // 準備（ブラウザ・文脈を開く）・段ごとの文脈を開く所・後始末で投げたら、そこで止める（test は落ちる。単独なら終了コード1）
-const { launch, NOW, check, failShot, watchErrors, withTimeout } = require('./env.cjs');
+const { launch, NOW, check, failShot, recentChecks, watchErrors, withTimeout } = require('./env.cjs');
 const { skipTour } = require('./tourSeen.cjs');
 const { answerConfirms, watchNative } = require('./confirmDialog.cjs');
 
@@ -35,9 +35,22 @@ function guard(fn, { label, info = message, page, shot = label }) {
       await withTimeout(run, STEP_LIMIT_MS, STEP_TIMEOUT_TEXT);
       return undefined;
     } catch (e) {
-      check(false, label, info(e));
       const timedOut = String(e?.message || e).includes(STEP_TIMEOUT_TEXT);
       const p = page?.();
+      // 時間切れは、直前に通った確かめと開いているページの URL を添える（CI の記録だけでどこで止まったか分かるように。
+      // url() はページの中を待たないので、固まったページでも読める）
+      const where = timedOut
+        ? `  直前の確かめ：${recentChecks.slice(0, 2).join(' ／ ') || 'なし'}  開いているページ：${
+            p
+              ? p
+                  .context()
+                  .pages()
+                  .map((x) => x.url())
+                  .join(' , ')
+              : '不明'
+          }`
+        : '';
+      check(false, label, `${info(e)}${where}`);
       if (p && !timedOut) await withTimeout(failShot(p, shot), 10 * 1000, 'スクリーンショット').catch(() => {});
       return timedOut ? TIMED_OUT : undefined;
     }

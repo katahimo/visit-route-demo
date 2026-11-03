@@ -109,7 +109,7 @@ export function useStaffLines(d: PlanData) {
 
 /** 「入らない N」「守れない条件 N」の一覧の行（PRD D345）。時刻は今の担当の開始、無ければ約束の開始 */
 export function planIssueRows(d: PlanData): { dropped: IssueRow[]; hard: IssueRow[] } {
-  const { explained, visitById, clientOf, problem, unassigned, cs, terms, data, staffName } = d;
+  const { explained, visitById, clientOf, problem, unassigned, cs, terms, data, staffName, whyOf } = d;
   const timeOf = (id: string) => {
     const t = explained.get(id)?.timing;
     return t ? minutesToHhmm(t.start) : (visitById.get(id)?.earliestStart ?? '');
@@ -117,7 +117,12 @@ export function planIssueRows(d: PlanData): { dropped: IssueRow[]; hard: IssueRo
   const w = { timeOf, clientName: (id: string) => clientOf(id)?.displayName ?? '（不明）' };
   return {
     // 理由は「担当なしの訪問」の列の札と同じ
-    dropped: droppedRowsOf(unassigned, (id) => unplacedReasons(problem, explained, id), w),
+    dropped: droppedRowsOf(
+      unassigned,
+      (id) => unplacedReasons(problem, explained, id),
+      w,
+      (id) => (whyOf.get(id)?.links ?? []).filter((l) => linkIfOn(data.org.features, l.to) !== null),
+    ),
     // 訪問ごとに1行。関連の画面は lib/hardLinks（切った機能の行き先は出さない）
     hard: hardRowsOf(
       cs?.hardViolations ?? [],

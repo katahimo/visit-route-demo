@@ -1,8 +1,10 @@
 import { Loader2 } from 'lucide-react';
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { jstDate } from '../domain/time';
 import { autoArrange, autoBandText, autoDoneText, requestBandArrange } from '../lib/autoArrangeBatch';
 import { useDemoData } from '../store';
+import { useDay } from './day';
 import { useToast } from './Toast';
 import { useUndoAction } from './undo';
 import { useValueStore } from './valueStore';
@@ -15,7 +17,7 @@ export const AUTO_BAND_DELAY_MS = 600;
  * 自動の組み（lib/autoArrangeBatch。ADR-0072 第2段）に store の data と update をつなぎ、終わったら知らせる（PRD D405）。
  * App の直下に1つ。外れると計算を捨てる。データを丸ごと差し替えたら（読み込み・初期状態に戻す・直前の状態に戻す・別のタブの変更）
  * 待たせている依頼ごと捨てる（古いデータから作った結果を新しいデータに書かない）。
- * 終わったら「N件の担当を組みました」と［元に戻す］（書いたのが1手なので全体の履歴の1手戻す。要対応の組み直しだけで書かなかったときは出さない）。提案の帯は出さない。
+ * 終わったら「N件の担当を組みました」と［元に戻す］。担当なしのまま残れば件数と組めない理由の内訳・［理由を見る］（PRD D430）（書いたのが1手なので全体の履歴の1手戻す。要対応の組み直しだけで書かなかったときは出さない）。提案の帯は出さない。
  * デモを作った直後（store の startArrange。PRD D409）は、要対応の帯の［要対応を組む］と同じ依頼を1回出す
  */
 export function AutoArrangeHost(): ReactNode {
@@ -50,6 +52,8 @@ export function AutoArrangeHost(): ReactNode {
   }, [startArrange, takeStartArrange]);
   const toast = useToast();
   const undo = useUndoAction();
+  const navigate = useNavigate();
+  const { setDate } = useDay();
   const done = useValueStore(autoArrange.done);
   /** 知らせた終わり（描き直し・付け直しで同じ知らせを二度出さない。つないだときにあった古い知らせも出さない） */
   const shown = useRef(done);
@@ -59,7 +63,20 @@ export function AutoArrangeHost(): ReactNode {
     shown.current = done;
     // 要対応の組み直しだけで何も書かなかったときは知らせない（autoDoneText が null）
     const text = autoDoneText(done, latest.current.org.terms.staff);
-    if (text !== null) toast(text, done.written > 0 ? { action: undo } : undefined);
+    if (text === null) return;
+    // 担当なしのまま残ったら［理由を見る］（最初の1件の日の予定でその訪問の欄を開く。要対応の帯の［見に行く］と同じ移り方）と長めの表示（PRD D430）
+    const first = done.left.first;
+    const more = first
+      ? {
+          label: '理由を見る',
+          testId: 'toast-left-why',
+          onClick: () => {
+            setDate(first.date);
+            navigate('/plan', { state: { visitId: first.visitId, band: true } });
+          },
+        }
+      : undefined;
+    toast(text, { action: done.written > 0 ? undo : undefined, more, long: !!first });
   }, [done]);
   return null;
 }

@@ -58,15 +58,7 @@ async function zoom(page) {
       [...el.querySelectorAll('[data-testid]')]
         .map((x) => x.getAttribute('data-testid'))
         .filter((id) =>
-          [
-            'toolbar-add-plan',
-            'plan-visit-add',
-            'toolbar-assign',
-            'adopt',
-            'sudden-open',
-            'undo-btn',
-            'plan-menu',
-          ].includes(id),
+          ['toolbar-add-plan', 'plan-visit-add', 'toolbar-assign', 'adopt', 'sudden-open', 'plan-menu'].includes(id),
         ),
     );
     // 入の操作の行は主「定期の予定を追加」＋（月・週は「担当を組む」、日は「確定（伝えた）」）の2つと「その他 ▾」（PRD D402）
@@ -80,14 +72,18 @@ async function zoom(page) {
       `${zoomName}：操作の行は ${want.join(' → ')} の2つだけ（欠勤・元に戻すは行に無く、AI で組む ▾ も無い）`,
       order,
     );
-    // 欠勤・キャンセルを登録・元に戻すは「その他 ▾」の中
+    // 欠勤・キャンセルを登録は「その他 ▾」の中、元に戻す・やり直すはアイコンだけのボタンで行にある（PRD D432）
     const moreList = await openMore(page);
     check(
       (await moreList.getByTestId('sudden-open').count()) === 1 &&
-        (await moreList.getByTestId('more-undo').count()) === 1,
-      `${zoomName}：「その他 ▾」に 欠勤・キャンセルを登録 と 元に戻す がある`,
+        (await moreList.getByTestId('more-undo').count()) === 0,
+      `${zoomName}：「その他 ▾」に 欠勤・キャンセルを登録 がある（元に戻すは重ねて入れない）`,
     );
     await closeMore(page);
+    check(
+      (await bar.getByTestId('undo-btn').count()) === 1 && (await bar.getByTestId('redo-btn').count()) === 1,
+      `${zoomName}：操作の行にアイコンだけの［元に戻す］［やり直す］がある`,
+    );
     // その他 ▾ は欠勤・元に戻すを入れるので日・週・月のどれにもある（空き状況はメニュー。PRD D344・D400）
     check((await bar.locator('[data-testid$="-more"]').count()) === 1, `${zoomName}：その他 ▾ がある`);
     check(
@@ -334,7 +330,7 @@ async function multi(page) {
     (await stored(page)).clients.find((c) => c.id === renamed)?.displayName === '別のタブで変えた名前',
     '週：確認の間の別のタブの変更を、取り消しが上書きしない',
   );
-  await pressTool(page, '元に戻す', { where: 'more' });
+  await pressTool(page, '元に戻す', { where: 'row' });
   const restored = await waitStored(page, (d) => !wids.some((id) => d.visits.some((v) => v.id === id && v.cancelled)));
   check(restored, '操作の行の「元に戻す」で取り消しを戻す');
 }

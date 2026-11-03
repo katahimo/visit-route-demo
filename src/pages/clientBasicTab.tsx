@@ -2,6 +2,7 @@
 // 「訪問先の決まりごと」。新しい人は「基本」の節に基本と段階の入力をまとめて開く
 import { BadgeCheck, DoorOpen, House, Route, UserRound } from 'lucide-react';
 import { type ReactNode, useMemo } from 'react';
+import { ClientTravelFields } from '../components/clientTravel';
 import { TraitsEditor } from '../components/conditions';
 import { DetailsFold } from '../components/DetailsFold';
 import type { FormErr } from '../components/FieldError';
@@ -15,6 +16,7 @@ import { VISIT_RULE_FIELDS } from '../components/VisitRules';
 import type { Client } from '../contracts/documents';
 import type { Item } from '../contracts/rules';
 import { jstDate } from '../domain/time';
+import { travelNote, withTravel } from '../lib/clientTravel';
 import { colorOf } from '../lib/colors';
 import { hasLocation } from '../lib/common';
 import { traitText } from '../lib/compatView';
@@ -48,6 +50,7 @@ function ClientPlaceView({ c }: { c: Client }) {
         <DlRow term="住所" value={orDash(c.place.address)} />
         <ClientAreaRow client={c} />
         <DlRow term="緯度・経度" value={placeText(c.place)} />
+        <DlRow term="移動" value={travelNote(c.place) || '距離から見積もる'} />
       </dl>
       {points.length > 0 && <PlaceMap lat={points[0]!.lat} lng={points[0]!.lng} color={points[0]!.color} />}
     </>
@@ -142,7 +145,25 @@ function basicSections(a: BasicSectionsArgs): { part: ClientPart; node: ReactNod
     section(
       'place',
       <EditSection key="place" {...sec('place')} icon={House} title="住所" view={<ClientPlaceView c={c} />}>
-        {form && <ClientPlaceEditor value={form.place} onChange={(place) => setForm((x) => ({ ...x, place }))} />}
+        {form && (
+          <ClientPlaceEditor
+            value={form.place}
+            // 移動時間・遠方（出張）は下の欄の値を残す（住所の検索の結果で戻さない）
+            onChange={(place) =>
+              setForm((x) => ({
+                ...x,
+                place: withTravel(place, x.place.travelMinutes ?? null, x.place.farTrip === true),
+              }))
+            }
+          />
+        )}
+        {form && (
+          <ClientTravelFields
+            value={form.place}
+            onChange={(f) => setForm((x) => ({ ...x, place: f(x.place) }))}
+            bad={bad}
+          />
+        )}
       </EditSection>,
     ),
     section(

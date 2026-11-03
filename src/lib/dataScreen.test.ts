@@ -7,6 +7,7 @@ import {
   otherFormSkippedText,
   otherOrgOf,
   rosterConfirmBody,
+  rosterDefaultHoursNote,
   rosterDoneText,
   rosterFileName,
   rosterHasChanges,
@@ -20,6 +21,7 @@ import {
   workbookConfirmBody,
   workbookCountsText,
 } from './dataScreen';
+import { applyTemplate } from './features';
 import { tidyMonthLabel } from './tidy';
 
 describe('keepNote・keptSuffix（1世代の控えの文）', () => {
@@ -135,6 +137,32 @@ describe('名簿の読み込みの文', () => {
     ).toBe('読み込んだあと、住所から緯度・経度を探します（住所を郵便番号の検索と国土地理院の地図の検索に使います）');
     expect(rosterConfirmBody({ ...base, autoPlace: false })).not.toContain('緯度・経度を探します');
     expect(rosterConfirmBody(base)).not.toContain('緯度・経度を探します');
+  });
+  it('勤務の列が無く既定にした人がいれば、単発の予約のときだけ1文を足す（PRD D428。ADR-0095）', () => {
+    const f = applyTemplate('oneOff');
+    const note = rosterDefaultHoursNote({ names: ['A', 'B'], features: f, staffTerm: 'スタッフ' });
+    expect(note).toBe(
+      '勤務する曜日・時間のどれかが空の2人は、空の所を既定（毎日 7:00〜22:00）にしました。スタッフの画面の勤務時間で直せます',
+    );
+    expect(rosterDefaultHoursNote({ names: [], features: f, staffTerm: 'スタッフ' })).toBeNull();
+    expect(
+      rosterDefaultHoursNote({ names: ['A'], features: applyTemplate('basic'), staffTerm: 'スタッフ' }),
+    ).toBeNull();
+    const base = {
+      warning: null,
+      fileName: 'a.csv',
+      term: 'スタッフ',
+      how: '追加・更新',
+      summary: '追加 2人',
+      source: { format: 'csv', encoding: 'UTF-8' } as const,
+      empty: true,
+      keep: { kept: true, why: null },
+    };
+    expect(
+      rosterConfirmBody({ ...base, hoursNote: note })
+        .split('\n')
+        .at(-1),
+    ).toBe(note);
   });
   it('rosterIsEmpty：その一覧が0人か', () => {
     const d = createDemoData('2026-10-13');

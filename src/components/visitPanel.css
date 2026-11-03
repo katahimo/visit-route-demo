@@ -108,3 +108,26 @@
   border-color: var(--primary);
   background: var(--primary-soft);
 }
+/* 組めない理由の枠（PRD D430。components/visitWhy） */
+.vp-why {
+  border: 1px solid #ecd7a8;
+  background: #fdf6e7;
+  border-radius: 10px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.vp-why-label {
+  margin-left: 6px;
+  font-weight: 700;
+  color: var(--warn-ink);
+}
+.vp-why p {
+  margin: 0;
+}
+.vp-why-links {
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}

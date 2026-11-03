@@ -1,8 +1,9 @@
 // 予定の画面の時間軸（PRD D58。design.md §4 pages「予定の画面の時間軸」）の位置の計算。
 // 分 → px、列の背景（稼働時間帯の外・欠勤）、移動・待ちの区間、ドラッグ中の影の可否。データは書き換えない
+import type { ClientPlace } from '../contracts/documents';
 import type { Problem, StopTiming } from '../contracts/problem';
 import { bestInsertion, scheduleRoute } from '../matching';
-import { own } from './common';
+import { hasLocation, own } from './common';
 import { DAY_END, DAY_START, type Span } from './spans';
 
 /** 1分の高さ（px） */
@@ -80,22 +81,40 @@ export function backgroundOf(range: Span, baseSlots: Span[], slots: Span[]): Bac
  * 帯のあいだの区間：fromHome（最初の訪問へ自宅から）・drive（前の訪問の終わりから移動）・wait（着いてから始めるまで）・
  * toHome（最後の訪問の終わりから自宅まで）。visitId は区間のキー（来る区間は行き先の訪問、toHome は最後の訪問）
  */
-export type LegSpan = Span & { kind: 'fromHome' | 'drive' | 'wait' | 'toHome'; visitId: string; minutes: number };
+export type LegSpan = Span & {
+  kind: 'fromHome' | 'drive' | 'wait' | 'toHome';
+  visitId: string;
+  minutes: number;
+  /** 片方の位置（緯度・経度）が未登録で、分数が見込み（ADR-0093。markLegs が付ける） */
+  estimated?: boolean;
+  /** 着く時刻が訪問の「いつまでに始める」を過ぎている（markLegs が付ける） */
+  late?: boolean;
+};
 
-/** 担当の1列の時刻（lenient の scheduleRoute）から移動・待ちの区間。homeMinutes は最後の訪問から自宅まで（無ければ null） */
+/** 着く時刻の比べで許す誤差（分。matching/timing.ts の EPS と同じ考え） */
+const LATE_EPS = 1e-6;
+
+/**
+ * 担当の1列の時刻（lenient の scheduleRoute）から移動・待ちの区間。homeMinutes は最後の訪問から自宅まで（無ければ null）。
+ * 移動は次の訪問の始まりに接して置き、待ちはその前（前の訪問の終わり〜出る時刻）に置く（担当ごとの1日の横棒 spanParts と同じ）
+ */
 export function legsOf(stops: StopTiming[], homeMinutes: number | null): LegSpan[] {
   const out: LegSpan[] = [];
   stops.forEach((t, k) => {
+    const prevEnd = k > 0 ? stops[k - 1]!.end : Number.NEGATIVE_INFINITY;
+    const leave = Math.max(prevEnd, t.start - t.travelIn);
+    if (k > 0 && leave - prevEnd > LATE_EPS) {
+      out.push({ kind: 'wait', visitId: t.visitId, start: prevEnd, end: leave, minutes: leave - prevEnd });
+    }
     if (t.travelIn > 0) {
       out.push({
         kind: k === 0 ? 'fromHome' : 'drive',
         visitId: t.visitId,
-        start: t.arrival - t.travelIn,
-        end: t.arrival,
+        start: leave,
+        end: t.start,
         minutes: t.travelIn,
       });
     }
-    if (t.wait > 0) out.push({ kind: 'wait', visitId: t.visitId, start: t.arrival, end: t.start, minutes: t.wait });
   });
   const last = stops.at(-1);
   if (last && homeMinutes !== null) {
@@ -108,6 +127,55 @@ export function legsOf(stops: StopTiming[], homeMinutes: number | null): LegSpan
     });
   }
   return out;
+}
+
+/**
+ * 訪問先の移動の決まり方：fixed＝移動時間（片道・分）を手で決めた（位置に関わらずその分数。ADR-0096）、
+ * placed＝位置から見積もる、none＝位置が未登録（UNPLACED_TRAVEL_MIN 分の見込み。ADR-0093）。〈利用者さん〉が分からなければ none
+ */
+export function visitTravelKind(place: ClientPlace | undefined): 'fixed' | 'placed' | 'none' {
+  if (!place) return 'none';
+  if (place.travelMinutes !== undefined) return 'fixed';
+  return hasLocation(place) ? 'placed' : 'none';
+}
+
+/**
+ * 移動の区間に「見込み」「間に合わない」の印を付ける（分数は組みの結果のまま。新しく計算し直さない）。
+ * order は担当の訪問IDの並び、visitPlace は訪問先の〈利用者さん〉の場所、homePlaced は自宅の位置があるか、
+ * latestOf は訪問の「いつまでに始める」（分。無ければ undefined）。待ちの区間はそのまま返す。
+ * 見込みは、両端のどちらにも移動時間が無く、どちらかの位置が未登録の区間（移動時間があればその分数で決まる。matching の legOf と同じ）
+ */
+export function markLegs(
+  legs: LegSpan[],
+  a: {
+    order: string[];
+    visitPlace: (visitId: string) => ClientPlace | undefined;
+    homePlaced: boolean;
+    latestOf: (visitId: string) => number | undefined;
+  },
+): LegSpan[] {
+  const kindOf = (id: string) => visitTravelKind(a.visitPlace(id));
+  return legs.map((leg) => {
+    if (leg.kind === 'wait') return leg;
+    const k = a.order.indexOf(leg.visitId);
+    const prev = leg.kind === 'drive' && k > 0 ? a.order[k - 1] : undefined;
+    const here = kindOf(leg.visitId);
+    const ends = leg.kind === 'drive' ? (prev !== undefined ? [kindOf(prev), here] : []) : [here];
+    const homeKnown = leg.kind === 'drive' || a.homePlaced;
+    const estimated = ends.length > 0 && !ends.includes('fixed') && (ends.includes('none') || !homeKnown);
+    const latest = leg.kind === 'toHome' ? undefined : a.latestOf(leg.visitId);
+    const late = latest !== undefined && leg.end > latest + LATE_EPS;
+    return { ...leg, estimated, late };
+  });
+}
+
+/**
+ * 区間の言葉：「移動 15分」「自宅まで 30分（見込み）」。間に合わない区間は「・着く時刻が間に合わない」を添える
+ */
+export function legWords(leg: LegSpan, minutes: number): string {
+  const word = leg.kind === 'drive' ? '移動 ' : leg.kind === 'fromHome' ? '自宅から ' : '自宅まで ';
+  const note = leg.estimated ? '（見込み）' : '';
+  return `${word}${minutes}分${note}${leg.late ? '・着く時刻が間に合わない' : ''}`;
 }
 
 /**

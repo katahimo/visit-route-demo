@@ -6,6 +6,7 @@ import { type CellIn, condList, type ListRule, nullable, type TableSpec, traitLi
 import {
   CLIENT_POSTAL_COL,
   CLIENT_STAGE_COLS,
+  CLIENT_TRAVEL_COLS,
   clientExportCols,
   prefHeader,
   reqHeader,
@@ -108,6 +109,9 @@ export function clientTable(data: DemoData, name: string): TableSpec {
       c.place.address,
       nullable(c.place.lat),
       nullable(c.place.lng),
+      // 移動時間（片道・分）・遠方（出張）（ADR-0096）
+      c.place.travelMinutes ?? null,
+      yes(c.place.farTrip === true),
       // 担当できる人（ADR-0014）：名前を「、」で区切る
       c.allowedStaffIds
         .flatMap((id) => staffName.get(id) ?? [])
@@ -130,6 +134,7 @@ export function clientTable(data: DemoData, name: string): TableSpec {
       { col: 4, values: ['1', '2', '3', '4', '5', '6', '7', '8'] },
       { col: 5, values: [YES] },
       { col: 6, values: [YES] },
+      { col: clientBase.indexOf(CLIENT_TRAVEL_COLS.farTrip) + 1, values: [YES] },
       { col: clientBase.indexOf(CLIENT_STAGE_COLS.stage) + 1, values: Object.values(STAGE_LABELS) },
       ...cp.lists,
     ],

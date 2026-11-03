@@ -23,7 +23,7 @@
 - 下のタブ：`bottomTabs(groups, features)`。並びは `bottomTabKeys(features)`：入は 予定・〈利用者さん〉・〈スタッフ〉・組む（設定・空き状況は引き出しとパレット）、切は 予定・空き状況・〈利用者さん〉・〈スタッフ〉（設定は引き出しとパレット。空き状況（`vacancy`）が切なら空き状況の代わりに設定。ADR-0080）。そのあとに画面のボタンの「探す」「メニュー」
 - 起動先：`homePath(features)`＝`startGuidePlanPath(features)`（繰り返しを使うなら `/month`、使わないなら `/week`）。`#/home`・`#/`・知らない URL・切った機能の URL（知らせ `FeatureOffNotice` を上に出す）はここへ移す（`Navigate replace`。`App.tsx`）
 - 画面の一覧（`screenSections`。パレットの画面・上の帯の名前）：予定（月・週・日・空き状況。切はさらに担当を組む）／見出しなしの人のグループ（切は先頭に予定と相性・〈利用者さん〉・〈スタッフ〉・相性・勤務時間（シフト）・勤務の見込み）／組む（入だけ。予定と相性・条件の重み・組み方の標準・担当を組む）／設定
-- 要対応の帯（`components/attentionBand.tsx`・`attentionBand.css`・フック `useAttentionBand`。data-testid `attention-band`）：月・週・日の予定のナビの行のすぐ下に1本（入切とも。無ければ出さない。印刷で出さない）
+- 要対応の帯（`components/attentionBand.tsx`・`attentionBand.css`・フック `useAttentionBand`。data-testid `attention-band`）：月・週・日の予定のナビの行のすぐ下に1本（入切とも。無ければ出さない。印刷で出さない）。担当なしがあれば文のあとに「（担当なしの理由：勤務時間外 6・勤務日外 5）」（`attention-band-why`。帯の担当なしの訪問ごとの主な型の件数。日ごとの問題と今の列で `lib/unassignedReason` の `unassignedAcross`・`reasonBreakdown`。日ごとの結果は `createUnassignedMemo` で覚え、画面を移っても同じ問題・同じ列なら計算し直さない。PRD D430）
   - 判定は `lib/attentionBand` の `attentionBand(statuses, today, startOf, expert?)`（純粋関数。テストあり）。見る日は `bandDays(today)`＝今日〜翌月末（自動の組みの範囲 `autoRange` と同じ）
   - `DayStatus.issues` から訪問を件数で数える（分け方は `lib/bandIssues`。ADR-0089）：**担当なし**（`unassigned`）・**間に合わない**（`late`＝その訪問だけでも時間の約束・働ける時間に収まらない）・**重なり**（`overlap`＝その訪問だけなら収まるが前の訪問のあとでは間に合わない。`lib/dayPlan` の `visitIssues` が `scheduleRoute` をその訪問1件で数え直して分ける）・**休みの人**（`off`＝休み・休止の人に割り当てた訪問）。1つの訪問は1つの種類（担当なし → 休みの人 → 間に合わない → 重なり）。条件に合わない（`notAllowed`）は切では数えない
   - 入だけの種類（`expert`＝`ExpertBandInput`：`hasStandard`・`basisChanged`・`planYm`・`isOn`）：条件に合わない N件・拘束超 N日・組み方の標準が無い・基本情報が変わった（組み直す）・未確定 N日（訪問があって `state` が told でない日。`monthProgress` の `unconfirmed` と同じ数え方）。行き先の機能が切なら出さない（`isOn(href)`）
@@ -37,7 +37,7 @@
   - ［×］は `navOpenMemory.write(nextMonth:<今月>, false)`（端末に覚える。データ・書き出しに入れない）。閉じたらフォーカスを見出しへ移す。翌月の20日には鍵が変わるのでまた出す。ボタンは足さない（来月の要対応を組むのは帯の［要対応を組む］。今日〜翌月末）
 - 「訪問を1件追加」：日の主ボタン（`ADD_VISIT_LABEL`。開くのは訪問の欄）。月・週は別の言葉（`planAddLabel`＝「定期の予定を追加」／単発のみは「予約を追加」）で、 `ToolbarRow`（`mainTools` の `plan`）から `components/AddPlanPanel` を開く（[design.md](../design.md) の「定期の予定を追加」）
 - 人の小さいタブ：`lib/peopleTabs`（`peopleTabs`・`peopleTabsLabel`・`peopleSideOf`・`rememberedSide`・`peopleMatch`）と `components/SettingsTabs` の `PeopleTabs`（一覧・相性・勤務の画面。`data-testid="people-tabs"`）。相性でどちらから来たかは `components/peopleSide`。予定と相性は別の `BasicsNav`
-- 予定の「その他 ▾」：画面ごとの項目（表示の切り替え・使い方・印刷など）と元に戻す・やり直す・連絡を貼り付けて入れる（PRD D418）だけ
+- 予定の「その他 ▾」：画面ごとの項目（表示の切り替え・使い方・印刷など）と連絡を貼り付けて入れる（PRD D418）だけ
 
 ### `lib/nav.ts`（純粋関数。テストあり）
 

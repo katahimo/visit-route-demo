@@ -3,6 +3,7 @@
 import type { DemoData } from '../contracts/data';
 import type { Client, Staff, Terms } from '../contracts/documents';
 import { addDays } from '../domain/time';
+import { travelMinutesError } from './clientTravel';
 import { nameTaken } from './common';
 import { normalizeEmail } from './mailto';
 import { type ClientTab, mergeFields, pickFields } from './personPage';
@@ -125,6 +126,9 @@ export function clientSaveDraft(input: {
       ok: false,
       error: { text: '郵便番号は7桁の数字で入れてください（ハイフンは有っても無くても構いません。空でも構いません）' },
     };
+  // 移動時間（片道・分。任意。ADR-0096）
+  const travelError = touches('place') ? travelMinutesError(base.place.travelMinutes) : null;
+  if (travelError !== null) return { ok: false, error: { text: travelError, field: 'travelMinutes' } };
   // 紹介元のメールアドレス（任意。ADR-0017）
   const referrerEmail = touches('referrer') ? normalizeEmail(base.referrer.email) : base.referrer.email;
   if (referrerEmail === null)

@@ -49,7 +49,7 @@ export function useStaffEdit(opts: StaffEditOptions) {
   const navigate = useNavigate();
   const [edit, setEdit] = useState<Edit | null>(() => {
     if (!isNew) return null;
-    const f = blankStaff();
+    const f = blankStaff(data.org.features);
     return { key: 'new', form: f, opened: structuredClone(f) };
   });
   const [error, setError] = useState<FormErr>(null);

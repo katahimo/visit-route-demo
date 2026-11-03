@@ -4,7 +4,7 @@ import { type ComponentProps, type RefObject, useEffect, useMemo, useRef, useSta
 import { useSearchParams } from 'react-router-dom';
 import { useConfirm } from '../components/ConfirmDialog';
 import { useToast } from '../components/Toast';
-import { undoFocusTarget } from '../components/undo';
+import { moreFocusTarget } from '../components/undo';
 import type { DemoData } from '../contracts/data';
 import type { Absence, Client, Staff, Terms, Visit } from '../contracts/documents';
 import type { Problem } from '../contracts/problem';
@@ -242,7 +242,7 @@ export function useSuddenFlow(x: SuddenArgs): {
       leftCount: flow.left.length,
       contactMail: x.staffMail ? (row) => x.staffMail?.(row.id, row.text) ?? null : undefined,
       onCopied: x.onCopied,
-      fallbackFocus: () => (sudden.staffId ? x.colHeadOf(sudden.staffId) : (state.btnRef.current ?? undoFocusTarget())),
+      fallbackFocus: () => (sudden.staffId ? x.colHeadOf(sudden.staffId) : (state.btnRef.current ?? moreFocusTarget())),
       returnFocus: () => (state.toBar.current ? document.getElementById(flow.barId) : null),
     },
   };

@@ -1,6 +1,6 @@
 import type { DemoData, RosterKind } from '../contracts/data';
 import type { ClientPlace, Place, Terms } from '../contracts/documents';
-import { UNPLACED_TRAVEL_MIN } from '../matching/compile';
+import { UNPLACED_TRAVEL_MIN } from '../matching/travel';
 import { colorOf, initialOf } from './colors';
 import { byName, hasLocation } from './common';
 import type { GeoHit, LookupFail, LookupOptions, LookupResult, PostalHit } from './geocode';

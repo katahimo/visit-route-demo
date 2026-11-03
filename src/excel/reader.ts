@@ -2,13 +2,14 @@
 // セルの値の読み取り・見出しで列を引く行とシート・ID と名前の重なり・特性と条件の列（ADR-0006）
 import ExcelJS from 'exceljs';
 import type { DemoData, ImportError } from '../contracts/data';
-import { graphemeCount, STAFF_ICON_MAX, STAFF_ICON_MAX_UNITS } from '../contracts/documents';
+import { graphemeCount, STAFF_ICON_MAX, STAFF_ICON_MAX_UNITS, TRAVEL_MINUTES_MAX } from '../contracts/documents';
 import type { Condition, Item, ItemTarget, Traits, TraitValue } from '../contracts/rules';
 import { nameKey, newId } from '../lib/common';
 import { normalizeEmail } from '../lib/mailto';
 import { normalizePostalCode } from '../lib/postalCode';
 import {
   CLIENT_POSTAL_COL,
+  CLIENT_TRAVEL_COLS,
   PREF_PREFIX,
   prefHeader,
   REQ_PREFIX,
@@ -132,6 +133,14 @@ export function readPostal(r: Row): string | null {
   if (postalCode === null)
     r.err(CLIENT_POSTAL_COL, '7桁の数字で書いてください（ハイフンは有っても無くても構いません）');
   return postalCode;
+}
+
+/**
+ * 移動時間（片道・分）の列（PRD D429。ADR-0096）：列が無い古いブック・空は null（距離から見積もる）。
+ * 1〜上限の整数でなければ行付きで止めて undefined
+ */
+export function readTravelMinutes(r: Row): number | null | undefined {
+  return r.num(CLIENT_TRAVEL_COLS.minutes, { int: true, min: 1, max: TRAVEL_MINUTES_MAX });
 }
 
 /** 見出しの比べ方（全角半角・コロンの揺れ・空白を許す） */

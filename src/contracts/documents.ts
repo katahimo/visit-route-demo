@@ -68,6 +68,9 @@ export const staffIconSchema = z
   .max(STAFF_ICON_MAX_UNITS)
   .refine((s) => s === s.trim(), 'アイコンの前後に空白は入れられません');
 
+/** 移動時間（片道・分）の上限（PRD D429。ADR-0096）。新幹線・飛行機の片道でも収まる長さ */
+export const TRAVEL_MINUTES_MAX = 720;
+
 /**
  * 〈利用者さん〉の場所（PRD D86。ADR-0016）：場所に郵便番号を足したもの。郵便番号は空か7桁の数字（ハイフンなし）。
  * 入力のハイフン・全角数字は画面・Excel が lib/geocode の normalizePostalCode で直してから入れる。無い古いデータは ''
@@ -77,6 +80,17 @@ export const clientPlaceSchema = placeSchema.extend({
     .string()
     .regex(/^(\d{7})?$/, '郵便番号は7桁の数字で入れてください')
     .default(''),
+  /**
+   * 移動時間（片道・分。PRD D429。ADR-0096）：新幹線・飛行機など距離で見積もれないときに手で決める。
+   * 入っていれば、この〈利用者さん〉への・からの移動は、どこから来ても（どこへ行っても）この分数とみる（距離は 0 m＝交通費に入れない）。
+   * 無い＝距離から見積もる。無い古いデータも同じ
+   */
+  travelMinutes: z.number().int().min(1).max(TRAVEL_MINUTES_MAX).optional(),
+  /**
+   * 遠方（出張。PRD D429。ADR-0096）：true なら、この訪問の日は、その担当はこの〈利用者さん〉の訪問だけを回る
+   * （前後にほかの〈利用者さん〉の訪問をつながない）。家を出る時刻は勤務の開始に縛らない。無い＝false
+   */
+  farTrip: z.boolean().optional(),
 });
 export type ClientPlace = z.infer<typeof clientPlaceSchema>;
 

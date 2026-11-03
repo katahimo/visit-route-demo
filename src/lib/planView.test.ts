@@ -95,6 +95,14 @@ describe('「入らない」「守れない条件」の一覧の行', () => {
   it('droppedRowsOf：時刻・名前・理由の言葉', () => {
     const rows = droppedRowsOf(['v1'], () => [{ ruleId: 'x', label: '遠い', points: 3 }], w);
     expect(rows).toEqual([{ visitId: 'v1', time: '09:00', clientName: '客v1', reasons: ['遠い'], links: [] }]);
+    // 組めない理由の直す画面（PRD D430）
+    const linked = droppedRowsOf(
+      ['v1'],
+      () => [],
+      w,
+      () => [{ to: '/staff', label: '直す' }],
+    );
+    expect(linked[0]!.links).toEqual([{ to: '/staff', label: '直す' }]);
   });
   it('hardRowsOf：訪問ごとに1行にまとめ、時刻の順', () => {
     const v = (visitId: string, label: string) => ({ visitId, staffId: 's1', kind: 'notAllowed' as const, label });

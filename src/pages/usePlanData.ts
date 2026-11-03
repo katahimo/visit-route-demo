@@ -23,6 +23,7 @@ import { leavePeople } from '../lib/personLinks';
 import { hardLabelsOf, planColumns, toldMarksOf } from '../lib/planView';
 import { reasonOfRoutes } from '../lib/scoreReason';
 import { showConfirmStep } from '../lib/settledView';
+import { type UnassignedReason, unassignedReasons } from '../lib/unassignedReason';
 import { dayLooks } from '../lib/visitLook';
 import { workStats } from '../lib/workload';
 import { explainMap } from './planParts';
@@ -56,6 +57,14 @@ function usePlanCore(date: string) {
     [problem, hasPlan, routes, m.allVisits],
   );
   const owner = useMemo(() => ownerOf(routes), [routes]);
+  /** 担当なしの訪問の組めない理由（PRD D430。担当なしの訪問の列の札・入らない一覧のリンク） */
+  const whyOf = useMemo(
+    () =>
+      problem && hasPlan
+        ? unassignedReasons(problem, routes, m.data.org.terms, { clients: m.data.clients })
+        : new Map<string, UnassignedReason>(),
+    [problem, hasPlan, routes, m.data.org.terms, m.data.clients],
+  );
   const staffName = (id: string) => staffById.get(id)?.name ?? '（不明）';
   const clientOf = (visitId: string) => {
     const v = visitById.get(visitId);
@@ -85,6 +94,7 @@ function usePlanCore(date: string) {
     curAch,
     issues,
     owner,
+    whyOf,
     staffName,
     clientOf,
     visitLabel,

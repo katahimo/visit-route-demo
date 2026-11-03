@@ -82,18 +82,22 @@ type RowWords = {
   clientName: (visitId: string) => string;
 };
 
-/** 「入らない N」の一覧（PRD D345）：理由は「担当なしの訪問」の列の札と同じ言葉 */
+/**
+ * 「入らない N」の一覧（PRD D345）：理由は「担当なしの訪問」の列の札と同じ言葉。関連の画面は組めない理由の直す画面
+ * （lib/unassignedReason。PRD D430。切った機能の行き先は呼ぶ側で外す）
+ */
 export function droppedRowsOf(
   unassigned: readonly string[],
   reasonsOf: (visitId: string) => readonly Reason[],
   w: RowWords,
+  linksOf: (visitId: string) => HardLink[] = () => [],
 ): PlanIssueRow[] {
   return unassigned.map((id) => ({
     visitId: id,
     time: w.timeOf(id),
     clientName: w.clientName(id),
     reasons: reasonsOf(id).map((r) => reasonFace(r).text),
-    links: [],
+    links: linksOf(id),
   }));
 }
 

@@ -5,7 +5,14 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { RosterKind, RosterMode } from '../contracts/data';
 import { jstDate } from '../domain/time';
-import { rosterConfirmBody, rosterDoneText, rosterHasChanges, rosterHowText, rosterIsEmpty } from '../lib/dataScreen';
+import {
+  rosterConfirmBody,
+  rosterDefaultHoursNote,
+  rosterDoneText,
+  rosterHasChanges,
+  rosterHowText,
+  rosterIsEmpty,
+} from '../lib/dataScreen';
 import { autoPlaceAfterRoster } from '../lib/placeAll';
 import { canKeepPrevious } from '../store';
 import { useConfirm } from './ConfirmDialog';
@@ -57,6 +64,11 @@ export function useRosterImport(x: {
         empty: rosterIsEmpty(base, kind),
         keep: canKeepPrevious(),
         autoPlace,
+        hoursNote: rosterDefaultHoursNote({
+          names: r.hoursDefaulted,
+          features: base.org.features,
+          staffTerm: terms.staff,
+        }),
       }),
       confirmLabel: '名簿を読み込む',
       // 総入れ替え（名簿にいない人を終了・休止にする）は危険の色

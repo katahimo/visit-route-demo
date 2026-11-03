@@ -106,7 +106,10 @@ export const DETAILS_LABEL = '詳しく';
 /** 時間軸の凡例の項目のうち、資格✗・限✗（条件に合わない）は切では外す（札に出さないので凡例も要らない） */
 export const showUnfitLegend = (only: boolean): boolean => !only;
 
-/** 日の予定で、時間軸に移動・待ちの分数の区間を出すか（切は出さない：移動の分数は例外ではない） */
+/**
+ * 日の予定の順番の表示で、移動の分数の行を出すか（切は出さない：移動の分数は例外ではない）。
+ * 時間軸の移動・待ちは入切とも同じに出す（components/routeTimeline。PRD D431）
+ */
 export const showLegs = (only: boolean): boolean => !only;
 
 /** 担当なしの札の下の「入れられない理由」の札を出すか（切は出さない：理由は例外の知らせの外） */

@@ -420,8 +420,8 @@ async function changed(page) {
   );
   check((await sheet(page).count()) === 0, '「連絡した」のあと連絡の一覧は閉じる');
   // 元に戻す（今の確定と同じ扱い）：伝えた記録が前に戻り、変更ありが戻る
-  // 元に戻すは「その他 ▾」の中（エキスパート機能が切。PRD D384）
-  await pressTool(page, 'more-undo', { where: 'more' });
+  // 元に戻すは操作の行のアイコンだけのボタン（PRD D432）
+  await pressTool(page, '元に戻す', { where: 'row' });
   const undone = await dataWhen(page, (x) => x.snapshots[TODAY].at === before.at);
   check(undone.snapshots[TODAY].at === before.at, '操作の行の［元に戻す］で「連絡した」の前に戻る');
   await page.locator('[data-told-date]').first().waitFor({ timeout: 10000 });

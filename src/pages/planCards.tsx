@@ -2,6 +2,7 @@
 // 印・経路のリンク・理由）。どれも usePlanPage の戻り値から描く関数
 import { MessageSquareText, PanelRightOpen, Pin, PinOff, ShieldAlert, TriangleAlert } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { TravelFact } from '../components/clientTravel';
 import { DetailsFold } from '../components/DetailsFold';
 import { VisitRouteLinks } from '../components/mapsLinks';
 import { PersonButton } from '../components/PersonPopover';
@@ -242,7 +243,20 @@ export function tagsOf(p: PlanCtx, id: string, pinHint = true) {
  * 入らない訪問で「受けられる人」（振り直しの候補）を出しているものは重ねない
  */
 export function reassignOf(p: PlanCtx, id: string, ownerId: string | null) {
-  const { problem, hasPlan, routes, pins, staffName, terms, columns, running, reassignMarks, moveTo, unassign } = bv(p);
+  const {
+    problem,
+    hasPlan,
+    routes,
+    pins,
+    staffName,
+    terms,
+    columns,
+    running,
+    reassignMarks,
+    moveTo,
+    unassign,
+    clientOf,
+  } = bv(p);
   if (!problem || !hasPlan) return null;
   if (!ownerId && reassignMarks.unplaced.has(id)) return null;
   return (
@@ -254,7 +268,8 @@ export function reassignOf(p: PlanCtx, id: string, ownerId: string | null) {
       pinned={!!own(pins, id)}
       staffIds={columns}
       staffName={staffName}
-      staffTerm={terms.staff}
+      terms={terms}
+      client={clientOf(id)}
       busy={running ? '計算中は選べません' : false}
       onMove={(sid) => {
         moveTo(id, sid);
@@ -329,6 +344,7 @@ export function card(p: PlanCtx, id: string) {
           {whoOf(p, id, ownerId)}
           {reassignOf(p, id, ownerId)}
           {!isFirst && <VisitRules client={clientOf(id)} />}
+          <TravelFact place={clientOf(id)?.place} start={explained.get(id)?.timing?.start ?? null} />
           {routeLinksOf(p, id, ownerId)}
           {reasonOf(p, id)}
         </>
@@ -456,6 +472,7 @@ export function bandOf(p: PlanCtx, id: string, sid: string): TimelineBand {
         {reassignOf(p, id, sid)}
         {tagsOf(p, id)}
         {!isFirst && <VisitRules client={client} />}
+        <TravelFact place={client?.place} start={start} />
         {routeLinksOf(p, id, sid)}
         {reasonOf(p, id)}
       </>

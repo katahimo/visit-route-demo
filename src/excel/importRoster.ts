@@ -178,6 +178,7 @@ function readLoaded(
           .filter((s) => s.active && s.lastDay !== null && base.staff.find((b) => b.id === s.id)?.lastDay !== s.lastDay)
           .map((s) => s.name)
       : [];
+  const hoursDefaulted = reads.filter((x) => x.hoursDefaulted).map((x) => nameOf(x.person));
   const activeBefore =
     kind === 'staff'
       ? base.staff.filter((s) => s.active).length
@@ -191,6 +192,7 @@ function readLoaded(
     allowedRemoved,
     allowedEmptied,
     lastDaySet,
+    hoursDefaulted,
     activeBefore,
     source,
     otherForm: other ? { label: other.form.label, skippedColumns: other.skipped } : null,

@@ -345,3 +345,32 @@
   cursor: pointer;
   white-space: nowrap;
 }
+/* 隙間が狭い移動は文字を出さず、隙間いっぱいを押す所にする */
+.tl-leg.is-short .tl-leg-btn.leg-btn {
+  width: 100%;
+  height: 100%;
+  margin-left: 0;
+  padding: 0;
+}
+/* 位置が未登録の区間（見込み）は文字を斜めに */
+.tl-leg.is-estimated .tl-leg-btn {
+  font-style: italic;
+}
+/* 着く時刻が間に合わない区間：注意の色（文字と線。三角の印と title の文も添える） */
+.tl-leg.is-late {
+  border-left-color: var(--warn-line);
+}
+.tl-leg.is-late .tl-leg-btn.leg-btn {
+  color: var(--warn-ink);
+  font-weight: 700;
+}
+@media print {
+  .tl-leg {
+    opacity: 1;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .tl-leg-btn.leg-btn {
+    background: transparent;
+  }
+}

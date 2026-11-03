@@ -5,17 +5,18 @@ import { Link } from 'react-router-dom';
 import { PersonInfo } from '../components/PersonPopover';
 import { RouteTimeline, type TimelineColumn } from '../components/routeTimeline';
 import { LegLine, StaffFocusButton } from '../components/routeView';
+import type { StopTiming } from '../contracts/problem';
 import { slotsText } from '../domain/availability';
 import { NONE } from '../domain/scheduleModel';
 import { absenceText } from '../lib/absences';
-import { own } from '../lib/common';
+import { hasLocation, own } from '../lib/common';
 import { showLegs, showUnplacedReasons } from '../lib/exceptionView';
 import { unplacedReasons } from '../lib/planView';
 import { hardReasonLabels, notAllowedText } from '../lib/reassignMenu';
 import { homeLegKey, homeTravel } from '../lib/routeView';
 import { reasonFace } from '../lib/scoreReason';
 import { spansOf } from '../lib/spans';
-import { type LegSpan, legsOf, shadowOf } from '../lib/timeline';
+import { type LegSpan, legsOf, markLegs, shadowOf } from '../lib/timeline';
 import { CandidateBox } from './absenceParts';
 import { bandOf, bv, card } from './planCards';
 import { PLAN_SET } from './usePlanNav';
@@ -176,6 +177,7 @@ export function noneCol(p: PlanCtx) {
     placeCandidate,
     date,
     only,
+    whyOf,
   } = bv(p);
   return (
     <div
@@ -208,10 +210,17 @@ export function noneCol(p: PlanCtx) {
       )}
       {unassigned.map((id) => {
         const reasons = unplacedReasons(problem, explained, id);
+        const why = whyOf.get(id);
         const client = clientOf(id);
         return (
           <div key={id} className="stack" style={{ gap: 2 }}>
             {card(p, id)}
+            {/* 組めない理由の短い内訳（入切とも控えめに。押すと訪問の詳細の「組めない理由」で案内とリンク。PRD D430） */}
+            {why && (
+              <span className="sub unplaced-why" title={why.guide} data-testid="unplaced-why">
+                組めない理由：{why.summary}
+              </span>
+            )}
             {/* 〈利用者さん〉の名前はカード（押すと選ぶ・ドラッグ）の中なので、詳細は外の i から開く（PRD D205） */}
             <div className="row unplaced-reasons" style={{ flexWrap: 'wrap', gap: 4 }}>
               {client && <PersonInfo kind="client" id={client.id} name={client.displayName} testId="unplaced-info" />}
@@ -257,10 +266,25 @@ export function noneCol(p: PlanCtx) {
   );
 }
 
+/**
+ * 時間軸の列の移動の区間（組みの結果の時刻から。分数は計算し直さない）。切でも出す（PRD D431）：
+ * 位置が未登録の区間は見込み、着く時刻が「いつまでに始める」を過ぎる区間は警告
+ */
+function columnLegs(p: PlanCtx, sid: string, ids: string[], stops: StopTiming[]): LegSpan[] {
+  const { problem, routes, staffById, clientOf } = bv(p);
+  if (stops.length !== ids.length) return [];
+  const home = staffById.get(sid)?.home;
+  return markLegs(legsOf(stops, homeTravel(problem, staffById.get(sid), routes, true)), {
+    order: ids,
+    visitPlace: (id) => clientOf(id)?.place,
+    homePlaced: home !== undefined && hasLocation(home),
+    latestOf: (id) => problem?.visits.find((v) => v.id === id)?.latest,
+  });
+}
+
 /** 時間軸の列（PRD D58） */
 export function timelineCol(p: PlanCtx, sid: string): TimelineColumn {
-  const { problem, routes, owner, explained, staffById, slotsOf, colorOfStaff, dragging, dropTo, dropProps, only } =
-    bv(p);
+  const { problem, routes, owner, explained, slotsOf, colorOfStaff, dragging, dropTo, dropProps } = bv(p);
   const ids = own(routes, sid) ?? [];
   const avail = slotsOf.get(sid);
   const stops = ids.flatMap((id) => {
@@ -280,10 +304,7 @@ export function timelineCol(p: PlanCtx, sid: string): TimelineColumn {
     baseSlots: spansOf(avail?.baseSlots ?? []),
     slots: spansOf(avail?.slots ?? []),
     bands: ids.map((id) => bandOf(p, id, sid)),
-    legs:
-      showLegs(only) && stops.length === ids.length
-        ? legsOf(stops, homeTravel(problem, staffById.get(sid), routes))
-        : [],
+    legs: columnLegs(p, sid, ids, stops),
     shadow,
     emptyText: 'ここへドラッグすると移せます',
   };

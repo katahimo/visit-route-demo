@@ -3,10 +3,18 @@ import type { DemoData } from '../contracts/data';
 import type { Pattern } from '../contracts/documents';
 import type { Problem, SolveResult } from '../contracts/problem';
 import { addDays } from '../domain/time';
+import { compile } from '../matching';
 import { findVisit, putVisits, visitsOn } from '../patterns';
 import { createDemoData } from '../seed';
 import { solve } from '../solver';
-import { AUTO_ARRANGE_LABEL, autoBandText, autoDoneText, createAutoArrange } from './autoArrangeBatch';
+import {
+  AUTO_ARRANGE_LABEL,
+  autoBandText,
+  autoDoneText,
+  autoLeftOf,
+  createAutoArrange,
+  NO_LEFT,
+} from './autoArrangeBatch';
 import { dayBandIssues } from './bandIssues';
 
 const TODAY = '2026-10-21';
@@ -305,16 +313,46 @@ describe('createAutoArrange（自動の組みの入れ物。ADR-0072）', () => 
 
 describe('知らせ・帯の文', () => {
   it('件数があれば「N件の担当を組みました」、無ければ〈スタッフ〉の呼び方で「組める…がいませんでした」', () => {
-    const d = { written: 4, appliedDays: 2, skippedDays: 0, error: null, staffedOnly: false };
+    const d = { written: 4, appliedDays: 2, skippedDays: 0, error: null, staffedOnly: false, left: NO_LEFT };
     expect(autoDoneText(d, 'スタッフ')).toBe('4件の担当を組みました');
     expect(autoDoneText({ ...d, written: 0 }, 'シッター')).toBe('組めるシッターがいませんでした。担当なしのまま');
     expect(autoDoneText({ ...d, skippedDays: 1 }, 'スタッフ')).toContain('変わった日は組んでいません');
     expect(autoDoneText({ ...d, error: '失敗' }, 'スタッフ')).toContain('失敗');
   });
   it('対象がすべて担当のある訪問（要対応の組み直しだけ）で何も書かなかったときは知らせない', () => {
-    const d = { written: 0, appliedDays: 1, skippedDays: 0, error: null, staffedOnly: true };
+    const d = { written: 0, appliedDays: 1, skippedDays: 0, error: null, staffedOnly: true, left: NO_LEFT };
     expect(autoDoneText(d, 'スタッフ')).toBeNull();
     expect(autoDoneText({ ...d, written: 2 }, 'スタッフ')).toBe('2件の担当を組みました');
+  });
+  it('担当なしのまま残った対象があれば、件数と組めない理由の内訳を添える（PRD D430）', () => {
+    const d = { written: 66, appliedDays: 20, skippedDays: 0, error: null, staffedOnly: false };
+    const left = { count: 11, why: '勤務時間外 6・勤務日外 5', first: { date: TODAY, visitId: 'v1' } };
+    expect(autoDoneText({ ...d, left }, 'スタッフ')).toBe(
+      '66件の担当を組みました。担当なしのまま 11件（勤務時間外 6・勤務日外 5）',
+    );
+    expect(autoDoneText({ ...d, written: 0, left }, 'シッター')).toBe(
+      '組めるシッターがいませんでした。担当なしのまま 11件（勤務時間外 6・勤務日外 5）',
+    );
+  });
+  it('autoLeftOf：組んだ日の対象のうち担当なしのまま残った訪問と理由の内訳・最初の1件', () => {
+    // 22:00 の回は勤務（デモの〈スタッフ〉の勤務時間）の外で、だれも組めない
+    const base = start();
+    const d: DemoData = {
+      ...base,
+      patterns: base.patterns.map((p) =>
+        p.id === 'pn' ? { ...p, earliestStart: '23:00', latestStart: '23:00', durationMinutes: 50 } : p,
+      ),
+    };
+    const date = addDays(TODAY, 1);
+    const problem = compile(d, date);
+    const ids = [`${date}_pn`];
+    const day = { date, visits: visitsOn(d, date), inputs: [], targetIds: ids, problem, routes: {} };
+    const left = autoLeftOf(d, [day as never], [date], d.org.terms);
+    expect(left.count).toBe(1);
+    expect(left.why).toBe('勤務時間外 1');
+    expect(left.first).toEqual({ date, visitId: `${date}_pn` });
+    // 組まなかった日（飛ばした日）は数えない
+    expect(autoLeftOf(d, [day as never], [], d.org.terms)).toEqual(NO_LEFT);
   });
   it('進み具合の帯の文', () => {
     expect(autoBandText({ index: 2, total: 10, waiting: 0 })).toBe('担当を自動で組んでいます 3/10日');

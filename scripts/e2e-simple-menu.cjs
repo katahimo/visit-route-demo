@@ -590,7 +590,10 @@ async function exceptions(page) {
     check(btns.length >= 1 && btns[0].primary && primaryText.test(btns[0].text), `${to}：1つ目が主ボタン`, btns);
     check(btns.filter((b) => b.primary).length === 1, `${to}：操作の行の主ボタンは1つ`, btns);
     check((await page.locator('main .btn-primary, .content .btn-primary').count()) <= 1, `${to}：画面の主ボタンは1つ`);
-    check((await page.getByTestId('undo-btn').count()) === 0, `${to}：元に戻すは操作の行に出さない（その他 ▾ の中）`);
+    check(
+      (await page.getByTestId('undo-btn').count()) === 1 && (await page.getByTestId('redo-btn').count()) === 1,
+      `${to}：元に戻す・やり直すはアイコンだけのボタンで操作の行に出す（数えない補助。PRD D432）`,
+    );
     const fold = page.getByTestId(detailsId);
     check((await fold.count()) === 1, `${to}：「詳しく」がある`);
     check(!(await fold.evaluate((e) => e.open)), `${to}：「詳しく」は初め閉じている`);
@@ -604,11 +607,7 @@ async function exceptions(page) {
     // 「その他 ▾」に 元に戻す・表示の切り替えなど
     await page.getByTestId(`${zoom}-more`).click();
     const menu = await texts(page.getByRole('menuitem'));
-    check(
-      menu.some((t) => /^元に戻す/.test(t)),
-      `${to}：「その他 ▾」に元に戻す`,
-      menu,
-    );
+    check(!menu.some((t) => /^元に戻す/.test(t)), `${to}：「その他 ▾」に元に戻すを重ねて入れない`, menu);
     if (to !== '/week')
       check(
         menu.some((t) => /で見る/.test(t)),
@@ -632,7 +631,10 @@ async function exceptions(page) {
     check(!BANNED.test(inner), `${to}：「詳しく」の中にも禁句が出ない`, inner.match(BANNED)?.[0]);
     if (to === '/plan') {
       check(/点数/.test(inner) && /移動/.test(inner), '日：「詳しく」の中に点数・移動の分数がある');
-      check((await page.locator('.tl-leg, .tl-wait').count()) === 0, '日：時間軸に移動・待ちの分数の線が出ない');
+      check(
+        (await page.locator('.tl-leg').count()) > 0 && (await page.locator('.tl-wait').count()) > 0,
+        '日：時間軸に移動・待ちの分数が入と同じく出る（PRD D431）',
+      );
       check((await page.getByTestId('unplaced-reason').count()) === 0, '日：担当なしの札に入れられない理由を出さない');
       check((await page.getByTestId('band-care').count()) === 0, '日：要対応の件数の内訳の帯を出さない');
       const marks = await page.locator('[data-testid="visit-marks"] [data-kind="pin"], [data-kind="unfit"]').count();
@@ -825,7 +827,10 @@ async function expertSame(page) {
       btns,
     );
     check(btns[0].primary, `入 ${to}：1つ目（${want[0]}）が主ボタン`, btns);
-    check((await page.getByTestId('undo-btn').count()) === 0, `入 ${to}：元に戻すは操作の行に出さない`);
+    check(
+      (await page.getByTestId('undo-btn').count()) === 1,
+      `入 ${to}：元に戻すはアイコンだけのボタンで操作の行に出す`,
+    );
     check(
       (await page.getByTestId('plan-help-btn').count()) === 0,
       `入 ${to}：使い方・表示の切り替えのボタンは行に無い`,
@@ -837,8 +842,8 @@ async function expertSame(page) {
       return t;
     })();
     check(
-      list.some((t) => /^欠勤・キャンセルを登録/.test(t)) && list.some((t) => /^元に戻す/.test(t)),
-      `入 ${to}：「その他 ▾」に 欠勤・キャンセルを登録 と 元に戻す`,
+      list.some((t) => /^欠勤・キャンセルを登録/.test(t)) && !list.some((t) => /^元に戻す/.test(t)),
+      `入 ${to}：「その他 ▾」に 欠勤・キャンセルを登録（元に戻すは行のアイコンだけで、メニューに重ねない。PRD D432）`,
       list,
     );
     const fold = page.getByTestId(detailsId);

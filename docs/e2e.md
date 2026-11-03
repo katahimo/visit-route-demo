@@ -30,7 +30,7 @@ AGENTS.md「コマンド」から引く詳細。e2e を走らせる・足す・�
 - `goTo(page, 行き先, { ready, timeout, h1, settleMs })`：URL で画面へ行く（about:blank を挟む）。行き先は名前（`月`・`週`・`日`・`利用者さん`・`スタッフ`・`設定`・`基本情報`・`組む`・`空き状況`・`欠勤` ほか。表は `SCREENS`）か `/path?query`。各スクリプトの `open` の多くはこれの薄い包み（読み直す形の `open` や `openPlan`・`freshPlan` などは自前の待ちを持つ）
 - `clickMenu(page, 行き先, scope)`：左のメニューの項目を名前で押す（畳んだ親の中なら開いてから。名前は 予定・利用者さん・スタッフ・設定・基本情報・組む・担当を組む・組み方の標準）。メニューを押して移ることそのものを確かめるときだけ使い、ただ移りたいなら `goTo`
 - `pressTool(page, 操作, { where })`：操作の行のボタンを名前で押す。既定は行にあっても「その他 ▾」の中でも押せる。`where: 'row'`・`where: 'more'` は位置そのものを確かめる所に付ける（`元に戻す`・`欠勤`（入は `where: 'more'`）・`勤務の見込み`・`印刷`・`予定を入れる`・`担当を組む`・`確定`・`使い方`・`メールで送る` ほか。表は `TOOLS`。表に無い名前は testid として行→「その他 ▾」の順に探す）。`openMore`・`closeMore` は「その他 ▾」の開け閉め
-- `undoState(page)`・`toolCount(page, testId)`：「元に戻す」の状態（押せるか・手の名前）を「その他 ▾」を開いて読む／行と「その他 ▾」の中を合わせた testid の数
+- `undoState(page)`・`toolCount(page, testId)`：「元に戻す」の状態（押せるか・手の名前）を操作の行のアイコンだけのボタン（`undo-btn`）から読む／行と「その他 ▾」の中を合わせた testid の数
 - `openScreenDetails(page)`：画面の「詳しく ▾」（月・週・日）を開く（開け閉めは覚えるので、以後その画面は開いて始まる）
 - `openDetails(page, testId)`・`reveal(page, testId)`：「詳しく ▾」を開く／その要素を含む畳んだ「詳しく ▾」だけ開いて見えるまで待つ。畳んだ中の点数・移動・凡例を読む前に `reveal`。管理者設定のひな形の「適用」は `scripts/lib/features.cjs` の `applyTemplate` が `openDetails(page, 'feature-templates-fold')` で開いてから押す
 - 使い分け：画面そのものの作り（メニューの並び・操作の行の中身・「詳しく ▾」の開け閉め）を確かめる e2e は位置を直に見てよい。ほかの確かめのために「移る・押す・開く」だけの所は共通の手を使う

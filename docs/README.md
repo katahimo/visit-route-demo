@@ -137,6 +137,10 @@
 | [0092](adr/0092-demo-entry-three-uses-template-names-settings-layout.md) | 最初の2問の問2を使い方4つに・ひな形の名前と並び・機能のグループ・やり直しはデータの画面へ |
 | [0093](adr/0093-arrange-without-locations.md) | 位置が未登録でも担当を組む（移動は30分とみる） |
 | [0094](adr/0094-auto-place-after-roster-import.md) | 名簿を読み込んだら住所から自動で地図に置き、位置の無い人を一覧で扱う |
+| [0095](adr/0095-oneoff-staff-default-hours.md) | 単発の予約では新しい〈スタッフ〉の既定の勤務を毎日 7:00〜22:00 にし、勤務に入らない予約を読み込み前に知らせる |
+| [0096](adr/0096-far-client-travel-minutes.md) | 遠方の〈利用者さん〉に手で決める移動時間（片道・分）と遠方（出張）の印 |
+| [0097](adr/0097-quiet-travel-in-day-timeline-and-undo-icons.md) | 日の時間軸に移動の分数を控えめに戻す・予定の操作の行にアイコンだけの［元に戻す］［やり直す］ |
+| [0098](adr/0098-unassigned-reason-guide.md) | 担当なしの訪問の組めない理由を型に分け、直し方と直す画面を案内する |
 
 ## 文書の保ち方
 

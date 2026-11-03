@@ -525,12 +525,14 @@ describe('〈利用者さん〉の担当できる人の列（ADR-0014）', () =>
           : c,
     ),
   });
-  it('担当できる人が 書き出し → 読み込み で同じに戻る（列は「経度」の次、名前を「、」で区切る）', async () => {
+  it('担当できる人が 書き出し → 読み込み で同じに戻る（列は「経度」・移動時間・遠方の次、名前を「、」で区切る）', async () => {
     const d = withLimit(base());
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(await toBuffer(d));
     const ws = sheet(wb, personSheetNames(d.org.terms).client);
-    expect(col(ws, '担当できる人')).toBe(col(ws, '経度') + 1);
+    expect(col(ws, '移動時間（片道・分）')).toBe(col(ws, '経度') + 1);
+    expect(col(ws, '遠方（出張）')).toBe(col(ws, '経度') + 2);
+    expect(col(ws, '担当できる人')).toBe(col(ws, '遠方（出張）') + 1);
     expect(ws.getRow(2).getCell(col(ws, '担当できる人')).value).toBe(`${d.staff[1]!.name}、${d.staff[0]!.name}`);
     const r = ok(await importWorkbook(await toBuffer(d), d));
     expect(r.clients.map((c) => c.allowedStaffIds)).toEqual(d.clients.map((c) => c.allowedStaffIds));

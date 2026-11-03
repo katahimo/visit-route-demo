@@ -13,11 +13,13 @@ import {
   X,
 } from 'lucide-react';
 import type { Client, Staff, Visit, VisitType } from '../contracts/documents';
+import { hhmmToMinutes } from '../domain/time';
 import { dateText } from '../lib/dateText';
 import type { PrevStop } from '../lib/prevStop';
 import type { VisitInfo } from '../lib/visitDraft';
 import { windowShown } from '../lib/visitPanelText';
 import { hasVisitRules } from '../lib/visitRules';
+import { TravelFact } from './clientTravel';
 import { MAPS_TITLE, VisitRouteLinks } from './mapsLinks';
 import { PersonButton } from './PersonPopover';
 import { StaffMark } from './StaffMark';
@@ -178,6 +180,7 @@ export function VisitSummary({
           </>
         )}
       </dl>
+      <TravelFact place={client?.place} start={hhmmToMinutes(v.start ?? v.earliestStart)} />
       {!info.editable && <p className="sub">今日より前の訪問なので、見るだけです。</p>}
       {onOpenDay && (
         <button type="button" className="btn btn-small" onClick={onOpenDay} data-testid="vp-open-day">

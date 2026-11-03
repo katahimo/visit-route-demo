@@ -230,7 +230,7 @@ async function sheet(page) {
   check(ok, '下から出る欄で担当を替えて保存（担当が変わりピン）', { vid, to });
   await panel(page).waitFor({ state: 'detached' });
   // 元に戻す（操作の行）
-  await pressTool(page, '元に戻す', { where: 'more' });
+  await pressTool(page, '元に戻す', { where: 'row' });
   const back = await waitStored(page, (d) => visitsKey(d) === visitsKey(before));
   check(back, '操作の行の「元に戻す」で担当が戻る');
   // 取り消す
@@ -297,7 +297,7 @@ async function multi(page) {
   await page.getByTestId('confirm-ok').click();
   const done = await waitStored(page, (d) => !!visitOf(d, ida)?.cancelled && !!visitOf(d, idb)?.cancelled);
   check(done, 'まとめて取り消す（確認のあと2件）');
-  await pressTool(page, '元に戻す', { where: 'more' });
+  await pressTool(page, '元に戻す', { where: 'row' });
   const back = await waitStored(page, (d) => visitsKey(d) === visitsKey(before));
   check(back, '「元に戻す」で2件の取り消しが1手で戻る');
   // 「選ぶ」で入る・抜ける
@@ -477,8 +477,8 @@ async function keyboard(page) {
   check(del, '確認のあと取り消す');
   await settle(page, 300);
   check(
-    (await page.evaluate(() => document.activeElement?.dataset.testid)) === 'plan-more',
-    '取り消したらフォーカスは操作の行の「その他 ▾」（元に戻すの入口）',
+    (await page.evaluate(() => document.activeElement?.dataset.testid)) === 'undo-btn',
+    '取り消したらフォーカスは操作の行の［元に戻す］',
   );
   // Ctrl+Z で全部戻る
   for (let i = 0; i < 4; i++) {

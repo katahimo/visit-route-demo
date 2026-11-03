@@ -15,6 +15,7 @@ import './attentionBand.css';
  * 見に行くは、訪問の種類なら 間に合わない・重なり・休みの人 → 担当なし の並び（日付 → 開始）で、押すたびに次の1件のある日の予定を開き、
  * その訪問を選んで見える所へ巻く（担当なしは欄を開く。日の予定の usePlanNav）。2件目からは「n/N」と［‹ 前へ］（useBandStep。ADR-0089）。
  * ［見に行く］の読み上げの名前は「次を見に行く」、位置「n/N」は aria-live（polite）で知らせる。
+ * 担当なしがあれば、組めない理由の内訳（「勤務時間外 6・勤務日外 5」。lib/unassignedReason。PRD D430）を添える。
  * 日の予定でその日を見ているときも、移り直して同じことをする。入だけの種類は移る先が決まっている（lib/attentionBand の go）。印刷では出さない
  */
 export function AttentionBand() {
@@ -54,6 +55,13 @@ export function AttentionBand() {
         <span className="band-text">
           <span className="attention-band-title">要対応</span>{' '}
           <span data-testid="attention-band-text">{band.text}</span>
+          {/* 担当なしの組めない理由の内訳（PRD D430）。直し方は［見に行く］で開く訪問の詳細の「組めない理由」 */}
+          {band.why && (
+            <span className="attention-band-why" data-testid="attention-band-why">
+              {' '}
+              （担当なしの理由：{band.why}）
+            </span>
+          )}
         </span>
       </WithIcon>
       <span className="attention-band-actions">

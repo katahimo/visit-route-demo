@@ -77,6 +77,11 @@ export const CLIENT_ALLOWED_COL = '担当できる人';
  */
 export const CLIENT_POSTAL_COL = '郵便番号';
 /**
+ * 〈利用者さん〉の移動時間（片道・分）と遠方（出張）（PRD D429。ADR-0096）。書き出しは「経度」の次に置く。
+ * 古いブックには無いので必須の列にしない（無い・空なら距離から見積もる・印なし）
+ */
+export const CLIENT_TRAVEL_COLS = { minutes: '移動時間（片道・分）', farTrip: '遠方（出張）' } as const;
+/**
  * 〈利用者さん〉の段階と紹介元（PRD D73。ADR-0015）。書き出しは固定の列の最後。古いブックには無いので必須の列にしない
  * （段階が無い・空なら「利用中」「仮押さえ」の列から読み替える。紹介元は空）
  */
@@ -90,7 +95,8 @@ export const CLIENT_STAGE_COLS = {
 } as const;
 /**
  * 書き出す〈利用者さん〉の固定の列（「表示名」の次に「よみ」、「利用中」の次に「仮押さえ」、「住所」の前に「郵便番号」、「経度」の次に
- * 「担当できる人」、「メモ」の次に決まりごと、最後に段階と紹介元）。版2：いつもの担当の列は無い（繰り返しのシートの担当。ADR-0053）
+ * 移動時間（片道・分）・遠方（出張）と「担当できる人」、「メモ」の次に決まりごと、最後に段階と紹介元）。
+ * 版2：いつもの担当の列は無い（繰り返しのシートの担当。ADR-0053）
  */
 export const clientExportCols = (): string[] => {
   const base: string[] = Object.values(CLIENT_COLS);
@@ -101,7 +107,12 @@ export const clientExportCols = (): string[] => {
   const a = withKanaOnly.indexOf(CLIENT_COLS.address);
   const withKana = [...withKanaOnly.slice(0, a), CLIENT_POSTAL_COL, ...withKanaOnly.slice(a)];
   const u = withKana.indexOf(CLIENT_COLS.lng) + 1;
-  const withAllowed = [...withKana.slice(0, u), CLIENT_ALLOWED_COL, ...withKana.slice(u)];
+  const withAllowed = [
+    ...withKana.slice(0, u),
+    ...Object.values(CLIENT_TRAVEL_COLS),
+    CLIENT_ALLOWED_COL,
+    ...withKana.slice(u),
+  ];
   const n = withAllowed.indexOf(CLIENT_COLS.note) + 1;
   return [
     ...withAllowed.slice(0, n),

@@ -7,6 +7,8 @@ export {
   ALLOWED_STAFF_RULE_ID,
   type CompileInput,
   compile,
+  DAY_OFF,
+  OUTSIDE_HOURS,
   PIN_LABEL,
   PIN_RULE_ID,
   VISIT_TYPE_RULE_ID,
@@ -15,4 +17,12 @@ export { conditionText, matches, yearsSince } from './conditions';
 export { balanceOff, balancePoints, dropPointsOf, overCap, totalPoints } from './cost';
 export { bestInsertion } from './insertion';
 export { naiveSeqs } from './naive';
-export { EPS, fitStart, routeCost, scheduleRoute } from './timing';
+export { EPS, fitStart, routeCost, scheduleRoute, soloBroken } from './timing';
+export {
+  FAR_TRIP_LABEL,
+  FAR_TRIP_RULE_ID,
+  TRAVEL_TOO_FAR_RULE_ID,
+  TRAVEL_TOO_FAR_WORD,
+  travelTooFarLabel,
+  UNPLACED_TRAVEL_MIN,
+} from './travel';
