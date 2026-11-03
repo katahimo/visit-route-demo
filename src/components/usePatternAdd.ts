@@ -1,5 +1,5 @@
 // 〈利用者さん〉の繰り返し（定期パターン）を足す処理（ADR-0012・0072）：入力を確かめて足し、足した分の担当なしの回を自動で組む。
-// 〈利用者さん〉の画面の「繰り返しを足す」（pages/usePatternsFlow）と、予定の「定期の予定を入れる」（AddPlanPanel）が使う。データを書くのは store の update だけ
+// 〈利用者さん〉の画面の「繰り返しを足す」（pages/usePatternsFlow）と、予定の「定期の予定を追加」（AddPlanPanel）が使う。データを書くのは store の update だけ
 import type { DemoData } from '../contracts/data';
 import type { Pattern } from '../contracts/documents';
 import { jstDate } from '../domain/time';

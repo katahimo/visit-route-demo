@@ -31,8 +31,8 @@
 #### 「詳しく ▾」と操作の行
 
 - 「詳しく ▾」（`day-details`）：開け閉めは日の画面として端末に覚える（鍵 `details:day`）。中は1行のまとめ（訪問・入らない・守れない条件・移動・点数・理由）と担当ごとの1日。入は見出しの1行に「点数・移動 N分・入らない N・守れない条件 N」（0 は出さない。`lib/detailsHeading` の `dayHeading`）を出し、中の先頭に「要対応の訪問 N件」の帯（`band-care`。`CareBand`）。切は要対応の訪問の帯を出さない（上の要対応の帯が知らせる）
-- 操作の行（共通の部品は [pages-common.md](pages-common.md) の `ScheduleToolbar`）：入＝主「訪問を1件足す」（`plan-visit-add`。`ADD_VISIT_LABEL`。〈利用者さん〉がいなければ `aria-disabled` と title に理由。開く欄の見出しも同じ）＋「確定（伝えた）」（`adopt`。確定済みの日は枠）、切＝主「訪問を1件足す」＋「欠勤・キャンセルを登録」（`sudden-open`）。スマホは「訪問を1件足す」を「その他 ▾」に入れ（`tb-keep-label`）、入は主が「確定（伝えた）」、切は主ボタン無し。要対応を組むのは要対応の帯
-- 「その他 ▾」（`MenuButton`・`plan-more`）：訪問を1件足す（スマホ）・表示（`plan-view-〈k〉`。広い画面は時間軸・順番・一覧、スマホは日ごとのリスト・順番・一覧。訪問のある日だけ）・元に戻す・やり直す（`more-undo`・`more-redo`）・入は欠勤・キャンセルを登録・使い方（`plan-more-help`。操作の行の下に `plan-help` を開きフォーカスを移す。開いていれば「使い方を閉じる」）・**書き出し**（見出し「書き出し」。行き先ごとに1つずつ。`planToolbar.tsx` の `exportItemsOf`。PRD D419・ADR-0085）：「チャット用にコピー」（`day-chat-copy`。文に出す訪問のある日＝`lib/dayPlan` の `activeDayVisits` が1件以上。取り消し・休み・休止中の〈利用者さん〉の訪問だけの日は出さない。`usePlanPage` の `contact.hasShownVisits`）・「メールで送る」（`day-mail`。`mail` が入で、訪問のある日・未連絡の変更のある日）・「印刷」（`day-print`。チャット用にコピーと同じ日。`window.print()` で今の日の予定を印刷。印刷では時間軸の代わりに順番）・連絡を貼り付けて入れる（`paste-open`。いちばん最後。[pages-plan-absence.md](pages-plan-absence.md)）
+- 操作の行（共通の部品は [pages-common.md](pages-common.md) の `ScheduleToolbar`）：入＝主「訪問を1件追加」（`plan-visit-add`。`ADD_VISIT_LABEL`。〈利用者さん〉がいなければ `aria-disabled` と title に理由。開く欄の見出しも同じ）＋「確定（伝えた）」（`adopt`。確定済みの日は枠）、切＝主「訪問を1件追加」＋「欠勤・キャンセルを登録」（`sudden-open`）。スマホは「訪問を1件追加」を「その他 ▾」に入れ（`tb-keep-label`）、入は主が「確定（伝えた）」、切は主ボタン無し。要対応を組むのは要対応の帯
+- 「その他 ▾」（`MenuButton`・`plan-more`）：訪問を1件追加（スマホ）・表示（`plan-view-〈k〉`。広い画面は時間軸・順番・一覧、スマホは日ごとのリスト・順番・一覧。訪問のある日だけ）・元に戻す・やり直す（`more-undo`・`more-redo`）・入は欠勤・キャンセルを登録・使い方（`plan-more-help`。操作の行の下に `plan-help` を開きフォーカスを移す。開いていれば「使い方を閉じる」）・**書き出し**（見出し「書き出し」。行き先ごとに1つずつ。`planToolbar.tsx` の `exportItemsOf`。PRD D419・ADR-0085）：「チャット用にコピー」（`day-chat-copy`。文に出す訪問のある日＝`lib/dayPlan` の `activeDayVisits` が1件以上。取り消し・休み・休止中の〈利用者さん〉の訪問だけの日は出さない。`usePlanPage` の `contact.hasShownVisits`）・「メールで送る」（`day-mail`。`mail` が入で、訪問のある日・未連絡の変更のある日）・「印刷」（`day-print`。チャット用にコピーと同じ日。`window.print()` で今の日の予定を印刷。印刷では時間軸の代わりに順番）・連絡を貼り付けて入れる（`paste-open`。いちばん最後。[pages-plan-absence.md](pages-plan-absence.md)）
 - 欠勤の振り直しの案B の計算中は、行に進み具合と止める（回数とバーは `PlanProgressText` が外の入れ物 `lib/valueStore` から `useValueStore` で読み、画面全体は描き直さない）
 
 #### エキスパート機能が切のとき
@@ -203,7 +203,7 @@
 - 欄は [pages-common.md](pages-common.md) の「訪問の詳細の欄」。日の予定から開く所（`useOpenVisit`）：
   - 時間軸の帯・順番のカード・入らなかった訪問のカードの詳細の先頭の「詳細・変更」（`visit-open`）
   - 一覧の行の「開く」（`visit-row-open`。休みのため無しの行も）。行の「取り消す」はそのまま
-  - 操作の行の「訪問を1件足す」（`plan-visit-add`）：その日を入れた新規の形
+  - 操作の行の「訪問を1件追加」（`plan-visit-add`）：その日を入れた新規の形
 - 閉じたあとのフォーカス：開いた訪問の帯（`.tl-band .tl-band-btn`）・カード（`.route-btn`）・一覧の「開く」の順に探し（作り直した回・足した訪問は新しい ID）、無ければ開く前の要素、新規で何も無ければ `plan-visit-add`（600px 以下は `plan-more`）
 - 「担当を変える ▾」の候補は欄と同じ `reassignChoices`。欄で担当を替えると `bestInsertion` の位置に入れてピン
 - 取り消しは欄（ふつう／当日キャンセル）と一覧の行の「取り消す」（`applyCancel(visitId, sameDay)`。欠勤・キャンセルの欄と共通）。取り消すとその日の列・点から消え、足すと「入らなかった訪問」に出る

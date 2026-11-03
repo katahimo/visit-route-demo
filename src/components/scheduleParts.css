@@ -131,7 +131,7 @@
     clip: rect(0 0 0 0);
     white-space: nowrap;
   }
-  /* 主ボタン「定期の予定を入れる」（切）は文字も残す（何のボタンか分かるように。ほかはアイコンだけ） */
+  /* 主ボタン「定期の予定を追加」（切）は文字も残す（何のボタンか分かるように。ほかはアイコンだけ） */
   .schedule-toolbar .tb-keep-label .tb-label {
     position: static;
     width: auto;

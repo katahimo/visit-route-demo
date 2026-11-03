@@ -35,7 +35,7 @@
   - 中身は `nextMonthCheck(statuses, ym)`：来月の日ごとの状態（`useDayStatuses`。要対応の帯・月の画面と同じ覚え）の `count` の合計と、訪問ごとに `visitBandKind`（要対応の帯と同じ：担当なし → 休みの人 → 間に合わない → 重なり）で数えた件数。合計が0なら null（出さない）
   - 1行は「12月の予定 N件はできています・担当なし a件・間に合わない b件・重なり c件・休みの人 d件」（0件の種類は書かない。`next-month-check-text`）。右に［12月を見る ›］（`next-month-check-go`。`/month?ym=<来月>` へのリンク）と［×］（`next-month-check-close`。読み上げ「12月の確認を閉じる（今月は出しません）」）。箱は `section` で読み上げの名前「12月の確認」。色は地の文（急ぎではない）。狭い幅は折り返す
   - ［×］は `navOpenMemory.write(nextMonth:<今月>, false)`（端末に覚える。データ・書き出しに入れない）。閉じたらフォーカスを見出しへ移す。翌月の20日には鍵が変わるのでまた出す。ボタンは足さない（来月の要対応を組むのは帯の［要対応を組む］。今日〜翌月末）
-- 「訪問を1件足す」：日の主ボタン（`ADD_VISIT_LABEL`。開くのは訪問の欄）。月・週は別の言葉（`planAddLabel`＝「定期の予定を入れる」／単発のみは「予約を入れる」）で、 `ToolbarRow`（`mainTools` の `plan`）から `components/AddPlanPanel` を開く（[design.md](../design.md) の「定期の予定を入れる」）
+- 「訪問を1件追加」：日の主ボタン（`ADD_VISIT_LABEL`。開くのは訪問の欄）。月・週は別の言葉（`planAddLabel`＝「定期の予定を追加」／単発のみは「予約を追加」）で、 `ToolbarRow`（`mainTools` の `plan`）から `components/AddPlanPanel` を開く（[design.md](../design.md) の「定期の予定を追加」）
 - 人の小さいタブ：`lib/peopleTabs`（`peopleTabs`・`peopleTabsLabel`・`peopleSideOf`・`rememberedSide`・`peopleMatch`）と `components/SettingsTabs` の `PeopleTabs`（一覧・相性・勤務の画面。`data-testid="people-tabs"`）。相性でどちらから来たかは `components/peopleSide`。予定と相性は別の `BasicsNav`
 - 予定の「その他 ▾」：画面ごとの項目（表示の切り替え・使い方・印刷など）と元に戻す・やり直す・連絡を貼り付けて入れる（PRD D418）だけ
 
@@ -117,7 +117,7 @@
 ### `lib/commandPalette.ts`（純粋関数。テストあり）
 
 - `PaletteItem`：`id`・`kind`（`action|screen|client|staff|visit`）・`label`・`hint`・`to`・`date?`・`visitId?`・`op?`（`'visit-add'`）・`keys`（`lib/search` の `normalizeKana` でそろえた名前・よみ・別名）。`paletteItem` で作る
-- `paletteActions(today, { features })`：欠勤・キャンセルを登録・日の予定（今日）を開く・今月／来月の担当を組む（`/arrange?ym=`）・要対応を見る（`?do=attention`）・確定していない日を見る（`unconfirmed`）・訪問を1件足す（`op: 'visit-add'`）・問い合わせに答える。切った機能の操作は出さない
+- `paletteActions(today, { features })`：欠勤・キャンセルを登録・日の予定（今日）を開く・今月／来月の担当を組む（`/arrange?ym=`）・要対応を見る（`?do=attention`）・確定していない日を見る（`unconfirmed`）・訪問を1件追加（`op: 'visit-add'`）・問い合わせに答える。切った機能の操作は出さない
 - `paletteScreens(sections, terms)`：sections は `screenSections`。補足はグループの見出し（見出しも語に入るので「設定」「予定」で引ける）。読み・言い換え `SCREEN_WORDS`、〈利用者さん〉一覧・〈スタッフ〉一覧には呼び方のよみ `TERM_READINGS`（既定の呼び方の漢字だけ）
 - `palettePeople(clients, staff, terms)`：`/clients/:id`・`/staff/:id`。段階・休止中を補足に
 - `filterPalette(items, query, limit=8)`：語に分けて AND、種類の順・先頭一致を前に、人は種類ごと limit まで（`rest`）。空なら操作と画面だけ
@@ -137,5 +137,5 @@
 - 選んでいる候補は見える位置へ（先頭なら scrollTop=0、種類の先頭なら見出しごと）
 - 候補の語は `useMemo`（開いたとき・データが変わったとき）でそろえ、打つたびは `filterPalette` だけ（300人×60人で1文字 100ms 以内）
 - 訪問の索引は打ってから作り、開いている間は使い回す。訪問の補足は担当・「担当なし」・取り消し。「要対応」の `attention` は日の予定と同じ検査（`dayProblemOf` → `routesOf` → `visitIssues`）を候補の日だけ計算し、日ごとに覚える（データが変わったら捨てる）
-- 選ぶと閉じて、訪問（`visitId`）・「訪問を1件足す」（`op`）は画面を移らずに訪問の詳細の欄（`useOpenVisit`）を開く。ほかは `date` があれば `setDate`、今の画面なら移らない、ほかは `navigate(to)`
+- 選ぶと閉じて、訪問（`visitId`）・「訪問を1件追加」（`op`）は画面を移らずに訪問の詳細の欄（`useOpenVisit`）を開く。ほかは `date` があれば `setDate`、今の画面なら移らない、ほかは `navigate(to)`
 - z-index 1150（引き出し 1100 とトースト 1200 の間）。印刷で出さない。860px 以下は上に寄せ、下の案内（↑↓ Enter Esc）を隠す

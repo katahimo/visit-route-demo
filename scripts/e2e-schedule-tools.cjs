@@ -69,7 +69,7 @@ async function zoom(page) {
           ].includes(id),
         ),
     );
-    // 入の操作の行は主「定期の予定を入れる」＋（月・週は「担当を組む」、日は「確定（伝えた）」）の2つと「その他 ▾」（PRD D402）
+    // 入の操作の行は主「定期の予定を追加」＋（月・週は「担当を組む」、日は「確定（伝えた）」）の2つと「その他 ▾」（PRD D402）
     const want = {
       day: ['plan-visit-add', 'adopt'],
       week: ['toolbar-add-plan', 'toolbar-assign'],

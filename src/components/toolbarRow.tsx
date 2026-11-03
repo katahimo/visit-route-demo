@@ -1,8 +1,8 @@
 // 予定の操作の行（入切とも。PRD D384・D402。ADR-0073・ADR-0074）：主ボタン1つ＋ボタン1つまで、ほかは「その他 ▾」へ。
 // どのボタンを残すかは lib/exceptionView の mainTools（入と切の差はそこの1か所）。
-// 切：日は「訪問を1件足す」（その日の訪問の欄を開く）が主ボタン（スマホは出さず主ボタン無し）、週・月は「定期の予定を入れる」（単発のみは「予約を入れる」）（引き出しは AddPlanPanel。PRD D402）。
+// 切：日は「訪問を1件追加」（その日の訪問の欄を開く）が主ボタン（スマホは出さず主ボタン無し）、週・月は「定期の予定を追加」（単発のみは「予約を追加」）（引き出しは AddPlanPanel。PRD D402）。
 // もう1つは「欠勤・キャンセルを登録」。要対応を組むのは要対応の帯（PRD D403。ADR-0077）。
-// 入：月・週は「定期の予定を入れる」＋「担当を組む」（担当を組むの画面へ）、日は「訪問を1件足す」＋「確定（伝えた）」。欠勤・キャンセルは「その他 ▾」の中。
+// 入：月・週は「定期の予定を追加」＋「担当を組む」（担当を組むの画面へ）、日は「訪問を1件追加」＋「確定（伝えた）」。欠勤・キャンセルは「その他 ▾」の中。
 // 入切とも「その他 ▾」の最後に「連絡を貼り付けて入れる」（PRD D418。欠勤・キャンセルか〈利用者さん〉の休みの機能が入のとき）
 import { ClipboardPaste, Plus, Sparkles } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
@@ -19,7 +19,7 @@ import { useFeature, useFeatures } from './useFeature';
 /** 欠勤・キャンセルを登録：切は操作の行のボタン（node）、入は「その他 ▾」の項目（item） */
 export type AbsenceTool = { node: ReactNode; item: MenuItem };
 
-/** 日の「訪問を1件足す」（押せない理由があれば why。スマホは null＝ボタンにしない） */
+/** 日の「訪問を1件追加」（押せない理由があれば why。スマホは null＝ボタンにしない） */
 export type AddTool = { onClick: () => void; why: string | false };
 
 export function ToolbarRow({
