@@ -299,19 +299,22 @@ export type TemplateId = (typeof TEMPLATE_IDS)[number];
 /** ひな形：名前・1行の説明・入れる機能（ほかは切） */
 export type TemplateDef = { id: TemplateId; label: string; description: string; on: readonly FeatureId[] };
 
-/** 基本のひな形で入れる機能（予定・繰り返し・毎月の第N・曜日ごとの時刻・欠勤・キャンセル・空き状況・相性・決まりごと・道順のリンク・住所の検索。ADR-0086） */
+/** 基本のひな形で入れる機能（予定・繰り返し・毎月の第N・曜日ごとの時刻・〈利用者さん〉の休み・欠勤・キャンセル・空き状況・相性・決まりごと・退職・担当替え・道順のリンク・住所の検索・Excel の入出力。ADR-0086・ADR-0091） */
 const BASIC_ON: readonly FeatureId[] = [
   'patterns',
   'patternMonthly',
+  'clientLeave',
   'sudden',
   'vacancy',
   'compat',
   'visitNotes',
+  'offboard',
   'mapsLink',
   'geocode',
+  'excel',
 ];
 
-/** 単発のみのひな形で入れる機能：基本から繰り返し（patterns・patternMonthly）と決まりごと（visitNotes）を外したもの（ADR-0072 第2段・ADR-0086。PRD D378） */
+/** 単発のみのひな形で入れる機能：基本から繰り返し（patterns・patternMonthly）と決まりごと（visitNotes）を外したもの（ADR-0072 第2段・ADR-0086・ADR-0091。PRD D378） */
 const ONE_OFF_ON: readonly FeatureId[] = BASIC_ON.filter(
   (f) => f !== 'patterns' && f !== 'patternMonthly' && f !== 'visitNotes',
 );
@@ -329,21 +332,20 @@ export const TEMPLATES: readonly TemplateDef[] = [
     id: 'basic',
     label: '基本',
     description:
-      '予定（月・週・日。毎月の第N・曜日ごとの時刻も）と欠勤・キャンセル・空き状況・相性・決まりごと・道順・住所の検索だけ。まず割当と当日の対応を見たいとき',
+      '予定（月・週・日。毎月の第N・曜日ごとの時刻も）と休み・欠勤・キャンセル・空き状況・相性・決まりごと・退職・担当替え・道順・住所の検索・Excel の入出力。まず割当と当日の対応を見たいとき',
     on: BASIC_ON,
   },
   {
     id: 'laborContract',
     label: '労務・契約管理',
-    description:
-      '基本に、勤務の見込み・交通費・退職・担当替え・段階・紹介元。拘束時間・交通費・人の入れ替わりを見たいとき',
-    on: [...BASIC_ON, 'clientStage', 'offboard', 'workload', 'fare'],
+    description: '基本に、勤務の見込み・交通費・段階・紹介元。拘束時間・交通費・契約の段階を見たいとき',
+    on: [...BASIC_ON, 'clientStage', 'workload', 'fare'],
   },
   {
     id: 'monthlyField',
     label: '月次予定・現場共有',
-    description: '基本に、休み・希望休・月の印刷・案内文・担当を限る・Excel。月の予定が複雑なとき',
-    on: [...BASIC_ON, 'clientLeave', 'requestedOff', 'monthPrint', 'vacancyNotice', 'allowedStaff', 'excel'],
+    description: '基本に、希望休・月の印刷・案内文・担当を限る。月の予定が複雑なとき',
+    on: [...BASIC_ON, 'requestedOff', 'monthPrint', 'vacancyNotice', 'allowedStaff'],
   },
   {
     id: 'all',
