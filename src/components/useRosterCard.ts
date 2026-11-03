@@ -11,8 +11,8 @@ import { useToast } from './Toast';
 import { useFeature } from './useFeature';
 import { useRosterImport } from './useRosterImport';
 
-/** onImported は名簿が入ったと見届けたときに呼ぶ（PRD D399） */
-export function useRosterCard(kind: RosterKind, onImported?: () => void) {
+/** onPlace は名簿が入ったあと、位置の無い人を自動でまとめて置き始める（PRD D427。郵便番号・住所の検索が切なら undefined） */
+export function useRosterCard(kind: RosterKind, onPlace?: () => void) {
   const { data } = useDemoData();
   const toast = useToast();
   const offboardOn = useFeature('offboard');
@@ -20,7 +20,7 @@ export function useRosterCard(kind: RosterKind, onImported?: () => void) {
   const [busy, setBusy] = useState(false);
   /** 名簿の読み込み方（PRD D104）：追加・更新（既定）か総入れ替え */
   const [rosterMode, setRosterMode] = useState<RosterMode>('merge');
-  const loadRoster = useRosterImport({ rosterMode, offboardOn, setError, onImported });
+  const loadRoster = useRosterImport({ rosterMode, offboardOn, setError, onPlace });
   const term = kind === 'staff' ? data.org.terms.staff : data.org.terms.client;
   /** 一覧が0人か（書き出しは列名だけのテンプレートになる） */
   const empty = rosterIsEmpty(data, kind);

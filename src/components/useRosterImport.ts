@@ -6,21 +6,23 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { RosterKind, RosterMode } from '../contracts/data';
 import { jstDate } from '../domain/time';
 import { rosterConfirmBody, rosterDoneText, rosterHasChanges, rosterHowText, rosterIsEmpty } from '../lib/dataScreen';
+import { autoPlaceAfterRoster } from '../lib/placeAll';
 import { canKeepPrevious } from '../store';
 import { useConfirm } from './ConfirmDialog';
 import { IMPORT_CHANGED_TEXT, usePendingImport } from './usePendingImport';
 
 /**
  * offboardOn は退職・担当替えの機能（ADR-0028 の offboard）が入か（切っていれば最終勤務日の欄を指さない）。
- * onImported は名簿が入ったと見届けたときに呼ぶ（〈利用者さん〉一覧の「位置の無い N人を地図に置く」の導線。PRD D399）
+ * onPlace は位置の無い人を自動でまとめて置き始める（PRD D427。ADR-0094）。渡されていて、読み込んだあとに
+ * まとめて置く対象がいれば、確認に1文を足し（押す前に分かるように。ADR-0016）、名簿が入ったと見届けたら呼ぶ
  */
 export function useRosterImport(x: {
   rosterMode: RosterMode;
   offboardOn: boolean;
   setError: Dispatch<SetStateAction<string | null>>;
-  onImported?: () => void;
+  onPlace?: () => void;
 }) {
-  const { rosterMode, offboardOn, setError, onImported } = x;
+  const { rosterMode, offboardOn, setError, onPlace } = x;
   const { data, toast, changedSince, commit } = usePendingImport(setError);
   const confirmDialog = useConfirm();
 
@@ -41,6 +43,7 @@ export function useRosterImport(x: {
     if (changedSince(base)) return setError(IMPORT_CHANGED_TEXT);
     const terms = base.org.terms;
     const how = rosterHowText(rosterMode);
+    const autoPlace = autoPlaceAfterRoster({ geocodeOn: onPlace !== undefined, next: r.data, kind });
     const ok = await confirmDialog({
       title: `${term}の名簿を読み込みますか？（${how}）`,
       body: rosterConfirmBody({
@@ -53,6 +56,7 @@ export function useRosterImport(x: {
         otherForm: r.otherForm,
         empty: rosterIsEmpty(base, kind),
         keep: canKeepPrevious(),
+        autoPlace,
       }),
       confirmLabel: '名簿を読み込む',
       // 総入れ替え（名簿にいない人を終了・休止にする）は危険の色
@@ -68,7 +72,7 @@ export function useRosterImport(x: {
       next: r.data,
       label: `${term}の名簿の${how}`,
       done: (keep) => rosterDoneText({ term, staffTerm: terms.staff, hasLastDay, keep }),
-      onDone: onImported,
+      onDone: autoPlace ? onPlace : undefined,
     });
   };
 }

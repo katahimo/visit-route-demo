@@ -1,21 +1,35 @@
-// 位置の無い〈利用者さん〉をまとめて地図に置く（PRD D89。ADR-0016）。外部には出さず、検索の偽物で確かめる
+// 位置の無い人をまとめて地図に置く（PRD D89・D427。ADR-0016・ADR-0094）。外部には出さず、検索の偽物で確かめる
 import { describe, expect, it } from 'vitest';
-import type { Client } from '../contracts/documents';
-import { client, makeData } from '../matching/fixtures.testkit';
+import type { Client, Staff } from '../contracts/documents';
+import { client, makeData, staff } from '../matching/fixtures.testkit';
 import type { GeoHit, LookupResult, PostalHit } from './geocode';
 import {
+  AUTO_PLACE_NOTE,
+  autoPlaceAfterRoster,
+  canSearchOne,
   hasAddressNotFound,
   keepStorePlace,
+  NO_PLACE_NOTE,
+  noPlaceIds,
   type PlaceAllResult,
+  type PlacePerson,
   placeAll,
-  placeAllLead,
+  placeAllRunLabel,
   placeAllTargets,
+  placeAllTexts,
+  placePeople,
   sleep,
   withFoundPlace,
 } from './placeAll';
 
 const noPlace = (id: string, address: string, postalCode = '', over: Partial<Client> = {}) =>
   client(id, 0, 0, { displayName: id, place: { address, lat: null, lng: null, postalCode }, ...over });
+const noHome = (id: string, address: string, over: Partial<Staff> = {}) =>
+  staff(id, 0, 0, { name: id, home: { address, lat: null, lng: null }, ...over });
+/** まとめて置く人の形（〈利用者さん〉） */
+const person = (c: Client): PlacePerson => placePeople({ clients: [c], staff: [] }, 'client')[0]!;
+const people = (...cs: Client[]) => cs.map(person);
+const ids = (ps: { id: string }[]) => ps.map((p) => p.id);
 
 const geo = (lat: number, lng: number, title = 't'): LookupResult<GeoHit> => ({
   ok: true,
@@ -23,7 +37,7 @@ const geo = (lat: number, lng: number, title = 't'): LookupResult<GeoHit> => ({
 });
 
 describe('placeAllTargets（まとめて置く対象）', () => {
-  it('位置が無く、終了でない人のうち、住所か郵便番号のある人。無い人は skipped。表示名の順', () => {
+  it('〈利用者さん〉：位置が無く、終了でない人のうち、住所か郵便番号のある人。無い人は skipped。表示名の順', () => {
     const cs = [
       noPlace('い', '宮城県仙台市'),
       noPlace('あ', '', '9800811'),
@@ -31,39 +45,75 @@ describe('placeAllTargets（まとめて置く対象）', () => {
       noPlace('え', '宮城県', '', { stage: 'ended', active: false }),
       client('お', 38, 140),
     ];
-    const { targets, skipped } = placeAllTargets(cs);
-    expect(targets.map((c) => c.id)).toEqual(['あ', 'い']);
-    expect(skipped.map((c) => c.id)).toEqual(['う']);
+    const { targets, skipped } = placeAllTargets({ clients: cs, staff: [] }, 'client');
+    expect(ids(targets)).toEqual(['あ', 'い']);
+    expect(ids(skipped)).toEqual(['う']);
+  });
+  it('〈スタッフ〉：自宅の位置が無く、休止でない人のうち、住所のある人（郵便番号は持たないので住所だけ）', () => {
+    const ss = [
+      noHome('し', '宮城県仙台市青葉区'),
+      noHome('さ', ''),
+      noHome('す', '宮城県', { active: false }),
+      staff('せ', 38, 140),
+    ];
+    const { targets, skipped } = placeAllTargets({ clients: [noPlace('a', '宮城県')], staff: ss }, 'staff');
+    expect(ids(targets)).toEqual(['し']);
+    expect(ids(skipped)).toEqual(['さ']);
+    expect(targets[0]!.place.postalCode).toBe('');
   });
 });
 
-describe('placeAllLead（名簿を読み込んだあとの導線。PRD D399）', () => {
-  const on = { asked: true, geocodeOn: true, running: false, targets: 3 };
-  it('名簿が入った後で、対象がいれば「位置の無い N人を地図に置く」', () => {
-    expect(placeAllLead(on)).toBe('位置の無い3人を地図に置く');
+describe('noPlaceIds・canSearchOne（一覧の「位置なし」）', () => {
+  it('数える人のうち位置の無い人（住所の有無は問わない）', () => {
+    const d = {
+      clients: [noPlace('a', ''), noPlace('b', '', '', { stage: 'ended', active: false }), client('c', 38, 140)],
+      staff: [noHome('s', ''), noHome('t', '', { active: false }), staff('u', 38, 140)],
+    };
+    expect([...noPlaceIds(d, 'client')]).toEqual(['a']);
+    expect([...noPlaceIds(d, 'staff')]).toEqual(['s']);
   });
-  it('読み込む前・検索を切っている・置いている最中・対象が0人なら出さない', () => {
-    expect(placeAllLead({ ...on, asked: false })).toBeNull();
-    expect(placeAllLead({ ...on, geocodeOn: false })).toBeNull();
-    expect(placeAllLead({ ...on, running: true })).toBeNull();
-    expect(placeAllLead({ ...on, targets: 0 })).toBeNull();
+  it('1人だけ探せるのは、検索が入・置いている最中でない・住所か郵便番号がある人', () => {
+    const on = { geocodeOn: true, running: false };
+    expect(canSearchOne(person(noPlace('a', '宮城県')), on)).toBe(true);
+    expect(canSearchOne(person(noPlace('a', '', '9800811')), on)).toBe(true);
+    expect(canSearchOne(person(noPlace('a', ' ')), on)).toBe(false);
+    expect(canSearchOne(person(noPlace('a', '宮城県')), { ...on, geocodeOn: false })).toBe(false);
+    expect(canSearchOne(person(noPlace('a', '宮城県')), { ...on, running: true })).toBe(false);
   });
-  it('N は placeAllTargets の対象の数（住所も郵便番号も無い人・終了の人・位置のある人は数えない）', () => {
-    const cs = [
-      noPlace('a', '太白区大野田'),
-      noPlace('b', '', '9800811'),
-      noPlace('c', ''),
-      noPlace('d', '宮城県', '', { stage: 'ended', active: false }),
-      client('e', 38, 140),
-    ];
-    expect(placeAllLead({ ...on, targets: placeAllTargets(cs).targets.length })).toBe('位置の無い2人を地図に置く');
+});
+
+describe('placeAllRunLabel・placeAllTexts（まとめて置く欄の文）', () => {
+  it('はじめは「位置の無い N人を地図に置く」、一度探したあとは「続きを探す（N人）」、0人は「まとめて地図に置く」', () => {
+    expect(placeAllRunLabel({ targets: 3, tried: false })).toBe('位置の無い3人を地図に置く');
+    expect(placeAllRunLabel({ targets: 2, tried: true })).toBe('続きを探す（2人）');
+    expect(placeAllRunLabel({ targets: 0, tried: true })).toBe('まとめて地図に置く');
+  });
+  it('種類ごとの見出しと数えない人の注記。担当は組める補足（ADR-0093）', () => {
+    const terms = { client: '利用者さん', staff: 'スタッフ' };
+    expect(placeAllTexts('client', terms).heading).toBe('位置が未登録の利用者さん');
+    expect(placeAllTexts('client', terms).notCounted).toContain('終了');
+    expect(placeAllTexts('staff', terms).heading).toBe('自宅の位置が未登録のスタッフ');
+    expect(placeAllTexts('staff', terms).notCounted).toContain('休止');
+    expect(placeAllTexts('staff', terms).has).toBe('住所あり');
+    expect(NO_PLACE_NOTE).toContain('移動は30分');
+  });
+});
+
+describe('autoPlaceAfterRoster（名簿のあと自動で置くか。PRD D427）', () => {
+  it('検索が入で、読み込んだあとに対象がいるときだけ', () => {
+    const next = { clients: [noPlace('a', '宮城県')], staff: [noHome('s', '')] };
+    expect(autoPlaceAfterRoster({ geocodeOn: true, next, kind: 'client' })).toBe(true);
+    expect(autoPlaceAfterRoster({ geocodeOn: false, next, kind: 'client' })).toBe(false);
+    // 住所の無い〈スタッフ〉しかいない → 送るものが無い
+    expect(autoPlaceAfterRoster({ geocodeOn: true, next, kind: 'staff' })).toBe(false);
+    expect(AUTO_PLACE_NOTE).toBe('読み込んだあと、住所から地図の位置を探します（住所を地図の検索に使います）');
   });
 });
 
 describe('hasAddressNotFound（市区町村の1行を足すか）', () => {
   const from = { address: '', postalCode: '' };
   const fail = (step: 'postal' | 'address', reason: 'notFound' | 'network'): PlaceAllResult => ({
-    clientId: 'a',
+    personId: 'a',
     ok: false,
     reason,
     step,
@@ -81,7 +131,7 @@ describe('placeAll（順に置く）', () => {
   it('1人ずつ順に呼び、呼ぶたびに間隔をあける（最初の前はあけない）。住所が空なら先に郵便番号から住所', async () => {
     const log: string[] = [];
     const results: PlaceAllResult[] = [];
-    const r = await placeAll([noPlace('a', '宮城県仙台市青葉区'), noPlace('b', '', '9800811')], {
+    const r = await placeAll(people(noPlace('a', '宮城県仙台市青葉区'), noPlace('b', '', '9800811')), {
       search: async (q) => {
         log.push(`search:${q}`);
         return geo(38.26, 140.87, `${q}の位置`);
@@ -106,7 +156,7 @@ describe('placeAll（順に置く）', () => {
     ]);
     expect(results).toEqual([
       {
-        clientId: 'a',
+        personId: 'a',
         ok: true,
         lat: 38.26,
         lng: 140.87,
@@ -115,7 +165,7 @@ describe('placeAll（順に置く）', () => {
         from: { address: '宮城県仙台市青葉区', postalCode: '' },
       },
       {
-        clientId: 'b',
+        personId: 'b',
         ok: true,
         lat: 38.26,
         lng: 140.87,
@@ -128,7 +178,12 @@ describe('placeAll（順に置く）', () => {
   it('失敗した人は理由と段階を返して次へ進む', async () => {
     const results: PlaceAllResult[] = [];
     await placeAll(
-      [noPlace('a', '', '0000000'), noPlace('b', 'どこにもない'), noPlace('c', '宮城県'), noPlace('d', '', '1111111')],
+      people(
+        noPlace('a', '', '0000000'),
+        noPlace('b', 'どこにもない'),
+        noPlace('c', '宮城県'),
+        noPlace('d', '', '1111111'),
+      ),
       {
         search: async (q) => (q.includes('どこにもない') ? { ok: false, reason: 'notFound' } : geo(38, 140)),
         lookup: async (code) =>
@@ -138,14 +193,14 @@ describe('placeAll（順に置く）', () => {
       },
     );
     expect(
-      results.map((x) => (x.ok ? `${x.clientId}:ok` : `${x.clientId}:${x.step}:${x.reason}:${x.foundAddress ?? '-'}`)),
+      results.map((x) => (x.ok ? `${x.personId}:ok` : `${x.personId}:${x.step}:${x.reason}:${x.foundAddress ?? '-'}`)),
     ).toEqual(['a:postal:timeout:-', 'b:address:notFound:-', 'c:ok', 'd:address:notFound:どこにもない町']);
   });
   it('止めたら次の呼び出しから止める（止めた呼び出しの結果は返さない）', async () => {
     const ctrl = new AbortController();
     const results: PlaceAllResult[] = [];
     let searches = 0;
-    const r = await placeAll([noPlace('a', 'A'), noPlace('b', 'B'), noPlace('c', 'C')], {
+    const r = await placeAll(people(noPlace('a', 'A'), noPlace('b', 'B'), noPlace('c', 'C')), {
       search: async () => {
         searches += 1;
         if (searches === 2) ctrl.abort();
@@ -159,7 +214,7 @@ describe('placeAll（順に置く）', () => {
     });
     expect(r).toEqual({ stopped: true });
     expect(searches).toBe(2);
-    expect(results.map((x) => x.clientId)).toEqual(['a']);
+    expect(results.map((x) => x.personId)).toEqual(['a']);
   });
 });
 
@@ -180,32 +235,51 @@ describe('withFoundPlace（見つけた位置を書く）', () => {
     const d = makeData();
     d.clients = [noPlace('a', '宮城県仙台市', '9800811'), noPlace('b', '', '9800811'), client('c', 38.1, 140.1)];
     const found = { lat: 38.26, lng: 140.87, address: '宮城県仙台市青葉区一番町' };
-    const a = withFoundPlace(d, 'a', from(d.clients[0]), found);
+    const a = withFoundPlace(d, 'client', 'a', from(d.clients[0]), found);
     expect(a.clients[0].place).toEqual({ address: '宮城県仙台市', lat: 38.26, lng: 140.87, postalCode: '9800811' });
-    const b = withFoundPlace(d, 'b', from(d.clients[1]), found);
+    const b = withFoundPlace(d, 'client', 'b', from(d.clients[1]), found);
     expect(b.clients[1].place).toEqual({ ...found, postalCode: '9800811' });
     // 位置のある人・いない人は変えない（同じ data）
-    expect(withFoundPlace(d, 'c', from(d.clients[2]), found)).toBe(d);
-    expect(withFoundPlace(d, 'zz', { address: '', postalCode: '' }, found)).toBe(d);
+    expect(withFoundPlace(d, 'client', 'c', from(d.clients[2]), found)).toBe(d);
+    expect(withFoundPlace(d, 'client', 'zz', { address: '', postalCode: '' }, found)).toBe(d);
   });
   it('探したときと住所・郵便番号が違えば書かない（その間に利用者が直した）', () => {
     const d = makeData();
     d.clients = [noPlace('a', '宮城県仙台市太白区', '')];
     const found = { lat: 38.26, lng: 140.87, address: '宮城県仙台市太白区' };
-    expect(withFoundPlace(d, 'a', { address: '宮城県仙台市', postalCode: '' }, found)).toBe(d);
-    expect(withFoundPlace(d, 'a', { address: '宮城県仙台市太白区', postalCode: '9800811' }, found)).toBe(d);
+    expect(withFoundPlace(d, 'client', 'a', { address: '宮城県仙台市', postalCode: '' }, found)).toBe(d);
+    expect(withFoundPlace(d, 'client', 'a', { address: '宮城県仙台市太白区', postalCode: '9800811' }, found)).toBe(d);
   });
   it('位置が null なら住所だけ書く（郵便番号で住所は見つかったが位置が見つからない人）', () => {
     const d = makeData();
     d.clients = [noPlace('a', '', '9800811'), noPlace('b', '宮城県', '')];
-    const a = withFoundPlace(d, 'a', from(d.clients[0]), { lat: null, lng: null, address: '宮城県仙台市青葉区一番町' });
+    const a = withFoundPlace(d, 'client', 'a', from(d.clients[0]), {
+      lat: null,
+      lng: null,
+      address: '宮城県仙台市青葉区一番町',
+    });
     expect(a.clients[0].place).toEqual({
       address: '宮城県仙台市青葉区一番町',
       lat: null,
       lng: null,
       postalCode: '9800811',
     });
-    expect(withFoundPlace(d, 'b', from(d.clients[1]), { lat: null, lng: null, address: 'x' })).toBe(d);
+    expect(withFoundPlace(d, 'client', 'b', from(d.clients[1]), { lat: null, lng: null, address: 'x' })).toBe(d);
+  });
+});
+
+describe('withFoundPlace（〈スタッフ〉の自宅）', () => {
+  it('自宅に位置を書く。休止・位置のある人・住所を直した人は変えない', () => {
+    const d = makeData();
+    d.staff = [noHome('s', '宮城県仙台市'), staff('t', 38.1, 140.1)];
+    const from = { address: '宮城県仙台市', postalCode: '' };
+    const found = { lat: 38.26, lng: 140.87, address: '宮城県仙台市' };
+    const x = withFoundPlace(d, 'staff', 's', from, found);
+    expect(x.staff[0]!.home).toEqual({ address: '宮城県仙台市', lat: 38.26, lng: 140.87 });
+    expect('postalCode' in x.staff[0]!.home).toBe(false);
+    expect(x.clients).toBe(d.clients);
+    expect(withFoundPlace(d, 'staff', 't', { address: '', postalCode: '' }, found)).toBe(d);
+    expect(withFoundPlace(d, 'staff', 's', { address: '宮城県', postalCode: '' }, found)).toBe(d);
   });
 });
 

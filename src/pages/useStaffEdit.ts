@@ -1,7 +1,7 @@
 // 〈スタッフ〉の画面の節の編集（PRD D299・D308〜D310。ADR-0014・ADR-0015・ADR-0050・ADR-0052）：直している節と入力・誤り・
 // 編集中の印（離れるときの確かめ）・直し始める／取り消す・保存（検査 → 休止の確かめ → 保存 → 担当の振り直しの欄）
 import { useCallback, useEffect, useId, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useConfirm } from '../components/ConfirmDialog';
 import { type FormErr, invalidAttrs, toFormErr } from '../components/FieldError';
 import { useAskDiscard } from '../components/personPage';
@@ -83,6 +83,24 @@ export function useStaffEdit(opts: StaffEditOptions) {
     },
   );
   const ask = useAskDiscard(sectionDirty, whoText);
+  // 一覧の「位置なし」の［地図で置く］・まとめて置けなかった人の「編集」から節を開いて来たとき（`?edit=home`。PRD D427）。
+  // 開いたら URL から消す
+  const [params, setParams] = useSearchParams();
+  const editParam = params.get('edit');
+  // biome-ignore lint/correctness/useExhaustiveDependencies: URL の edit が替わったときだけ
+  useEffect(() => {
+    if (!editParam) return;
+    if (editParam in STAFF_SECTIONS && saved)
+      setEdit({ key: editParam as StaffSecKey, form: structuredClone(saved), opened: structuredClone(saved) });
+    setParams(
+      (prev) => {
+        const p = new URLSearchParams(prev);
+        p.delete('edit');
+        return p;
+      },
+      { replace: true },
+    );
+  }, [editParam]);
   const startEdit = async (key: StaffSecKey) => {
     if (!saved || edit?.key === key) return;
     if (!(await ask('section'))) return;

@@ -1,9 +1,12 @@
 import { ListChecks, Sheet, Undo2 } from 'lucide-react';
 import { useId, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { RosterCard } from '../components/RosterCard';
 import { PageHeader, WithIcon } from '../components/ui';
+import { useFeature } from '../components/useFeature';
+import { type PlaceAllRun, usePlaceAllRun } from '../components/usePlaceAllRun';
 import { useRestartFirstRun } from '../components/useRestartFirstRun';
+import { useRosterAutoPlace } from '../components/useRosterAutoPlace';
 import type { Terms } from '../contracts/documents';
 import { RESTART_TITLE } from '../lib/firstRun';
 import {
@@ -18,13 +21,16 @@ import {
 } from '../lib/startGuide';
 import { useDemoData } from '../store';
 import { BookingCard } from './dataBookings';
+import { PlaceAllPanel } from './PlaceAllPanel';
 import './settings.css';
 
 /**
  * 登録の案内（`#/start`。PRD D381。ADR-0073）：自分のデータで始めたあと、1画面1項目の3段で案内する。
  * 上に「1/3」。①〈利用者さん〉②〈スタッフ〉は「CSV・Excel を読み込む」（名簿の欄＝今の名簿の読み込み）と「1人ずつ入れる」（今の追加の画面）、
  * ③は予約の CSV の読み込み（データの画面の予約の CSV の欄と同じ）と予定の画面へ。主ボタンは各段で1つ（①②は「次へ」、③は「予定の画面へ」）。
- * 段は URL の `?step=`。名簿・予約の CSV を①→②→③の順に読み込めば、事業所の CSV でデモを始められる（ADR-0092）
+ * 段は URL の `?step=`。名簿・予約の CSV を①→②→③の順に読み込めば、事業所の CSV でデモを始められる（ADR-0092）。
+ * ①②で名簿が入ったら、郵便番号・住所の検索が入なら位置の無い人を自動でまとめて地図に置き始める（PRD D427。ADR-0094）。
+ * 置く処理は段を替えても続くよう、この画面が〈利用者さん〉・〈スタッフ〉の2つを持つ
  */
 export default function StartGuidePage() {
   const { data } = useDemoData();
@@ -33,6 +39,7 @@ export default function StartGuidePage() {
   const step = startGuideSteps(data.org.terms)[index - 1]!;
   const { prev, next } = startGuideNeighbors(index);
   const restart = useRestartFirstRun();
+  const placeRuns = { client: usePlaceAllRun('client'), staff: usePlaceAllRun('staff') };
   return (
     <div className="stack" style={{ maxWidth: 720 }} data-testid="start-guide" data-step={index}>
       <PageHeader
@@ -45,6 +52,7 @@ export default function StartGuidePage() {
           <RosterStep
             key={step.index}
             step={step}
+            run={placeRuns[step.person]}
             registered={step.person === 'client' ? data.clients.length : data.staff.length}
           />
         ) : (
@@ -77,10 +85,27 @@ export default function StartGuidePage() {
   );
 }
 
-/** ①②の本体：読み込む・1人ずつ入れる（どちらも今ある画面へつなぐ）。入れた人数を添える */
-function RosterStep({ step, registered }: { step: Extract<StartGuideStep, { kind: 'roster' }>; registered: number }) {
+/** ①②の本体：読み込む・1人ずつ入れる（どちらも今ある画面へつなぐ）。入れた人数を添える。下にまとめて置く欄 */
+function RosterStep({
+  step,
+  run,
+  registered,
+}: {
+  step: Extract<StartGuideStep, { kind: 'roster' }>;
+  run: PlaceAllRun;
+  registered: number;
+}) {
   const [open, setOpen] = useState(false);
   const rosterId = useId();
+  const geocodeOn = useFeature('geocode');
+  const autoPlace = useRosterAutoPlace({ run, geocodeOn, onStart: () => setOpen(false) });
+  const navigate = useNavigate();
+  const openPlace = (id: string) =>
+    navigate(
+      step.person === 'staff'
+        ? `/staff/${encodeURIComponent(id)}?tab=basic&edit=home`
+        : `/clients/${encodeURIComponent(id)}?tab=basic&edit=place`,
+    );
   return (
     <>
       <p>{step.term}の名簿の CSV・Excel を読み込みます。</p>
@@ -98,10 +123,17 @@ function RosterStep({ step, registered }: { step: Extract<StartGuideStep, { kind
         </button>
       </div>
       {/* 名簿の欄（ADR-0068）をそのまま使う。Excel の入出力の入り切りにかかわらず、ここでは読み込める */}
-      <RosterCard kind={step.person} id={rosterId} open={open} onClose={() => setOpen(false)} />
+      <RosterCard
+        kind={step.person}
+        id={rosterId}
+        open={open}
+        onClose={() => setOpen(false)}
+        onPlace={autoPlace.onPlace}
+      />
       <p className="sub" data-testid="start-guide-registered">
         いま登録されているのは {registered}人です
       </p>
+      <PlaceAllPanel model={run} geocodeOn={geocodeOn} ref={autoPlace.panelRef} onEdit={openPlace} />
     </>
   );
 }

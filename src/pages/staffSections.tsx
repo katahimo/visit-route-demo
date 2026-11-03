@@ -246,7 +246,11 @@ export function StaffBasicTab({
     <>
       <div className="person-sections">{parts.shown}</div>
       {(parts.folded.length > 0 || more) && (
-        <DetailsFold testId="person-details">
+        <DetailsFold
+          testId="person-details"
+          // 畳んだ欄を直す指定で来たとき（`?edit=home`。PRD D427）は開く
+          forceOpen={!!edit && edit.key !== 'new' && (folded as readonly string[]).includes(edit.key)}
+        >
           {parts.folded.length > 0 && <div className="person-sections">{parts.folded}</div>}
           {more}
         </DetailsFold>

@@ -213,7 +213,7 @@ export function ClientFilter({
 }
 
 /** 絞り込みのチップ1つ（押すと付け外し。0人なら薄くして押せなくする＝blocked） */
-function ChipButton({
+export function ChipButton({
   on,
   empty,
   blocked,

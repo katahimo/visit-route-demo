@@ -8,6 +8,7 @@ import type {
   RosterMode,
   RosterSource,
 } from '../contracts/data';
+import { AUTO_PLACE_NOTE } from './placeAll';
 import type { TidyPreview } from './tidy';
 import { sizeText, tidyMonthLabel } from './tidy';
 
@@ -98,6 +99,8 @@ export function rosterConfirmBody(x: {
   /** いまの一覧が0人か（rosterIsEmpty） */
   empty: boolean;
   keep: KeepState;
+  /** 読み込んだあと、位置の無い人を自動でまとめて置くか（PRD D427。ADR-0094。押す前に分かるように1文を足す） */
+  autoPlace?: boolean;
 }): string {
   return [
     ...(x.warning ? [x.warning, ''] : []),
@@ -106,6 +109,7 @@ export function rosterConfirmBody(x: {
     x.summary,
     // 0人なら消えるもの・戻すものが無いので省く
     ...(x.empty ? [] : ['予定は消えません。', keepNote(x.keep, '読み込む前の状態に戻す')]),
+    ...(x.autoPlace ? [AUTO_PLACE_NOTE] : []),
   ].join('\n');
 }
 

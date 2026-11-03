@@ -117,6 +117,25 @@ describe('名簿の読み込みの文', () => {
     expect(rosterConfirmBody({ ...base, keep: { kept: true, why: null } }).split('\n')).toEqual(lines);
     expect(rosterConfirmBody({ ...base, keep: { kept: false, why: '容量が足りません' } }).split('\n')).toEqual(lines);
   });
+  it('読み込んだあと自動で地図に置くときは、最後に送ることの1文を足す（PRD D427。押す前に分かるように）', () => {
+    const base = {
+      warning: null,
+      fileName: 'a.csv',
+      term: '利用者さん',
+      how: '追加・更新',
+      summary: '追加 1人',
+      source: { format: 'xlsx' } as const,
+      empty: true,
+      keep: { kept: true, why: null },
+    };
+    expect(
+      rosterConfirmBody({ ...base, autoPlace: true })
+        .split('\n')
+        .at(-1),
+    ).toBe('読み込んだあと、住所から地図の位置を探します（住所を地図の検索に使います）');
+    expect(rosterConfirmBody({ ...base, autoPlace: false })).not.toContain('地図の位置を探します');
+    expect(rosterConfirmBody(base)).not.toContain('地図の位置を探します');
+  });
   it('rosterIsEmpty：その一覧が0人か', () => {
     const d = createDemoData('2026-10-13');
     expect(rosterIsEmpty(d, 'staff')).toBe(false);
