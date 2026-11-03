@@ -21,6 +21,9 @@ import '../components/placeLookup.css';
 /** 送る先と中身の注記（PRD D90） */
 const PLACE_ALL_NOTICE = `${EXTERNAL_NOTICE}（押したときだけ。1人ずつ間をあけて順に送ります。名前などほかの項目は送りません）`;
 
+/** ほかの名簿の置く処理が終わるのを待っている間の文（外部の検索は同時に1本。ADR-0016） */
+const PLACE_WAITING = 'ほかの名簿の位置を探し終わるのを待っています';
+
 /** 「位置なしだけ見る」の押している状態と切り替え（一覧の絞り込み） */
 export type NoPlaceOnly = { on: boolean; toggle: () => void };
 
@@ -48,7 +51,7 @@ export function PlaceAllPanel({
   ref?: Ref<HTMLDivElement>;
 }) {
   const { data } = useDemoData();
-  const { kind, targets, skipped, running, total, results, stopped, tried, run, stop } = model;
+  const { kind, targets, skipped, running, waiting, total, results, stopped, tried, run, stop } = model;
   const t = placeAllTexts(kind, data.org.terms);
   const byId = useMemo(() => new Map(placePeople(data, kind).map((p) => [p.id, p])), [data, kind]);
   const fails = results.filter((r): r is Fail => !r.ok);
@@ -111,9 +114,11 @@ export function PlaceAllPanel({
         <div className="row" style={{ flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
           <progress className="place-all-progress" max={Math.max(total, 1)} value={results.length} aria-hidden="true" />
           <output data-testid="place-all-progress">
-            {running
-              ? `置いています… ${results.length}／${total}人`
-              : `${stopped ? '止めました' : '終わりました'}：${results.length}／${total}人`}
+            {waiting
+              ? `${PLACE_WAITING}${total > 0 ? `… ${results.length}／${total}人` : ''}`
+              : running
+                ? `置いています… ${results.length}／${total}人`
+                : `${stopped ? '止めました' : '終わりました'}：${results.length}／${total}人`}
             （置けた {ok}人・置けなかった {fails.length}人）
           </output>
         </div>
@@ -121,6 +126,34 @@ export function PlaceAllPanel({
       {fails.length > 0 && <FailList fails={fails} byId={byId} t={t} onEdit={onEdit} />}
       {skipped.length > 0 && <SkippedList skipped={skipped} t={t} onEdit={onEdit} />}
       {!running && <PlacedMap results={results} byId={byId} t={t} />}
+    </div>
+  );
+}
+
+/**
+ * 走っている置く処理の1行（登録の案内で、いまの段の欄に出ない種類の分。PRD D427）：進み具合と［止める］。
+ * 走っていなければ出さない
+ */
+export function PlaceAllBusyLine({ model }: { model: PlaceAllRun }) {
+  const { data } = useDemoData();
+  const { kind, running, waiting, total, results, stop } = model;
+  if (!running) return null;
+  const t = placeAllTexts(kind, data.org.terms);
+  return (
+    <div
+      className="row"
+      style={{ flexWrap: 'wrap', gap: 10, alignItems: 'center' }}
+      data-testid="place-all-busy"
+      data-kind={kind}
+    >
+      <output className="sub" data-testid="place-all-busy-progress">
+        {waiting ? `${t.term}：${PLACE_WAITING}` : `${t.term}の位置を探しています… ${results.length}／${total}人`}
+      </output>
+      <button type="button" className="btn btn-small" onClick={stop} data-testid="place-all-busy-stop">
+        <WithIcon icon={CircleStop} size={14}>
+          止める
+        </WithIcon>
+      </button>
     </div>
   );
 }

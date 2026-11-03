@@ -49,7 +49,10 @@ describe('名簿のブックの書き方・記入例', () => {
       const headers = (sheet(wb, name).getRow(1).values as ExcelJS.CellValue[]).slice(1).map(text);
       expect([...listed.keys()]).toEqual(headers);
       for (const r of listed.values()) expect(text(r.getCell(2).value)).not.toBe('');
-      if (kind === 'staff') expect(text(listed.get('移動手段')?.getCell(4).value)).toBe('空なら車');
+      // 既定値が入るのは新しい人の空だけ（今いる人の行の空は今までどおり）
+      if (kind === 'staff') expect(text(listed.get('移動手段')?.getCell(4).value)).toBe('新しい人で空なら車');
+      if (kind === 'client') expect(text(listed.get('段階')?.getCell(4).value)).toBe('新しい人で空なら利用中');
+      expect(text(listed.get('住所')?.getCell(4).value)).toBe('空のまま');
     }
   });
 

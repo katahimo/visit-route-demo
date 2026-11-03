@@ -316,7 +316,7 @@ export function PlanDocks({ p }: { p: PlanCtx }) {
   );
 }
 
-/** 計算に入れなかった訪問（〈利用者さん〉が休止中・位置が未登録など） */
+/** 計算に入れなかった訪問（〈利用者さん〉が休止中など。位置が未登録の訪問は入れる。ADR-0093） */
 export function NotInProblemCard({ p }: { p: PlanCtx }) {
   const { d } = p;
   if (d.notInProblem.length === 0) return null;
@@ -326,7 +326,7 @@ export function NotInProblemCard({ p }: { p: PlanCtx }) {
         icon={TriangleAlert}
         aside={
           <Hint>
-            {d.terms.client}が休止中・位置が未登録などの訪問です（{d.terms.client}の画面で直せます）。
+            {d.terms.client}が休止中などの訪問です（{d.terms.client}の画面で直せます）。
           </Hint>
         }
       >

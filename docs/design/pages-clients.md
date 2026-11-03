@@ -23,7 +23,7 @@
 - 読み込み方 `roster-mode`：追加・更新（ファイルに無い人はそのまま）／総入れ替え（ファイルに無い人を〈スタッフ〉は休止、〈利用者さん〉は段階「終了」にする。消さない）
 - 読み込み `FilePick`（`roster-file`・caption「読み込む〈呼び方〉の名簿（Excel・CSV）」・.xlsx・.csv・.tsv・.txt）。.xlsx か CSV かは中身で、CSV の文字コードは `lib/csv` の `decodeText` で見分ける。列名がほかのソフトの形（`excel/rosterForms`。予約システムのスタッフ・顧客）なら、その形の列を名簿の列に写して読む。顧客台帳の形なら、名前・よみ（カタカナはひらがな・空白を詰める）・郵便番号・住所（都道府県＋市区町村＋町名以下＋建物名）・電話（備考の先頭に1行）・状態（利用中＝利用中、ほか＝終了）・備考だけを読み、請求・口座・生年月日・性別・続柄・顧客番号は読まずデータに残さない。確認の本文に読んだ形（ほかのソフトの形なら「〈形の名前〉の形として読みました」と「読まなかった列：…」も。`rosterConfirmBody`。控えの文は「データの画面の「直前の状態に戻す」」）。確認の後にデータが変わっていないかを見直す（入らなければ控えを前の世代に戻す）
 - 〈スタッフ〉の名簿で最終勤務日が入れば、トーストで「最終勤務日のある〈スタッフ〉」の欄を指す（`offboard` が切なら指さない）
-- 名簿を読み込むとき（PRD D427。ADR-0094）、`RosterCard` に `onPlace` を渡していれば（`components/useRosterAutoPlace`。`geocode` が切なら渡さない）、`useRosterImport` が `lib/placeAll` の `autoPlaceAfterRoster`（読み込んだあとのデータに `placeAllTargets` の対象がいるか）で決め、確認の本文（`rosterConfirmBody` の `autoPlace`）の最後に「読み込んだあと、住所から地図の位置を探します（住所を地図の検索に使います）」を足す。入ったと見届けたら（`usePendingImport` の `onDone`）名簿の欄を閉じ、まとめて置く欄（`place-all`）へ移してフォーカスし、`run` を始める（［名簿を読み込む］を押した続き）。〈スタッフ〉一覧・登録の案内①②も同じ
+- 名簿を読み込むとき（PRD D427。ADR-0094）、`RosterCard` に `onPlace` を渡していれば（`components/useRosterAutoPlace`。`geocode` が切なら渡さない）、`useRosterImport` が `lib/placeAll` の `autoPlaceAfterRoster`（読み込んだあとのデータに `placeAllTargets` の対象がいるか）で決め、確認の本文（`rosterConfirmBody` の `autoPlace`）の最後に「読み込んだあと、住所から地図の位置を探します（住所を郵便番号の検索と国土地理院の地図の検索に使います）」を足す。入ったと見届けたら（`usePendingImport` の `onDone`）名簿の欄を閉じ、まとめて置く欄（`place-all`）へ移してフォーカスし、`run` を始める（［名簿を読み込む］を押した続き）。〈スタッフ〉一覧・登録の案内①②も同じ
 
 ### 〈利用者さん〉・〈スタッフ〉の画面の殻
 
@@ -164,7 +164,7 @@
 #### まとめて地図に置く（`lib/placeAll.ts`・`pages/PlaceAllPanel.tsx`・`components/usePlaceAllRun.ts`）
 
 - 〈利用者さん〉一覧・〈スタッフ〉一覧（自宅）・登録の案内①②の上のカード（PRD D89・D427）。1行目は「位置が未登録の〈…〉：N人」・数え方（`place-all-count`）・ふつうのボタン［位置の無い N人を地図に置く］（`place-all-run`。一度探したあとは［続きを探す（N人）］。`placeAllRunLabel`。`geocode` が切なら出さない）・「止める」・［位置なしだけ見る］（`place-all-only`。押すと絞り込みの「位置なし」を付け外し。案内では出さない）。下に「位置が無くても担当は組めます（移動は30分とみます）」（`place-all-note`。ADR-0093）・送る先の注記（`geocode` が入のとき）・進み具合・結果。位置の無い人がいなくなり結果も無ければ出さない。画面を離れたら止める
-- 状態と処理（`usePlaceAllRun(kind)`）は一覧の画面（案内は〈利用者さん〉・〈スタッフ〉の2つを画面が持ち、段を替えても続く）が持ち、カード・名簿のあと・行の［住所から探す］（`run([id])`。その人だけ）に同じものを渡す。`run` は呼ばれたときのデータで対象を数える（名簿の直後でも）。カードは見せるだけ（`ref` で名簿のあとに移ってフォーカスする。`tabIndex=-1`）
+- 状態と処理（`usePlaceAllRun(kind)`）は一覧の画面（案内は〈利用者さん〉・〈スタッフ〉の2つを画面が持ち、段を替えても続く）が持ち、カード・名簿のあと・行の［住所から探す］（`run([id])`。その人だけ）に同じものを渡す。`run` は呼ばれたときのデータで対象を数える（名簿の直後でも）。走っている最中に呼ばれたら（名簿を読み込んだ）、終わったあと残り（この続きでまだ探していない人）を続けて探す予約を持つ（`lib/placeRunQueue` の `createPlaceRunGate`。止めたら予約を捨てる）。案内は `usePlaceAllRun(kind, lane)` に1本の列（`createPlaceLane`）を渡し、〈利用者さん〉・〈スタッフ〉を同時に走らせない（片方が走っていれば、もう片方は待って始める。待つ間は「ほかの名簿の位置を探し終わるのを待っています」と［止める］。外部の検索は同時に1本。ADR-0016）。カードは見せるだけ（`ref` で名簿のあとに移ってフォーカスする。`tabIndex=-1`）
 - 置けなかった人に住所から位置が見つからなかった人（`hasAddressNotFound`）がいれば、見出しの下に1行「市区町村の名前が無い住所…」（`place-all-city-hint`）
 - 種類ごとの違い（数える人＝〈利用者さん〉は終了を除く・〈スタッフ〉は休止を除く／書く先＝場所・自宅／文）は `placeAccess` の1か所（switch を never で網羅）。`placePeople(data, kind)`（そろえた形 `PlacePerson`。〈スタッフ〉の郵便番号は ''）、`placeAllTargets(data, kind)`（対象・住所も郵便番号もない人）、`placeAll(targets, opts)`（1人ずつ順に・間隔をあける・止める・1人ごとに結果）、`withFoundPlace(data, kind, id, from, place)`（位置の無いときだけ書く）
 - 置けなかった人の「編集」と行の［地図で置く］はその人の住所の節（`#/clients/:id?tab=basic&edit=place`。〈スタッフ〉は自宅の節 `#/staff/:id?tab=basic&edit=home`。畳んだ「詳しく ▾」は開く）

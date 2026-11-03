@@ -72,6 +72,24 @@ describe('見分け', () => {
     expect(ROSTER_FORMS.slice(-2).map((f) => f.id)).toEqual(['generic-client', 'generic-staff']);
   });
 
+  it('〈スタッフ〉：「名前」の列があっても、アプリの名簿にしか無い列が1つも無ければ列名から読む形', () => {
+    expect(isGenericHeader(['名前', '住所', 'メールアドレス'], 'staff')).toBe(true);
+    expect(
+      idOf(
+        [
+          ['名前', '電話'],
+          ['架空 花子', '000'],
+        ],
+        'staff',
+      ),
+    ).toBe('generic-staff');
+    // アプリの名簿の形（移動手段・勤務開始・特性の列など）は今まで通り名簿の形として読む
+    expect(isGenericHeader(['名前', '移動手段'], 'staff')).toBe(false);
+    expect(isGenericHeader(['名前', '勤務開始', '勤務終了'], 'staff')).toBe(false);
+    expect(isGenericHeader(['名前', '利用中'], 'staff')).toBe(false);
+    expect(isGenericHeader(['名前', '特性：資格'], 'staff')).toBe(false);
+  });
+
   it('姓・名が別の列でも当たる', () => {
     expect(isGenericHeader(['姓', '名'], 'client')).toBe(true);
     expect(isGenericHeader(['苗字', '名前'], 'staff')).toBe(true);
@@ -148,6 +166,18 @@ describe('〈利用者さん〉', () => {
     ]);
     expect(r?.rows.slice(1).map((x) => x[0])).toEqual(['架空 四郎（A1）', '架空 四郎（A2）']);
   });
+
+  it('名前が空の行は飛ばし（空行にする）、件数を skipped に挙げる', () => {
+    const r = genericClientToRoster([
+      ['氏名', '住所'],
+      ['架空 五郎', '架空県架空市1-1'],
+      ['', '架空県架空市2-2'],
+      ['', ''],
+    ]);
+    expect(r?.rows[2]).toEqual(['', '', '', '', '', '', '', '']);
+    expect(r?.rows[3]).toEqual(['', '', '', '', '', '', '', '']);
+    expect(r?.skipped).toEqual(['氏名（空の行 1件）']);
+  });
 });
 
 describe('〈スタッフ〉', () => {
@@ -172,5 +202,20 @@ describe('〈スタッフ〉', () => {
     expect(col).toBeGreaterThan(0);
     expect(r?.rows.slice(1).map((x) => x[col])).toEqual(['女性', '男性']);
     expect(r?.skipped).not.toContain('性別');
+  });
+
+  it('住所の先頭の郵便番号を外す。名前が空の行は飛ばし、件数を skipped に挙げる', () => {
+    const r = genericStaffToRoster(
+      [
+        ['職員氏名', '住所'],
+        ['架空 星子', '〒000-0003 架空県架空市3-3'],
+        ['', '架空県架空市4-4'],
+      ],
+      TODAY,
+      [],
+    );
+    expect(r?.rows[1]?.[2]).toBe('架空県架空市3-3');
+    expect(r?.rows[2]).toEqual(['', '', '', '', '', '', '']);
+    expect(r?.skipped).toEqual(['職員氏名（空の行 1件）']);
   });
 });

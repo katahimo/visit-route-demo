@@ -171,6 +171,22 @@ describe('compile：可否と割当費用', () => {
     expect(p.travel[0]![p.staff.length + 1]).toBe(UNPLACED_TRAVEL_MIN);
     expect(p.travel[p.staff.length + 1]![0]).toBe(UNPLACED_TRAVEL_MIN);
   });
+  it('位置が未登録でも、同じ〈利用者さん〉の訪問どうしは移動0分、別の〈利用者さん〉なら見込みの分数（地点の鍵）', () => {
+    const d = twoStaff();
+    const noPlace = { place: { address: '', lat: null, lng: null, postalCode: '' } };
+    d.clients.push(client('c2', 0, 0, noPlace), client('c3', 0, 0, noPlace));
+    d.visits.push(
+      visit('v2', 'c2', '10:00', '11:00'),
+      visit('v3', 'c2', '12:00', '13:00'),
+      visit('v4', 'c3', '14:00', '15:00'),
+    );
+    const p = compile(d, DATE);
+    const pt = (id: string) => p.visits.find((v) => v.id === id)!.point;
+    expect(p.travel[pt('v2')]![pt('v3')]).toBe(0);
+    expect(p.travel[pt('v3')]![pt('v2')]).toBe(0);
+    expect(p.travel[pt('v3')]![pt('v4')]).toBe(UNPLACED_TRAVEL_MIN);
+    expect(UNPLACED_TRAVEL_MIN).toBe(30);
+  });
   it('自宅の位置が未登録の担当も働く（訪問先の位置があれば組める。ADR-0093）', () => {
     const d = twoStaff();
     d.staff = d.staff.map((s) => ({ ...s, home: { ...s.home, lat: null, lng: null } }));

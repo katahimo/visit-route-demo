@@ -1,6 +1,7 @@
 // 位置の無い人をまとめて地図に置く（PRD D89・D427。ADR-0016・ADR-0094）。外部には出さず、検索の偽物で確かめる
 import { describe, expect, it } from 'vitest';
 import type { Client, Staff } from '../contracts/documents';
+import { UNPLACED_TRAVEL_MIN } from '../matching/compile';
 import { client, makeData, staff } from '../matching/fixtures.testkit';
 import type { GeoHit, LookupResult, PostalHit } from './geocode';
 import {
@@ -95,6 +96,8 @@ describe('placeAllRunLabel・placeAllTexts（まとめて置く欄の文）', ()
     expect(placeAllTexts('staff', terms).heading).toBe('自宅の位置が未登録のスタッフ');
     expect(placeAllTexts('staff', terms).notCounted).toContain('休止');
     expect(placeAllTexts('staff', terms).has).toBe('住所あり');
+    // 分数は計算の見込み（UNPLACED_TRAVEL_MIN）から作る
+    expect(NO_PLACE_NOTE).toContain(`移動は${UNPLACED_TRAVEL_MIN}分`);
     expect(NO_PLACE_NOTE).toContain('移動は30分');
   });
 });
@@ -106,7 +109,9 @@ describe('autoPlaceAfterRoster（名簿のあと自動で置くか。PRD D427）
     expect(autoPlaceAfterRoster({ geocodeOn: false, next, kind: 'client' })).toBe(false);
     // 住所の無い〈スタッフ〉しかいない → 送るものが無い
     expect(autoPlaceAfterRoster({ geocodeOn: true, next, kind: 'staff' })).toBe(false);
-    expect(AUTO_PLACE_NOTE).toBe('読み込んだあと、住所から地図の位置を探します（住所を地図の検索に使います）');
+    expect(AUTO_PLACE_NOTE).toBe(
+      '読み込んだあと、住所から地図の位置を探します（住所を郵便番号の検索と国土地理院の地図の検索に使います）',
+    );
   });
 });
 

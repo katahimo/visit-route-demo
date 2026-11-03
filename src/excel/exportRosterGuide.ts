@@ -31,6 +31,11 @@ interface ColDoc {
   blank: string;
 }
 const doc = (what: string, example: string, blank: string): ColDoc => ({ what, example, blank });
+/**
+ * 新しい人で空のとき既定値が入る列の「空のとき」の文（rosterRows の pickNew。ADR-0092）。
+ * 今いる人の行の空は今までどおり（既定値にしない）
+ */
+const newBlank = (value: string): string => `新しい人で空なら${value}`;
 
 /** 行の数だけ並べる架空の値（列名 → 値）。名前は「記入例」と分かるもの、住所は仙台市の公共施設 */
 type Sample = Record<string, CellIn>;
@@ -46,11 +51,11 @@ function staffDocs(t: DemoData['org']['terms']): [string, ColDoc][] {
   return [
     [S.id, doc('いま名簿にいる人を直すときの番号です。新しい人は空にします', '（空）', '空なら新しい人として足します')],
     [S.name, doc(`${t.staff}の名前です。必ず書きます`, '記入例 はなこ', '空の行は読めません')],
-    [S.travelMode, doc('車・自転車・徒歩・公共交通から選びます', '車', '空なら車')],
-    [S.workDays, doc('勤務する曜日を続けて書きます', '月火水木金', '空なら 月〜金')],
-    [S.shiftStart, doc('勤務を始める時刻です', '9:00', '空なら 9:00')],
-    [S.shiftEnd, doc('勤務を終える時刻です', '18:00', '空なら 18:00')],
-    [S.active, doc('いま勤務している人に ○ を付けます', YES, '空なら利用中')],
+    [S.travelMode, doc('車・自転車・徒歩・公共交通から選びます', '車', newBlank('車'))],
+    [S.workDays, doc('勤務する曜日を続けて書きます', '月火水木金', newBlank(' 月〜金'))],
+    [S.shiftStart, doc('勤務を始める時刻です', '9:00', newBlank(' 9:00'))],
+    [S.shiftEnd, doc('勤務を終える時刻です', '18:00', newBlank(' 18:00'))],
+    [S.active, doc('いま勤務している人に ○ を付けます', YES, newBlank('利用中'))],
     [S.address, doc('自宅の住所です', PLACES[0].address, '空のまま')],
     [S.lat, doc('地図の位置（緯度）です。わからなければ空でかまいません', '38.2682', '空のまま')],
     [S.lng, doc('地図の位置（経度）です。わからなければ空でかまいません', '140.8694', '空のまま')],
@@ -68,8 +73,8 @@ function clientDocs(t: DemoData['org']['terms']): [string, ColDoc][] {
     [C.id, doc('いま名簿にいる人を直すときの番号です。新しい人は空にします', '（空）', '空なら新しい人として足します')],
     [C.name, doc(`${t.client}の名前です。必ず書きます`, '記入例 さくら', '空の行は読めません')],
     [CLIENT_KANA_COL, doc('名前のよみ（ひらがな）です', 'きにゅうれい さくら', '空のまま')],
-    [C.color, doc('画面で使う色の番号です（1〜8）', '1', '空なら順に決まります')],
-    [C.active, doc(`いま${t.client}として使っている人に ○ を付けます`, YES, '空なら利用中')],
+    [C.color, doc('画面で使う色の番号です（1〜8）', '1', newBlank('順に決まります'))],
+    [C.active, doc(`いま${t.client}として使っている人に ○ を付けます`, YES, newBlank('利用中'))],
     [CLIENT_TENTATIVE_COL, doc('日程を仮に押さえている人に ○ を付けます', '', '空なら付けない')],
     [CLIENT_POSTAL_COL, doc('7桁の数字です（ハイフンは有っても無くてもかまいません）', PLACES[0].postal, '空のまま')],
     [C.address, doc('訪問先の住所です', PLACES[0].address, '空のまま')],
@@ -88,7 +93,7 @@ function clientDocs(t: DemoData['org']['terms']): [string, ColDoc][] {
     [R.key, doc('鍵のことです（200文字まで）', 'キーボックス（番号は事業所で確認）', '空のまま')],
     [R.parking, doc('車を止める場所です（200文字まで）', '建物の前に1台', '空のまま')],
     [R.caution, doc('気を付けることです（200文字まで）', '玄関に段差あり', '空のまま')],
-    [G.stage, doc('相談受付・顔合わせ・契約・利用中・終了から選びます', '利用中', '空なら利用中')],
+    [G.stage, doc('相談受付・顔合わせ・契約・利用中・終了から選びます', '利用中', newBlank('利用中'))],
     [G.referrer, doc('紹介してくれた所です', '記入例 相談センター', '空のまま')],
     [G.referrerContact, doc('紹介元の連絡先です', '022-000-0000', '空のまま')],
     [G.referrerNote, doc('紹介元のメモです', '月に1回報告', '空のまま')],

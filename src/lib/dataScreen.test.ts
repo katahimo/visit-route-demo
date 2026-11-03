@@ -132,7 +132,7 @@ describe('名簿の読み込みの文', () => {
       rosterConfirmBody({ ...base, autoPlace: true })
         .split('\n')
         .at(-1),
-    ).toBe('読み込んだあと、住所から地図の位置を探します（住所を地図の検索に使います）');
+    ).toBe('読み込んだあと、住所から地図の位置を探します（住所を郵便番号の検索と国土地理院の地図の検索に使います）');
     expect(rosterConfirmBody({ ...base, autoPlace: false })).not.toContain('地図の位置を探します');
     expect(rosterConfirmBody(base)).not.toContain('地図の位置を探します');
   });

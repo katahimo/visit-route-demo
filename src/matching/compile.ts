@@ -189,8 +189,9 @@ function staffLimitsOf(clients: Map<string, Client>, staffDocs: Staff[], on: boo
   return limitOf;
 }
 
-/** 地点どうしの移動（分）と距離（m）の行列。地点は先に staffDocs の自宅、続いて訪問先 */
-function travelMatrices(places: (LatLng | null)[], staffDocs: Staff[]): { travel: number[][]; meters: number[][] } {
+type Matrices = { travel: number[][]; meters: number[][] };
+/** 地点どうしの移動（分）と距離（m）の行列（先に自宅、続いて訪問先）。keys は地点の鍵で、同じ鍵なら位置が未登録でも 0 分 */
+function travelMatrices(places: (LatLng | null)[], keys: string[], staffDocs: Staff[]): Matrices {
   const S = staffDocs.length;
   const P = places.length;
   const common = majorityMode(staffDocs);
@@ -205,7 +206,7 @@ function travelMatrices(places: (LatLng | null)[], staffDocs: Staff[]): { travel
     const a = places[i];
     for (let j = 0; j < P; j++) {
       const b = places[j];
-      if (i === j) continue;
+      if (i === j || keys[i] === keys[j]) continue;
       // 位置が未登録の側があれば、見込みの分数（距離は分からないので 0 m。交通費には入らない）
       if (!a || !b) {
         tr[j] = UNPLACED_TRAVEL_MIN;
@@ -515,7 +516,9 @@ export function compile(data: CompileInput, date: string, pins?: Record<string, 
     ...staffDocs.map((s) => latLngOf(s.home)),
     ...visitDocs.map((v) => latLngOf(clients.get(v.clientId)!.place)),
   ];
-  const { travel, meters } = travelMatrices(places, staffDocs);
+  // 地点の鍵：訪問は 'c:'+clientId、自宅は 's:'+staffId（同じ〈利用者さん〉の続けた訪問を同じ担当が持てる）
+  const keys = [...staffDocs.map((s) => `s:${s.id}`), ...visitDocs.map((v) => `c:${v.clientId}`)];
+  const { travel, meters } = travelMatrices(places, keys, staffDocs);
 
   // --- 可否・割当費用・理由 ---
   const working = new Set(staff.filter((s) => s.slots.length > 0).map((s) => s.id));

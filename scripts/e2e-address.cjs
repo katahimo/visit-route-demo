@@ -490,7 +490,9 @@ async function rosterPlaceAll(page, fake, dlg) {
     dlg.messages
       .slice(asked)
       .join('\n')
-      .includes('読み込んだあと、住所から地図の位置を探します（住所を地図の検索に使います）'),
+      .includes(
+        '読み込んだあと、住所から地図の位置を探します（住所を郵便番号の検索と国土地理院の地図の検索に使います）',
+      ),
     '名簿のあと：確認の本文に、読み込んだあと住所から地図の位置を探すことを書く',
     dlg.messages.slice(asked),
   );

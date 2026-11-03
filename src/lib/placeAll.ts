@@ -1,5 +1,6 @@
 import type { DemoData, RosterKind } from '../contracts/data';
 import type { ClientPlace, Place, Terms } from '../contracts/documents';
+import { UNPLACED_TRAVEL_MIN } from '../matching/compile';
 import { colorOf, initialOf } from './colors';
 import { byName, hasLocation } from './common';
 import type { GeoHit, LookupFail, LookupOptions, LookupResult, PostalHit } from './geocode';
@@ -152,7 +153,7 @@ export function noPlaceIds(d: Pick<DemoData, 'clients' | 'staff'>, kind: PlaceKi
 export const NO_PLACE_CHIP = 'noPlace';
 
 /** 位置が無くても担当は組めることの補足（ADR-0093） */
-export const NO_PLACE_NOTE = '位置が無くても担当は組めます（移動は30分とみます）';
+export const NO_PLACE_NOTE = `位置が無くても担当は組めます（移動は${UNPLACED_TRAVEL_MIN}分とみます）`;
 
 /** 1人だけ探せるか：郵便番号・住所の検索が入で、住所か郵便番号があり、まとめて置いている最中でない */
 export const canSearchOne = (p: Pick<PlacePerson, 'place'>, x: { geocodeOn: boolean; running: boolean }): boolean =>
@@ -168,7 +169,8 @@ export function placeAllRunLabel(x: { targets: number; tried: boolean }): string
 }
 
 /** 名簿の読み込みの確認に足す1文（PRD D427。ADR-0094。この文を見て［名簿を読み込む］を押すのが送る同意） */
-export const AUTO_PLACE_NOTE = '読み込んだあと、住所から地図の位置を探します（住所を地図の検索に使います）';
+export const AUTO_PLACE_NOTE =
+  '読み込んだあと、住所から地図の位置を探します（住所を郵便番号の検索と国土地理院の地図の検索に使います）';
 
 /**
  * 名簿を読み込んだあと、自動でまとめて置き始めるか（PRD D427）：郵便番号・住所の検索が入（geocodeOn）で、

@@ -23,6 +23,7 @@ import {
   CLIENT_STAGE_COLS,
   STAFF_COLS,
   STAFF_EMAIL_COL,
+  STAFF_ICON_COL,
   STAFF_LAST_DAY_COL,
   TRAIT_PREFIX,
 } from './layout';
@@ -94,14 +95,35 @@ function nameColumns(at: At, kind: 'client' | 'staff'): string[] {
   return one === null ? [] : [one];
 }
 
-/** 1行目の列名から、読む列を決める（名前の列が無ければ null） */
+/**
+ * 〈スタッフ〉の名簿にしか無い列（アプリの名簿の形の見分けに使う）。名簿の名前の列「名前」はほかのソフトにもある列名なので、
+ * これらが1つも無ければ列名から読む形として扱う。特性の列（「特性：」で始まる列）もアプリの名簿にしか無い
+ */
+const STAFF_OWN_ONLY: readonly string[] = [
+  STAFF_COLS.travelMode,
+  STAFF_COLS.workDays,
+  STAFF_COLS.shiftStart,
+  STAFF_COLS.shiftEnd,
+  STAFF_COLS.active,
+  STAFF_ICON_COL,
+];
+
+/**
+ * アプリ自身の名簿の形か：名簿の名前の列があり、姓・名の列に分かれていない。〈スタッフ〉はさらに、名簿にしか無い列が1つ以上ある
+ * （〈利用者さん〉の名前の列「表示名」はアプリの名簿にしか無い）
+ */
+function isOwnRoster(header: readonly string[], at: At, kind: 'client' | 'staff', name: readonly string[]): boolean {
+  const own = kind === 'client' ? CLIENT_COLS.name : STAFF_COLS.name;
+  if (!at.has(colKey(own)) || name.length !== 1) return false;
+  if (kind === 'client') return true;
+  return STAFF_OWN_ONLY.some((h) => at.has(colKey(h))) || header.some((h) => h.trim().startsWith(TRAIT_PREFIX));
+}
+
+/** 1行目の列名から、読む列を決める（名前の列が無い・アプリの名簿の形なら null） */
 function layoutOf(header: readonly string[], kind: 'client' | 'staff'): Layout | null {
   const at = columnsOf(header);
   const name = nameColumns(at, kind);
-  if (name.length === 0) return null;
-  // アプリ自身の名簿の形：名簿の名前の列があり、姓・名の列に分かれていない
-  const own = kind === 'client' ? CLIENT_COLS.name : STAFF_COLS.name;
-  if (at.has(colKey(own)) && name.length === 1) return null;
+  if (name.length === 0 || isOwnRoster(header, at, kind, name)) return null;
   const kanaOne = pick(
     at,
     NAMES.kana.filter((n) => !name.includes(n)),
@@ -190,6 +212,17 @@ function namesOf(at: At, body: readonly (readonly string[])[], l: Layout): strin
 /** 空の列（空行・名前の無い行を、行番号を合わせて残す） */
 const blankRow = (n: number): string[] => Array.from({ length: n }, () => '');
 
+/** 名前が空の行（空行は除く）の件数を skipped に「〈名前の列〉（空の行 N件）」で足す（職員台帳と同じ知らせ方） */
+function pushUnnamed(
+  skipped: string[],
+  l: Layout,
+  body: readonly (readonly string[])[],
+  names: readonly string[],
+): void {
+  const n = body.filter((r, i) => !isBlankRow(r) && (names[i] ?? '') === '').length;
+  if (n > 0) skipped.push(`${l.name.join('・')}（空の行 ${n}件）`);
+}
+
 /**
  * CSV の表（1行目が列名）→〈利用者さん〉の名簿の列の表。名前らしい列が無い・アプリの名簿の形なら null。
  * - 名前：利用者名・氏名・名前など。姓・名が別の列なら「姓 名」。同じ名前の人は ID の列（利用者番号など）があれば「名前（ID）」で分ける
@@ -198,6 +231,7 @@ const blankRow = (n: number): string[] => Array.from({ length: n }, () => '');
  * - 緯度・経度：別の列か「緯度, 経度」の1列
  * - 電話・携帯：メモの先頭に1行
  * - 段階：すべて「利用中」。性別・メール・生年月日・状態などほかの列は読まず、skipped に名前を挙げる
+ * - 名前が空の行は飛ばす（空行にして行番号を元のファイルと合わせる）。件数を skipped に「〈名前の列〉（空の行 N件）」
  */
 export function genericClientToRoster(table: readonly (readonly string[])[]): RosterTable | null {
   const header = table[0];
@@ -222,7 +256,7 @@ export function genericClientToRoster(table: readonly (readonly string[])[]): Ro
     ],
   ];
   body.forEach((r, i) => {
-    if (isBlankRow(r)) {
+    if (isBlankRow(r) || (names[i] ?? '') === '') {
       out.push(blankRow(8));
       return;
     }
@@ -252,7 +286,9 @@ export function genericClientToRoster(table: readonly (readonly string[])[]): Ro
     ...(mobile ? [mobile] : []),
     ...latLngNames(at),
   ];
-  return { rows: out, skipped: skippedColumns(header, body, read) };
+  const skipped = skippedColumns(header, body, read);
+  pushUnnamed(skipped, l, body, names);
+  return { rows: out, skipped };
 }
 
 /** 性別の文字 → 項目「性別」の選択肢（そのまま・全角半角をそろえて・「女」「男」の頭の文字で合う選択肢）。合わなければ空 */
@@ -266,7 +302,8 @@ function genderOption(item: Item, text: string): string {
 
 /**
  * CSV の表（1行目が列名）→〈スタッフ〉の名簿の列の表。名前らしい列が無い・アプリの名簿の形なら null。
- * - 名前・住所・緯度・経度：〈利用者さん〉と同じ読み方（郵便番号・よみ・電話は〈スタッフ〉の名簿に無いので読まず、skipped に挙げる）
+ * - 名前・住所・緯度・経度：〈利用者さん〉と同じ読み方（郵便番号・よみ・電話は〈スタッフ〉の名簿に無いので読まず、skipped に挙げる）。
+ *   住所の先頭の郵便番号は外す。名前が空の行は飛ばし、件数を skipped に「〈名前の列〉（空の行 N件）」
  * - メールアドレス：形の違う値は読まず、skipped に「〈列名〉（形の違う値 N件）」
  * - 性別：〈スタッフ〉の項目「性別」（選択肢から1つ）があれば特性の列へ。選択肢に合わない値は空（未確認）
  * - 退職日・退社年月日：最終勤務日にする。today より前なら休止（×）、ほかは利用中（○）。読めない値はそのまま渡し、名簿の読み込みが誤りにする
@@ -306,7 +343,7 @@ export function genericStaffToRoster(
     out.push([
       names[i] ?? '',
       email ?? '',
-      clip(addressOf(v, l), MAX.address),
+      clip(splitPostal(addressOf(v, l)).address, MAX.address),
       lat,
       lng,
       left ? NO : YES,
@@ -324,6 +361,7 @@ export function genericStaffToRoster(
     ...latLngNames(at),
   ];
   const skipped = skippedColumns(header, body, read);
+  pushUnnamed(skipped, l, body, names);
   if (emailCol !== null && badEmails > 0) skipped.push(`${emailCol}（形の違う値 ${badEmails}件）`);
   return { rows: out, skipped };
 }
