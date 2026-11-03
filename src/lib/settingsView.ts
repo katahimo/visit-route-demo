@@ -3,7 +3,16 @@
 // 画面は表（lib/features）から文を受け取る。データは書き換えない
 import type { Terms } from '../contracts/documents';
 import type { Features } from '../contracts/features';
-import { type FeatureDef, featureLabel, fillTerms, isOn, type TemplateId, templateDef } from './features';
+import {
+  type FeatureDef,
+  featureLabel,
+  fillTerms,
+  isOn,
+  type TemplateDef,
+  type TemplateId,
+  templateBasicDelta,
+  templateDef,
+} from './features';
 
 /** スイッチの行の文 */
 export type FeatureRowText = {
@@ -41,3 +50,19 @@ export function currentTemplateName(id: TemplateId | 'custom'): { name: string; 
 
 /** メールの予約送信の手順の見出しの1行（畳んだままでも数が読める） */
 export const mailStepsHeading = (count: number): string => `手順 ${count}つ`;
+
+/** ひな形の一覧の1つの文（ADR-0092）：近い業種の例（「例：」付き）・説明（呼び方を入れる）・基本との差の行（足す・外す） */
+export function templateCardText(
+  t: TemplateDef,
+  terms: Pick<Terms, 'client' | 'staff'>,
+): { example: string | null; description: string; delta: string[] } {
+  const delta = templateBasicDelta(t.id);
+  const names = (ids: readonly FeatureDef['id'][]) => ids.map((id) => featureLabel(id, terms)).join('・');
+  const lines: string[] = [];
+  if (delta && delta.add.length > 0) lines.push(`基本に足す：${names(delta.add)}`);
+  if (delta && delta.drop.length > 0) lines.push(`基本から外す：${names(delta.drop)}`);
+  return { example: t.example ? `例：${t.example}` : null, description: fillTerms(t.description, terms), delta: lines };
+}
+
+/** スイッチのグループの見出しに添える入っている数（「2 / 4 入」） */
+export const groupOnCountText = (on: number, total: number): string => `${on} / ${total} 入`;

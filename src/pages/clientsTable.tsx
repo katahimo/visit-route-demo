@@ -2,6 +2,7 @@
 import { Eye, MapPin, ShieldCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { CondChips, TraitChips } from '../components/conditions';
+import { NoPlaceCell, type NoPlaceRow } from '../components/NoPlaceActions';
 import { TentativeMark } from '../components/parts';
 import { StaffMarkById } from '../components/StaffMark';
 import type { DemoData } from '../contracts/data';
@@ -34,6 +35,8 @@ type RowContext = {
   staffName: (id: string | null) => string;
   today: string;
   onOpen: (c: Client) => void;
+  /** 住所の列に「位置なし」と［住所から探す］［地図で置く］（PRD D427） */
+  noPlace: NoPlaceRow;
 };
 
 /** 列の見出し（呼び名は org.terms から） */
@@ -58,6 +61,7 @@ export function ClientsTable({
   detailed,
   expert,
   onOpen,
+  noPlace,
 }: {
   shown: Client[];
   data: DemoData;
@@ -73,6 +77,8 @@ export function ClientsTable({
   expert: boolean;
   /** 行を押したとき（その人の画面へ） */
   onOpen: (c: Client) => void;
+  /** 位置の無い人の行の印と操作（PRD D427） */
+  noPlace: NoPlaceRow;
 }) {
   const terms = data.org.terms;
   const staffName = (id: string | null) => (id ? (staff.find((s) => s.id === id)?.name ?? '（不明）') : '');
@@ -90,6 +96,7 @@ export function ClientsTable({
     staffName,
     today: jstDate(Date.now()),
     onOpen,
+    noPlace,
   };
   return (
     <table {...narrowRole.table} className="people-table narrow-cards" data-testid="narrow-clients">
@@ -237,6 +244,7 @@ function ClientCell({ col, c, ctx }: { col: ClientCol; c: Client; ctx: RowContex
       return (
         <td {...narrowRole.cell} data-label="住所" data-testid="client-address">
           {orDash(addressCellText(c.place, ctx.expert))}
+          <NoPlaceCell id={c.id} name={c.displayName} row={ctx.noPlace} />
         </td>
       );
     case 'plan':

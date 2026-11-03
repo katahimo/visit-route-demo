@@ -14,6 +14,7 @@ import {
 } from '../lib/clientFilter';
 import { byDisplayName, byName } from '../lib/common';
 import { dateText } from '../lib/dateText';
+import { NO_PLACE_CHIP, noPlaceIds } from '../lib/placeAll';
 import { usualStaffMap } from '../lib/usualStaff';
 import { weekDates, weekDay } from '../lib/week';
 import { useDemoData } from '../store';
@@ -32,9 +33,11 @@ export function useClientsList() {
   const activeStaff = useMemo(() => staff.filter((s) => s.active), [staff]);
   const dates = useMemo(() => weekDates(date), [date]);
   const days = useMemo(() => dates.map((d) => weekDay(data, d)), [data, dates]);
+  // 足すチップ「位置なし」（PRD D427）：位置の無い人（終了を除く）
+  const noPlaceSet = useMemo(() => noPlaceIds({ clients: data.clients, staff: [] }, 'client'), [data.clients]);
   const facts = useMemo(
-    () =>
-      filterFacts({
+    () => ({
+      ...filterFacts({
         days,
         clients,
         patterns: data.patterns,
@@ -42,7 +45,9 @@ export function useClientsList() {
         staff,
         visitTypes: data.visitTypes,
       }),
-    [days, clients, data.patterns, data.clientLeaves, data.visitTypes, staff],
+      extraTests: { [NO_PLACE_CHIP]: (c: { id: string }) => noPlaceSet.has(c.id) },
+    }),
+    [days, clients, data.patterns, data.clientLeaves, data.visitTypes, staff, noPlaceSet],
   );
   const shown = useMemo(
     () => filterClients(clients, filter, facts, resolveStaffId(filter, activeStaff, facts, clients)),

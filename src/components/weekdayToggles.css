@@ -1,4 +1,4 @@
-/* 曜日と毎月の第N のトグル（繰り返しの欄 pages/patternsForm と「予定を入れる」の引き出し components/AddPlanPanel で共通） */
+/* 曜日と毎月の第N のトグル（繰り返しの欄 pages/patternsForm と「定期の予定を入れる」の引き出し components/AddPlanPanel で共通） */
 .weekday-toggles {
   display: flex;
   gap: 6px;

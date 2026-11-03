@@ -61,6 +61,7 @@ async function openPage({
   const b = await launch();
   const ctx = await b.newContext({ viewport, ...context });
   await skipTour(ctx, { start });
+  await blockGeocode(ctx);
   const page = await ctx.newPage();
   if (clock) await page.clock.setFixedTime(NOW);
   watchErrors(page, { log: logErrors });
@@ -70,6 +71,27 @@ async function openPage({
 /** 地図のタイル（国土地理院・OpenStreetMap）は外へ取りに行かない */
 const blockTiles = (ctx) =>
   ctx.route(/cyberjapandata|tile\.openstreetmap/, (r) => r.fulfill({ status: 204, body: '' }));
+
+/**
+ * 郵便番号・住所の検索（郵便番号検索・国土地理院）も外へ出さず「見つからない」を返す（名簿を読み込むと自動で探すので。
+ * PRD D427）。偽の応答で確かめるスクリプト（e2e-address）はページの page.route が先に当たる
+ */
+const blockGeocode = (ctx) =>
+  ctx.route(/zipcloud\.ibsnet\.co\.jp|msearch\.gsi\.go\.jp/, (r) => {
+    const url = new URL(r.request().url());
+    const body = JSON.stringify(
+      url.hostname.startsWith('zipcloud') ? { status: 200, message: null, results: null } : [],
+    );
+    const cb = url.searchParams.get('callback');
+    return r
+      .fulfill({
+        status: 200,
+        contentType: cb ? 'text/javascript' : 'application/json',
+        headers: { 'access-control-allow-origin': '*' },
+        body: cb ? `${cb}(${body})` : body,
+      })
+      .catch(() => {});
+  });
 
 /**
  * pagePerStep の段ごとの文脈とページを開く：案内ツアーを見た扱い・地図のタイルを取りに行かない・ページの時計を NOW に止める・
@@ -83,6 +105,7 @@ async function openContext(
   const ctx = await b.newContext({ viewport, ...context });
   await skipTour(ctx);
   await blockTiles(ctx);
+  await blockGeocode(ctx);
   const page = await ctx.newPage();
   if (clock) await page.clock.setFixedTime(NOW);
   watchErrors(page);

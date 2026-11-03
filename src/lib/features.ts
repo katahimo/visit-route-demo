@@ -7,8 +7,20 @@ import type { Pattern, Terms } from '../contracts/documents';
 import { FEATURE_IDS, type FeatureId, type Features, isFeatureId } from '../contracts/features';
 import { isRequestedOff } from './requestedOff';
 
-/** 機能のグループ（管理者設定のスイッチの並びと見出し。PRD D326。予定・当日・人・AI の条件の順で、連絡・データは後ろ） */
-export const FEATURE_GROUPS = ['予定', '当日・問い合わせ', '人', 'AI の条件', '連絡', 'データ'] as const;
+/**
+ * 機能のグループ（管理者設定のスイッチの並びと見出し。PRD D326・D211。ADR-0092）。
+ * ひな形の差が1つのグループに集まる並び：予定の入れ方・当日・担当の決め方（基本）→ 勤務・契約（定期＋勤務・契約）→
+ * 現場との共有（定期＋月の予定・現場共有）→ 入力の補助 → 上級（すべてだけ入）
+ */
+export const FEATURE_GROUPS = [
+  '予定の入れ方',
+  '当日・問い合わせ',
+  '担当の決め方',
+  '勤務・契約',
+  '現場との共有',
+  '入力の補助',
+  '上級（組み方の調整）',
+] as const;
 export type FeatureGroup = (typeof FEATURE_GROUPS)[number];
 
 /** その機能の操作の入口（`?do=` で画面の中の欄を開く URL。例：欠勤・キャンセル＝ `/plan?do=absence`） */
@@ -40,7 +52,7 @@ export const FEATURES: readonly FeatureDef[] = [
     id: 'patterns',
     label: '繰り返し（定期パターン）',
     description: '{client}ごとに、毎週などの繰り返しの訪問（定期パターン）を決められます',
-    group: '予定',
+    group: '予定の入れ方',
     paths: [],
     hides: '{client}の画面の繰り返しの欄（今ある繰り返しの回は予定に残り、計算に効く）',
   },
@@ -48,7 +60,7 @@ export const FEATURES: readonly FeatureDef[] = [
     id: 'patternMonthly',
     label: '毎月の第N曜日・曜日ごとの時刻',
     description: '定期パターンで「毎月の第N週」や、曜日ごとに違う時刻を決められます',
-    group: '予定',
+    group: '予定の入れ方',
     requires: 'patterns',
     paths: [],
     hides: '定期パターンの欄の「毎月の第N週」「曜日ごとの時刻」（毎週〜4週ごと・同じ時刻は残る）',
@@ -57,7 +69,7 @@ export const FEATURES: readonly FeatureDef[] = [
     id: 'clientLeave',
     label: '{client}の休み',
     description: '入院などで{client}が休む期間を入れ、その間は訪問を入れません',
-    group: '予定',
+    group: '予定の入れ方',
     paths: [],
     hides: '{client}の欄の休み、休みの帯・点',
   },
@@ -65,7 +77,7 @@ export const FEATURES: readonly FeatureDef[] = [
     id: 'requestedOff',
     label: '希望休のまとめ入力',
     description: '月の予定で{staff}の希望休をまとめて入れられます',
-    group: '予定',
+    group: '予定の入れ方',
     paths: [],
     hides: '月の「休みを入れる」（希望休は残り計算に効く。「休みの人に N」の印も出る）',
   },
@@ -73,7 +85,7 @@ export const FEATURES: readonly FeatureDef[] = [
     id: 'monthPrint',
     label: '月の予定の印刷',
     description: '月の予定を紙のカレンダーの代わりに印刷できます',
-    group: '予定',
+    group: '現場との共有',
     paths: ['/month/print'],
     hides: '月の予定の「その他 ▾」の印刷、月の印刷の画面',
   },
@@ -81,7 +93,7 @@ export const FEATURES: readonly FeatureDef[] = [
     id: 'expert',
     label: 'エキスパート機能（組み方の標準・案を比べる・条件の重み）',
     description: '「組む」（4段・担当を組む）・組み方の標準・案を比べる・条件の重みの入口を出します',
-    group: 'AI の条件',
+    group: '上級（組み方の調整）',
     paths: ['/standard'],
     hides:
       'メニューの「組む」・組み方の標準・案を比べる・条件の重みの入口（切るとメニューは 予定・〈利用者さん〉・〈スタッフ〉・設定 の4つになり、予定の上の帯の未確定・組み直し・標準が無いも出ない。担当を組むは基準のプリセットで組む。入れた人・希望日時から組むふだんの道だけになる）',
@@ -91,7 +103,7 @@ export const FEATURES: readonly FeatureDef[] = [
     label: '提案を比べる',
     requires: 'expert',
     description: '同じ日の今の担当と AI の提案を並べて、点数と違いを比べられます（提案は保存しません）',
-    group: '予定',
+    group: '上級（組み方の調整）',
     paths: ['/compare'],
     hides: '比較の画面（パレット・担当を組むの「案を比べる」）',
   },
@@ -125,7 +137,7 @@ export const FEATURES: readonly FeatureDef[] = [
     id: 'compat',
     label: '相性',
     description: '{staff}と{client}の相性（◎〜×）を AI の提案に効かせます',
-    group: 'AI の条件',
+    group: '担当の決め方',
     paths: ['/compat'],
     hides: '設定の「相性」のタブ・相性の画面、〈スタッフ〉・〈利用者さん〉の画面の相性、条件の「相性」',
   },
@@ -133,7 +145,7 @@ export const FEATURES: readonly FeatureDef[] = [
     id: 'allowedStaff',
     label: '担当を限る',
     description: '{client}ごとに、担当できる{staff}を決められます',
-    group: 'AI の条件',
+    group: '担当の決め方',
     paths: [],
     hides: '{client}の「担当できる人」、絞り込みのチップ',
   },
@@ -141,7 +153,7 @@ export const FEATURES: readonly FeatureDef[] = [
     id: 'clientStage',
     label: '段階・紹介元',
     description: '相談受付 → 契約 → 利用中の段階と、紹介元を記録します',
-    group: '人',
+    group: '勤務・契約',
     paths: [],
     hides: '段階の5つの選択・紹介元の欄（切ると「利用中／終了」の2つだけ選べる。段階のデータは残す）',
   },
@@ -149,7 +161,7 @@ export const FEATURES: readonly FeatureDef[] = [
     id: 'visitNotes',
     label: '訪問先の決まりごと',
     description: '入り方・鍵・駐車場・注意を記録して、予定と一緒に見られます',
-    group: '人',
+    group: '現場との共有',
     paths: [],
     hides: '入り方・鍵・駐車場・注意の欄と表示',
   },
@@ -157,7 +169,7 @@ export const FEATURES: readonly FeatureDef[] = [
     id: 'offboard',
     label: '退職・担当替え',
     description: '{staff}の最終勤務日を入れ、担当をまとめて振り直します',
-    group: '人',
+    group: '勤務・契約',
     paths: [],
     hides: '最終勤務日の欄と一括の振り直し、名簿の読み込みの知らせ',
   },
@@ -165,7 +177,7 @@ export const FEATURES: readonly FeatureDef[] = [
     id: 'workload',
     label: '勤務の見込み',
     description: '{staff}ごとの月の稼働・拘束の見込みを見ます',
-    group: '人',
+    group: '勤務・契約',
     paths: ['/workload'],
     hides: '勤務の見込みの画面とその入口、拘束の上限の帯、行き止まりから移るリンク',
   },
@@ -173,7 +185,7 @@ export const FEATURES: readonly FeatureDef[] = [
     id: 'fare',
     label: '交通費',
     description: '勤務の見込みに、移動の距離から交通費の見込みを出します',
-    group: '人',
+    group: '勤務・契約',
     requires: 'workload',
     paths: [],
     hides: '勤務の見込みの交通費の列と単価の欄',
@@ -183,7 +195,7 @@ export const FEATURES: readonly FeatureDef[] = [
     requires: 'expert',
     label: '条件の重みとプリセット',
     description: 'AI の条件の重み・特性の項目・プリセットを変えられます',
-    group: 'AI の条件',
+    group: '上級（組み方の調整）',
     paths: ['/rules', '/items'],
     hides:
       '組み方の標準から開く「条件の重み」の画面と設定の「特性の項目」のタブ、点数の理由（切ると基準のプリセットだけで組む）',
@@ -192,7 +204,7 @@ export const FEATURES: readonly FeatureDef[] = [
     id: 'mail',
     label: 'メール',
     description: '予定・連絡・案内文を、端末のメールアプリで開きます',
-    group: '連絡',
+    group: '現場との共有',
     paths: [],
     hides: 'メールのボタン・欄、メールアドレスの欄',
   },
@@ -200,7 +212,7 @@ export const FEATURES: readonly FeatureDef[] = [
     id: 'mapsLink',
     label: '道順のリンク',
     description: '訪問先への道順を Google マップで開くリンクを出します',
-    group: '連絡',
+    group: '現場との共有',
     paths: [],
     hides: 'Google マップのリンク',
   },
@@ -208,7 +220,7 @@ export const FEATURES: readonly FeatureDef[] = [
     id: 'geocode',
     label: '郵便番号・住所の検索',
     description: '郵便番号・住所から地図の位置を探します',
-    group: '連絡',
+    group: '入力の補助',
     paths: [],
     hides: '検索のボタン・まとめて地図に置く（地図のクリックで置くのは残る）',
   },
@@ -216,9 +228,9 @@ export const FEATURES: readonly FeatureDef[] = [
     id: 'excel',
     label: 'Excel の入出力',
     description: 'データを Excel のブックで、名簿を Excel・CSV で書き出し・読み込みします',
-    group: 'データ',
+    group: '入力の補助',
     paths: [],
-    hides: 'データの画面の Excel の欄・一覧の名簿の欄（Excel・CSV）。控え（JSON）は残る',
+    hides: 'データの画面の Excel の欄・一覧の名簿の欄（Excel・CSV）。控えは残る',
   },
 ];
 
@@ -296,8 +308,18 @@ export function isFeatureOffState(state: unknown): state is FeatureOffState {
 export const TEMPLATE_IDS = ['oneOff', 'basic', 'laborContract', 'monthlyField', 'all'] as const;
 export type TemplateId = (typeof TEMPLATE_IDS)[number];
 
-/** ひな形：名前・1行の説明・入れる機能（ほかは切） */
-export type TemplateDef = { id: TemplateId; label: string; description: string; on: readonly FeatureId[] };
+/**
+ * ひな形：名前・近い業種の例・1行の説明（どんなときに使うか）・入れる機能（ほかは切）。
+ * 名前は機能のまとまりで、法人名は出さない（PRD D212。ADR-0092）。最初の2問の問2の選択肢もここから引く（lib/firstRun）
+ */
+export type TemplateDef = {
+  id: TemplateId;
+  label: string;
+  /** 近い業種の例（「例：」は付けない。無ければ null） */
+  example: string | null;
+  description: string;
+  on: readonly FeatureId[];
+};
 
 /** 基本のひな形で入れる機能（予定・繰り返し・毎月の第N・曜日ごとの時刻・〈利用者さん〉の休み・欠勤・キャンセル・空き状況・相性・決まりごと・退職・担当替え・道順のリンク・住所の検索・Excel の入出力。ADR-0086・ADR-0091） */
 const BASIC_ON: readonly FeatureId[] = [
@@ -314,49 +336,70 @@ const BASIC_ON: readonly FeatureId[] = [
   'excel',
 ];
 
-/** 単発のみのひな形で入れる機能：基本から繰り返し（patterns・patternMonthly）と決まりごと（visitNotes）を外したもの（ADR-0072 第2段・ADR-0086・ADR-0091。PRD D378） */
+/** 単発の予約のひな形で入れる機能：基本から繰り返し（patterns・patternMonthly）と決まりごと（visitNotes）を外したもの（ADR-0072 第2段・ADR-0086・ADR-0091。PRD D378） */
 const ONE_OFF_ON: readonly FeatureId[] = BASIC_ON.filter(
   (f) => f !== 'patterns' && f !== 'patternMonthly' && f !== 'visitNotes',
 );
 
-/** ひな形の5つ（ADR-0028 の表に、ADR-0072 の単発のみを足したもの） */
+/**
+ * ひな形の5つ（ADR-0028 の表に ADR-0072 の単発を足し、ADR-0092 で名前と説明を直したもの）。
+ * 並びは 単発 → 定期の基本 → 基本に足す2つ → すべて（一覧は「基本との差」で読む）
+ */
 export const TEMPLATES: readonly TemplateDef[] = [
   {
     id: 'oneOff',
-    label: '単発のみ',
-    description:
-      'ベビーシッター型など、日ごとの単発の予約だけを入れるとき。繰り返しの欄を隠し、予定のカレンダーで足した訪問をその日のぶん自動で組みます',
+    label: '単発の予約',
+    example: 'ベビーシッター',
+    description: '日ごとに入る単発の予約に担当を組みます。繰り返しの欄を隠し、足した予約はその日のぶん自動で組みます',
     on: ONE_OFF_ON,
   },
   {
     id: 'basic',
-    label: '基本',
+    label: '定期の訪問（基本）',
+    example: null,
     description:
-      '予定（月・週・日。毎月の第N・曜日ごとの時刻も）と休み・欠勤・キャンセル・空き状況・相性・決まりごと・退職・担当替え・道順・住所の検索・Excel の入出力。まず割当と当日の対応を見たいとき',
+      '毎週・毎月の決まった訪問に担当を組み、休み・欠勤・キャンセル・空き状況・退職に対応します。まず割当と当日の対応を見たいとき',
     on: BASIC_ON,
   },
   {
     id: 'laborContract',
-    label: '労務・契約管理',
-    description: '基本に、勤務の見込み・交通費・段階・紹介元。拘束時間・交通費・契約の段階を見たいとき',
+    label: '定期＋勤務・契約',
+    example: '訪問介護・移動支援',
+    description: '定期の訪問に、{staff}の拘束・稼働の見込みと交通費、相談から契約までの段階と紹介元を足します',
     on: [...BASIC_ON, 'clientStage', 'workload', 'fare'],
   },
   {
     id: 'monthlyField',
-    label: '月次予定・現場共有',
-    description: '基本に、希望休・月の印刷・案内文・担当を限る。月の予定が複雑なとき',
+    label: '定期＋月の予定・現場共有',
+    example: '訪問看護',
+    description: '定期の訪問に、希望休のまとめ入力・月の予定の印刷・空き枠の案内文・担当できる人を限るを足します',
     on: [...BASIC_ON, 'requestedOff', 'monthPrint', 'vacancyNotice', 'allowedStaff'],
   },
   {
     id: 'all',
-    label: 'すべて',
-    description: 'すべての機能を入れます。条件を試す・全機能を見せるとき',
+    label: 'すべての機能',
+    example: null,
+    description: '組み方の標準・案を比べる・条件の重みを含め、すべてを入れます。条件を試す・全機能を見せるとき',
     on: FEATURE_IDS,
   },
 ];
 
 /** ひな形の1つ */
 export const templateDef = (id: TemplateId): TemplateDef => TEMPLATES.find((t) => t.id === id)!;
+
+/**
+ * ひな形の一覧に出す「基本との差」（PRD D212。ADR-0092）：基本に足す機能・基本から外す機能（表の順）。
+ * 基本とすべての機能は差を出さない（基本は差が無く、すべては足す数が多い）ので null
+ */
+export function templateBasicDelta(id: TemplateId): { add: FeatureId[]; drop: FeatureId[] } | null {
+  if (id === 'basic' || id === 'all') return null;
+  const on = new Set(templateDef(id).on);
+  const basic = new Set(BASIC_ON);
+  return {
+    add: FEATURE_IDS.filter((f) => on.has(f) && !basic.has(f)),
+    drop: FEATURE_IDS.filter((f) => !on.has(f) && basic.has(f)),
+  };
+}
 
 /** ひな形を適用したときの入り切り（全22の ID を明示して書く。業種とは連動しない） */
 export function applyTemplate(id: TemplateId): Features {

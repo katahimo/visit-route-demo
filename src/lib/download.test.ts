@@ -4,8 +4,8 @@ import { backupFileName, backupNote } from './download';
 
 describe('backupFileName', () => {
   it('いまのデータはデータの画面と同じ名前、壊れたデータは -broken を付ける', () => {
-    expect(backupFileName('2026-10-21')).toBe('visit-route-demo-2026-10-21.json');
-    expect(backupFileName('2026-10-21', 'broken')).toBe('visit-route-demo-2026-10-21-broken.json');
+    expect(backupFileName('2026-10-21')).toBe('staff-assign-demo-2026-10-21.json');
+    expect(backupFileName('2026-10-21', 'broken')).toBe('staff-assign-demo-2026-10-21-broken.json');
   });
 });
 

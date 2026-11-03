@@ -24,7 +24,7 @@ export type ProblemVisit = {
 };
 
 export type Reason = {
-  /** Rule.id。移動・待ちは 'travel' / 'wait'、可否で外れた原因は Rule.id か 'slot' / 'time' / 'noPlace' */
+  /** Rule.id。移動・待ちは 'travel' / 'wait'、可否で外れた原因は Rule.id か 'slot' / 'time'。'noPlace' は位置が未登録の点（可否にはしない。ADR-0093） */
   ruleId: string;
   label: string;
   /** 点（正＝悪い、負＝良い）。可否で外れた原因は Infinity */

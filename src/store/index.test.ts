@@ -232,7 +232,7 @@ describe('初期状態に戻す（最後の問2の答え。PRD D216）', () => {
   });
 
   it('単発で始めたあとは、単発のデモデータ（呼び名・ひな形）で作り直す。入り切りは今のまま', () => {
-    startWithAnswer({ start: 'own', booking: 'oneOff' });
+    startWithAnswer({ start: 'own', use: 'oneOff' });
     expect(mem.get(LAST_BOOKING_KEY)).toBe('oneOff');
     const d = reset();
     expect(d.org.terms?.client).toBe('お客様');
@@ -241,10 +241,10 @@ describe('初期状態に戻す（最後の問2の答え。PRD D216）', () => {
   });
 
   it('定期で始めたあとは定期。印「all」のときは今までどおり', () => {
-    startWithAnswer({ start: 'demo', booking: 'oneOff' });
-    startWithAnswer({ start: 'demo', booking: 'regular' });
+    startWithAnswer({ start: 'demo', use: 'oneOff' });
+    startWithAnswer({ start: 'demo', use: 'basic' });
     expect(reset().org.terms?.client).toBe('利用者さん');
-    startWithAnswer({ start: 'demo', booking: 'oneOff' });
+    startWithAnswer({ start: 'demo', use: 'oneOff' });
     mem.set(FEATURES_START_KEY, FEATURES_START_ALL);
     expect(reset().org.terms?.client).toBe('利用者さん');
   });
@@ -275,9 +275,9 @@ describe('デモを作った直後に組む印（PRD D409）', () => {
 
   it('「デモで試す」は書き、「自分のデータで始める」・印「all」は書かない', () => {
     const ss = mockSession();
-    startWithAnswer({ start: 'demo', booking: 'regular' });
+    startWithAnswer({ start: 'demo', use: 'basic' });
     expect(ss.get(ARRANGE_PENDING_KEY)).toBe('1');
-    startWithAnswer({ start: 'own', booking: 'regular' });
+    startWithAnswer({ start: 'own', use: 'basic' });
     expect(ss.has(ARRANGE_PENDING_KEY)).toBe(false);
     mem.set(FEATURES_START_KEY, FEATURES_START_ALL);
     reset();

@@ -177,7 +177,7 @@ function usePlanLists(date: string, c: PlanCore) {
     overSpan,
     leaveNames,
     sortedVisits,
-    /** 計算に入れなかった訪問（〈利用者さん〉が休止中・位置が未登録など） */
+    /** 計算に入れなかった訪問（〈利用者さん〉が休止中など。位置が未登録の訪問は入れる。ADR-0093） */
     notInProblem: problem ? c.visits.filter((v) => !problem.visits.some((p) => p.id === v.id)) : [],
     /** 〈利用者さん〉の休みのため無しの訪問（開始の順。一覧の後ろに薄く出す）と、休みの理由 */
     leaveSorted: [...m.leaveVisits].sort((a, b) => a.earliestStart.localeCompare(b.earliestStart)),

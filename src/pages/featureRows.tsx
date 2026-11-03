@@ -1,9 +1,10 @@
+import { ToggleRight } from 'lucide-react';
 import { useId } from 'react';
 import { Hint } from '../components/ui';
 import type { Terms } from '../contracts/documents';
 import type { Features } from '../contracts/features';
-import { FEATURES, type FeatureDef, type FeatureGroup, isOn } from '../lib/features';
-import { featureRowText } from '../lib/settingsView';
+import { FEATURE_GROUPS, FEATURES, type FeatureDef, type FeatureGroup, isOn } from '../lib/features';
+import { featureRowText, groupOnCountText } from '../lib/settingsView';
 
 /** グループごとのスイッチ（見出しはグループの名前） */
 export type RowProps = {
@@ -12,14 +13,38 @@ export type RowProps = {
   onToggle: (f: FeatureDef) => Promise<void>;
 };
 
-export function FeatureGroupCard({ group, ...props }: RowProps & { group: FeatureGroup }) {
+/**
+ * 機能の入・切（PRD D210・D395。ADR-0092）：1枚のカードに、グループごとの見出し（入っている数を添える）とスイッチを並べる。
+ * グループをカードに分けないので、下のメールの設定と見分けやすい
+ */
+export function FeatureSwitchesCard(props: RowProps) {
+  const titleId = useId();
+  return (
+    <section className="card stack" aria-labelledby={titleId} data-testid="feature-switches">
+      <h2 id={titleId} className="feature-section-title">
+        <ToggleRight size={18} aria-hidden="true" />
+        機能の入・切
+      </h2>
+      <p className="sub">ひな形を適用したあと、ここで1つずつ直せます。押すとすぐ保存します。</p>
+      {FEATURE_GROUPS.map((g) => (
+        <FeatureGroupBlock key={g} group={g} {...props} />
+      ))}
+    </section>
+  );
+}
+
+function FeatureGroupBlock({ group, ...props }: RowProps & { group: FeatureGroup }) {
   const titleId = useId();
   const list = FEATURES.filter((f) => f.group === group);
+  const onCount = list.filter((f) => isOn(props.features, f.id)).length;
   return (
-    <section className="card stack" aria-labelledby={titleId} data-testid="feature-group">
-      <h2 id={titleId} className="feature-section-title">
+    <section className="feature-group" aria-labelledby={titleId} data-testid="feature-group">
+      <h3 id={titleId} className="feature-group-title">
         {group}
-      </h2>
+        <span className="feature-group-count" data-testid="feature-group-count">
+          {groupOnCountText(onCount, list.length)}
+        </span>
+      </h3>
       <ul className="feature-list">
         {list.map((f) => (
           <FeatureRow key={f.id} f={f} {...props} />

@@ -8,7 +8,7 @@ describe('fileNameText', () => {
     expect(fileNameText('  ')).toBe('ファイルを選んでいません');
   });
   it('選んだらファイル名', () => {
-    expect(fileNameText('visit-route-demo-2026-10-18.json')).toBe('選んだファイル：visit-route-demo-2026-10-18.json');
+    expect(fileNameText('staff-assign-demo-2026-10-18.json')).toBe('選んだファイル：staff-assign-demo-2026-10-18.json');
     expect(fileNameText(' 名簿.xlsx ')).toBe('選んだファイル：名簿.xlsx');
   });
   it('ボタンは日本語', () => {

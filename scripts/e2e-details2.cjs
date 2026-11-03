@@ -427,7 +427,7 @@ async function roster(page, dlg) {
       page.getByTestId(`roster-export-${format}`).click(),
     ]);
     check(
-      download.suggestedFilename().startsWith('visit-route-demo-staff-') &&
+      download.suggestedFilename().startsWith('staff-assign-demo-staff-') &&
         download.suggestedFilename().endsWith(`.${format}`),
       `名簿の欄：${format} で書き出す（ファイル名）`,
       download.suggestedFilename(),
@@ -458,7 +458,7 @@ async function roster(page, dlg) {
     const msg = dlg.messages.slice(asked).join('\n');
     check(
       s.lastDay === LAST_DAY &&
-        msg.includes(format === 'csv' ? 'CSV（文字コード UTF-8）として読みました' : 'Excel のブックとして読みました'),
+        msg.includes(format === 'csv' ? 'CSV ファイルを読みました' : 'Excel ファイルを読みました'),
       `${format}：読み込むと最終勤務日が入る（確認の本文にファイルの形）`,
       { lastDay: s.lastDay, msg: msg.slice(0, 200) },
     );
@@ -535,7 +535,7 @@ async function roster(page, dlg) {
     { hanako, taro },
   );
   check(
-    ledgerMsg.includes('顧客台帳の形として読みました') &&
+    ledgerMsg.includes('顧客台帳の形の CSV ファイルを読みました') &&
       ledgerMsg.includes('読まなかった列：') &&
       ledgerMsg.includes('請求方法'),
     '顧客台帳の形：確認の本文に形と読まなかった列を出す',

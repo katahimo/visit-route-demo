@@ -99,9 +99,9 @@ async function allOn(page) {
   );
   // 設定の見せ方（PRD D395。ADR-0074）：ひな形は今のものの名前だけ出して畳み、スイッチの行は名前と1行の説明（隠れるものは ⓘ）
   check(
-    (await page.getByTestId('feature-template-current').innerText()).trim() === 'いま：すべて' &&
-      (await page.getByRole('img', { name: '今のひな形：すべて' }).count()) === 1,
-    'ひな形：見出しの横に「いま：すべて」だけ出す（読み上げは「今のひな形：すべて」）',
+    (await page.getByTestId('feature-template-current').innerText()).trim() === 'いま：すべての機能' &&
+      (await page.getByRole('img', { name: '今のひな形：すべての機能' }).count()) === 1,
+    'ひな形：見出しの横に「いま：すべての機能」だけ出す（読み上げは「今のひな形：すべての機能」）',
   );
   check(
     (await page.getByTestId('feature-templates-fold').getAttribute('open')) === null &&
@@ -158,6 +158,19 @@ async function allOn(page) {
       els.map((el) => ({ checked: el.getAttribute('aria-checked'), disabled: el.getAttribute('aria-disabled') })),
     );
   check(sw.length === 22 && sw.every((s) => s.checked === 'true' && s.disabled === null), 'スイッチは22・すべて入', sw);
+  // スイッチは1枚のカード（feature-switches）の中にグループ（ADR-0092）。各グループ見出しに「N / M 入」
+  const groups = await page.getByTestId('feature-switches').getByTestId('feature-group').count();
+  const counts = await page.getByTestId('feature-group-count').allInnerTexts();
+  check(
+    groups === 7 && (await page.getByTestId('feature-group').count()) === 7 && counts.length === 7,
+    '管理者設定のスイッチは1枚のカードの中にグループ7つ',
+    { groups, counts },
+  );
+  check(
+    counts.every((t) => /^(\d+) \/ \1 入$/.test(t.replace(/\s+/g, ' ').trim())),
+    'すべて入では各グループの見出しが「M / M 入」',
+    counts,
+  );
   const vac = page.getByRole('switch', { name: '空き状況', exact: true });
   check((await vac.count()) === 1, 'スイッチの名前（読み上げ）：「空き状況」');
   // ⓘ を閉じたまま、AX ツリーでの説明（読み上げ）に説明と隠れるものが入る（閉じた <details> の中は入らないので、外の写しを指す）
@@ -381,7 +394,7 @@ async function templates(page, dlg, ctx) {
   // 取り消すと変わらない
   const msg0 = await applyTemplate(page, dlg, 'basic', false);
   check(
-    msg0.length === 1 && msg0[0].includes('ひな形「基本」を適用しますか？'),
+    msg0.length === 1 && msg0[0].includes('ひな形「定期の訪問（基本）」を適用しますか？'),
     '適用する前に独自の確認（見出し）',
     msg0,
   );
@@ -394,7 +407,10 @@ async function templates(page, dlg, ctx) {
 
   // 基本（管理者設定で適用する）
   await applyTemplate(page, dlg, 'basic');
-  await page.locator('.toast').filter({ hasText: 'ひな形「基本」を適用しました' }).waitFor({ timeout: 5000 });
+  await page
+    .locator('.toast')
+    .filter({ hasText: 'ひな形「定期の訪問（基本）」を適用しました' })
+    .waitFor({ timeout: 5000 });
   check(same(await storedFeatures(page), asFeatures(TEMPLATE_ON.basic)), '基本：全22の ID を明示して書く');
   await checkTemplate(page, 'basic');
   await page.screenshot({ path: path.join(OUT_DIR, 'settings-basic.png'), fullPage: true });

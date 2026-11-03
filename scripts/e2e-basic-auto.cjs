@@ -1,13 +1,13 @@
 // 「基本」（初めて開いたときの最初の2問に「デモで試す・定期」で答えたひな形。エキスパート機能は切）で予定が自動で決まること
 // （自動の組み PRD D372〜D378・決まった予定 PRD D382。ADR-0072・ADR-0073）を本物のブラウザで確かめる：
 // 自動の組み
-//  1 日の予定の「予定を入れる」で担当を選ばずに単発の訪問を足す → 知らせ「N件の担当を組みました」と［元に戻す］が出てその訪問に担当が付く（ピンは付けない）
+//  1 日の予定の「訪問を1件足す」で担当を選ばずに単発の訪問を足す → 知らせ「N件の担当を組みました」と［元に戻す］が出てその訪問に担当が付く（ピンは付けない）
 //    → ［元に戻す］で担当なしに戻る（訪問は残る）
 //  2 予定の上の要対応の帯の従のボタン［要対応を組む］：押すと組まれて件数が減る（エキスパート機能が入なら出さない）
 //  2b 間に合わない（時間休で時間の約束に間に合わない）訪問が帯に「間に合わない N件」と出て、［要対応を組む］で別の人に組み直され、帯から消える（ADR-0089）
 //  3 〈利用者さん〉の画面で担当なしの繰り返しを足す → 自動で組まれ、繰り返しの担当（usualStaffId）が書かれて行に出る
 //    （組んだ回は訪問として保存され、保存の直後に別の画面へ移っても組みは続く）
-//  4 ひな形「単発のみ」を当てると〈利用者さん〉の画面の予定のタブから繰り返しの欄が消える（入り切りの全体は e2e-features・e2e-features2）
+//  4 ひな形「単発の予約」を当てると〈利用者さん〉の画面の予定のタブから繰り返しの欄が消える（入り切りの全体は e2e-features・e2e-features2）
 // 決まった予定
 //  5 日の画面：確定のボタン・「確定済み」「まだ伝えていない」の印が無い（初期データは伝えた記録なし）
 //  5b 要対応（担当なし）が残る日は、手で直しても伝えた記録を付けず、もう一度直しても「変更あり」が出ない（ADR-0089）
@@ -254,7 +254,7 @@ async function pattern(page) {
   check(!!findVisit(d1, rows[0]?.id ?? ''), '回の訪問が見つかる（前提）');
 }
 
-/** 4 ひな形「単発のみ」を当てると繰り返しの欄が消える */
+/** 4 ひな形「単発の予約」を当てると繰り返しの欄が消える */
 async function oneOff(page, dlg) {
   await freshAsked(page, '/clients/c1', '[data-testid="pcal"]', UNARRANGED);
   check((await page.getByTestId('patterns-section').count()) === 1, '前提：初めは繰り返しの欄が出る（基本）');
@@ -262,15 +262,15 @@ async function oneOff(page, dlg) {
   const d = await dataWhen(page, (x) => x.org.features.patterns === false);
   check(
     d.org.features.patterns === false && d.org.features.expert === false,
-    '単発のみ：繰り返しの機能が切',
+    '単発の予約：繰り返しの機能が切',
     d.org.features,
   );
   await page.goto('about:blank');
   await page.goto(`${BASE}#/clients/c1`);
   await page.getByTestId('pcal').waitFor({ timeout: 60000 });
   await settle(page, 400);
-  check((await page.getByTestId('patterns-section').count()) === 0, '単発のみ：予定のタブから繰り返しの欄が消える');
-  check((await page.getByTestId('pattern-add').count()) === 0, '単発のみ：「繰り返しを足す」も出ない');
+  check((await page.getByTestId('patterns-section').count()) === 0, '単発の予約：予定のタブから繰り返しの欄が消える');
+  check((await page.getByTestId('pattern-add').count()) === 0, '単発の予約：「繰り返しを足す」も出ない');
 }
 
 /** 今日の最初の担当の列の最初の帯の訪問 ID */
@@ -554,7 +554,7 @@ const steps = sharedPage({
     ['2 要対応の帯の［要対応を組む］', bandArrange],
     ['2b 間に合わない訪問を［要対応を組む］で組み直す', lateArrange],
     ['3 繰り返しを足すと組まれ、繰り返しの担当が書かれる', pattern],
-    ['4 ひな形「単発のみ」で繰り返しの欄が消える', oneOff],
+    ['4 ひな形「単発の予約」で繰り返しの欄が消える', oneOff],
     ['5 切の日の画面に確定の段階が無い', plain],
     ['5b 要対応が残る日は伝えた記録・変更ありが出ない', noTellWithIssues],
     ['6 手で直すと自動で決まる', settle1],

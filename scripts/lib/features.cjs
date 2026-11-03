@@ -52,11 +52,11 @@ const TEMPLATE_ON = {
   all: FEATURE_IDS,
 };
 const TEMPLATE_LABEL = {
-  oneOff: '単発のみ',
-  basic: '基本',
-  laborContract: '労務・契約管理',
-  monthlyField: '月次予定・現場共有',
-  all: 'すべて',
+  oneOff: '単発の予約',
+  basic: '定期の訪問（基本）',
+  laborContract: '定期＋勤務・契約',
+  monthlyField: '定期＋月の予定・現場共有',
+  all: 'すべての機能',
 };
 const asFeatures = (on) => Object.fromEntries(FEATURE_IDS.map((id) => [id, on.includes(id)]));
 

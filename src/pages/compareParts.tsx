@@ -488,7 +488,7 @@ export function UnassignedCard({
   );
 }
 
-/** 計算に入れなかった訪問（〈利用者さん〉が休止中・位置が未登録など） */
+/** 計算に入れなかった訪問（〈利用者さん〉が休止中など。位置が未登録の訪問は入れる。ADR-0093） */
 export function NotInProblemCard({
   visits,
   visitLabel,
@@ -504,7 +504,7 @@ export function NotInProblemCard({
         icon={TriangleAlert}
         aside={
           <Hint>
-            {clientTerm}が休止中・位置が未登録などの訪問です（{clientTerm}の画面で直せます）。
+            {clientTerm}が休止中などの訪問です（{clientTerm}の画面で直せます）。
           </Hint>
         }
       >

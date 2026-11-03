@@ -1,9 +1,13 @@
 // 名簿の CSV（ADR-0068）：書き出し → 読み込みで変わらない・文字コードを見分ける・名簿のブックと同じ読み方
+import ExcelJS from 'exceljs';
 import { describe, expect, it } from 'vitest';
-import type { ImportError, RosterImportResult } from '../contracts/data';
+import type { DemoData, ImportError, RosterImportResult } from '../contracts/data';
+import { DEFAULT_TERMS } from '../domain/terms';
 import { decodeText, parseCsv, toCsv } from '../lib/csv';
+import { createBlankData, REGULAR_VISIT_TYPES } from '../seed/blank';
 import { base } from './excel.testkit';
-import { exportRosterCsv, importRoster } from './index';
+import { exportRosterCsv, exportRosterWorkbook, importRoster } from './index';
+import { personSheetNames } from './text';
 
 const rok = (r: RosterImportResult | ImportError): RosterImportResult => {
   if ('code' in r) throw new Error(`読み込めなかった：${r.message}`);
@@ -75,5 +79,55 @@ describe('名簿の CSV（ADR-0068）', () => {
     expect(await importRoster(csvBuf(''), d, 'client', 'merge')).toMatchObject({
       message: 'CSV のファイルが空です',
     });
+  });
+
+  it('0人のときの書き出しは列名の行だけ（テンプレート）。名前だけ書き足して読むと、その人が既定値（画面で足すときと同じ）で足される（ADR-0092）', async () => {
+    const blank: DemoData = createBlankData(
+      '2026-10-30',
+      { industry: 'care', terms: DEFAULT_TERMS.nursing, features: {} },
+      REGULAR_VISIT_TYPES,
+    );
+    for (const kind of ['client', 'staff'] as const) {
+      /** 名前の列の見出し（〈利用者さん〉は表示名） */
+      const nameHead = kind === 'staff' ? '名前' : '表示名';
+      /** 名前のほかは空のまま（新しい人の空のセルは既定値） */
+      const required: Record<string, string> = {};
+      // CSV：列名の1行だけ
+      const { text } = decodeText(new Uint8Array(await exportRosterCsv(blank, kind).arrayBuffer()));
+      const rows = parseCsv(text);
+      expect(rows).toHaveLength(1);
+      const head = rows[0]!;
+      expect(head).toContain(nameHead);
+      const added = head.map(() => '');
+      added[head.indexOf(nameHead)] = '書き足した人';
+      for (const [h, v] of Object.entries(required)) added[head.indexOf(h)] = v;
+      const fromCsv = rok(await importRoster(csvBuf(toCsv([head, added])), blank, kind, 'merge'));
+      expect(fromCsv.added).toEqual(['書き足した人']);
+      if (kind === 'staff') {
+        const st = fromCsv.data.staff.find((x) => x.name === '書き足した人')!;
+        expect([st.travelMode, st.shiftStart, st.shiftEnd, st.workDays, st.active]).toEqual([
+          'DRIVE',
+          '09:00',
+          '18:00',
+          [1, 2, 3, 4, 5],
+          true,
+        ]);
+      } else {
+        expect(fromCsv.data.clients.find((x) => x.displayName === '書き足した人')?.active).toBe(true);
+      }
+
+      // Excel：名簿のシートの列名の1行だけ
+      const wb = new ExcelJS.Workbook();
+      await wb.xlsx.load(await (await exportRosterWorkbook(blank, kind)).arrayBuffer());
+      const ws = wb.getWorksheet(personSheetNames(blank.org.terms)[kind])!;
+      expect(ws.actualRowCount).toBe(1);
+      const nameCol = (ws.getRow(1).values as unknown[]).indexOf(nameHead);
+      expect(nameCol).toBeGreaterThan(0);
+      const headValues = ws.getRow(1).values as unknown[];
+      ws.getRow(2).getCell(nameCol).value = '書き足した人';
+      for (const [h, v] of Object.entries(required)) ws.getRow(2).getCell(headValues.indexOf(h)).value = v;
+      const fromXlsx = rok(await importRoster((await wb.xlsx.writeBuffer()) as ArrayBuffer, blank, kind, 'merge'));
+      expect(fromXlsx.added).toEqual(['書き足した人']);
+    }
   });
 });

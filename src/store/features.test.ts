@@ -106,7 +106,7 @@ describe('初めて開いたとき（PRD D276・D379。ADR-0073）', () => {
   });
   it('答えるとデータを作って書く：呼び名・ひな形は答えどおり。次に開いたときは2問を出さない', () => {
     loadWithStatus();
-    const d = startWithAnswer({ start: 'demo', booking: 'oneOff' });
+    const d = startWithAnswer({ start: 'demo', use: 'oneOff' });
     expect(d.org.terms).toEqual({ client: 'お客様', staff: 'シッター' });
     expect(d.org.features).toEqual(applyTemplate('oneOff'));
     const saved = JSON.parse(mem.get(STORAGE_KEY) ?? '{}') as DemoData;
@@ -117,7 +117,7 @@ describe('初めて開いたとき（PRD D276・D379。ADR-0073）', () => {
   });
   it('自分のデータで始めると、空のデータ（人・訪問なし）が書かれ、読み直しても壊れない', () => {
     loadWithStatus();
-    startWithAnswer({ start: 'own', booking: 'regular' });
+    startWithAnswer({ start: 'own', use: 'basic' });
     const r = loadWithStatus();
     expect(r.broken).toBe(false);
     expect(r.data.clients).toEqual([]);

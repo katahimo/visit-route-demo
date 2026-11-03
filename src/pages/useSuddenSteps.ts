@@ -1,4 +1,4 @@
-// 「欠勤・キャンセル」の欄（PRD D167〜D172・D244〜D246・D414）の状態と処理：段（1 何が起きたか・2 連絡・確定）・何が起きたか・
+// 「欠勤・キャンセル」の欄（PRD D167〜D172・D244〜D246・D414）の状態と処理：段（1 休み・キャンセルを選ぶ・2 連絡・確定）・種類・
 // 人と欠勤の入力・訪問・済んだこと・［連絡した］の印・見込み（absencePreviewOf）。見た目は suddenSteps.tsx・suddenContactStep.tsx と SuddenPanel
 import { type ReactNode, useMemo, useState } from 'react';
 import type { DemoData } from '../contracts/data';
@@ -142,7 +142,7 @@ export function useSuddenSteps(p: SuddenPanelProps) {
     setStaffId(id);
     setDraft(draftOf(p.slotsOf.get(id)?.absence ?? null));
   };
-  /** 何が起きたかを選ぶ。種類を変えたら、前に選んだ人・訪問・欠勤の入力を消す */
+  /** 休み・キャンセルを選ぶ。種類を変えたら、前に選んだ人・訪問・欠勤の入力を消す */
   const chooseKind = (k: SuddenKind) => {
     if (k !== kind) {
       setStaffId('');

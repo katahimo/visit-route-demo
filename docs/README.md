@@ -17,7 +17,7 @@
 | なぜその案にしたか | [adr/](adr/)（下の一覧） |
 | まだ決まっていないこと | [design.md](design.md) §8・[prd.md](prd.md) §8 |
 | e2e の走らせ方・書き方 | [e2e.md](e2e.md) |
-| 事業所向けの取扱説明書（台帳 CSV の取り込み・デモ例） | [manual/取扱説明書.md](manual/取扱説明書.md)（Word 版 `manual/取扱説明書.docx`。サンプル CSV は `manual/samples/`） |
+| 事業所向けの取扱説明書（型ごと。名簿・予約の CSV の取り込み・デモ例） | 訪問介護・移動支援 [manual/取扱説明書_訪問介護.md](manual/取扱説明書_訪問介護.md)・訪問看護 [manual/取扱説明書_訪問看護.md](manual/取扱説明書_訪問看護.md)・ベビーシッター [manual/取扱説明書_ベビーシッター.md](manual/取扱説明書_ベビーシッター.md)（Word 版は同じ名前の `.docx`。サンプル CSV は `manual/samples/`） |
 
 ## 画面別の設計（design/）
 
@@ -118,7 +118,7 @@
 | [0073](adr/0073-first-run-two-questions-auto-settle-less-on-screen.md) | 最初の2問・決まった予定・例外だけ見せる |
 | [0074](adr/0074-expert-on-screens-built-on-expert-off.md) | エキスパート機能が入の画面も切の作りに |
 | [0075](adr/0075-other-software-csv-forms.md) | ほかのソフトの CSV を形の一覧で |
-| [0076](adr/0076-roster-import-then-place-all.md) | 名簿の読み込み後にまとめて地図に置く |
+| [0076](adr/0076-roster-import-then-place-all.md) | 名簿の読み込み後にまとめて地図に置く（ADR-0094 で置き換え） |
 | [0077](adr/0077-attention-band-arrange-and-go.md) | 要対応の帯から担当なしを組む |
 | [0078](adr/0078-vacancy-in-menu.md) | 空き状況をメニューに（下のタブは 0080） |
 | [0079](adr/0079-demo-starts-arranged-month-exceptions-only.md) | デモは組み終えて始め、月のマスは例外だけ |
@@ -134,6 +134,9 @@
 | [0089](adr/0089-band-late-split-rearrange-exceptions-tell-clean-days.md) | 帯の重なりと間に合わないを分け・要対応も組み直し・要対応が残る日は伝えた扱いにしない |
 | [0090](adr/0090-plan-csv-template-export-import.md) | 予定の CSV（テンプレート・書き出し・読み込み）を「予定を入れる」から |
 | [0091](adr/0091-basic-template-excel-offboard-client-leave.md) | 「基本」のひな形に Excel の入出力・退職・担当替え・〈利用者さん〉の休み |
+| [0092](adr/0092-demo-entry-three-uses-template-names-settings-layout.md) | 最初の2問の問2を使い方4つに・ひな形の名前と並び・機能のグループ・やり直しはデータの画面へ |
+| [0093](adr/0093-arrange-without-locations.md) | 位置が未登録でも担当を組む（移動は30分とみる） |
+| [0094](adr/0094-auto-place-after-roster-import.md) | 名簿を読み込んだら住所から自動で地図に置き、位置の無い人を一覧で扱う |
 
 ## 文書の保ち方
 

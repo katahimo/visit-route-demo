@@ -39,14 +39,13 @@ export function bookingConfirmBody(x: {
   keep: KeepState;
 }): string {
   const { r } = x;
-  const enc = r.source.format === 'csv' ? `（文字コード ${r.source.encoding}）` : '';
   return [
-    `「${x.fileName}」を訪問として読み込みます。CSV${enc}・${r.otherForm.label}の形として読みました。`,
+    `「${x.fileName}」を訪問として読み込みます（${r.otherForm.label}の CSV）。`,
     bookingSummary(r),
     ...(r.cancelledSkipped > 0 ? [`取り消し済みで、まだ入れていない ${r.cancelledSkipped}件は入れません。`] : []),
     ...bookingProblems(r, x.clientTerm),
     otherFormSkippedText(r.otherForm),
-    '担当は決めません（担当なし）。同じ予約番号・訪問IDの訪問は日付・時刻・所要・メモをファイルに合わせ、担当・ピン・取り消しは残します（取り消しはファイルでは戻せません）。ファイルに無い訪問はそのままです。',
+    '担当は空のままです。すでに入っている予約は、日時・所要時間・メモをファイルに合わせます（担当は残ります）。ファイルに無い訪問はそのままです。',
     keepNote(x.keep),
   ].join('\n');
 }

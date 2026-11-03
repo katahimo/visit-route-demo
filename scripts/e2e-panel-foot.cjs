@@ -236,7 +236,7 @@ async function expectMobileRow(page, label) {
   );
 }
 
-// ---- 欠勤・キャンセルの欄の各段（1 何が起きたか・2 連絡・確定。PRD D414） ----
+// ---- 欠勤・キャンセルの欄の各段（1 休み・キャンセルを選ぶ・2 連絡・確定。PRD D414） ----
 async function suddenSteps(page, w) {
   await freshPlan(page);
   await pressTool(page, '欠勤', { where: 'more' });

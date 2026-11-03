@@ -28,7 +28,7 @@
   border-color: var(--ink);
   font-weight: 600;
 }
-/* まとめて置く欄。名簿のあとの導線から移るとき、上の帯の裏に隠さない（PRD D399） */
+/* まとめて置く欄。名簿を読み込んだあとに移るとき、上の帯の裏に隠さない（PRD D427） */
 .place-all {
   scroll-margin-top: calc(var(--header-h) + 8px);
 }
@@ -42,4 +42,12 @@
 }
 .place-all-fails li {
   margin: 2px 0;
+}
+/* 一覧の行の「位置なし」の印と［住所から探す］［地図で置く］（PRD D427） */
+.no-place {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-left: 6px;
 }
