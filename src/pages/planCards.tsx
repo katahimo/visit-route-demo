@@ -2,6 +2,7 @@
 // 印・経路のリンク・理由）。どれも usePlanPage の戻り値から描く関数
 import { MessageSquareText, PanelRightOpen, Pin, PinOff, ShieldAlert, TriangleAlert } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { TravelFact } from '../components/clientTravel';
 import { DetailsFold } from '../components/DetailsFold';
 import { VisitRouteLinks } from '../components/mapsLinks';
 import { PersonButton } from '../components/PersonPopover';
@@ -329,6 +330,7 @@ export function card(p: PlanCtx, id: string) {
           {whoOf(p, id, ownerId)}
           {reassignOf(p, id, ownerId)}
           {!isFirst && <VisitRules client={clientOf(id)} />}
+          <TravelFact place={clientOf(id)?.place} start={explained.get(id)?.timing?.start ?? null} />
           {routeLinksOf(p, id, ownerId)}
           {reasonOf(p, id)}
         </>
@@ -456,6 +458,7 @@ export function bandOf(p: PlanCtx, id: string, sid: string): TimelineBand {
         {reassignOf(p, id, sid)}
         {tagsOf(p, id)}
         {!isFirst && <VisitRules client={client} />}
+        <TravelFact place={client?.place} start={start} />
         {routeLinksOf(p, id, sid)}
         {reasonOf(p, id)}
       </>

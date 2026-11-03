@@ -11,6 +11,7 @@ import {
   CLIENT_RULE_COLS,
   CLIENT_STAGE_COLS,
   CLIENT_TENTATIVE_COL,
+  CLIENT_TRAVEL_COLS,
   prefHeader,
   reqHeader,
   STAFF_COLS,
@@ -80,6 +81,18 @@ function clientDocs(t: DemoData['org']['terms']): [string, ColDoc][] {
     [C.address, doc('訪問先の住所です', PLACES[0].address, '空のまま')],
     [C.lat, doc('緯度です。わからなければ空でかまいません', '38.2682', '空のまま')],
     [C.lng, doc('経度です。わからなければ空でかまいません', '140.8694', '空のまま')],
+    [
+      CLIENT_TRAVEL_COLS.minutes,
+      doc(
+        '新幹線・飛行機などで行き、距離で見積もれないときの片道の移動時間（分）です。どこから来ても同じ分数とみます',
+        '180',
+        '空なら距離から見積もる',
+      ),
+    ],
+    [
+      CLIENT_TRAVEL_COLS.farTrip,
+      doc(`遠方（出張）の人に ○ を付けます。その日の${t.staff}にはほかの訪問を入れません`, '', '空なら付けない'),
+    ],
     [
       CLIENT_ALLOWED_COL,
       doc(

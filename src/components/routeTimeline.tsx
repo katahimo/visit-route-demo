@@ -1,13 +1,13 @@
 // 予定の画面の時間軸（PRD D58。design.md §4 pages「予定の画面の時間軸」）。
 // 担当ごとの列を時刻の位置で描く（縦＝07:00〜20:00。はみ出せば広げる）。列の見出し・ドラッグの受け口・印は予定の画面から受け取る
 import './routeTimeline.css';
-import { Car, House } from 'lucide-react';
+import { Car, House, TriangleAlert } from 'lucide-react';
 import type { CSSProperties, DragEvent, KeyboardEvent, ReactNode } from 'react';
 import { minutesToHhmm } from '../domain/time';
 import { r0 } from '../lib/common';
 import { clockTime } from '../lib/dateText';
 import type { Span } from '../lib/spans';
-import { backgroundOf, boxOf, hourMarks, type LegSpan, TL_PX_PER_MIN, timeRange } from '../lib/timeline';
+import { backgroundOf, boxOf, hourMarks, type LegSpan, legWords, TL_PX_PER_MIN, timeRange } from '../lib/timeline';
 import { isMultiClick } from '../lib/visitSelect';
 import { EdgeScroll } from './EdgeScroll';
 import { toldDateOf, useOpenTold } from './openTold';
@@ -69,6 +69,8 @@ export type TimelineColumn = {
   bands: TimelineBand[];
   /** 移動・待ち・自宅まで（lib/timeline の legsOf） */
   legs: LegSpan[];
+  /** 移動を控えめに描く（点線・薄い文字・待ちの枠は出さない。エキスパート機能が切のとき。PRD D431） */
+  quietLegs?: boolean;
   /** ドラッグ中の影（その人へ入れたときに strict で回れるか） */
   shadow: (Span & { ok: boolean; allowed: boolean }) | null;
   /** 訪問が無いときの文 */
@@ -145,7 +147,15 @@ export function RouteTimeline({
               })}
               {c.bands.length === 0 && c.emptyText && <span className="tl-empty sub">{c.emptyText}</span>}
               {c.legs.map((leg) => (
-                <Leg key={`${leg.kind}-${leg.visitId}`} leg={leg} range={range} px={px} on={legOn(leg)} onLeg={onLeg} />
+                <Leg
+                  key={`${leg.kind}-${leg.visitId}`}
+                  leg={leg}
+                  range={range}
+                  px={px}
+                  quiet={c.quietLegs === true}
+                  on={legOn(leg)}
+                  onLeg={onLeg}
+                />
               ))}
               {c.bands.map((b) => (
                 <Band key={b.visitId} band={b} range={range} px={px} alignRight={ci >= columns.length - 1 && ci > 0} />
@@ -167,43 +177,59 @@ export function RouteTimeline({
   );
 }
 
-/** 帯のあいだの区間：移動・自宅から・自宅まで は細い線とボタン、待ちは点線の枠 */
+/** 隙間がこれ（px）より狭い移動は、文字を出さず線だけにする（帯に重ならないように） */
+const QUIET_LABEL_MIN_PX = 14;
+
+/**
+ * 帯のあいだの区間：移動・自宅から・自宅まで は細い線とボタン、待ちは点線の枠。
+ * quiet（切）は点線と小さな薄い文字だけ（待ちの枠は出さない。隙間が狭ければ線だけ）。
+ * 位置が未登録の区間は「（見込み）」、着く時刻が間に合わない区間は注意の色と三角の印（PRD D431）
+ */
 function Leg({
   leg,
   range,
   px,
+  quiet,
   on,
   onLeg,
 }: {
   leg: LegSpan;
   range: Span;
   px: number;
+  quiet: boolean;
   on: boolean;
   onLeg: (leg: LegSpan) => void;
 }) {
   const box = boxOf(leg, range, px);
   const m = r0(leg.minutes);
   if (leg.kind === 'wait') {
+    if (quiet) return null;
     return (
       <div className="tl-wait" style={box} title={`待ち ${m}分`}>
         {box.height >= 14 && <span className="tl-wait-label">待ち {m}分</span>}
       </div>
     );
   }
-  const text = leg.kind === 'drive' ? `移動 ${m}分` : leg.kind === 'fromHome' ? `自宅から ${m}分` : `自宅まで ${m}分`;
-  const Icon = leg.kind === 'drive' ? Car : House;
+  const words = legWords(leg, m);
+  const short = quiet && box.height < QUIET_LABEL_MIN_PX;
+  // 控えめな表示は「15分」「30分（見込み）」だけ（種類は印で分かる）。ふつうの表示は「移動 15分」
+  const text = legWords({ ...leg, late: false }, m, quiet);
+  const Icon = leg.late ? TriangleAlert : leg.kind === 'drive' ? Car : House;
+  const classes = ['tl-leg', `is-${leg.kind}`, on ? 'is-on' : '', quiet ? 'is-quiet' : '', short ? 'is-short' : '']
+    .concat(leg.estimated ? 'is-estimated' : '', leg.late ? 'is-late' : '')
+    .join(' ');
   return (
-    <div className={`tl-leg is-${leg.kind}${on ? ' is-on' : ''}`} style={box}>
+    <div className={classes} style={box} data-testid="tl-leg" data-quiet={quiet ? '' : undefined}>
       <button
         type="button"
         className={`tl-leg-btn leg-btn ${on ? 'is-on' : ''}`}
         aria-pressed={on}
-        title={on ? '地図の区間の強調をやめる' : '地図でこの区間を強調する'}
+        title={`${words}\n${on ? '地図の区間の強調をやめる' : '地図でこの区間を強調する'}`}
         data-testid={leg.kind === 'toHome' ? 'home-leg' : undefined}
         onClick={() => onLeg(leg)}
       >
-        <Icon size={11} aria-hidden="true" />
-        {text}
+        {!short && <Icon size={11} aria-hidden="true" />}
+        <span className={short ? 'sr-only' : undefined}>{short ? words : text}</span>
       </button>
     </div>
   );

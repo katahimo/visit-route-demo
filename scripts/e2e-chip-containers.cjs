@@ -896,8 +896,8 @@ async function monthMove(page, { confirms }) {
   check(moved, '月の移す：「移す」で2件の日付が移る（時刻はそのまま）', { to, two });
   await settle(page, 300);
   check(
-    await until(() => page.evaluate(() => document.activeElement?.dataset?.testid === 'month-more'), 3000),
-    '月の移す：移したあとフォーカスは操作の行の「その他 ▾」（元に戻すの入口）',
+    await until(() => page.evaluate(() => document.activeElement?.dataset?.testid === 'undo-btn'), 3000),
+    '月の移す：移したあとフォーカスは操作の行の［元に戻す］',
   );
   const title = (await undoState(page)).text;
   check(title.includes(`${dateText(to)}へ移しました`), '月の移す：手の名前は「M/D（曜）へ移しました」', title);

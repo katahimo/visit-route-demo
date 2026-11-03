@@ -2,6 +2,7 @@
 // 件数（追加・更新・変更なし・入れなかった行）を見せて確かめてから、store の update で訪問（単発・担当なし）として入れる。
 // 入れる手は usePendingImport（名簿の読み込みと同じ）
 import { useState } from 'react';
+import { bookingsOutsideHours, outsideHoursNote } from '../lib/bookingFit';
 import { bookingConfirmBody, bookingDoneText, bookingHasChanges, bookingProblems } from '../lib/bookingScreen';
 import { formError, isStaleBuild } from '../lib/common';
 import { EXCEL_STALE_TEXT } from '../lib/dataScreen';
@@ -35,7 +36,13 @@ export function useBookingImport(onDone?: () => void) {
     if (changedSince(base)) return setError(IMPORT_CHANGED_TEXT);
     const ok = await confirmDialog({
       title: '訪問を読み込みますか？',
-      body: bookingConfirmBody({ fileName: file.name, r, clientTerm, keep: canKeepPrevious() }),
+      body: bookingConfirmBody({
+        fileName: file.name,
+        r,
+        clientTerm,
+        keep: canKeepPrevious(),
+        outsideNote: outsideHoursNote(bookingsOutsideHours(base, r.data), base.org.terms.staff),
+      }),
       confirmLabel: '読み込む',
     });
     if (!ok) return;

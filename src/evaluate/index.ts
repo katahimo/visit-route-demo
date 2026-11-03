@@ -18,10 +18,15 @@ import {
   balanceOff,
   balancePoints,
   EPS,
+  FAR_TRIP_LABEL,
+  FAR_TRIP_RULE_ID,
   naiveSeqs,
   PIN_RULE_ID,
   scheduleRoute,
+  soloBroken,
+  TRAVEL_TOO_FAR_RULE_ID,
   totalPoints,
+  travelTooFarLabel,
   VISIT_TYPE_RULE_ID,
 } from '../matching';
 
@@ -103,6 +108,11 @@ function scorePlaced(problem: Problem, p: Placed): PlanScore {
     }
     for (const x of t.violations)
       hardViolations.push({ visitId: x.visitId, staffId, kind: x.kind, label: TIME_LABEL[x.kind] });
+    // 遠方（出張）の訪問の日にほかの〈利用者さん〉の訪問を並べた（ADR-0096）：遠方の訪問を違反にする
+    if (soloBroken(problem, p.seqs[s]!))
+      for (const v of p.seqs[s]!)
+        if (problem.visits[v]!.solo === true)
+          hardViolations.push({ visitId: problem.visits[v]!.id, staffId, kind: 'notAllowed', label: FAR_TRIP_LABEL });
     counts[s] = p.seqs[s]!.length;
   }
   let dropped = 0;
@@ -209,7 +219,14 @@ function whyUnassigned(problem: Problem, p: Placed, v: number): Reason[] {
       fits = scheduleRoute(problem, s, t, 'strict') !== null;
     }
     const cap = problem.balance?.cap?.[s];
-    if (fits && cap !== undefined && seq.length + 1 > cap) {
+    const far = !fits && farTripBlocks(problem, seq, v);
+    if (far) {
+      out.push({ ruleId: FAR_TRIP_RULE_ID, label: `${st.name}：${FAR_TRIP_LABEL}`, points: INF });
+    } else if (!fits && scheduleRoute(problem, s, [v], 'strict') === null) {
+      // その訪問だけでも間に合わない：可否（稼働時間帯）は満たすので、家からの移動が原因（ADR-0096）
+      const minutes = problem.travel[st.point]![pv.point]!;
+      out.push({ ruleId: TRAVEL_TOO_FAR_RULE_ID, label: `${st.name}：${travelTooFarLabel(minutes)}`, points: INF });
+    } else if (fits && cap !== undefined && seq.length + 1 > cap) {
       out.push({ ruleId: BALANCE_RULE_KEY, label: `${st.name}：件数の上限（${cap}件）`, points: INF });
     } else if (fits) {
       out.push({ ruleId: 'cost', label: `${st.name}：入れられるが、ほかの訪問との兼ね合いで外れた`, points: 0 });
@@ -229,6 +246,11 @@ function whyUnassigned(problem: Problem, p: Placed, v: number): Reason[] {
   }
   for (const [label, n] of blocked) out.push({ ruleId: 'notAllowed', label: `${label}（${n}人）`, points: INF });
   return out;
+}
+
+/** 列 seq に訪問 v を足すと、遠方（出張）の訪問とほかの〈利用者さん〉の訪問が同じ列になるか（ADR-0096） */
+function farTripBlocks(problem: Problem, seq: readonly number[], v: number): boolean {
+  return seq.length > 0 && soloBroken(problem, [...seq, v]);
 }
 
 /** 担当が変わった訪問ID、移動分の差（to−from）、合計点の差（to−from） */

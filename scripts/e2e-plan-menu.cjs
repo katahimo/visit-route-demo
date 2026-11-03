@@ -229,7 +229,7 @@ async function reassignMenu(page) {
     'トースト「〈名前〉さんへ移しました」と「元に戻す」',
     toastText,
   );
-  check(!(await undoState(page)).disabled, '操作の行の「その他 ▾」の「元に戻す」：移したあとは押せる');
+  check(!(await undoState(page)).disabled, '操作の行の［元に戻す］：移したあとは押せる');
   await page.screenshot({ path: path.join(OUT_DIR, 'reassign-moved.png') });
   // トーストの「元に戻す」で、担当・ピンが移す前に戻る
   await toastUndo.click();
@@ -262,17 +262,15 @@ async function reassignMenu(page) {
   await dialog(page).waitFor({ state: 'detached' });
   await page.screenshot({ path: path.join(OUT_DIR, 'reassign-none.png') });
   check(!(await undoState(page)).disabled, '確定を取り消しても「元に戻す」は押せる');
-  // 「その他 ▾」をキーボードで開き、「元に戻す」を Enter で選ぶ
-  await page.getByTestId('plan-more').focus();
-  await page.keyboard.press('Enter');
-  await page.getByTestId('more-undo').focus();
+  // 操作の行の［元に戻す］（アイコンだけのボタン）をキーボードで押す（Enter）
+  await page.getByTestId('undo-btn').focus();
   await page.keyboard.press('Enter');
   await waitStored(page, (d, b) => JSON.stringify(d.visits) === b, beforeKey);
   check(
     visitsKey(await stored(page)) === beforeKey,
-    '「その他 ▾」の「元に戻す」（キーボード）：担当なしから元の担当へ戻る',
+    '操作の行の［元に戻す］（キーボード）：担当なしから元の担当へ戻る',
   );
-  check((await focusedId(page)) === 'plan-more', '戻したあともフォーカスは操作の行の「その他 ▾」に戻る');
+  check((await focusedId(page)) === 'undo-btn', '戻したあともフォーカスは操作の行の［元に戻す］に戻る');
 }
 
 async function mobile(page) {
@@ -319,11 +317,11 @@ async function moreMenus(page) {
   // 日の予定：操作の行に見せるのは「訪問を1件追加」と「確定（伝えた）」の2つと「その他 ▾」だけ（PRD D402。AI で組む ▾ は無い。ADR-0063）
   const shown = await page
     .getByTestId('schedule-toolbar')
-    .locator('button:visible')
+    .locator('button.btn:visible')
     .evaluateAll((els) => els.map((el) => el.textContent.trim()));
   check(
     JSON.stringify(shown) === JSON.stringify(['訪問を1件追加', '確定（伝えた）', 'その他']),
-    '日の予定：操作の行は 訪問を1件追加・確定（伝えた）・その他 ▾（欠勤・元に戻す・表示・使い方・メールは「その他 ▾」の中。AI で組む ▾ は無い）',
+    '日の予定：操作の行は 訪問を1件追加・確定（伝えた）・その他 ▾（欠勤・表示・使い方・メールは「その他 ▾」の中、元に戻す・やり直すはアイコンだけのボタン。AI で組む ▾ は無い）',
     shown,
   );
   const inMore = await (async () => {
@@ -333,12 +331,12 @@ async function moreMenus(page) {
     return t;
   })();
   check(
-    ['欠勤・キャンセルを登録', '元に戻す', '使い方', 'チャット用にコピー', 'メールで送る', '印刷'].every((x) =>
+    ['欠勤・キャンセルを登録', '使い方', 'チャット用にコピー', 'メールで送る', '印刷'].every((x) =>
       inMore.includes(x),
     ) &&
       !inMore.includes('空き状況') &&
       /で見る|時間軸/.test(inMore),
-    '日の予定：「その他 ▾」に 欠勤・元に戻す・表示の切り替え・使い方・書き出し（チャット用にコピー・メールで送る・印刷。PRD D419）（空き状況はメニュー。PRD D401）',
+    '日の予定：「その他 ▾」に 欠勤・表示の切り替え・使い方・書き出し（チャット用にコピー・メールで送る・印刷。PRD D419）（空き状況はメニュー。PRD D401）',
     inMore,
   );
   // 操作の行は状態の1行（今の担当）のすぐ下（週・月と同じ位置。PRD D344）
@@ -452,17 +450,16 @@ async function moreMenus(page) {
     .locator('[role="menuitem"] .menu-item-label')
     .allInnerTexts();
   check(
-    mItems.length === 9 &&
+    mItems.length === 8 &&
       mItems[0] === 'カレンダーで見る' &&
       mItems[1] === '日ごとの一覧で見る' &&
       /^表示を選ぶ/.test(mItems[2]) &&
       mItems[3] === '印刷' &&
       mItems[4] === '勤務の見込み' &&
       mItems[5] === 'マスの見方の説明' &&
-      mItems[6] === '元に戻す' &&
-      mItems[7] === '欠勤・キャンセルを登録' &&
-      mItems[8] === '連絡を貼り付けて入れる',
-    '月の予定の「その他 ▾」：見せ方の切り替え・表示を選ぶ・印刷・勤務の見込み・マスの見方の説明・元に戻す・欠勤・キャンセルを登録・連絡を貼り付けて入れる（空き状況はメニュー。PRD D402・D401・D418）',
+      mItems[6] === '欠勤・キャンセルを登録' &&
+      mItems[7] === '連絡を貼り付けて入れる',
+    '月の予定の「その他 ▾」：見せ方の切り替え・表示を選ぶ・印刷・勤務の見込み・マスの見方の説明・欠勤・キャンセルを登録・連絡を貼り付けて入れる（空き状況はメニュー。PRD D402・D401・D418）',
     mItems,
   );
   await page.getByTestId('month-more-help').click();

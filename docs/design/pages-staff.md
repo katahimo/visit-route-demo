@@ -1,6 +1,6 @@
 # 〈スタッフ〉の一覧と画面・勤務時間（シフト）・勤務の見込み・スマホ画面
 
-> この画面のファイル：`src/pages/StaffPage.tsx`（行とカード `staffList.tsx`）・`StaffPersonPage.tsx`（見出しとタブ `staffPersonHeader.tsx`・タブ `staffSections.tsx`・`staffFields.tsx`・`staffScheduleTab.tsx`・節の編集と保存 `useStaffEdit.ts`・予定 `useStaffSchedule.ts`）・`OffboardPanel.tsx`（`offboardParts.tsx`・`useOffboardFlow.ts`）・`AvailabilityPage.tsx`（`availabilityParts.tsx`・`useAvailabilityEdit.ts`）・`WorkloadPage.tsx`（`workload.css`・`workloadHead.tsx`・`workloadTables.tsx`・`useWorkloadSettings.ts`）・`StaffViewPage.tsx`（`staffViewParts.tsx`）、`src/components/workBars.tsx`・`mapsLinks.tsx`・`personPage.tsx`・`PersonCalendar.tsx`・`personView.tsx`・`placeLookup.tsx`、`src/lib/offboard.ts`・`offboardView.ts`・`staffEdit.ts`・`workload.ts`・`workloadView.ts`・`links.ts`・`personPage.ts`・`peopleView.ts`・`visitLists.ts`・`visitOps.ts`・`viewMode.ts`。関連 ADR：0011・0014・0015・0016・0017・0018・0050・0052・0073・0083。関連 PRD：D16・D68・D75〜D77・D91〜D101・D118〜D121・D201〜D209・D220・D221・D230・D241・D272・D275・D298・D299・D308〜D312・D326・D385・D394・D417。
+> この画面のファイル：`src/pages/StaffPage.tsx`（行とカード `staffList.tsx`）・`StaffPersonPage.tsx`（見出しとタブ `staffPersonHeader.tsx`・タブ `staffSections.tsx`・`staffFields.tsx`・`staffScheduleTab.tsx`・節の編集と保存 `useStaffEdit.ts`・予定 `useStaffSchedule.ts`）・`OffboardPanel.tsx`（`offboardParts.tsx`・`useOffboardFlow.ts`）・`AvailabilityPage.tsx`（`availabilityParts.tsx`・`useAvailabilityEdit.ts`）・`WorkloadPage.tsx`（`workload.css`・`workloadHead.tsx`・`workloadTables.tsx`・`useWorkloadSettings.ts`）・`StaffViewPage.tsx`（`staffViewParts.tsx`）、`src/components/workBars.tsx`・`mapsLinks.tsx`・`personPage.tsx`・`PersonCalendar.tsx`・`personView.tsx`・`placeLookup.tsx`、`src/lib/offboard.ts`・`offboardView.ts`・`staffEdit.ts`・`workload.ts`・`workloadView.ts`・`links.ts`・`personPage.ts`・`peopleView.ts`・`visitLists.ts`・`visitOps.ts`・`viewMode.ts`。関連 ADR：0011・0014・0015・0016・0017・0018・0050・0052・0073・0083・0095。関連 PRD：D16・D68・D75〜D77・D91〜D101・D118〜D121・D201〜D209・D220・D221・D230・D241・D272・D275・D298・D299・D308〜D312・D326・D385・D394・D417・D428。
 > 画面の殻（ルート・見出し・タブ・節・変更の確認）と予定のカレンダーは [pages-clients.md](pages-clients.md) と共通。
 
 ### 〈スタッフ〉一覧（`#/staff`）
@@ -38,6 +38,7 @@
 
 #### 勤務時間のタブ
 
+- 新しい〈スタッフ〉（`#/staff/new` の `blankStaff(features)`）の勤務日・勤務時間の初期値は使い方で決まる：単発の予約（`patterns` が切）は毎日 7:00〜22:00、ほかは月〜金 9:00〜18:00（`lib/staffDefaultHours` の `defaultStaffHours`。名簿で勤務の列が無い新しい人も同じ。PRD D428。ADR-0095）
 - ふだんの勤務（`hours`：勤務する曜日・勤務開始（`staff-shift-start`）・勤務終了（`staff-shift-end`）。読むときは `StaffHoursRow`）
 - 日ごとに変えた勤務（これから。読むだけ。`overrides`）と「勤務時間（シフト）で直す」（`to-availability`）
 

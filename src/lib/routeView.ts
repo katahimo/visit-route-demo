@@ -110,13 +110,17 @@ export function buildRouteMap(args: {
   return { points: [...homes, ...visitPts.values()], lines };
 }
 
-/** その人の最後の訪問先から自宅までの移動（分）。自宅の位置が無い・計算に入れていないなら null */
+/**
+ * その人の最後の訪問先から自宅までの移動（分）。計算に入れていないなら null。
+ * 自宅の位置が無いときは null。ただし withEstimate なら組みが使った見込みの分数（ADR-0093）を返す
+ */
 export function homeTravel(
   problem: Problem | null,
   staff: Staff | undefined,
   routes: Record<string, string[]>,
+  withEstimate = false,
 ): number | null {
-  if (!problem || !staff || !hasLocation(staff.home)) return null;
+  if (!problem || !staff || (!withEstimate && !hasLocation(staff.home))) return null;
   const lastId = own(routes, staff.id)?.at(-1);
   const st = problem.staff.find((x) => x.id === staff.id);
   const pv = lastId ? problem.visits.find((v) => v.id === lastId) : undefined;

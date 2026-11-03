@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ABSENT_ALL_DAY, AFTER_LAST_DAY } from '../matching';
+import { ABSENT_ALL_DAY, AFTER_LAST_DAY, FAR_TRIP_LABEL, travelTooFarLabel } from '../matching';
 import { clientPageHref, hardLinks, staffPageHref } from './hardLinks';
 
 const T = { client: '利用者さん', staff: 'スタッフ' };
@@ -26,6 +26,10 @@ describe('必須の違反 → 関連の画面（PRD D345）', () => {
     expect(tos('いつもの担当でない')).toEqual([clientPageHref('c1')]);
     expect(tos('利用者さんの緯度・経度が未登録')).toEqual([clientPageHref('c1')]);
     expect(hardLinks(na('必要条件：資格 ✗'), 'c1', T)[0]?.label).toBe('利用者さんの画面');
+  });
+  it('遠方（出張）・移動が間に合わない（ADR-0096）：その〈利用者さん〉の画面（場所の節で直す）', () => {
+    expect(tos(FAR_TRIP_LABEL)).toEqual([clientPageHref('c1')]);
+    expect(tos(travelTooFarLabel(900))).toEqual([clientPageHref('c1')]);
   });
   it('〈利用者さん〉が分からなければ〈利用者さん〉の画面は出さない', () => {
     expect(hardLinks(na('必要条件：資格 ✗'), undefined, T)).toEqual([]);

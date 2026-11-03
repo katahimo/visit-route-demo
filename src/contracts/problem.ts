@@ -21,6 +21,11 @@ export type ProblemVisit = {
   earliest: number;
   latest: number;
   duration: number;
+  /**
+   * 遠方（出張。PRD D429。ADR-0096）：true なら、この訪問のある列は同じ〈利用者さん〉の訪問だけ（strict ではほかの〈利用者さん〉と
+   * 並べた列は不可）。列の最初なら、家を出る時刻を勤務の開始に縛らない。無い＝false
+   */
+  solo?: boolean;
 };
 
 export type Reason = {
@@ -89,6 +94,8 @@ export type ProblemStay = {
 /**
  * 1人のルートの時刻の決め方（solver と evaluate で同じ。matching/timing.ts の scheduleRoute が唯一の実装）：
  * - 自宅を出る時刻は自由。最初の訪問に着く時刻＝その訪問の開始（待ちは0）。ただし自宅を出るのは最初の稼働時間帯の開始以降
+ *   （最初の訪問が遠方（出張。solo）なら縛らない。ADR-0096）
+ * - 遠方（出張。solo）の訪問がある列に、ほかの〈利用者さん〉の訪問がある＝strict では不可（lenient は時刻を数え、evaluate が違反にする）
  * - 各訪問の開始＝max(到着, earliest) から、作業 [開始, 開始+duration] が稼働時間帯の1つに収まる最も早い時刻
  * - 開始が latest を超える、または収まる時間帯がない＝時間の違反（strict ではそのルートは不可）
  * - 待ち＝開始−到着（最初の訪問は0）。最後の訪問のあと自宅へ帰る移動も数える。帰着が最後の時間帯の終了を超えても違反にしない

@@ -1,8 +1,8 @@
 // 位置の無い人をまとめて地図に置く（PRD D89・D427。ADR-0016・ADR-0094）。外部には出さず、検索の偽物で確かめる
 import { describe, expect, it } from 'vitest';
 import type { Client, Staff } from '../contracts/documents';
-import { UNPLACED_TRAVEL_MIN } from '../matching/compile';
 import { client, makeData, staff } from '../matching/fixtures.testkit';
+import { UNPLACED_TRAVEL_MIN } from '../matching/travel';
 import type { GeoHit, LookupResult, PostalHit } from './geocode';
 import {
   AUTO_PLACE_NOTE,

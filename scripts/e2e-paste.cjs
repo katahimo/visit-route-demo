@@ -12,7 +12,7 @@
 // 終了コード：全部通れば 0、通らないものがあれば 1。ページのエラー（pageerror）も失敗に数える
 const { STORAGE_KEY, TODAY, check, settle, stored, waitStored, runSteps } = require('./lib/env.cjs');
 const { openPage, sharedPage } = require('./lib/steps.cjs');
-const { goTo, openMore, closeMore, pressTool, toolCount } = require('./lib/ui.cjs');
+const { goTo, pressTool, toolCount, undoState } = require('./lib/ui.cjs');
 
 /** 日付の足し算（YYYY-MM-DD） */
 const addDays = (date, n) => new Date(Date.parse(`${date}T00:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
@@ -223,10 +223,8 @@ const steps = sharedPage({
     [
       '元に戻す：1回で3件とも戻る',
       async (page) => {
-        const list = await openMore(page);
-        const undo = list.getByTestId('more-undo');
-        check((await undo.textContent()).includes('連絡を貼り付けて入れる'), '戻す手の名前', await undo.textContent());
-        await closeMore(page);
+        const undoTitle = (await undoState(page)).title;
+        check(undoTitle.includes('連絡を貼り付けて入れる'), '戻す手の名前', undoTitle);
         await pressTool(page, '元に戻す');
         const ok = await waitStored(
           page,

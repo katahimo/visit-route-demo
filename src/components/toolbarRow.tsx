@@ -3,6 +3,7 @@
 // 切：日は「訪問を1件追加」（その日の訪問の欄を開く）が主ボタン（スマホは出さず主ボタン無し）、週・月は「定期の予定を追加」（単発のみは「予約を追加」）（引き出しは AddPlanPanel。PRD D402）。
 // もう1つは「欠勤・キャンセルを登録」。要対応を組むのは要対応の帯（PRD D403。ADR-0077）。
 // 入：月・週は「定期の予定を追加」＋「担当を組む」（担当を組むの画面へ）、日は「訪問を1件追加」＋「確定（伝えた）」。欠勤・キャンセルは「その他 ▾」の中。
+// 入切とも、ボタンの右に アイコンだけの［元に戻す］［やり直す］（数えない補助。PRD D432）。
 // 入切とも「その他 ▾」の最後に「連絡を貼り付けて入れる」（PRD D418。欠勤・キャンセルか〈利用者さん〉の休みの機能が入のとき）
 import { ClipboardPaste, Plus, Sparkles } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
@@ -13,7 +14,7 @@ import { AddPlanPanel } from './AddPlanPanel';
 import { MenuButton, type MenuItem } from './MenuButton';
 import { PASTE_LABEL, PastePanel } from './PastePanel';
 import { WithIcon } from './ui';
-import { useHistoryMenuItems } from './undo';
+import { UndoIconButtons } from './undo';
 import { useFeature, useFeatures } from './useFeature';
 
 /** 欠勤・キャンセルを登録：切は操作の行のボタン（node）、入は「その他 ▾」の項目（item） */
@@ -48,7 +49,6 @@ export function ToolbarRow({
   moreItems: MenuItem[];
   after?: ReactNode;
 }) {
-  const history = useHistoryMenuItems();
   const [adding, setAdding] = useState(false);
   const [pasting, setPasting] = useState(false);
   const features = useFeatures();
@@ -73,7 +73,7 @@ export function ToolbarRow({
     onSelect: () => setPasting(true),
     testId: 'paste-open',
   };
-  const items = [...moreItems, ...history, ...(expert && absence ? [absence.item] : []), ...(pasteOn ? [paste] : [])];
+  const items = [...moreItems, ...(expert && absence ? [absence.item] : []), ...(pasteOn ? [paste] : [])];
   return (
     <div className={`row schedule-toolbar is-simple ${className}`} data-testid="schedule-toolbar" data-zoom={zoom}>
       {primary === 'add' && add && (
@@ -118,6 +118,7 @@ export function ToolbarRow({
         </Link>
       )}
       {second === 'absence' && absence?.node}
+      <UndoIconButtons />
       <MenuButton
         label="その他"
         items={items}

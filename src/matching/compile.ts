@@ -1,23 +1,17 @@
 // DemoData（その日の訪問・スタッフ・項目・条件・相性）→ Problem（可否・費用表・移動の行列）
-import { TRAVEL_MODES, type TravelMode } from '../contracts/codes';
 import type { DemoData } from '../contracts/data';
 import type { Client, LatLng, Pattern, Place, Staff, VisitType } from '../contracts/documents';
 import type { Problem, ProblemStaff, ProblemVisit, Reason } from '../contracts/problem';
 import { type Condition, type Item, POINTS_PER_WEIGHT, type Rule, type Traits } from '../contracts/rules';
 import { afterLastDay, availabilityOf, withoutAbsences } from '../domain/availability';
-import { estimateLeg } from '../domain/geo';
 import { leaveOn } from '../domain/leaves';
 import { hhmmToMinutes } from '../domain/time';
 import { visitsOn } from '../patterns';
 import { conditionText, matches } from './conditions';
 import { EPS, fitStart } from './timing';
+import { travelMatrices, UNPLACED_TRAVEL_MIN } from './travel';
 
 const INF = Number.POSITIVE_INFINITY;
-/**
- * 位置（緯度・経度）が未登録の訪問先・自宅への移動の見込み（分）。位置が無くても担当を組めるように、
- * どこからでもこの分数とみる（ADR-0093。台帳 CSV を読んだだけで地図に置く前でも組める）
- */
-export const UNPLACED_TRAVEL_MIN = 30;
 /** 位置が未登録の組に足す点（位置のある人・訪問先を先に選ぶ。可否にはしない） */
 export const UNPLACED_POINTS = 30;
 /** infeasible に載せる原因の数 */
@@ -49,20 +43,6 @@ function slotsOf(
   const base = toMinutes(raw);
   if (absences.length === 0) return { base, slots: base, absence: null };
   return { base, slots: toMinutes(withoutAbsences(raw, absences)), absence: absences[absences.length - 1] ?? null };
-}
-
-/** 事業所の多数決の移動手段（同数なら TRAVEL_MODES の順） */
-function majorityMode(staff: Staff[]): TravelMode {
-  let best: TravelMode = 'DRIVE';
-  let bestCount = 0;
-  for (const m of TRAVEL_MODES) {
-    const c = staff.filter((s) => s.travelMode === m).length;
-    if (c > bestCount) {
-      best = m;
-      bestCount = c;
-    }
-  }
-  return best;
 }
 
 /** 有効な条件（weight 0 かつ hard false は無効） */
@@ -187,39 +167,6 @@ function staffLimitsOf(clients: Map<string, Client>, staffDocs: Staff[], on: boo
     if (ids.length > 0) limitOf.set(c.id, { ids: new Set(ids), names: ids.map((id) => activeName.get(id)).join('、') });
   }
   return limitOf;
-}
-
-type Matrices = { travel: number[][]; meters: number[][] };
-/** 地点どうしの移動（分）と距離（m）の行列（先に自宅、続いて訪問先）。keys は地点の鍵で、同じ鍵なら位置が未登録でも 0 分 */
-function travelMatrices(places: (LatLng | null)[], keys: string[], staffDocs: Staff[]): Matrices {
-  const S = staffDocs.length;
-  const P = places.length;
-  const common = majorityMode(staffDocs);
-  // 自宅が絡む区間はそのスタッフの手段（出る側を優先）、訪問先どうしは多数決の手段
-  const modeOf = (i: number, j: number): TravelMode =>
-    i < S ? staffDocs[i]!.travelMode : j < S ? staffDocs[j]!.travelMode : common;
-  const travel: number[][] = [];
-  const meters: number[][] = [];
-  for (let i = 0; i < P; i++) {
-    const tr = new Array<number>(P).fill(0);
-    const me = new Array<number>(P).fill(0);
-    const a = places[i];
-    for (let j = 0; j < P; j++) {
-      const b = places[j];
-      if (i === j || keys[i] === keys[j]) continue;
-      // 位置が未登録の側があれば、見込みの分数（距離は分からないので 0 m。交通費には入らない）
-      if (!a || !b) {
-        tr[j] = UNPLACED_TRAVEL_MIN;
-        continue;
-      }
-      const leg = estimateLeg(a, b, modeOf(i, j));
-      tr[j] = leg.seconds / 60;
-      me[j] = leg.meters;
-    }
-    travel.push(tr);
-    meters.push(me);
-  }
-  return { travel, meters };
 }
 
 /** 条件1つ（rules の1件）の理由を out に足す（担当と〈利用者さん〉の組1つ） */
@@ -359,8 +306,9 @@ function pairReasons(ctx: PairContext, v: VisitSide, i: number): Reason[] {
   const ps = staff[i]!;
   const out: Reason[] = [];
   const look: CondLook = { items, date };
-  // 位置が未登録でも組む（移動は UNPLACED_TRAVEL_MIN 分とみる。ADR-0093）。位置のある組を先に選ぶよう点を足す
-  if (!places[S + j])
+  // 位置が未登録でも組む（移動は UNPLACED_TRAVEL_MIN 分とみる。ADR-0093）。位置のある組を先に選ぶよう点を足す。
+  // 移動時間（片道・分）を手で決めた〈利用者さん〉は位置を使わないので足さない（ADR-0096）
+  if (!places[S + j] && client.place.travelMinutes === undefined)
     out.push({
       ruleId: 'noPlace',
       label: `${terms.client}の緯度・経度が未登録（移動は${UNPLACED_TRAVEL_MIN}分とみる）`,
@@ -501,7 +449,7 @@ export function compile(data: CompileInput, date: string, pins?: Record<string, 
   }));
   const visits: ProblemVisit[] = visitDocs.map((v, j) => {
     const earliest = hhmmToMinutes(v.earliestStart);
-    return {
+    const pv: ProblemVisit = {
       id: v.id,
       clientId: v.clientId,
       point: S + j,
@@ -509,6 +457,9 @@ export function compile(data: CompileInput, date: string, pins?: Record<string, 
       latest: v.windowKind === 'fixed' ? earliest : hhmmToMinutes(v.latestStart),
       duration: v.durationMinutes,
     };
+    // 遠方（出張。ADR-0096）：その担当のその日はこの〈利用者さん〉の訪問だけ（matching/timing が見る）
+    if (clients.get(v.clientId)!.place.farTrip === true) pv.solo = true;
+    return pv;
   });
 
   // --- 地点と移動の行列 ---
@@ -518,7 +469,12 @@ export function compile(data: CompileInput, date: string, pins?: Record<string, 
   ];
   // 地点の鍵：訪問は 'c:'+clientId、自宅は 's:'+staffId（同じ〈利用者さん〉の続けた訪問を同じ担当が持てる）
   const keys = [...staffDocs.map((s) => `s:${s.id}`), ...visitDocs.map((v) => `c:${v.clientId}`)];
-  const { travel, meters } = travelMatrices(places, keys, staffDocs);
+  // 手で決めた移動時間（片道・分。ADR-0096）：自宅は無し
+  const fixed = [
+    ...staffDocs.map(() => null),
+    ...visitDocs.map((v) => clients.get(v.clientId)!.place.travelMinutes ?? null),
+  ];
+  const { travel, meters } = travelMatrices(places, fixed, keys, staffDocs);
 
   // --- 可否・割当費用・理由 ---
   const working = new Set(staff.filter((s) => s.slots.length > 0).map((s) => s.id));

@@ -4,6 +4,7 @@
 // データは書き換えない。切った機能の行き先を外すのは呼ぶ側（lib/links の linkIfOn）
 import type { PlanScore } from '../contracts/problem';
 import { ABSENCE_OVERLAP, ABSENT_ALL_DAY, ABSENT_NO_HOURS, AFTER_LAST_DAY } from '../matching';
+import { travelReasonOf } from './travelReasons';
 
 /** 関連の画面へのリンク（to は react-router の行き先、label はリンクの文字） */
 export type HardLink = { to: string; label: string };
@@ -26,7 +27,8 @@ export const staffPageHref = (staffId: string): string => `/staff/${encodeURICom
  * - slot（働ける時間に収まらない）：勤務時間（シフト）
  * - notAllowed：label の中の言葉で決める
  *   - 「相性」→ 相性の表
- *   - 〈利用者さん〉の条件（「必要条件：」「希望✗」「担当を限る」「いつもの担当」「〈利用者さん〉の位置」）→ その〈利用者さん〉の画面
+ *   - 〈利用者さん〉の条件（「必要条件：」「希望✗」「担当を限る」「いつもの担当」「〈利用者さん〉の位置」）と、
+ *     移動・遠方（出張）の理由（lib/travelReasons。ADR-0096）→ その〈利用者さん〉の画面
  *   - 〈スタッフ〉の条件（「〈スタッフ〉の必要条件」「〈スタッフ〉の希望」「〈スタッフ〉の自宅の位置」「最終勤務日の後」）→ その人の画面
  *   - 「種類（…）」→ 訪問の種類
  *   - 休み・欠勤・働ける時間に収まらない → 勤務時間（シフト）
@@ -47,7 +49,9 @@ export function hardLinks(v: Violation, clientId: string | undefined, terms: Ter
   const staffWords = [`${terms.staff}の必要条件`, `${terms.staff}の希望`, `${terms.staff}の自宅の緯度・経度`];
   const clientSide = staffWords.reduce((s, w) => s.split(w).join(''), label);
   const clientWords = ['必要条件：', '希望✗', '担当を限る', 'いつもの担当', `${terms.client}の緯度・経度`];
-  if (clientId && clientWords.some((w) => clientSide.includes(w)))
+  // 移動・遠方（出張）の理由（ADR-0096）は〈利用者さん〉の場所の節で直す
+  const travel = travelReasonOf({ label }, terms) !== null;
+  if (clientId && (travel || clientWords.some((w) => clientSide.includes(w))))
     add({ to: clientPageHref(clientId), label: `${terms.client}の画面` });
   if (staffWords.some((w) => label.includes(w)) || label.includes(AFTER_LAST_DAY))
     add({ to: staffPageHref(v.staffId), label: `${terms.staff}の画面` });

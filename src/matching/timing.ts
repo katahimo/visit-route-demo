@@ -17,7 +17,31 @@ export function fitStart(slots: { start: number; end: number }[], t0: number, du
 }
 
 /**
- * 1人のルートの時刻。strict で時間の違反があれば null。
+ * 列の最初の訪問の到着の下限：最初の時間帯の開始に自宅を出たときの到着。遠方（出張。solo）の訪問は家を出る時刻を縛らない（ADR-0096）
+ */
+function firstReady(slots: { start: number }[], travelIn: number, solo: boolean | undefined): number {
+  return solo === true ? Number.NEGATIVE_INFINITY : (slots[0]?.start ?? Number.NEGATIVE_INFINITY) + travelIn;
+}
+
+/**
+ * 遠方（出張。solo）の訪問のある列に、ほかの〈利用者さん〉の訪問があるか（ADR-0096）。length は列の先頭からの長さ
+ */
+export function soloBroken(problem: Problem, visits: ArrayLike<number>, length = visits.length): boolean {
+  if (length < 2) return false;
+  const pv = problem.visits;
+  const first = pv[visits[0]!]!.clientId;
+  let solo = false;
+  let mixed = false;
+  for (let k = 0; k < length; k++) {
+    const v = pv[visits[k]!]!;
+    if (v.solo === true) solo = true;
+    if (v.clientId !== first) mixed = true;
+  }
+  return solo && mixed;
+}
+
+/**
+ * 1人のルートの時刻。strict で時間の違反・遠方（出張）の列に別の〈利用者さん〉（soloBroken）があれば null。
  * lenient では違反を記録して続ける（収まる時間帯がなければ max(到着, earliest) に始めたことにする）
  */
 export function scheduleRoute(
@@ -26,6 +50,7 @@ export function scheduleRoute(
   visits: number[],
   mode: 'strict' | 'lenient',
 ): RouteTiming | null {
+  if (mode === 'strict' && soloBroken(problem, visits)) return null;
   const st = problem.staff[staff]!;
   const slots = st.slots;
   const home = st.point;
@@ -41,8 +66,8 @@ export function scheduleRoute(
     const travelIn = problem.travel[prevPoint]![v.point]!;
     meters += problem.meters[prevPoint]![v.point]!;
     travelMinutes += travelIn;
-    // 最初の訪問は、最初の時間帯の開始に自宅を出たときの到着が下限（待ちは0）
-    const ready = k === 0 ? (slots[0]?.start ?? Number.NEGATIVE_INFINITY) + travelIn : prevEnd + travelIn;
+    // 最初の訪問は、最初の時間帯の開始に自宅を出たときの到着が下限（待ちは0。遠方（出張）は縛らない）
+    const ready = k === 0 ? firstReady(slots, travelIn, v.solo) : prevEnd + travelIn;
     const lower = ready > v.earliest ? ready : v.earliest;
     let start = fitStart(slots, lower, v.duration);
     if (start === Number.POSITIVE_INFINITY) {
@@ -76,6 +101,7 @@ export function scheduleRoute(
  * （evaluate の採点には入れない）
  */
 export function routeCost(problem: Problem, staff: number, visits: ArrayLike<number>, length = visits.length): number {
+  if (soloBroken(problem, visits, length)) return Number.POSITIVE_INFINITY;
   const st = problem.staff[staff]!;
   const slots = st.slots;
   const home = st.point;
@@ -94,7 +120,7 @@ export function routeCost(problem: Problem, staff: number, visits: ArrayLike<num
     const v = pv[vi]!;
     const travelIn = travel[prevPoint]![v.point]!;
     travelMinutes += travelIn;
-    const ready = k === 0 ? (slots[0]?.start ?? Number.NEGATIVE_INFINITY) + travelIn : prevEnd + travelIn;
+    const ready = k === 0 ? firstReady(slots, travelIn, v.solo) : prevEnd + travelIn;
     const lower = ready > v.earliest ? ready : v.earliest;
     const start = fitStart(slots, lower, v.duration);
     if (start > v.latest + EPS) return Number.POSITIVE_INFINITY;

@@ -1,6 +1,6 @@
 # データの画面と管理者設定
 
-> この画面のファイル：`src/pages/DataPage.tsx`（組み立てだけ。状態と処理は `useDataBackup`（`useLastExport`・`useDataBackup`・`useDataRestore`）・`useDataExcel`・`useDataTidy`・`useDataTerms`、見た目は `dataParts.tsx`（保存の誤り・直前の状態に戻す・呼び方・控え（JSON）・古い訪問を片づける・使い方の案内・初期状態に戻す）・`dataExcel.tsx`（Excel の欄）・`dataBookings.tsx`（予約の CSV の欄）、文と判定は `src/lib/dataScreen.ts`・`bookingScreen.ts`）・`SettingsPage.tsx`（`settings.css`）・`RestartCard.tsx`・`mailScheduleSettings.tsx`、`src/components/FilePick.tsx`（`filePick.css`）・`Tour.tsx`・`DataNotices.tsx`（`dataNotices.css`）・`dirtyForms.ts`（`useDirtyMark`）、`src/lib/filePick.ts`・`features.ts`・`backupReminder.ts`・`tidy.ts`・`dirtyForms.ts`。関連 ADR：0006・0028・0032・0068・0069・0073・0075・0090。関連 PRD：D191〜D193・D210〜D216・D227・D260・D275・D322・D366・D379・D381・D395・D408。
+> この画面のファイル：`src/pages/DataPage.tsx`（組み立てだけ。状態と処理は `useDataBackup`（`useLastExport`・`useDataBackup`・`useDataRestore`）・`useDataExcel`・`useDataTidy`・`useDataTerms`、見た目は `dataParts.tsx`（保存の誤り・直前の状態に戻す・呼び方・控え（JSON）・古い訪問を片づける・使い方の案内・初期状態に戻す）・`dataExcel.tsx`（Excel の欄）・`dataBookings.tsx`（予約の CSV の欄）、文と判定は `src/lib/dataScreen.ts`・`bookingScreen.ts`）・`SettingsPage.tsx`（`settings.css`）・`RestartCard.tsx`・`mailScheduleSettings.tsx`、`src/components/FilePick.tsx`（`filePick.css`）・`Tour.tsx`・`DataNotices.tsx`（`dataNotices.css`）・`dirtyForms.ts`（`useDirtyMark`）、`src/lib/filePick.ts`・`features.ts`・`backupReminder.ts`・`tidy.ts`・`dirtyForms.ts`。関連 ADR：0006・0028・0032・0068・0069・0073・0075・0090・0095。関連 PRD：D191〜D193・D210〜D216・D227・D260・D275・D322・D366・D379・D381・D395・D408・D428。
 > Excel の変換は design.md の「excel」、機能の表と判定は design.md の「features」。
 
 ### データ（`#/data`）
@@ -42,7 +42,7 @@
 #### 予約の CSV（`BookingCard`。`booking-card`）
 
 - Excel の欄の次。`excel` が切なら出さない。予約を1回ずつの訪問（担当なし）として入れる。読める形は `BOOKING_FORMS`（予約システムの予約・このアプリの予定）。同じ読み込みは「定期の予定を追加」の引き出しにもある（テンプレート・書き出しつき。`excel` が切でも出す。PRD D423）
-- `FilePick`（`booking-file`・caption「読み込む予約の CSV」・.csv・.tsv・.txt）で選ぶと `useBookingImport` が `importBookings` で読み、確認（題「訪問を読み込みますか？」・本文 `lib/bookingScreen` の `bookingConfirmBody`：形と文字コード・件数・足さない取り消し済みの予約・入れなかった予約・読めなかった行・読まなかった列・担当なし（担当・ピン・アプリでの取り消しは残す）・控えの文。主ボタン「読み込む」）のあと、1世代の控えを残して入れる（`usePendingImport`）
+- `FilePick`（`booking-file`・caption「読み込む予約の CSV」・.csv・.tsv・.txt）で選ぶと `useBookingImport` が `importBookings` で読み、確認（題「訪問を読み込みますか？」・本文 `lib/bookingScreen` の `bookingConfirmBody`：形と文字コード・件数・足さない取り消し済みの予約・入れなかった予約・読めなかった行・勤務日・時間に入らない予約の文（`lib/bookingFit` の `bookingsOutsideHours`・`outsideHoursNote`。足す・直す予約のうち、どの〈スタッフ〉の勤務（日ごとの上書きを含む。休止・最終勤務日後は除く）にも入らないもの。PRD D428。ADR-0095）・読まなかった列・担当なし（担当・ピン・アプリでの取り消しは残す）・控えの文。主ボタン「読み込む」）のあと、1世代の控えを残して入れる（`usePendingImport`）
 - 知らせは担当の組み方を案内する（エキスパート機能が入なら「担当を組む」、切なら予定の上の要対応の帯の「要対応を組む」）
 - 足す・直す訪問が無ければ確認を出さず、入れなかった予約・読めなかった行があれば欄の誤りに「入れる訪問はありませんでした」と一緒に、無ければ「変更はありませんでした」の知らせ。読み込みの部品を読めなかった（新しい版の公開）ときは Excel の欄と同じ「画面を読み直す」の文
 

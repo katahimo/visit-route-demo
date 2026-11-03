@@ -80,22 +80,40 @@ export function backgroundOf(range: Span, baseSlots: Span[], slots: Span[]): Bac
  * 帯のあいだの区間：fromHome（最初の訪問へ自宅から）・drive（前の訪問の終わりから移動）・wait（着いてから始めるまで）・
  * toHome（最後の訪問の終わりから自宅まで）。visitId は区間のキー（来る区間は行き先の訪問、toHome は最後の訪問）
  */
-export type LegSpan = Span & { kind: 'fromHome' | 'drive' | 'wait' | 'toHome'; visitId: string; minutes: number };
+export type LegSpan = Span & {
+  kind: 'fromHome' | 'drive' | 'wait' | 'toHome';
+  visitId: string;
+  minutes: number;
+  /** 片方の位置（緯度・経度）が未登録で、分数が見込み（ADR-0093。markLegs が付ける） */
+  estimated?: boolean;
+  /** 着く時刻が訪問の「いつまでに始める」を過ぎている（markLegs が付ける） */
+  late?: boolean;
+};
 
-/** 担当の1列の時刻（lenient の scheduleRoute）から移動・待ちの区間。homeMinutes は最後の訪問から自宅まで（無ければ null） */
+/** 着く時刻の比べで許す誤差（分。matching/timing.ts の EPS と同じ考え） */
+const LATE_EPS = 1e-6;
+
+/**
+ * 担当の1列の時刻（lenient の scheduleRoute）から移動・待ちの区間。homeMinutes は最後の訪問から自宅まで（無ければ null）。
+ * 移動は次の訪問の始まりに接して置き、待ちはその前（前の訪問の終わり〜出る時刻）に置く（担当ごとの1日の横棒 spanParts と同じ）
+ */
 export function legsOf(stops: StopTiming[], homeMinutes: number | null): LegSpan[] {
   const out: LegSpan[] = [];
   stops.forEach((t, k) => {
+    const prevEnd = k > 0 ? stops[k - 1]!.end : Number.NEGATIVE_INFINITY;
+    const leave = Math.max(prevEnd, t.start - t.travelIn);
+    if (k > 0 && leave - prevEnd > LATE_EPS) {
+      out.push({ kind: 'wait', visitId: t.visitId, start: prevEnd, end: leave, minutes: leave - prevEnd });
+    }
     if (t.travelIn > 0) {
       out.push({
         kind: k === 0 ? 'fromHome' : 'drive',
         visitId: t.visitId,
-        start: t.arrival - t.travelIn,
-        end: t.arrival,
+        start: leave,
+        end: t.start,
         minutes: t.travelIn,
       });
     }
-    if (t.wait > 0) out.push({ kind: 'wait', visitId: t.visitId, start: t.arrival, end: t.start, minutes: t.wait });
   });
   const last = stops.at(-1);
   if (last && homeMinutes !== null) {
@@ -108,6 +126,44 @@ export function legsOf(stops: StopTiming[], homeMinutes: number | null): LegSpan
     });
   }
   return out;
+}
+
+/**
+ * 移動の区間に「見込み」「間に合わない」の印を付ける（分数は組みの結果のまま。新しく計算し直さない）。
+ * order は担当の訪問IDの並び、visitPlaced は訪問先の位置があるか、homePlaced は自宅の位置があるか、
+ * latestOf は訪問の「いつまでに始める」（分。無ければ undefined）。待ちの区間はそのまま返す
+ */
+export function markLegs(
+  legs: LegSpan[],
+  a: {
+    order: string[];
+    visitPlaced: (visitId: string) => boolean;
+    homePlaced: boolean;
+    latestOf: (visitId: string) => number | undefined;
+  },
+): LegSpan[] {
+  return legs.map((leg) => {
+    if (leg.kind === 'wait') return leg;
+    const k = a.order.indexOf(leg.visitId);
+    const prev = leg.kind === 'drive' && k > 0 ? a.order[k - 1] : undefined;
+    const estimated =
+      leg.kind === 'drive'
+        ? prev !== undefined && (!a.visitPlaced(prev) || !a.visitPlaced(leg.visitId))
+        : !a.homePlaced || !a.visitPlaced(leg.visitId);
+    const latest = leg.kind === 'toHome' ? undefined : a.latestOf(leg.visitId);
+    const late = latest !== undefined && leg.end > latest + LATE_EPS;
+    return { ...leg, estimated, late };
+  });
+}
+
+/**
+ * 区間の言葉：「移動 15分」「自宅まで 30分（見込み）」。間に合わない区間は「・着く時刻が間に合わない」を添える。
+ * bare は控えめな表示の文字（「15分」「30分（見込み）」。種類は印で分かるので言葉と添え書きを省く）
+ */
+export function legWords(leg: LegSpan, minutes: number, bare = false): string {
+  const word = leg.kind === 'drive' ? '移動 ' : leg.kind === 'fromHome' ? '自宅から ' : '自宅まで ';
+  const note = leg.estimated ? '（見込み）' : '';
+  return bare ? `${minutes}分${note}` : `${word}${minutes}分${note}${leg.late ? '・着く時刻が間に合わない' : ''}`;
 }
 
 /**

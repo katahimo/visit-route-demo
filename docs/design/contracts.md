@@ -11,7 +11,7 @@ PoC本体の documents.ts からログイン・事業所の分離（email・uid�
 |---|---|
 | `Org` | `name` 1〜100・`industry`（`sitter`/`care`/`nursing`/`other`）・`terms`・`fareYenPerKm` 0〜1000（0＝交通費なし）・`spanLimitHours` 0〜24・0.5刻み（10。0＝注意しない）・`features`（`{}`） |
 | `Staff` | `id`・`name` 1〜50・`home`・`travelMode`（`DRIVE`/`BICYCLE`/`WALK`/`TRANSIT`）・`workDays`（0=日〜6=土）・`shiftStart`・`shiftEnd`・`active`・`traits`・`requirements`・`preferences`（訪問先の特性に対して。各20まで）・`lastDay`（最終勤務日。翌日から勤務なし。null）・`email`（''）・`icon`（印の中の1〜2文字。絵文字も可。''＝未設定で苗字の最初の1文字。無い古いデータは ''。版は上げない。schema は形だけ＝前後の空白なし・32コード単位まで。見た目で2文字まで（書記素）は画面の `staffIconError` と Excel の `readStaffIcon` で見る） |
-| `Client` | `id`・`displayName` 1〜50・`kana` ≤50（''）・`place`（＋`postalCode` 空か7桁。''）・`note` ≤500・`color` 0〜7・`active`・`traits`・`requirements`・`preferences`・`tentative`（仮押さえ。false）・`entryNote`・`keyNote`・`parkingNote`・`cautionNote`（各 ≤200。''）・`allowedStaffIds` ≤50（`[]`＝限らない）・`stage`・`referrer`（`name` ≤50・`contact` ≤100・`note` ≤200・`email`。空＝`EMPTY_REFERRER`） |
+| `Client` | `id`・`displayName` 1〜50・`kana` ≤50（''）・`place`（＋`postalCode` 空か7桁。''。任意の `travelMinutes` 1〜720 の整数（移動時間（片道・分））・`farTrip`（遠方（出張））。無し＝距離から見積もる・印なし。ADR-0096）・`note` ≤500・`color` 0〜7・`active`・`traits`・`requirements`・`preferences`・`tentative`（仮押さえ。false）・`entryNote`・`keyNote`・`parkingNote`・`cautionNote`（各 ≤200。''）・`allowedStaffIds` ≤50（`[]`＝限らない）・`stage`・`referrer`（`name` ≤50・`contact` ≤100・`note` ≤200・`email`。空＝`EMPTY_REFERRER`） |
 | `VisitType` | `id`・`name` 1〜20・`color` 0〜7・`durationMinutes` 5〜720（新しい訪問・パターンの初期値だけ）・`requirements` ≤20（常に必須）・`note` ≤200。20まで（`MAX_VISIT_TYPES`） |
 | `Pattern` | `id`・`clientId`・`typeId`（null＝問わない）・`weekdays` 1〜7個・`everyWeeks` 1〜4・`repeat`（`'weekly'`/`'monthly'`。`'weekly'`）・`monthWeeks` 1〜5（`[]`）・`dayTimes`（曜日・開始（早）・開始（遅）。7まで。`[]`）・`windowKind`・`earliestStart`・`latestStart`・`durationMinutes`・`from`・`to`（null＝続く）・`usualStaffId`（繰り返しの担当。null＝担当なし）・`usualStarts`（曜日ごとの標準の開始 `{ weekday, start: HH:mm }`。7まで・同じ曜日は1つ。`[]`）・`note` |
 | `Visit` | `id`・`date`・`clientId`・`windowKind`（`fixed`/`window`）・`earliestStart`・`latestStart`・`durationMinutes` 5〜720・`staffId`（担当。null＝担当なし）・`start`（組んだ開始。null＝開始（早）で並べる）・`pinned`（AI で組み直しても担当を変えない。false）・`cancelled`・`note` ≤200・`typeId`（null）・`pattern`＝`{ id, date: 元の日, edited }`（null＝単発）・`cancelKind`（`'sameDay'`＝当日キャンセル。null）。保存するのは単発と、繰り返しの変えた回だけ |
@@ -96,11 +96,12 @@ POINTS_PER_WEIGHT = 10; DROP_POINTS = 10000; KEEP_DROP_POINTS = DROP_POINTS * 10
 
 ```ts
 Problem = { date, staff: { id, name, point, slots /* 欠勤・最終勤務日を引いた時間帯。空＝休み */ }[],
-  visits: { id, clientId, point, earliest, latest, duration }[], travel, meters /* [from][to] 自宅と訪問先 */,
+  visits: { id, clientId, point, earliest, latest, duration, solo? /* 遠方（出張）。ADR-0096 */ }[], travel, meters /* [from][to] 自宅と訪問先 */,
   allowed, assignCost, reasons /* [visit][staff]。reasons は点の大きい順 */, waitPerMinute,
   balance: { perVisit, lo, hi, cap /* 必須なら hi+1、ほか null */ } | null, infeasible: { visit, reasons }[], stay? }
 Reason = { ruleId, label, points /* 可否の原因は Infinity */, level? /* 相性だけ 2|1|-1|-2 */ }
   // ruleId：Rule.id・'travel'・'wait'・'slot'・'time'・'noPlace'（位置が未登録の点。可否にはしない。ADR-0093）・'visitType'・'allowedStaff'・'pin'
+  //   担当なしの理由（explain）だけ：'travelTooFar'「移動が間に合わない（片道 約N分）」・'farTrip'「遠方（出張）の日はほかの訪問を入れません」（ADR-0096）
 ProblemStay = { staff /* [visit] 元の担当の添字 | null */, start /* [visit] 元の開始 | null */, keep: boolean[], movePoints, minutePoints }
 SolveOptions = { seed, iterations, initial?: Routes }
 SolveResult = { routes, unassigned, score /* evaluate.score と一致 */, seed, iterations, stopped }
@@ -115,7 +116,7 @@ HundredPart = { key: 'travel'|'wait'|'assign'|'balance'|'dropped', label, points
 RuleAchievement = { ruleId, unit: 'visit' | 'staff', total, met, compat: { great, good, poor, ng } | null }
 ```
 
-- `scheduleRoute`：自宅を出る時刻は自由（最初の稼働時間帯の開始以降）、最初の待ちは0。開始＝max(到着, earliest) から作業が時間帯の1つに収まる最も早い時刻。latest 超え・収まらない＝違反（strict は不可、lenient は記録して続ける）。帰りの移動も数える（帰着の超過は違反にしない）
+- `scheduleRoute`：自宅を出る時刻は自由（最初の稼働時間帯の開始以降。列の最初が遠方（`solo`）なら縛らない）、最初の待ちは0。遠方の訪問とほかの〈利用者さん〉の訪問が同じ列なら strict は不可（`routeCost` は Infinity。ADR-0096）。開始＝max(到着, earliest) から作業が時間帯の1つに収まる最も早い時刻。latest 超え・収まらない＝違反（strict は不可、lenient は記録して続ける）。帰りの移動も数える（帰着の超過は違反にしない）
 - 画面は `bestRoutes` を点数の基準で採点して「いまの最良 N点」を出す（無ければ前の点）
 
 ## 欠勤の振り直し（`src/contracts/reassign.ts`。PRD D26〜D35。ADR-0011）
@@ -304,7 +305,7 @@ BICYCLE_NOTE = '自転車の経路が出ないときは、Google マップで徒
 | 条件 | ID・名前・種類・重み・必須（重み・必須は読み込むとプリセットのシートの点数の基準の行にそろえる。重みは1組。使い方のシートにも書く） |
 | プリセット | ID・名前・一言・重み：〈型〉…（空は0）・必須（型の名前）・点数の基準（○ は1行。無印なら先頭。ふだんの重み＝条件の重みの画面の重み）。1〜6行（いまのまま） |
 | 〈スタッフ〉 | ID・名前・移動手段・勤務する曜日・勤務開始・勤務終了・利用中・住所・緯度・経度・最終勤務日・メールアドレス・アイコン（任意の1〜2文字・文字列の書式。列が無い古いブックは未設定・名簿の読み込みで列が無ければ今の値のまま。2文字・32コード単位を超えれば行付きで止める）・特性：…・必要条件：…・希望：… |
-| 〈利用者さん〉 | ID・表示名・よみ（50字）・色（1〜8）・利用中・仮押さえ・郵便番号（文字列）・住所・緯度・経度・いつもの担当・担当できる人（名前を「、」か改行で。限らない）・メモ・入り方・鍵・駐車場・注意・段階（空なら利用中・仮押さえから）・紹介元・紹介元の連絡先・紹介元のメモ・紹介元のメールアドレス・特性：…・必要条件：…・希望：… |
+| 〈利用者さん〉 | ID・表示名・よみ（50字）・色（1〜8）・利用中・仮押さえ・郵便番号（文字列）・住所・緯度・経度・移動時間（片道・分。1〜720。空＝距離から見積もる）・遠方（出張）（○）・いつもの担当・担当できる人（名前を「、」か改行で。限らない）・メモ・入り方・鍵・駐車場・注意・段階（空なら利用中・仮押さえから）・紹介元・紹介元の連絡先・紹介元のメモ・紹介元のメールアドレス・特性：…・必要条件：…・希望：… |
 | 相性 | 行＝〈利用者さん〉、列＝〈スタッフ〉。◎○△×・空 |
 | 稼働時間 | 〈スタッフ〉・日付・時間帯（例 9:00-12:00、13:00-18:00。「休み」） |
 | 欠勤 | ID・〈スタッフ〉・日付・開始・終了（空＝始業から／終業まで）・メモ（欠勤なし。`base` から引き継がない） |

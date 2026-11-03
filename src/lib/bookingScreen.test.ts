@@ -39,6 +39,18 @@ describe('予約の読み込みの文', () => {
     ]);
   });
 
+  it('勤務に入らない予約の文があれば、入れなかった行の次に添える（PRD D428）', () => {
+    const lines = bookingConfirmBody({
+      fileName: 'a.csv',
+      r: result(),
+      clientTerm: 'お客様',
+      keep,
+      outsideNote:
+        '1件はどのシッターの勤務日・時間にも入りません（例：11/5（木）17:00〜20:00）。シッターの勤務時間を広げると組めます',
+    }).split('\n');
+    expect(lines[2]).toContain('1件はどのシッターの勤務日・時間にも入りません');
+  });
+
   it('確認の本文に形・読まなかった列・担当なしを出す（文字コードは出さない）', () => {
     const body = bookingConfirmBody({ fileName: 'Reserve.csv', r: result(), clientTerm: 'お客様', keep });
     expect(body).toContain('「Reserve.csv」を訪問として読み込みます（予約システムの予約の CSV）。');

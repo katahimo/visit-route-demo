@@ -15,4 +15,11 @@ export { conditionText, matches, yearsSince } from './conditions';
 export { balanceOff, balancePoints, dropPointsOf, overCap, totalPoints } from './cost';
 export { bestInsertion } from './insertion';
 export { naiveSeqs } from './naive';
-export { EPS, fitStart, routeCost, scheduleRoute } from './timing';
+export { EPS, fitStart, routeCost, scheduleRoute, soloBroken } from './timing';
+export {
+  FAR_TRIP_LABEL,
+  FAR_TRIP_RULE_ID,
+  TRAVEL_TOO_FAR_RULE_ID,
+  TRAVEL_TOO_FAR_WORD,
+  travelTooFarLabel,
+} from './travel';

@@ -209,7 +209,7 @@
 | `EdgeScroll.tsx` | 横に巻く格子の表の箱（右に続きがある印 `has-more-right`） | このファイル（狭い画面の表） |
 | `progressBand.tsx` | `ProgressBand`・`BandLive` | [pages-progress.md](pages-progress.md) |
 | `PastePanel.tsx`・`usePasteNotices.ts` | 連絡を貼り付けて入れる（読みは `lib/pasteNotices`・`lib/pasteRows`） | [pages-plan-absence.md](pages-plan-absence.md) |
-| `scheduleParts.tsx`・`undo.tsx` | 予定の共通の部品（`ScheduleToolbar`・`RangeProposalBand`・`confirmDropProposal`・`SelectionBar`）・全体の元に戻す（`UndoButtons`・`useUndoAction`・`HistoryKeys`） | [pages-common.md](pages-common.md) |
+| `scheduleParts.tsx`・`undo.tsx` | 予定の共通の部品（`ScheduleToolbar`・`RangeProposalBand`・`confirmDropProposal`・`SelectionBar`）・全体の元に戻す（`UndoIconButtons`・`UndoButtons`・`useUndoAction`・`HistoryKeys`） | [pages-common.md](pages-common.md) |
 | `visitParts.tsx`・`visitKeys.tsx`・`dayList.tsx` | 訪問の札の共通の部品（印 `VisitMarks`・選ぶ `useVisitSelection`・`useVisitItem`・`SelectToggle`・中の札＝1行1訪問の行 `VisitRow`・小の札 `VisitChip`・マスに積む `ChipStack`・ドラッグの `useVisitDrag`・`DropShadow`）・帯をキーで動かす（`useVisitKeys`）・スマホの日ごとのリスト | [pages-common.md](pages-common.md) |
 | `EmptyNext.tsx` | 空の画面の次の一手 | [pages-common.md](pages-common.md) |
 | `FeatureOffNotice.tsx` | 切った機能の URL を開いたときの知らせ | このファイル |
@@ -240,7 +240,7 @@
 | `week.ts`・`weekOps.ts`・`weekView.ts`・`timelineClients.ts`・`fold.ts` | 週（`weekOps` は動かす・空き時間に入れる操作） | [pages-week.md](pages-week.md) |
 | `barRows.ts`・`staffBar.ts`・`glance.ts`・`dayLine.ts` | 時間帯のバー | [pages-bars.md](pages-bars.md) |
 | `vacancyView.ts` | 空き状況 | [pages-vacancy.md](pages-vacancy.md) |
-| `clientFilter.ts`・`area.ts`・`search.ts`・`leaves.ts`・`patternText.ts`・`tentative.ts`（伝えた日。取り消しは `store/tentative`）・`clientStage.ts`・`addressLookup.ts`・`geocode.ts`・`postalCode.ts`・`placeAll.ts`・`viewMode.ts`・`personPage.ts`・`personLinks.ts` | 〈利用者さん〉・人の画面・住所 | [pages-clients.md](pages-clients.md) |
+| `clientFilter.ts`・`area.ts`・`search.ts`・`leaves.ts`・`patternText.ts`・`tentative.ts`（伝えた日。取り消しは `store/tentative`）・`clientStage.ts`・`addressLookup.ts`・`geocode.ts`・`postalCode.ts`・`placeAll.ts`・`clientTravel.ts`・`travelReasons.ts`（移動時間・遠方（出張）。ADR-0096）・`viewMode.ts`・`personPage.ts`・`personLinks.ts` | 〈利用者さん〉・人の画面・住所 | [pages-clients.md](pages-clients.md) |
 | `offboard.ts`・`workload.ts` | 〈スタッフ〉 | [pages-staff.md](pages-staff.md) |
 | `compatView.ts` | 相性 | [pages-compat.md](pages-compat.md) |
 | `presets.ts` | プリセット | [pages-rules.md](pages-rules.md) |
@@ -289,7 +289,7 @@
 - [ ] エキスパート機能が切で今日が月の20日以降なら、予定（月・週・日）の要対応の帯の下に「〈来月〉の予定 N件はできています」＋来月の担当なし・間に合わない・重なり・休みの人の数（0 は出さない）の1行と［〈来月〉を見る ›］（月の予定の来月）・［×］が出る。19日までと入では出さず、来月に訪問が無ければ出さない。［×］で消え、その月の間は読み直しても出さない（端末に覚え、データに入れない）。390px で折り返して収まる（`scripts/e2e-simple-menu.cjs` の 3c。時計を止め直す）
 - [ ] エキスパート機能が切のとき、月・週の操作の行は主「定期の予定を追加」＋「欠勤・キャンセルを登録」の2つだけ（要対応を組むのは要対応の帯）。押すと引き出しが開き、定期は 曜日・くり返し（毎月なら第N）・開始日・時刻・所要、単発は 日付・時刻・所要 を入れて「追加」で、繰り返し（定期）／その日の訪問（単発）が1件増えて担当が自動で付く。〈スタッフ〉の一覧の上のタブ（一覧・勤務・相性）と〈利用者さん〉のタブ（一覧・相性）で行き来でき、メニューの印は〈スタッフ〉／〈利用者さん〉。相性・勤務の画面に禁句・点が出ない。入では変わらない
 - [ ] エキスパート機能が入のとき、メニュー（左・引き出し）が 予定・空き状況・〈利用者さん〉・〈スタッフ〉・組む・設定 の6項目で、子の項目を持つのは組む（基本情報・組み方の標準・担当を組む。標準があれば基本情報と担当を組むだけ）だけ（▾ で畳める。既定は開く。開け閉めを覚え、今の画面の親へ移ると開く）。印は開いていれば子、畳んでいれば親。件数の印は組むの1つ（「変更」か「N日」）。`#/home`・`#/`・知らない URL は予定の画面へ移る。予定の上の要対応の帯に 担当なし・間に合わない・重なり・休みの人のほか 組み方の標準が無い・基本情報が変わった（組み直す）・未確定 N日 が出て、押すとそれぞれの行き先へ移る。下のタブは 予定・〈利用者さん〉・〈スタッフ〉・組む・探す・メニュー。1366×768 で巻かずに収まる。親を押すと最後に開いた表示・タブを開く。画面の見出しが上の帯・パレットの名前と同じ。Ctrl+K（上の帯の「探す・移動」、狭い画面は下のタブの「探す」）で開き、打って↑↓・Enter で画面・操作・人の画面（〈利用者さん〉・〈スタッフ〉）へ移り、Esc でフォーカスが戻る（`scripts/e2e-nav.cjs`・`scripts/e2e-home.cjs`）
-- [ ] エキスパート機能が入のとき、予定の操作の行は 月・週＝「定期の予定を追加」＋「担当を組む」、日＝「訪問を1件追加」＋「確定（伝えた）」の2つと「その他 ▾」（欠勤・キャンセル・元に戻す・表示の切り替え・使い方・メールで送るなどはその中）。進み具合の帯・月全体の件数・凡例（月）、1行の状態・凡例（週）、今の担当の1行・担当ごとの1日・要対応の訪問の帯（日）は「詳しく ▾」に入り、閉じて始まる。見出しの1行に 月＝担当 a/b日・確定 c/d日、週＝未確定 N日・要対応 M件、日＝点数・移動・入らない・守れない条件 の数が読める。開け閉めは月・週・日の画面ごとに端末に覚え、読み直しても開いたまま（切の「詳しく ▾」も同じ）。担当なしの札の理由は「理由 N ▾」で開く。説明は入切とも1行で初回だけ
+- [ ] エキスパート機能が入のとき、予定の操作の行は 月・週＝「定期の予定を追加」＋「担当を組む」、日＝「訪問を1件追加」＋「確定（伝えた）」の2つと「その他 ▾」（欠勤・キャンセル・表示の切り替え・使い方・メールで送るなどはその中）。進み具合の帯・月全体の件数・凡例（月）、1行の状態・凡例（週）、今の担当の1行・担当ごとの1日・要対応の訪問の帯（日）は「詳しく ▾」に入り、閉じて始まる。見出しの1行に 月＝担当 a/b日・確定 c/d日、週＝未確定 N日・要対応 M件、日＝点数・移動・入らない・守れない条件 の数が読める。開け閉めは月・週・日の画面ごとに端末に覚え、読み直しても開いたまま（切の「詳しく ▾」も同じ）。担当なしの札の理由は「理由 N ▾」で開く。説明は入切とも1行で初回だけ
 - [ ] 月・週・日の名前から詳細の吹き出しが開き、Esc・外を押す・もう一度押す・Tab で閉じてボタンへ戻る。同時に1つ、見出しが消えたら閉じる。リンクでその人の画面が開く。印刷では i を出さない（`lib/personPopover` のテスト・`scripts/e2e-details.cjs`・`scripts/e2e-details2.cjs`）
 - [ ] 390×844 で条件の重み・特性の項目・〈スタッフ〉一覧・〈利用者さん〉一覧・比較が横に巻かず、行がカードになる。条件の重みのスライダーと必須が画面の中。〈利用者さん〉一覧の絞り込みが「絞り込み（N）」に畳まれる。比較の主ボタンがタブに隠れない。週は今日の列が見え、空き状況の表は 9:00 から（`lib/scrollEdge`・`lib/weekView`・`lib/clientFilter` のテスト・`scripts/e2e-mobile.cjs`）
 - [ ] 右の欄の確定のボタンの帯：短い欄は帯が内容のすぐ下・区切りなし、長い欄は欄の下に貼り付き、内容が隠れている間だけ区切り。390px の並び・タブに隠れない・キーボード（`lib/panelFit` のテスト・`scripts/e2e-panel-foot.cjs`）

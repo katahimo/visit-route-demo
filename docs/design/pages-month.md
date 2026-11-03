@@ -18,7 +18,7 @@
 #### 並び
 
 1. 見出し：`lead`「一月の担当を見て、担当なしや要対応を手で直し、確定します」。すぐ下にナビの行（`ScheduleNav`）：「今日」・‹ 月を選ぶ欄（`month-title`）›・［月｜週｜日］。下に要対応の帯 `AttentionBand`
-2. 操作の行（`ScheduleToolbar zoom="month"`）：入＝主「定期の予定を追加」（`toolbar-add-plan`）＋「担当を組む」（`toolbar-assign`。`/arrange?ym=`）、切＝主「定期の予定を追加」＋「欠勤・キャンセルを登録」（`sudden-open`。選んでいる日（今日より前なら今日）の日の予定で欄を開くリンク）。「その他 ▾」（`month-more`）：見せ方（`month-layout-calendar`・`month-layout-list`）・元に戻す／やり直す・入は欠勤・キャンセルを登録・「表示を選ぶ」・「印刷」・「勤務の見込み」・「マスの見方の説明」・「連絡を貼り付けて入れる」（`paste-open`。[pages-plan-absence.md](pages-plan-absence.md)）（空き状況はメニュー。ADR-0078）
+2. 操作の行（`ScheduleToolbar zoom="month"`）：入＝主「定期の予定を追加」（`toolbar-add-plan`）＋「担当を組む」（`toolbar-assign`。`/arrange?ym=`）、切＝主「定期の予定を追加」＋「欠勤・キャンセルを登録」（`sudden-open`。選んでいる日（今日より前なら今日）の日の予定で欄を開くリンク）。「その他 ▾」（`month-more`）：見せ方（`month-layout-calendar`・`month-layout-list`）・入は欠勤・キャンセルを登録・「表示を選ぶ」・「印刷」・「勤務の見込み」・「マスの見方の説明」・「連絡を貼り付けて入れる」（`paste-open`。[pages-plan-absence.md](pages-plan-absence.md)）（空き状況はメニュー。ADR-0078）
 3. 範囲の提案の帯（`RangeProposalBand`）
 4. 操作の欄 `month-head`：
    - 「その他 ▾」の項目：「表示を選ぶ（〈スタッフ〉・〈利用者さん〉・混み具合）」（`month-more-pickers`。開いていれば「表示の選択をたたむ」、選んでいる間・休みの入力中は押せず理由「表示を「全体」・混み具合を「すべて」に戻すと、たためます」）・「印刷」（`month-print`。選んでいる〈スタッフ〉があれば `&staff=`。`monthPrint` が入のとき）・「勤務の見込み」（`month-workload`。`/workload?ym=`。`workload` が入のとき）・「マスの見方の説明」（`month-more-help`。開いていれば「…を閉じる」）。印刷・勤務の見込みには1行の説明
