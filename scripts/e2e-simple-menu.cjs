@@ -1491,7 +1491,7 @@ async function addRecurring(page, w) {
  * 確認のあと訪問が1件増え、引き出しが閉じる
  */
 async function addCsv(page) {
-  await fresh(page, '/week', NAV_READY, { start: 'demo', booking: 'oneOff' });
+  await fresh(page, '/week', NAV_READY, { start: 'demo', use: 'oneOff' });
   // 単発のみは Excel の入出力が入（ADR-0091）。切っても出ることを見るので excel だけ切って読み直す
   await page.evaluate((k) => {
     const d = JSON.parse(localStorage.getItem(k));
@@ -1524,7 +1524,7 @@ async function addCsv(page) {
     .trim()
     .split('\r\n');
   check(
-    lines.length > 1 && /^visit-route-demo-visits-\d{4}-\d{2}\.csv$/.test(exp[0].suggestedFilename()),
+    lines.length > 1 && /^staff-assign-demo-visits-\d{4}-\d{2}\.csv$/.test(exp[0].suggestedFilename()),
     'CSV：書き出しのファイル',
     lines.length,
   );
@@ -1625,7 +1625,7 @@ async function addMonthly(page) {
 
 /** 単発：週で押す → 〈利用者さん〉・日付・時刻・所要 → 入れる → 訪問が1件増え、予定に出る */
 async function addOneOff(page, w) {
-  await fresh(page, '/week', NAV_READY, { start: 'demo', booking: 'oneOff' });
+  await fresh(page, '/week', NAV_READY, { start: 'demo', use: 'oneOff' });
   const d0 = await data(page);
   check(d0.org.features.patterns === false, '前提：単発の答えは繰り返しを使わない');
   await addToolbar(page, '/week', 'week', w);

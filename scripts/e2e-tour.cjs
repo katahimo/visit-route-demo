@@ -3,9 +3,9 @@
 // 読み直してもまた2問・Tab は選んだ方だけ・矢印で選び直す）・デモ×定期（今の初期データ・利用者さん／スタッフ・「基本」・最初は月。
 // 作った直後に今日〜翌月末の要対応（担当なし・間に合わない・重なり・休みの人）を1回自動で組み、知らせ「N件の担当を組みました」と［元に戻す］。組む印（sessionStorage）は読み直しをまたいで起動で読む。PRD D409）・
 // デモ×単発（架空の単発の予約が今日から2週間分・お客様／シッター・「単発のみ」・最初は週）・
-// 自分のデータ（空のデータ＋3段の登録の案内：上に「1/3」・①②は「CSV・Excel を読み込む」（名簿の欄）と「1人ずつ入れる」（追加の画面）・③は予定へ・
+// 自分のデータ（空のデータ＋3段の登録の案内：上に「1/3」・①②は「CSV・Excel を読み込む」（名簿の欄）・下の段に「始め方を選び直す」・③は予定へ・
 // 空のデータで月・週・日・一覧・設定などが壊れない。組まない）・印「all」（scripts/lib/startFeatures.cjs）があれば2問を出さず今の初期データ＋すべて入（組まない）・
-// 設定の「最初の設定をやり直す」（確認の文は元に戻す Ctrl+Z の対象外・先に書き出す案内 → 2問へ戻る → 答えでデータを作り直す・控えが残る）、
+// データの画面の「始め方を選び直す」（確認の文は元に戻す Ctrl+Z の対象外・先に書き出す案内 → 2問へ戻る → 答えでデータを作り直す・控えが残る）、
 // 案内ツアー（データの画面の「案内をもう一度見る」から開く：role="dialog"・aria-modal・見出しと本文・1 / 2・最初のフォーカスは「次へ」・
 // 裏の inert とスクロールのロック・「戻る」は最初の枚で押せない・Tab と Shift+Tab が中で回る・開いている間は Ctrl+K でパレットを開かない・
 // 2枚（予定・欠勤。ホームは無い。PRD D277・D401）・予定の枚は3段の説明・最後の枚は主ボタン「今日の予定を開く」・「閉じる」（とばすは出さない。PRD D323）・
@@ -113,11 +113,13 @@ async function firstRun(b) {
   check(
     text.includes('デモで試す') &&
       text.includes('自分のデータで始める') &&
-      text.includes('単発の予約が中心') &&
+      text.includes('単発の予約') &&
       text.includes('例：ベビーシッター') &&
-      text.includes('定期の訪問が中心') &&
-      text.includes('訪問介護・看護、家事代行の定期'),
-    '2問：問1（デモで試す／自分のデータで始める）・問2（単発の予約が中心／定期の訪問が中心）の選択肢と例',
+      text.includes('定期の訪問（基本）') &&
+      text.includes('定期＋勤務・契約') &&
+      text.includes('定期＋月の予定・現場共有') &&
+      (await page.locator('[data-testid^="first-run-use-"]').count()) === 4,
+    '2問：問1（デモで試す／自分のデータで始める）・問2（使い方の4つ。ひな形の名前と例）の選択肢',
     text,
   );
   check((await page.getByTestId('first-run-cancel').count()) === 0, '初めて開いたときの2問に「やめる」は出ない');
@@ -125,8 +127,8 @@ async function firstRun(b) {
   check(primary.length === 1 && primary[0].trim() === 'はじめる', '主ボタンは「はじめる」の1つだけ', primary);
   check(
     (await page.getByTestId('first-run-start-demo').isChecked()) &&
-      (await page.getByTestId('first-run-booking-regular').isChecked()),
-    '初めに選んである：デモで試す・定期の訪問が中心',
+      (await page.getByTestId('first-run-use-basic').isChecked()),
+    '初めに選んである：デモで試す・定期の訪問（基本）',
   );
   // ラジオは標準の radio group：Tab は選んだ方だけ、矢印で選び直す
   const stops = [];
@@ -137,8 +139,8 @@ async function firstRun(b) {
   check(
     stops.includes('first-run-start-demo') &&
       !stops.includes('first-run-start-own') &&
-      stops.includes('first-run-booking-regular') &&
-      !stops.includes('first-run-booking-oneOff'),
+      stops.includes('first-run-use-basic') &&
+      !stops.includes('first-run-use-oneOff'),
     '2問：Tab は選んでいる方だけに止まる',
     stops,
   );
@@ -152,7 +154,7 @@ async function firstRun(b) {
   check((await stored2(page)) === null, '読み直しても、答えるまではデータを書かず、また2問');
   // デモ・定期：今の初期データ。呼び名は利用者さん／スタッフ・ひな形は基本・最初は月の予定
   await page.getByTestId('first-run-start-demo').check();
-  await page.getByTestId('first-run-booking-regular').check();
+  await page.getByTestId('first-run-use-basic').check();
   await page.getByTestId('first-run-submit').click();
   await answered(page);
   await page.locator('.app-main h1').first().waitFor({ timeout: 30000 });
@@ -261,7 +263,7 @@ async function firstRunOneOff(b) {
   await page.goto(`${BASE}#/`);
   await page.getByTestId('first-run').waitFor({ timeout: 30000 });
   await page.getByTestId('first-run-start-demo').check();
-  await page.getByTestId('first-run-booking-oneOff').check();
+  await page.getByTestId('first-run-use-oneOff').check();
   await page.getByTestId('first-run-submit').click();
   await answered(page);
   await page.locator('.app-main h1').first().waitFor({ timeout: 30000 });
@@ -275,7 +277,7 @@ async function firstRunOneOff(b) {
   );
   check(
     d.org.features.patterns === false && d.org.features.expert === false,
-    'デモ・単発：ひな形は「単発のみ」（繰り返しを切・エキスパート機能は切）',
+    'デモ・単発：ひな形は「単発の予約」（繰り返しを切・エキスパート機能は切）',
     d.org.features,
   );
   const days = new Set(d.visits.map((v) => v.date));
@@ -305,13 +307,41 @@ async function firstRunOneOff(b) {
   await ctx.close();
 }
 
-// 自分のデータで始める：空のデータ＋3段の登録の案内（1/3・①②は読み込む／1人ずつ・③は予定へ）。空の画面が壊れない
+// 問2で労務・契約／月次予定・現場共有を選ぶと、そのひな形で始まる（管理者設定の見出しの横が「いま：〈ひな形の名前〉」）
+async function firstRunUses(b) {
+  for (const [use, name, key] of [
+    ['laborContract', '定期＋勤務・契約', 'workload'],
+    ['monthlyField', '定期＋月の予定・現場共有', 'monthPrint'],
+  ]) {
+    const { ctx, page } = await askingPage(b);
+    await page.goto(`${BASE}#/`);
+    await page.getByTestId('first-run').waitFor({ timeout: 30000 });
+    await page.getByTestId('first-run-start-own').check();
+    await page.getByTestId(`first-run-use-${use}`).check();
+    await page.getByTestId('first-run-submit').click();
+    await answered(page);
+    await page.getByTestId('start-guide').waitFor({ timeout: 30000 });
+    await until(async () => (await stored2(page)) !== null, 10000);
+    const f = (await stored2(page)).org.features;
+    check(f.patterns === true && f[key] === true && f.expert === false, `問2で「${name}」：そのひな形の機能が入る`, f);
+    await page.goto('about:blank');
+    await page.goto(`${BASE}#/settings`);
+    await page.getByTestId('feature-template-current').waitFor({ timeout: 30000 });
+    check(
+      (await page.getByTestId('feature-template-current').innerText()).trim() === `いま：${name}`,
+      `問2で「${name}」：管理者設定の見出しの横は「いま：${name}」`,
+    );
+    await ctx.close();
+  }
+}
+
+// 自分のデータで始める：空のデータ＋3段の登録の案内（1/3・①②は読み込む・③は予定へ）。空の画面が壊れない
 async function firstRunOwn(b) {
   const { ctx, page } = await askingPage(b);
   await page.goto(`${BASE}#/`);
   await page.getByTestId('first-run').waitFor({ timeout: 30000 });
   await page.getByTestId('first-run-start-own').check();
-  await page.getByTestId('first-run-booking-regular').check();
+  await page.getByTestId('first-run-use-basic').check();
   await page.getByTestId('first-run-submit').click();
   await answered(page);
   await page.getByTestId('start-guide').waitFor({ timeout: 30000 });
@@ -334,7 +364,7 @@ async function firstRunOwn(b) {
   const count = () => page.getByTestId('start-guide-count').innerText();
   const title = () => page.locator('.app-main h1').first().innerText();
   check(
-    (await count()).trim() === '1/3' && (await title()).includes('① 利用者さんを入れる'),
+    (await count()).trim() === '1/3' && (await title()).includes('① 利用者さんの名簿を読み込む'),
     '案内 1/3：① 利用者さん',
     {
       count: await count(),
@@ -351,34 +381,31 @@ async function firstRunOwn(b) {
     '案内①：「CSV・Excel を読み込む」で利用者さんの名簿の読み込み（今の名簿の欄）が開く',
   );
   await page.screenshot({ path: path.join(OUT_DIR, 'start-guide-1.png') });
-  // ① 1人ずつ → 追加の画面
-  await page.getByTestId('start-guide-add').click();
-  await page.waitForURL(/#\/clients\/new/);
-  check(true, '案内①：「1人ずつ入れる」で利用者さんの追加の画面へ');
-  await page.goBack();
-  await page.getByTestId('start-guide').waitFor();
+  check(
+    (await page.getByTestId('start-guide-add').count()) === 0,
+    '案内：「1人ずつ入れる」は無い（一覧の画面の追加から入れる）',
+  );
+  check((await page.getByTestId('start-guide-restart').count()) === 1, '案内：下の段に「始め方を選び直す」');
   // ② スタッフ
   await page.getByTestId('start-guide-next').click();
   await page.waitForURL(/step=2/);
   await page.getByTestId('start-guide-count').filter({ hasText: '2/3' }).waitFor();
-  check((await count()).trim() === '2/3' && (await title()).includes('② スタッフを入れる'), '案内 2/3：② スタッフ');
+  check(
+    (await count()).trim() === '2/3' && (await title()).includes('② スタッフの名簿を読み込む'),
+    '案内 2/3：② スタッフ',
+  );
   await page.getByTestId('start-guide-import').click();
   check(
     (await page.getByTestId('roster-card').innerText()).includes('スタッフの名簿'),
     '案内②：「CSV・Excel を読み込む」でスタッフの名簿の欄が開く',
   );
-  await page.getByTestId('start-guide-add').click();
-  await page.waitForURL(/#\/staff\/new/);
-  check(true, '案内②：「1人ずつ入れる」でスタッフの追加の画面へ');
-  await page.goBack();
-  await page.getByTestId('start-guide').waitFor();
   // ③ 予定
   await page.getByTestId('start-guide-next').click();
   await page.waitForURL(/step=3/);
   await page.getByTestId('start-guide-count').filter({ hasText: '3/3' }).waitFor();
   const btns = await page.getByTestId('start-guide').locator('.btn-primary').allInnerTexts();
   check(
-    (await count()).trim() === '3/3' && (await title()).includes('③ 予定を入れる') && btns.join() === '予定を入れる',
+    (await count()).trim() === '3/3' && (await title()).includes('③ 予定を登録する') && btns.join() === '予定を入れる',
     '案内 3/3：③ 予定。主ボタンは「予定を入れる」',
     btns,
   );
@@ -415,11 +442,11 @@ async function firstRunOwn(b) {
   await o.page.goto(`${BASE}#/`);
   await o.page.getByTestId('first-run').waitFor({ timeout: 30000 });
   await o.page.getByTestId('first-run-start-own').check();
-  await o.page.getByTestId('first-run-booking-oneOff').check();
+  await o.page.getByTestId('first-run-use-oneOff').check();
   await o.page.getByTestId('first-run-submit').click();
   await o.page.getByTestId('start-guide').waitFor({ timeout: 30000 });
   check(
-    (await o.page.locator('.app-main h1').first().innerText()).includes('① お客様を入れる'),
+    (await o.page.locator('.app-main h1').first().innerText()).includes('① お客様の名簿を読み込む'),
     '自分のデータ・単発：案内の呼び名はお客様',
   );
   await o.page.goto('about:blank');
@@ -438,10 +465,10 @@ async function firstRunOwn(b) {
   await o.ctx.close();
 }
 
-// 設定の「最初の設定をやり直す」：確認（元に戻すの対象外・先に書き出す案内）→ 2問へ戻る → 選んだ答えでデータを作り直す
+// データの画面の「始め方を選び直す」：確認（元に戻すの対象外・先に書き出す案内）→ 2問へ戻る → 選んだ答えでデータを作り直す
 async function firstRunRestart(b) {
   const { ctx, page } = await newPage(b, { human: false });
-  await page.goto(`${BASE}#/settings`);
+  await page.goto(`${BASE}#/data`);
   await page.getByTestId('restart-first-run-button').waitFor({ timeout: 30000 });
   const before = await stored2(page);
   check(before.clients.length === 20, '前提：今の初期データ（20人）');
@@ -487,19 +514,19 @@ async function firstRunRestart(b) {
   );
   // もう一度：単発・自分のデータで作り直す
   await page.goto('about:blank');
-  await page.goto(`${BASE}#/settings`);
+  await page.goto(`${BASE}#/data`);
   await page.getByTestId('restart-first-run-button').click();
   await page.getByTestId('confirm-ok').click();
   await page.getByTestId('first-run').waitFor({ timeout: 30000 });
   await page.getByTestId('first-run-start-own').check();
-  await page.getByTestId('first-run-booking-oneOff').check();
+  await page.getByTestId('first-run-use-oneOff').check();
   await page.getByTestId('first-run-submit').click();
   await page.getByTestId('start-guide').waitFor({ timeout: 30000 });
   await until(async () => (await stored2(page)).clients.length === 0, 10000);
   const after = await stored2(page);
   check(
     after.org.terms.client === 'お客様' && after.org.features.patterns === false && after.staff.length === 0,
-    '選んだ答えでデータを作り直す（単発・自分のデータ：お客様／シッター・単発のみ・空）',
+    '選んだ答えでデータを作り直す（単発・自分のデータ：お客様／シッター・単発の予約・空）',
     after.org,
   );
   check(
@@ -1269,6 +1296,7 @@ const steps = [
   ...[
     ['first-run', firstRun],
     ['first-run-one-off', firstRunOneOff],
+    ['first-run-uses', firstRunUses],
     ['first-run-own', firstRunOwn],
     ['first-run-restart', firstRunRestart],
     ['tour-dialog', tourDialog],

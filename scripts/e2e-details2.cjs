@@ -427,7 +427,7 @@ async function roster(page, dlg) {
       page.getByTestId(`roster-export-${format}`).click(),
     ]);
     check(
-      download.suggestedFilename().startsWith('visit-route-demo-staff-') &&
+      download.suggestedFilename().startsWith('staff-assign-demo-staff-') &&
         download.suggestedFilename().endsWith(`.${format}`),
       `名簿の欄：${format} で書き出す（ファイル名）`,
       download.suggestedFilename(),

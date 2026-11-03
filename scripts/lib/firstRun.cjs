@@ -1,6 +1,6 @@
 // e2e の共通：最初の2問（PRD D379〜D381。ADR-0073）に答える。
 // 初めて開いたとき（保存データも印「all」も無い。scripts/lib/startFeatures.cjs）は2問の画面が出る。
-// 画面の data-testid：first-run（画面）・first-run-start-<demo|own>（問1）・first-run-booking-<oneOff|regular>（問2）・first-run-submit（はじめる）
+// 画面の data-testid：first-run（画面）・first-run-start-<demo|own>（問1）・first-run-use-<oneOff|basic|laborContract|monthlyField>（問2：使い方）・first-run-submit（はじめる）
 const { BASE, STORAGE_KEY, settle, until } = require('./env.cjs');
 const { openPage } = require('./steps.cjs');
 const { answerConfirms } = require('./confirmDialog.cjs');
@@ -36,14 +36,14 @@ async function waitStartArranged(page, ms = 180000) {
 }
 
 /**
- * 2問に答えて「はじめる」を押す（既定は 問1＝デモで試す・問2＝定期の訪問が中心。今の初期データ＋「基本」のひな形）。
+ * 2問に答えて「はじめる」を押す（既定は 問1＝デモで試す・問2＝使い方の基本。今の初期データ＋「定期の訪問（基本）」のひな形）。
  * デモなら、作った直後の1回の組みが終わるまで待つ（waitStartArranged）。arranged が false なら、終わりの知らせの［元に戻す］で
  * 組む前（初期データの担当なしが残る）に戻す（要対応の帯の［要対応を組む］や、空いている人への自動の組みを確かめるとき）
  */
-async function answerFirstRun(page, { start = 'demo', booking = 'regular', arranged = true } = {}) {
+async function answerFirstRun(page, { start = 'demo', use = 'basic', arranged = true } = {}) {
   await page.getByTestId('first-run').waitFor({ timeout: 30000 });
   await page.getByTestId(`first-run-start-${start}`).check();
-  await page.getByTestId(`first-run-booking-${booking}`).check();
+  await page.getByTestId(`first-run-use-${use}`).check();
   await page.getByTestId('first-run-submit').click();
   await page.getByTestId('first-run').waitFor({ state: 'detached', timeout: 30000 });
   if (start !== 'demo') return;
