@@ -49,7 +49,7 @@ export function PatternsSection({
               data-testid="pattern-add"
             >
               <WithIcon icon={Plus} size={14}>
-                繰り返しを足す
+                繰り返しを追加
               </WithIcon>
             </button>
           )
@@ -60,7 +60,7 @@ export function PatternsSection({
       <Hint>
         <ul className="hint-list">
           <li>決まった曜日・時刻の訪問です。押すと、その回をカレンダーで目立たせます。</li>
-          <li>足すと、今日から作ってある最後の日まで訪問を作ります。その先の月は「月の予定」で作ります。</li>
+          <li>追加すると、今日から作ってある最後の日まで訪問を作ります。その先の月は「月の予定」で作ります。</li>
           {!client.active && <li>この{terms.client}は利用中でないので、訪問は作りません。</li>}
         </ul>
       </Hint>

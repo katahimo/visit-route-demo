@@ -31,14 +31,12 @@ export type PlacePerson = {
 
 /** 画面の文（種類ごと） */
 export type PlaceAllTexts = {
-  /** 欄の見出し（「位置が未登録の〈利用者さん〉」） */
+  /** 欄の見出し（「緯度・経度が未登録の〈利用者さん〉」） */
   heading: string;
-  /** 探す手がかりのある人（「住所か郵便番号あり」） */
+  /** 探す手がかりのある人（「住所・郵便番号あり」） */
   has: string;
   /** 手がかりの無い人（「どちらも無い」） */
   hasNot: string;
-  /** 数えない人の注記 */
-  notCounted: string;
   /** 置ける人がいないときの理由 */
   none: string;
   /** ボタンの説明 */
@@ -74,12 +72,11 @@ function placeAccess(kind: PlaceKind): PlaceAccess {
           clients: d.clients.map((c) => (c.id === id ? { ...c, place: { ...c.place, ...p } } : c)),
         }),
         texts: (t) => ({
-          heading: `位置が未登録の${t.client}`,
-          has: '住所か郵便番号あり',
-          hasNot: 'どちらも無い',
-          notCounted: '段階が「終了」の人は数えません',
-          none: '住所か郵便番号のある、位置の無い人がいません',
-          how: '住所（無ければ郵便番号）から1人ずつ位置を探して、地図に置きます',
+          heading: `緯度・経度が未登録の${t.client}`,
+          has: '住所・郵便番号あり',
+          hasNot: '住所・郵便番号なし',
+          none: '住所か郵便番号のある未登録の人がいません',
+          how: '住所（無ければ郵便番号）から緯度・経度を探して入れます',
           skipped: `住所も郵便番号もない${t.client}`,
           term: t.client,
         }),
@@ -101,12 +98,11 @@ function placeAccess(kind: PlaceKind): PlaceAccess {
           staff: d.staff.map((s) => (s.id === id ? { ...s, home: { ...s.home, ...p } } : s)),
         }),
         texts: (t) => ({
-          heading: `自宅の位置が未登録の${t.staff}`,
+          heading: `自宅の緯度・経度が未登録の${t.staff}`,
           has: '住所あり',
-          hasNot: '住所の無い人',
-          notCounted: '休止の人は数えません',
-          none: '住所のある、自宅の位置の無い人がいません',
-          how: '自宅の住所から1人ずつ位置を探して、地図に置きます',
+          hasNot: '住所なし',
+          none: '住所のある未登録の人がいません',
+          how: '自宅の住所から緯度・経度を探して入れます',
           skipped: `自宅の住所が無い${t.staff}`,
           term: t.staff,
         }),
@@ -153,7 +149,7 @@ export function noPlaceIds(d: Pick<DemoData, 'clients' | 'staff'>, kind: PlaceKi
 export const NO_PLACE_CHIP = 'noPlace';
 
 /** 位置が無くても担当は組めることの補足（ADR-0093） */
-export const NO_PLACE_NOTE = `位置が無くても担当は組めます（移動は${UNPLACED_TRAVEL_MIN}分とみます）`;
+export const NO_PLACE_NOTE = `緯度・経度が未登録の場合、移動${UNPLACED_TRAVEL_MIN}分で計算されます`;
 
 /** 1人だけ探せるか：郵便番号・住所の検索が入で、住所か郵便番号があり、まとめて置いている最中でない */
 export const canSearchOne = (p: Pick<PlacePerson, 'place'>, x: { geocodeOn: boolean; running: boolean }): boolean =>
@@ -161,16 +157,16 @@ export const canSearchOne = (p: Pick<PlacePerson, 'place'>, x: { geocodeOn: bool
 
 /**
  * まとめて置くボタンの文言（PRD D427）：一度探したあと（止めた・見つからない人が残った）は「続きを探す（N人）」、
- * はじめは「位置の無い N人を地図に置く」。対象が0人なら「まとめて地図に置く」
+ * はじめは「住所から緯度・経度を入れる（N人）」。対象が0人なら人数を付けない
  */
 export function placeAllRunLabel(x: { targets: number; tried: boolean }): string {
-  if (x.targets <= 0) return 'まとめて地図に置く';
-  return x.tried ? `続きを探す（${x.targets}人）` : `位置の無い${x.targets}人を地図に置く`;
+  if (x.targets <= 0) return '住所から緯度・経度を入れる';
+  return x.tried ? `続きを探す（${x.targets}人）` : `住所から緯度・経度を入れる（${x.targets}人）`;
 }
 
 /** 名簿の読み込みの確認に足す1文（PRD D427。ADR-0094。この文を見て［名簿を読み込む］を押すのが送る同意） */
 export const AUTO_PLACE_NOTE =
-  '読み込んだあと、住所から地図の位置を探します（住所を郵便番号の検索と国土地理院の地図の検索に使います）';
+  '読み込んだあと、住所から緯度・経度を探します（住所を郵便番号の検索と国土地理院の地図の検索に使います）';
 
 /**
  * 名簿を読み込んだあと、自動でまとめて置き始めるか（PRD D427）：郵便番号・住所の検索が入（geocodeOn）で、

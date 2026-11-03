@@ -238,11 +238,11 @@ withFoundPlace(data, clientId, from, found); keepStorePlace(form, opened, stored
 postalBlockReason; addressBlockReason; applyFoundAddress(current, found, hasPin?); sameQuery(what, sent, now); pinnedAddressAfter; toPlace
 ```
 
-- 呼ぶのは部品 `AddressField`（〈利用者さん〉・空き状況の場所・〈スタッフ〉の自宅）と「まとめて地図に置く」だけ、押したときだけ。空き状況・自宅の郵便番号は保存しない
+- 呼ぶのは部品 `AddressField`（〈利用者さん〉・空き状況の場所・〈スタッフ〉の自宅）と「住所から緯度・経度を入れる」（まとめて）だけ、押したときだけ。空き状況・自宅の郵便番号は保存しない
 - 郵便番号：`https://zipcloud.ibsnet.co.jp/api/search?zipcode=1234567`（fetch が TypeError のときだけ `&callback=` で JSONP）。`results` が null・空→notFound、`status` 400→invalid、ほかの非200・形違い→badResponse
 - 住所：`https://msearch.gsi.go.jp/address-search/AddressSearch?q=住所`（fetch だけ）。Feature の `geometry.coordinates`＝[経度, 緯度]・`properties.title` を、範囲内のものから5件。空→notFound、配列でない→badResponse。HTTP エラー→network
 - 時間切れは8秒（郵便番号は fetch と JSONP を合わせて。JSONP に切り替えない）。`signal` で aborted。JSONP の名前は `__vrdJsonp_連番_時刻`、終われば script と関数を消し遅れた応答は捨てる。onerror→network、onload で呼ばれていなければ badResponse
-- まとめて置く：位置が無く・終了でなく・住所か郵便番号のある人（表示名の順）。住所が空なら先に郵便番号から。呼ぶごとに `intervalMs` あける。1人ずつ `withFoundPlace`（位置が無く住所・郵便番号が from のままの人だけ）。住所だけ見つかれば住所だけ書く
+- まとめて入れる：位置が無く・終了でなく・住所か郵便番号のある人（表示名の順）。住所が空なら先に郵便番号から。呼ぶごとに `intervalMs` あける。1人ずつ `withFoundPlace`（位置が無く住所・郵便番号が from のままの人だけ）。住所だけ見つかれば住所だけ書く
 - 文言は `lookupMessage`（「見つかりませんでした。…」「時間内に応答がありませんでした（8秒）。…」「つながりませんでした。…」「応答の形が想定と違います。…」）
 
 ## メール（`src/lib/mailto.ts`・`mail.ts`。PRD D91〜D96。ADR-0017）

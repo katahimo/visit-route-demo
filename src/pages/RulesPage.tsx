@@ -39,7 +39,7 @@ export default function RulesPage() {
   const add = (type: RuleType) => {
     // 足す条件の重み・必須は、押した時点のデータで決める（点数の基準のプリセットのその型。lib/presets の addRule）
     const rule = { id: newId('r'), type, label: ruleTypeLabel(type, terms) };
-    update((d) => addRule(d, rule, RULE_DEFAULTS[type]), '条件を足す');
+    update((d) => addRule(d, rule, RULE_DEFAULTS[type]), '条件を追加');
   };
   const remove = async (r: Rule) => {
     // 必須の条件は、消すと「守らなければ担当にしない」が無くなることを本文で伝える（PRD D271）

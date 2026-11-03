@@ -47,7 +47,7 @@ function ClientPlaceView({ c }: { c: Client }) {
         <DlRow term="郵便番号" value={c.place.postalCode ? `〒${formatPostalCode(c.place.postalCode)}` : '—'} />
         <DlRow term="住所" value={orDash(c.place.address)} />
         <ClientAreaRow client={c} />
-        <DlRow term="地図の位置" value={placeText(c.place)} />
+        <DlRow term="緯度・経度" value={placeText(c.place)} />
       </dl>
       {points.length > 0 && <PlaceMap lat={points[0]!.lat} lng={points[0]!.lng} color={points[0]!.color} />}
     </>

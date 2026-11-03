@@ -1,13 +1,28 @@
 import { describe, expect, it } from 'vitest';
 import { applyTemplate } from './features';
 import {
+  guideBackHref,
   startGuideCount,
   startGuideHref,
   startGuideIndex,
   startGuideNeighbors,
   startGuidePlanPath,
   startGuideSteps,
+  withGuideBack,
 } from './startGuide';
+
+describe('withGuideBack・guideBackHref（登録の案内から開いた人の画面の戻り先）', () => {
+  it('段の番号を付け、人の画面からその段へ戻る', () => {
+    expect(withGuideBack('/clients/c1?tab=basic&edit=place', 1)).toBe('/clients/c1?tab=basic&edit=place&guide=1');
+    expect(withGuideBack('/staff/s1', 2)).toBe('/staff/s1?guide=2');
+    expect(guideBackHref('?tab=basic&guide=1')).toBe(startGuideHref(1));
+    expect(guideBackHref('?guide=2')).toBe(startGuideHref(2));
+  });
+  it('付いていない・知らない値なら null（ふつうの一覧へ戻る）', () => {
+    expect(guideBackHref('?tab=basic')).toBeNull();
+    expect(guideBackHref('?guide=9')).toBeNull();
+  });
+});
 
 const terms = { client: '利用者さん', staff: 'スタッフ' };
 

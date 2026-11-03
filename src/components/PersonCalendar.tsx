@@ -134,8 +134,8 @@ function PcalMonthView({ cal, anchor, dayNote, head, tail }: ViewParts) {
                         type="button"
                         className="pcal-cell-add"
                         onClick={() => cal.openNew(d, 9 * 60, 60)}
-                        aria-label={`${dateText(d)}に訪問を足す`}
-                        title={`${dateText(d)}に訪問を足す`}
+                        aria-label={`${dateText(d)}に訪問を追加`}
+                        title={`${dateText(d)}に訪問を追加`}
                         data-testid="pcal-cell-add"
                       >
                         <Plus size={12} aria-hidden="true" />

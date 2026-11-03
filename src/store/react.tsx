@@ -73,7 +73,7 @@ export type DemoStore = {
    * データの画面の「始め方を選び直す」（askFirstRun）のあと。答えるまでデータは書かない
    */
   needsFirstRun: boolean;
-  /** 2問がデータの画面の「始め方を選び直す」のあとか（true なら画面は「やめる」を出せる。初めて開いたときは false） */
+  /** 2問がデータの画面の「始め方を選び直す」のあとか（true なら画面は「閉じる」を出せる。初めて開いたときは false） */
   redoingFirstRun: boolean;
   /** やり直しをやめて、今のデータのまま2問から戻る（やり直しでないときは何もしない） */
   cancelFirstRun(): void;

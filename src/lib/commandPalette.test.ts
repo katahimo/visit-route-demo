@@ -399,7 +399,7 @@ describe('訪問の候補（PRD D304）', () => {
     expect(paletteVisits('要対応', people, far, TODAY, describeV)).toEqual([]);
     expect(paletteVisits('担当なし', people, far, TODAY, describeV).map((x) => x.visitId)).toEqual(['f1']);
   });
-  it('訪問を1件足すの操作', () => {
+  it('訪問を1件追加の操作', () => {
     expect(paletteActions(TODAY).find((x) => x.id === 'action:visit-add')).toMatchObject({ op: 'visit-add' });
   });
 });

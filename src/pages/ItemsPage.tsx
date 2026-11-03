@@ -85,10 +85,10 @@ function ItemTable({
           <button
             type="button"
             className="btn btn-small"
-            onClick={() => update((d) => addItem(d, target), '項目を足す')}
+            onClick={() => update((d) => addItem(d, target), '項目を追加')}
           >
             <WithIcon icon={Plus} size={14}>
-              項目を足す
+              項目を追加
             </WithIcon>
           </button>
         }
@@ -324,7 +324,7 @@ function OptionsEditor({
                 {...invalidAttrs(!!renameErr, renameErrId)}
               />
               <IconButton icon={Check} label="名前を決める" type="submit" disabled={!d || renameDup || !!renameBad} />
-              <IconButton icon={X} label="やめる" onClick={() => setEditing(null)} />
+              <IconButton icon={X} label="閉じる" onClick={() => setEditing(null)} />
             </form>
           ) : (
             <span key={o} className="opt-chip">
@@ -361,13 +361,13 @@ function OptionsEditor({
           <input
             value={added}
             maxLength={30}
-            placeholder="選択肢を足す"
+            placeholder="選択肢を追加"
             {...invalidAttrs(addDup || !!addBad, addErrId)}
             onChange={(e) => setAdded(e.target.value)}
           />
           <button type="submit" className="btn btn-small nowrap" disabled={!a || addDup || !!addBad}>
             <WithIcon icon={Plus} size={14}>
-              足す
+              追加
             </WithIcon>
           </button>
         </form>

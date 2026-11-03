@@ -150,7 +150,7 @@ describe('monthListEntries', () => {
     expect(rows[1]!.row.attention).toBe(2);
     expect(rows[0]!.extra).toEqual([]);
   });
-  it('〈スタッフ〉：休み・欠勤・担当の件数。「休みを入れる」の説明', () => {
+  it('〈スタッフ〉：休み・欠勤・担当の件数。「休みを追加」の説明', () => {
     const sd = {
       slots: [],
       off: true,

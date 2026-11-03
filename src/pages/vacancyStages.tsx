@@ -46,7 +46,7 @@ export function PlaceStage({
       </summary>
       <div className="stack vacancy-place">
         <span className="sub">
-          郵便番号・住所から探して置くか、地図に点を置くと、その場所への移動を含めて正確に数えます（すぐ下の結果が変わります）。空のときは移動を前後
+          郵便番号・住所から緯度・経度を入れるか、地図をクリックして入れると、その場所への移動を含めて正確に数えます（すぐ下の結果が変わります）。空のときは移動を前後
           {VACANCY_MARGIN_DEFAULT}分で見込んだ目安です。
         </span>
         <AddressField
@@ -57,7 +57,6 @@ export function PlaceStage({
           postalCode={place.postalCode}
           onPostalCodeChange={(postalCode) => setPlace((cur) => ({ ...cur, postalCode }))}
           testId="vacancy"
-          noticeNote="（押したときだけ。条件などほかの項目は送りません）"
         />
       </div>
     </details>

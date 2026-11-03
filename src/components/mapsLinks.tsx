@@ -86,7 +86,7 @@ export function VisitRouteLinks({
   if (!here) {
     return (
       <p className="sub" data-testid={testId}>
-        場所（住所・地図の位置）が未登録のため、道順のリンクはありません。
+        場所（住所・緯度・経度）が未登録のため、道順のリンクはありません。
       </p>
     );
   }

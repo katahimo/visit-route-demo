@@ -223,7 +223,7 @@ export function CellEditor({
           決める
         </button>
         <button type="button" className="btn btn-small btn-text" onClick={onClose}>
-          やめる
+          閉じる
         </button>
       </div>
     </form>

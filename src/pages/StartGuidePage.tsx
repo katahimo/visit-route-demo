@@ -19,6 +19,7 @@ import {
   startGuideNeighbors,
   startGuidePlanPath,
   startGuideSteps,
+  withGuideBack,
 } from '../lib/startGuide';
 import { useDemoData } from '../store';
 import { BookingCard } from './dataBookings';
@@ -110,11 +111,15 @@ function RosterStep({
   const geocodeOn = useFeature('geocode');
   const autoPlace = useRosterAutoPlace({ run, geocodeOn, onStart: () => setOpen(false) });
   const navigate = useNavigate();
+  // 人の画面に戻り先（この段）を付ける。案内はメニューに無いので、付けないと案内へ戻れない
   const openPlace = (id: string) =>
     navigate(
-      step.person === 'staff'
-        ? `/staff/${encodeURIComponent(id)}?tab=basic&edit=home`
-        : `/clients/${encodeURIComponent(id)}?tab=basic&edit=place`,
+      withGuideBack(
+        step.person === 'staff'
+          ? `/staff/${encodeURIComponent(id)}?tab=basic&edit=home`
+          : `/clients/${encodeURIComponent(id)}?tab=basic&edit=place`,
+        step.index,
+      ),
     );
   return (
     <>
@@ -160,7 +165,9 @@ function PlanStep({
 }) {
   return (
     <>
-      <p>予約の CSV があれば読み込みます。無ければ、予定の画面で訪問を足します。足した訪問には自動で担当が付きます。</p>
+      <p>
+        予約の CSV があれば読み込みます。無ければ、予定の画面で訪問を追加します。追加した訪問には自動で担当が付きます。
+      </p>
       {/* データの画面の予約の CSV の欄をそのまま使う。Excel の入出力の入り切りにかかわらず、ここでは読み込める */}
       <BookingCard t={terms} />
       <p className="sub" data-testid="start-guide-visits">

@@ -280,7 +280,7 @@ export function RulesAdd({
           style={{ alignSelf: 'flex-end' }}
           onClick={() => onAdd(addType)}
         >
-          <WithIcon icon={Plus}>条件を足す</WithIcon>
+          <WithIcon icon={Plus}>条件を追加</WithIcon>
         </button>
       </div>
       <Hint label="この種類の説明">{ruleTypeHelp(addType, terms)}</Hint>

@@ -129,7 +129,7 @@ export function placeLine(
   }
   if (p.address.trim() !== '') {
     return {
-      text: `${p.address.trim()}（位置がまだありません。地図に置くと移動を含めて数えます）`,
+      text: `${p.address.trim()}（緯度・経度がまだありません。入れると移動を含めて数えます）`,
       set: false,
     };
   }

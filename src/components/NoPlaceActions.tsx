@@ -19,7 +19,7 @@ export function NoPlaceActions({
 }) {
   return (
     <span className="no-place" data-testid="no-place">
-      <span className="chip chip-warn">位置なし</span>
+      <span className="chip chip-warn">緯度・経度なし</span>
       {canSearch && (
         <button
           type="button"
@@ -37,11 +37,11 @@ export function NoPlaceActions({
         type="button"
         className="btn btn-small"
         onClick={onMap}
-        aria-label={`地図で置く（${name}）`}
+        aria-label={`緯度・経度を編集（${name}）`}
         data-testid="no-place-map"
       >
         <WithIcon icon={MapIcon} size={13}>
-          地図で置く
+          緯度・経度を編集
         </WithIcon>
       </button>
     </span>

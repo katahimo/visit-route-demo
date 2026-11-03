@@ -89,7 +89,7 @@ export function ClientLeaveFormBox({
 }) {
   return (
     <fieldset className="leave-form stack" data-testid="leave-form" onKeyDown={enterToSave(onSave)}>
-      <legend>{form.id ? '休みを直す' : '休みを入れる'}</legend>
+      <legend>{form.id ? '休みを直す' : '休みを追加'}</legend>
       <div className="form-grid">
         <label>
           開始日

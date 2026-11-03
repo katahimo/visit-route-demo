@@ -15,7 +15,7 @@
 // ファイル名・取り消してもデータはそのまま・確定で読み込む・Excel の壊れたファイルは誤りの文・名簿は一覧へのリンク）、
 // 月の画面の日ごとの一覧（390px ははじめ一覧で横にはみ出さず土曜も見える・今日の行が画面に入る・「今日へ」・切り替えは操作の欄より上・行の読み上げ・押すとその日の訪問の下から出る欄（日の予定へは移らない）→ 欄の「この日の日の予定を開く」でその日の日の画面・
 // カレンダーへ切り替えると URL の ?layout=calendar・読み直しても同じ・戻すと ?layout=list（押したら必ず書く）・1400px ははじめカレンダー・
-// ?layout=list で一覧・「休みを入れる」の行は押すと希望休を付け外し・印刷の画面は今のまま）、
+// ?layout=list で一覧・「休みを追加」の行は押すと希望休を付け外し・印刷の画面は今のまま）、
 // データを守る（PRD D227。ADR-0032）：初期状態に戻したあと「直前の状態に戻す」で戻る（確認の本文に控えの文・欄の文・もう一度戻せる）・
 // 書き出すと「最後に書き出した日」が今日になる（download）・「古い案と記録を片づける」で古い記録が消え新しいものは残る・
 // 保存していたデータが壊れていると起動時の知らせ（閉じられる）と「読めなかったデータを書き出す」（元の文字）・別のタブの変更の知らせ・控えの知らせ（トースト）。
@@ -122,7 +122,7 @@ async function firstRun(b) {
     '2問：問1（デモで試す／自分のデータで始める）・問2（使い方の4つ。ひな形の名前と例）の選択肢',
     text,
   );
-  check((await page.getByTestId('first-run-cancel').count()) === 0, '初めて開いたときの2問に「やめる」は出ない');
+  check((await page.getByTestId('first-run-cancel').count()) === 0, '初めて開いたときの2問に「閉じる」は出ない');
   const primary = await page.getByTestId('first-run').locator('.btn-primary').allInnerTexts();
   check(primary.length === 1 && primary[0].trim() === 'はじめる', '主ボタンは「はじめる」の1つだけ', primary);
   check(
@@ -491,17 +491,17 @@ async function firstRunRestart(b) {
   await page.getByTestId('confirm-ok').click();
   await page.getByTestId('first-run').waitFor({ timeout: 30000 });
   check((await stored2(page)).clients.length === 20, '2問へ戻っても、答えるまではデータを作り直さない');
-  // 抜ける道：やり直しのときだけ従のボタン「やめる」（主ボタンは「はじめる」の1つのまま）。今のデータのまま戻る
+  // 抜ける道：やり直しのときだけ従のボタン「閉じる」（主ボタンは「はじめる」の1つのまま）。今のデータのまま戻る
   check(
-    (await page.getByTestId('first-run-cancel').innerText()).trim() === 'やめる' &&
+    (await page.getByTestId('first-run-cancel').innerText()).trim() === '閉じる' &&
       (await page.getByTestId('first-run').locator('.btn-primary').count()) === 1,
-    'やり直しの2問：従のボタン「やめる」があり、主ボタンは「はじめる」の1つ',
+    'やり直しの2問：従のボタン「閉じる」があり、主ボタンは「はじめる」の1つ',
   );
   await page.getByTestId('first-run-cancel').click();
   await page.getByTestId('restart-first-run-button').waitFor({ timeout: 30000 });
   check(
     (await page.getByTestId('first-run').count()) === 0 && (await stored2(page)).clients.length === 20,
-    '「やめる」で、今のデータのまま設定の画面へ戻る',
+    '「閉じる」で、今のデータのまま設定の画面へ戻る',
   );
   await page.getByTestId('restart-first-run-button').click();
   await page.getByTestId('confirm-ok').click();
@@ -989,7 +989,7 @@ async function monthList(b) {
   await page.waitForURL(/#\/plan/);
   const sel = await page.locator('.date-switch select').inputValue();
   check(sel === target, '欄の「この日の日の予定を開く」でその日の「日の予定」', { sel, target });
-  // 「休みを入れる」：〈スタッフ〉を選んで、勤務日の行を押すと希望休を付け外し。
+  // 「休みを追加」：〈スタッフ〉を選んで、勤務日の行を押すと希望休を付け外し。
   // 希望休を入れられる行（data-off="open"）がある〈スタッフ〉を探す。今月に1つも無ければ（月末で残りの日に働く人がいない）翌月で
   const nextYm = (() => {
     const [y, m] = YM.split('-').map(Number);
@@ -1016,7 +1016,7 @@ async function monthList(b) {
     }
     if (found) break;
   }
-  check(found, '「休みを入れる」：希望休を入れられる行のある〈スタッフ〉がいる（今月に無ければ翌月）');
+  check(found, '「休みを追加」：希望休を入れられる行のある〈スタッフ〉がいる（今月に無ければ翌月）');
   await openRow.waitFor({ timeout: 10000 });
   const offDate = await openRow.getAttribute('data-date');
   await openRow.click();
@@ -1024,12 +1024,12 @@ async function monthList(b) {
   await settle(page, 400);
   check(
     (await row.getAttribute('data-off')) === 'requested' && (await row.getAttribute('aria-pressed')) === 'true',
-    '「休みを入れる」：行を押すと希望休（マスと同じ動き）',
+    '「休みを追加」：行を押すと希望休（マスと同じ動き）',
   );
   await row.click();
   await settle(page, 400);
-  check((await row.getAttribute('data-off')) === 'open', '「休みを入れる」：もう一度押すと外す');
-  check(/#\/month/.test(hashOf(page)), '「休みを入れる」の間は日の予定へ移らない');
+  check((await row.getAttribute('data-off')) === 'open', '「休みを追加」：もう一度押すと外す');
+  check(/#\/month/.test(hashOf(page)), '「休みを追加」の間は日の予定へ移らない');
   // 広い画面：はじめカレンダー、?layout=list で一覧
   await page.setViewportSize({ width: 1400, height: 1000 });
   await open(page, `/month?ym=${YM}`, '[data-testid="month-grid"]');

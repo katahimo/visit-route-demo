@@ -77,7 +77,7 @@ export default function BasicsPage() {
       <div className="card stack">
         {rows.length === 0 ? (
           <p className="sub" data-testid="basics-empty">
-            繰り返しの予定がありません。<Link to="/clients">{terms.client}</Link>の画面で繰り返しを足します
+            繰り返しの予定がありません。<Link to="/clients">{terms.client}</Link>の画面で繰り返しを追加します
           </p>
         ) : (
           <>

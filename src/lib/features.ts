@@ -79,7 +79,7 @@ export const FEATURES: readonly FeatureDef[] = [
     description: '月の予定で{staff}の希望休をまとめて入れられます',
     group: '予定の入れ方',
     paths: [],
-    hides: '月の「休みを入れる」（希望休は残り計算に効く。「休みの人に N」の印も出る）',
+    hides: '月の「休みを追加」（希望休は残り計算に効く。「休みの人に N」の印も出る）',
   },
   {
     id: 'monthPrint',
@@ -219,10 +219,10 @@ export const FEATURES: readonly FeatureDef[] = [
   {
     id: 'geocode',
     label: '郵便番号・住所の検索',
-    description: '郵便番号・住所から地図の位置を探します',
+    description: '郵便番号・住所から緯度・経度を探します',
     group: '入力の補助',
     paths: [],
-    hides: '検索のボタン・まとめて地図に置く（地図のクリックで置くのは残る）',
+    hides: '検索のボタン・まとめて緯度・経度を入れる（地図のクリックで入れるのは残る）',
   },
   {
     id: 'excel',

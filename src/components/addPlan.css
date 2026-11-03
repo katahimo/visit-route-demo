@@ -1,4 +1,4 @@
-/* 「定期の予定を入れる」の引き出し（components/AddPlanPanel。PRD D402） */
+/* 「定期の予定を追加」の引き出し（components/AddPlanPanel。PRD D402） */
 .add-plan {
   gap: 12px;
 }
@@ -16,7 +16,7 @@
 .add-plan .form-grid {
   grid-template-columns: minmax(0, 1fr);
 }
-/* CSV でまとめて入れる（components/PlanCsvSection。ADR-0090）：入力の欄と線で分け、ふだんは畳む */
+/* CSV でまとめて追加（components/PlanCsvSection。ADR-0090）：入力の欄と線で分け、ふだんは畳む */
 .add-plan-csv {
   margin-top: 8px;
   padding-top: 12px;

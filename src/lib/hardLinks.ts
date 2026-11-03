@@ -44,9 +44,9 @@ export function hardLinks(v: Violation, clientId: string | undefined, terms: Ter
   };
   if (label.includes('相性')) add({ to: '/compat', label: '相性の表' });
   // 〈スタッフ〉側の言葉を除いてから〈利用者さん〉側を見る（「〈スタッフ〉の必要条件」は「必要条件：」を含まない形だが念のため）
-  const staffWords = [`${terms.staff}の必要条件`, `${terms.staff}の希望`, `${terms.staff}の自宅の位置`];
+  const staffWords = [`${terms.staff}の必要条件`, `${terms.staff}の希望`, `${terms.staff}の自宅の緯度・経度`];
   const clientSide = staffWords.reduce((s, w) => s.split(w).join(''), label);
-  const clientWords = ['必要条件：', '希望✗', '担当を限る', 'いつもの担当', `${terms.client}の位置`];
+  const clientWords = ['必要条件：', '希望✗', '担当を限る', 'いつもの担当', `${terms.client}の緯度・経度`];
   if (clientId && clientWords.some((w) => clientSide.includes(w)))
     add({ to: clientPageHref(clientId), label: `${terms.client}の画面` });
   if (staffWords.some((w) => label.includes(w)) || label.includes(AFTER_LAST_DAY))

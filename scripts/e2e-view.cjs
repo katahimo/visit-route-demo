@@ -3,7 +3,7 @@
 // 節の「直す」で入力欄（最初の入力欄へフォーカス・主ボタンは「保存」）、保存・取り消しで読むだけに戻りフォーカスは「直す」／
 // 変更があるまま取り消す・Esc・タブを替える・メニューで移る・別の人の URL で確認が出て、断れば編集が続く／
 // 変更が無い・特性を未確認に戻しただけ・担当できる人を限るを入れて外しただけなら確認しない／変更があるときだけ beforeunload／
-// 「追加」は新しい人の画面（基本の節が開いた形。何も入れずに取り消すと確認なしで一覧へ）／「まとめて地図に置く」の「編集」は住所の節を開く／
+// 「追加」は新しい人の画面（基本の節が開いた形。何も入れずに取り消すと確認なしで一覧へ）／「緯度・経度が未登録の〈利用者さん〉」の欄の「編集」は住所の節を開く／
 // 予定のタブの休みはこれからの休み・休みのタブは終わった休みも／最終勤務日を入れて保存すると担当の振り直しの欄。
 // 相性・担当の名前（PRD D198〜D200）：〈スタッフ〉の相性のタブにいつもの担当・相性の記号ごとの〈利用者さん〉の名前（人数・利用中だけ・
 // 13人目から「あと N人」）、名前で詳細の吹き出し（Tab は吹き出しの中を進み端で閉じて名前へ・Esc は吹き出しだけ閉じる）、リンクで相手の画面、
@@ -95,7 +95,7 @@ async function clients(page, dlg) {
   await isReading(page, '〈利用者さん〉・基本情報', [
     '段階',
     '住所',
-    '地図の位置',
+    '緯度・経度',
     '特性',
     '訪問先の決まりごと',
     '紹介元',
@@ -111,7 +111,7 @@ async function clients(page, dlg) {
     .catch(() => {});
   check(
     (await sec(page, 'place').locator('.leaflet-container').count()) === 1,
-    '〈利用者さん〉：位置があれば住所の節に地図の小さな表示',
+    '〈利用者さん〉：緯度・経度があれば住所の節に地図の小さな表示',
   );
   await page.screenshot({ path: path.join(OUT_DIR, 'client-basic.png') });
   await goTab(page, 'staffing');
@@ -429,7 +429,7 @@ async function reviewFixes(page, dlg) {
   );
 }
 
-/** 休みの見え方・「まとめて地図に置く」の「編集」は住所の節を開く */
+/** 休みの見え方・まとめて緯度・経度を入れる欄の「編集」は住所の節を開く */
 async function seeded(page) {
   await open(page, '/clients', '[data-testid="client-row"]');
   const today = new Date(NOW.getTime() + JST).toISOString().slice(0, 10);
@@ -473,7 +473,7 @@ async function seeded(page) {
     '〈利用者さん〉：休みのタブは終わった休みも（印つき）',
     rows,
   );
-  // 位置も住所も無い人の「編集」（まとめて地図に置く）は、その人の画面の住所の節を開く
+  // 緯度・経度も住所も無い人の「編集」（まとめて緯度・経度を入れる欄）は、その人の画面の住所の節を開く
   await open(page, '/clients', '[data-testid="client-row"]');
   await page
     .getByTestId('place-all-skipped')
@@ -484,7 +484,7 @@ async function seeded(page) {
     hashOf(page).startsWith('#/clients/c2') &&
       !urlOf(page).includes('edit=') &&
       (await sec(page, 'place').locator('input').count()) > 0,
-    '〈利用者さん〉：「まとめて地図に置く」の「編集」はその人の画面の住所の節を開く（URL の edit は消す）',
+    '〈利用者さん〉：まとめて緯度・経度を入れる欄の「編集」はその人の画面の住所の節を開く（URL の edit は消す）',
     urlOf(page),
   );
   await sec(page, 'place').getByTestId('sec-cancel').click();

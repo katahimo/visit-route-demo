@@ -7,6 +7,7 @@ import { type ReactNode, useEffect, useId, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import type { ConfirmOptions } from '../lib/confirmDialog';
 import { tabSearch } from '../lib/personPage';
+import { guideBackHref } from '../lib/startGuide';
 import { useConfirm } from './ConfirmDialog';
 import { FieldError, type FormErr, submitHandler } from './FieldError';
 import { WithIcon } from './ui';
@@ -90,11 +91,15 @@ export function PersonTabs<T extends string>({
   );
 }
 
-/** 一覧へ戻るリンク（見出しの右。文字のボタン） */
+/**
+ * 一覧へ戻るリンク（見出しの右。文字のボタン）。登録の案内から開いたとき（`?guide=N`）は、案内のその段へ戻る
+ * （案内はメニューに無いので、一覧へ戻すと案内へ戻れなくなる）
+ */
 export function BackToList({ to, label }: { to: string; label: string }) {
+  const guide = guideBackHref(useLocation().search);
   return (
-    <Link to={to} className="btn btn-text" data-testid="person-back">
-      <WithIcon icon={ArrowLeft}>{label}</WithIcon>
+    <Link to={guide ?? to} className="btn btn-text" data-testid="person-back">
+      <WithIcon icon={ArrowLeft}>{guide ? '登録の案内へ戻る' : label}</WithIcon>
     </Link>
   );
 }

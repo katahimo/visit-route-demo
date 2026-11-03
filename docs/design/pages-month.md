@@ -18,14 +18,14 @@
 #### 並び
 
 1. 見出し：`lead`「一月の担当を見て、担当なしや要対応を手で直し、確定します」。すぐ下にナビの行（`ScheduleNav`）：「今日」・‹ 月を選ぶ欄（`month-title`）›・［月｜週｜日］。下に要対応の帯 `AttentionBand`
-2. 操作の行（`ScheduleToolbar zoom="month"`）：入＝主「定期の予定を入れる」（`toolbar-add-plan`）＋「担当を組む」（`toolbar-assign`。`/arrange?ym=`）、切＝主「定期の予定を入れる」＋「欠勤・キャンセルを登録」（`sudden-open`。選んでいる日（今日より前なら今日）の日の予定で欄を開くリンク）。「その他 ▾」（`month-more`）：見せ方（`month-layout-calendar`・`month-layout-list`）・元に戻す／やり直す・入は欠勤・キャンセルを登録・「表示を選ぶ」・「印刷」・「勤務の見込み」・「マスの見方の説明」・「連絡を貼り付けて入れる」（`paste-open`。[pages-plan-absence.md](pages-plan-absence.md)）（空き状況はメニュー。ADR-0078）
+2. 操作の行（`ScheduleToolbar zoom="month"`）：入＝主「定期の予定を追加」（`toolbar-add-plan`）＋「担当を組む」（`toolbar-assign`。`/arrange?ym=`）、切＝主「定期の予定を追加」＋「欠勤・キャンセルを登録」（`sudden-open`。選んでいる日（今日より前なら今日）の日の予定で欄を開くリンク）。「その他 ▾」（`month-more`）：見せ方（`month-layout-calendar`・`month-layout-list`）・元に戻す／やり直す・入は欠勤・キャンセルを登録・「表示を選ぶ」・「印刷」・「勤務の見込み」・「マスの見方の説明」・「連絡を貼り付けて入れる」（`paste-open`。[pages-plan-absence.md](pages-plan-absence.md)）（空き状況はメニュー。ADR-0078）
 3. 範囲の提案の帯（`RangeProposalBand`）
 4. 操作の欄 `month-head`：
    - 「その他 ▾」の項目：「表示を選ぶ（〈スタッフ〉・〈利用者さん〉・混み具合）」（`month-more-pickers`。開いていれば「表示の選択をたたむ」、選んでいる間・休みの入力中は押せず理由「表示を「全体」・混み具合を「すべて」に戻すと、たためます」）・「印刷」（`month-print`。選んでいる〈スタッフ〉があれば `&staff=`。`monthPrint` が入のとき）・「勤務の見込み」（`month-workload`。`/workload?ym=`。`workload` が入のとき）・「マスの見方の説明」（`month-more-help`。開いていれば「…を閉じる」）。印刷・勤務の見込みには1行の説明
    - 「詳しく ▾」（`DetailsFold`・`month-details`。閉じて始まり、開け閉めは端末に覚える＝鍵 `details:month`。入は見出しの1行に「担当 a/b日・確定 c/d日」＝`lib/detailsHeading` の `monthHeading`）：進み具合の帯 `ProgressBand`（次の一手は主ボタンにせず、`onOp` で要対応・確定していない日は右の欄を開き、「担当を AI で組む」は `/arrange?ym=` へ）・要約 `month-summary`（「月全体：入らない N件（・当日キャンセル N件）」。今日より前の日も数える）・凡例 `month-legend`
    - 表示の選択の段 `month-pickers`（「表示を選ぶ」で開くか、選んでいる間・休みの入力中に出す。開いたら `month-focus` へフォーカス。段の中で選び直したら出したまま。保存しない）：
      - 表示の選択 `month-focus`（「表示」：全体／〈スタッフ〉（optgroup）／〈利用者さん〉（名前・よみで探す））。〈利用者さん〉なら `ClientPicker`（1人。`month-client-picker`。近道：この月・〈スタッフ〉が担当する人・最近選んだ人・仮押さえの人（`tentativeShortcut`））
-     - 〈スタッフ〉を選んでいれば「休みを入れる」（`month-off-toggle`）
+     - 〈スタッフ〉を選んでいれば「休みを追加」（`month-off-toggle`）
      - 全体なら「混み具合：」と `Term`（`loadCount`）と選ぶ欄 `month-load-type`（数える人：すべて／〈種類〉。名前は aria-labelledby）
    - 訪問の無い月は「定期パターンが無いか、この月の訪問がありません」
    - マスの見方の説明 `month-help`（開くとフォーカスを移す。文は `lib/monthGuide` の `monthHelpLines(staffTerm, only)`。マスの押し方・右の欄の行の押し方と「別の日へ」・赤い枠と「要対応 N」の札。入はさらにマスの色と印（凡例）・「未連絡 N」・混み具合のバーと端の印、切は印の意味を見出しの ⓘ（`monthCellHint`）へ案内する。「説明を閉じる」）
@@ -64,8 +64,8 @@
 #### マスを押す・キー・その日の回の一覧・まとめて選ぶ・別の日へ
 
 - マスは「その日のまとめ」（訪問の札は描かない）。訪問を描くのは右の欄（スマホは下から出る欄）に出した1日だけ
-- 押す（`pickDay`。マスと日ごとの一覧の行で同じ）：1回目はその日を右の欄の先頭に出す（フォーカスはマスのまま。`is-listed`）。出している日をもう一度押すと `openDay`（日の予定）。吹き出しの文の後ろは「（押すとこの日の訪問を右の欄に出します。もう一度押すと「日の予定」）」、出している日は「（もう一度押すとこの日の「日の予定」を開きます）」。「休みを入れる」の間は `toggleOff`
-- キー（`cellKeyOf`。`lib/visitKeys`）：←→ 前・次の日、↑↓ 前・次の週（月の外へ出たら `goMonth` してフォーカスを移す）、Enter でその日の回の一覧（`openList`。最初の行へ、無ければ見出しへフォーカス）、Shift／Ctrl＋Enter・Shift／Ctrl＋クリックでその日の選べる訪問をまとめて選ぶ・外す（`toggleGroup`）。`aria-keyshortcuts`。「休みを入れる」の間の Enter は `toggleOff`
+- 押す（`pickDay`。マスと日ごとの一覧の行で同じ）：1回目はその日を右の欄の先頭に出す（フォーカスはマスのまま。`is-listed`）。出している日をもう一度押すと `openDay`（日の予定）。吹き出しの文の後ろは「（押すとこの日の訪問を右の欄に出します。もう一度押すと「日の予定」）」、出している日は「（もう一度押すとこの日の「日の予定」を開きます）」。「休みを追加」の間は `toggleOff`
+- キー（`cellKeyOf`。`lib/visitKeys`）：←→ 前・次の日、↑↓ 前・次の週（月の外へ出たら `goMonth` してフォーカスを移す）、Enter でその日の回の一覧（`openList`。最初の行へ、無ければ見出しへフォーカス）、Shift／Ctrl＋Enter・Shift／Ctrl＋クリックでその日の選べる訪問をまとめて選ぶ・外す（`toggleGroup`）。`aria-keyshortcuts`。「休みを追加」の間の Enter は `toggleOff`
 - 選ぶのは `useVisitSelection(ym)`（月を送ったら外す）。`canSelectVisit`（今日より前・取り消し・休みは選ばない）。表示の選択が人ならその人の回だけ（`dayItems`）。選んだ日のマスに「選択 N」（`month-selected`・`data-selected`・`aria-label` に「選択中 N件」）。選んだ訪問は画面の下の `SelectionBar`（担当を替える・時刻をずらす・別の日へ・取り消す・選択を外す。`dates` は月のマスの日）
 - その日の回の一覧（`DayVisits`・`section.month-day-visits`・`month-day-visits`・`data-date`）：見出し「M月D日（曜）の訪問 N件」・閉じる（`month-day-visits-close`。Esc でも閉じ、フォーカスはマスへ。選んでいれば Esc は先に選択を外す）・行（`VisitRow`＝中の札。`month-visit`・`data-size="m"`。開始の順）・説明「行を押すと訪問の詳細。Shift・Ctrl＋クリックで選び、↑↓ で15分・←→ で1日動かせます。行を別の日のマスへドラッグするか、選んで下の「別の日へ」で日付を移せます（時刻はそのまま）」・「この日の日の予定を開く」（`month-day-visits-plan`）。Enter で開いたとき〈利用者さん〉を選んでいてその日の回が1つなら、その回の訪問の詳細の欄（閉じたらフォーカスはマス）。訪問が無い日は「この日の訪問はありません。」。月を送ると閉じる
 - 一覧の行：押す・Enter で訪問の詳細の欄、Shift・Ctrl＋クリック／Enter で選ぶ・外す、キーで動かす（↑↓ 15分・←→ 1日・Shift+←→ 隣の担当・Delete 取り消し。月の外へ動いたらその月へ移って一覧もその日にし、フォーカスは動かした行）。印は `useVisitLooks`（`data-marks`）
@@ -104,7 +104,7 @@
 - `lib/monthList.ts`（純粋関数。テストあり）：`MonthLayout`（`calendar`・`list`）・`MONTH_LIST_QUERY`（`(max-width: 600px)`）・`monthLayoutOf(param, narrow)`・`monthListFocusDate`・`DAY_STATE_TEXT`・`monthListRow`（日付・件数・状態の文・`care`・旗。`reasons` が偽（切）なら旗は空で状態の印と文を出さない。読み上げの `label` には残す）
 - 今月の一覧の上に「今日へ」（`month-list-today`）
 - `month-list`（`ul`）。開いたとき `monthListFocusDate` の行へ巻く。行は `scroll-margin` で上の帯・下のタブを避ける
-- 行は `button.month-list-btn`（`month-list-day`・`data-date`・`data-state`・`data-off`）。押すとマスと同じ（`pickDay`。「休みを入れる」のときは `toggleOff`・押せない日は `aria-disabled`）
+- 行は `button.month-list-btn`（`month-list-day`・`data-date`・`data-state`・`data-off`）。押すとマスと同じ（`pickDay`。「休みを追加」のときは `toggleOff`・押せない日は `aria-disabled`）
 - 表示の選択が〈スタッフ〉なら勤務の状態と担当の件数、〈利用者さん〉なら訪問の時刻と担当、休みを入れるときはその日の扱いを行の下に
 - 390px で土曜も見え、はみ出さない。600px 以下の操作の行は1段で、見せ方の切り替え（`month-layout`）はアイコンだけ（名前は読み上げ）
 
@@ -124,7 +124,7 @@
 #### 右の欄（要対応・確定していない日。入のとき）
 
 - 確定していない日（`progress.unconfirmed`＝今日以降の訪問があって確定済みでない日）：
-  - 上に「問題の無い日をまとめて確定（N日）」（`month-confirm-bulk`・`data-count`。主ボタンにしない（主ボタンは操作の行の「定期の予定を入れる」））。0日なら出さない
+  - 上に「問題の無い日をまとめて確定（N日）」（`month-confirm-bulk`・`data-count`。主ボタンにしない（主ボタンは操作の行の「定期の予定を追加」））。0日なら出さない
   - 対象は `lib/confirmDay` の `bulkConfirmTargets(unconfirmed, statusOf, attention)`：まだ伝えていない日で、`care` が0で、`attentionList`（未連絡の変更は除く）に出ない日。残すのは問題のある日（`problem`）・未連絡の変更のある日（`changed`）
   - 押せなければ理由 `month-confirm-why`（aria-describedby。`bulkConfirmWhy`：問題のある日がある／未連絡の変更のある日がある／確定していない日は無い）。対象の決まりの1行（`month-confirm-note`）。組んでいる間は押せない。印刷では出さない
   - 押すと確認（`bulkConfirmDialog`）：「問題の無い N日を確定しますか？」、本文に日付（`datesText`：「10/22（水）・10/23（木）… 計 N日」。7日を超えたら先頭6日と「…」）・担当が書き換わる旨・「問題のある M日は残します（要対応で確認）：日付」・「前に確定した割当と違う M日も残します（日の予定で確定し直します）。」・「案の無い M日も残します。」、ボタン「N日を確定する」
@@ -152,8 +152,8 @@
 
 #### 希望休
 
-- 〈スタッフ〉を選ぶと選択の横に「休みを入れる」（`month-off-toggle`・`aria-pressed`。押すと「休みの入力を終わる」）。`requestedOff` が入のとき
-- 入れているあいだ上に帯 `month-off-bar`（「〈名前〉さんの休みを入れる：勤務日のマスを押すと…」・この月の希望休 N日・最後の操作の結果 `month-off-note`（`aria-live`。訪問のある日に入れたら注意と「〈日〉の予定を開く」））
+- 〈スタッフ〉を選ぶと選択の横に「休みを追加」（`month-off-toggle`・`aria-pressed`。押すと「休みの入力を終わる」）。`requestedOff` が入のとき
+- 入れているあいだ上に帯 `month-off-bar`（「〈名前〉さんの休みを追加：勤務日のマスを押すと…」・この月の希望休 N日・最後の操作の結果 `month-off-note`（`aria-live`。訪問のある日に入れたら注意と「〈日〉の予定を開く」））
 - マスを押すと `lib/requestedOff` の `toggleRequestedOff`（1回の `update`）
 - `offDayState`：入れられる日は紫の点線の枠、希望休の日は紫の斜線（`aria-pressed`）、今日より前・勤務なし・ほかの欠勤は `disabled`（灰の枠。title と読み上げに理由）
 - 〈スタッフ〉の選びを外すと終わる。組んでいる間は押せない
@@ -185,7 +185,7 @@
 
 - [ ] 進み具合の帯の「担当を AI で組む」・`?do=batch` で担当を組むの画面（その月）へ。組んでいる間は月の予定に進み具合と［止める］、提案の帯で反映できる（`scripts/e2e-progress.cjs`）
 - [ ] マスを押すとその日の訪問が右の欄に出て、もう一度押すと日の予定が開く
-- [ ] 〈スタッフ〉を選び「休みを入れる」で勤務日のマスを押すと希望休が付き、もう一度で外れる。勤務の無い日・今日より前は押せない。訪問のある日に入れると注意とリンク、担当が休みの要対応（担当は変わらない）。全体の「休 N」に数が入る
+- [ ] 〈スタッフ〉を選び「休みを追加」で勤務日のマスを押すと希望休が付き、もう一度で外れる。勤務の無い日・今日より前は押せない。訪問のある日に入れると注意とリンク、担当が休みの要対応（担当は変わらない）。全体の「休 N」に数が入る
 - [ ] 「印刷」で `#/month/print` が開き、A4横の1か月の表（〈スタッフ〉で絞れる）。ナビ・操作の帯は印刷せず、週の途中で改ページしない
 - [ ] 最終勤務日に「最終」、後の日の訪問は担当が休みの要対応。上限を超える日に「拘束超」・要対応
 - [ ] 要対応の行き先（担当なし → 日の予定の担当なしの列・拘束の上限超え → 勤務の見込みのその月・その人・ほか → 日の予定）（`scripts/e2e-links.cjs`）

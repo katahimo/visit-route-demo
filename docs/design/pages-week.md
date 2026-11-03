@@ -21,11 +21,11 @@ URL は `replace` で書く（表示の切り替えは除く）。
 #### 見出しと並び
 
 - 見出しは題名と `lead`「この週の担当を見て、日時をドラッグでずらし、〈スタッフ〉に伝えたら確定します」だけ。すぐ下にナビの行（`ScheduleNav`）：週の前後の送り・「今日」・週を選ぶ欄（`week-title`）・［月｜週｜日］・入は右にまとめて確定（「この週の準備」）
-- 操作の行（`ScheduleToolbar zoom="week"`）：入＝主「定期の予定を入れる」（`toolbar-add-plan`）＋「担当を組む」（`toolbar-assign`。`/arrange?ym=`）、切＝主「定期の予定を入れる」＋「欠勤・キャンセルを登録」（`sudden-open`。選んでいる日（今日より前なら今日）の日の予定で欄を開くリンク）。「その他 ▾」（`week-more`）：元に戻す・やり直す・入は欠勤・キャンセルを登録・予定をメールで送る（`week-mail`。`mail` が入のとき。右の欄 `WeekMailPanel`：最終勤務日が週の初めより前の人は出さない。宛先ごとに `MailButton`。週のメールは見通しで、送っても確定にしない）・「連絡を貼り付けて入れる」（`paste-open`。[pages-plan-absence.md](pages-plan-absence.md)）
+- 操作の行（`ScheduleToolbar zoom="week"`）：入＝主「定期の予定を追加」（`toolbar-add-plan`）＋「担当を組む」（`toolbar-assign`。`/arrange?ym=`）、切＝主「定期の予定を追加」＋「欠勤・キャンセルを登録」（`sudden-open`。選んでいる日（今日より前なら今日）の日の予定で欄を開くリンク）。「その他 ▾」（`week-more`）：元に戻す・やり直す・入は欠勤・キャンセルを登録・予定をメールで送る（`week-mail`。`mail` が入のとき。右の欄 `WeekMailPanel`：最終勤務日が週の初めより前の人は出さない。宛先ごとに `MailButton`。週のメールは見通しで、送っても確定にしない）・「連絡を貼り付けて入れる」（`paste-open`。[pages-plan-absence.md](pages-plan-absence.md)）
 - 「詳しく ▾」（`week-details`。閉じて始まり、開け閉めは端末に覚える＝鍵 `details:week`）：1行の状態（`week-status`。今日以降に訪問がある週だけ）「この週の今日以降：確定済み N日・まだ伝えていない N日・未連絡の変更 N日（あるときだけ）・要対応 N件」と時間軸の凡例・使い方。入は見出しの1行に「未確定 N日（まだ伝えていない日＋未連絡の変更のある日）・要対応 M件」（`weekHeading`）。進み具合の帯は出さない
 - 範囲の提案の帯（`RangeProposalBand`）
 - 表示の切り替え `week-views` は週のカードの1行目
-- 空の画面（`week-empty`。時間軸の上に横1行の帯 `compact`。主ボタンにしない）：`periodEmptyGuide({ period: 'この週', dates, today, visitDays })`（「この週には訪問がありません」と［日の予定で訪問を足す］）
+- 空の画面（`week-empty`。時間軸の上に横1行の帯 `compact`。主ボタンにしない）：`periodEmptyGuide({ period: 'この週', dates, today, visitDays })`（「この週には訪問がありません」と［日の予定で訪問を追加］）
 - 複数選択の帯（`SelectionBar`。時間軸の帯・表の札・「+N」の一覧の行を Shift・Ctrl＋クリック／Enter で選ぶ（スマホは長押し・「選ぶ」）。週を送ると外す）
 
 #### エキスパート機能が切のとき

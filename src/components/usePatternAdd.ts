@@ -1,5 +1,5 @@
 // 〈利用者さん〉の繰り返し（定期パターン）を足す処理（ADR-0012・0072）：入力を確かめて足し、足した分の担当なしの回を自動で組む。
-// 〈利用者さん〉の画面の「繰り返しを足す」（pages/usePatternsFlow）と、予定の「定期の予定を入れる」（AddPlanPanel）が使う。データを書くのは store の update だけ
+// 〈利用者さん〉の画面の「繰り返しを足す」（pages/usePatternsFlow）と、予定の「定期の予定を追加」（AddPlanPanel）が使う。データを書くのは store の update だけ
 import type { DemoData } from '../contracts/data';
 import type { Pattern } from '../contracts/documents';
 import { jstDate } from '../domain/time';
@@ -21,7 +21,7 @@ export function usePatternAdd(): (form: PatternForm, clientId: string) => Patter
     const add = (d: DemoData): DemoData => ({ ...d, patterns: [...d.patterns, p] });
     // 保存後のデータは先に1回だけ作り、store にもそれを入れる（自動の組みが読むデータと参照をそろえる）
     const after = add(data);
-    update((d) => (d === data ? after : add(d)), '繰り返しを足す');
+    update((d) => (d === data ? after : add(d)), '繰り返しを追加');
     return { pattern: p, auto: requestAutoArrange({ before: data, after, today, writeUsual: true, from: p.from }) };
   };
 }

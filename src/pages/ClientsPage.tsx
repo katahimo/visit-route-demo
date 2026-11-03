@@ -32,7 +32,7 @@ import './settings.css';
 
 /** 絞り込みに足すチップ「位置なし」（PRD D427） */
 const NO_PLACE_CHIPS = [
-  { key: NO_PLACE_CHIP, label: '位置なし', help: '地図の位置が未登録の人（終了を除く）' },
+  { key: NO_PLACE_CHIP, label: '緯度・経度なし', help: '緯度・経度が未登録の人（終了を除く）' },
 ] as const;
 
 export default function ClientsPage() {

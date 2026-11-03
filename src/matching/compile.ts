@@ -363,13 +363,13 @@ function pairReasons(ctx: PairContext, v: VisitSide, i: number): Reason[] {
   if (!places[S + j])
     out.push({
       ruleId: 'noPlace',
-      label: `${terms.client}の位置が未登録（移動は${UNPLACED_TRAVEL_MIN}分とみる）`,
+      label: `${terms.client}の緯度・経度が未登録（移動は${UNPLACED_TRAVEL_MIN}分とみる）`,
       points: UNPLACED_POINTS,
     });
   if (!places[i])
     out.push({
       ruleId: 'noPlace',
-      label: `${terms.staff}の自宅の位置が未登録（移動は${UNPLACED_TRAVEL_MIN}分とみる）`,
+      label: `${terms.staff}の自宅の緯度・経度が未登録（移動は${UNPLACED_TRAVEL_MIN}分とみる）`,
       points: UNPLACED_POINTS,
     });
   if (pv.earliest > pv.latest) out.push({ ruleId: 'time', label: '時間の約束の幅が正しくない', points: INF });

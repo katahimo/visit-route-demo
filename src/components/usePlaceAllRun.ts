@@ -108,7 +108,9 @@ export function usePlaceAllRun(kind: PlaceKind, lane?: PlaceLane) {
     setWaiting(false);
     if (!any) return;
     setStopped(c.signal.aborted);
-    toast(c.signal.aborted ? `止めました（${placed}人を地図に置きました）` : `${placed}人を地図に置きました`);
+    toast(
+      c.signal.aborted ? `止めました（${placed}人の緯度・経度を入れました）` : `${placed}人の緯度・経度を入れました`,
+    );
   };
   /** 止める（今の1人の検索を取り消す。待っている間なら待つのをやめる） */
   const stop = () => ctrl.current?.abort();

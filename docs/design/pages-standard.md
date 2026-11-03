@@ -48,7 +48,7 @@
 
 - 下書きが無いとき：説明と［今の標準から作る］（`standard-from-current`。`currentTable`）
 - 下書きがあるとき：どこから作ったか（`standard-draft-from`）・「今の標準と違う所 N か所（担当 a・時刻だけ b）」（`standard-diff-count`）・下書きの表（`standard-table`）・［下書きを捨てる］（`standard-discard`。直しがあれば確認）。作ったあとに繰り返しが変わったら注意（`standard-draft-stale`。無くなった繰り返しは外し、新しい繰り返しは今の標準で出す）
-- マスを押すと行のすぐ下に欄（`standard-editor`）：担当（`standard-editor-staff`。勤務中の〈スタッフ〉＋担当なし）・開始（`standard-editor-start`。空＝時刻なし。`startError`：時間の約束の外は「時間の約束（9:00〜12:00）の外です」で受け付けない）・［決める］［やめる］。開くとフォーカスは担当、Esc・やめる・決めるで閉じてフォーカスはマス。担当なしは開始も無し
+- マスを押すと行のすぐ下に欄（`standard-editor`）：担当（`standard-editor-staff`。勤務中の〈スタッフ〉＋担当なし）・開始（`standard-editor-start`。空＝時刻なし。`startError`：時間の約束の外は「時間の約束（9:00〜12:00）の外です」で受け付けない）・［決める］［閉じる］。開くとフォーカスは担当、Esc・閉じる・決めるで閉じてフォーカスはマス。担当なしは開始も無し
 
 #### 3. 標準にする（下半分：登録）
 
