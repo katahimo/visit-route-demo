@@ -32,14 +32,16 @@ export function defaultStaffHours(features: Features): StaffHours {
 /** 既定が広い既定（単発の予約）か。確認の文に既定を使ったと知らせる要るか */
 export const hasWideDefaultHours = (features: Features): boolean => isOneOffUse(features);
 
+/** 勤務日の文（「毎日」「月火水木金」。月曜から並べる） */
+export function workDaysText(workDays: readonly number[]): string {
+  if (workDays.length === 7) return '毎日';
+  return [...workDays]
+    .sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7))
+    .map((d) => WEEKDAY_LABELS[d])
+    .join('');
+}
+
 /** 勤務日・勤務時間の文（「毎日 7:00〜22:00」「月火水木金 9:00〜18:00」） */
 export function staffHoursText(h: StaffHours): string {
-  const days =
-    h.workDays.length === 7
-      ? '毎日'
-      : [...h.workDays]
-          .sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7))
-          .map((d) => WEEKDAY_LABELS[d])
-          .join('');
-  return `${days} ${timeText(h.shiftStart)}〜${timeText(h.shiftEnd)}`;
+  return `${workDaysText(h.workDays)} ${timeText(h.shiftStart)}〜${timeText(h.shiftEnd)}`;
 }

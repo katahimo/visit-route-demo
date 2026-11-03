@@ -276,10 +276,7 @@ function columnLegs(p: PlanCtx, sid: string, ids: string[], stops: StopTiming[])
   const home = staffById.get(sid)?.home;
   return markLegs(legsOf(stops, homeTravel(problem, staffById.get(sid), routes, true)), {
     order: ids,
-    visitPlaced: (id) => {
-      const c = clientOf(id);
-      return c !== undefined && hasLocation(c.place);
-    },
+    visitPlace: (id) => clientOf(id)?.place,
     homePlaced: home !== undefined && hasLocation(home),
     latestOf: (id) => problem?.visits.find((v) => v.id === id)?.latest,
   });

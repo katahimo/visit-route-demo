@@ -237,6 +237,11 @@ async function slotNew(page) {
   const made = d.visits.find((v) => v.clientId === 'c1' && v.date === target && v.earliestStart === '18:00');
   check(!!made && made.durationMinutes === 90 && !made.pattern, '「追加」で単発の訪問が足され、カレンダーに出る');
   if (made) check((await visitBtn(page, made.id).count()) === 1, '足した訪問がカレンダーに出る');
+  // 足した 18:00 の訪問は担当なしのまま残り、自動の組みの知らせ（理由つき・10秒）がカレンダーの下の方に重なるので、消えるのを待つ
+  await page
+    .locator('.toast')
+    .waitFor({ state: 'detached', timeout: 15000 })
+    .catch(() => {});
   // 押しただけなら既定の所要（60分）。訪問の無い 16:15 を押す（閉じたあとフォーカスが足した回へ移って巻くことがあるので、列の位置は測り直す）
   await settle(page, 300);
   const box2 = await c.boundingBox();

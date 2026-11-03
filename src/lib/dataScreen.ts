@@ -120,7 +120,7 @@ export function rosterConfirmBody(x: {
 
 /**
  * 名簿の読み込みの確認に添える、既定の勤務にした人の文（PRD D428。ADR-0095）。広い既定（単発の予約）で、
- * 勤務する曜日・時間の列が無い（か空の）新しい人がいるときだけ。無ければ null
+ * 勤務する曜日・勤務開始・勤務終了のどれかの列が無い（か空の）新しい人がいるときだけ（空の所だけ既定にする）。無ければ null
  */
 export function rosterDefaultHoursNote(x: {
   names: readonly string[];
@@ -128,7 +128,7 @@ export function rosterDefaultHoursNote(x: {
   staffTerm: string;
 }): string | null {
   if (x.names.length === 0 || !hasWideDefaultHours(x.features)) return null;
-  return `勤務する曜日・時間の列が無い${x.names.length}人は、既定（${staffHoursText(defaultStaffHours(x.features))}）にしました。${x.staffTerm}の画面の勤務時間で直せます`;
+  return `勤務する曜日・時間のどれかが空の${x.names.length}人は、空の所を既定（${staffHoursText(defaultStaffHours(x.features))}）にしました。${x.staffTerm}の画面の勤務時間で直せます`;
 }
 
 /** 名簿を読み込んだあとの知らせ（最終勤務日の入った人がいれば、一覧の「最終勤務日のある人」の欄で振り直せると添える。PRD D209） */

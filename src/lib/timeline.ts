@@ -1,8 +1,9 @@
 // 予定の画面の時間軸（PRD D58。design.md §4 pages「予定の画面の時間軸」）の位置の計算。
 // 分 → px、列の背景（稼働時間帯の外・欠勤）、移動・待ちの区間、ドラッグ中の影の可否。データは書き換えない
+import type { ClientPlace } from '../contracts/documents';
 import type { Problem, StopTiming } from '../contracts/problem';
 import { bestInsertion, scheduleRoute } from '../matching';
-import { own } from './common';
+import { hasLocation, own } from './common';
 import { DAY_END, DAY_START, type Span } from './spans';
 
 /** 1分の高さ（px） */
@@ -129,27 +130,39 @@ export function legsOf(stops: StopTiming[], homeMinutes: number | null): LegSpan
 }
 
 /**
+ * 訪問先の移動の決まり方：fixed＝移動時間（片道・分）を手で決めた（位置に関わらずその分数。ADR-0096）、
+ * placed＝位置から見積もる、none＝位置が未登録（UNPLACED_TRAVEL_MIN 分の見込み。ADR-0093）。〈利用者さん〉が分からなければ none
+ */
+export function visitTravelKind(place: ClientPlace | undefined): 'fixed' | 'placed' | 'none' {
+  if (!place) return 'none';
+  if (place.travelMinutes !== undefined) return 'fixed';
+  return hasLocation(place) ? 'placed' : 'none';
+}
+
+/**
  * 移動の区間に「見込み」「間に合わない」の印を付ける（分数は組みの結果のまま。新しく計算し直さない）。
- * order は担当の訪問IDの並び、visitPlaced は訪問先の位置があるか、homePlaced は自宅の位置があるか、
- * latestOf は訪問の「いつまでに始める」（分。無ければ undefined）。待ちの区間はそのまま返す
+ * order は担当の訪問IDの並び、visitPlace は訪問先の〈利用者さん〉の場所、homePlaced は自宅の位置があるか、
+ * latestOf は訪問の「いつまでに始める」（分。無ければ undefined）。待ちの区間はそのまま返す。
+ * 見込みは、両端のどちらにも移動時間が無く、どちらかの位置が未登録の区間（移動時間があればその分数で決まる。matching の legOf と同じ）
  */
 export function markLegs(
   legs: LegSpan[],
   a: {
     order: string[];
-    visitPlaced: (visitId: string) => boolean;
+    visitPlace: (visitId: string) => ClientPlace | undefined;
     homePlaced: boolean;
     latestOf: (visitId: string) => number | undefined;
   },
 ): LegSpan[] {
+  const kindOf = (id: string) => visitTravelKind(a.visitPlace(id));
   return legs.map((leg) => {
     if (leg.kind === 'wait') return leg;
     const k = a.order.indexOf(leg.visitId);
     const prev = leg.kind === 'drive' && k > 0 ? a.order[k - 1] : undefined;
-    const estimated =
-      leg.kind === 'drive'
-        ? prev !== undefined && (!a.visitPlaced(prev) || !a.visitPlaced(leg.visitId))
-        : !a.homePlaced || !a.visitPlaced(leg.visitId);
+    const here = kindOf(leg.visitId);
+    const ends = leg.kind === 'drive' ? (prev !== undefined ? [kindOf(prev), here] : []) : [here];
+    const homeKnown = leg.kind === 'drive' || a.homePlaced;
+    const estimated = ends.length > 0 && !ends.includes('fixed') && (ends.includes('none') || !homeKnown);
     const latest = leg.kind === 'toHome' ? undefined : a.latestOf(leg.visitId);
     const late = latest !== undefined && leg.end > latest + LATE_EPS;
     return { ...leg, estimated, late };

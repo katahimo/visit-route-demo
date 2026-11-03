@@ -243,7 +243,20 @@ export function tagsOf(p: PlanCtx, id: string, pinHint = true) {
  * 入らない訪問で「受けられる人」（振り直しの候補）を出しているものは重ねない
  */
 export function reassignOf(p: PlanCtx, id: string, ownerId: string | null) {
-  const { problem, hasPlan, routes, pins, staffName, terms, columns, running, reassignMarks, moveTo, unassign } = bv(p);
+  const {
+    problem,
+    hasPlan,
+    routes,
+    pins,
+    staffName,
+    terms,
+    columns,
+    running,
+    reassignMarks,
+    moveTo,
+    unassign,
+    clientOf,
+  } = bv(p);
   if (!problem || !hasPlan) return null;
   if (!ownerId && reassignMarks.unplaced.has(id)) return null;
   return (
@@ -256,6 +269,7 @@ export function reassignOf(p: PlanCtx, id: string, ownerId: string | null) {
       staffIds={columns}
       staffName={staffName}
       terms={terms}
+      client={clientOf(id)}
       busy={running ? '計算中は選べません' : false}
       onMove={(sid) => {
         moveTo(id, sid);

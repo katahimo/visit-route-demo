@@ -40,6 +40,29 @@ describe('型ごとの理由・案内・リンク', () => {
     expect(r.links.map((l) => l.to)).toEqual(['/staff', '/availability']);
   });
 
+  it('勤務日外：全員が勤務日外のときだけ「どの〈スタッフ〉の勤務日でもありません」と言い切る', () => {
+    const d = makeData({
+      staff: [st('s1'), st('s2')],
+      clients: [near()],
+      visits: [visit('v1', 'c1', '10:00', '10:00', { date: SAT })],
+    });
+    expect(why(d, {}, SAT).guide).toContain('土曜はどのヘルパーの勤務日でもありません');
+  });
+
+  it('勤務日外：その日に勤務する人がいれば、その人はほかの理由で入れないと言い、勤務日外の人の名前を添える', () => {
+    const d = makeData({
+      staff: [st('s1'), st('s2'), st('s3', { workDays: [6], shiftStart: '13:00', shiftEnd: '18:00' })],
+      clients: [near()],
+      visits: [visit('v1', 'c1', '10:00', '10:00', { date: SAT, windowKind: 'fixed' })],
+    });
+    const r = why(d, {}, SAT);
+    expect(r.kind).toBe('dayOff');
+    expect(r.summary).toBe('勤務日外 2人・勤務時間外 1人');
+    expect(r.guide).not.toContain('どのヘルパーの勤務日でもありません');
+    expect(r.guide).toContain('土曜に勤務するヘルパーは 1人いますが、ほかの理由で入れません');
+    expect(r.guide).toContain('勤務日外のヘルパー（s1・s2）の勤務する曜日に土曜を足す');
+  });
+
   it('勤務時間外：勤務 9:00〜18:00 に訪問 17:00〜20:00 は収まらない。終わりを 20:00 以降に', () => {
     const d = makeData({
       staff: [st('s1', { shiftStart: '09:00', shiftEnd: '18:00' })],
@@ -210,6 +233,19 @@ describe('遠方・位置なし（ADR-0093・ADR-0096）', () => {
     expect(r.links[0]!.to).toBe('/clients/far?tab=basic&edit=place&focus=travel');
   });
 
+  it('移動が間に合わない：移動時間を入れ済みなら、その分数と、勤務の開始を早める・遠方（出張）に印を付ける案内', () => {
+    const d = makeData({
+      staff: [st('s1')],
+      clients: [tokyo({ travelMinutes: 150 })],
+      visits: [visit('v1', 'far', '09:00', '09:00', { windowKind: 'fixed' })],
+    });
+    const r = unassignedReasonOf(compile(d, DATE), {}, 'v1', T, d.clients)!;
+    expect(r.kind).toBe('travel');
+    expect(r.guide).toContain('移動時間（片道 150分）では、勤務の開始に家を出ても間に合いません');
+    expect(r.guide).toContain('遠方（出張）に印を付けると');
+    expect(r.guide).not.toContain('距離から見積もった');
+  });
+
   it('遠方（出張）の日：その人の列にほかの訪問がある', () => {
     const d = makeData({
       staff: [st('s1')],
@@ -268,7 +304,7 @@ describe('複合と内訳', () => {
     const all = unassignedReasons(p, {}, T);
     expect([...all.keys()].sort()).toEqual(['v1', 'v2', 'v3']);
     expect(reasonBreakdown(all.values())).toBe('勤務時間外 2・入れられる人あり 1');
-    const only = unassignedReasons(p, {}, T, new Set(['v3']));
+    const only = unassignedReasons(p, {}, T, { ids: new Set(['v3']) });
     expect([...only.keys()]).toEqual(['v3']);
   });
 

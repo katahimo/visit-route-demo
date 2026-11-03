@@ -842,8 +842,8 @@ async function expertSame(page) {
       return t;
     })();
     check(
-      list.some((t) => /^欠勤・キャンセルを登録/.test(t)) && list.some((t) => /^元に戻す/.test(t)),
-      `入 ${to}：「その他 ▾」に 欠勤・キャンセルを登録 と 元に戻す`,
+      list.some((t) => /^欠勤・キャンセルを登録/.test(t)) && !list.some((t) => /^元に戻す/.test(t)),
+      `入 ${to}：「その他 ▾」に 欠勤・キャンセルを登録（元に戻すは行のアイコンだけで、メニューに重ねない。PRD D432）`,
       list,
     );
     const fold = page.getByTestId(detailsId);

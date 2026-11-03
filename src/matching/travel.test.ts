@@ -55,6 +55,19 @@ describe('移動時間（片道・分。ADR-0096）', () => {
     expect(p.reasons[0]![0]!.some((r) => r.ruleId === 'noPlace')).toBe(false);
   });
 
+  it('移動時間があれば、〈スタッフ〉の自宅が未登録でも「位置が未登録」の点を足さない（ほかの〈利用者さん〉には足す）', () => {
+    const d = makeData({
+      staff: [staff('s1', SENDAI.lat, SENDAI.lng)],
+      clients: [tokyo({ travelMinutes: 150 }), client('near', NEAR.lat, NEAR.lng)],
+      visits: [visit('v1', 'far', '13:00', '13:00'), visit('v2', 'near', '09:00', '09:00')],
+    });
+    d.staff = d.staff.map((s) => ({ ...s, home: { ...s.home, lat: null, lng: null } }));
+    const p = compile(d, DATE);
+    const at = (id: string) => p.visits.findIndex((v) => v.id === id);
+    expect(p.reasons[at('v1')]![0]!.some((r) => r.ruleId === 'noPlace')).toBe(false);
+    expect(p.reasons[at('v2')]![0]!.some((r) => r.ruleId === 'noPlace')).toBe(true);
+  });
+
   it('2つの〈利用者さん〉の両方に入っていれば、長いほう', () => {
     const d = makeData({
       staff: [staff('s1', SENDAI.lat, SENDAI.lng)],

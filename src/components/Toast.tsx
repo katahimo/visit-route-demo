@@ -16,7 +16,7 @@ const ACTION_TOAST_MS = 6000;
 /** ボタン付きの知らせの最長（長い文は1字 120ms で読む間を足し、ここで止める。PRD D268） */
 const ACTION_TOAST_MAX_MS = 10000;
 /** 長く出す知らせ（組めない理由の内訳と［理由を見る］。PRD D430） */
-const LONG_TOAST_MS = 20000;
+const LONG_TOAST_MS = 10000;
 
 /** 知らせを出しておく時間（PRD D268）：文だけは短く、ボタン付きは読み上げと押す間を残す（長い文ほど長く、上限あり）。long は長く */
 export function toastMs(msg: string, withAction: boolean, long = false): number {

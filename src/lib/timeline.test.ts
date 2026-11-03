@@ -15,6 +15,7 @@ import {
   subtractSpans,
   timeRange,
   toY,
+  visitTravelKind,
 } from './timeline';
 
 describe('縦の範囲と位置', () => {
@@ -112,13 +113,19 @@ describe('移動の見込み・間に合わない・言葉', () => {
     { visitId: 'a', arrival: 540, start: 540, end: 600, wait: 0, travelIn: 15 },
     { visitId: 'b', arrival: 630, start: 630, end: 690, wait: 0, travelIn: 30 },
   ];
-  const base = { order: ['a', 'b'], visitPlaced: () => true, homePlaced: true, latestOf: () => undefined };
+  const placed = { address: '', lat: 38.26, lng: 140.87, postalCode: '' };
+  const unplaced = { address: '', lat: null, lng: null, postalCode: '' };
+  const base = { order: ['a', 'b'], visitPlace: () => placed, homePlaced: true, latestOf: () => undefined };
   it('位置が全部ある区間は見込みにしない', () => {
     const legs = markLegs(legsOf(stops, 12), base);
     expect(legs.every((l) => l.estimated === false && l.late === false)).toBe(true);
   });
   it('どちらかの位置が未登録の区間・自宅が未登録の区間は見込み', () => {
-    const legs = markLegs(legsOf(stops, 30), { ...base, visitPlaced: (id) => id !== 'a', homePlaced: false });
+    const legs = markLegs(legsOf(stops, 30), {
+      ...base,
+      visitPlace: (id) => (id === 'a' ? unplaced : placed),
+      homePlaced: false,
+    });
     expect(legs.map((l) => [l.kind, l.estimated])).toEqual([
       ['fromHome', true],
       ['drive', true],
@@ -126,6 +133,27 @@ describe('移動の見込み・間に合わない・言葉', () => {
     ]);
     const onlyHome = markLegs(legsOf(stops, 30), { ...base, homePlaced: false });
     expect(onlyHome.map((l) => l.estimated)).toEqual([true, false, true]);
+  });
+  it('移動時間を手で決めた訪問先の区間は、位置・自宅が未登録でも見込みにしない（ADR-0096）', () => {
+    const fixedA = { ...unplaced, travelMinutes: 90 };
+    const legs = markLegs(legsOf(stops, 30), {
+      ...base,
+      visitPlace: (id) => (id === 'a' ? fixedA : unplaced),
+      homePlaced: false,
+    });
+    // 自宅から a（決めた分数）・a から b（a の分数）は見込みでない。b から自宅は見込み
+    expect(legs.map((l) => [l.kind, l.estimated])).toEqual([
+      ['fromHome', false],
+      ['drive', false],
+      ['toHome', true],
+    ]);
+  });
+  it('visitTravelKind：移動時間があれば位置に関わらず fixed、位置だけなら placed、どちらも無ければ none', () => {
+    expect(visitTravelKind({ ...unplaced, travelMinutes: 60 })).toBe('fixed');
+    expect(visitTravelKind({ ...placed, travelMinutes: 60 })).toBe('fixed');
+    expect(visitTravelKind(placed)).toBe('placed');
+    expect(visitTravelKind(unplaced)).toBe('none');
+    expect(visitTravelKind(undefined)).toBe('none');
   });
   it('着く時刻が「いつまでに始める」を過ぎる移動は間に合わない（帰りは見ない）', () => {
     const legs = markLegs(legsOf(stops, 12), { ...base, latestOf: (id) => (id === 'b' ? 600 : undefined) });
@@ -136,7 +164,7 @@ describe('移動の見込み・間に合わない・言葉', () => {
     ]);
   });
   it('言葉：ふつうは「移動 15分」、見込み・間に合わないを添える、控えめは分だけ', () => {
-    const [leg] = markLegs(legsOf(stops, null), { ...base, visitPlaced: () => false });
+    const [leg] = markLegs(legsOf(stops, null), { ...base, visitPlace: () => unplaced });
     expect(legWords({ ...leg!, kind: 'drive', late: true }, 15)).toBe('移動 15分（見込み）・着く時刻が間に合わない');
     expect(legWords({ ...leg!, kind: 'toHome', estimated: false }, 8)).toBe('自宅まで 8分');
   });

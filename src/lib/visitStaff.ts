@@ -74,7 +74,8 @@ export function staffChoices(d: DemoData, visitId: string | null, draft: VisitDr
   const working = workingStaff(problem, all);
   const choices = reassignChoices(problem, all, moved.id, current, (sid) => working.has(sid));
   const selectable = choices.some((c) => !c.current && !c.disabled);
-  const blocked = current === null || !selectable ? unassignedReasonOf(problem, all, moved.id, d.org.terms) : null;
+  const blocked =
+    current === null || !selectable ? unassignedReasonOf(problem, all, moved.id, d.org.terms, d.clients) : null;
   const others = choices.some((c) => !c.current);
   const why = !others && blocked ? `ほかに担当できる${d.org.terms.staff}がいません（${blocked.summary}）` : null;
   return { date: draft.date, currentStaffId: current, choices, why, blocked };

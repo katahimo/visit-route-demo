@@ -91,4 +91,17 @@ describe('移動・遠方の理由のキーと案内（lib/travelReasons）', ()
     expect(travelReasonOf({ ruleId: 'travelTooFar', label: '' }, terms)?.hint).toContain('利用者さんの画面');
     expect(travelReasonOf({ ruleId: 'farTrip', label: '' }, terms)?.hint).toContain('ヘルパーにほかの訪問を入れません');
   });
+
+  it('移動が間に合わない案内は、移動時間・遠方（出張）の入れ方で分ける', () => {
+    const r = { ruleId: 'travelTooFar', label: '' };
+    expect(travelReasonOf(r, terms)?.hint).toContain('距離から見積もった移動では');
+    expect(travelReasonOf(r, terms, {})?.hint).toContain('距離から見積もった移動では');
+    const manual = travelReasonOf(r, terms, { travelMinutes: 150 })?.hint ?? '';
+    expect(manual).toContain('移動時間（片道 150分）では、勤務の開始に家を出ても間に合いません');
+    expect(manual).toContain('ヘルパーの勤務の開始を早めるか');
+    expect(manual).toContain('遠方（出張）に印を付けると、家を出る時刻を勤務の開始に縛りません');
+    const far = travelReasonOf(r, terms, { travelMinutes: 150, farTrip: true })?.hint ?? '';
+    expect(far).toContain('移動時間（片道 150分）を見ても');
+    expect(far).not.toContain('遠方（出張）に印を付ける');
+  });
 });

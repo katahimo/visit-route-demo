@@ -2,7 +2,7 @@
 // 短い理由・直し方の案内（1〜2文）・直す画面へのリンクを決める純粋関数。新しい判定は足さず、matching の可否の理由（problem.reasons の
 // Infinity の理由）と、可の人を今の列に入れたときの原因（evaluate の unplacedCauses。explain の担当なしの理由と同じ判定）をまとめる。
 // 訪問の詳細の「組めない理由」・要対応の帯の内訳・自動の組みの知らせ・日の予定の担当なしの札・「担当を変える ▾」で同じものを使う
-import type { Visit } from '../contracts/documents';
+import type { Client, Visit } from '../contracts/documents';
 import type { Problem, Reason } from '../contracts/problem';
 import { weekday } from '../domain/time';
 import { BALANCE_RULE_KEY, unplacedCauses } from '../evaluate';
@@ -23,7 +23,7 @@ import { WEEKDAY_LABELS } from './common';
 import { clockTime } from './dateText';
 import { routesOf } from './dayPlan';
 import { clientPageHref, clientTravelHref, type HardLink, staffPageHref, TRAVEL_LINK_LABEL } from './hardLinks';
-import { travelReasonOf } from './travelReasons';
+import { type TravelPlace, travelReasonOf } from './travelReasons';
 
 /**
  * 組めない型。人ごとの型（その人が入れない原因）と、訪問そのものの型（働ける人がいない・時間の約束の幅が正しくない）。
@@ -214,13 +214,25 @@ const AVAILABILITY = '/availability';
 const clientSectionHref = (clientId: string, sec: 'place' | 'staffing' | 'conds') =>
   `${clientPageHref(clientId)}?edit=${sec}`;
 
+/** 勤務日外の案内：その日に勤務する人がいれば、その人たちはほかの理由で入れないことを言う（全員が勤務日外のときだけ言い切る） */
+function dayOffGuide(problem: Problem, people: readonly PersonCause[], t: ReasonTerms): string {
+  const day = WEEKDAY_LABELS[weekday(problem.date)];
+  const fix = `勤務する曜日に${day}曜を足すか、勤務時間（シフト）でその日だけの勤務を足すと組めます`;
+  const working = problem.staff.filter((s) => s.slots.length > 0).length;
+  if (working === 0) return `${day}曜はどの${t.staff}の勤務日でもありません。${t.staff}の${fix}`;
+  return `${day}曜に勤務する${t.staff}は ${working}人いますが、ほかの理由で入れません。勤務日外の${t.staff}（${namesOf(problem, people)}）の${fix}`;
+}
+
+/** 案内を決めるのに使う、訪問の外のもの（呼び方と、その〈利用者さん〉の移動時間・遠方） */
+type GuideInput = { t: ReasonTerms; place: TravelPlace | undefined };
+
 /** 主な型の案内とリンク */
 function guideOf(
   problem: Problem,
   v: number,
   kind: UnassignedKind,
   people: readonly PersonCause[],
-  t: ReasonTerms,
+  { t, place }: GuideInput,
 ): { guide: string; links: HardLink[] } {
   const pv = problem.visits[v]!;
   const first = people[0]?.reason?.label ?? '';
@@ -243,7 +255,7 @@ function guideOf(
     case 'travel':
     case 'farTrip': {
       const key = kind === 'travel' ? TRAVEL_TOO_FAR_RULE_ID : FAR_TRIP_RULE_ID;
-      const hint = travelReasonOf({ ruleId: key, label: first }, t)?.hint ?? '';
+      const hint = travelReasonOf({ ruleId: key, label: first }, t, place)?.hint ?? '';
       return { guide: hint, links: [{ to: clientTravelHref(pv.clientId), label: TRAVEL_LINK_LABEL }] };
     }
     case 'noPlace':
@@ -259,16 +271,14 @@ function guideOf(
           { to: AVAILABILITY, label: '勤務時間（シフト）を直す' },
         ],
       };
-    case 'dayOff': {
-      const day = WEEKDAY_LABELS[weekday(problem.date)];
+    case 'dayOff':
       return {
-        guide: `${day}曜はどの${t.staff}の勤務日でもありません。${t.staff}の勤務する曜日に${day}曜を足すか、勤務時間（シフト）でその日だけの勤務を足すと組めます`,
+        guide: dayOffGuide(problem, people, t),
         links: [
           staffLink(problem, people, `${t.staff}の勤務する曜日を直す`),
           { to: AVAILABILITY, label: 'その日だけの勤務を足す' },
         ],
       };
-    }
     case 'absent':
       return {
         guide: `入れる${t.staff}（${namesOf(problem, people)}）が欠勤です。欠勤を見直すか、勤務時間（シフト）でほかの${t.staff}の勤務を足すと組めます`,
@@ -320,9 +330,14 @@ function guideOf(
 }
 
 /** 訪問 v（添字）の組めない理由。causes は evaluate の unplacedCauses のその訪問の分 */
-function reasonOf(problem: Problem, v: number, causes: readonly (Reason | null)[], t: ReasonTerms): UnassignedReason {
+function reasonOf(
+  problem: Problem,
+  v: number,
+  causes: readonly (Reason | null)[],
+  input: GuideInput,
+): UnassignedReason {
   const build = (kind: UnassignedKind, people: PersonCause[], counts: KindCount[], summary: string) => {
-    const g = guideOf(problem, v, kind, people, t);
+    const g = guideOf(problem, v, kind, people, input);
     return { kind, label: UNASSIGNED_LABELS[kind], summary, guide: g.guide, links: g.links, counts };
   };
   if (problem.staff.length === 0) return build('noStaff', [], [], UNASSIGNED_LABELS.noStaff);
@@ -345,19 +360,27 @@ function reasonOf(problem: Problem, v: number, causes: readonly (Reason | null)[
 }
 
 /**
- * その日の、どの列にも入っていない訪問ごとの組めない理由（訪問 ID → 理由）。ids を渡せばその訪問だけ。
+ * 理由を見る範囲と、案内に使うもの。ids を渡せばその訪問だけ。clients を渡せば、移動が間に合わない案内を
+ * その〈利用者さん〉の移動時間・遠方で分ける（無ければ距離から見積もったものとみる。内訳だけ見るときは要らない）
+ */
+export type ReasonOptions = { ids?: ReadonlySet<string>; clients?: readonly Pick<Client, 'id' | 'place'>[] };
+
+/**
+ * その日の、どの列にも入っていない訪問ごとの組めない理由（訪問 ID → 理由）。
  * routes は担当 → 訪問 ID の列（担当を替える候補を見るときは、その訪問を除いた列を渡す）
  */
 export function unassignedReasons(
   problem: Problem,
   routes: Record<string, string[]>,
   terms: ReasonTerms,
-  ids?: ReadonlySet<string>,
+  { ids, clients }: ReasonOptions = {},
 ): Map<string, UnassignedReason> {
   const out = new Map<string, UnassignedReason>();
   const only = ids ? (v: number) => ids.has(problem.visits[v]!.id) : undefined;
+  const placeOf = new Map(clients?.map((c) => [c.id, c.place]));
   for (const [v, causes] of unplacedCauses(problem, routes, only)) {
-    out.set(problem.visits[v]!.id, reasonOf(problem, v, causes, terms));
+    const place = placeOf.get(problem.visits[v]!.clientId);
+    out.set(problem.visits[v]!.id, reasonOf(problem, v, causes, { t: terms, place }));
   }
   return out;
 }
@@ -368,8 +391,9 @@ export function unassignedReasonOf(
   routes: Record<string, string[]>,
   visitId: string,
   terms: ReasonTerms,
+  clients?: ReasonOptions['clients'],
 ): UnassignedReason | null {
-  return unassignedReasons(problem, routes, terms, new Set([visitId])).get(visitId) ?? null;
+  return unassignedReasons(problem, routes, terms, { ids: new Set([visitId]), clients }).get(visitId) ?? null;
 }
 
 /** 担当なしの訪問たちの主な型の内訳（帯・知らせ。「勤務時間外 6・勤務日外 5」）。無ければ空の文 */
@@ -387,7 +411,7 @@ export function unassignedAcross(days: readonly DayUnassigned[], terms: ReasonTe
   const out = new Map<string, UnassignedReason>();
   for (const d of days) {
     if (!d.problem || d.ids.length === 0) continue;
-    for (const [id, r] of unassignedReasons(d.problem, routesOf(d.problem, d.visits), terms, new Set(d.ids)))
+    for (const [id, r] of unassignedReasons(d.problem, routesOf(d.problem, d.visits), terms, { ids: new Set(d.ids) }))
       out.set(id, r);
   }
   return out;

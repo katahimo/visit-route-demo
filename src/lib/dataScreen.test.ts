@@ -142,7 +142,7 @@ describe('名簿の読み込みの文', () => {
     const f = applyTemplate('oneOff');
     const note = rosterDefaultHoursNote({ names: ['A', 'B'], features: f, staffTerm: 'スタッフ' });
     expect(note).toBe(
-      '勤務する曜日・時間の列が無い2人は、既定（毎日 7:00〜22:00）にしました。スタッフの画面の勤務時間で直せます',
+      '勤務する曜日・時間のどれかが空の2人は、空の所を既定（毎日 7:00〜22:00）にしました。スタッフの画面の勤務時間で直せます',
     );
     expect(rosterDefaultHoursNote({ names: [], features: f, staffTerm: 'スタッフ' })).toBeNull();
     expect(

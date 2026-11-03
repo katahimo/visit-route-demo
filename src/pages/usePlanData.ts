@@ -60,8 +60,10 @@ function usePlanCore(date: string) {
   /** 担当なしの訪問の組めない理由（PRD D430。担当なしの訪問の列の札・入らない一覧のリンク） */
   const whyOf = useMemo(
     () =>
-      problem && hasPlan ? unassignedReasons(problem, routes, m.data.org.terms) : new Map<string, UnassignedReason>(),
-    [problem, hasPlan, routes, m.data.org.terms],
+      problem && hasPlan
+        ? unassignedReasons(problem, routes, m.data.org.terms, { clients: m.data.clients })
+        : new Map<string, UnassignedReason>(),
+    [problem, hasPlan, routes, m.data.org.terms, m.data.clients],
   );
   const staffName = (id: string) => staffById.get(id)?.name ?? '（不明）';
   const clientOf = (visitId: string) => {

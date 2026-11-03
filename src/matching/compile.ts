@@ -311,14 +311,15 @@ function pairReasons(ctx: PairContext, v: VisitSide, i: number): Reason[] {
   const out: Reason[] = [];
   const look: CondLook = { items, date };
   // 位置が未登録でも組む（移動は UNPLACED_TRAVEL_MIN 分とみる。ADR-0093）。位置のある組を先に選ぶよう点を足す。
-  // 移動時間（片道・分）を手で決めた〈利用者さん〉は位置を使わないので足さない（ADR-0096）
-  if (!places[S + j] && client.place.travelMinutes === undefined)
+  // 移動時間（片道・分）を手で決めた〈利用者さん〉は位置を使わないので、〈利用者さん〉の側も〈スタッフ〉の自宅の側も足さない（ADR-0096）
+  const manualTravel = client.place.travelMinutes !== undefined;
+  if (!places[S + j] && !manualTravel)
     out.push({
       ruleId: 'noPlace',
       label: `${terms.client}の緯度・経度が未登録（移動は${UNPLACED_TRAVEL_MIN}分とみる）`,
       points: UNPLACED_POINTS,
     });
-  if (!places[i])
+  if (!places[i] && !manualTravel)
     out.push({
       ruleId: 'noPlace',
       label: `${terms.staff}の自宅の緯度・経度が未登録（移動は${UNPLACED_TRAVEL_MIN}分とみる）`,
