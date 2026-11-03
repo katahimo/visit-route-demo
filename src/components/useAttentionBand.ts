@@ -7,12 +7,15 @@ import { type AttentionBand, attentionBand, bandDays } from '../lib/attentionBan
 import { isHrefOn, isOn } from '../lib/features';
 import { planYm } from '../lib/scheduleMode';
 import { hasStandard } from '../lib/standard';
-import { reasonBreakdown, unassignedAcross } from '../lib/unassignedReason';
+import { createUnassignedMemo, reasonBreakdown, unassignedAcross } from '../lib/unassignedReason';
 import { visitsOn } from '../patterns';
 import { useDemoData } from '../store';
 import { useBasisChanged } from './useArrangeBasis';
 import { useCompileInput } from './useDayModel';
 import { useDayStatuses } from './useDayStatuses';
+
+/** 帯の理由の覚え（画面を移っても日ごとの状態の覚えが同じ問題を返すので、同じ日の計算を使い回す） */
+const reasonMemo = createUnassignedMemo();
 
 /** 要対応の帯の中身と、担当なしの訪問の組めない理由の内訳（「勤務時間外 6・勤務日外 5」。担当なしが無ければ空。PRD D430） */
 export type AttentionBandView = AttentionBand & { why: string };
@@ -54,7 +57,7 @@ export function useAttentionBand(): AttentionBandView | null {
       visits: visitsOn(compileInput, date),
       ids,
     }));
-    return reasonBreakdown(unassignedAcross(list, data.org.terms).values());
+    return reasonBreakdown(unassignedAcross(list, data.org.terms, reasonMemo).values());
   }, [band, perDay, compileInput, data.org.terms]);
   return band ? { ...band, why } : null;
 }

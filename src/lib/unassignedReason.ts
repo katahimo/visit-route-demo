@@ -407,12 +407,39 @@ export type DayUnassigned = { problem: Problem | null; visits: readonly Visit[];
  * 日をまたいだ担当なしの訪問の組めない理由（要対応の帯の内訳・自動の組みの知らせ）。列はその日の今の担当（routesOf）。
  * 問題の無い日・列に入っている訪問は飛ばす
  */
-export function unassignedAcross(days: readonly DayUnassigned[], terms: ReasonTerms): Map<string, UnassignedReason> {
+export function unassignedAcross(
+  days: readonly DayUnassigned[],
+  terms: ReasonTerms,
+  memo?: UnassignedMemo,
+): Map<string, UnassignedReason> {
   const out = new Map<string, UnassignedReason>();
   for (const d of days) {
     if (!d.problem || d.ids.length === 0) continue;
-    for (const [id, r] of unassignedReasons(d.problem, routesOf(d.problem, d.visits), terms, { ids: new Set(d.ids) }))
+    const routes = routesOf(d.problem, d.visits);
+    const day = () => unassignedReasons(d.problem as Problem, routes, terms, { ids: new Set(d.ids) });
+    for (const [id, r] of memo
+      ? memo.of(d.problem, `${JSON.stringify(routes)}|${d.ids.join(',')}|${terms.client}|${terms.staff}`, day)
+      : day())
       out.set(id, r);
   }
   return out;
+}
+
+/** 日ごとの理由の覚え：同じ問題（日ごとの状態の覚えが同じ物を返す）・同じ担当の並び・同じ対象なら計算し直さない */
+export type UnassignedMemo = {
+  of: (problem: Problem, key: string, make: () => Map<string, UnassignedReason>) => Map<string, UnassignedReason>;
+};
+
+/** 理由の覚えを作る（問題が捨てられたら覚えも消える WeakMap。問題ごとに最後の1つだけ持つ） */
+export function createUnassignedMemo(): UnassignedMemo {
+  const byProblem = new WeakMap<Problem, { key: string; value: Map<string, UnassignedReason> }>();
+  return {
+    of: (problem, key, make) => {
+      const hit = byProblem.get(problem);
+      if (hit && hit.key === key) return hit.value;
+      const value = make();
+      byProblem.set(problem, { key, value });
+      return value;
+    },
+  };
 }

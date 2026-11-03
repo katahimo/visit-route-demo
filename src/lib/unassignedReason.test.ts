@@ -1,10 +1,17 @@
 // 担当なしの訪問の組めない理由（PRD D430。ADR-0098）：型ごと・複合・遠方
 import { describe, expect, it } from 'vitest';
 import type { DemoData } from '../contracts/data';
+import type { Problem } from '../contracts/problem';
 import { compile } from '../matching';
 import { client, DATE, makeData, rule, staff, visit } from '../matching/fixtures.testkit';
 import { clientTravelHref, staffPageHref } from './hardLinks';
-import { countKinds, reasonBreakdown, unassignedReasonOf, unassignedReasons } from './unassignedReason';
+import {
+  countKinds,
+  createUnassignedMemo,
+  reasonBreakdown,
+  unassignedReasonOf,
+  unassignedReasons,
+} from './unassignedReason';
 
 const SENDAI = { lat: 38.26, lng: 140.87 };
 const NEAR = { lat: 38.27, lng: 140.88 };
@@ -310,5 +317,24 @@ describe('複合と内訳', () => {
 
   it('countKinds：同じ数なら型の順', () => {
     expect(countKinds(['dayOff', 'hours']).map((c) => c.kind)).toEqual(['hours', 'dayOff']);
+  });
+});
+
+describe('createUnassignedMemo（帯の理由の覚え）', () => {
+  it('同じ問題・同じ鍵なら作り直さず、鍵が変われば作り直す', () => {
+    const memo = createUnassignedMemo();
+    const problem = {} as Problem;
+    let made = 0;
+    const make = () => {
+      made++;
+      return new Map();
+    };
+    const a = memo.of(problem, 'k1', make);
+    expect(memo.of(problem, 'k1', make)).toBe(a);
+    expect(made).toBe(1);
+    memo.of(problem, 'k2', make);
+    expect(made).toBe(2);
+    memo.of({} as Problem, 'k2', make);
+    expect(made).toBe(3);
   });
 });
