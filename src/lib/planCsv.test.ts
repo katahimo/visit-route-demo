@@ -8,8 +8,8 @@ describe('予定の CSV の画面の決まり', () => {
     expect(planCsvRange('2028-02-01')).toMatchObject({ to: '2028-02-29' });
   });
   it('ファイル名とボタンの文', () => {
-    expect(planCsvFileName('2026-11')).toBe('visit-route-demo-visits-2026-11.csv');
-    expect(PLAN_CSV_TEMPLATE_NAME).toBe('visit-route-demo-visits-template.csv');
+    expect(planCsvFileName('2026-11')).toBe('staff-assign-demo-visits-2026-11.csv');
+    expect(PLAN_CSV_TEMPLATE_NAME).toBe('staff-assign-demo-visits-template.csv');
     expect(planCsvExportLabel('2026-01', 3)).toBe('1月の単発の訪問を書き出す（3件）');
   });
 });

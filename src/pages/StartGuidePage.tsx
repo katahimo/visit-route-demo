@@ -3,7 +3,9 @@ import { useId, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { RosterCard } from '../components/RosterCard';
 import { PageHeader, WithIcon } from '../components/ui';
+import type { Terms } from '../contracts/documents';
 import {
+  START_GUIDE_ROSTER_FORMS,
   type StartGuideStep,
   startGuideCount,
   startGuideHref,
@@ -13,12 +15,14 @@ import {
   startGuideSteps,
 } from '../lib/startGuide';
 import { useDemoData } from '../store';
+import { BookingCard } from './dataBookings';
 import './settings.css';
 
 /**
  * 登録の案内（`#/start`。PRD D381。ADR-0073）：自分のデータで始めたあと、1画面1項目の3段で案内する。
  * 上に「1/3」。①〈利用者さん〉②〈スタッフ〉は「CSV・Excel を読み込む」（名簿の欄＝今の名簿の読み込み）と「1人ずつ入れる」（今の追加の画面）、
- * ③は予定を入れる画面へ。主ボタンは各段で1つ（①②は「次へ」、③は「予定を入れる」）。段は URL の `?step=`
+ * ③は予約の CSV の読み込み（データの画面の予約の CSV の欄と同じ）と予定を入れる画面へ。主ボタンは各段で1つ（①②は「次へ」、③は「予定を入れる」）。
+ * 段は URL の `?step=`。名簿・予約の CSV を①→②→③の順に読み込めば、事業所の CSV でデモを始められる（ADR-0092）
  */
 export default function StartGuidePage() {
   const { data } = useDemoData();
@@ -41,7 +45,11 @@ export default function StartGuidePage() {
             registered={step.person === 'client' ? data.clients.length : data.staff.length}
           />
         ) : (
-          <PlanStep planPath={startGuidePlanPath(data.org.features)} />
+          <PlanStep
+            planPath={startGuidePlanPath(data.org.features)}
+            terms={data.org.terms}
+            visits={data.visits.length}
+          />
         )}
       </section>
       <nav className="row" aria-label="案内の段" style={{ justifyContent: 'space-between' }}>
@@ -69,6 +77,7 @@ function RosterStep({ step, registered }: { step: Extract<StartGuideStep, { kind
   return (
     <>
       <p>{step.term}を入れます。ファイルがあれば読み込み、少ないときは1人ずつ入れます。</p>
+      <p className="sub">{START_GUIDE_ROSTER_FORMS}</p>
       <div className="row" style={{ flexWrap: 'wrap' }}>
         <button
           type="button"
@@ -93,11 +102,27 @@ function RosterStep({ step, registered }: { step: Extract<StartGuideStep, { kind
   );
 }
 
-/** ③の本体：予定を入れる画面へ（主ボタン） */
-function PlanStep({ planPath }: { planPath: string }) {
+/** ③の本体：予約の CSV があれば読み込み（ADR-0075・ADR-0092）、予定を入れる画面へ（主ボタン）。入った訪問の数を添える */
+function PlanStep({
+  planPath,
+  terms,
+  visits,
+}: {
+  planPath: string;
+  terms: Pick<Terms, 'client' | 'staff'>;
+  visits: number;
+}) {
   return (
     <>
-      <p>予定の画面で日を選び、訪問を足します。足した訪問は、入れた分だけ自動で担当が付きます。</p>
+      <p>
+        予約の CSV
+        があれば読み込みます。無ければ、予定の画面で日を選んで訪問を足します。足した訪問は、入れた分だけ自動で担当が付きます。
+      </p>
+      {/* データの画面の予約の CSV の欄をそのまま使う。Excel の入出力の入り切りにかかわらず、ここでは読み込める */}
+      <BookingCard t={terms} />
+      <p className="sub" data-testid="start-guide-visits">
+        いま入っている訪問は {visits}件です
+      </p>
       <Link
         to={planPath}
         className="btn btn-primary"

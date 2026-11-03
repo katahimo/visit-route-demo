@@ -65,6 +65,37 @@
 .feature-template .btn {
   align-self: flex-start;
 }
+/* 近い業種の例（ADR-0092） */
+.feature-template-example {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--sub);
+}
+/* 基本との差（足す・外す機能） */
+.feature-template p.feature-template-delta {
+  flex: 0 0 auto;
+  font-size: 0.82rem;
+  color: var(--ink);
+}
+
+/* 機能の入・切の1枚の中のグループ（見出しと、入っている数） */
+.feature-group + .feature-group {
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1.5px solid var(--line);
+}
+.feature-group-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  font-size: 0.95rem;
+}
+.feature-group-count {
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--sub);
+}
 
 /* グループごとのスイッチ */
 .feature-list {
@@ -210,10 +241,25 @@
   gap: 4px;
 }
 
-/* 「最初の設定をやり直す」の注意（データが消える。畳まずに出す） */
+/* 「始め方を選び直す」の注意（データが消える。畳まずに出す） */
 .restart-warn {
   margin: 0;
   color: var(--warn-ink);
   font-weight: 700;
   font-size: 0.9rem;
+}
+
+/* 最初からやり直すの1行（説明とボタン。狭い画面では縦） */
+.restart-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.restart-row p {
+  margin: 0;
+  flex: 1 1 260px;
 }

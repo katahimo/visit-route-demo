@@ -60,9 +60,9 @@ describe('workbookCountsText・excelFileName・rosterFileName', () => {
     );
   });
   it('ファイル名は英字だけ', () => {
-    expect(excelFileName('2026-10-12')).toBe('visit-route-demo-2026-10-12.xlsx');
-    expect(rosterFileName('staff', 'xlsx', '2026-10-12')).toBe('visit-route-demo-staff-2026-10-12.xlsx');
-    expect(rosterFileName('client', 'csv', '2026-10-12')).toBe('visit-route-demo-clients-2026-10-12.csv');
+    expect(excelFileName('2026-10-12')).toBe('staff-assign-demo-2026-10-12.xlsx');
+    expect(rosterFileName('staff', 'xlsx', '2026-10-12')).toBe('staff-assign-demo-staff-2026-10-12.xlsx');
+    expect(rosterFileName('client', 'csv', '2026-10-12')).toBe('staff-assign-demo-clients-2026-10-12.csv');
   });
 });
 

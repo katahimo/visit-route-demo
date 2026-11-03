@@ -54,11 +54,11 @@ export function workbookCountsText(
 }
 
 /** 書き出す Excel（全体）のファイル名。英字だけ（呼び方の文字を入れると、Chromium で保存名が「download」になったため） */
-export const excelFileName = (date: string): string => `visit-route-demo-${date}.xlsx`;
+export const excelFileName = (date: string): string => `staff-assign-demo-${date}.xlsx`;
 
 /** 書き出す名簿のファイル名（Excel か CSV。ADR-0068）。英字だけ（excelFileName と同じ理由） */
 export const rosterFileName = (kind: RosterKind, format: RosterSource['format'], date: string): string =>
-  `visit-route-demo-${kind === 'staff' ? 'staff' : 'clients'}-${date}.${format}`;
+  `staff-assign-demo-${kind === 'staff' ? 'staff' : 'clients'}-${date}.${format}`;
 
 /** 読んだ名簿のファイルの形の文（確認の本文に添える。CSV なら見分けた文字コード） */
 const rosterSourceText = (s: RosterSource): string =>

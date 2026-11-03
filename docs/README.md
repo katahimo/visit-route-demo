@@ -17,7 +17,7 @@
 | なぜその案にしたか | [adr/](adr/)（下の一覧） |
 | まだ決まっていないこと | [design.md](design.md) §8・[prd.md](prd.md) §8 |
 | e2e の走らせ方・書き方 | [e2e.md](e2e.md) |
-| 事業所向けの取扱説明書（台帳 CSV の取り込み・デモ例） | [manual/取扱説明書.md](manual/取扱説明書.md)（Word 版 `manual/取扱説明書.docx`。サンプル CSV は `manual/samples/`） |
+| 事業所向けの取扱説明書（型ごと。名簿・予約の CSV の取り込み・デモ例） | 訪問介護・移動支援 [manual/取扱説明書_訪問介護.md](manual/取扱説明書_訪問介護.md)・訪問看護 [manual/取扱説明書_訪問看護.md](manual/取扱説明書_訪問看護.md)・ベビーシッター [manual/取扱説明書_ベビーシッター.md](manual/取扱説明書_ベビーシッター.md)（Word 版は同じ名前の `.docx`。サンプル CSV は `manual/samples/`） |
 
 ## 画面別の設計（design/）
 
@@ -134,6 +134,7 @@
 | [0089](adr/0089-band-late-split-rearrange-exceptions-tell-clean-days.md) | 帯の重なりと間に合わないを分け・要対応も組み直し・要対応が残る日は伝えた扱いにしない |
 | [0090](adr/0090-plan-csv-template-export-import.md) | 予定の CSV（テンプレート・書き出し・読み込み）を「予定を入れる」から |
 | [0091](adr/0091-basic-template-excel-offboard-client-leave.md) | 「基本」のひな形に Excel の入出力・退職・担当替え・〈利用者さん〉の休み |
+| [0092](adr/0092-demo-entry-three-uses-template-names-settings-layout.md) | 最初の2問の問2を使い方4つに・ひな形の名前と並び・機能のグループ・やり直しはデータの画面へ |
 
 ## 文書の保ち方
 

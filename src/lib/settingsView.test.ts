@@ -1,9 +1,39 @@
 import { describe, expect, it } from 'vitest';
-import { applyTemplate, FEATURES, featureDef, matchTemplate, withFeature } from './features';
-import { currentTemplateName, featureRowText, mailStepsHeading } from './settingsView';
+import { applyTemplate, FEATURES, featureDef, matchTemplate, templateDef, withFeature } from './features';
+import {
+  currentTemplateName,
+  featureRowText,
+  groupOnCountText,
+  mailStepsHeading,
+  templateCardText,
+} from './settingsView';
 
 const terms = { client: '利用者さん', staff: 'スタッフ' };
 const all = applyTemplate('all');
+
+describe('templateCardText（ひな形の一覧の1つ。ADR-0092）', () => {
+  it('例は「例：」付き、説明は呼び方を入れ、基本との差を行にする', () => {
+    const t = templateCardText(templateDef('laborContract'), terms);
+    expect(t.example).toBe('例：訪問介護・移動支援');
+    expect(t.description).toContain('スタッフの拘束');
+    expect(t.description).not.toContain('{staff}');
+    expect(t.delta).toEqual(['基本に足す：段階・紹介元・勤務の見込み・交通費']);
+  });
+  it('単発の予約は外す行だけ、基本・すべての機能は差の行が無い', () => {
+    expect(templateCardText(templateDef('oneOff'), terms).delta).toEqual([
+      '基本から外す：繰り返し（定期パターン）・毎月の第N曜日・曜日ごとの時刻・訪問先の決まりごと',
+    ]);
+    expect(templateCardText(templateDef('basic'), terms)).toEqual({
+      example: null,
+      description: templateDef('basic').description,
+      delta: [],
+    });
+    expect(templateCardText(templateDef('all'), terms).delta).toEqual([]);
+  });
+  it('グループの入っている数', () => {
+    expect(groupOnCountText(2, 4)).toBe('2 / 4 入');
+  });
+});
 
 describe('featureRowText（スイッチの行の文）', () => {
   it('説明は1行（隠れるものは別に持つ）で、呼び方は terms に置き換える', () => {
@@ -35,8 +65,11 @@ describe('featureRowText（スイッチの行の文）', () => {
 
 describe('currentTemplateName（ひな形の見出しの名前）', () => {
   it('同じひな形ならその名前、どれとも違えば「カスタム」', () => {
-    expect(currentTemplateName(matchTemplate(applyTemplate('basic')))).toEqual({ name: '基本', custom: false });
-    expect(currentTemplateName(matchTemplate(all))).toEqual({ name: 'すべて', custom: false });
+    expect(currentTemplateName(matchTemplate(applyTemplate('basic')))).toEqual({
+      name: '定期の訪問（基本）',
+      custom: false,
+    });
+    expect(currentTemplateName(matchTemplate(all))).toEqual({ name: 'すべての機能', custom: false });
     expect(currentTemplateName(matchTemplate(withFeature(all, 'vacancy', false)))).toEqual({
       name: 'カスタム',
       custom: true,

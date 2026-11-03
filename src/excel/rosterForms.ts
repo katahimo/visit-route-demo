@@ -4,6 +4,14 @@
 import type { RosterKind } from '../contracts/data';
 import type { Item } from '../contracts/rules';
 import type { RosterTable } from './csvColumns';
+import {
+  GENERIC_CLIENT_KEEP_BLANK,
+  GENERIC_STAFF_KEEP_BLANK,
+  genericClientErrorMessage,
+  genericClientToRoster,
+  genericStaffErrorMessage,
+  genericStaffToRoster,
+} from './genericCsv';
 import { ledgerErrorMessage, ledgerToRoster } from './ledgerCsv';
 import {
   RESERVE_CLIENT_KEEP_BLANK,
@@ -74,6 +82,23 @@ export const ROSTER_FORMS: readonly RosterForm[] = [
     toRoster: (t, env) => staffLedgerToRoster(t, env.today, env.items),
     errorMessage: staffLedgerErrorMessage,
     keepBlank: STAFF_LEDGER_KEEP_BLANK,
+  },
+  // 暫定の形（事業所のソフトが分からないとき）：名前らしい列があり、ほかの形でもアプリの名簿の形でもないときだけ当たるので、最後に置く
+  {
+    id: 'generic-client',
+    label: '列名から読んだ名簿',
+    kind: 'client',
+    toRoster: (t) => genericClientToRoster(t),
+    errorMessage: genericClientErrorMessage,
+    keepBlank: GENERIC_CLIENT_KEEP_BLANK,
+  },
+  {
+    id: 'generic-staff',
+    label: '列名から読んだ名簿',
+    kind: 'staff',
+    toRoster: (t, env) => genericStaffToRoster(t, env.today, env.items),
+    errorMessage: genericStaffErrorMessage,
+    keepBlank: GENERIC_STAFF_KEEP_BLANK,
   },
 ];
 

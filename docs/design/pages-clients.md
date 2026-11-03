@@ -19,7 +19,7 @@
 
 - 部品 `components/RosterCard`（見出しのボタン `RosterButton`・欄 `RosterCard`）、状態と処理 `components/useRosterCard`、読み込みの確かめ `components/useRosterImport`。`excel` が切ならボタンも欄も出さない
 - 「Excel・CSV」（`aria-expanded`・`aria-controls`）で一覧の上に欄（`section.roster-card`・`roster-card`）を開け閉めする（画面の中だけ）。右上に「閉じる」（`roster-close`）
-- 「Excel に書き出す」（`roster-export-xlsx`。`exportRosterWorkbook`）・「CSV に書き出す」（`roster-export-csv`。`exportRosterCsv`。BOM 付きの UTF-8）。ファイル名は `rosterFileName`（`visit-route-demo-clients-YYYY-MM-DD.csv` など英字だけ）。「最後に書き出した日」に数えない
+- 「Excel に書き出す」（`roster-export-xlsx`。`exportRosterWorkbook`）・「CSV に書き出す」（`roster-export-csv`。`exportRosterCsv`。BOM 付きの UTF-8）。ファイル名は `rosterFileName`（`staff-assign-demo-clients-YYYY-MM-DD.csv` など英字だけ）。「最後に書き出した日」に数えない
 - 読み込み方 `roster-mode`：追加・更新（ファイルに無い人はそのまま）／総入れ替え（ファイルに無い人を〈スタッフ〉は休止、〈利用者さん〉は段階「終了」にする。消さない）
 - 読み込み `FilePick`（`roster-file`・caption「読み込む〈呼び方〉の名簿（Excel・CSV）」・.xlsx・.csv・.tsv・.txt）。.xlsx か CSV かは中身で、CSV の文字コードは `lib/csv` の `decodeText` で見分ける。列名がほかのソフトの形（`excel/rosterForms`。予約システムのスタッフ・顧客）なら、その形の列を名簿の列に写して読む。顧客台帳の形なら、名前・よみ（カタカナはひらがな・空白を詰める）・郵便番号・住所（都道府県＋市区町村＋町名以下＋建物名）・電話（備考の先頭に1行）・状態（利用中＝利用中、ほか＝終了）・備考だけを読み、請求・口座・生年月日・性別・続柄・顧客番号は読まずデータに残さない。確認の本文に読んだ形（ほかのソフトの形なら「〈形の名前〉の形として読みました」と「読まなかった列：…」も。`rosterConfirmBody`。控えの文は「データの画面の「直前の状態に戻す」」）。確認の後にデータが変わっていないかを見直す（入らなければ控えを前の世代に戻す）
 - 〈スタッフ〉の名簿で最終勤務日が入れば、トーストで「最終勤務日のある〈スタッフ〉」の欄を指す（`offboard` が切なら指さない）

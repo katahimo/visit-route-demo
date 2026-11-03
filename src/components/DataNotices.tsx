@@ -74,7 +74,7 @@ export function BrokenDataNotice({ onClose }: { onClose: () => void }) {
       return;
     }
     try {
-      saveBlob(new Blob([text], { type: 'application/json' }), `visit-route-demo-broken-${jstDate(Date.now())}.json`);
+      saveBlob(new Blob([text], { type: 'application/json' }), `staff-assign-demo-broken-${jstDate(Date.now())}.json`);
       setMessage('書き出しました');
     } catch (e) {
       setMessage(`書き出せませんでした（${e instanceof Error ? e.message : String(e)}）`);

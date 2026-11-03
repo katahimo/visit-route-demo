@@ -237,7 +237,8 @@ describe('形の一覧', () => {
   it('ID は重ならず、名簿の種類ごとに見分ける', () => {
     const ids = ROSTER_FORMS.map((f) => f.id);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(readRosterForm(STAFF_TABLE, 'client', { today: '2026-10-31', items: [] })).toBeNull();
+    // 予約システムのスタッフの CSV を〈利用者さん〉で読むと、既存の形ではなく列名から読んだ名簿（氏名の列）になる
+    expect(readRosterForm(STAFF_TABLE, 'client', { today: '2026-10-31', items: [] })?.form.id).toBe('generic-client');
     expect(readRosterForm(STAFF_TABLE, 'staff', { today: '2026-10-31', items: [] })?.form.id).toBe('reserve-staff');
     expect(readRosterForm([['名前']], 'staff', { today: '2026-10-31', items: [] })).toBeNull();
   });
@@ -250,8 +251,8 @@ describe('形の一覧', () => {
         t[0]?.[0] === 'スタッフ名' ? { rows: [['名前'], ...t.slice(1).map((r) => [r[0] ?? ''])], skipped: [] } : null,
     };
     const hit = readRosterForm([['スタッフ名'], ['架空 一子']], 'staff', { today: '2026-10-31', items: [] }, [
-      ...ROSTER_FORMS,
       other,
+      ...ROSTER_FORMS,
     ]);
     expect(hit?.form.label).toBe('別の会社');
     expect(hit?.table.rows).toEqual([['名前'], ['架空 一子']]);

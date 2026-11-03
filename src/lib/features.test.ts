@@ -20,6 +20,7 @@ import {
   TEMPLATE_IDS,
   TEMPLATES,
   type TemplateId,
+  templateBasicDelta,
   templateDiff,
   turnOffImpact,
   withFeature,
@@ -104,11 +105,20 @@ const TABLE: Record<TemplateId, FeatureId[]> = {
 };
 
 describe('機能の表（ADR-0028 の機能の一覧）', () => {
-  it('22の機能が契約の ID と同じ順に1つずつ。グループは決まった6つのどれか（管理者設定のスイッチの並び）', () => {
-    expect(FEATURE_GROUPS).toEqual(['予定', '当日・問い合わせ', '人', 'AI の条件', '連絡', 'データ']);
-    expect(featureDef('compat').group).toBe('AI の条件');
-    expect(featureDef('allowedStaff').group).toBe('AI の条件');
-    expect(featureDef('rules').group).toBe('AI の条件');
+  it('22の機能が契約の ID と同じ順に1つずつ。グループは決まった7つのどれか（管理者設定のスイッチの並び。ADR-0092）', () => {
+    expect(FEATURE_GROUPS).toEqual([
+      '予定の入れ方',
+      '当日・問い合わせ',
+      '担当の決め方',
+      '勤務・契約',
+      '現場との共有',
+      '入力の補助',
+      '上級（組み方の調整）',
+    ]);
+    expect(featureDef('compat').group).toBe('担当の決め方');
+    expect(featureDef('allowedStaff').group).toBe('担当の決め方');
+    expect(featureDef('rules').group).toBe('上級（組み方の調整）');
+    expect(featureDef('compare').group).toBe(featureDef('expert').group);
     expect(featureDef('vacancy').group).toBe('当日・問い合わせ');
     expect(FEATURES.map((f) => f.id)).toEqual([...FEATURE_IDS]);
     expect(FEATURES).toHaveLength(22);
@@ -231,15 +241,32 @@ describe('featureOfLocation（URL に要る機能）', () => {
 });
 
 describe('ひな形（ADR-0028 の表）', () => {
-  it('5つが 単発のみ・基本・労務・契約管理・月次予定・現場共有・すべて の順', () => {
+  it('5つが 単発の予約・定期の訪問（基本）・定期＋勤務・契約・定期＋月の予定・現場共有・すべての機能 の順（ADR-0092）', () => {
     expect(TEMPLATES.map((t) => [t.id, t.label])).toEqual([
-      ['oneOff', '単発のみ'],
-      ['basic', '基本'],
-      ['laborContract', '労務・契約管理'],
-      ['monthlyField', '月次予定・現場共有'],
-      ['all', 'すべて'],
+      ['oneOff', '単発の予約'],
+      ['basic', '定期の訪問（基本）'],
+      ['laborContract', '定期＋勤務・契約'],
+      ['monthlyField', '定期＋月の予定・現場共有'],
+      ['all', 'すべての機能'],
     ]);
     for (const t of TEMPLATES) expect(t.description).not.toBe('');
+    expect(TEMPLATES.map((t) => t.example)).toEqual(['ベビーシッター', null, '訪問介護・移動支援', '訪問看護', null]);
+  });
+  it('templateBasicDelta：基本との差（足す・外す。表の順）。基本・すべての機能は null', () => {
+    expect(templateBasicDelta('basic')).toBeNull();
+    expect(templateBasicDelta('all')).toBeNull();
+    expect(templateBasicDelta('oneOff')).toEqual({ add: [], drop: ['patterns', 'patternMonthly', 'visitNotes'] });
+    expect(templateBasicDelta('laborContract')).toEqual({ add: ['clientStage', 'workload', 'fare'], drop: [] });
+    expect(templateBasicDelta('monthlyField')).toEqual({
+      add: ['requestedOff', 'monthPrint', 'vacancyNotice', 'allowedStaff'],
+      drop: [],
+    });
+  });
+  it('グループごとに見ると、基本に足す機能は1つか2つのグループに集まる（勤務・契約／現場との共有ほか）', () => {
+    const groupsOf = (id: 'laborContract' | 'monthlyField') =>
+      new Set(templateBasicDelta(id)!.add.map((f) => featureDef(f).group));
+    expect([...groupsOf('laborContract')]).toEqual(['勤務・契約']);
+    expect(groupsOf('monthlyField').size).toBeLessThanOrEqual(4);
   });
   it.each(TEMPLATE_IDS)('%s を適用すると表どおりの入り切り（全22の ID を明示）で、matchTemplate がそれを返す', (id) => {
     const f = applyTemplate(id);

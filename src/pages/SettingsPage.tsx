@@ -7,7 +7,6 @@ import type { FeatureId } from '../contracts/features';
 import { jstDate } from '../domain/time';
 import {
   applyTemplate,
-  FEATURE_GROUPS,
   type FeatureDef,
   featureLabel,
   isOn,
@@ -20,16 +19,16 @@ import {
 import { useDemoData } from '../store';
 import '../components/features.css';
 import { SettingsTabs } from '../components/SettingsTabs';
-import { FeatureGroupCard } from './featureRows';
+import { FeatureSwitchesCard } from './featureRows';
 import { MailScheduleSettingsCard } from './mailScheduleSettings';
-import { RestartCard } from './RestartCard';
 import { TemplatesCard } from './TemplatesCard';
 
 /**
  * 管理者設定（`#/settings`。PRD D210〜D212。ADR-0028）：機能の入り切り。だれでも開ける（ログイン・鍵なし）。
  * 上にひな形（見出しの横に今のひな形の名前、どれとも違えば「カスタム」。5つは「詳しく ▾」に畳む。TemplatesCard）。「適用」は
- * 独自の確認ダイアログで入る機能・切れる機能を出してから書く。下にグループごとのスイッチ（pages/featureRows。名前と1行の説明、
+ * 独自の確認ダイアログで入る機能・切れる機能を出してから書く。下に機能の入・切の1枚（pages/featureRows。グループは見出し、名前と1行の説明、
  * 隠れるものは ⓘ。押すとすぐ保存。主ボタンは置かない）。メールの予約送信の手順も畳む（PRD D395）。
+ * データを作り直す操作（始め方を選び直す・初期状態に戻す）はデータの画面に置き、ここには置かない（ADR-0092）。
  * 書くのは store の update(fn) だけ。切った機能のデータは消さない。呼び方は org.terms
  */
 export default function SettingsPage() {
@@ -114,17 +113,12 @@ export default function SettingsPage() {
         lead="使う機能だけを入れると、メニューと画面がすっきりします。切った機能のデータは消えません"
       />
 
-      <TemplatesCard features={features} onApply={(t) => void apply(t)} />
+      <TemplatesCard features={features} terms={terms} onApply={(t) => void apply(t)} />
 
-      {FEATURE_GROUPS.map((g) => (
-        <FeatureGroupCard key={g} group={g} features={features} terms={terms} onToggle={toggle} />
-      ))}
+      <FeatureSwitchesCard features={features} terms={terms} onToggle={toggle} />
 
       {/* メールの予約送信（PRD D366。ADR-0069）：メールの機能が入のときだけ */}
       {isOn(features, 'mail') && <MailScheduleSettingsCard />}
-
-      {/* 最初の設定をやり直す（PRD D381。ADR-0073） */}
-      <RestartCard />
     </div>
   );
 }

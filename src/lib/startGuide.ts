@@ -8,6 +8,10 @@ import { isOn } from './features';
 /** 登録の案内の画面（`#/start`。段は `?step=2`・`?step=3`） */
 export const START_GUIDE_PATH = '/start';
 
+/** ①②に添える、読める名簿の形（excel/rosterForms の形と、このアプリの名簿の形。ADR-0075・ADR-0092） */
+export const START_GUIDE_ROSTER_FORMS =
+  '読める形：介護ソフトの顧客台帳・職員台帳、予約システムの顧客・スタッフ、このアプリの名簿（Excel・CSV）、氏名の列がある CSV（列名から読む）。';
+
 /** 案内の段の数 */
 const START_GUIDE_COUNT = 3;
 

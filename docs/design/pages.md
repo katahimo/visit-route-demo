@@ -41,7 +41,7 @@
 | `#/types` | `pages/TypesPage.tsx` | 訪問の種類 | [pages-rules.md](pages-rules.md) |
 | `#/items` | `pages/ItemsPage.tsx` | 特性の項目 | [pages-rules.md](pages-rules.md) |
 | `#/data` | `pages/DataPage.tsx` | データ（控え・Excel・初期状態に戻す・案内をもう一度見る） | [pages-data.md](pages-data.md) |
-| `#/settings` | `pages/SettingsPage.tsx` | 管理者設定（機能の入り切り。だれでも開ける。いちばん下に「最初の設定をやり直す」） | [pages-data.md](pages-data.md) |
+| `#/settings` | `pages/SettingsPage.tsx` | 管理者設定（ひな形と機能の入・切。だれでも開ける。ADR-0092） | [pages-data.md](pages-data.md) |
 | `#/start` | `pages/StartGuidePage.tsx` | 登録の案内（自分のデータで始めたあとの3段。`?step=`） | [pages-common.md](pages-common.md) |
 | `*`（`#/` を含む） | （`Navigate`） | 予定の画面（`homePath`。月か週）へ（replace）。`#/home` も同じ | — |
 
@@ -272,7 +272,7 @@
   - 人の小さいタブ（入切とも）：〈スタッフ〉＝一覧・勤務・相性、〈利用者さん〉＝一覧・相性（`PeopleTabs`。`lib/peopleTabs`。相性でどちらから来たかは `components/peopleSide`。保存しない）。予定と相性（`#/basics`）は `BasicsNav`。相性の画面の「点のしくみ」は入だけ（`compatHintLabel`。ADR-0087）
 - メニュー（[design/pages-nav.md](design/pages-nav.md)）：機能 `expert`（既定は切）が入のときだけ「組む」（組み方の標準・案を比べる・条件の重みの入口を含む）を出す。ホームは無く、予定の上の要対応の帯と「その他 ▾」が受け持つ。機能 `patterns`（既定は入）を切ると〈利用者さん〉の画面から繰り返しの欄を隠す（今ある繰り返しの回は残る）
 - 予定を組む：1段ずつ進む段（`components/SettingsTabs` の `ArrangeSteps`。並びは `lib/nav` の `arrangeSteps`）。1 基本情報は予定と相性の表 `pages/BasicsPage`（計算は `lib/basicsView`）と基本情報のタブ（`BasicsNav`）。標準が無い間は 2 案をくらべる → 3 標準にする（表で直す（下書き）と登録）を組み方の標準 `pages/StandardPage` で（今の段は `lib/standardDraft` の `standardWork.step`）、最後に 担当を組む `pages/ArrangePage`。標準があれば 基本情報 → 担当を組む で、［標準の組み方を変える］で組み方の標準へ戻る。条件の重み `pages/RulesPage` は案をくらべるからの寄り道。考え方（点数の基準）を替えるのは条件の重みと標準にするの登録だけ。基本情報の鍵（`lib/arrangeBasis`）を提案の反映・標準の登録で `store/arrangeBasis`（`vrdemo:arrange:basis`。DemoData の外）に覚え、変われば担当を組むに組み直しの知らせ（`components/useArrangeBasis`）
-- 最初の2問・登録の案内：保存データが無く初めて開いたとき（印 `vrdemo:features:start` = `all` が無いとき）と設定の「最初の設定をやり直す」のあと、本文の代わりに1画面2問（`components/FirstRunPage` の `FirstRunGate`）。答えから決まる呼び名・ひな形・最初の画面・データは `lib/firstRun`。自分のデータで始めると `#/start` の3段（`lib/startGuide`・`pages/StartGuidePage`）。案内ツアーはデータの画面の「案内をもう一度見る」だけ。詳細は [design/pages-common.md](design/pages-common.md)・[design/pages-data.md](design/pages-data.md)
+- 最初の2問・登録の案内：保存データが無く初めて開いたとき（印 `vrdemo:features:start` = `all` が無いとき）とデータの画面の「始め方を選び直す」のあと、本文の代わりに1画面2問（`components/FirstRunPage` の `FirstRunGate`）。答えから決まる呼び名・ひな形・最初の画面・データは `lib/firstRun`。自分のデータで始めると `#/start` の3段（`lib/startGuide`・`pages/StartGuidePage`）。案内ツアーはデータの画面の「案内をもう一度見る」だけ。詳細は [design/pages-common.md](design/pages-common.md)・[design/pages-data.md](design/pages-data.md)
 - スマホ・キーボード：600px 以下の日の予定は `components/dayList` の日ごとのリスト（長押し・「選ぶ」で複数選択・スワイプで日を送る）、訪問の詳細の欄は `SidePanel` の `sheet`、帯・札をキーで動かすのは `components/visitKeys`（書くのは `lib/visitKeys` → `lib/visitOps`）
 - 訪問の札の共通の部品：札は3段（大＝時間軸の帯・中＝行 `VisitRow`・小＝表の札 `VisitChip`。`data-size`）、入れ物は時間軸・表（`ChipStack`）・リスト。見た目・選ぶ・キー・落とし先の判定は `lib/visitLook`・`visitSelect`・`visitDrop`・`visitKeys` と `components/visitParts.tsx`。書くのは `lib/visitOps`・`lib/multiEdit`・訪問の詳細の欄だけ
 - 訪問の詳細の欄：1件の訪問を見る・直す欄は `components/VisitPanel` の1つで、App の殻に置き、どの画面・コマンドパレットからも `useOpenVisit` で開く。データには `lib/visitOps`（純粋関数）越しにだけ触る
