@@ -26,10 +26,10 @@ const SCREENS = {
   利用者さん: '/clients',
   スタッフ: '/staff',
   設定: '/settings',
-  基本情報: '/basics',
+  予定と相性: '/basics',
   組む: '/arrange',
   担当を組む: '/arrange',
-  組み方の標準: '/standard',
+  条件の重み: '/rules',
   空き状況: '/vacancy',
   欠勤: '/plan?do=absence',
 };
@@ -45,10 +45,9 @@ const MENU_KEYS = {
   利用者さん: ['clients'],
   スタッフ: ['staff'],
   設定: ['settings'],
-  基本情報: ['arrange:basics'],
   組む: ['arrange'],
+  条件の重み: ['arrange:rules'],
   担当を組む: ['arrange:assign'],
-  組み方の標準: ['arrange:standard'],
 };
 
 /**

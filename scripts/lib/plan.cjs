@@ -2,12 +2,10 @@
 // 初期データは今日からの日を繰り返しの担当のまま（保存した訪問は空）にするので、「保存した訪問（data.visits）に
 // 今日以降の担当の入った訪問がある」前提の確認の前に呼ぶ。
 // 担当を組む（#/arrange）で週ごとに「伝えていない日をすべて組み直す」→ AI で組む → ［反映する］（実際の画面と同じ手順）。
-// 組み方の標準は組むために一時的に登録し、元が無ければ消して元に戻す（標準が無い前提の確認が後にあるので）。
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const { BASE, STORAGE_KEY, TODAY, settle } = require('./env.cjs');
-const { markStandard } = require('./standard.cjs');
 
 /** 日付に n 日足す（YYYY-MM-DD） */
 function addDays(d, n) {
@@ -16,21 +14,7 @@ function addDays(d, n) {
   return t.toISOString().slice(0, 10);
 }
 
-/** 組み方の標準を消す（planDays が登録したものを戻す）。読み直して store に取り込む */
-async function clearStandard(page) {
-  await page.goto(`${BASE}#/data`);
-  await page.reload();
-  await page.locator('h1').waitFor();
-  await page.evaluate((key) => {
-    const d = JSON.parse(localStorage.getItem(key));
-    delete d.standard;
-    localStorage.setItem(key, JSON.stringify(d));
-  }, STORAGE_KEY);
-  await page.reload();
-  await page.locator('h1').waitFor();
-}
-
-/** cache 用：初期データから組んだ結果（データの JSON）。キーは今日・日数・標準を残すか */
+/** cache 用：初期データから組んだ結果（データの JSON）。キーは今日・日数 */
 const cached = new Map();
 /**
  * cache 用のファイルの置き場所（e2e/legacy.spec.ts が test-results の下を渡す。実行のたびに消える）。
@@ -46,7 +30,7 @@ const buildOf = (page) =>
       .sort()
       .join(','),
   );
-/** cache のファイルの道（今日・日数・標準・ビルドで分ける） */
+/** cache のファイルの道（今日・日数・ビルドで分ける） */
 const cacheFile = (key, build) =>
   path.join(CACHE_DIR, `plan-${crypto.createHash('sha1').update(`${key}|${build}`).digest('hex').slice(0, 16)}.json`);
 function readCache(key, build) {
@@ -98,12 +82,7 @@ async function claimOrWait(key, build) {
 }
 
 /** 担当を組む（#/arrange）で今日からの週を AI で組んで反映する（planDays の中身） */
-async function arrangeDays(page, days, keepStandard) {
-  const hadStandard = await page.evaluate((k) => {
-    const raw = localStorage.getItem(k);
-    return raw !== null && JSON.parse(raw).standard !== undefined;
-  }, STORAGE_KEY);
-  await markStandard(page);
+async function arrangeDays(page, days) {
   // 今日の週、その次の週…（今日から days 日が入るまで）。週の範囲は ?d= の日が属する週（今日より前の日は対象にならない）
   const last = addDays(TODAY, days - 1);
   for (
@@ -123,11 +102,8 @@ async function arrangeDays(page, days, keepStandard) {
     await band.waitFor({ state: 'detached', timeout: 10000 });
     await settle(page, 300);
   }
-  if (!keepStandard && !hadStandard) await clearStandard(page);
-  else {
-    await page.goto(`${BASE}#/data`);
-    await page.locator('h1').waitFor();
-  }
+  await page.goto(`${BASE}#/data`);
+  await page.locator('h1').waitFor();
 }
 
 /** 結果のデータを書き込んで読み直す（cache の写しを使うとき） */
@@ -139,21 +115,21 @@ async function writeData(page, json) {
 
 /**
  * 今日から days 日（既定7日）を含む週を AI で組んで反映し、訪問に担当を保存する（今日より前の日は組まない）。
- * 終わったらデータの画面（#/data）を開いた状態で返る。keepStandard を true にすると標準を残す
+ * 終わったらデータの画面（#/data）を開いた状態で返る
  * @param {import('playwright').Page} page
  * cache を true にすると、2回目からは1回目の結果のデータをそのまま書き込む（速い）。同じプロセスの中と、
  * E2E_PLAN_CACHE_DIR があれば同じ実行のほかのスクリプトとも分け合う（同じビルド・同じ今日のときだけ。
  * ほかの worker が組んでいる最中なら、組み終わるのを待つ）。
  * 使えるのは「初期データ（localStorage を消した直後・新しい文脈）から組む」ときだけ。画面の手順そのものは e2e-arrange が確かめる
- * @param {{ days?: number, keepStandard?: boolean, cache?: boolean }} [opt]
+ * @param {{ days?: number, cache?: boolean }} [opt]
  */
-async function planDays(page, { days = 7, keepStandard = false, cache = false } = {}) {
-  const key = `${TODAY}:${days}:${keepStandard}`;
+async function planDays(page, { days = 7, cache = false } = {}) {
+  const key = `${TODAY}:${days}`;
   // 最初の文書が about:blank でも localStorage を読めるように、先にデータの画面を開く
   await page.goto(`${BASE}#/data`);
   await page.locator('h1').waitFor();
   if (!cache) {
-    await arrangeDays(page, days, keepStandard);
+    await arrangeDays(page, days);
     return;
   }
   const build = await buildOf(page);
@@ -165,7 +141,7 @@ async function planDays(page, { days = 7, keepStandard = false, cache = false } 
     return;
   }
   try {
-    await arrangeDays(page, days, keepStandard);
+    await arrangeDays(page, days);
     writeCache(key, build, await page.evaluate((k) => localStorage.getItem(k), STORAGE_KEY));
   } finally {
     release();

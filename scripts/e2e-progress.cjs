@@ -14,7 +14,6 @@
 const path = require('node:path');
 const { answerConfirms } = require('./lib/confirmDialog.cjs');
 const { BASE, OUT_DIR, TODAY, STORAGE_KEY, perfMs, check, hashOf, runSteps, settle, until } = require('./lib/env.cjs');
-const { markStandard } = require('./lib/standard.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
 const { openDetails, openScreenDetails } = require('./lib/ui.cjs');
 
@@ -115,7 +114,6 @@ const assignedIn = (page, ym) =>
 async function monthEntry(page) {
   await editData(page, (key) => localStorage.removeItem(key), STORAGE_KEY);
   await clearPlans(page);
-  await markStandard(page); // 標準が無い間は担当を組むで組めない（ADR-0065）
   await open(page, `/month?ym=${YM}`, '[data-testid="month-grid"]');
   check(
     (await page.getByTestId('progress-band').isVisible()) &&
@@ -224,7 +222,6 @@ async function nextMonth(page) {
 // ---- 担当を組むで組み始めると画面を移っても続く（PRD D256・D257。ADR-0042）：上の帯に進み具合と［止める］、戻ると進み具合、知らせから担当を組むへ ----
 async function keepRunning(page) {
   await clearPlans(page);
-  await markStandard(page);
   await open(page, `/arrange?ym=${YM}`, '[data-testid="arrange-start"]');
   await settle(page, 500);
   await page.getByTestId('arrange-start').click();
@@ -401,7 +398,6 @@ async function links(page) {
 // ---- 週・日の操作の行が速く出る（日の割当は訪問から毎回計算する） ----
 async function perf(page) {
   await editData(page, (key) => localStorage.removeItem(key), STORAGE_KEY);
-  await markStandard(page);
   for (const [hash, ready] of [
     [`/week?d=${TODAY}`, '[data-testid="week-title"]'],
     ['/plan', '[data-testid="confirm-state"]'],

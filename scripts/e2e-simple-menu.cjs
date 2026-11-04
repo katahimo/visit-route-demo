@@ -22,14 +22,14 @@
 //    押すと引き出し（定期＝〈利用者さん〉・曜日・くり返し・開始日（既定は今日・今日より前は誤り。PRD D416）・時刻・所要／単発＝〈利用者さん〉・日付・時刻・所要）で
 //    「追加」→ 予定に出て開始日からの回に担当が自動で付く。くり返しは 毎週〜4週ごと・毎月（第N）（「基本」は毎月の第N の機能が入。ADR-0086）。
 //    5f3 最初の2問で定期を選んだデータ（「基本」）のままで、くり返しに「毎月（第N）」と第1〜第5 のチップ（選ばなければ誤り。入れた回に担当が自動で付き、組みの終わりまで待って次の段へ）、
-//    〈スタッフ〉の一覧の上のタブ（一覧・勤務・相性）と〈利用者さん〉のタブ（一覧・相性）で行き来でき、メニューの印は〈スタッフ〉／〈利用者さん〉に付き、
+//    〈スタッフ〉の一覧の上のタブ（一覧・勤務・相性）と〈利用者さん〉のタブ（一覧・予定と相性・相性。ADR-0100）で行き来でき、メニューの印は〈スタッフ〉／〈利用者さん〉に付き、
 //    相性・勤務の画面に禁句・点数が出ない。1366px・390px。幅は落ちても戻す、
 // 5f4 「CSV でまとめて追加」（PRD D423）：Excel の入出力を切っても（単発のみで excel を切る）引き出しに畳んで出る。テンプレート・見ている月の書き出し・1件足したファイルの読み込み（確認のあと引き出しが閉じる）、
-// 6 エキスパート機能を入にすると帯に 組み方の標準が無い・未確定 N日 が足され［要対応を組む］は出ない（入のメニュー・ホームが無いことは e2e-nav・e2e-home）。
+// 6 エキスパート機能を入にすると帯に 未確定 N日 が足され［要対応を組む］は出ない（入のメニュー・ホームが無いことは e2e-nav・e2e-home）。
 // 6b 入の操作の行（主ボタン＋1つ＋「その他 ▾」）・「詳しく ▾」の見出しの数と開け閉めの覚え・説明1行。
-// 6c 入の人の一覧（PRD D394）：〈スタッフ〉・〈利用者さん〉の一覧は見出しがメニューの名前で、切と同じ人のタブ（一覧・勤務・相性／一覧・相性）と3列で始まり、
+// 6c 入の人の一覧（PRD D394）：〈スタッフ〉・〈利用者さん〉の一覧は見出しがメニューの名前で、切と同じ人のタブ（一覧・勤務・相性／一覧・予定と相性・相性）と3列で始まり、
 //    表の上の「くわしい列」を入れると専門の列が足され、一覧ごとに端末に覚えて読み直しても同じ（外すと3列に戻る。切は切り替えが無い）。休止中は状態の列に重ねない。
-//    相性は来た側のタブ・メニューの印。1366px・390px（予定を組むの4段・基本情報のタブは e2e-nav）。
+//    相性は来た側のタブ・メニューの印。1366px・390px（入のメニューの子は e2e-nav）。
 // スクリーンショット：simple-band-go-day-1366（3）、simple-next-month-plan-1366・simple-next-month-390（3c）、simple-add-*（5f）・simple-clients-1366・simple-staff-1366・simple-plan-map-closed-1366 ほか（5e は simple-people-*・simple-plan-map-*）、simple-month-1366・simple-band-plan-1366・simple-menu-more-1366・simple-week-390・simple-tabs-390・simple-drawer-390
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-simple-menu.cjs
@@ -70,9 +70,9 @@ async function redirects(page) {
     await page.locator(NAV_READY).waitFor({ timeout: 60000 });
     check(/^#\/month/.test(hash(page)), `#${to} も予定（月）へ移る`, hash(page));
   }
-  // 切った機能の URL（担当を組むの後ろの組み方の標準は expert 切で開けない）も予定へ移して知らせる
+  // 切った機能の URL（条件の重みは expert 切で開けない）も予定へ移して知らせる
   await page.goto('about:blank');
-  await page.goto(`${BASE}#/standard`);
+  await page.goto(`${BASE}#/rules`);
   await page.locator(NAV_READY).waitFor({ timeout: 60000 });
   check(/^#\/month/.test(hash(page)), '切った機能の URL も予定（月）へ移る', hash(page));
   check((await page.getByTestId('feature-off-notice').count()) === 1, '移った先の予定の上で、切った機能の知らせを出す');
@@ -942,11 +942,7 @@ async function expertList(page, w, { to, list, table, row, simple, extra, headin
     !/状態」の印/.test(await page.locator('main, .content').first().textContent()),
     `入 ${list}（${w}）：状態の列が無い間は「状態」の印の説明を出さない`,
   );
-  check(
-    (await texts(page.locator('[data-testid="people-tabs"] [data-tab]'))).every((t) => t !== '予定と相性') &&
-      (await page.getByTestId('arrange-steps').count()) === 0,
-    `入 ${list}（${w}）：基本情報のタブ・予定を組むの段は出さない`,
-  );
+  check((await page.getByTestId('arrange-steps').count()) === 0, `入 ${list}（${w}）：予定を組むの段は出さない`);
   if (postal) {
     // 住所の列に〒郵便番号を添える（データに郵便番号のある人がいるとき）
     const withPostal = await page.evaluate(
@@ -998,7 +994,7 @@ async function expertListOff(page, to, row, list) {
   await until(async () => (await columnsMemory(page, list)) === false, 5000, 100);
 }
 
-/** 6c 入：〈利用者さん〉・〈スタッフ〉の一覧は切と同じタブと3列、「くわしい列」で専門の列（覚える。一覧ごと。PRD D394。4段と基本情報のタブは e2e-nav） */
+/** 6c 入：〈利用者さん〉・〈スタッフ〉の一覧は切と同じタブと3列、「くわしい列」で専門の列（覚える。一覧ごと。PRD D394） */
 async function expertPeople(page) {
   const terms = (await data(page)).org.terms;
   const offName = await page.evaluate((k) => {
@@ -1045,10 +1041,11 @@ async function expertPeople(page) {
       /状態」の印/.test(await page.locator('main, .content').first().textContent()),
       `入 clients（${w}）：くわしい列を入れると「状態」の印の説明を出す（狭い画面は畳んだ絞り込みの中）`,
     );
-    // タブ：切と同じ（〈スタッフ〉＝一覧・勤務・相性、〈利用者さん〉＝一覧・相性）。移った先にも同じタブ・メニューの印
+    // タブ：切と同じ（〈スタッフ〉＝一覧・勤務・相性、〈利用者さん〉＝一覧・予定と相性・相性。ADR-0100）。移った先にも同じタブ・メニューの印
     for (const [to, names, side] of [
       ['/staff', ['一覧', '勤務', '相性'], terms.staff],
-      ['/clients', ['一覧', '相性'], terms.client],
+      ['/clients', ['一覧', '予定と相性', '相性'], terms.client],
+      ['/basics', ['一覧', '予定と相性', '相性'], terms.client],
     ]) {
       await openTo(page, to);
       const st = await peopleTabState(page);
@@ -1064,7 +1061,7 @@ async function expertPeople(page) {
     await settle(page, 500);
     const cst = await peopleTabState(page);
     check(
-      JSON.stringify(cst.names) === JSON.stringify(['一覧', '相性']) &&
+      JSON.stringify(cst.names) === JSON.stringify(['一覧', '予定と相性', '相性']) &&
         JSON.stringify(cst.on) === JSON.stringify(['相性']) &&
         JSON.stringify(cst.menu) === JSON.stringify([terms.client]),
       `入 相性（${w}）：来た側（${terms.client}）のタブと印`,
@@ -1083,7 +1080,7 @@ async function expertPeople(page) {
 }
 
 /**
- * 6 エキスパート機能を入にすると、帯に入だけの種類（組み方の標準が無い・未確定 N日）が足され［要対応を組む］は出ない（PRD D404）。
+ * 6 エキスパート機能を入にすると、帯に入だけの種類（未確定 N日）が足され［要対応を組む］は出ない（PRD D404。組み方の標準が無いは無い。ADR-0100）。
  * 入のメニュー（6つ・子は組むだけ）・ホームが無いこと・下のタブと引き出しは e2e-nav・e2e-home・e2e-mobile が見る
  */
 async function expertOn(page) {
@@ -1101,8 +1098,8 @@ async function expertOn(page) {
   await page.getByTestId('attention-band').waitFor({ timeout: 60000 });
   const bandText = await page.getByTestId('attention-band-text').innerText();
   check(
-    /担当なし \d+件/.test(bandText) && /組み方の標準が無い/.test(bandText) && /未確定 \d+日/.test(bandText),
-    'expert 入：要対応の帯に 担当なし・組み方の標準が無い・未確定 N日 が出る',
+    /担当なし \d+件/.test(bandText) && !/組み方の標準/.test(bandText) && /未確定 \d+日/.test(bandText),
+    'expert 入：要対応の帯に 担当なし・未確定 N日 が出る（組み方の標準が無いは出ない）',
     bandText,
   );
   check(
@@ -1174,8 +1171,6 @@ async function peopleList(page, { label, to, table, heads, row }) {
   check(cells === heads.length + 1, `${label}：行のセルは3列＋開く`, cells);
   const body = await page.locator('main, .content').first().innerText();
   check(!BANNED.test(body), `${label}：一覧に禁句が出ない`, body.match(BANNED)?.[0]);
-  const tabs = await texts(page.locator('[data-testid="people-tabs"] [data-tab]'));
-  check(!tabs.includes('予定と相性'), `${label}：基本情報のタブ（予定と相性）は出さない（小さいタブは 5f）`, tabs);
   check(
     (await columnsToggle(page).count()) === 0,
     `${label}：「くわしい列」の切り替えは入だけ（切は出さない。PRD D394）`,
@@ -1755,21 +1750,19 @@ async function peopleTabs(page, w) {
   await tabGo(page, `${terms.staff}の`, '/compat', { ...s, tab: '相性' });
   await tabGo(page, `${terms.staff}の`, '/staff', { ...s, tab: '一覧' });
   // 勤務の見込み（#/workload。「基本」では機能が切）の印は、タブの match（lib/peopleTabs）と menu の match が同じ画面に当てる（単体テスト）
-  // 〈利用者さん〉：一覧・相性。相性の画面ではこちらから来た側のタブ・印
-  const c = { names: ['一覧', '相性'], menu: terms.client, side: 'clients' };
+  // 〈利用者さん〉：一覧・予定と相性・相性（ADR-0100）。相性の画面ではこちらから来た側のタブ・印
+  const c = { names: ['一覧', '予定と相性', '相性'], menu: terms.client, side: 'clients' };
   await openTo(page, '/clients');
   const cs = await peopleTabState(page);
   check(
     JSON.stringify(cs.names) === JSON.stringify(c.names),
-    `${terms.client}一覧（${w}）：タブは 一覧・相性`,
+    `${terms.client}一覧（${w}）：タブは 一覧・予定と相性・相性`,
     cs.names,
   );
   await shot(page, `simple-tabs-clients-list-${page.viewportSize().width}`);
+  await tabGo(page, `${terms.client}の`, '/basics', { ...c, tab: '予定と相性' });
   await tabGo(page, `${terms.client}の`, '/compat', { ...c, tab: '相性' });
   await tabGo(page, `${terms.client}の`, '/clients', { ...c, tab: '一覧' });
-  // 予定と相性（#/basics）など旧画面のタブは出さない
-  await openTo(page, '/basics');
-  check((await page.getByTestId('people-tabs').count()) === 0, `予定と相性（${w}）：旧画面のタブは出さない`);
 }
 
 /**
@@ -1823,7 +1816,7 @@ const steps = sharedPage({
     ['5f4 切：「予約を追加」の CSV でまとめて追加（単発のみ）', addCsv],
     ['6 入：メニュー6つ・ホームなし・帯の入の種類', expertOn],
     ['6b 入：操作の行（2つ＋その他）・「詳しく」の見出しの数と開け閉めの覚え・説明1行', expertSame],
-    ['6c 入：人の一覧は3列＋「くわしい列」（覚える）・人のタブ・4段は組む画面だけ', restoreWidth(expertPeople)],
+    ['6c 入：人の一覧は3列＋「くわしい列」（覚える）・人のタブ', restoreWidth(expertPeople)],
   ],
   call: (fn, s) => fn(s.page),
 });
