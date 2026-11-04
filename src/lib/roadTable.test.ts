@@ -1,16 +1,25 @@
 // OSRM から道路の所要の表を取る（PRD D436。ADR-0101）：fetch の偽物で確かめる
 import { describe, expect, it } from 'vitest';
-import { ROAD_POINTS_MAX } from '../contracts/documents';
+import { ROAD_NEAR_K, ROAD_POINTS_MAX } from '../contracts/documents';
 import { client, makeData, staff } from '../matching/fixtures.testkit';
 import {
   fetchRoadTable,
   type RoadFetchFn,
   roadBlocks,
+  roadEstimateSeconds,
   roadMissingCount,
   roadPointsOf,
+  roadRequestCount,
   roadTableUrl,
 } from './roadTable';
-import { factorInputError, parkInputError, roadExampleText, roadStatusText } from './roadTravelView';
+import {
+  factorInputError,
+  parkInputError,
+  roadExampleText,
+  roadPlanText,
+  roadProgressText,
+  roadStatusText,
+} from './roadTravelView';
 
 const P = [
   { lat: 38.2683, lng: 140.8694 },
@@ -19,22 +28,29 @@ const P = [
 ];
 const noSleep = async () => {};
 
-/** URL の sources・destinations から、所要＝出発番号×100＋到着番号（道のりはその10倍）を返す偽物 */
+/** 一直線に並べた地点（i 番目は緯度 38 + i/1000） */
+const line = (n: number) => Array.from({ length: n }, (_, i) => ({ lat: 38 + i / 1000, lng: 140 }));
+
+/** 座標から決まる偽物：所要＝緯度の差 × 100000 秒（並べた地点なら |i−j|×100）、道のり＝所要×10 */
 function fakeOsrm(calls: string[]): RoadFetchFn {
   return async (url) => {
     calls.push(url);
-    const q = new URL(url).searchParams;
-    const coords = new URL(url).pathname.split('/').pop()!.split(';');
-    const src = q.get('sources')!.split(';').map(Number);
-    const dst = q.get('destinations')!.split(';').map(Number);
-    expect(Math.max(...src, ...dst)).toBeLessThan(coords.length);
-    const v = (a: number, b: number) => a * 100 + b;
+    const u = new URL(url);
+    const coords = u.pathname
+      .split('/')
+      .pop()!
+      .split(';')
+      .map((c) => Number(c.split(',')[1]));
+    expect(coords.length).toBeLessThanOrEqual(100);
+    const src = u.searchParams.get('sources')!.split(';').map(Number);
+    const dst = u.searchParams.get('destinations')!.split(';').map(Number);
+    const v = (a: number, b: number) => Math.round(Math.abs(coords[a]! - coords[b]!) * 100000);
     return {
       ok: true,
       json: async () => ({
         code: 'Ok',
         durations: src.map((a) => dst.map((b) => v(a, b))),
-        distances: src.map((a) => dst.map((b) => v(a, b) * 10)),
+        distances: src.map((a) => dst.map((b) => v(a, b) * 10 + 3)),
       }),
     };
   };
@@ -55,7 +71,7 @@ describe('roadPointsOf・roadMissingCount', () => {
     const pts = roadPointsOf(d);
     expect(pts).toEqual([P[0], P[1]]);
     expect(roadMissingCount(undefined, pts)).toBe(2);
-    expect(roadMissingCount({ at: 0, points: [P[0]!], seconds: [[0]], meters: [[0]] }, pts)).toBe(1);
+    expect(roadMissingCount({ at: 0, points: [P[0]!], near: [[]], seconds: [[]], meters: [[]] }, pts)).toBe(1);
   });
 });
 
@@ -72,42 +88,48 @@ describe('roadBlocks・roadTableUrl', () => {
 });
 
 describe('fetchRoadTable', () => {
-  it('1回で取り、同じ地点は 0、秒は整数・道のりは 10 m 単位', async () => {
+  it('100地点までは1回で全組。自分自身は残さず、所要の近い順。秒は整数・道のりは 10 m 単位', async () => {
     const calls: string[] = [];
-    const r = await fetchRoadTable(P, { fetch: fakeOsrm(calls), sleep: noSleep, now: 123 });
+    const r = await fetchRoadTable(line(3), { fetch: fakeOsrm(calls), sleep: noSleep, now: 123 });
     expect(calls).toHaveLength(1);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.table.at).toBe(123);
-    expect(r.table.seconds[0]).toEqual([0, 1, 2]);
-    expect(r.table.seconds[2]).toEqual([200, 201, 0]);
-    expect(r.table.meters[1]).toEqual([1000, 0, 1020]);
+    expect(r.table.near).toEqual([
+      [1, 2],
+      [0, 2],
+      [1, 0],
+    ]);
+    expect(r.table.seconds[2]).toEqual([100, 200]);
+    expect(r.table.meters[2]).toEqual([1000, 2000]);
   });
 
-  it('地点が多ければ区画に分けて順に送り、合わせた表は送った番号に関わらず地点の並び', async () => {
-    const many = Array.from({ length: 60 }, (_, i) => ({ lat: 38 + i / 1000, lng: 140 }));
+  it('100地点を超えれば 50地点ずつの区画で順に送り、地点ごとに近い ROAD_NEAR_K 件を残す', async () => {
     const calls: string[] = [];
     const progress: string[] = [];
     const slept: number[] = [];
-    const r = await fetchRoadTable(many, {
+    const r = await fetchRoadTable(line(120), {
       fetch: fakeOsrm(calls),
       sleep: async (ms) => {
         slept.push(ms);
       },
       onProgress: (d, t) => progress.push(`${d}/${t}`),
     });
-    expect(calls).toHaveLength(4);
-    expect(slept).toHaveLength(3);
-    expect(progress).toEqual(['1/4', '2/4', '3/4', '4/4']);
+    expect(calls).toHaveLength(9);
+    expect(roadRequestCount(120)).toBe(9);
+    expect(slept).toHaveLength(8);
+    expect(progress.at(-1)).toBe('9/9');
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.table.seconds).toHaveLength(60);
-    expect(r.table.seconds.every((row) => row.length === 60 && row.every((x) => x !== null))).toBe(true);
-    // 区画（50〜59）→ 区画（0〜49）：送った座標は 50〜59 が 0〜9、0〜49 が 10〜59
-    expect(r.table.seconds[55]![3]).toBe(5 * 100 + 13);
+    expect(r.table.near.every((ns) => ns.length === ROAD_NEAR_K)).toBe(true);
+    // 0 番の近い順は 1, 2, …, 50（区画をまたぐ 50 を含む）
+    expect(r.table.near[0]).toEqual(Array.from({ length: ROAD_NEAR_K }, (_, k) => k + 1));
+    expect(r.table.seconds[0]![49]).toBe(5000);
+    // 区画の境（59 番）：近い順に 58, 60, 57, 61, …（同じ所要は番号の小さい順）
+    expect(r.table.near[59]!.slice(0, 4)).toEqual([58, 60, 57, 61]);
   });
 
-  it('道が見つからない（null）は null のまま', async () => {
+  it('道が見つからない（null）組は残さない', async () => {
     const f: RoadFetchFn = async () => ({
       ok: true,
       json: async () => ({
@@ -123,13 +145,23 @@ describe('fetchRoadTable', () => {
       }),
     });
     const r = await fetchRoadTable([P[0]!, P[1]!], { fetch: f, sleep: noSleep });
-    expect(r.ok && r.table.seconds[0]![1]).toBeNull();
+    expect(r.ok && r.table.near).toEqual([[], [0]]);
+  });
+
+  it('回数と目安の時間', () => {
+    expect(roadRequestCount(0)).toBe(0);
+    expect(roadRequestCount(100)).toBe(1);
+    expect(roadRequestCount(101)).toBe(9);
+    expect(roadRequestCount(500)).toBe(100);
+    expect(roadEstimateSeconds(0)).toBe(0);
+    expect(roadEstimateSeconds(100)).toBe(1);
+    expect(roadEstimateSeconds(500)).toBe(209);
   });
 
   it('送らない：地点が無い・上限を超える', async () => {
     const calls: string[] = [];
     expect(await fetchRoadTable([], { fetch: fakeOsrm(calls) })).toEqual({ ok: false, reason: 'empty' });
-    const many = Array.from({ length: ROAD_POINTS_MAX + 1 }, (_, i) => ({ lat: i / 1000, lng: 0 }));
+    const many = line(ROAD_POINTS_MAX + 1);
     expect(await fetchRoadTable(many, { fetch: fakeOsrm(calls) })).toEqual({ ok: false, reason: 'tooMany' });
     expect(calls).toHaveLength(0);
   });
@@ -173,8 +205,23 @@ describe('roadTravelView', () => {
   it('例と状態の文', () => {
     expect(roadExampleText({ parkMinutes: 5, trafficFactor: 1.5 })).toBe('道路で10分の区間 → 5 + 10 × 1.5 = 20分');
     expect(roadStatusText(undefined, P, String)).toBe('取っていません。車の移動は直線距離から見積もっています');
-    const t = { at: 9, points: [P[0]!], seconds: [[0]], meters: [[0]] };
+    const t = { at: 9, points: [P[0]!], near: [[]], seconds: [[]], meters: [[]] };
     expect(roadStatusText(t, [P[0]!], String)).toBe('1地点を取りました（9）');
     expect(roadStatusText(t, P, String)).toContain('表に無い地点が2あります');
+  });
+});
+
+describe('roadTravelView：目安と進みの文', () => {
+  it('目安', () => {
+    expect(roadPlanText(0)).toBe('緯度・経度の登録された自宅・訪問先がありません');
+    expect(roadPlanText(28)).toBe('28地点・問い合わせ 1回・約1秒');
+    expect(roadPlanText(500)).toBe('500地点・問い合わせ 100回・約4分');
+    expect(roadPlanText(501)).toContain('上限の500を超える');
+  });
+  it('進み', () => {
+    expect(roadProgressText(3, 9)).toBe('取っています（3/9）・残り約13秒');
+    expect(roadProgressText(9, 9)).toBe('取っています（9/9）');
+    expect(roadProgressText(0, 2)).toBe('取っています（0/2）・残り約5秒');
+    expect(roadProgressText(0, 40)).toBe('取っています（0/40）・残り約2分');
   });
 });

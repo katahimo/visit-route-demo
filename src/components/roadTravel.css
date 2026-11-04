@@ -1,0 +1,54 @@
+/* 道路の移動時間（車）の補正の欄（PRD D436。ADR-0101） */
+.road-settings {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+label.road-setting {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+}
+.road-setting > span:first-child {
+  color: var(--ink);
+  font-weight: 700;
+}
+.road-setting input {
+  width: 6em;
+  padding: 6px 8px;
+}
+
+/* 移動時間の見積もり方の選択（components/RoadTravelChoice。PRD D436） */
+.road-choice {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  gap: 8px;
+}
+.road-choice-legend {
+  font-weight: 700;
+  padding: 0;
+  margin-bottom: 4px;
+}
+label.road-choice-option {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+}
+.road-choice-option input[type='radio'] {
+  width: auto;
+  flex: none;
+  margin: 0;
+}
+.road-choice-option > span {
+  flex: 1 1 auto;
+  text-align: left;
+}
+.road-choice-body {
+  margin-left: 26px;
+  gap: 6px;
+}

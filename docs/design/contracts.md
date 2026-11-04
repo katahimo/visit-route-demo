@@ -37,7 +37,7 @@ DemoData = { version: 2, baseDate /* seed の基準日 */, seed /* 乱数の種 
   patterns /* ≤2000 */, clientLeaves /* ≤2000 */,
   snapshots /* date → DaySnapshot＝伝えた内容（確定） */, reassigns /* date → ReassignInfo（反映した振り直しの日だけ） */,
   presets /* 1〜6 */, scorePresetId?,
-  roads? /* 道路の所要の表 { at, points: LatLng[]（100まで）, seconds, meters: (number|null)[][] }。ADR-0101 */ }
+  roads? /* 道路の所要の表 { at, points: LatLng[]（500まで）, near: number[][]（地点ごとに近い順 50 件の行き先）, seconds, meters: number[][] }。ADR-0101 */ }
 DaySnapshot = { date, at /* 確定した時刻 ms */, visits: ToldVisit[] /* ≤500。取り消し・休みは入れない */ }
 ToldVisit = { id, clientId, staffId /* null＝担当なし */, start /* HH:mm。null 可 */ }
 ReassignInfo = { method: 'insert' | 'anneal', stayWeight? /* 案B 0〜5 */, insertRoutes? /* 案A の結果 */,

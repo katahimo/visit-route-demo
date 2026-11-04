@@ -1,6 +1,7 @@
 import { ListChecks, Sheet, Undo2 } from 'lucide-react';
 import { useId, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { RoadTravelChoice } from '../components/RoadTravelChoice';
 import { RosterCard } from '../components/RosterCard';
 import { PageHeader, WithIcon } from '../components/ui';
 import { useFeature } from '../components/useFeature';
@@ -58,6 +59,17 @@ export default function StartGuidePage() {
         .map((k) => (
           <PlaceAllBusyLine key={k} model={placeRuns[k]} />
         ))}
+      {step.kind !== 'roster' && (
+        // 移動時間の見積もり方（PRD D436。ADR-0101）：名簿と緯度・経度が入ったあとの③で選ぶ。緯度・経度を探している間は取れない
+        <section className="card stack" data-testid="start-guide-road">
+          <RoadTravelChoice
+            waitReason={
+              placeRuns.client.running || placeRuns.staff.running ? '緯度・経度を探し終えてから押せます' : null
+            }
+          />
+          <p className="sub">あとから管理者設定の「道路の移動時間（車）」で変えられます。</p>
+        </section>
+      )}
       <section className="card stack">
         {step.kind === 'roster' ? (
           <RosterStep

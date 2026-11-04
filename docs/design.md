@@ -132,7 +132,7 @@ flowchart LR
   pages -->|押したときだけ事業所の GAS に預ける・取り消す・確かめる| mailSchedule
   store -->|この端末の接続の設定・預けた記録（DemoData と別のキー）| mailSchedule
   roadTable["lib/roadTable（道路の所要の表を取る。ADR-0101）"]
-  pages -->|押したときだけ地点の緯度・経度を送って表を取らせる| roadTable
+  pages -->|押したときだけ地点の緯度・経度を送って表を取らせる（components/RoadTravelChoice。管理者設定・登録の案内の③）| roadTable
   roadTable -->|GET（Table API）| osrm["OSRM の公開サーバー（OpenStreetMap の道路・車）"]
   matching -->|表を引いて車の区間の移動を補正する（matching/roads）| domain
   mailSchedule -->|POST（text/plain の JSON）| gas["事業所の Google Apps Script（gas/Code.gs。シートに預け、5分ごとに送る）"]
@@ -254,7 +254,7 @@ flowchart LR
   - 種類（`visitType`）：種類の `requirements` を満たさない条件ごとに「種類（〈名前〉）：〈条件の文〉 ✗」。満たせば ✓・0点。いない種類は無視
   - 担当を限る（`allowedStaff`）：`allowedStaffIds` のうち問題にいる人が1人以上いればその人たちだけ可。理由「担当を限る：山田、佐藤 ✗／✓」（問題にいる限った人を並べた順）
   - 種類と担当を限るは常に必須で、条件の重み・プリセット・達成の件数に関係しない
-- 移動の行列（`matching/travel` の `travelMatrices`）：〈利用者さん〉に移動時間（片道・分。`place.travelMinutes`）があれば、その地点への・からの移動はその分数（両側にあれば長いほう）・0 m（ADR-0096）。それ以外で位置が未登録の地点への移動は `UNPLACED_TRAVEL_MIN`（30分）・0 m とみる（ADR-0093。移動時間がある〈利用者さん〉には `noPlace` の点を足さない）。地点の鍵（訪問は `'c:'+clientId`、自宅は `'s:'+staffId`）が同じ地点どうしは位置が無くても 0 分（同じ〈利用者さん〉の続けた訪問を同じ担当が持てる）。車の区間で道路の所要の表（`DemoData.roads`。`matching/roads` の `roadModelOf` が緯度・経度の小数5桁で引く）に組があれば、移動＝`org.roadTravel.parkMinutes` ＋ `trafficFactor` × 所要（分）・距離＝道のり（ADR-0101）。無ければ `estimateLeg`
+- 移動の行列（`matching/travel` の `travelMatrices`）：〈利用者さん〉に移動時間（片道・分。`place.travelMinutes`）があれば、その地点への・からの移動はその分数（両側にあれば長いほう）・0 m（ADR-0096）。それ以外で位置が未登録の地点への移動は `UNPLACED_TRAVEL_MIN`（30分）・0 m とみる（ADR-0093。移動時間がある〈利用者さん〉には `noPlace` の点を足さない）。地点の鍵（訪問は `'c:'+clientId`、自宅は `'s:'+staffId`）が同じ地点どうしは位置が無くても 0 分（同じ〈利用者さん〉の続けた訪問を同じ担当が持てる）。車の区間で道路の所要の表（`DemoData.roads`。地点ごとに近い順 50 件。`matching/roads` の `roadModelOf` が緯度・経度の小数5桁で引き、索引は表ごとに1回だけ作る）に組があれば、移動＝`org.roadTravel.parkMinutes` ＋ `trafficFactor` × 所要（分）・距離＝道のり（ADR-0101）。無ければ `estimateLeg`
 - 遠方（出張。ADR-0096）：`place.farTrip` の〈利用者さん〉の訪問は `ProblemVisit.solo`。`scheduleRoute`（strict）・`routeCost` は遠方の訪問とほかの〈利用者さん〉の訪問が同じ列なら不可（`soloBroken`）、列の最初の遠方の訪問は家を出る時刻を勤務の開始に縛らない。可否（`allowed`）には入れない。理由のキー・文（`FAR_TRIP_RULE_ID`「遠方（出張）の日はほかの訪問を入れません」・`TRAVEL_TOO_FAR_RULE_ID`「移動が間に合わない（片道 約N分）」）は `matching/travel` に置き、evaluate の explain（担当なしの理由）と採点（守れない条件）が使う。見分けと案内は `lib/travelReasons`
 - 問題に入れない訪問：取り消し、休み（`leaveOn`）の〈利用者さん〉の訪問。AI で組む（担当を組む・比較）・空き状況・振り直しはどれも compile を通る
 - いつもの担当（`continuity`）：訪問の `pattern` の繰り返しの `usualStaffId`（単発の訪問は無し）

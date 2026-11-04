@@ -1,15 +1,16 @@
 /**
  * 道路の所要の表を OSRM（OpenStreetMap の道路・車）から取る（PRD D436。ADR-0101）。OSRM を呼ぶ**ただ1か所**。
- * 呼ぶのは管理者設定の「道路の移動時間」のカードで、利用者がボタンを押したときだけ。送るのは地点の緯度・経度だけ（名前・住所は送らない）。
+ * 呼ぶのは管理者設定の「道路の移動時間」のカードと登録の案内の③で、利用者がボタンを押したときだけ。送るのは地点の緯度・経度だけ（名前・住所は送らない）。
  * solver・matching・evaluate・seed・patterns・vacancy・reassign・excel・store からは呼ばない。
  *
- * - Table API（1回で地点 × 地点の所要と道のり）。1回に送る地点は ROAD_REQUEST_POINTS まで。超えたら区画に分けて順に送る
+ * - Table API（1回で地点 × 地点の所要と道のり）。1回に送る地点は ROAD_REQUEST_POINTS まで（公開サーバーの上限。101 で TooBig）。
+ *   超えたら 50 地点ずつの区画（出発 × 到着）に分けて順に送る。全組を取り、地点ごとに近い順に ROAD_NEAR_K 件だけ残す
  * - 公開サーバーの決まり（1秒に1回まで）に合わせ、2回目からは ROAD_REQUEST_GAP_MS あけて送る
  * 応答の形が違っていても落とさず badResponse で返す。テストは fetch の偽物で行う。
  */
 
 import type { DemoData } from '../contracts/data';
-import { type LatLng, ROAD_POINTS_MAX, type RoadTable } from '../contracts/documents';
+import { type LatLng, ROAD_NEAR_K, ROAD_POINTS_MAX, type RoadTable } from '../contracts/documents';
 import { roadPointKey } from '../matching';
 
 const OSRM_TABLE_URL = 'https://router.project-osrm.org/table/v1/driving/';
@@ -153,39 +154,90 @@ async function requestBlock(
   }
 }
 
+/** 区画の大きさ：100地点までは1区画（1回で全組）、超えたら出発 ＋ 到着が上限に収まる半分ずつ */
+function blockSize(count: number): number {
+  return count <= ROAD_REQUEST_POINTS ? ROAD_REQUEST_POINTS : ROAD_REQUEST_POINTS / 2;
+}
+
+/** 問い合わせの回数（区画の数の2乗） */
+export function roadRequestCount(count: number): number {
+  if (count === 0) return 0;
+  const b = Math.ceil(count / blockSize(count));
+  return b * b;
+}
+
+/** 1回の問い合わせの応答の目安（ミリ秒。100地点で約1.1秒だった） */
+export const ROAD_RESPONSE_MS = 1000;
+
+/** 取り終えるまでの目安（秒）：回数 ×（応答 ＋ 間）− 最後の間 */
+export function roadEstimateSeconds(count: number): number {
+  const n = roadRequestCount(count);
+  return n === 0 ? 0 : Math.ceil((n * (ROAD_RESPONSE_MS + ROAD_REQUEST_GAP_MS) - ROAD_REQUEST_GAP_MS) / 1000);
+}
+
 /**
- * 地点 × 地点の所要と道のりを取る。地点が無い・上限を超えるときは送らない。
+ * 1つの出発の地点の行（全部の行き先の所要・道のり）から、所要の近い順に ROAD_NEAR_K 件を残す（自分自身と道の無い組は除く）。
+ * 秒は整数、道のりは 10 m 単位に丸める
+ */
+export function nearestOf(
+  from: number,
+  seconds: readonly (number | null)[],
+  meters: readonly (number | null)[],
+): { near: number[]; seconds: number[]; meters: number[] } {
+  const ok: number[] = [];
+  seconds.forEach((s, j) => {
+    if (j !== from && s !== null && meters[j] !== null) ok.push(j);
+  });
+  ok.sort((a, b) => seconds[a]! - seconds[b]! || a - b);
+  const near = ok.slice(0, ROAD_NEAR_K);
+  return {
+    near,
+    seconds: near.map((j) => Math.round(seconds[j]!)),
+    meters: near.map((j) => Math.round(meters[j]! / 10) * 10),
+  };
+}
+
+/**
+ * 地点 × 地点の所要と道のりを取り、地点ごとに近い順に ROAD_NEAR_K 件を残す。地点が無い・上限を超えるときは送らない。
+ * 出発の区画ごとに全部の到着の区画を取り終えたら、その区画の行を絞る（全組を一度に持たない）。
  * 1回でも失敗したら表を返さない（途中までの表は保存しない）
  */
 export async function fetchRoadTable(points: readonly LatLng[], opts: RoadOptions = {}): Promise<RoadResult> {
   if (points.length === 0) return { ok: false, reason: 'empty' };
   if (points.length > ROAD_POINTS_MAX) return { ok: false, reason: 'tooMany' };
   const n = points.length;
-  const blocks = roadBlocks(n, ROAD_REQUEST_POINTS / 2);
-  const pairs = blocks.flatMap((from) => blocks.map((to) => [from, to] as const));
-  const seconds: (number | null)[][] = Array.from({ length: n }, () => new Array<number | null>(n).fill(null));
-  const meters: (number | null)[][] = Array.from({ length: n }, () => new Array<number | null>(n).fill(null));
+  const blocks = roadBlocks(n, blockSize(n));
+  const total = blocks.length * blocks.length;
+  const table: RoadTable = { at: opts.now ?? Date.now(), points: [...points], near: [], seconds: [], meters: [] };
   const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
+  let done = 0;
   try {
-    for (let k = 0; k < pairs.length; k++) {
-      if (opts.signal?.aborted) return { ok: false, reason: 'aborted' };
-      if (k > 0) await sleep(ROAD_REQUEST_GAP_MS);
-      const [from, to] = pairs[k]!;
-      const got = await requestBlock(points, from, to, opts);
-      from.forEach((i, a) => {
-        to.forEach((j, b) => {
-          // 同じ地点は 0（応答の値によらない）。秒は整数、道のりは 10 m 単位に丸めて保存を小さくする
-          const s = i === j ? 0 : got.seconds[a]![b]!;
-          const m = i === j ? 0 : got.meters[a]![b]!;
-          seconds[i]![j] = s === null ? null : Math.round(s);
-          meters[i]![j] = m === null ? null : Math.round(m / 10) * 10;
+    for (const from of blocks) {
+      const rowS = from.map(() => new Array<number | null>(n).fill(null));
+      const rowM = from.map(() => new Array<number | null>(n).fill(null));
+      for (const to of blocks) {
+        if (opts.signal?.aborted) return { ok: false, reason: 'aborted' };
+        if (done > 0) await sleep(ROAD_REQUEST_GAP_MS);
+        const got = await requestBlock(points, from, to, opts);
+        from.forEach((_, a) => {
+          to.forEach((j, b) => {
+            rowS[a]![j] = got.seconds[a]![b]!;
+            rowM[a]![j] = got.meters[a]![b]!;
+          });
         });
+        done++;
+        opts.onProgress?.(done, total);
+      }
+      from.forEach((i, a) => {
+        const kept = nearestOf(i, rowS[a]!, rowM[a]!);
+        table.near[i] = kept.near;
+        table.seconds[i] = kept.seconds;
+        table.meters[i] = kept.meters;
       });
-      opts.onProgress?.(k + 1, pairs.length);
     }
   } catch (e) {
     if (e instanceof RoadError) return { ok: false, reason: e.reason };
     throw e;
   }
-  return { ok: true, table: { at: opts.now ?? Date.now(), points: [...points], seconds, meters } };
+  return { ok: true, table };
 }

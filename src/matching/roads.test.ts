@@ -10,20 +10,13 @@ const HOME = { lat: 38.2683, lng: 140.8694 };
 const A = { lat: 38.2593, lng: 140.893 };
 const B = { lat: 38.3245, lng: 140.8805 };
 
-/** HOME・A・B の表（B への・からの道は見つからない） */
+/** HOME・A・B の表（近い順に残した組だけ。B への・からの道は残っていない） */
 const table: RoadTable = {
   at: 0,
   points: [HOME, A, B],
-  seconds: [
-    [0, 360, null],
-    [400, 0, null],
-    [null, null, 0],
-  ],
-  meters: [
-    [0, 3150, null],
-    [3200, 0, null],
-    [null, null, 0],
-  ],
+  near: [[1], [0], []],
+  seconds: [[360], [400], []],
+  meters: [[3150], [3200], []],
 };
 const TRAVEL = { parkMinutes: 5, trafficFactor: 1.5 };
 
@@ -35,10 +28,10 @@ describe('roadModelOf・roadMinutes', () => {
 
   it('表が無い・空なら null', () => {
     expect(roadModelOf(undefined, TRAVEL)).toBeNull();
-    expect(roadModelOf({ ...table, points: [], seconds: [], meters: [] }, TRAVEL)).toBeNull();
+    expect(roadModelOf({ ...table, points: [], near: [], seconds: [], meters: [] }, TRAVEL)).toBeNull();
   });
 
-  it('向きのある組を引く。表に無い地点・道が見つからない組は null。小数5桁で同じ地点とみる', () => {
+  it('向きのある組を引く。表に無い地点・残していない組は null。小数5桁で同じ地点とみる', () => {
     const m = roadModelOf(table, TRAVEL)!;
     expect(m.lookup(HOME, A)).toEqual({ seconds: 360, meters: 3150 });
     expect(m.lookup(A, HOME)).toEqual({ seconds: 400, meters: 3200 });
@@ -71,7 +64,7 @@ describe('compile の移動の行列と道路の所要の表', () => {
     expect(compile(d, DATE).travel[0]![1]).toBe(6);
   });
 
-  it('道が見つからない組は直線距離からの見積もり', () => {
+  it('残していない組（遠い・道が無い）は直線距離からの見積もり', () => {
     const p = compile(data(), DATE);
     expect(p.travel[0]![2]).toBe(estimateLeg(HOME, B, 'DRIVE').seconds / 60);
   });

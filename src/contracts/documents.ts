@@ -129,19 +129,24 @@ export const ROAD_TRAVEL_DEFAULT: RoadTravel = {
   trafficFactor: ROAD_TRAFFIC_FACTOR_DEFAULT,
 };
 
-/** 道路の所要の表に入れる地点の上限（地点数²の数を端末に保存するため） */
-export const ROAD_POINTS_MAX = 100;
+/** 道路の所要の表に入れる地点の上限 */
+export const ROAD_POINTS_MAX = 500;
+/** 地点ごとに残す行き先の数（道路の所要の近い順。遠い組は直線距離から見積もる。ADR-0101） */
+export const ROAD_NEAR_K = 50;
 
 /**
  * 道路の所要の表（PRD D436。ADR-0101）：OSRM（OpenStreetMap の道路・車）から押したときに取った、地点どうしの所要（秒）と道のり（m）。
- * seconds[i][j]・meters[i][j] は points[i] → points[j]。道が見つからなければ null。地点は緯度・経度（小数5桁）で重複なし
+ * 全組を取り、地点ごとに所要の近い順に ROAD_NEAR_K 件だけ残す（保存を小さくする）。
+ * near[i][k] は行き先の地点の番号、seconds[i][k]・meters[i][k] は points[i] → points[near[i][k]]。道が見つからない組は残さない。
+ * 地点は緯度・経度（小数5桁）で重複なし
  */
 export const roadTableSchema = z.object({
   /** 取った時刻（ms） */
   at: z.number(),
   points: z.array(latLngSchema).max(ROAD_POINTS_MAX),
-  seconds: z.array(z.array(z.number().min(0).nullable())),
-  meters: z.array(z.array(z.number().min(0).nullable())),
+  near: z.array(z.array(z.number().int().min(0)).max(ROAD_NEAR_K)),
+  seconds: z.array(z.array(z.number().min(0)).max(ROAD_NEAR_K)),
+  meters: z.array(z.array(z.number().min(0)).max(ROAD_NEAR_K)),
 });
 export type RoadTable = z.infer<typeof roadTableSchema>;
 
