@@ -39,10 +39,10 @@ export function RoadTravelChoice({
   const confirmDialog = useConfirm();
   const name = useId();
   const [mode, setMode] = useState<Mode>(road.table ? 'road' : 'line');
-  // 別のタブ・元に戻すで表が入ったら、道路を選んだ状態に合わせる
+  // 別のタブ・元に戻すで表が入った・消えたら、選んだ状態も合わせる
   const has = road.table !== undefined;
   useEffect(() => {
-    if (has) setMode('road');
+    setMode(has ? 'road' : 'line');
   }, [has]);
   const busy = road.progress !== null;
   /** 送れない（地点が無い・上限を超える） */
@@ -64,63 +64,73 @@ export function RoadTravelChoice({
   };
   const fetchNow = async () => {
     const r = await road.fetchNow();
-    toast(r.ok ? `${r.count}地点の道のりを取得しました` : r.message);
+    toast(r.ok ? `${r.count}地点の道のりを取得しました。予定の移動時間が変わります` : r.message);
   };
 
   return (
-    <fieldset className="stack road-choice" data-testid="road-choice" disabled={busy}>
-      <legend className={hideLegend ? 'sr-only' : 'road-choice-legend'}>移動時間の見積もり方</legend>
-      <label className="road-choice-option">
-        <input
-          type="radio"
-          name={name}
-          checked={mode === 'line'}
-          onChange={() => void choose('line')}
-          data-testid="road-choice-line"
-        />
-        <span>緯度・経度の直線距離で見積もる</span>
-      </label>
-      <LineFormula />
-      <label className="road-choice-option">
-        <input
-          type="radio"
-          name={name}
-          checked={mode === 'road'}
-          onChange={() => void choose('road')}
-          data-testid="road-choice-road"
-        />
-        <span>車道にそった道のりから見積もる</span>
-      </label>
-      <RoadFormula />
-      {mode === 'road' && (
-        <div className="stack road-choice-body">
-          <p className="sub" data-testid="road-choice-notice">
-            車道にそった道のりは、OSRM の公開サーバー（OpenStreetMap
-            の道路データ）に、緯度・経度のみを送信して取得します。
-          </p>
-          <p className="sub" data-testid="road-choice-plan">
-            目安：{roadPlanText(road.points.length)}
-          </p>
-          <div className="row">
-            <button
-              type="button"
-              className="btn"
-              onClick={() => void fetchNow()}
-              disabled={busy || cannot || waitReason !== null}
-              data-testid="road-travel-fetch"
-            >
-              <WithIcon icon={Route}>{road.table ? '取り直す' : '道のりを取得する'}</WithIcon>
-            </button>
-            {waitReason && <span className="sub">{waitReason}</span>}
+    <>
+      <fieldset className="stack road-choice" data-testid="road-choice" disabled={busy}>
+        <legend className={hideLegend ? 'sr-only' : 'road-choice-legend'}>移動時間の見積もり方</legend>
+        <label className="road-choice-option">
+          <input
+            type="radio"
+            name={name}
+            checked={mode === 'line'}
+            onChange={() => void choose('line')}
+            data-testid="road-choice-line"
+          />
+          <span>緯度・経度の直線距離で見積もる</span>
+        </label>
+        <LineFormula />
+        <label className="road-choice-option">
+          <input
+            type="radio"
+            name={name}
+            checked={mode === 'road'}
+            onChange={() => void choose('road')}
+            data-testid="road-choice-road"
+          />
+          <span>車道にそった道のりから見積もる</span>
+        </label>
+        <RoadFormula />
+        {mode === 'road' && (
+          <div className="stack road-choice-body">
+            <p className="sub" data-testid="road-choice-notice">
+              車道にそった道のりは、OSRM の公開サーバー（OpenStreetMap
+              の道路データ）に、緯度・経度のみを送信して取得します。
+            </p>
+            <p className="sub" data-testid="road-choice-plan">
+              目安：{roadPlanText(road.points.length)}
+            </p>
+            <div className="row">
+              <button
+                type="button"
+                className="btn"
+                onClick={() => void fetchNow()}
+                disabled={busy || cannot || waitReason !== null}
+                data-testid="road-travel-fetch"
+              >
+                <WithIcon icon={Route}>{road.table ? '取り直す' : '道のりを取得する'}</WithIcon>
+              </button>
+              {waitReason && <span className="sub">{waitReason}</span>}
+            </div>
           </div>
-        </div>
-      )}
-      <p className="sub" data-testid="road-travel-status" aria-live="polite">
-        {road.progress
-          ? roadProgressText(road.progress.done, road.progress.total)
-          : roadStatusText(road.table, road.points, (ms) => `${jstDate(ms)} ${jstHhmm(ms)}`)}
-      </p>
-    </fieldset>
+        )}
+      </fieldset>
+      {/* 状態と［止める］は fieldset の外（取っている間も押せる） */}
+      <div className="row road-status">
+        <p className="sub" data-testid="road-travel-status" aria-live="polite">
+          {road.progress
+            ? roadProgressText(road.progress.done, road.progress.total)
+            : roadStatusText(road.table, road.points, (ms) => `${jstDate(ms)} ${jstHhmm(ms)}`)}
+        </p>
+        {busy && (
+          <button type="button" className="btn" onClick={road.stop} data-testid="road-travel-stop">
+            止める
+          </button>
+        )}
+      </div>
+    </>
   );
 }
 

@@ -5,7 +5,14 @@ import type { LatLng, RoadTable, RoadTravel } from '../contracts/documents';
 export type RoadLeg = { seconds: number; meters: number };
 
 /** 車の区間の移動の見方：表を引く関数と補正 */
-export type RoadModel = { lookup: (a: LatLng, b: LatLng) => RoadLeg | null } & RoadTravel;
+export type RoadModel = {
+  lookup: (a: LatLng, b: LatLng) => RoadLeg | null;
+  /**
+   * 出発の地点が表にあるとき、残した組のうち一番長い所要（秒）と道のり（m）。表に残さなかった遠い組の下限に使う
+   * （残した組より短く見積もらない。近い組より遠い組が安く見えるのを防ぐ）。表に無い地点・残した組が無ければ null
+   */
+  farthest: (a: LatLng) => RoadLeg | null;
+} & RoadTravel;
 
 /** 地点の鍵（緯度・経度を小数5桁。約1m。表を作る側と引く側で同じものを使う） */
 export function roadPointKey(p: LatLng): string {
@@ -49,5 +56,12 @@ export function roadModelOf(table: RoadTable | undefined, travel: RoadTravel): R
     if (seconds === undefined || meters === undefined) return null;
     return { seconds, meters };
   };
-  return { lookup, parkMinutes: travel.parkMinutes, trafficFactor: travel.trafficFactor };
+  const farthest = (a: LatLng): RoadLeg | null => {
+    const i = index.get(roadPointKey(a));
+    const ss = i === undefined ? undefined : table.seconds[i];
+    const ms = i === undefined ? undefined : table.meters[i];
+    if (!ss || !ms || ss.length === 0) return null;
+    return { seconds: Math.max(...ss), meters: Math.max(...ms) };
+  };
+  return { lookup, farthest, parkMinutes: travel.parkMinutes, trafficFactor: travel.trafficFactor };
 }

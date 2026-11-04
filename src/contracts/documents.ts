@@ -100,6 +100,9 @@ export type Terms = z.infer<typeof termsSchema>;
 /** 拘束の上限の既定（時間。ADR-0015） */
 export const SPAN_LIMIT_DEFAULT_HOURS = 10;
 
+/** 小数1桁まで（係数の欄と同じ。浮動小数の誤差は許す） */
+const oneDecimal = (n: number): boolean => Math.abs(n * 10 - Math.round(n * 10)) < 1e-9;
+
 /** 直線距離からの見積もりの既定（ADR-0101）：道なり係数（直線距離に掛ける） */
 export const LINE_DETOUR_DEFAULT = 1.3;
 /** 直線距離からの見積もりの既定（ADR-0101）：車の平均速度（km/h） */
@@ -116,7 +119,12 @@ export const LINE_DRIVE_KMH_MAX = 80;
  * 車の平均速度は driveKmh、自転車・徒歩・公共交通は domain/geo の決まった速さ。無い古いデータは既定（1.3・25km/h）
  */
 export const lineTravelSchema = z.object({
-  detourFactor: z.number().min(LINE_DETOUR_MIN).max(LINE_DETOUR_MAX).default(LINE_DETOUR_DEFAULT),
+  detourFactor: z
+    .number()
+    .min(LINE_DETOUR_MIN)
+    .max(LINE_DETOUR_MAX)
+    .refine(oneDecimal, '道なり係数は小数1桁までです')
+    .default(LINE_DETOUR_DEFAULT),
   driveKmh: z.number().int().min(LINE_DRIVE_KMH_MIN).max(LINE_DRIVE_KMH_MAX).default(LINE_DRIVE_KMH_DEFAULT),
 });
 export type LineTravel = z.infer<typeof lineTravelSchema>;
@@ -142,6 +150,7 @@ export const roadTravelSchema = z.object({
     .number()
     .min(ROAD_TRAFFIC_FACTOR_MIN)
     .max(ROAD_TRAFFIC_FACTOR_MAX)
+    .refine(oneDecimal, '混雑係数は小数1桁までです')
     .default(ROAD_TRAFFIC_FACTOR_DEFAULT),
 });
 export type RoadTravel = z.infer<typeof roadTravelSchema>;

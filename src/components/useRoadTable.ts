@@ -38,5 +38,8 @@ export function useRoadTable() {
       return rest;
     }, '道路の移動時間を消す');
 
-  return { table: data.roads, points: roadPointsOf(data), progress, fetchNow, clear };
+  /** 取っている途中で止める（表はそのまま。途中までの分は保存しない） */
+  const stop = () => ctrl.current?.abort();
+
+  return { table: data.roads, points: roadPointsOf(data), progress, fetchNow, clear, stop };
 }

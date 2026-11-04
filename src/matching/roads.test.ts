@@ -79,4 +79,15 @@ describe('compile の移動の行列と道路の所要の表', () => {
     delete d.roads;
     expect(compile(d, DATE).travel[0]![1]).toBe(estimateLeg(HOME, A, 'DRIVE').seconds / 60);
   });
+
+  it('表に残さなかった遠い組は、残した一番遠い組（補正後）より短くしない', () => {
+    const d = data();
+    // 自宅の行に A だけを 50分で残す：自宅 → B（残していない）は 5 + 1.5 × 50 = 80分 を下限にする
+    d.roads = { ...table, seconds: [[3000], [400], []], meters: [[40000], [3200], []] };
+    const p = compile(d, DATE);
+    expect(p.travel[0]![2]).toBe(80);
+    expect(p.meters[0]![2]).toBe(40000);
+    // B の行は空：今までどおり直線距離からの見積もり
+    expect(p.travel[2]![0]).toBe(estimateLeg(B, HOME, 'DRIVE').seconds / 60);
+  });
 });

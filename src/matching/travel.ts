@@ -45,7 +45,8 @@ type Matrices = { travel: number[][]; meters: number[][] };
 /**
  * 2地点の移動（分）と距離（m）。fixed は手で決めた移動時間（片道・分。ADR-0096）で、どちらかにあれば距離の計算ではなくそれを使う
  * （両方にあれば長いほう。距離は 0 m＝交通費に入れない）。位置が未登録の側があれば UNPLACED_TRAVEL_MIN 分・0 m（ADR-0093）。
- * 車の区間で道路の所要の表に組があれば、補正した道路の所要と道のり（ADR-0101）。無ければ直線距離からの見積もり
+ * 車の区間で道路の所要の表に組があれば、補正した道路の所要と道のり（ADR-0101）。表に残さなかった遠い組は、直線距離からの見積もりと
+ * 残した一番遠い組の補正した所要の大きいほう（近い組より遠い組が短く見えないように）。表が無ければ直線距離からの見積もり
  */
 function legOf(
   a: { at: LatLng | null; fixed: number | null },
@@ -59,6 +60,13 @@ function legOf(
   const onRoad = road && mode === 'DRIVE' ? road.lookup(a.at, b.at) : null;
   if (onRoad) return { minutes: roadMinutes(onRoad.seconds, road!), meters: Math.round(onRoad.meters) };
   const leg = estimateLeg(a.at, b.at, mode, line);
+  // 表に残さなかった遠い組：残した一番遠い組より短く見積もらない（ADR-0101）
+  const far = road && mode === 'DRIVE' ? road.farthest(a.at) : null;
+  if (far)
+    return {
+      minutes: Math.max(leg.seconds / 60, roadMinutes(far.seconds, road!)),
+      meters: Math.max(leg.meters, Math.round(far.meters)),
+    };
   return { minutes: leg.seconds / 60, meters: leg.meters };
 }
 

@@ -50,7 +50,7 @@ export const ROAD_FAIL_TEXT: Record<RoadFail, string> = {
 };
 
 /**
- * 表に入れる地点：位置のある〈スタッフ〉の自宅と、位置があり移動時間を手で決めていない〈利用者さん〉の場所（ADR-0096 の手で決めた人は表を使わない）。
+ * 表に入れる地点：位置のある〈スタッフ〉の自宅と、位置があり移動時間を手で決めていない、終了でない〈利用者さん〉の場所（ADR-0096 の手で決めた人は表を使わない）。
  * 位置（小数5桁）が同じものは1つ。並びは自宅 → 〈利用者さん〉の順
  */
 export function roadPointsOf(data: Pick<DemoData, 'staff' | 'clients'>): LatLng[] {
@@ -62,7 +62,9 @@ export function roadPointsOf(data: Pick<DemoData, 'staff' | 'clients'>): LatLng[
     if (!out.has(k)) out.set(k, p);
   };
   for (const s of data.staff) add(s.home.lat, s.home.lng);
-  for (const c of data.clients) if (c.place.travelMinutes === undefined) add(c.place.lat, c.place.lng);
+  // 終了した〈利用者さん〉は回らないので送らない（住所の一括検索と同じ。PRD D89）
+  for (const c of data.clients)
+    if (c.stage !== 'ended' && c.place.travelMinutes === undefined) add(c.place.lat, c.place.lng);
   return [...out.values()];
 }
 
@@ -121,6 +123,7 @@ async function requestBlock(
     from.map((i) => pos.get(i)!),
     to.map((i) => pos.get(i)!),
   );
+  if (opts.signal?.aborted) throw new RoadError('aborted');
   const ctrl = new AbortController();
   const onAbort = () => ctrl.abort();
   opts.signal?.addEventListener('abort', onAbort);
@@ -218,6 +221,8 @@ export async function fetchRoadTable(points: readonly LatLng[], opts: RoadOption
       for (const to of blocks) {
         if (opts.signal?.aborted) return { ok: false, reason: 'aborted' };
         if (done > 0) await sleep(ROAD_REQUEST_GAP_MS);
+        // 待っている間に止められたら送らない
+        if (opts.signal?.aborted) return { ok: false, reason: 'aborted' };
         const got = await requestBlock(points, from, to, opts);
         from.forEach((_, a) => {
           to.forEach((j, b) => {

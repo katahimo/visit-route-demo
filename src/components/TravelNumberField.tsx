@@ -32,10 +32,9 @@ export function TravelNumberField({
     <label className="road-setting">
       <span>{label}</span>
       <input
-        type="number"
-        min={rule.min}
-        max={rule.max}
-        step={rule.decimals === 0 ? 1 : 0.1}
+        // 全角の数字も受ける（type="number" は全角を空にする）。誤りは numberInputError が出す
+        type="text"
+        inputMode={rule.decimals === 0 ? 'numeric' : 'decimal'}
         value={text}
         onChange={(e) => setText(e.target.value)}
         onBlur={save}

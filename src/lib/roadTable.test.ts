@@ -58,7 +58,7 @@ function fakeOsrm(calls: string[]): RoadFetchFn {
 }
 
 describe('roadPointsOf・roadMissingCount', () => {
-  it('位置のある自宅と〈利用者さん〉（移動時間を決めた人を除く）。同じ位置は1つ', () => {
+  it('位置のある自宅と〈利用者さん〉（移動時間を決めた人・終了の人を除く）。同じ位置は1つ', () => {
     const d = makeData({
       staff: [staff('s1', P[0]!.lat, P[0]!.lng), staff('s2', P[0]!.lat, P[0]!.lng)],
       clients: [
@@ -67,6 +67,7 @@ describe('roadPointsOf・roadMissingCount', () => {
           place: { address: '', ...P[2]!, postalCode: '', travelMinutes: 60 },
         }),
         client('c', 0, 0, { place: { address: '', lat: null, lng: null, postalCode: '' } }),
+        client('d', 38.3, 140.9, { stage: 'ended' }),
       ],
     });
     const pts = roadPointsOf(d);
@@ -178,6 +179,20 @@ describe('fetchRoadTable', () => {
     expect(await fetchRoadTable(P, { fetch: ng, sleep: noSleep })).toEqual({ ok: false, reason: 'badResponse' });
     const http: RoadFetchFn = async () => ({ ok: false, json: async () => ({}) });
     expect(await fetchRoadTable(P, { fetch: http, sleep: noSleep })).toEqual({ ok: false, reason: 'badResponse' });
+  });
+
+  it('待っている間に止めたら、次の問い合わせを送らない', async () => {
+    const calls: string[] = [];
+    const c = new AbortController();
+    const r = await fetchRoadTable(line(120), {
+      fetch: fakeOsrm(calls),
+      signal: c.signal,
+      sleep: async () => {
+        c.abort();
+      },
+    });
+    expect(r).toEqual({ ok: false, reason: 'aborted' });
+    expect(calls).toHaveLength(1);
   });
 
   it('止めた', async () => {
