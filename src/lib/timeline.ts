@@ -89,6 +89,8 @@ export type LegSpan = Span & {
   estimated?: boolean;
   /** 着く時刻が訪問の「いつまでに始める」を過ぎている（markLegs が付ける） */
   late?: boolean;
+  /** 距離（m。道路の所要の表があれば道のり。ADR-0101。withLegMeters が付ける。0 なら出さない） */
+  meters?: number;
 };
 
 /** 着く時刻の比べで許す誤差（分。matching/timing.ts の EPS と同じ考え） */
@@ -170,12 +172,39 @@ export function markLegs(
 }
 
 /**
- * 区間の言葉：「移動 15分」「自宅まで 30分（見込み）」。間に合わない区間は「・着く時刻が間に合わない」を添える
+ * 移動の区間に距離（m）を付ける（問題の距離の行列から。自宅の地点は担当の point）。order は担当の訪問IDの並び。
+ * 問題・担当・訪問が無ければそのまま
+ */
+export function withLegMeters(legs: LegSpan[], problem: Problem | null, staffId: string, order: string[]): LegSpan[] {
+  if (!problem) return legs;
+  const home = problem.staff.find((s) => s.id === staffId)?.point;
+  const pointOf = new Map(problem.visits.map((v) => [v.id, v.point]));
+  if (home === undefined) return legs;
+  const last = order.length > 0 ? pointOf.get(order[order.length - 1]!) : undefined;
+  return legs.map((leg) => {
+    if (leg.kind === 'wait') return leg;
+    const here = pointOf.get(leg.visitId);
+    const k = order.indexOf(leg.visitId);
+    const prev = k > 0 ? pointOf.get(order[k - 1]!) : undefined;
+    const [from, to] = leg.kind === 'fromHome' ? [home, here] : leg.kind === 'drive' ? [prev, here] : [last, home];
+    if (from === undefined || to === undefined) return leg;
+    return { ...leg, meters: problem.meters[from]?.[to] ?? 0 };
+  });
+}
+
+/** 距離の文（「3.2km」。1km 未満は「800m」。10 m 単位を四捨五入） */
+function distanceText(meters: number): string {
+  return meters < 1000 ? `${Math.round(meters / 10) * 10}m` : `${(Math.round(meters / 100) / 10).toFixed(1)}km`;
+}
+
+/**
+ * 区間の言葉：「移動 15分・3.2km」「自宅まで 30分（見込み）」。距離は 0 なら出さない。間に合わない区間は「・着く時刻が間に合わない」を添える
  */
 export function legWords(leg: LegSpan, minutes: number): string {
   const word = leg.kind === 'drive' ? '移動 ' : leg.kind === 'fromHome' ? '自宅から ' : '自宅まで ';
   const note = leg.estimated ? '（見込み）' : '';
-  return `${word}${minutes}分${note}${leg.late ? '・着く時刻が間に合わない' : ''}`;
+  const dist = leg.meters ? `・${distanceText(leg.meters)}` : '';
+  return `${word}${minutes}分${dist}${note}${leg.late ? '・着く時刻が間に合わない' : ''}`;
 }
 
 /**

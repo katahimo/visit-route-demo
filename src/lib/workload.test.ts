@@ -1,7 +1,7 @@
 // 稼働の見込み（PRD D72。ADR-0015）
 import { describe, expect, it } from 'vitest';
 import type { DemoData } from '../contracts/data';
-import { ROAD_TRAVEL_DEFAULT } from '../contracts/documents';
+import { LINE_TRAVEL_DEFAULT, ROAD_TRAVEL_DEFAULT } from '../contracts/documents';
 import { compile } from '../matching';
 import { client, DATE, makeData, staff, visit } from '../matching/fixtures.testkit';
 import { fareOf, hmText, isOverSpan, workDayOf, workloadTsv, workMonth, workStats, workTotals } from './workload';
@@ -21,6 +21,7 @@ function data(over: Partial<DemoData> = {}): DemoData {
       fareYenPerKm: 10,
       spanLimitHours: 10,
       roadTravel: { ...ROAD_TRAVEL_DEFAULT },
+      lineTravel: { ...LINE_TRAVEL_DEFAULT },
       features: {},
     },
     staff: [staff('s1', 38.26, 140.87, { name: '山田 花' }), staff('s2', 38.3, 140.9, { name: '佐藤 一' })],

@@ -483,7 +483,7 @@ export function compile(data: CompileInput, date: string, pins?: Record<string, 
   ];
   // 道路の所要の表（ADR-0101）：取ってあれば車の区間に使う
   const road = roadModelOf(data.roads, data.org.roadTravel);
-  const { travel, meters } = travelMatrices(places, fixed, keys, staffDocs, road);
+  const { travel, meters } = travelMatrices(places, fixed, keys, staffDocs, road, data.org.lineTravel);
 
   // --- 可否・割当費用・理由 ---
   const working = new Set(staff.filter((s) => s.slots.length > 0).map((s) => s.id));

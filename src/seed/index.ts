@@ -6,6 +6,7 @@ import { DATA_VERSION } from '../contracts/data';
 import {
   type Client,
   EMPTY_REFERRER,
+  LINE_TRAVEL_DEFAULT,
   ROAD_TRAVEL_DEFAULT,
   SPAN_LIMIT_DEFAULT_HOURS,
   type Staff,
@@ -96,6 +97,7 @@ export function createDemoData(today: string): DemoData {
       fareYenPerKm: 10,
       spanLimitHours: SPAN_LIMIT_DEFAULT_HOURS,
       roadTravel: { ...ROAD_TRAVEL_DEFAULT },
+      lineTravel: { ...LINE_TRAVEL_DEFAULT },
       // 機能の入り切り（ADR-0028・ADR-0072）：初期データはエキスパート機能だけ切（ほかは入）
       features: { expert: false },
     },

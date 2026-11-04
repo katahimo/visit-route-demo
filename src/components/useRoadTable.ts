@@ -23,7 +23,7 @@ export function useRoadTable() {
         onProgress: (done, total) => setProgress({ done, total }),
       });
       if (!r.ok) return { ok: false, message: ROAD_FAIL_TEXT[r.reason] };
-      update((d) => ({ ...d, roads: r.table }), '道路の移動時間を取る');
+      update((d) => ({ ...d, roads: r.table }), '道のりを取得する');
       return { ok: true, count: r.table.points.length };
     } finally {
       ctrl.current = null;

@@ -67,7 +67,7 @@ export default function StartGuidePage() {
               placeRuns.client.running || placeRuns.staff.running ? '緯度・経度を探し終えてから押せます' : null
             }
           />
-          <p className="sub">あとから管理者設定の「道路の移動時間（車）」で変えられます。</p>
+          <p className="sub">あとから管理者設定の「移動時間の見積もり方」で変えられます。</p>
         </section>
       )}
       <section className="card stack">

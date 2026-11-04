@@ -1,6 +1,11 @@
-// 管理者設定の「道路の移動時間（車）」の文と入力の確かめ（PRD D436。ADR-0101）。純粋関数
+// 移動時間の見積もり方（直線距離・車道の道のり）の文と係数の入力の確かめ（PRD D436。ADR-0101）。純粋関数
 import {
   type LatLng,
+  LINE_DETOUR_MAX,
+  LINE_DETOUR_MIN,
+  LINE_DRIVE_KMH_MAX,
+  LINE_DRIVE_KMH_MIN,
+  type LineTravel,
   ROAD_PARK_MINUTES_MAX,
   ROAD_POINTS_MAX,
   ROAD_TRAFFIC_FACTOR_MAX,
@@ -17,21 +22,37 @@ import {
   roadRequestCount,
 } from './roadTable';
 
-/** 駐車・玄関までの分の入力の誤り（0〜上限の整数。正しければ null） */
-export function parkInputError(text: string): string | null {
-  const n = Number(text.normalize('NFKC').trim());
-  if (text.trim() === '' || !Number.isInteger(n) || n < 0 || n > ROAD_PARK_MINUTES_MAX)
-    return `0〜${ROAD_PARK_MINUTES_MAX}の整数（分）で入れてください`;
-  return null;
+/** 係数の欄の決まり：範囲・小数の桁（0 なら整数）・単位の言葉 */
+export type NumberRule = { min: number; max: number; decimals: 0 | 1; unit: string };
+
+/** 係数の欄の決まり（ADR-0101） */
+export const TRAVEL_RULES = {
+  park: { min: 0, max: ROAD_PARK_MINUTES_MAX, decimals: 0, unit: '分' },
+  traffic: { min: ROAD_TRAFFIC_FACTOR_MIN, max: ROAD_TRAFFIC_FACTOR_MAX, decimals: 1, unit: '倍' },
+  detour: { min: LINE_DETOUR_MIN, max: LINE_DETOUR_MAX, decimals: 1, unit: '倍' },
+  driveKmh: { min: LINE_DRIVE_KMH_MIN, max: LINE_DRIVE_KMH_MAX, decimals: 0, unit: 'km/h' },
+} as const satisfies Record<string, NumberRule>;
+
+/** 入力の文字 → 数（全角も受ける）。決まりに合わなければ null */
+export function numberInput(text: string, rule: NumberRule): number | null {
+  const t = text.normalize('NFKC').trim();
+  const re = rule.decimals === 0 ? /^\d+$/ : /^\d+(\.\d)?$/;
+  if (!re.test(t)) return null;
+  const n = Number(t);
+  return n >= rule.min && n <= rule.max ? n : null;
 }
 
-/** 混雑係数の入力の誤り（範囲内の小数1桁まで。正しければ null） */
-export function factorInputError(text: string): string | null {
-  const t = text.normalize('NFKC').trim();
-  const n = Number(t);
-  if (t === '' || !/^\d+(\.\d)?$/.test(t) || n < ROAD_TRAFFIC_FACTOR_MIN || n > ROAD_TRAFFIC_FACTOR_MAX)
-    return `${ROAD_TRAFFIC_FACTOR_MIN}〜${ROAD_TRAFFIC_FACTOR_MAX}の数（小数1桁まで）で入れてください`;
-  return null;
+/** 係数の欄の誤りの文（正しければ null） */
+export function numberInputError(text: string, rule: NumberRule): string | null {
+  if (numberInput(text, rule) !== null) return null;
+  const kind = rule.decimals === 0 ? 'の整数' : 'の数（小数1桁まで）';
+  return `${rule.min}〜${rule.max}${kind}（${rule.unit}）で入れてください`;
+}
+
+/** 直線距離の例の文（「直線 2km の区間 → 2 × 1.3 ÷ 25 × 60 = 6分」） */
+export function lineExampleText(line: LineTravel, km = 2): string {
+  const total = Math.round(((km * line.detourFactor) / line.driveKmh) * 60);
+  return `直線 ${km}km の区間 → ${km} × ${line.detourFactor} ÷ ${line.driveKmh} × 60 = ${total}分`;
 }
 
 /** 補正の例の文（「道路で10分の区間 → 5 + 10 × 1.5 = 20分」） */

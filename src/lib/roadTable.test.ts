@@ -13,12 +13,13 @@ import {
   roadTableUrl,
 } from './roadTable';
 import {
-  factorInputError,
-  parkInputError,
+  lineExampleText,
+  numberInputError,
   roadExampleText,
   roadPlanText,
   roadProgressText,
   roadStatusText,
+  TRAVEL_RULES,
 } from './roadTravelView';
 
 const P = [
@@ -191,19 +192,25 @@ describe('fetchRoadTable', () => {
 
 describe('roadTravelView', () => {
   it('入力の確かめ', () => {
-    expect(parkInputError('5')).toBeNull();
-    expect(parkInputError('０')).toBeNull();
-    expect(parkInputError('')).not.toBeNull();
-    expect(parkInputError('2.5')).not.toBeNull();
-    expect(parkInputError('61')).not.toBeNull();
-    expect(factorInputError('1.5')).toBeNull();
-    expect(factorInputError('3')).toBeNull();
-    expect(factorInputError('0.9')).not.toBeNull();
-    expect(factorInputError('1.25')).not.toBeNull();
-    expect(factorInputError('3.1')).not.toBeNull();
+    const { park, traffic, detour, driveKmh } = TRAVEL_RULES;
+    expect(numberInputError('5', park)).toBeNull();
+    expect(numberInputError('０', park)).toBeNull();
+    expect(numberInputError('', park)).toBe('0〜60の整数（分）で入れてください');
+    expect(numberInputError('2.5', park)).not.toBeNull();
+    expect(numberInputError('61', park)).not.toBeNull();
+    expect(numberInputError('1.5', traffic)).toBeNull();
+    expect(numberInputError('3', traffic)).toBeNull();
+    expect(numberInputError('0.9', traffic)).not.toBeNull();
+    expect(numberInputError('1.25', traffic)).toBe('1〜3の数（小数1桁まで）（倍）で入れてください');
+    expect(numberInputError('3.1', traffic)).not.toBeNull();
+    expect(numberInputError('1.3', detour)).toBeNull();
+    expect(numberInputError('25', driveKmh)).toBeNull();
+    expect(numberInputError('4', driveKmh)).not.toBeNull();
+    expect(numberInputError('25.5', driveKmh)).not.toBeNull();
   });
   it('例と状態の文', () => {
     expect(roadExampleText({ parkMinutes: 5, trafficFactor: 1.5 })).toBe('道路で10分の区間 → 5 + 10 × 1.5 = 20分');
+    expect(lineExampleText({ detourFactor: 1.3, driveKmh: 25 })).toBe('直線 2km の区間 → 2 × 1.3 ÷ 25 × 60 = 6分');
     expect(roadStatusText(undefined, P, String)).toBe('取っていません。車の移動は直線距離から見積もっています');
     const t = { at: 9, points: [P[0]!], near: [[]], seconds: [[]], meters: [[]] };
     expect(roadStatusText(t, [P[0]!], String)).toBe('1地点を取りました（9）');

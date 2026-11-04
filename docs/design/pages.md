@@ -40,7 +40,7 @@
 | `#/types` | `pages/TypesPage.tsx` | 訪問の種類 | [pages-rules.md](pages-rules.md) |
 | `#/items` | `pages/ItemsPage.tsx` | 特性の項目 | [pages-rules.md](pages-rules.md) |
 | `#/data` | `pages/DataPage.tsx` | データ（控え・Excel・初期状態に戻す・案内をもう一度見る） | [pages-data.md](pages-data.md) |
-| `#/settings` | `pages/SettingsPage.tsx` | 管理者設定（ひな形と機能の入・切・道路の移動時間（車。ADR-0101）。だれでも開ける。ADR-0092） | [pages-data.md](pages-data.md) |
+| `#/settings` | `pages/SettingsPage.tsx` | 管理者設定（ひな形と機能の入・切・移動時間の見積もり方（ADR-0101）。だれでも開ける。ADR-0092） | [pages-data.md](pages-data.md) |
 | `#/start` | `pages/StartGuidePage.tsx` | 登録の案内（自分のデータで始めたあとの3段。`?step=`） | [pages-common.md](pages-common.md) |
 | `*`（`#/` を含む） | （`Navigate`） | 予定の画面（`homePath`。月か週）へ（replace）。`#/home` も同じ | — |
 

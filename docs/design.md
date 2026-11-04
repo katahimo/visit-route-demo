@@ -234,7 +234,7 @@ flowchart LR
   - [ ] 性別希望・NG・種類・繰り返し・訪問の ID が上のとおり、プリセットは §5 の3種（テスト）
 
 ### domain（PoC本体から写した純粋関数）
-- 責務：時刻（`hhmmToMinutes` など）、距離と移動の概算（`distanceMeters`・`estimateLeg`）、稼働時間帯（`availabilityOf`・`withinSlots`）、担当の列の時刻の補助（`domain/scheduleModel.ts`。PoC本体 `web/src/features/admin/schedule/model.ts` の `timeOrder`・`timesOf`・`windowText`）
+- 責務：時刻（`hhmmToMinutes` など）、距離と移動の概算（`distanceMeters`・`estimateLeg`。係数は `Org.lineTravel`）、稼働時間帯（`availabilityOf`・`withinSlots`）、担当の列の時刻の補助（`domain/scheduleModel.ts`。PoC本体 `web/src/features/admin/schedule/model.ts` の `timeOrder`・`timesOf`・`windowText`）
 - 持つデータ（持ち主）：なし
 - 提供するAPI：PoC本体と同じ名前・引数（写したコミットをファイル先頭に書く）。デモ独自（コメントに明記）：`withoutAbsences(slots, absences)`（`domain/availability.ts`。「その日に働ける時間帯」を決めるのはこのファイルだけ）、`afterLastDay(base, date)`（`availabilityOf` は最終勤務日の後なら上書きがあっても空）、`leaveOn(leaves, clientId, date)`・`isOnLeave(leaves, visit)`（`domain/leaves.ts`。休みの判定はこれだけ）
 - 依存するもの：なし（zod のみ）
@@ -254,7 +254,7 @@ flowchart LR
   - 種類（`visitType`）：種類の `requirements` を満たさない条件ごとに「種類（〈名前〉）：〈条件の文〉 ✗」。満たせば ✓・0点。いない種類は無視
   - 担当を限る（`allowedStaff`）：`allowedStaffIds` のうち問題にいる人が1人以上いればその人たちだけ可。理由「担当を限る：山田、佐藤 ✗／✓」（問題にいる限った人を並べた順）
   - 種類と担当を限るは常に必須で、条件の重み・プリセット・達成の件数に関係しない
-- 移動の行列（`matching/travel` の `travelMatrices`）：〈利用者さん〉に移動時間（片道・分。`place.travelMinutes`）があれば、その地点への・からの移動はその分数（両側にあれば長いほう）・0 m（ADR-0096）。それ以外で位置が未登録の地点への移動は `UNPLACED_TRAVEL_MIN`（30分）・0 m とみる（ADR-0093。移動時間がある〈利用者さん〉には `noPlace` の点を足さない）。地点の鍵（訪問は `'c:'+clientId`、自宅は `'s:'+staffId`）が同じ地点どうしは位置が無くても 0 分（同じ〈利用者さん〉の続けた訪問を同じ担当が持てる）。車の区間で道路の所要の表（`DemoData.roads`。地点ごとに近い順 50 件。`matching/roads` の `roadModelOf` が緯度・経度の小数5桁で引き、索引は表ごとに1回だけ作る）に組があれば、移動＝`org.roadTravel.parkMinutes` ＋ `trafficFactor` × 所要（分）・距離＝道のり（ADR-0101）。無ければ `estimateLeg`
+- 移動の行列（`matching/travel` の `travelMatrices`）：〈利用者さん〉に移動時間（片道・分。`place.travelMinutes`）があれば、その地点への・からの移動はその分数（両側にあれば長いほう）・0 m（ADR-0096）。それ以外で位置が未登録の地点への移動は `UNPLACED_TRAVEL_MIN`（30分）・0 m とみる（ADR-0093。移動時間がある〈利用者さん〉には `noPlace` の点を足さない）。地点の鍵（訪問は `'c:'+clientId`、自宅は `'s:'+staffId`）が同じ地点どうしは位置が無くても 0 分（同じ〈利用者さん〉の続けた訪問を同じ担当が持てる）。車の区間で道路の所要の表（`DemoData.roads`。地点ごとに近い順 50 件。`matching/roads` の `roadModelOf` が緯度・経度の小数5桁で引き、索引は表ごとに1回だけ作る）に組があれば、移動＝`org.roadTravel.parkMinutes` ＋ `trafficFactor` × 所要（分）・距離＝道のり（ADR-0101）。無ければ `estimateLeg`（直線距離 × `org.lineTravel.detourFactor` ÷ 車は `driveKmh`・ほかは決まった速さ）
 - 遠方（出張。ADR-0096）：`place.farTrip` の〈利用者さん〉の訪問は `ProblemVisit.solo`。`scheduleRoute`（strict）・`routeCost` は遠方の訪問とほかの〈利用者さん〉の訪問が同じ列なら不可（`soloBroken`）、列の最初の遠方の訪問は家を出る時刻を勤務の開始に縛らない。可否（`allowed`）には入れない。理由のキー・文（`FAR_TRIP_RULE_ID`「遠方（出張）の日はほかの訪問を入れません」・`TRAVEL_TOO_FAR_RULE_ID`「移動が間に合わない（片道 約N分）」）は `matching/travel` に置き、evaluate の explain（担当なしの理由）と採点（守れない条件）が使う。見分けと案内は `lib/travelReasons`
 - 問題に入れない訪問：取り消し、休み（`leaveOn`）の〈利用者さん〉の訪問。AI で組む（担当を組む・比較）・空き状況・振り直しはどれも compile を通る
 - いつもの担当（`continuity`）：訪問の `pattern` の繰り返しの `usualStaffId`（単発の訪問は無し）

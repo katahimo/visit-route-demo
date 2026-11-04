@@ -1,4 +1,4 @@
-/* 道路の移動時間（車）の補正の欄（PRD D436。ADR-0101） */
+/* 移動時間の見積もり方の係数の欄（PRD D436。ADR-0101） */
 .road-settings {
   flex-wrap: wrap;
   gap: 10px;
@@ -51,4 +51,8 @@ label.road-choice-option {
 .road-choice-body {
   margin-left: 26px;
   gap: 6px;
+}
+.road-formula {
+  margin: 0;
+  font-size: 0.9rem;
 }

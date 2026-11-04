@@ -204,6 +204,7 @@ export async function importWorkbook(buf: ArrayBuffer, base: DemoData): Promise<
     features: base.org.features,
     // 道路の移動時間の補正もブックに入れない（ADR-0101）。読み込んでも今の値のまま
     roadTravel: base.org.roadTravel,
+    lineTravel: base.org.lineTravel,
   };
   const next: DemoData = {
     version: base.version,
