@@ -189,9 +189,8 @@ describe('autoDayPlan（1日の問題）', () => {
     }
   });
 
-  it('標準（data.standard）が無くても組める。対象が無い・伝えた日・訪問の無い日は null', () => {
+  it('組める。対象が無い・伝えた日・訪問の無い日は null', () => {
     const d = withPattern(d0);
-    expect(d.standard).toBeUndefined();
     expect(autoDayPlan(d, TODAY, [`${TODAY}_pn`])).not.toBeNull();
     expect(autoDayPlan(d, TODAY, [])).toBeNull();
     expect(autoDayPlan(d, TODAY, ['nothing'])).toBeNull();

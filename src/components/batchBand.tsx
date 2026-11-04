@@ -3,7 +3,6 @@ import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 're
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { confirmLeave } from '../lib/leaveGuard';
 import { batchBandText, batchDoneText, batchHref, monthBatch } from '../lib/monthBatch';
-import { clearStandardWork } from '../lib/standardDraft';
 import { useDemoData } from '../store';
 import { useToast } from './Toast';
 import { useValueStore } from './valueStore';
@@ -30,8 +29,6 @@ export function MonthBatchHost(): ReactNode {
     if (replacedCount === lastReplaced.current) return;
     lastReplaced.current = replacedCount;
     monthBatch.abort();
-    // 組み方の標準の案・下書きも前のデータのものなので捨てる
-    clearStandardWork();
   }, [replacedCount]);
   const toast = useToast();
   const navigate = useNavigate();

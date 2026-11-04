@@ -3,10 +3,8 @@ import { useState } from 'react';
 import { useConfirm } from '../components/ConfirmDialog';
 import { confirmDropProposal } from '../components/scheduleParts';
 import { useToast } from '../components/Toast';
-import { markArrangeStart } from '../components/useArrangeBasis';
 import type { BatchMode } from '../lib/month';
 import { type BatchSource, monthBatch } from '../lib/monthBatch';
-import { useDemoData } from '../store';
 
 /** 組む範囲と日の決まり（画面で選んだもの）。条件はいつもデータの条件（点数の基準。ADR-0065） */
 export type ArrangeStartPlan = {
@@ -22,17 +20,14 @@ export type ArrangeStartPlan = {
 
 export function useArrangeStart(plan: ArrangeStartPlan) {
   const toast = useToast();
-  const { data } = useDemoData();
   const confirmDialog = useConfirm();
   const [error, setError] = useState<string | null>(null);
 
   /**
    * 選んだ範囲を AI で組む（ピンの訪問はそのまま。終わったら提案の帯。反映するまで訪問は変わらない）。
-   * days を渡すとその作り方・日で組む（基本情報が変わったときの［組み直す］は伝えていない日をすべて。ADR-0067）
    */
-  const start = async (days?: { mode: BatchMode; targets: readonly string[] }) => {
-    const { scope, ym, at, today, rangeLabel } = plan;
-    const { mode, targets } = days ?? plan;
+  const start = async () => {
+    const { scope, ym, at, today, rangeLabel, mode, targets } = plan;
     if (monthBatch.running()) return;
     setError(null);
     if (targets.length === 0) {
@@ -50,8 +45,6 @@ export function useArrangeStart(plan: ArrangeStartPlan) {
       rangeStart: scope === 'month' ? null : at,
     });
     if (!ok) toast('ほかの担当を組んでいます。終わってから押してください');
-    // 提案の前提（基本情報）を控える。反映でこの鍵を覚える（ADR-0067）
-    else markArrangeStart(data);
   };
   return { error, setError, start };
 }

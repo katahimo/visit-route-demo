@@ -1,5 +1,4 @@
 import {
-  CalendarCheck,
   CalendarClock,
   CalendarDays,
   CalendarRange,
@@ -46,7 +45,6 @@ export const NAV_ICONS: Record<NavIcon, LucideIcon> = {
   staff: UserRound,
   hours: Clock,
   workload: Timer,
-  standard: CalendarCheck,
   rules: SlidersHorizontal,
   types: Layers,
   items: Tags,

@@ -1,17 +1,17 @@
 // 予定の画面の上の「要対応の帯」（PRD D400・D403・D404。ADR-0073・ADR-0074・ADR-0077）の決まり。
 // 日ごとの状態（lib/month の DayStatus。月の画面のマス・要対応と同じ数え方）から、目立たせる訪問だけを数える純粋関数。データは書き換えない。
 // 切の種類は 担当なし・間に合わない・重なり・休みの人（分け方は lib/bandIssues。ADR-0089）。エキスパート機能が入なら、そのあとに
-// 条件に合わない・拘束超・組み方の標準が無い・基本情報が変わった（組み直す）・未確定 N日 を足す
+// 条件に合わない・拘束超・未確定 N日 を足す
 import { rangeDays } from './autoArrange';
 import { isBandIssue, type VisitBandKind, visitBandKind } from './bandIssues';
 import type { VisitIssue } from './dayPlan';
 import type { DayStatus } from './month';
 
 /**
- * 帯に数える種類。訪問のほか、入だけの種類：条件に合わない（必須の違反。訪問）・拘束超（日）・組み方の標準が無い・
- * 基本情報が変わった（組み直す）・未確定の日（確定（伝えた）がまだ。PRD D382）。条件に合わない・拘束超はホームの要対応が知らせていたもの
+ * 帯に数える種類。訪問のほか、入だけの種類：条件に合わない（必須の違反。訪問）・拘束超（日）・
+ * 未確定の日（確定（伝えた）がまだ。PRD D382）。条件に合わない・拘束超はホームの要対応が知らせていたもの
  */
-export type BandKind = VisitBandKind | 'notAllowed' | 'overSpan' | 'noStandard' | 'rebuild' | 'unconfirmed';
+export type BandKind = VisitBandKind | 'notAllowed' | 'overSpan' | 'unconfirmed';
 
 /** 帯に出す種類の並びと名前（文の並び・押した先を選ぶ順。入だけの種類は訪問の種類のあと） */
 export const BAND_KINDS: readonly { kind: BandKind; label: string; unit: string }[] = [
@@ -21,8 +21,6 @@ export const BAND_KINDS: readonly { kind: BandKind; label: string; unit: string 
   { kind: 'off', label: '休みの人', unit: '件' },
   { kind: 'notAllowed', label: '条件に合わない', unit: '件' },
   { kind: 'overSpan', label: '拘束超', unit: '日' },
-  { kind: 'noStandard', label: '組み方の標準が無い', unit: '' },
-  { kind: 'rebuild', label: '基本情報が変わった（組み直す）', unit: '' },
   { kind: 'unconfirmed', label: '未確定', unit: '日' },
 ];
 
@@ -46,28 +44,15 @@ export const bandDays = (today: string): string[] => rangeDays(today);
 /** 押したときに移る先：to は URL（クエリ付き）、date があれば移る前に選んでいる日付をその日にする、visitId があればその訪問を選んで見える所へ巻く（日の予定） */
 export type BandGo = { to: string; date?: string; visitId?: string };
 
-/** 入だけの種類の判定に使うもの（エキスパート機能が入のとき渡す。切のときは渡さない） */
-export type ExpertBandInput = {
-  /** 組み方の標準を登録しているか（登録していなければ「組み方の標準が無い」） */
-  hasStandard: boolean;
-  /** 基本情報が最後に組んだあとに変わったか（標準が無い間は知らせない。PRD D363） */
-  basisChanged: boolean;
-  /** 組む月（「基本情報が変わった」を押したときに「担当を組む」で開く月。YYYY-MM） */
-  planYm: string;
-  /** 切っていない機能の URL か（切った機能へ向かう種類は出さない。PRD D213） */
-  isOn: (href: string) => boolean;
-};
-
 /** 帯の中身：種類ごとの件数・合計・文・押したときの移る先 */
 export type AttentionBand = {
   counts: Record<BandKind, number>;
-  /** 1行の文（0件の種類は書かない。例「担当なし 2件・休みの人 1件・未確定 12日」。入だけの標準・組み直しは件数なしの言葉） */
+  /** 1行の文（0件の種類は書かない。例「担当なし 2件・休みの人 1件・未確定 12日」） */
   text: string;
   /**
    * 押したときの移る先：BAND_KINDS の順で最初に当たる種類。訪問の種類なら、間に合わない・重なり・休みの人の訪問があればそのうち、無ければ担当なしの訪問のうち、
    * いちばん早い日の、開始（earliest）がいちばん早い訪問（今日以降。PRD D403）。
-   * 未確定は、1日だけならその日の日の予定、2日以上なら最初の日の月の右の欄（`do=unconfirmed`。PRD D143 の動き）。
-   * 組み直しは担当を組む（組む月）、標準が無いは組み方の標準
+   * 未確定は、1日だけならその日の日の予定、2日以上なら最初の日の月の右の欄（`do=unconfirmed`。PRD D143 の動き）
    */
   go: BandGo;
   /** 帯の訪問の並び（間に合わない・重なり・休みの人 → 担当なし、それぞれ日付 → 開始。順番に見に行く bandStep が使う） */
@@ -79,7 +64,7 @@ export type BandVisit = { date: string; visitId: string; start: number; attend: 
 
 /**
  * 要対応の帯：今日以降の日（日付の順）の、担当なし・間に合わない・重なり・休みの人の訪問の件数と、エキスパート機能が入なら 未確定の日数
- * （訪問があって伝えていない・未連絡の変更のある日。lib/month の monthProgress の unconfirmed と同じ数え方）・基本情報が変わったか・標準が無いか。
+ * （訪問があって伝えていない・未連絡の変更のある日。lib/month の monthProgress の unconfirmed と同じ数え方）・条件に合わない・拘束超。
  * 1件も無ければ null（帯を出さない）。1つの訪問は1つの種類に数える（担当なし → 休みの人 → 間に合わない → 重なり の順で先に当たったもの）。
  * 最初の訪問は、間に合わない・重なり・休みの人を先に（無ければ担当なし）、日付 → 開始時刻（startOf＝その訪問の最早開始の分。無ければ最後）の順でいちばん早いもの（同じなら訪問の検査の並び）
  */
@@ -87,7 +72,7 @@ export function attentionBand(
   statuses: readonly DayStatus[],
   today: string,
   startOf: (visitId: string) => number | null = () => null,
-  expert?: ExpertBandInput,
+  expert = false,
 ): AttentionBand | null {
   const counts: Record<BandKind, number> = {
     unassigned: 0,
@@ -96,8 +81,6 @@ export function attentionBand(
     off: 0,
     notAllowed: 0,
     overSpan: 0,
-    noStandard: 0,
-    rebuild: 0,
     unconfirmed: 0,
   };
   // 帯の訪問：間に合わない・重なり・休みの人（人の目が要る）と担当なしを分けて集め、あとで並べる（PRD D403）
@@ -130,10 +113,6 @@ export function attentionBand(
   }
   counts.unconfirmed = unconfirmed.length;
   counts.overSpan = overSpan.length;
-  if (expert) {
-    counts.noStandard = !expert.hasStandard && expert.isOn('/standard') ? 1 : 0;
-    counts.rebuild = expert.hasStandard && expert.basisChanged && expert.isOn('/arrange') ? 1 : 0;
-  }
   const present = BAND_KINDS.filter((k) => counts[k.kind] > 0);
   if (present.length === 0) return null;
   // 並べ替えは安定（同じ日・同じ開始なら検査の並びのまま）
@@ -146,14 +125,12 @@ export function attentionBand(
     off: visitGo,
     notAllowed: firstNa,
     overSpan: overSpan[0] === undefined ? null : { to: '/plan', date: overSpan[0] },
-    noStandard: { to: '/standard' },
-    rebuild: { to: `/arrange?ym=${expert?.planYm ?? ''}` },
     unconfirmed: unconfirmedGo(unconfirmed),
   };
   // 訪問の種類は、間に合わない・重なり・休みの人の最初の1件（日付の順）、無ければ担当なしの最初の1件へ。種類の順で最初に当たったものの先
   const target = goOf[present[0]!.kind];
   if (!target) return null;
-  const text = present.map((k) => (k.unit ? `${k.label} ${counts[k.kind]}${k.unit}` : k.label)).join('・');
+  const text = present.map((k) => `${k.label} ${counts[k.kind]}${k.unit}`).join('・');
   const { to, date, visitId } = target;
   return { counts, text, go: { to, date, visitId }, visits };
 }

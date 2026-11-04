@@ -5,6 +5,8 @@ import { HARDABLE, type ItemKind, type Rule, type RuleType } from '../contracts/
 /** 画面の共通の表示（呼び方は org.terms から引く。「お客様」「シッター」を直書きしない） */
 
 export const WEEKDAY_LABELS = ['日', '月', '火', '水', '木', '金', '土'] as const;
+/** 曜日の並び（月曜はじまり。表の列・曜日の選択） */
+export const WEEKDAY_ORDER = [1, 2, 3, 4, 5, 6, 0] as const;
 export const TRAVEL_MODE_LABELS: Record<TravelMode, string> = {
   DRIVE: '車',
   BICYCLE: '自転車',

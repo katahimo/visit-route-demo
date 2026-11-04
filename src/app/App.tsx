@@ -28,7 +28,6 @@ import SettingsPage from '../pages/SettingsPage';
 import StaffPage from '../pages/StaffPage';
 import StaffPersonPage from '../pages/StaffPersonPage';
 import StaffViewPage from '../pages/StaffViewPage';
-import StandardPage from '../pages/StandardPage';
 import StartGuidePage from '../pages/StartGuidePage';
 import TypesPage from '../pages/TypesPage';
 import WeekPage from '../pages/WeekPage';
@@ -107,7 +106,6 @@ export default function App() {
                 {/* 担当を組む（AI で範囲の担当を組む・提案を比べる。ADR-0063） */}
                 <Route path="/arrange" element={<ArrangePage />} />
                 <Route path="/compare" element={<ComparePage />} />
-                <Route path="/standard" element={<StandardPage />} />
                 <Route path="/rules" element={<RulesPage />} />
                 <Route path="/items" element={<ItemsPage />} />
                 <Route path="/types" element={<TypesPage />} />

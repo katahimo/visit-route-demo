@@ -147,14 +147,13 @@ describe('機能の表（ADR-0028 の機能の一覧）', () => {
 });
 
 describe('エキスパート機能（ADR-0072）', () => {
-  it('切ると 案を比べる・条件の重み・組み方の標準・特性の項目の URL へ移れない（担当を組むは土台のまま）', () => {
+  it('切ると 案を比べる・条件の重み・特性の項目の URL へ移れない（担当を組むは土台のまま）', () => {
     const off: Features = { expert: false };
-    for (const h of ['/standard', '/compare?date=2026-10-12', '/rules#presets', '/items'])
+    for (const h of ['/compare?date=2026-10-12', '/rules#presets', '/items'])
       expect(isHrefOn(off, h)).toBe(false);
     expect(isHrefOn(off, '/arrange?ym=2026-10')).toBe(true);
     expect(isOn({ expert: false, compare: true, rules: true }, 'compare')).toBe(false);
     expect(isOn({ expert: false, rules: true }, 'rules')).toBe(false);
-    expect(isHrefOn({}, '/standard')).toBe(true);
   });
   it('ひな形：すべてだけ入。基本・労務・月次は切（matchTemplate も見分ける）', () => {
     expect(isOn(applyTemplate('all'), 'expert')).toBe(true);
@@ -363,17 +362,17 @@ describe('menuSections（ひな形ごとの項目。PRD D213・D275）', () => {
     // 空き状況を切れば出さない（PRD D213）
     expect(labels({ expert: false, vacancy: false })).toEqual(['予定', '利用者さん', 'スタッフ', '設定']);
   });
-  it('「組む」の子は機能の入り切りで変わらない項目だけ（基本情報・組み方の標準・担当を組む）。欠勤・空き状況を切っても子は同じ', () => {
+  it('「組む」の子は 条件の重み・担当を組む。欠勤・空き状況を切っても子は同じ', () => {
     const kids = (f: Features) =>
       menuSections(terms, TODAY, f)
         .flatMap((g) => g.items)
         .find((i) => i.key === 'arrange')
         ?.children?.map((i) => i.key);
-    expect(kids({})).toEqual(['arrange:basics', 'arrange:standard', 'arrange:assign']);
-    expect(kids({ sudden: false, vacancy: false })).toEqual(['arrange:basics', 'arrange:standard', 'arrange:assign']);
+    expect(kids({})).toEqual(['arrange:rules', 'arrange:assign']);
+    expect(kids({ sudden: false, vacancy: false })).toEqual(['arrange:rules', 'arrange:assign']);
   });
   it('基本は5項目（エキスパート機能が切）。画面の一覧は勤務の見込み・条件の重み・特性の項目が無い（案を比べるはいつも無い）', () => {
-    // 基本はエキスパート機能が切：メニューは5つ・ホームは無い。組み方の標準は出ず、担当を組むだけ残る（パレットの空き状況は予定のグループ）
+    // 基本はエキスパート機能が切：メニューは5つ・ホームは無い。担当を組むは予定のグループ（パレットの空き状況も予定のグループ）
     expect(labels(applyTemplate('basic'))).toEqual(['予定', '空き状況', '利用者さん', 'スタッフ', '設定']);
     expect(screens(applyTemplate('basic'))).toEqual([
       '月の予定',
@@ -448,14 +447,11 @@ describe('表の整合（メニュー・パレット・要対応の帯・ツア�
   it('パレットの操作', () => {
     for (const a of paletteActions(TODAY)) expect(belongs(a.to), a.to).toBe(true);
   });
-  it('要対応の帯の移る先（訪問・未確定・組み直し・標準が無い）', () => {
+  it('要対応の帯の移る先（訪問・未確定）', () => {
     const visit = st(TODAY, { issues: new Map([['v1', [{ kind: 'unassigned' as const, label: '担当なし' }]]]) });
-    const open = { hasStandard: true, basisChanged: true, planYm: '2026-10', isOn: () => true };
     const gos = [
-      attentionBand([visit], TODAY, undefined, open)?.go,
-      attentionBand([st(TODAY, { state: 'none' }), st('2026-10-22', { state: 'none' })], TODAY, undefined, open)?.go,
-      attentionBand([], TODAY, undefined, open)?.go,
-      attentionBand([], TODAY, undefined, { ...open, hasStandard: false })?.go,
+      attentionBand([visit], TODAY, undefined, true)?.go,
+      attentionBand([st(TODAY, { state: 'none' }), st('2026-10-22', { state: 'none' })], TODAY, undefined, true)?.go,
     ];
     expect(gos.every((g) => g !== undefined)).toBe(true);
     for (const g of gos) expect(belongs(g!.to), g!.to).toBe(true);

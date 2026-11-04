@@ -169,12 +169,11 @@ export function otherOrgOf(
 }
 
 /**
- * 読み込んだデータから、いまの事業所の運用の記録（伝えた内容・振り直し・組み方の標準の記録）を外す。
+ * 読み込んだデータから、いまの事業所の運用の記録（伝えた内容・振り直し）を外す。
  * Excel にはこれらのシートが無く、読み込みは今のものを残すため、別の事業所のブックではここで消す
  */
 export function withoutOrgState(d: DemoData): DemoData {
-  const { standard: _standard, ...rest } = d;
-  return { ...rest, snapshots: {}, reassigns: {} };
+  return { ...d, snapshots: {}, reassigns: {} };
 }
 
 /** Excel の全体のブックで置き換える確認の本文（PRD D227。ADR-0006） */

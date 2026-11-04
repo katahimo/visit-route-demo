@@ -1,0 +1,121 @@
+/* 予定と相性の表（#/basics。ADR-0067・ADR-0099） */
+.basics-grid-scroll {
+  /* 中の sr-only（position: absolute）を巻く箱の中に収める */
+  position: relative;
+  overflow-x: auto;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+.basics-grid {
+  border-collapse: collapse;
+  min-width: 100%;
+  font-size: 0.9rem;
+}
+.basics-grid th,
+.basics-grid td {
+  border: 1px solid var(--line);
+  padding: 4px 6px;
+  vertical-align: top;
+  text-align: left;
+}
+.basics-grid thead th {
+  background: var(--soft);
+  white-space: nowrap;
+  text-align: center;
+}
+.basics-grid tbody th {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--card);
+  min-width: 9em;
+  max-width: 14em;
+  font-weight: normal;
+}
+.basics-row-name {
+  display: block;
+  font-weight: 600;
+}
+.basics-row-when {
+  display: block;
+  color: var(--sub);
+  font-size: 0.8rem;
+}
+.basics-grid td {
+  min-width: 6.5em;
+}
+.basics-cell-none {
+  color: var(--sub);
+  text-align: center;
+  background: var(--soft);
+}
+
+/* マスを直す小さな欄（直す行のすぐ下の行） */
+.basics-edit-row > td {
+  background: var(--soft);
+}
+.basics-editor {
+  position: sticky;
+  left: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 12px;
+  max-width: min(100%, calc(100vw - 64px));
+}
+.basics-editor-title {
+  flex-basis: 100%;
+  margin: 0;
+  font-weight: 600;
+}
+.basics-editor .sub,
+.basics-editor .error {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+/* 基本情報・予定と相性の表（ADR-0067）。表の形は標準の表と同じ */
+.basics-cell > span,
+.basics-cell > .basics-time {
+  display: block;
+}
+.basics-time {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  min-height: 24px;
+  text-align: left;
+}
+.basics-cell > .basics-staff {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.basics-grid td.is-issue {
+  box-shadow: inset 3px 0 0 var(--warn-line);
+}
+.basics-issue {
+  font-size: 0.8rem;
+}
+.basics-compat {
+  display: inline-block;
+  min-width: 1.4em;
+  padding: 0 4px;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 0.8rem;
+}
+.basics-compat-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.basics-compat-list li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
