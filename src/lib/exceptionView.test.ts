@@ -147,7 +147,7 @@ describe('arrangeWords（担当を組むの画面の言葉。ADR-0074 段1）', 
   it('入は今のまま（提案・反映・ピン）', () => {
     const w = arrangeWords(false);
     expect(w.lead).toContain('提案を見て反映します');
-    expect(w.note('組み方の標準の担当')).toContain('ピンの訪問（手で替えた訪問・組み方の標準の担当）');
+    expect(w.note('繰り返しのいつもの担当')).toContain('ピンの訪問（手で替えた訪問・繰り返しのいつもの担当）');
     expect(w.note('x')).toContain('「反映する」');
   });
 });

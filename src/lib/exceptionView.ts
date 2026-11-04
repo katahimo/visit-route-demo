@@ -182,7 +182,7 @@ export function proposalWords(only: boolean): ProposalWords {
 export type ArrangeWords = {
   /** 見出しの下の1行 */
   lead: string;
-  /** 「AI で組む」の下の注記。pinned は手で替えた訪問などの言い方（入はピンの訪問・標準の担当、切は手で替えた訪問・繰り返しの担当） */
+  /** 「AI で組む」の下の注記。pinned は手で替えた訪問などの言い方（入切とも繰り返しのいつもの担当） */
   note: (pinned: string) => string;
 };
 

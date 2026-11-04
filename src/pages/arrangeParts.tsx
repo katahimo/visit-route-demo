@@ -168,8 +168,10 @@ function ArrangeProgress({ run }: { run: BatchRun }) {
 /** 「AI で組む」の区画の入力 */
 export type ArrangeRunProps = {
   headingId: string;
-  /** エキスパート機能が入（考え方を替える条件の重みの案内を出す。ADR-0100） */
+  /** エキスパート機能が入（注記の言い方） */
   expert: boolean;
+  /** 条件の重みの画面を開ける（考え方を替える案内のリンクを出す。ADR-0100） */
+  rulesOn: boolean;
   mode: BatchMode;
   careDays: number;
   allDays: number;
@@ -199,7 +201,7 @@ export function ArrangeRunSection({ view, actions }: { view: ArrangeRunProps; ac
       <ArrangeModeFields mode={mode} careDays={view.careDays} allDays={view.allDays} onMode={actions.onMode} />
       <p data-testid="arrange-basis">
         考え方：<strong>{view.basisName}</strong>
-        {view.expert && (
+        {view.rulesOn && (
           <span className="sub">
             （替えるのは<Link to="/rules">条件の重み</Link>）
           </span>

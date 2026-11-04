@@ -32,6 +32,7 @@ export default function ArrangePage() {
   const [params, setParams] = useSearchParams();
   const compareOn = useFeature('compare');
   const expert = useFeature('expert');
+  const rulesOn = useFeature('rules');
   const ids = useId();
   const today = jstDate(Date.now());
   const { scope, ym, at } = scopeOf(params, today);
@@ -99,6 +100,7 @@ export default function ArrangePage() {
         view={{
           headingId: `${ids}-run`,
           expert,
+          rulesOn,
           mode,
           careDays: careTargets.length,
           allDays: allTargets.length,

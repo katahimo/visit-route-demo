@@ -11,7 +11,7 @@ import './batchBand.css';
 /**
  * 担当を組む計算（lib/monthBatch。ADR-0042）に store の data と update をつなぎ、終わったら知らせる（PRD D256・D257）。
  * App の直下に1つ。外れる（ページを閉じる）と作っている計算を捨てる。データを丸ごと差し替えたら（読み込み・初期状態に戻す・
- * 直前の状態に戻す・別のタブの変更）作っている計算と組み方の標準の案・下書きを捨てる（古いデータから作った結果を新しいデータに書かない）
+ * 直前の状態に戻す・別のタブの変更）作っている計算を捨てる（古いデータから作った結果を新しいデータに書かない）
  */
 export function MonthBatchHost(): ReactNode {
   const { data, update, replacedCount } = useDemoData();
