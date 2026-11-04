@@ -378,7 +378,7 @@ async function checkTemplate(page, t) {
 }
 
 // ---- ひな形の5通り ----
-async function templates(page, dlg, ctx) {
+async function templates(page, dlg) {
   // すべて入から始める（スイッチの確かめで {vacancy: true} などが残っていても すべて と同じ）
   await open(page, '/settings', '[data-testid="feature-templates"]');
   const before = await storedFeatures(page);
@@ -405,12 +405,17 @@ async function templates(page, dlg, ctx) {
   check(same(await storedFeatures(page), asFeatures(TEMPLATE_ON.basic)), '基本：全22の ID を明示して書く');
   await checkTemplate(page, 'basic');
   await page.screenshot({ path: path.join(OUT_DIR, 'settings-basic.png'), fullPage: true });
+}
 
-  // 労務・契約管理（別のタブで localStorage を書き換える）
+// ひな形の段は、ひな形ごとに分ける（1つの段に入れると遅い CI で段の上限を超える）。前の段のひな形のまま続ける
+/** 労務・契約管理（別のタブで localStorage を書き換える） */
+async function templatesLabor(page, _dlg, ctx) {
   await writeFeaturesInOtherTab(ctx, asFeatures(TEMPLATE_ON.laborContract));
   await checkTemplate(page, 'laborContract');
+}
 
-  // 月次予定・現場共有（管理者設定で適用する。確認に入る機能・切れる機能）
+/** 月次予定・現場共有（管理者設定で適用する。確認に入る機能・切れる機能） */
+async function templatesMonthly(page, dlg) {
   const msg = await applyTemplate(page, dlg, 'monthlyField');
   check(
     msg[0]?.includes('入る機能：') &&
@@ -421,8 +426,10 @@ async function templates(page, dlg, ctx) {
     msg,
   );
   await checkTemplate(page, 'monthlyField');
+}
 
-  // すべて
+/** すべて */
+async function templatesAll(page, dlg) {
   await applyTemplate(page, dlg, 'all');
   await checkTemplate(page, 'all');
 }
@@ -704,6 +711,9 @@ const steps = sharedPage({
     ['all-on', allOn],
     ['switches', switches],
     ['templates', templates],
+    ['templates-labor', templatesLabor],
+    ['templates-monthly', templatesMonthly],
+    ['templates-all', templatesAll],
     ['mobile', mobile],
     ['path-variants', pathVariants],
     ['dead-ends', deadEnds],
