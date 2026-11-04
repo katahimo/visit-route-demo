@@ -36,20 +36,24 @@ export function RosterButton({ open, onToggle, controls }: { open: boolean; onTo
  * 名簿の欄。id は見出しのボタンの aria-controls が指す。閉じても消さずに隠す（読み込みの途中で閉じても、
  * 入ったかの見届け（トースト・控えを戻す）が続くように）。
  * onPlace を渡すと、読み込みの確認に「読み込んだあと、住所から地図の位置を探します」の1文を足し、名簿が入ったと
- * 見届けたら呼ぶ（位置の無い人を自動でまとめて置き始める。PRD D427。ADR-0094）。郵便番号・住所の検索が切なら渡さない
+ * 見届けたら呼ぶ（位置の無い人を自動でまとめて置き始める。PRD D427。ADR-0094）。郵便番号・住所の検索が切なら渡さない。
+ * inline（登録の案内の①②。PRD D381）：開け閉めせずいつも出し、見出し・「閉じる」・カードの枠を出さない（画面の見出しが同じことを言う）
  */
 export function RosterCard({
   kind,
   id,
-  open,
+  open = false,
   onClose,
   onPlace,
+  inline = false,
 }: {
   kind: RosterKind;
   id: string;
-  open: boolean;
-  onClose: () => void;
+  /** inline のときは要らない */
+  open?: boolean;
+  onClose?: () => void;
   onPlace?: () => void;
+  inline?: boolean;
 }) {
   const roster = useRosterCard(kind, onPlace);
   const titleId = useId();
@@ -57,29 +61,32 @@ export function RosterCard({
   return (
     <section
       id={id}
-      className="card stack roster-card"
-      aria-labelledby={titleId}
-      hidden={!open}
+      className={inline ? 'stack roster-card' : 'card stack roster-card'}
+      aria-labelledby={inline ? undefined : titleId}
+      aria-label={inline ? `${term}の名簿（Excel・CSV）` : undefined}
+      hidden={!inline && !open}
       data-testid="roster-card"
     >
-      <SectionTitle
-        icon={FileSpreadsheet}
-        aside={
-          <button
-            type="button"
-            className="btn btn-small"
-            onClick={onClose}
-            aria-label="名簿の欄を閉じる"
-            data-testid="roster-close"
-          >
-            <WithIcon icon={X} size={14}>
-              閉じる
-            </WithIcon>
-          </button>
-        }
-      >
-        <span id={titleId}>{term}の名簿（Excel・CSV）</span>
-      </SectionTitle>
+      {!inline && (
+        <SectionTitle
+          icon={FileSpreadsheet}
+          aside={
+            <button
+              type="button"
+              className="btn btn-small"
+              onClick={onClose}
+              aria-label="名簿の欄を閉じる"
+              data-testid="roster-close"
+            >
+              <WithIcon icon={X} size={14}>
+                閉じる
+              </WithIcon>
+            </button>
+          }
+        >
+          <span id={titleId}>{term}の名簿（Excel・CSV）</span>
+        </SectionTitle>
+      )}
       <Hint ariaLabel="名簿の説明">
         {roster.empty
           ? 'テンプレートをダウンロードし、1行に1人ずつ書き足して保存し、そのファイルを読み込みます。'

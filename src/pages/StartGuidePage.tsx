@@ -1,5 +1,5 @@
-import { ListChecks, Sheet, Undo2 } from 'lucide-react';
-import { useId, useState } from 'react';
+import { ListChecks, Undo2 } from 'lucide-react';
+import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { RoadTravelChoice } from '../components/RoadTravelChoice';
 import { RosterCard } from '../components/RosterCard';
@@ -29,7 +29,7 @@ import './settings.css';
 
 /**
  * 登録の案内（`#/start`。PRD D381。ADR-0073）：自分のデータで始めたあと、1画面1項目の3段で案内する。
- * 上に「1/3」。①〈利用者さん〉②〈スタッフ〉は「CSV・Excel を読み込む」（名簿の欄＝今の名簿の読み込み）と「1人ずつ入れる」（今の追加の画面）、
+ * 上に「1/3」。①〈利用者さん〉②〈スタッフ〉は名簿の欄（今の名簿の読み込み。開け閉めせず、テンプレートとファイルを選ぶをそのまま出す）、
  * ③は予約の CSV の読み込み（データの画面の予約の CSV の欄と同じ）と予定の画面へ。主ボタンは各段で1つ（①②は「次へ」、③は「予定の画面へ」）。
  * 段は URL の `?step=`。名簿・予約の CSV を①→②→③の順に読み込めば、事業所の CSV でデモを始められる（ADR-0092）。
  * ①②で名簿が入ったら、郵便番号・住所の検索が入なら位置の無い人を自動でまとめて地図に置き始める（PRD D427。ADR-0094）。
@@ -108,7 +108,7 @@ export default function StartGuidePage() {
   );
 }
 
-/** ①②の本体：読み込む・1人ずつ入れる（どちらも今ある画面へつなぐ）。入れた人数を添える。下にまとめて置く欄 */
+/** ①②の本体：名簿の欄をそのまま出す（読み込むしかないので開け閉めしない）。入れた人数を添える。下にまとめて置く欄 */
 function RosterStep({
   step,
   run,
@@ -118,10 +118,8 @@ function RosterStep({
   run: PlaceAllRun;
   registered: number;
 }) {
-  const [open, setOpen] = useState(false);
-  const rosterId = useId();
   const geocodeOn = useFeature('geocode');
-  const autoPlace = useRosterAutoPlace({ run, geocodeOn, onStart: () => setOpen(false) });
+  const autoPlace = useRosterAutoPlace({ run, geocodeOn });
   const navigate = useNavigate();
   // 人の画面に戻り先（この段）を付ける。案内はメニューに無いので、付けないと案内へ戻れない
   const openPlace = (id: string) =>
@@ -135,28 +133,9 @@ function RosterStep({
     );
   return (
     <>
-      <p>{step.term}の名簿の CSV・Excel を読み込みます。</p>
       <p className="sub">{START_GUIDE_ROSTER_FORMS}</p>
-      <div className="row" style={{ flexWrap: 'wrap' }}>
-        <button
-          type="button"
-          className="btn"
-          aria-expanded={open}
-          aria-controls={rosterId}
-          onClick={() => setOpen((o) => !o)}
-          data-testid="start-guide-import"
-        >
-          <WithIcon icon={Sheet}>CSV・Excel を読み込む</WithIcon>
-        </button>
-      </div>
       {/* 名簿の欄（ADR-0068）をそのまま使う。Excel の入出力の入り切りにかかわらず、ここでは読み込める */}
-      <RosterCard
-        kind={step.person}
-        id={rosterId}
-        open={open}
-        onClose={() => setOpen(false)}
-        onPlace={autoPlace.onPlace}
-      />
+      <RosterCard kind={step.person} id={`start-guide-roster-${step.person}`} onPlace={autoPlace.onPlace} inline />
       <p className="sub" data-testid="start-guide-registered">
         いま登録されているのは {registered}人です
       </p>

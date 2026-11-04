@@ -39,7 +39,7 @@ describe('名簿のブックの書き方・記入例', () => {
       const name = personSheetNames(d.org.terms)[kind];
       const guide = sheet(wb, '書き方');
       expect(text(guide.getCell(1, 1).value)).toBe(`『${name}』のシートに1行に1人ずつ書きます。`);
-      expect(text(guide.getCell(2, 1).value)).toContain('［CSV・Excel を読み込む］');
+      expect(text(guide.getCell(2, 1).value)).toContain('［ファイルを選ぶ］');
       expect(text(guide.getCell(4, 1).value)).toContain('読み込みません');
       const headerRow = [1, 2, 3, 4].map((c) => text(guide.getCell(6, c).value));
       expect(headerRow).toEqual(['列の名前', '何を書くか', '例', '空のとき']);

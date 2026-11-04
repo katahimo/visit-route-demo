@@ -3,7 +3,7 @@
 // 読み直してもまた2問・Tab は選んだ方だけ・矢印で選び直す）・デモ×定期（今の初期データ・利用者さん／スタッフ・「基本」・最初は月。
 // 作った直後に今日〜翌月末の要対応（担当なし・間に合わない・重なり・休みの人）を1回自動で組み、知らせ「N件の担当を組みました」と［元に戻す］。組む印（sessionStorage）は読み直しをまたいで起動で読む。PRD D409）・
 // デモ×単発（架空の単発の予約が今日から2週間分・お客様／シッター・「単発のみ」・最初は週）・
-// 自分のデータ（空のデータ＋3段の登録の案内：上に「1/3」・①②は「CSV・Excel を読み込む」（名簿の欄）・下の段に「始め方を選び直す」・③は予定へ・
+// 自分のデータ（空のデータ＋3段の登録の案内：上に「1/3」・①②は名簿の欄をはじめから出す・下の段に「始め方を選び直す」・③は予定へ・
 // 空のデータで月・週・日・一覧・設定などが壊れない。組まない）・印「all」（scripts/lib/startFeatures.cjs）があれば2問を出さず今の初期データ＋すべて入（組まない）・
 // データの画面の「始め方を選び直す」（確認の文は元に戻す Ctrl+Z の対象外・先に書き出す案内 → 2問へ戻る → 答えでデータを作り直す・控えが残る）、
 // 更新の知らせ（見た更新の印が古いと「デモを更新しました」・問1の上に「今のデータを使い続ける」を選んでおく・開くとデータはそのまま・デモを選ぶと作り直し控えが残る）、
@@ -364,13 +364,20 @@ async function firstRunOwn(b) {
     },
   );
   check((await page.getByTestId('start-guide').locator('.btn-primary').count()) === 1, '案内：主ボタンは1つ');
-  // ① 読み込む → 名簿の欄が開く
-  check(!(await page.getByTestId('roster-card').isVisible()), '案内①：はじめは名簿の欄を閉じている');
-  await page.getByTestId('start-guide-import').click();
-  await page.getByTestId('roster-card').waitFor({ state: 'visible' });
+  // ① 名簿の欄を開け閉めせずに出す（テンプレートとファイルを選ぶ。見出し・閉じるは出さない）
+  const roster = page.getByTestId('roster-card');
   check(
-    (await page.getByTestId('roster-card').innerText()).includes('利用者さんの名簿'),
-    '案内①：「CSV・Excel を読み込む」で利用者さんの名簿の読み込み（今の名簿の欄）が開く',
+    (await roster.isVisible()) && (await roster.innerText()).includes('利用者さんの名簿'),
+    '案内①：利用者さんの名簿の欄をはじめから出す',
+  );
+  check(
+    (await page.getByTestId('start-guide-import').count()) === 0 &&
+      (await page.getByTestId('roster-close').count()) === 0,
+    '案内①：「CSV・Excel を読み込む」「閉じる」は無い',
+  );
+  check(
+    (await page.getByTestId('roster-export-xlsx').isVisible()) && (await page.getByTestId('roster-file').count()) > 0,
+    '案内①：テンプレートとファイルを選ぶがそのまま見える',
   );
   await page.screenshot({ path: path.join(OUT_DIR, 'start-guide-1.png') });
   check(
@@ -386,10 +393,9 @@ async function firstRunOwn(b) {
     (await count()).trim() === '2/3' && (await title()).includes('② スタッフの名簿を読み込む'),
     '案内 2/3：② スタッフ',
   );
-  await page.getByTestId('start-guide-import').click();
   check(
     (await page.getByTestId('roster-card').innerText()).includes('スタッフの名簿'),
-    '案内②：「CSV・Excel を読み込む」でスタッフの名簿の欄が開く',
+    '案内②：スタッフの名簿の欄をはじめから出す',
   );
   // ③ 予定
   await page.getByTestId('start-guide-next').click();

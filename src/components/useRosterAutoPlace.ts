@@ -5,14 +5,14 @@ import { useRef } from 'react';
 import type { PlaceAllRun } from './usePlaceAllRun';
 
 /**
- * geocodeOn は郵便番号・住所の検索（ADR-0028 の geocode）が入か。onStart は始める前にすること（名簿の欄を閉じる）。
+ * geocodeOn は郵便番号・住所の検索（ADR-0028 の geocode）が入か。onStart は始める前にすること（名簿の欄を閉じる。欄を開け閉めしない登録の案内は渡さない）。
  * onPlace は名簿の欄（RosterCard）に渡す。切なら undefined（確認に1文を足さず、読み込んでも送らない）
  */
-export function useRosterAutoPlace(x: { run: PlaceAllRun; geocodeOn: boolean; onStart: () => void }) {
+export function useRosterAutoPlace(x: { run: PlaceAllRun; geocodeOn: boolean; onStart?: () => void }) {
   const { run, geocodeOn, onStart } = x;
   const panelRef = useRef<HTMLDivElement>(null);
   const start = () => {
-    onStart();
+    onStart?.();
     void run.run();
     requestAnimationFrame(() => {
       panelRef.current?.focus({ preventScroll: true });
