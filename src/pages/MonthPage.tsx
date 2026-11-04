@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useDayModel } from '../components/useDayModel';
-import { attentionTarget } from '../lib/links';
+import { monthLabel } from '../lib/dateText';
 import { monthFeatures, monthPrintHref } from '../lib/monthView';
 import {
   legendBarOf,
@@ -11,6 +11,7 @@ import {
   MonthSheet,
   MonthTopBars,
 } from './monthSections';
+import { useArrangeStart } from './useArrangeStart';
 import { useMonthAside } from './useMonthAside';
 import { useMonthBatch } from './useMonthBatch';
 import { useMonthDayList } from './useMonthDayList';
@@ -52,6 +53,16 @@ export default function MonthPage() {
   const fs = useMonthFocus(data, nav.params, nav.patchParams, panels.keepPickers);
   const { focus } = fs;
   const month = useMonthDays(data, compileInput, ym, today);
+  /** 帯の「担当を AI で組む」（expert 切。担当なしの訪問がある日を、担当を組むの画面と同じ手順で組む） */
+  const arrange = useArrangeStart({
+    scope: 'month',
+    ym,
+    at: date,
+    today,
+    rangeLabel: monthLabel(ym),
+    mode: 'care',
+    targets: month.band.emptyDays,
+  });
   const fd = useMonthFocusDays({ data, compileInput, month, focus, loadType, ym, today });
   const off = useMonthOff({
     dataRef,
@@ -72,8 +83,7 @@ export default function MonthPage() {
     showAll: fs.showAll,
     problemOf: (d) => month.perDay.get(d)?.problem,
     bulk: month.bulk,
-    firstAttention: month.attention[0] ? attentionTarget(month.attention[0], data.org.features) : null,
-    openTarget: nav.openTarget,
+    arrange: () => void arrange.start(),
   });
   const list = useMonthDayList({
     data,
@@ -114,12 +124,13 @@ export default function MonthPage() {
 
   return (
     <div className="stack">
-      <MonthTopBars nav={nav} absence={on.sudden ? { date } : null} moreItems={more.items} staffTerm={terms.staff} />
+      <MonthTopBars nav={nav} absence={on.sudden ? { date } : null} moreItems={more.items} />
 
       <MonthDetails
         ym={ym}
         band={month.band}
         onBandOp={aside.onBandOp}
+        arranging={batch.running}
         summary={month.summary}
         legendBar={legendBarOf(focus.kind)}
       />

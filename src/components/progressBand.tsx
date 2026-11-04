@@ -2,7 +2,7 @@
 // 見ている月の今日以降について「訪問・担当が全部入った日・確定した日・要対応」と次の一手のボタンを1つ。
 // 数え方は月の画面の「今月の準備」と同じ（lib/useDayStatuses と lib/month の monthProgress・attentionList）。データは書き換えない
 import { Check, CircleAlert, Lock, type LucideIcon, Repeat, Sparkles } from 'lucide-react';
-import { type MouseEvent, memo, useEffect, useRef, useState } from 'react';
+import { type MouseEvent, memo, type ReactNode, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { monthLabel } from '../lib/dateText';
 import { type PrepPart, prepParts } from '../lib/glance';
@@ -18,6 +18,8 @@ export type BandModel = {
   progress: MonthProgress;
   /** 担当なしの訪問がある日の数（担当を AI で組む日） */
   emptyTargets: number;
+  /** 担当なしの訪問がある日（担当を AI で組む日。expert 切はこの日をその場で組む） */
+  emptyDays: readonly string[];
   /** 要対応のうち手当てが要る件数 */
   urgent: number;
 };
@@ -45,20 +47,26 @@ const PART_LABEL_SETTLED: Record<PrepPart['kind'], string> = {
 
 /**
  * 進み具合の帯（見た目だけ）。数字とボタンは月の画面の欄（`?do=`）か担当を組むの画面（`#/arrange?ym=`）へのリンク。onOp を渡すと移らずにそれを呼ぶ（月の画面）。
+ * expert 切は担当を組むの画面へ移らない：訪問・担当の数字は文だけにし、「担当を AI で組む」はボタンで onOp('batch')（その場で組む）。
  * model が null の間（数えている間）は同じ高さで「数えています」
  */
 export const ProgressBand = memo(function ProgressBand({
   ym,
   model,
   onOp,
+  arranging = false,
 }: {
   ym: string;
   model: BandModel | null;
   onOp?: (op: BandOp) => void;
+  /** 担当を AI で組んでいる間（expert 切の「担当を AI で組む」を押せなくする） */
+  arranging?: boolean;
 }) {
   const month = monthLabel(ym);
   /** 確定（伝えた）の段階を出すか（expert 入。切なら「確定」の数・次の一手の「確定していない日」を出さない。ADR-0073） */
   const confirmStep = useConfirmStep();
+  /** 担当を AI で組むをその場で行う（expert 切。担当を組むの画面へ移らない） */
+  const direct = !confirmStep && onOp !== undefined;
   const click = (op: BandOp) => (e: MouseEvent) => {
     // Ctrl・⌘・Shift・Alt・中ボタンのクリックはブラウザに任せる（新しいタブ・窓で月の画面を開く）
     if (!onOp || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
@@ -100,35 +108,36 @@ export const ProgressBand = memo(function ProgressBand({
       </span>
       <ul className="pb-items">
         <li className="pb-visits">
-          <Link
-            to={bandHref(ym, 'batch')}
+          <BatchItem
+            ym={ym}
+            direct={direct}
             onClick={click('batch')}
             className={`pb-item${visitsDone ? ' is-done' : ''}`}
-            title={`今日以降の訪問 ${p.visits}件。押すと「担当を組む」の画面を開きます`}
-            aria-label={`訪問 ${visitsText(p.visits)}${done(visitsDone)}。担当を組むの画面を開く`}
-            data-testid="band-visits"
+            title={`今日以降の訪問 ${p.visits}件`}
+            label={`訪問 ${visitsText(p.visits)}${done(visitsDone)}`}
+            testId="band-visits"
           >
             {visitsDone && <DoneMark />}
             訪問 <strong>{visitsText(p.visits)}</strong>
-          </Link>
+          </BatchItem>
         </li>
         <li>
-          <Link
-            to={bandHref(ym, 'batch')}
+          <BatchItem
+            ym={ym}
+            direct={direct}
             onClick={click('batch')}
             className={`pb-item${planDone ? ' is-done' : ''}`}
-            title={`担当が全部入った日（要対応の無い日） ${p.planned}/${p.days}日（訪問のある日のうち）。押すと「担当を組む」の画面を開きます`}
-            data-testid="band-plans"
-            data-planned={p.planned}
-            data-days={p.days}
-            aria-label={`担当が全部入った日 ${p.planned}/${p.days}日${done(planDone)}。担当を組むの画面を開く`}
+            title={`担当が全部入った日（要対応の無い日） ${p.planned}/${p.days}日（訪問のある日のうち）`}
+            label={`担当が全部入った日 ${p.planned}/${p.days}日${done(planDone)}`}
+            testId="band-plans"
+            data={{ 'data-planned': p.planned, 'data-days': p.days }}
           >
             {planDone && <DoneMark />}担当
             <strong>
               {p.planned}/{p.days}
             </strong>
             <span className="pb-long">日</span>
-          </Link>
+          </BatchItem>
         </li>
         {confirmStep && (
           <li>
@@ -180,6 +189,22 @@ export const ProgressBand = memo(function ProgressBand({
             <span className="pb-label-long">{next.label}</span>
             <span className="pb-label-short">{next.short}</span>
           </span>
+        ) : direct && next.kind === 'batch' ? (
+          <button
+            type="button"
+            className="btn btn-small"
+            onClick={() => onOp?.('batch')}
+            disabled={arranging}
+            data-testid="band-next"
+            data-kind={next.kind}
+            aria-label={`${month}：${arranging ? '担当を組んでいます' : next.label}`}
+          >
+            <span className="with-icon">
+              <NextIcon size={14} strokeWidth={2.2} aria-hidden="true" />
+              <span className="pb-label-long">{arranging ? '組んでいます…' : next.label}</span>
+              <span className="pb-label-short">{arranging ? '組んでいます…' : next.short}</span>
+            </span>
+          </button>
         ) : (
           <Link
             to={bandHref(ym, next.kind)}
@@ -223,6 +248,52 @@ export const ProgressBand = memo(function ProgressBand({
     </section>
   );
 });
+
+/**
+ * 訪問・担当の数字：入は担当を組むの画面へのリンク（label は読み上げ）、切（direct）は文だけ
+ * （移る先が無い。組むのは次の一手のボタン。読み上げは中の文と ✓ の「済」）
+ */
+function BatchItem({
+  ym,
+  direct,
+  onClick,
+  className,
+  title,
+  label,
+  testId,
+  data,
+  children,
+}: {
+  ym: string;
+  direct: boolean;
+  onClick: (e: MouseEvent) => void;
+  className: string;
+  title: string;
+  label: string;
+  testId: string;
+  data?: Record<`data-${string}`, number>;
+  children: ReactNode;
+}) {
+  if (direct)
+    return (
+      <span className={className} title={title} data-testid={testId} {...data}>
+        {children}
+      </span>
+    );
+  return (
+    <Link
+      to={bandHref(ym, 'batch')}
+      onClick={onClick}
+      className={className}
+      title={`${title}。押すと「担当を組む」の画面を開きます`}
+      aria-label={`${label}。担当を組むの画面を開く`}
+      data-testid={testId}
+      {...data}
+    >
+      {children}
+    </Link>
+  );
+}
 
 /** 済みの ✓（読み上げは「済」） */
 function DoneMark() {

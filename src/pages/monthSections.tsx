@@ -16,7 +16,7 @@ import { useIntro } from '../components/useIntro';
 import { KeyMoveBand } from '../components/visitKeys';
 import type { DemoData } from '../contracts/data';
 import { monthHeading } from '../lib/detailsHeading';
-import { foldedParts, MONTH_ASIDE_PICK_TEXT, monthCellView } from '../lib/exceptionView';
+import { foldedParts } from '../lib/exceptionView';
 import { type BandOp, bandHref } from '../lib/progressBand';
 import { addMonths, ymOf } from '../lib/ym';
 import {
@@ -28,15 +28,7 @@ import {
   MonthUnconfirmed,
 } from './monthAside';
 import { MonthGrid, MonthList } from './monthGrid';
-import {
-  MonthBatchProgress,
-  MonthCellHint,
-  MonthHelp,
-  MonthLegend,
-  MonthOffBar,
-  MonthPickers,
-  monthLayoutItems,
-} from './monthParts';
+import { MonthBatchProgress, MonthHelp, MonthLegend, MonthOffBar, MonthPickers, monthLayoutItems } from './monthParts';
 import type { MonthAside } from './useMonthAside';
 import type { MonthBatchState } from './useMonthBatch';
 import { focusCellEl, type MonthDayList } from './useMonthDayList';
@@ -54,27 +46,17 @@ export function MonthTopBars({
   nav,
   absence,
   moreItems,
-  staffTerm,
 }: {
   nav: Pick<MonthNav, 'ym' | 'today' | 'layout' | 'monthOptions' | 'goMonth' | 'pickLayout'>;
-  /** 〈スタッフ〉の呼び方（マスの読み方の ⓘ） */
-  staffTerm: string;
   /** 「欠勤」の入口（欠勤・キャンセルを切っていれば null） */
   absence: { date: string } | null;
   moreItems: MenuItem[];
 }) {
   const { ym, today } = nav;
   const lead = useIntro('month', '一月の担当を見て、担当なしや要対応を手で直し、確定します');
-  // マスの読み方：切は見出しの ⓘ（入はマスの吹き出し。PRD D410）
-  const hint = monthCellView(useExceptionsOnly()).guide === 'hint';
   return (
     <>
-      <PageHeader
-        icon={CalendarRange}
-        title="月の予定"
-        lead={lead}
-        actions={hint ? <MonthCellHint staffTerm={staffTerm} /> : undefined}
-      />
+      <PageHeader icon={CalendarRange} title="月の予定" lead={lead} />
       {/* 上のナビの行（日・週・月で同じ。PRD D347。ADR-0060）。月送り・今日・［月｜週｜日］。主ボタンは進み具合の帯（D154） */}
       <ScheduleNav
         current="month"
@@ -117,12 +99,15 @@ export function MonthDetails({
   ym,
   band,
   onBandOp,
+  arranging,
   summary,
   legendBar,
 }: {
   ym: string;
   band: BandModel;
   onBandOp: (op: BandOp) => void;
+  /** 担当を AI で組んでいる間 */
+  arranging: boolean;
   summary: MonthDays['summary'];
   legendBar: 'load' | 'staff' | null;
 }) {
@@ -136,9 +121,9 @@ export function MonthDetails({
       screen="month"
       heading={only ? undefined : monthHeading(band.progress, confirmStep)}
     >
-      {parts.includes('progress') && <ProgressBand ym={ym} model={band} onOp={onBandOp} />}
+      {parts.includes('progress') && <ProgressBand ym={ym} model={band} onOp={onBandOp} arranging={arranging} />}
       {parts.includes('summary') && <MonthSummaryLine summary={summary} />}
-      {parts.includes('legend') && <MonthLegend bar={legendBar} />}
+      {parts.includes('legend') && <MonthLegend bar={legendBar} confirmStep={confirmStep} />}
     </DetailsFold>
   );
 }
@@ -184,7 +169,7 @@ export function MonthHeadCard({
 }) {
   const terms = data.org.terms;
   const { focus } = fs;
-  const only = useExceptionsOnly();
+  const confirmStep = useConfirmStep();
   // 件数の行・凡例は「詳しく」の中（MonthDetails）なので、ほかに出すものが無ければ欄ごと出さない
   if (!pickersShown && !noVisitsWhy && !panels.helpOpen && off.offStaffId === null && !batch.batch && !batch.error)
     return null;
@@ -224,7 +209,7 @@ export function MonthHeadCard({
         <MonthHelp
           helpRef={panels.helpRef}
           staffTerm={terms.staff}
-          only={only}
+          confirmStep={confirmStep}
           onClose={() => panels.setHelpOpen(false)}
         />
       )}
@@ -309,7 +294,6 @@ export function MonthBodyCard({
 /**
  * 右の欄：その日の回の一覧（開いているとき）と、選ばないときは確定していない日／要対応、選んだ〈スタッフ〉／〈利用者さん〉の
  * 月のまとめ。下に選んだ訪問の帯とキーで動かした先の読み上げ（PRD D330・D333。日・週と同じ）。
- * エキスパート機能が切なら要対応の一覧は出さず、日を押す前は1行の案内だけ（件数の正は上の要対応の帯。PRD D404・D410）
  */
 export function MonthAsideCard({
   data,
@@ -335,7 +319,6 @@ export function MonthAsideCard({
   const { focus } = fs;
   const { listDay, multi } = list;
   const monthNo = Number(nav.ym.slice(5, 7));
-  const view = monthCellView(useExceptionsOnly());
   const dayShown = listDay !== null && !nav.narrowList;
   return (
     <>
@@ -346,11 +329,6 @@ export function MonthAsideCard({
         data-testid="month-aside"
         aria-label="右の欄"
       >
-        {focus.kind === 'all' && !view.attentionList && !dayShown && (
-          <p className="sub" data-testid="month-aside-pick">
-            {MONTH_ASIDE_PICK_TEXT}
-          </p>
-        )}
         {listDay && dayShown && (
           <DayVisits
             date={listDay}
@@ -375,7 +353,7 @@ export function MonthAsideCard({
             onShowAttention={() => aside.setAsideView('attention')}
           />
         )}
-        {focus.kind === 'all' && view.attentionList && aside.asideView === 'attention' && (
+        {focus.kind === 'all' && aside.asideView === 'attention' && (
           <MonthAttention
             attention={month.attention}
             features={data.org.features}

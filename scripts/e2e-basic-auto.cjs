@@ -16,8 +16,8 @@
 //  7 もう一度直すと訪問に「変更あり」の印と日の上の「変更あり N件」のチップ（伝えた記録は書き換えない）。印を押すと連絡の一覧が開き
 //    （札は選ばない）、「連絡した」で今の担当・時刻が伝えた記録になり「変更あり」が消える（操作の行の［元に戻す］で戻る）
 //  8 週の予定の印を押すとその日の日の予定へ移り連絡の一覧が開く（URL の ?do=told・?date= は消える）
-//  9 月の予定：確定の段階（進み具合の帯の「確定」・右の欄の「確定していない日」・まとめて確定）が無い。マスに「変更あり」の印は出さず、
-//   押した日の右の欄の行の印から連絡の一覧へ（PRD D410）。?do=unconfirmed は最初の要対応の日の予定へ移る（切は要対応の一覧が無い）
+//  9 月の予定：確定の段階（進み具合の帯の「確定」・右の欄の「確定していない日」・まとめて確定）が無い。マスに確定の鍵は出さず「変更あり」の印だけ出し、
+//   押した日の右の欄の行の印から連絡の一覧へ（PRD D433）。?do=unconfirmed は月の右の欄の要対応の一覧を開く
 // 10 エキスパート機能を入にすると確定（伝えた）の操作が出て、自動では伝えない（直しても snapshots は増えない）
 // 11 決まった日に訪問を足すと自動の組みが担当を付け、足した訪問は「変更あり」（伝えた記録は書き換えない）
 //
@@ -469,11 +469,27 @@ async function month(page) {
   check((await page.getByTestId('band-confirm').count()) === 0, '月の帯に「確定 N/N日」を出さない');
   const next = await page.getByTestId('band-next').getAttribute('data-kind');
   check(next !== 'unconfirmed', '月の帯の次の一手に「確定していない日を見る」を出さない', next);
-  // マスは例外だけ（PRD D410）：「変更あり」の印はマスに出さず、変更ありの日は「要対応 N」に数える。
+  // 訪問・担当の数字は担当を組むの画面へのリンクにしない（組むのは帯の「担当を AI で組む」でその場で）
+  check(
+    (await page.locator('a[data-testid="band-plans"], a[data-testid="band-visits"]').count()) === 0,
+    '月の帯の訪問・担当は担当を組むの画面へ移らない',
+  );
+  if (next === 'batch') {
+    check(
+      (await page.locator('button[data-testid="band-next"]').count()) === 1,
+      '月の帯の「担当を AI で組む」はその場で組むボタン',
+    );
+  }
+  // マスは入と同じ表示（PRD D433）：確定の鍵は出さず、「変更あり」の印と札を出し、変更ありの日は「要対応 N」にも数える。
   // マスを押すと右の欄にその日の訪問が出て、行の「変更あり」の印を押すとその日の日の予定の連絡の一覧
   const cell = page.locator(`[data-testid="month-day"][data-date="${TODAY}"]`);
   await cell.waitFor({ timeout: 15000 });
-  check((await cell.locator('[data-told-date]').count()) === 0, '月のマスに「変更あり」の印を出さない');
+  check((await cell.getByTestId('month-diff-mark').count()) === 1, '月のマスに「変更あり」の印を出す');
+  check(
+    /変更あり/.test(await cell.getByTestId('month-changed').innerText()),
+    '月のマスの札は「変更あり N」（未連絡と言わない）',
+  );
+  check((await cell.locator('.month-lock').count()) === 0, '月のマスに確定の鍵を出さない');
   check((await cell.getByTestId('month-attn').count()) === 1, '変更ありの日のマスに「要対応 N」の札');
   await cell.click();
   const rowMark = page.locator('[data-testid="month-day-visits"] [data-told-date]').first();
@@ -482,15 +498,12 @@ async function month(page) {
   await sheet(page).waitFor({ timeout: 15000 });
   const mh = new URL(page.url()).hash;
   check(/^#\/plan/.test(mh) && !/do=told|date=/.test(mh), '右の欄の行の印を押すと日の予定へ移り連絡の一覧が開く', mh);
-  // ?do=unconfirmed は切では要対応へ：要対応の一覧が無い（切）ので、月に要対応があれば最初の要対応の行き先（日の予定）へ移る
-  // （lib/useMonthAside の showAside）。月の右の欄は移る前の一瞬だけ描かれるので、それを待たず、移った先（日の予定）を待つ。
-  // この段の月は今日が「変更あり」（上で「要対応 N」の札を確かめた）なので、要対応は必ずある
+  // ?do=unconfirmed は切では要対応へ：確定していない日の欄は無いので、月の右の欄の要対応の一覧を開く（lib/useMonthAside の viewOf）
   await page.goto('about:blank');
   await page.goto(`${BASE}#/month?do=unconfirmed`);
-  const toPlan = await until(async () => /^#\/plan/.test(hashOf(page)), 60000);
-  await page.getByTestId('sched-nav').waitFor({ timeout: 60000 });
+  await page.getByTestId('month-attention').waitFor({ timeout: 60000 });
   await settle(page, 400);
-  check(!!toPlan, '?do=unconfirmed は確定していない日の欄でなく、最初の要対応の日の予定へ移る', hashOf(page));
+  check(/^#\/month/.test(hashOf(page)), '?do=unconfirmed は月のまま右の欄の要対応の一覧を開く', hashOf(page));
   check(
     (await page.getByTestId('month-unconfirmed').count()) === 0,
     '?do=unconfirmed でも確定していない日の欄は出ない（要対応へ）',

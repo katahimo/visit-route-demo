@@ -56,10 +56,8 @@ export type MonthListRow = {
   care: boolean;
   /** 要対応の札「要対応 N」の N（要対応の一覧の行の数。0＝札なし。マスと同じ。PRD D295） */
   attention: number;
-  /** 要対応の印の短い文（担当なし・担当が休み・条件に合わない・時間に間に合わない・未連絡の変更・拘束超）。赤は red、注意は warn。理由を出さない（切）ときは空 */
+  /** 要対応の印の短い文（担当なし・担当が休み・条件に合わない・時間に間に合わない・未連絡の変更・拘束超）。赤は red、注意は warn */
   flags: readonly { text: string; tone: 'red' | 'warn' | 'info' }[];
-  /** 理由の印と状態の言葉を見た目に出すか（切は出さない。読み上げの label には入れる。lib/exceptionView の monthCellView。PRD D410） */
-  reasons: boolean;
   /** 読み上げの名前（日付・件数・状態・要確認・印・補足） */
   label: string;
 };
@@ -72,11 +70,10 @@ export function monthListRow(
   s: DayStatus,
   today: string,
   extra: readonly string[] = [],
-  opts: { attention?: number; confirmStep?: boolean; reasons?: boolean } = {},
+  opts: { attention?: number; confirmStep?: boolean } = {},
 ): MonthListRow {
   const attention = s.date < today ? 0 : (opts.attention ?? 0);
   const confirmStep = opts.confirmStep !== false;
-  const reasons = opts.reasons !== false;
   const d = s.date;
   const wd = weekday(d);
   const isPast = d < today;
@@ -106,8 +103,7 @@ export function monthListRow(
     stateText,
     care,
     attention,
-    flags: reasons ? flags : [],
-    reasons,
+    flags,
     label,
   };
 }

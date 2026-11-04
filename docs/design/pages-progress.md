@@ -20,21 +20,21 @@
 
 - `bandNext({ progress, emptyTargets, urgent, confirmStep? })`：次の一手 `BandNext`＝種類 `batch|attention|unconfirmed|done|empty`・文・短い文。順は
   1. 今日以降に訪問が無い → empty（「今日以降の訪問はありません」）
-  2. 担当なしの訪問がある日が2日以上 → 担当を AI で組む
+  2. 担当なしの訪問がある日が2日以上（`confirmStep: false`＝expert 切は1日以上。その場で組むので） → 担当を AI で組む
   3. 手当てが要る要対応（要対応の訪問） → 要対応を見る
   4. 確定していない日 → 確定していない日を見る（`confirmStep: false`＝expert 切は飛ばす）
   5. 見るだけの要対応（未連絡の変更・拘束超） → 要対応を見る
   6. 無ければ済み（「準備は済みました」）
 - `urgentCount(attention)`：手当てが要る要対応（`care`）の件数
-- `bandHref(ym, op)`：`batch` は担当を組むの画面 `/arrange?ym=…`、ほかは `/month?ym=…&do=…`
+- `bandHref(ym, op)`：`batch` は担当を組むの画面 `/arrange?ym=…`（expert 入だけ使う）、ほかは `/month?ym=…&do=…`
 - `visitsText`：「N件」
 
 #### `components/progressBand.tsx`（`progressBand.css`。`data-testid="progress-band"`）
 
-- `ProgressBand({ ym, model, onOp? })`：見た目だけ（`pages/monthSections` が置く）
-  - `model` は `BandModel`＝`monthProgress`・担当なしの訪問がある日の数・手当てが要る要対応の件数。null の間は同じ高さで「数えています…」（`aria-busy`）
-  - 数字は `Link`：訪問（`band-visits`）・担当（`band-plans`）→ 担当を組むの画面、確定（`band-confirm`。expert 入だけ）→ `do=unconfirmed`、要対応（`band-attention`）→ `do=attention`。`onOp` があれば移らずにそれを呼ぶ（修飾キー（Ctrl・⌘・Shift・Alt）と左以外のボタンでは横取りしない）
-  - 右に次の一手（`band-next`。`Link` の従のボタン。主ボタンは操作の行の1つ。済み・訪問なしは文だけ）
+- `ProgressBand({ ym, model, onOp?, arranging? })`：見た目だけ（`pages/monthSections` が置く）
+  - `model` は `BandModel`＝`monthProgress`・担当なしの訪問がある日の数とその日（`emptyDays`）・手当てが要る要対応の件数。null の間は同じ高さで「数えています…」（`aria-busy`）
+  - 数字は `Link`：訪問（`band-visits`）・担当（`band-plans`）→ 担当を組むの画面（expert 切はリンクにせず文だけ。組む日が0日のとき移っても何もできないため）、確定（`band-confirm`。expert 入だけ）→ `do=unconfirmed`、要対応（`band-attention`）→ `do=attention`。`onOp` があれば移らずにそれを呼ぶ（修飾キー（Ctrl・⌘・Shift・Alt）と左以外のボタンでは横取りしない）
+  - 右に次の一手（`band-next`。`Link` の従のボタン。主ボタンは操作の行の1つ。済み・訪問なしは文だけ）。expert 切の「担当を AI で組む」は `button` で `onOp('batch')`（画面を移らない）。`arranging` の間は押せず「組んでいます…」
   - 下の縁に `lib/glance` の `prepParts` の細い積み上げ（`.prep-bar`・`.prep-part`）
   - 600px 以下は1行（「日」「件」を省き、ボタンは短い文）
   - 読み上げ：数字のリンクに aria-label（「担当が全部入った日 x/y日（済）。担当を組むの画面を開く」など）、✓ に sr-only の「済」、手当てが要る要対応に「要手当て」
@@ -45,7 +45,7 @@
 
 | 画面 | 置き方 |
 |---|---|
-| 月（`pages/MonthPage`） | 「詳しく ▾」の中に `ProgressBand`。`onOp` で要対応・確定していない日は欄を画面の中で開く（URL は変えない）。「担当を AI で組む」は担当を組むの画面（その月）へ移る。詳しくは [pages-month.md](pages-month.md) |
+| 月（`pages/MonthPage`） | 「詳しく ▾」の中に `ProgressBand`。`onOp` で要対応・確定していない日は欄を画面の中で開く（URL は変えない）。「担当を AI で組む」は、入は担当を組むの画面（その月）へ移る。切はその場で、その月の担当なしの訪問がある日（`emptyDays`）を担当を組むの画面と同じ手順（`pages/useArrangeStart`。作り方は要対応のある日）で組み、出た案は範囲の提案の帯（`BatchBand`）で「この案にする」。詳しくは [pages-month.md](pages-month.md) |
 | 週・日 | 出さない。週は1行の状態 `week-status`、日は見出しの状態の印。`?do=` のリンクは月の予定の欄を開き、`?do=` は月の予定が消す |
 
 #### 確かめ

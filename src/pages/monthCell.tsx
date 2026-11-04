@@ -1,7 +1,7 @@
 // 月のカレンダーの日のマス（PRD D53〜D55・D69・D177・D295・D340・D341）：日の状態を背景・枠と印で、種類の積み上げバー・
 // 休み欠勤の印・始まる▶終わる■の印・混み具合バー（全体）／その人の時間帯（〈スタッフ〉）／訪問の並び（〈利用者さん〉）。
-// 文（読み上げ・読み方の吹き出し）は lib/monthCell の dayCellText。エキスパート機能が切のときは例外だけ
-// （日付・訪問の件数・要対応の札・休 N・今日の印。吹き出しは出さない。何を出すかは lib/exceptionView の monthCellView。PRD D410）
+// 文（読み上げ・読み方の吹き出し）は lib/monthCell の dayCellText。エキスパート機能の入切で表示は変えない
+// （切は確定の鍵・確定の言葉だけ出さない。lib/settledView。ADR-0099）
 import { BedSingle, CalendarOff, CircleAlert, Lock, PencilLine, Timer, UserX } from 'lucide-react';
 import { memo, type KeyboardEvent as ReactKeyboardEvent, useLayoutEffect } from 'react';
 import { LoadBar, loadSummary, TypeStack } from '../components/loadBar';
@@ -12,7 +12,6 @@ import type { Staff, VisitType } from '../contracts/documents';
 import { inBar, loadEdgeTexts, withEdges } from '../lib/barRows';
 import { colorOf } from '../lib/colors';
 import { clockTime } from '../lib/dateText';
-import type { MonthCellView } from '../lib/exceptionView';
 import type { ClientDay, DayMarks, DayStatus, StaffDay } from '../lib/month';
 import {
   CLIENT_VISITS_MAX,
@@ -27,17 +26,15 @@ import {
 } from '../lib/monthCell';
 import type { TipStore } from '../lib/monthGuide';
 import type { OffDayState } from '../lib/requestedOff';
-import { shownDayState } from '../lib/settledView';
+import { CHANGED_WORD, shownDayState } from '../lib/settledView';
 import { dropShadowText, dropTone } from '../lib/visitDrop';
 import { isMultiClick } from '../lib/visitSelect';
 import type { DayLoadSlot } from '../vacancy';
 
 /** どのマスでも同じもの（月の画面で覚えておき、変わらなければマスを描き直さない） */
 export type CellContext = {
-  /** マスの読み方の文の置き場（日付で引く。MonthCellTip）。吹き出しを出さない（切）ときは null */
-  tipStore: TipStore | null;
-  /** マスに出すもの（入切の差。lib/exceptionView の monthCellView） */
-  view: MonthCellView;
+  /** マスの読み方の文の置き場（日付で引く。MonthCellTip） */
+  tipStore: TipStore;
   today: string;
   focus: MonthFocusKind;
   typeById: ReadonlyMap<string, VisitType>;
@@ -79,7 +76,7 @@ type CellProps = {
   drop: DropHover | undefined;
 };
 
-/** 担当なし・ほかの要対応・未連絡・拘束超・組んでいます の札（理由の札はエキスパート機能が入のときだけ。切は 組んでいます だけ） */
+/** 担当なし・ほかの要対応・未連絡・拘束超・組んでいます の札 */
 function CellFlags({
   s,
   otherIssues,
@@ -91,12 +88,7 @@ function CellFlags({
   making: boolean;
   ctx: CellContext;
 }) {
-  if (!ctx.view.reasons)
-    return making ? (
-      <span className="month-flags">
-        <MakingFlag />
-      </span>
-    ) : null;
+  const confirmStep = useConfirmStep();
   return (
     <span className="month-flags">
       {s.unassigned > 0 && (
@@ -114,11 +106,11 @@ function CellFlags({
       {s.changes > 0 && (
         <span
           className="month-flag is-warn"
-          title="確定（伝えた）あとに担当・時刻が変わった訪問です。日の予定の連絡の一覧で確かめてください"
+          title={`${confirmStep ? '確定（伝えた）' : '決まった'}あとに担当・時刻が変わった訪問です。日の予定の連絡の一覧で確かめてください`}
           data-testid="month-changed"
         >
           <PencilLine size={12} aria-hidden="true" />
-          未連絡 {s.changes}
+          {confirmStep ? '未連絡' : CHANGED_WORD} {s.changes}
         </span>
       )}
       {s.overSpan.length > 0 && (
@@ -156,12 +148,12 @@ function AllMarks({ mk, text, ctx }: { mk: DayMarks; text: DayCellText; ctx: Cel
           {mk.requested.length > 0 && `（希${mk.requested.length}）`}
         </span>
       )}
-      {ctx.view.otherMarks && <OtherMarks mk={mk} ctx={ctx} />}
+      <OtherMarks mk={mk} ctx={ctx} />
     </span>
   );
 }
 
-/** 「休 N」のほかの印（欠勤・始まる／終わる・〈利用者さん〉の休み・最終勤務日。切は出さない） */
+/** 「休 N」のほかの印（欠勤・始まる／終わる・〈利用者さん〉の休み・最終勤務日） */
 function OtherMarks({ mk, ctx }: { mk: DayMarks; ctx: CellContext }) {
   return (
     <>
@@ -275,19 +267,17 @@ function CellHead({
   ctx: CellContext;
   selected: number;
 }) {
-  // 確定の鍵・変更ありの印は理由を出すとき（エキスパート機能が入＝確定の段階を出す）だけ。切は出さない（PRD D410。ADR-0073）
-  const shown = s.state;
+  // 確定の鍵は確定の段階を出すとき（エキスパート機能が入）だけ。切は変更ありの印だけ（ADR-0073）
+  const shown = shownDayState(s.state, useConfirmStep());
   return (
     <span className="month-cell-head">
       <span className="month-day">
         {Number(d.slice(8, 10))}
         {d === ctx.today && <span className="month-today">今日</span>}
       </span>
-      {ctx.view.reasons && s.count > 0 && shown === 'told' && (
-        <Lock size={12} className="month-lock" aria-hidden="true" />
-      )}
+      {s.count > 0 && shown === 'told' && <Lock size={12} className="month-lock" aria-hidden="true" />}
       {/* 未連絡の変更あり（淡い黄）は色だけで分けない */}
-      {ctx.view.reasons && s.count > 0 && shown === 'changed' && (
+      {s.count > 0 && shown === 'changed' && (
         <PencilLine size={12} className="month-diff-icon" aria-hidden="true" data-testid="month-diff-mark" />
       )}
       {text.attention > 0 ? (
@@ -338,7 +328,7 @@ export const DayCell = memo(function DayCell(props: CellProps) {
   // 描いたあとに、日付をキーに読み方の文を置く（吹き出しは日付で引く。描画中に DOM を読まない）
   // biome-ignore lint/correctness/useExhaustiveDependencies: 文（guideKey）が変わったときだけ置き直す
   useLayoutEffect(() => {
-    ctx.tipStore?.set(d, { head: longDate(d), text: tipText, lines: guide });
+    ctx.tipStore.set(d, { head: longDate(d), text: tipText, lines: guide });
   }, [ctx.tipStore, d, tipText, guideKey]);
   const offPress = offState === 'open' || offState === 'requested';
   const flags = <CellFlags s={s} otherIssues={text.otherIssues} making={making} ctx={ctx} />;
@@ -373,7 +363,7 @@ export const DayCell = memo(function DayCell(props: CellProps) {
         // 押せない日も Tab で届き、理由（aria-label）が読み上がるよう disabled にしない。押しても何もしない
         aria-disabled={offState !== undefined && !offPress ? true : undefined}
         // 見た目の説明は title ではなく読み方の吹き出し（MonthCellTip。title と二重に出さない）。切は出さない（読み方は見出しの ⓘ）
-        data-tip={ctx.tipStore ? 'cell' : undefined}
+        data-tip="cell"
         onClick={(e) => {
           // Shift／Ctrl＋クリックはその日の訪問をまとめて選ぶ（休みを入れる間は今どおり）
           if (!offState && isMultiClick(e)) {
@@ -389,14 +379,12 @@ export const DayCell = memo(function DayCell(props: CellProps) {
         <CellHead d={d} s={s} text={text} ctx={ctx} selected={props.selected} />
         {focus === 'all' && (
           <>
-            {ctx.view.bars && <TypeStack types={mk.types} typeById={typeById} />}
+            <TypeStack types={mk.types} typeById={typeById} />
             <AllMarks mk={mk} text={text} ctx={ctx} />
             {flags}
-            {ctx.view.bars && (
-              <span className="month-load">
-                <LoadBar load={load ?? null} />
-              </span>
-            )}
+            <span className="month-load">
+              <LoadBar load={load ?? null} />
+            </span>
           </>
         )}
         {focus === 'staff' && props.staffDay && text.shift && <StaffCellBody x={props.staffDay} shift={text.shift} />}

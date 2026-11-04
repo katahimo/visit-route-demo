@@ -141,6 +141,7 @@
 | [0096](adr/0096-far-client-travel-minutes.md) | 遠方の〈利用者さん〉に手で決める移動時間（片道・分）と遠方（出張）の印 |
 | [0097](adr/0097-quiet-travel-in-day-timeline-and-undo-icons.md) | 日の時間軸に移動の分数を控えめに戻す・予定の操作の行にアイコンだけの［元に戻す］［やり直す］ |
 | [0098](adr/0098-unassigned-reason-guide.md) | 担当なしの訪問の組めない理由を型に分け、直し方と直す画面を案内する |
+| [0099](adr/0099-month-cells-same-for-expert-on-off.md) | 月のマスはエキスパート機能の入切で同じ表示（ADR-0079 の月のマスを置き換え） |
 
 ## 文書の保ち方
 
