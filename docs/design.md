@@ -2,7 +2,7 @@
 
 - PRD：[docs/prd.md](prd.md)
 - 作成者：松浦（草案：Claude）
-- 更新日：2026-11-03
+- 更新日：2026-11-04
 - 状態：合意済み（2026-10-11）
 - 読み方：今の仕様だけを書く。判断の理由は `docs/adr/`、経緯は git の履歴、型の正は `src/contracts/`
 
@@ -16,8 +16,8 @@ PoC本体（`katahimo-dev/visit-route-poc`）の管理者画面（予定・担�
 ## 2. やらないこと
 
 - ログイン・サーバー保存・事業所の分離・同時編集
-- 外部送信は地図タイルと、ボタンを押したときの郵便番号・住所の検索（ADR-0016）と、日の予定のメールの予約送信（押したときに事業所自身の Google Apps Script へ。ADR-0069）だけ。メールはほかは `mailto:` で端末のアプリを開くだけ（送信サービス・送った記録・HTML メールなし。ADR-0017）。道順は Maps URLs のリンクだけ（経路・時間を取らず、キーの要る API は使わない。ADR-0018）
-- Firebase・Cloud Functions・Python 最適化・Google Maps Platform。移動時間は直線距離からの概算（`estimateLeg`）だけ
+- 外部送信は地図タイルと、ボタンを押したときの郵便番号・住所の検索（ADR-0016）と、日の予定のメールの予約送信（押したときに事業所自身の Google Apps Script へ。ADR-0069）と、押したときの道路の所要の取得（地点の緯度・経度だけを OSRM の公開サーバーへ。ADR-0099）だけ。メールはほかは `mailto:` で端末のアプリを開くだけ（送信サービス・送った記録・HTML メールなし。ADR-0017）。道順は Maps URLs のリンクだけ（経路・時間を取らず、キーの要る API は使わない。ADR-0018）
+- Firebase・Cloud Functions・Python 最適化・Google Maps Platform・自前の経路のサーバー。移動時間は直線距離からの概算（`estimateLeg`）と、押したときに取った車の道路の所要（ADR-0099）だけ。渋滞・時間帯で変わる移動時間
 - スタッフの記録・位置・ジオフェンス・勤怠・CSV・通知・PWA のオフライン対応、相性の学習
 - 勤務シフトの自動作成、日をまたいだ最適化（範囲の AI で組むは1日ずつ。ADR-0012）、定期パターンの日付指定・祝日（ADR-0013）
 - 休みでの自動の振り替え、伝えた日の自動の組み直し、決まりごとを割当の条件に使うこと、案内文の送信（ADR-0013）
@@ -131,11 +131,15 @@ flowchart LR
   mailSchedule["lib/mailSchedule（予約送信の頼み・送る時刻・GAS を呼ぶ。ADR-0069）"]
   pages -->|押したときだけ事業所の GAS に預ける・取り消す・確かめる| mailSchedule
   store -->|この端末の接続の設定・預けた記録（DemoData と別のキー）| mailSchedule
+  roadTable["lib/roadTable（道路の所要の表を取る。ADR-0099）"]
+  pages -->|押したときだけ地点の緯度・経度を送って表を取らせる| roadTable
+  roadTable -->|GET（Table API）| osrm["OSRM の公開サーバー（OpenStreetMap の道路・車）"]
+  matching -->|表を引いて車の区間の移動を補正する（matching/roads）| domain
   mailSchedule -->|POST（text/plain の JSON）| gas["事業所の Google Apps Script（gas/Code.gs。シートに預け、5分ごとに送る）"]
 ```
 
 - 矢印は「読む・呼ぶ」。データを書き換えるのは store だけ
-- 外部の検索（`lib/geocode`）と予約送信（`lib/mailSchedule` の `postMailSchedule`）を呼ぶのは画面だけ（ADR-0016・ADR-0069）。`lib/mail`・`lib/mailto`・`lib/mapsLink` は URL の文字を作る純粋関数で通信しない
+- 外部の検索（`lib/geocode`）と予約送信（`lib/mailSchedule` の `postMailSchedule`）と道路の所要の取得（`lib/roadTable` の `fetchRoadTable`）を呼ぶのは画面だけ（ADR-0016・ADR-0069・ADR-0099）。`lib/mail`・`lib/mailto`・`lib/mapsLink` は URL の文字を作る純粋関数で通信しない
 - solver と evaluate は同じ費用表を使い、AI の提案と今の担当を**同じ物差し**で採点する
 
 ## 4. コンポーネントと責務
@@ -250,7 +254,7 @@ flowchart LR
   - 種類（`visitType`）：種類の `requirements` を満たさない条件ごとに「種類（〈名前〉）：〈条件の文〉 ✗」。満たせば ✓・0点。いない種類は無視
   - 担当を限る（`allowedStaff`）：`allowedStaffIds` のうち問題にいる人が1人以上いればその人たちだけ可。理由「担当を限る：山田、佐藤 ✗／✓」（問題にいる限った人を並べた順）
   - 種類と担当を限るは常に必須で、条件の重み・プリセット・達成の件数に関係しない
-- 移動の行列（`matching/travel` の `travelMatrices`）：〈利用者さん〉に移動時間（片道・分。`place.travelMinutes`）があれば、その地点への・からの移動はその分数（両側にあれば長いほう）・0 m（ADR-0096）。それ以外で位置が未登録の地点への移動は `UNPLACED_TRAVEL_MIN`（30分）・0 m とみる（ADR-0093。移動時間がある〈利用者さん〉には `noPlace` の点を足さない）。地点の鍵（訪問は `'c:'+clientId`、自宅は `'s:'+staffId`）が同じ地点どうしは位置が無くても 0 分（同じ〈利用者さん〉の続けた訪問を同じ担当が持てる）
+- 移動の行列（`matching/travel` の `travelMatrices`）：〈利用者さん〉に移動時間（片道・分。`place.travelMinutes`）があれば、その地点への・からの移動はその分数（両側にあれば長いほう）・0 m（ADR-0096）。それ以外で位置が未登録の地点への移動は `UNPLACED_TRAVEL_MIN`（30分）・0 m とみる（ADR-0093。移動時間がある〈利用者さん〉には `noPlace` の点を足さない）。地点の鍵（訪問は `'c:'+clientId`、自宅は `'s:'+staffId`）が同じ地点どうしは位置が無くても 0 分（同じ〈利用者さん〉の続けた訪問を同じ担当が持てる）。車の区間で道路の所要の表（`DemoData.roads`。`matching/roads` の `roadModelOf` が緯度・経度の小数5桁で引く）に組があれば、移動＝`org.roadTravel.parkMinutes` ＋ `trafficFactor` × 所要（分）・距離＝道のり（ADR-0099）。無ければ `estimateLeg`
 - 遠方（出張。ADR-0096）：`place.farTrip` の〈利用者さん〉の訪問は `ProblemVisit.solo`。`scheduleRoute`（strict）・`routeCost` は遠方の訪問とほかの〈利用者さん〉の訪問が同じ列なら不可（`soloBroken`）、列の最初の遠方の訪問は家を出る時刻を勤務の開始に縛らない。可否（`allowed`）には入れない。理由のキー・文（`FAR_TRIP_RULE_ID`「遠方（出張）の日はほかの訪問を入れません」・`TRAVEL_TOO_FAR_RULE_ID`「移動が間に合わない（片道 約N分）」）は `matching/travel` に置き、evaluate の explain（担当なしの理由）と採点（守れない条件）が使う。見分けと案内は `lib/travelReasons`
 - 問題に入れない訪問：取り消し、休み（`leaveOn`）の〈利用者さん〉の訪問。AI で組む（担当を組む・組み方の標準・比較）・空き状況・振り直しはどれも compile を通る
 - いつもの担当（`continuity`）：訪問の `pattern` の繰り返しの `usualStaffId`（単発の訪問は無し）
@@ -542,8 +546,8 @@ Worker 内の例外は `error` で返し、内部の文言は出さない（「A
 | 画面・最適化ワーカー | Cloudflare Workers（静的アセット配信） | 1 | 無料・push で即公開・サーバーなし・非公開リポジトリで可 |
 | ビルド | GitHub Actions（ubuntu-latest, Node 22） | push ごと | テストを通ったものだけ公開 |
 
-- 秘密情報の置き場所：なし（キー不要の地理院タイル・郵便番号検索・国土地理院の住所検索のみ。ビルド時の環境変数も使わない）
-- Content-Security-Policy は置いていない（置くときは `connect-src` に `https://zipcloud.ibsnet.co.jp https://msearch.gsi.go.jp`、`script-src` に `https://zipcloud.ibsnet.co.jp`（JSONP）を足す）
+- 秘密情報の置き場所：なし（キー不要の地理院タイル・郵便番号検索・国土地理院の住所検索・OSRM の公開サーバーのみ。ビルド時の環境変数も使わない）
+- Content-Security-Policy は置いていない（置くときは `connect-src` に `https://zipcloud.ibsnet.co.jp https://msearch.gsi.go.jp https://router.project-osrm.org`、`script-src` に `https://zipcloud.ibsnet.co.jp`（JSONP）を足す）
 - バックアップ・停止の許容：データは利用者のブラウザだけ。消えても「初期状態に戻す」で再開できる。大事な設定は JSON に書き出す
 - 費用の目安：0円
 

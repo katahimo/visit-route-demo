@@ -10,6 +10,7 @@ import {
   MAX_VISIT_TYPES,
   orgSchema,
   patternSchema,
+  roadTableSchema,
   staffSchema,
   visitSchema,
   visitTypeSchema,
@@ -118,6 +119,11 @@ export const demoDataSchema = z.object({
   scorePresetId: z.string().max(100).optional(),
   /** 組み方の標準を登録した記録（ADR-0062。無ければ登録していない） */
   standard: standardInfoSchema.optional(),
+  /**
+   * 道路の所要の表（PRD D433。ADR-0099。無ければ取っていない＝移動は直線距離からの見積もり）。
+   * 取るのは画面で押したときだけ（lib/roadTable）。Excel のブックには入れない
+   */
+  roads: roadTableSchema.optional(),
 });
 export type DemoData = z.infer<typeof demoDataSchema>;
 

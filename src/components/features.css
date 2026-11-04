@@ -263,3 +263,25 @@
   margin: 0;
   flex: 1 1 260px;
 }
+
+/* 道路の移動時間（車）の補正の欄（PRD D433。ADR-0099） */
+.road-settings {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+label.road-setting {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+}
+.road-setting > span:first-child {
+  color: var(--ink);
+  font-weight: 700;
+}
+.road-setting input {
+  width: 6em;
+  padding: 6px 8px;
+}

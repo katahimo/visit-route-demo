@@ -1,6 +1,6 @@
 // テスト用の小さな手作りデータと、乱数で作る大きめのデータ（matching・solver・evaluate・lib などのテストで使う。本番のコードからは使わない）
 import { DATA_VERSION, type DemoData } from '../contracts/data';
-import type { Client, Staff, Visit } from '../contracts/documents';
+import { type Client, ROAD_TRAVEL_DEFAULT, type Staff, type Visit } from '../contracts/documents';
 import type { Item, Rule } from '../contracts/rules';
 import { minutesToHhmm } from '../domain/time';
 
@@ -100,6 +100,7 @@ export function makeData(over: Partial<DemoData> = {}): DemoData {
       terms: { client: '利用者さん', staff: 'ヘルパー' },
       fareYenPerKm: 0,
       spanLimitHours: 10,
+      roadTravel: { ...ROAD_TRAVEL_DEFAULT },
       features: {},
     },
     items: ITEMS,

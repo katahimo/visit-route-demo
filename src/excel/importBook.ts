@@ -202,6 +202,8 @@ export async function importWorkbook(buf: ArrayBuffer, base: DemoData): Promise<
     spanLimitHours: spanLimit ?? SPAN_LIMIT_DEFAULT_HOURS,
     // 機能の入り切りはブックに入れない（ADR-0028）。読み込んでも今の入り切りのまま
     features: base.org.features,
+    // 道路の移動時間の補正もブックに入れない（ADR-0099）。読み込んでも今の値のまま
+    roadTravel: base.org.roadTravel,
   };
   const next: DemoData = {
     version: base.version,
@@ -224,6 +226,8 @@ export async function importWorkbook(buf: ArrayBuffer, base: DemoData): Promise<
     snapshots: base.snapshots,
     reassigns: base.reassigns,
     ...(base.standard ? { standard: base.standard } : {}),
+    // 道路の所要の表もシートに無い。位置で引くので、位置の変わらない地点はそのまま使える（ADR-0099）
+    ...(base.roads ? { roads: base.roads } : {}),
     presets: preset.presets,
     scorePresetId: preset.scorePresetId,
   };

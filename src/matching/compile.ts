@@ -8,6 +8,7 @@ import { leaveOn } from '../domain/leaves';
 import { hhmmToMinutes } from '../domain/time';
 import { visitsOn } from '../patterns';
 import { conditionText, matches } from './conditions';
+import { roadModelOf } from './roads';
 import { EPS, fitStart } from './timing';
 import { travelMatrices, UNPLACED_TRAVEL_MIN } from './travel';
 
@@ -96,6 +97,7 @@ export type CompileInput = Pick<
   | 'visitTypes'
   | 'patterns'
   | 'clientLeaves'
+  | 'roads'
 >;
 
 /** 訪問の種類の必要条件の理由の ruleId（条件 rules の ID ではない。ADR-0012） */
@@ -479,7 +481,9 @@ export function compile(data: CompileInput, date: string, pins?: Record<string, 
     ...staffDocs.map(() => null),
     ...visitDocs.map((v) => clients.get(v.clientId)!.place.travelMinutes ?? null),
   ];
-  const { travel, meters } = travelMatrices(places, fixed, keys, staffDocs);
+  // 道路の所要の表（ADR-0099）：取ってあれば車の区間に使う
+  const road = roadModelOf(data.roads, data.org.roadTravel);
+  const { travel, meters } = travelMatrices(places, fixed, keys, staffDocs, road);
 
   // --- 可否・割当費用・理由 ---
   const working = new Set(staff.filter((s) => s.slots.length > 0).map((s) => s.id));

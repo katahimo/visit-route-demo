@@ -2,6 +2,7 @@
 import { TRAVEL_MODES, type TravelMode } from '../contracts/codes';
 import type { LatLng, Staff } from '../contracts/documents';
 import { estimateLeg } from '../domain/geo';
+import { type RoadModel, roadMinutes } from './roads';
 
 /**
  * 位置（緯度・経度）が未登録の訪問先・自宅への移動の見込み（分）。位置が無くても担当を組めるように、
@@ -43,28 +44,34 @@ type Matrices = { travel: number[][]; meters: number[][] };
 
 /**
  * 2地点の移動（分）と距離（m）。fixed は手で決めた移動時間（片道・分。ADR-0096）で、どちらかにあれば距離の計算ではなくそれを使う
- * （両方にあれば長いほう。距離は 0 m＝交通費に入れない）。位置が未登録の側があれば UNPLACED_TRAVEL_MIN 分・0 m（ADR-0093）
+ * （両方にあれば長いほう。距離は 0 m＝交通費に入れない）。位置が未登録の側があれば UNPLACED_TRAVEL_MIN 分・0 m（ADR-0093）。
+ * 車の区間で道路の所要の表に組があれば、補正した道路の所要と道のり（ADR-0099）。無ければ直線距離からの見積もり
  */
 function legOf(
   a: { at: LatLng | null; fixed: number | null },
   b: { at: LatLng | null; fixed: number | null },
   mode: TravelMode,
+  road: RoadModel | null,
 ): { minutes: number; meters: number } {
   if (a.fixed !== null || b.fixed !== null) return { minutes: Math.max(a.fixed ?? 0, b.fixed ?? 0), meters: 0 };
   if (!a.at || !b.at) return { minutes: UNPLACED_TRAVEL_MIN, meters: 0 };
+  const onRoad = road && mode === 'DRIVE' ? road.lookup(a.at, b.at) : null;
+  if (onRoad) return { minutes: roadMinutes(onRoad.seconds, road!), meters: Math.round(onRoad.meters) };
   const leg = estimateLeg(a.at, b.at, mode);
   return { minutes: leg.seconds / 60, meters: leg.meters };
 }
 
 /**
  * 地点どうしの移動（分）と距離（m）の行列（先に自宅、続いて訪問先）。keys は地点の鍵で、同じ鍵なら位置が未登録でも 0 分。
- * fixed は地点ごとの手で決めた移動時間（片道・分。自宅・決めていない訪問先は null）
+ * fixed は地点ごとの手で決めた移動時間（片道・分。自宅・決めていない訪問先は null）。
+ * road は道路の所要の表（ADR-0099。取っていなければ null）：車の区間だけ使う
  */
 export function travelMatrices(
   places: (LatLng | null)[],
   fixed: (number | null)[],
   keys: string[],
   staffDocs: Staff[],
+  road: RoadModel | null = null,
 ): Matrices {
   const S = staffDocs.length;
   const P = places.length;
@@ -80,7 +87,7 @@ export function travelMatrices(
     const a = { at: places[i] ?? null, fixed: fixed[i] ?? null };
     for (let j = 0; j < P; j++) {
       if (i === j || keys[i] === keys[j]) continue;
-      const leg = legOf(a, { at: places[j] ?? null, fixed: fixed[j] ?? null }, modeOf(i, j));
+      const leg = legOf(a, { at: places[j] ?? null, fixed: fixed[j] ?? null }, modeOf(i, j), road);
       tr[j] = leg.minutes;
       me[j] = leg.meters;
     }
