@@ -9,7 +9,7 @@
 
 | 型 | フィールド |
 |---|---|
-| `Org` | `name` 1〜100・`industry`（`sitter`/`care`/`nursing`/`other`）・`terms`・`fareYenPerKm` 0〜1000（0＝交通費なし）・`spanLimitHours` 0〜24・0.5刻み（10。0＝注意しない）・`features`（`{}`） |
+| `Org` | `name` 1〜100・`industry`（`sitter`/`care`/`nursing`/`other`）・`terms`・`fareYenPerKm` 0〜1000（0＝交通費なし）・`spanLimitHours` 0〜24・0.5刻み（10。0＝注意しない）・`features`（`{}`）・`roadTravel`（`parkMinutes` 0〜60 の整数（5）・`trafficFactor` 1〜3（1.5）。道路の所要の補正。ADR-0101）・`lineTravel`（`detourFactor` 1〜3（1.3）・`driveKmh` 5〜80 の整数（25）。直線距離の見積もりの係数。ADR-0101） |
 | `Staff` | `id`・`name` 1〜50・`home`・`travelMode`（`DRIVE`/`BICYCLE`/`WALK`/`TRANSIT`）・`workDays`（0=日〜6=土）・`shiftStart`・`shiftEnd`・`active`・`traits`・`requirements`・`preferences`（訪問先の特性に対して。各20まで）・`lastDay`（最終勤務日。翌日から勤務なし。null）・`email`（''）・`icon`（印の中の1〜2文字。絵文字も可。''＝未設定で苗字の最初の1文字。無い古いデータは ''。版は上げない。schema は形だけ＝前後の空白なし・32コード単位まで。見た目で2文字まで（書記素）は画面の `staffIconError` と Excel の `readStaffIcon` で見る） |
 | `Client` | `id`・`displayName` 1〜50・`kana` ≤50（''）・`place`（＋`postalCode` 空か7桁。''。任意の `travelMinutes` 1〜720 の整数（移動時間（片道・分））・`farTrip`（遠方（出張））。無し＝距離から見積もる・印なし。ADR-0096）・`note` ≤500・`color` 0〜7・`active`・`traits`・`requirements`・`preferences`・`tentative`（仮押さえ。false）・`entryNote`・`keyNote`・`parkingNote`・`cautionNote`（各 ≤200。''）・`allowedStaffIds` ≤50（`[]`＝限らない）・`stage`・`referrer`（`name` ≤50・`contact` ≤100・`note` ≤200・`email`。空＝`EMPTY_REFERRER`） |
 | `VisitType` | `id`・`name` 1〜20・`color` 0〜7・`durationMinutes` 5〜720（新しい訪問・パターンの初期値だけ）・`requirements` ≤20（常に必須）・`note` ≤200。20まで（`MAX_VISIT_TYPES`） |
@@ -36,7 +36,8 @@ DemoData = { version: 2, baseDate /* seed の基準日 */, seed /* 乱数の種 
   visits /* 保存した訪問：単発と、繰り返しの変えた回 */, availability, absences /* ≤2000 */, visitTypes /* ≤20 */,
   patterns /* ≤2000 */, clientLeaves /* ≤2000 */,
   snapshots /* date → DaySnapshot＝伝えた内容（確定） */, reassigns /* date → ReassignInfo（反映した振り直しの日だけ） */,
-  presets /* 1〜6 */, scorePresetId? }
+  presets /* 1〜6 */, scorePresetId?,
+  roads? /* 道路の所要の表 { at, points: LatLng[]（500まで）, near: number[][]（地点ごとに近い順 50 件の行き先）, seconds, meters: number[][] }。ADR-0101 */ }
 DaySnapshot = { date, at /* 確定した時刻 ms */, visits: ToldVisit[] /* ≤500。取り消し・休みは入れない */ }
 ToldVisit = { id, clientId, staffId /* null＝担当なし */, start /* HH:mm。null 可 */ }
 ReassignInfo = { method: 'insert' | 'anneal', stayWeight? /* 案B 0〜5 */, insertRoutes? /* 案A の結果 */,
@@ -60,7 +61,7 @@ BookingImportResult = { data /* migrate 済み */, added, updated, unchanged, ca
 
 ### 版と移行
 
-今の版は2。版1（`version: 1`）のデータは移さない：`loadWithStatus` は版1を見つけたら初期データで始め（`outdated: true`）、画面が「データの形が変わったので初期データで始めます」（`OUTDATED_MESSAGE`）と知らせる。控えのファイル（JSON）の読み込みも版1なら同じ文で断る。版2の中で無いものは zod の既定値・`migrate` で読む：`absences`・`visitTypes`・`patterns`・`clientLeaves` は `[]`（null も）、`snapshots`・`reassigns` は `{}`、`presets` は `INITIAL_PRESETS`、`scorePresetId` は repair が先頭、`Visit.start` は null・`pinned` は false、`Pattern.usualStarts` は `[]`、`standard` は無し（登録していない）、〈利用者さん〉の `stage` は `stageOfLegacy`、`org.features` は知らない ID・真偽でない値を捨てオブジェクトでなければ `{}`。ほかは上の表の（　）。
+今の版は2。版1（`version: 1`）のデータは移さない：`loadWithStatus` は版1を見つけたら初期データで始め（`outdated: true`）、画面が「データの形が変わったので初期データで始めます」（`OUTDATED_MESSAGE`）と知らせる。控えのファイル（JSON）の読み込みも版1なら同じ文で断る。版2の中で無いものは zod の既定値・`migrate` で読む：`absences`・`visitTypes`・`patterns`・`clientLeaves` は `[]`（null も）、`snapshots`・`reassigns` は `{}`、`presets` は `INITIAL_PRESETS`、`scorePresetId` は repair が先頭、`Visit.start` は null・`pinned` は false、`Pattern.usualStarts` は `[]`、`standard` は無し（登録していない）、`roads` は無し（取っていない）・`org.roadTravel`・`org.lineTravel` は既定、〈利用者さん〉の `stage` は `stageOfLegacy`、`org.features` は知らない ID・真偽でない値を捨てオブジェクトでなければ `{}`。ほかは上の表の（　）。
 
 ## 項目・条件・プリセット（`src/contracts/rules.ts`。ADR-0002・ADR-0008・ADR-0010・ADR-0035・ADR-0070）
 

@@ -2,7 +2,13 @@
 // 「自分のデータで始める」は、この空のデータ（訪問の種類と呼び名だけ）から始める。人・訪問は入れない
 import type { DemoData } from '../contracts/data';
 import { DATA_VERSION } from '../contracts/data';
-import { type Org, SPAN_LIMIT_DEFAULT_HOURS, type VisitType } from '../contracts/documents';
+import {
+  LINE_TRAVEL_DEFAULT,
+  type Org,
+  ROAD_TRAVEL_DEFAULT,
+  SPAN_LIMIT_DEFAULT_HOURS,
+  type VisitType,
+} from '../contracts/documents';
 import type { Features } from '../contracts/features';
 import { INITIAL_VISIT_TYPES } from './patterns';
 import { INITIAL_ITEMS, INITIAL_RULES } from './people';
@@ -37,6 +43,8 @@ export function createBlankData(today: string, org: BlankOrg, visitTypes: readon
       terms: { ...org.terms },
       fareYenPerKm: 10,
       spanLimitHours: SPAN_LIMIT_DEFAULT_HOURS,
+      roadTravel: { ...ROAD_TRAVEL_DEFAULT },
+      lineTravel: { ...LINE_TRAVEL_DEFAULT },
       features: { ...org.features },
     },
     items: INITIAL_ITEMS.map((i) => ({ ...i, options: [...i.options] })),

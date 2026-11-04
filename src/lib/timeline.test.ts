@@ -16,6 +16,7 @@ import {
   timeRange,
   toY,
   visitTravelKind,
+  withLegMeters,
 } from './timeline';
 
 describe('縦の範囲と位置', () => {
@@ -199,5 +200,42 @@ describe('ドラッグ中の影', () => {
     const off = makeData({ ...data, staff: [staff('s1', 38.26, 140.87, { workDays: [] })] });
     const q = compile(off, DATE);
     expect(shadowOf(q, {}, 'v1', 's1')).toMatchObject({ ok: false, allowed: false });
+  });
+});
+
+describe('区間の距離（ADR-0101）', () => {
+  it('距離の文：1km 未満は m（10 m 単位）、それ以上は km（小数1桁）', () => {
+    const leg = { kind: 'drive' as const, visitId: 'v', start: 0, end: 1, minutes: 1 };
+    expect(legWords({ ...leg, meters: 853 }, 1)).toBe('移動 1分・850m');
+    expect(legWords({ ...leg, meters: 3149 }, 1)).toBe('移動 1分・3.1km');
+    expect(legWords({ ...leg, meters: 12000 }, 1)).toBe('移動 1分・12.0km');
+  });
+
+  it('自宅から・移動・自宅までに問題の距離を付け、言葉に添える（待ちは付けない。0 m は出さない）', () => {
+    const d = makeData({
+      staff: [staff('s1', 38.26, 140.87)],
+      clients: [client('a', 38.27, 140.88), client('b', 38.28, 140.89)],
+      visits: [visit('v1', 'a', '09:00', '09:00'), visit('v2', 'b', '11:00', '11:00')],
+    });
+    const p = compile(d, DATE);
+    const [a, b] = [p.visits[0]!.point, p.visits[1]!.point];
+    const legs = withLegMeters(
+      [
+        { kind: 'fromHome', visitId: 'v1', start: 0, end: 10, minutes: 10 },
+        { kind: 'wait', visitId: 'v2', start: 70, end: 100, minutes: 30 },
+        { kind: 'drive', visitId: 'v2', start: 100, end: 110, minutes: 10 },
+        { kind: 'toHome', visitId: 'v2', start: 170, end: 180, minutes: 10 },
+      ],
+      p,
+      's1',
+      ['v1', 'v2'],
+    );
+    expect(legs[0]!.meters).toBe(p.meters[0]![a]);
+    expect(legs[1]!.meters).toBeUndefined();
+    expect(legs[2]!.meters).toBe(p.meters[a]![b]);
+    expect(legs[3]!.meters).toBe(p.meters[b]![0]);
+    expect(legWords({ ...legs[2]!, meters: 3149 }, 10)).toBe('移動 10分・3.1km');
+    expect(legWords({ ...legs[2]!, meters: 0 }, 10)).toBe('移動 10分');
+    expect(withLegMeters(legs, null, 's1', [])).toBe(legs);
   });
 });

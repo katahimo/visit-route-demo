@@ -100,6 +100,87 @@ export type Terms = z.infer<typeof termsSchema>;
 /** 拘束の上限の既定（時間。ADR-0015） */
 export const SPAN_LIMIT_DEFAULT_HOURS = 10;
 
+/** 小数1桁まで（係数の欄と同じ。浮動小数の誤差は許す） */
+const oneDecimal = (n: number): boolean => Math.abs(n * 10 - Math.round(n * 10)) < 1e-9;
+
+/** 直線距離からの見積もりの既定（ADR-0101）：道なり係数（直線距離に掛ける） */
+export const LINE_DETOUR_DEFAULT = 1.3;
+/** 直線距離からの見積もりの既定（ADR-0101）：車の平均速度（km/h） */
+export const LINE_DRIVE_KMH_DEFAULT = 25;
+/** 道なり係数の範囲 */
+export const LINE_DETOUR_MIN = 1;
+export const LINE_DETOUR_MAX = 3;
+/** 車の平均速度の範囲（km/h） */
+export const LINE_DRIVE_KMH_MIN = 5;
+export const LINE_DRIVE_KMH_MAX = 80;
+
+/**
+ * 直線距離からの見積もりの係数（PRD D436。ADR-0101）：移動（分）＝ 直線距離 × detourFactor ÷ 平均速度。
+ * 車の平均速度は driveKmh、自転車・徒歩・公共交通は domain/geo の決まった速さ。無い古いデータは既定（1.3・25km/h）
+ */
+export const lineTravelSchema = z.object({
+  detourFactor: z
+    .number()
+    .min(LINE_DETOUR_MIN)
+    .max(LINE_DETOUR_MAX)
+    .refine(oneDecimal, '道なり係数は小数1桁までです')
+    .default(LINE_DETOUR_DEFAULT),
+  driveKmh: z.number().int().min(LINE_DRIVE_KMH_MIN).max(LINE_DRIVE_KMH_MAX).default(LINE_DRIVE_KMH_DEFAULT),
+});
+export type LineTravel = z.infer<typeof lineTravelSchema>;
+export const LINE_TRAVEL_DEFAULT: LineTravel = { detourFactor: LINE_DETOUR_DEFAULT, driveKmh: LINE_DRIVE_KMH_DEFAULT };
+
+/** 道路の移動時間の補正の既定（ADR-0101）：駐車・玄関までの分。遅刻を避けるため安全側にとる */
+export const ROAD_PARK_MINUTES_DEFAULT = 5;
+/** 道路の移動時間の補正の既定（ADR-0101）：混雑係数（道路の所要は渋滞・信号待ちを含まない）。遅刻を避けるため安全側にとる */
+export const ROAD_TRAFFIC_FACTOR_DEFAULT = 1.5;
+/** 駐車・玄関までの分の上限 */
+export const ROAD_PARK_MINUTES_MAX = 60;
+/** 混雑係数の範囲 */
+export const ROAD_TRAFFIC_FACTOR_MIN = 1;
+export const ROAD_TRAFFIC_FACTOR_MAX = 3;
+
+/**
+ * 道路の移動時間の補正（PRD D436。ADR-0101）：車の区間の移動（分）＝ parkMinutes ＋ trafficFactor × 道路の所要（分）。
+ * 道路の所要は DemoData.roads にあるときだけ使う。無い古いデータは既定
+ */
+export const roadTravelSchema = z.object({
+  parkMinutes: z.number().int().min(0).max(ROAD_PARK_MINUTES_MAX).default(ROAD_PARK_MINUTES_DEFAULT),
+  trafficFactor: z
+    .number()
+    .min(ROAD_TRAFFIC_FACTOR_MIN)
+    .max(ROAD_TRAFFIC_FACTOR_MAX)
+    .refine(oneDecimal, '混雑係数は小数1桁までです')
+    .default(ROAD_TRAFFIC_FACTOR_DEFAULT),
+});
+export type RoadTravel = z.infer<typeof roadTravelSchema>;
+/** 道路の移動時間の補正の既定（初期データ・空のデータ・古いデータ） */
+export const ROAD_TRAVEL_DEFAULT: RoadTravel = {
+  parkMinutes: ROAD_PARK_MINUTES_DEFAULT,
+  trafficFactor: ROAD_TRAFFIC_FACTOR_DEFAULT,
+};
+
+/** 道路の所要の表に入れる地点の上限 */
+export const ROAD_POINTS_MAX = 500;
+/** 地点ごとに残す行き先の数（道路の所要の近い順。遠い組は直線距離から見積もる。ADR-0101） */
+export const ROAD_NEAR_K = 50;
+
+/**
+ * 道路の所要の表（PRD D436。ADR-0101）：OSRM（OpenStreetMap の道路・車）から押したときに取った、地点どうしの所要（秒）と道のり（m）。
+ * 全組を取り、地点ごとに所要の近い順に ROAD_NEAR_K 件だけ残す（保存を小さくする）。
+ * near[i][k] は行き先の地点の番号、seconds[i][k]・meters[i][k] は points[i] → points[near[i][k]]。道が見つからない組は残さない。
+ * 地点は緯度・経度（小数5桁）で重複なし
+ */
+export const roadTableSchema = z.object({
+  /** 取った時刻（ms） */
+  at: z.number(),
+  points: z.array(latLngSchema).max(ROAD_POINTS_MAX),
+  near: z.array(z.array(z.number().int().min(0)).max(ROAD_NEAR_K)),
+  seconds: z.array(z.array(z.number().min(0)).max(ROAD_NEAR_K)),
+  meters: z.array(z.array(z.number().min(0)).max(ROAD_NEAR_K)),
+});
+export type RoadTable = z.infer<typeof roadTableSchema>;
+
 export const orgSchema = z.object({
   name: z.string().min(1).max(100),
   industry: z.enum(INDUSTRIES),
@@ -116,6 +197,10 @@ export const orgSchema = z.object({
    * 知らない ID は読むときに捨てる。Excel のブックには入れない
    */
   features: featuresSchema.default({}),
+  /** 道路の移動時間の補正（PRD D436。ADR-0101）。無い古いデータは既定（駐車 5分・混雑係数 1.5）。Excel のブックには入れない */
+  roadTravel: roadTravelSchema.default(ROAD_TRAVEL_DEFAULT),
+  /** 直線距離からの見積もりの係数（PRD D436。ADR-0101）。無い古いデータは既定（1.3・25km/h）。Excel のブックには入れない */
+  lineTravel: lineTravelSchema.default(LINE_TRAVEL_DEFAULT),
 });
 export type Org = z.infer<typeof orgSchema>;
 

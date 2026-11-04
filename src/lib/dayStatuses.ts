@@ -95,6 +95,7 @@ export function compileInputOf(data: CompileInput): CompileInput {
     visitTypes: data.visitTypes,
     patterns: data.patterns,
     clientLeaves: data.clientLeaves,
+    ...(data.roads ? { roads: data.roads } : {}),
   };
 }
 

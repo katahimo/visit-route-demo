@@ -112,6 +112,7 @@ export function useCompileInput(data: DemoData): CompileInput {
       data.visitTypes,
       data.patterns,
       data.clientLeaves,
+      data.roads,
     ],
   );
 }

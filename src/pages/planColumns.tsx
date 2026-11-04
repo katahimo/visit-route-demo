@@ -16,7 +16,7 @@ import { hardReasonLabels, notAllowedText } from '../lib/reassignMenu';
 import { homeLegKey, homeTravel } from '../lib/routeView';
 import { reasonFace } from '../lib/scoreReason';
 import { spansOf } from '../lib/spans';
-import { type LegSpan, legsOf, markLegs, shadowOf } from '../lib/timeline';
+import { type LegSpan, legsOf, markLegs, shadowOf, withLegMeters } from '../lib/timeline';
 import { CandidateBox } from './absenceParts';
 import { bandOf, bv, card } from './planCards';
 import { PLAN_SET } from './usePlanNav';
@@ -274,12 +274,14 @@ function columnLegs(p: PlanCtx, sid: string, ids: string[], stops: StopTiming[])
   const { problem, routes, staffById, clientOf } = bv(p);
   if (stops.length !== ids.length) return [];
   const home = staffById.get(sid)?.home;
-  return markLegs(legsOf(stops, homeTravel(problem, staffById.get(sid), routes, true)), {
+  const legs = markLegs(legsOf(stops, homeTravel(problem, staffById.get(sid), routes, true)), {
     order: ids,
     visitPlace: (id) => clientOf(id)?.place,
     homePlaced: home !== undefined && hasLocation(home),
     latestOf: (id) => problem?.visits.find((v) => v.id === id)?.latest,
   });
+  // 区間の距離（道路の所要の表があれば道のり。ADR-0101）
+  return withLegMeters(legs, problem ?? null, sid, ids);
 }
 
 /** 時間軸の列（PRD D58） */

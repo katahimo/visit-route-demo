@@ -202,6 +202,9 @@ export async function importWorkbook(buf: ArrayBuffer, base: DemoData): Promise<
     spanLimitHours: spanLimit ?? SPAN_LIMIT_DEFAULT_HOURS,
     // 機能の入り切りはブックに入れない（ADR-0028）。読み込んでも今の入り切りのまま
     features: base.org.features,
+    // 道路の移動時間の補正もブックに入れない（ADR-0101）。読み込んでも今の値のまま
+    roadTravel: base.org.roadTravel,
+    lineTravel: base.org.lineTravel,
   };
   const next: DemoData = {
     version: base.version,
@@ -223,6 +226,8 @@ export async function importWorkbook(buf: ArrayBuffer, base: DemoData): Promise<
     // （変わった所は「未連絡の変更」になる。ADR-0053。別の事業所のブックなら画面が消す：lib/dataScreen の withoutOrgState）
     snapshots: base.snapshots,
     reassigns: base.reassigns,
+    // 道路の所要の表はシートに無い。位置で引くので、位置の変わらない地点はそのまま使える（ADR-0101）
+    ...(base.roads ? { roads: base.roads } : {}),
     presets: preset.presets,
     scorePresetId: preset.scorePresetId,
   };

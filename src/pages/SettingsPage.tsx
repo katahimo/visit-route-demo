@@ -21,6 +21,7 @@ import '../components/features.css';
 import { SettingsTabs } from '../components/SettingsTabs';
 import { FeatureSwitchesCard } from './featureRows';
 import { MailScheduleSettingsCard } from './mailScheduleSettings';
+import { RoadTravelSettingsCard } from './roadTravelSettings';
 import { TemplatesCard } from './TemplatesCard';
 
 /**
@@ -29,6 +30,7 @@ import { TemplatesCard } from './TemplatesCard';
  * 独自の確認ダイアログで入る機能・切れる機能を出してから書く。下に機能の入・切の1枚（pages/featureRows。グループは見出し、名前と1行の説明、
  * 隠れるものは ⓘ。押すとすぐ保存。主ボタンは置かない）。メールの予約送信の手順も畳む（PRD D395）。
  * データを作り直す操作（始め方を選び直す・初期状態に戻す）はデータの画面に置き、ここには置かない（ADR-0092）。
+ * 移動時間の見積もり方（直線距離・車道の道のり）と係数もここに置く（PRD D436。pages/roadTravelSettings）。
  * 書くのは store の update(fn) だけ。切った機能のデータは消さない。呼び方は org.terms
  */
 export default function SettingsPage() {
@@ -116,6 +118,9 @@ export default function SettingsPage() {
       <TemplatesCard features={features} terms={terms} onApply={(t) => void apply(t)} />
 
       <FeatureSwitchesCard features={features} terms={terms} onToggle={toggle} />
+
+      {/* 移動時間の見積もり方（PRD D436。ADR-0101）：車道の道のりは押したときだけ OSRM から取る */}
+      <RoadTravelSettingsCard />
 
       {/* メールの予約送信（PRD D366。ADR-0069）：メールの機能が入のときだけ */}
       {isOn(features, 'mail') && <MailScheduleSettingsCard />}

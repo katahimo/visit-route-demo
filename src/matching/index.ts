@@ -17,6 +17,7 @@ export { conditionText, matches, yearsSince } from './conditions';
 export { balanceOff, balancePoints, dropPointsOf, overCap, totalPoints } from './cost';
 export { bestInsertion } from './insertion';
 export { naiveSeqs } from './naive';
+export { type RoadLeg, roadMinutes, roadPointKey } from './roads';
 export { EPS, fitStart, routeCost, scheduleRoute, soloBroken } from './timing';
 export {
   FAR_TRIP_LABEL,

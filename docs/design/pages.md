@@ -40,7 +40,7 @@
 | `#/types` | `pages/TypesPage.tsx` | 訪問の種類 | [pages-rules.md](pages-rules.md) |
 | `#/items` | `pages/ItemsPage.tsx` | 特性の項目 | [pages-rules.md](pages-rules.md) |
 | `#/data` | `pages/DataPage.tsx` | データ（控え・Excel・初期状態に戻す・案内をもう一度見る） | [pages-data.md](pages-data.md) |
-| `#/settings` | `pages/SettingsPage.tsx` | 管理者設定（ひな形と機能の入・切。だれでも開ける。ADR-0092） | [pages-data.md](pages-data.md) |
+| `#/settings` | `pages/SettingsPage.tsx` | 管理者設定（ひな形と機能の入・切・移動時間の見積もり方（ADR-0101）。だれでも開ける。ADR-0092） | [pages-data.md](pages-data.md) |
 | `#/start` | `pages/StartGuidePage.tsx` | 登録の案内（自分のデータで始めたあとの3段。`?step=`） | [pages-common.md](pages-common.md) |
 | `*`（`#/` を含む） | （`Navigate`） | 予定の画面（`homePath`。月か週）へ（replace）。`#/home` も同じ | — |
 
@@ -71,7 +71,7 @@
 - 主ボタン（塗り）は1画面1つ、濃い朱1色（下の「色・フォーカス・動き・タッチ」）。ボタンは塗り＝主／枠＝副／文字＝ついでの3段（[pages-common.md](pages-common.md) の「画面の見出しとボタンの3段」）。メール・リンク・地図のボタンは主ボタンにしない
 - 呼び方は `org.terms` から引き、「お客様」「シッター」を直書きしない。表記は常用漢字
 - データを書くのは `update(fn)` だけ（1つの操作は1回の `update` にまとめる）
-- 外部送信は地図タイルと、ボタンを押したときの郵便番号・住所の検索（`lib/geocode.ts` の1か所）と日の予定のメールの予約送信（`lib/mailSchedule.ts` の1か所）だけ。Google マップのリンク・mailto は人が押すので外部送信に当たらない
+- 外部送信は地図タイルと、ボタンを押したときの郵便番号・住所の検索（`lib/geocode.ts` の1か所）と日の予定のメールの予約送信（`lib/mailSchedule.ts` の1か所）と押したときの道路の所要の取得（`lib/roadTable.ts` の1か所。ADR-0101）だけ。Google マップのリンク・mailto は人が押すので外部送信に当たらない
 - 印刷では、メニュー・下のタブ・引き出し・トースト・浮いている帯・確認ダイアログ・ツアー・用語の説明・名前の i・進み具合の帯を出さない
 - 用語の説明（`Term`）の目印は用語の後ろの小さな ⓘ（下線は付けない）。同じ画面の同じ語は最初の1か所だけ説明を付ける（[pages-common.md](pages-common.md)）
 - 画面の文はふつうの言葉で：説明（`Hint`）・用語の説明・帯・空の画面の案内・確認の本文・トースト・`title`・ツアー・`lead` に内部の言葉（費用・点の内訳・稼働時間（帯）・必須の違反・点数の基準のプリセット・固定・記録）を使わない。言い換えは 固定 → ピン、必須の違反 → 守れない条件、点数の基準のプリセット「X」→「X」の重み、稼働時間 → 働ける時間。どうしても要る語は用語の説明に1か所だけ。1文を短く、括弧の中に括弧を重ねない。いくつもあることは `Hint` の中を `<ul className="hint-list">`（`styles.css`）の箇条書きにし、要点を1行ずつ。仕組み（なぜそうなるか）は用語の説明か「使い方」へ寄せ、帯・確認にはその場で要ることだけ書く。機能の名前（ボタン・メニューの項目）を変えたら e2e の文字の確かめも直す
