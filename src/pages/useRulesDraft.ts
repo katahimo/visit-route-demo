@@ -1,20 +1,21 @@
-// 条件の重みの画面の重みの下書き（PRD D286。ADR-0048・ADR-0065）：表の重み・必須は動かしても保存せず、画面の中の下書きに置く。
-// 「新しい考え方として保存（N件）」で確認（名前と変わる重み）のあと新しいプリセットとして足して点数の基準にし、「取り消す」で捨てる。
-// 下書きのまま画面を離れるときは確かめる。下書きの計算は lib/weightDraft、保存は lib/presets の saveDraftAsPreset
+// 条件の重みの画面の重みの下書き（PRD D286。ADR-0048・ADR-0099）：表の重み・必須は動かしても保存せず、画面の中の下書きに置く。
+// プリセットの［値を入れる］も下書きに入れる。「保存（N件）」で確認（変わる重み）のあと「調整した重み」に書いて点数の基準にし、
+// 「取り消す」で捨てる。下書きのまま画面を離れるときは確かめる。下書きの計算は lib/weightDraft、保存は lib/presets の saveTunedWeights
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useConfirm } from '../components/ConfirmDialog';
 import { useToast } from '../components/Toast';
 import { useLeaveGuard } from '../components/useLeaveGuard';
-import { MAX_PRESETS, type RuleType } from '../contracts/rules';
-import { addPresetError, draftPresetName, PRESET_NAME_MAX, saveDraftAsPreset } from '../lib/presets';
+import { MAX_PRESETS, type Preset, type RuleType } from '../contracts/rules';
+import { saveTunedWeights, tunedFull } from '../lib/presets';
 import {
   confirmBody,
   confirmTitle,
   draftChanges,
   editDraft,
+  fillDraft,
   leaveDialog,
   pruneDraft,
-  savedText,
+  SAVED_TEXT,
   savedWeights,
   type WeightDraft,
   withDraft,
@@ -48,8 +49,8 @@ export function useRulesDraft() {
   /** 最新のデータ（確認を待つ間に別のタブで変わったかを見る） */
   const dataRef = useRef(data);
   dataRef.current = data;
-  /** プリセットが6つあれば保存できない（使わない考え方を消してから。ADR-0065） */
-  const full = data.presets.length >= MAX_PRESETS;
+  /** 調整した重みがまだ無く、プリセットが6つあれば保存できない（使わない考え方を消してから。ADR-0099） */
+  const full = tunedFull(data);
   /** 点数の基準のプリセット（この画面で表の重みの元にする考え方。ADR-0035・ADR-0065） */
   const basis = scorePresetOf(data.presets, data.scorePresetId);
   /** 保存済みの条件：名前・種類は条件のまま、重み・必須は基準のプリセットのもの */
@@ -81,6 +82,9 @@ export function useRulesDraft() {
   const changeOf = (type: RuleType) => changes.find((c) => c.type === type);
   const setWeight = (type: RuleType, patch: Partial<{ weight: number; hard: boolean }>) =>
     setRawDraft({ basisId, values: editDraft(draft, saved, type, patch) });
+  /** プリセットの値を下書きに入れる（保存はしない。ADR-0099） */
+  const fill = (weights: Preset['weights'], types: readonly RuleType[]) =>
+    setRawDraft({ basisId, values: fillDraft(draft, saved, weights, types) });
   const focusHead = useFocusHead();
   /** 下書きを捨てる */
   const reset = () => setRawDraft({ basisId, values: {} });
@@ -89,52 +93,36 @@ export function useRulesDraft() {
     focusHead();
     toast('重みの変更を取り消しました');
   };
-  /** 新しい考え方として保存する（ADR-0065）：名前を付けて新しいプリセットとして足し、点数の基準にする（元のプリセットは残る） */
+  /** 保存する（ADR-0099）：確認のあと「調整した重み」に書いて点数の基準にする（ほかのプリセットは変えない） */
   const saveDraft = async () => {
     const list = changes;
     const values = draft;
     if (list.length === 0 || full || !basis) return;
-    let name = draftPresetName(basis.name, data.presets);
     const ok = await confirmDialog({
       title: confirmTitle(list.length),
-      body: confirmBody(list, basis.name),
+      body: confirmBody(list),
       confirmLabel: '保存する',
       cancelLabel: '編集を続ける',
-      field: {
-        label: '新しい考え方の名前',
-        initial: name,
-        maxLength: PRESET_NAME_MAX,
-        testId: 'rules-draft-name',
-        error: (v) => addPresetError(dataRef.current, v),
-        onValue: (v) => {
-          name = v;
-        },
-      },
     });
     if (!ok) return;
-    // 確認の間に別のタブで点数の基準が替わった・6つに達したら書かない（下書きは前の基準の重み。替わった基準では捨てられる）
+    // 確認の間に別のタブで点数の基準が替わった・保存できなくなったら書かない（下書きは前の基準の重み）
     if (basisRef.current !== basisId) {
       toast('点数の基準が替わったので、保存しませんでした');
       return;
     }
-    if (dataRef.current.presets.length >= MAX_PRESETS) {
+    if (tunedFull(dataRef.current)) {
       toast(`プリセットが${MAX_PRESETS}つになったので、保存しませんでした。使わない考え方を消してから保存してください`);
       return;
     }
-    const error = addPresetError(dataRef.current, name);
-    if (error) {
-      toast(`保存しませんでした：${error}`);
-      return;
-    }
     update(
-      (d) => (scorePresetOf(d.presets, d.scorePresetId)?.id === basisId ? saveDraftAsPreset(d, values, name) : d),
-      '新しい考え方として保存',
+      (d) => (scorePresetOf(d.presets, d.scorePresetId)?.id === basisId ? saveTunedWeights(d, values) : d),
+      '条件の重みを保存',
     );
     reset();
     focusHead();
-    toast(savedText(name.trim()));
+    toast(SAVED_TEXT);
   };
   // 下書きのまま画面を離れる（リンク・パレット・再読込・タブを閉じる）ときは確かめる
   useLeaveGuard(changes.length > 0, leaveDialog(changes.length));
-  return { basis, full, savedRules, shownRules, changes, changeOf, setWeight, discard, saveDraft };
+  return { basis, full, savedRules, shownRules, changes, changeOf, setWeight, fill, discard, saveDraft };
 }

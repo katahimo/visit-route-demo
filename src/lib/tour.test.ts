@@ -22,7 +22,7 @@ describe('tourSteps（PRD D277）', () => {
     expect(plan.points!.join('')).not.toContain('メニューの「組む」');
     expect(plan.points!.join('')).toContain('赤い帯の「要対応を組む」');
     const on = tourSteps(terms, {})[0]!;
-    expect(on.body).toContain('「組む」で組みます');
+    expect(on.body).toContain('「組む」の「担当を組む」で');
     expect(on.body).toContain('未確定の日');
     expect(on.points![0]).toContain('メニューの「組む」の「担当を組む」');
     expect(JSON.stringify(on)).not.toContain('予定を組む');

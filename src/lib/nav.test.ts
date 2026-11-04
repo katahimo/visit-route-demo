@@ -62,10 +62,12 @@ describe('menuSections（入。PRD D401。ADR-0054・0063・0067・0074・0078�
       ['arrange:assign', '担当を組む', '/arrange?ym=2026-11'],
     ]);
     // 予定と相性は〈利用者さん〉の項目（入切とも。ADR-0099）
-    for (const p of ['/clients', '/clients/c1', '/compat', '/basics']) expect(isActiveNav(item('clients'), p)).toBe(true);
+    for (const p of ['/clients', '/clients/c1', '/compat', '/basics'])
+      expect(isActiveNav(item('clients'), p)).toBe(true);
     for (const p of ['/staff', '/staff/s1', '/availability', '/workload'])
       expect(isActiveNav(item('staff'), p)).toBe(true);
-    for (const p of ['/clients', '/staff', '/clients/c1', '/basics']) expect(isActiveNav(item('arrange'), p)).toBe(false);
+    for (const p of ['/clients', '/staff', '/clients/c1', '/basics'])
+      expect(isActiveNav(item('arrange'), p)).toBe(false);
     expect(item('settings').children).toBeUndefined();
     // 前半は今月
     const early = menuSections(terms, '2026-10-03', {});

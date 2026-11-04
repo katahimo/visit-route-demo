@@ -197,8 +197,7 @@ export const FEATURES: readonly FeatureDef[] = [
     description: 'AI の条件の重み・特性の項目・プリセットを変えられます',
     group: '上級（組み方の調整）',
     paths: ['/rules', '/items'],
-    hides:
-      'メニューの「組む」の「条件の重み」と設定の「特性の項目」のタブ、点数の理由（切ると今の重みのまま組む）',
+    hides: 'メニューの「組む」の「条件の重み」と設定の「特性の項目」のタブ、点数の理由（切ると今の重みのまま組む）',
   },
   {
     id: 'mail',

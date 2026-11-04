@@ -1,6 +1,6 @@
-// 条件の重みの画面のプリセットの節（D20・D235。ADR-0008・ADR-0035・ADR-0065・ADR-0088）：プリセットの一覧の各行の丸で点数の基準を選ぶ・
-// プリセットごとの名前・一言の編集（変えるとすぐ保存）・型ごとの重み・必須の読み取り専用の一覧（基準のプリセットは下の条件の表に寄せる）・
-// 消す（初期の3つと最後の1つは消せない）。プリセットの重みは変えない（重みを変えるときは下の表で直して新しい考え方として保存する）。
+// 条件の重みの画面の「考え方（プリセット）の管理」（D20・D235。ADR-0008・ADR-0035・ADR-0088・ADR-0099。畳んで画面の下）：
+// プリセットの一覧の各行の丸で点数の基準を選ぶ・名前・一言の編集（変えるとすぐ保存）・型ごとの重み・必須の読み取り専用の一覧
+// （基準のプリセットは上の条件の表に寄せる）・消す（初期の3つと最後の1つは消せない）。プリセットの重みは変えない（重みは上の表で直して保存する）。
 // 状態と処理は usePresetSection
 import { LayoutGrid, ShieldCheck, Trash2 } from 'lucide-react';
 import { useState } from 'react';
@@ -29,21 +29,19 @@ export function PresetSection({
   const terms = data.org.terms;
   const flow = usePresetSection({ draftCount });
   return (
-    <div className="card stack" ref={flow.ref} data-testid="preset-section">
+    <div className="stack" ref={flow.ref} data-testid="preset-section">
       <SectionTitle
         icon={LayoutGrid}
         aside={
           <Hint>
             <ul className="hint-list">
               <li>
-                丸で選んだプリセットが点数の基準（ふだんの考え方）です。担当を組む・訪問ごとの検査はこの重み・必須で計算し、画面の点数（100点満点）もこれで付けます。
+                丸で選んだプリセットが点数の基準（ふだんの考え方）です。自動の組み・担当を組む・訪問ごとの検査はこの重み・必須で計算し、画面の点数（100点満点）もこれで付けます。
               </li>
               <li>
-                プリセットの重み・必須は変えられません。下の表は点数の基準の重みから始め、変えると新しいプリセットとして保存します。
+                プリセットの重み・必須は変えられません。上の表で直して保存すると「調整した重み」に書き、それを点数の基準にします。
               </li>
-              <li>
-                組み方の標準の「案をくらべる」はすべてのプリセットで案を作り、案から作った表を登録するとそのプリセットが点数の基準になります。
-              </li>
+              <li>案を比べるでは、プリセットごとに提案を作れます。</li>
               <li>{MAX_PRESETS}つまで作れます。名前・一言は変えるとすぐ保存します。初期の3つは消せません。</li>
             </ul>
           </Hint>
@@ -138,9 +136,9 @@ function PresetEdit({
             </div>
           </div>
           {isRuler ? (
-            // 基準のプリセットの重み・必須は下の条件の表と同じなので、表に寄せる（ADR-0088）
+            // 基準のプリセットの重み・必須は上の条件の表と同じなので、表に寄せる（ADR-0088）
             <p className="sub" data-testid="preset-weights-basis">
-              重み・必須は下の条件の表のとおりです（点数の基準）。
+              重み・必須は上の条件の表のとおりです（点数の基準）。
             </p>
           ) : (
             <PresetWeights preset={p} shownTypes={shownTypes} terms={terms} />

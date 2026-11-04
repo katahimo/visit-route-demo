@@ -149,8 +149,7 @@ describe('機能の表（ADR-0028 の機能の一覧）', () => {
 describe('エキスパート機能（ADR-0072）', () => {
   it('切ると 案を比べる・条件の重み・特性の項目の URL へ移れない（担当を組むは土台のまま）', () => {
     const off: Features = { expert: false };
-    for (const h of ['/compare?date=2026-10-12', '/rules#presets', '/items'])
-      expect(isHrefOn(off, h)).toBe(false);
+    for (const h of ['/compare?date=2026-10-12', '/rules#presets', '/items']) expect(isHrefOn(off, h)).toBe(false);
     expect(isHrefOn(off, '/arrange?ym=2026-10')).toBe(true);
     expect(isOn({ expert: false, compare: true, rules: true }, 'compare')).toBe(false);
     expect(isOn({ expert: false, rules: true }, 'rules')).toBe(false);

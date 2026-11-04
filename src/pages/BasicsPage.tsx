@@ -113,9 +113,7 @@ export default function BasicsPage() {
             />
           </>
         )}
-        <p className="sub">
-          相性を直すのは「相性」のタブ、勤務日・勤務時間を直すのは{terms.staff}の「勤務」のタブ
-        </p>
+        <p className="sub">相性を直すのは「相性」のタブ、勤務日・勤務時間を直すのは{terms.staff}の「勤務」のタブ</p>
       </div>
     </div>
   );

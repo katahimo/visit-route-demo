@@ -51,4 +51,3 @@ describe('rangeCounts（今日以降の担当なし・要対応）', () => {
     expect(rangeCounts(dates, statuses, '2026-11-10')).toEqual({ unassigned: 2, unassignedDays: 1, care: 4 });
   });
 });
-

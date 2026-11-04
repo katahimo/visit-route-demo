@@ -1,7 +1,6 @@
-import { ArrowLeft, SlidersHorizontal } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { SlidersHorizontal } from 'lucide-react';
 import { useConfirm } from '../components/ConfirmDialog';
-import { PageHeader, WithIcon } from '../components/ui';
+import { PageHeader } from '../components/ui';
 import { useFeature } from '../components/useFeature';
 import { RULE_TYPES, type Rule, type RuleType } from '../contracts/rules';
 import { newId, ruleTypeLabel } from '../lib/common';
@@ -10,7 +9,7 @@ import { isSavedHard, RULE_DEFAULTS, removeRule, renameRule } from '../lib/ruleE
 import { useDemoData } from '../store';
 import './settings.css';
 import { PresetSection } from './presetSection';
-import { RulesAdd, RulesAdvanced, RulesDraftBar, RulesIntro, RulesTable } from './rulesParts';
+import { RulesAdd, RulesAdvanced, RulesDraftBar, RulesFill, RulesIntro, RulesTable } from './rulesParts';
 import { useRulesDraft } from './useRulesDraft';
 
 /**
@@ -22,12 +21,11 @@ function useShownTypes(): { compatOn: boolean; shownTypes: readonly RuleType[] }
 }
 
 /**
- * 条件の重み（組み方の標準の「1. 案をくらべる」からの寄り道。PRD D233・D360。ADR-0035・ADR-0065・ADR-0066）。
- * 上にプリセットの節（点数の基準を選ぶと下の表の重みが替わる）。その下の条件（ルール）の一覧に、重み 0〜5（0.5刻み、0 で半透明＝無効）と
- * 必須の切り替え。表の重み・必須は点数の基準のプリセット（ふだんの考え方）のものから始まり、動かしても保存せず画面の中の下書きに置く
- * （PRD D286。ADR-0048。状態と処理は useRulesDraft）。保存するとプリセットは書き換えず、新しい考え方（プリセット）として足して
- * 点数の基準にする（ADR-0065）。担当を組む・点数・検査はこの重みで計算する（重みは1組。ADR-0053）。
- * 区画の部品は rulesParts、プリセットの節は presetSection
+ * 条件の重み（メニュー「組む」の子。PRD D233・D360。ADR-0035・ADR-0048・ADR-0099）：予定を入れたときの自動の組み・担当を組む・
+ * 点数・検査に使う重みを直す画面。条件（ルール）の一覧に、重み 0〜5（0.5刻み、0 で半透明＝無効）と必須の切り替え。
+ * 表の重み・必須は点数の基準のプリセット（今の重み）から始まり、動かしても・［値を入れる］でプリセットの値を入れても保存せず
+ * 画面の中の下書きに置く（状態と処理は useRulesDraft）。「保存」で「調整した重み」に書いて点数の基準にする（ほかのプリセットは変えない）。
+ * プリセットの管理（基準を選ぶ・名前・消す）は畳んで下に置く。区画の部品は rulesParts、プリセットの管理は presetSection
  */
 export default function RulesPage() {
   const { data, update } = useDemoData();
@@ -63,17 +61,12 @@ export default function RulesPage() {
       <PageHeader
         icon={SlidersHorizontal}
         title="条件の重み"
-        lead="ふだんの考え方（点数の基準）の重みを決めます。触らなくても、初期の考え方で組めます"
-        actions={
-          <Link to="/standard" className="btn" data-testid="rules-back">
-            <WithIcon icon={ArrowLeft}>組み方の標準へ戻る</WithIcon>
-          </Link>
-        }
+        lead="AI で担当を組むとき（予定を入れたときの自動の組み・担当を組む）に、どの条件を重く見るかを決めます。保存すると次に組むときから使います"
       />
-      <PresetSection draftCount={changes.length} shownTypes={shownTypes} />
 
       <div className="card stack">
         <RulesIntro basisName={draft.basis?.name} />
+        <RulesFill presets={data.presets} basisId={draft.basis?.id} onFill={(p) => draft.fill(p.weights, shownTypes)} />
         <RulesTable
           rules={draft.shownRules.filter((r) => compatOn || r.type !== 'compatibility')}
           terms={terms}
@@ -87,6 +80,12 @@ export default function RulesPage() {
         {data.rules.length === 0 && <p className="sub">条件がありません。移動時間だけで割り当てます。</p>}
         <RulesAdd types={shownTypes} terms={terms} primary={changes.length === 0} onAdd={add} />
       </div>
+
+      {/* プリセットの管理はふだん使わないので畳む（読み直すと畳む。#presets から来たら開く） */}
+      <details className="card rules-presets" data-testid="preset-fold">
+        <summary>考え方（プリセット）の管理</summary>
+        <PresetSection draftCount={changes.length} shownTypes={shownTypes} />
+      </details>
 
       <RulesAdvanced />
 

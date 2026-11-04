@@ -52,7 +52,5 @@ export function rememberedSide(pathname: string, remembered: PeopleSide | undefi
  */
 export function peopleMatch(side: PeopleSide, remembered: PeopleSide | undefined): string[] {
   const compat = (remembered ?? 'clients') === side ? ['/compat'] : [];
-  return side === 'clients'
-    ? ['/clients', '/basics', ...compat]
-    : ['/staff', '/availability', '/workload', ...compat];
+  return side === 'clients' ? ['/clients', '/basics', ...compat] : ['/staff', '/availability', '/workload', ...compat];
 }

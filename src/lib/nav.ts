@@ -329,9 +329,7 @@ export function screenSections(terms: Pick<Terms, 'client' | 'staff'>, features:
     { items: [basicsScreen, clientsScreen, staffScreen, ...workScreens] },
     {
       title: '組む',
-      items: expert
-        ? [{ key: 'rules', to: '/rules', label: '条件の重み', icon: 'rules' }, arrangeScreen]
-        : [],
+      items: expert ? [{ key: 'rules', to: '/rules', label: '条件の重み', icon: 'rules' }, arrangeScreen] : [],
     },
     {
       title: '設定',

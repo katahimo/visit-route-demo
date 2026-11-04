@@ -211,7 +211,12 @@ describe('attentionBand の入だけの種類（エキスパート機能が入�
     expect(attentionBand([span], TODAY, undefined, open)?.go).toEqual({ to: '/plan', date: '2026-10-23' });
   });
   it('文は 訪問の種類 → 未確定 の順にまとめ、押した先は先頭の種類（訪問があれば訪問）', () => {
-    const b = attentionBand([day(TODAY, { a: ['unassigned'], b: ['late'] }), untold('2026-10-23')], TODAY, undefined, open);
+    const b = attentionBand(
+      [day(TODAY, { a: ['unassigned'], b: ['late'] }), untold('2026-10-23')],
+      TODAY,
+      undefined,
+      open,
+    );
     expect(b?.text).toBe('担当なし 1件・間に合わない 1件・未確定 2日');
     expect(b?.go).toEqual({ to: '/plan', date: TODAY, visitId: 'b' }); // 間に合わないが先（PRD D403）
   });

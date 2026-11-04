@@ -256,7 +256,6 @@ export const patternUsualStartSchema = z.object({
   weekday: z.number().int().min(0).max(6),
   start: hhmmSchema,
 });
-export type PatternUsualStart = z.infer<typeof patternUsualStartSchema>;
 
 /** 定期パターン（ADR-0012。利用者さんごと。複数持てる） */
 export const patternSchema = z
