@@ -181,10 +181,10 @@ flowchart LR
   - パターン：いない〈利用者さん〉のものを除く、無効な `typeId`・`usualStaffId` は null、`weekdays`・`monthWeeks` は重なりなしの昇順（毎週系の `monthWeeks` は `[]`）、`dayTimes` はパターンの曜日だけ・曜日ごと最初の1件・曜日の順
   - 訪問：無効な `typeId`・`pattern` は null（訪問は残す）。取り消していない訪問の `cancelKind` は null。いない・休止中の担当は null（ピンも外す）。担当の無い訪問のピンは外す
   - `allowedStaffIds`：いない・休止中の人と重なりを除く（空になれば限らない）。active・tentative を段階に合わせる（`stageFlags`）
-- 最初の2問（PRD D276・D379〜D381）：
+- 最初の2問・更新の知らせ（PRD D276・D379〜D381・D437）：
   - 出さない印は `store/start.ts` の `startsWithAll(getStorage)`（保存データが無いときだけ読む。画面からは書かない。e2e の `scripts/lib/startFeatures.cjs` と全機能を見せるデモの前準備）
-  - 内部の `firstRun`（`'first'`＝初めて開いた・`'redo'`＝「始め方を選び直す」のあと・`null`）が null 以外のあいだ `needsFirstRun` が真で、`components/FirstRunPage` の `FirstRunGate` が本体の代わりに2問を出す。`first` のあいだは仮の空データを保存しない（StrictMode の2回実行でも）
-  - `startFirstRun(answer)`：`redo` なら先に `keepPrevious('始め方を選び直す')`、`startWithAnswer` で書き、`replace` と同じに履歴を捨てて `replacedCount` を増やす（Ctrl+Z の対象外）。`askFirstRun()` は2問を出すだけ。`redoingFirstRun` のときだけ従のボタン「閉じる」（`cancelFirstRun()` で今のデータのまま）
+  - 内部の `firstRun`（`'first'`＝初めて開いた・`'redo'`＝「始め方を選び直す」のあと・`'release'`＝まだ見ていないデモの更新がある（`loadWithStatus` の `releaseNotes`。`store/start.ts` の `seenRelease`／`rememberRelease`、キー `vrdemo:release:seen`）・`null`）が null 以外のあいだ `needsFirstRun` が真で、`components/FirstRunPage` の `FirstRunGate` が本体の代わりに2問を出す。`first` のあいだは仮の空データを保存しない（StrictMode の2回実行でも）
+  - `startFirstRun(answer)`：`redo` なら先に `keepPrevious('始め方を選び直す')`、`release` なら `keepPrevious('デモの更新で始め直す')`、`startWithAnswer` で書き、`replace` と同じに履歴を捨てて `replacedCount` を増やす（Ctrl+Z の対象外）。`askFirstRun()` は2問を出すだけ。`redoingFirstRun` のときだけ従のボタン「閉じる」（`cancelFirstRun()` で今のデータのまま）。`release` の「今のデータを使い続ける」も `cancelFirstRun()`（`keepAfterRelease` で今の版を見たことにする）。今の版の印は `startWithAnswer`・印 `all`・読めなかったデータでも書く（`rememberRelease` は今の印より新しいときだけ書く。id の新旧は `compareRelease`）。別のタブの保存を受けても `release` の知らせは閉じない
 - デモを作った直後の1回の組み（PRD D409。ADR-0079）：`startWithAnswer`・`reset` は `store/start.ts` の `arrangesAfterStart({ kind: 'answer', start } | { kind: 'reset' })`（「デモで試す」・初期状態に戻すときだけ真）が真なら sessionStorage の印（`ARRANGE_PENDING_KEY`。`markArrangeAfterStart`）を書き、偽なら消す。store は起動時と作り直した直後に印を読み（`arrangePending`）`startArrange` を置く。`components/autoArrangeHost` が新しいデータで `requestBandArrange`（帯の［要対応を組む］と同じ依頼・知らせ・［元に戻す］）を1回出し、`takeStartArrange`・`clearArrangePending` で印を消す。例外の画面の「データを初期状態に戻す」（`main.tsx` の `reset` → 読み直し）でも組む。StrictMode の付け直しでは依頼し直す。開いただけ・ふつうの読み直しでは組まない
 - 1世代の控え（PRD D227）：
   - `keepPrevious(data, reason, at)`：置き換える前のデータを書く（上書き）。書けなければ前の世代を消して1回試し直し、だめなら `{ kept: false, why: '控えを残せません：容量不足' }`（操作は止めない）。`cancel()` で前の世代に戻す。画面は確認で OK のあとに残し、確認の本文は `canKeepPrevious()` の見込み（保存が使えない・最後の保存が容量超過なら「容量不足」）
@@ -407,13 +407,13 @@ flowchart LR
 - 提供するAPI：`lib/features.ts` の `FEATURES`・`FEATURE_GROUPS`・`isOn`（依存先が切なら切）・`isSwitchOn`・`featureOfLocation(pathname, search)`・`featureOfHref`・`isHrefOn`（土台は null。パスは小文字・末尾の `/` を落とす）・`TEMPLATES`（`oneOff` 単発の予約／`basic` 定期の訪問（基本）／`laborContract` 定期＋勤務・契約／`monthlyField` 定期＋月の予定・現場共有／`all` すべての機能。名前・例・説明・入れる機能。ADR-0092）・`applyTemplate`・`matchTemplate`（違えば `custom`）・`templateDiff`・`templateBasicDelta`（基本との差）・`turnOffImpact(data, id, today)`・`withFeature`。画面から読むのは `components/useFeature.ts` の `useFeatures()`・`useFeature(id)`（`isOn` で依存も見る。欄・ボタンを出すかを部品の中で決める）
 - 表の `doParams`：`sudden` は `/plan?do=absence`
 - `turnOffImpact`（PRD D215）は計算に効くものだけ：相性は利用中の〈利用者さん〉×休止でない〈スタッフ〉、担当を限るは限った人に休止でない人がいる利用中の〈利用者さん〉、休み・希望休・欠勤は今日以降、空き状況は仮押さえの〈利用者さん〉
-- 出し分け：`menuSections(terms, today, features)`、`app/App.tsx` のルート（切った URL は予定の画面（`homePath`）へ移し、知らせと `#/settings` へのリンク）、`lib/commandPalette`・`lib/attentionBand`・`lib/tour`・`lib/links`（切なら null）、画面の欄・ボタン（`useFeature`）。`rules` を切っても AI で組むのは点数の基準のプリセットの重み（`data.rules` はいつも基準にそろっている）。事実の表示（休みの人に N・振り直しの差・連絡の一覧）は残し、入力・操作の入口だけ隠す
+- 出し分け：`menuSections(terms, today, features)`、`app/App.tsx` のルート（切った URL は予定の画面（`homePath`）へ移し、知らせと `#/settings` へのリンク）、`lib/commandPalette`・`lib/attentionBand`・`lib/links`（切なら null）、画面の欄・ボタン（`useFeature`）。`rules` を切っても AI で組むのは点数の基準のプリセットの重み（`data.rules` はいつも基準にそろっている）。事実の表示（休みの人に N・振り直しの差・連絡の一覧）は残し、入力・操作の入口だけ隠す
 - 管理者設定 `pages/SettingsPage.tsx`（`#/settings`。だれでも開ける。入切とも同じ見せ方）：ひな形（`TemplatesCard`。適用は `templateDiff` の確認）・グループごとのスイッチ（`featureRows`。データがあれば切る前に `turnOffImpact` の確認）・メールの予約送信。文は `lib/settingsView`（`featureRowText`・`currentTemplateName`）。画面の細部は [design/pages-data.md](design/pages-data.md)「管理者設定」
 - 依存するもの：contracts、store（読むだけ）
 - 配置：`src/lib/features.ts`・`src/components/useFeature.ts`・`src/components/FeatureOffNotice.tsx`（切った URL を開いたときの知らせ）・`src/pages/SettingsPage.tsx`
 - 完了の条件：
   - [ ] `org.features` の無いデータで画面・計算が変わらない（テスト）
-  - [ ] メニュー・パレット・要対応の帯・ツアー・links の行き先が土台か表の機能に属する。依存（`vacancy`→`vacancyNotice`、`workload`→`fare`）、ひな形と `matchTemplate`（テスト）
+  - [ ] メニュー・パレット・要対応の帯・links の行き先が土台か表の機能に属する。依存（`vacancy`→`vacancyNotice`、`workload`→`fare`）、ひな形と `matchTemplate`（テスト）
   - [ ] 切った URL は予定の画面（`homePath`）へ移り知らせ。設定と土台は切れない（e2e `scripts/e2e-features.cjs`：ひな形5通り・390px・印刷）
 
 ### pages（画面）
@@ -427,7 +427,7 @@ flowchart LR
 - 実装の決まり（予定の共通の部品・自動の組み・例外だけ見せる・「詳しく ▾」・操作の行・来月の確認・「定期の予定を追加」（`AddPlanPanel`・`PlanCsvSection`）・人の画面・予定を組む・最初の2問・スマホ・キーボード・訪問の札と詳細の欄・読み込みの分け方・よく変わる値）：[design/pages.md](design/pages.md) の「pages の実装の決まり」
 - 詳細（必要な画面のファイルだけ読む）：
   - 共通事項・ルート一覧・確認ダイアログ・機能の入り切り（画面側）：[design/pages.md](design/pages.md)。メニュー・コマンドパレット：[design/pages-nav.md](design/pages-nav.md)
-  - 画面共通の部品（右の欄・訪問の詳細の欄・名前の詳細・用語・ツアー・リンク・メール・道順）：[design/pages-common.md](design/pages-common.md)
+  - 画面共通の部品（右の欄・訪問の詳細の欄・名前の詳細・用語・リンク・メール・道順）：[design/pages-common.md](design/pages-common.md)
   - 3段の時間帯のバー・ひと目で分かる表示：[design/pages-bars.md](design/pages-bars.md)
   - 進み具合の帯・日の状態：[design/pages-progress.md](design/pages-progress.md)
   - 日の予定：[design/pages-plan.md](design/pages-plan.md)／欠勤・キャンセル・振り直し・連絡：[design/pages-plan-absence.md](design/pages-plan-absence.md)

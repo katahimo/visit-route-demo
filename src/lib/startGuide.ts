@@ -1,5 +1,5 @@
 // 自分のデータで始めたあとの、1画面1項目の3段の登録の案内（PRD D381。ADR-0073）の純粋な部分：
-// ①〈利用者さん〉②〈スタッフ〉③予定、上に「1/3」、①②は「CSV・Excel を読み込む」、③は予定の画面へ。
+// ①〈利用者さん〉②〈スタッフ〉③予定、上に「1/3」、①②は名簿の欄をそのまま出す、③は予定の画面へ。
 // 画面は pages/StartGuidePage。呼び名は org.terms から引く（直書きしない）
 import type { Terms } from '../contracts/documents';
 import type { Features } from '../contracts/features';

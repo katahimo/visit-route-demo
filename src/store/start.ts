@@ -5,6 +5,7 @@
 // デモを作った直後に要対応を組む印（PRD D409。要対応の帯の［要対応を組む］と同じ依頼）もここに置く（sessionStorage。読み直しをまたいで、組み終える前に消さない）
 
 import type { FirstRunBooking, FirstRunStart } from '../lib/firstRun';
+import { compareRelease } from '../lib/releaseNotes';
 
 /** localStorage のキー（DemoData の STORAGE_KEY とは別。データの版・書き出し・初期状態に戻すに入れない） */
 export const FEATURES_START_KEY = 'vrdemo:features:start';
@@ -112,5 +113,38 @@ export function clearArrangePending(getStorage: () => PendingStore | null = sess
     getStorage()?.removeItem(ARRANGE_PENDING_KEY);
   } catch {
     // 消せなくても続ける
+  }
+}
+
+/**
+ * 最後に見たデモの更新の印のキー（PRD D437。ADR-0102。DemoData とは別。データの版・書き出し・初期状態に戻すに入れない。
+ * 値は更新の id（lib/releaseNotes）だけで個人の情報は持たない）。最初の2問・更新の知らせに答えたとき・知らせを出さずに開いたときに書く
+ */
+export const SEEN_RELEASE_KEY = 'vrdemo:release:seen';
+
+/** 最後に見た更新の id。印が無い・読めないなら null */
+export function seenRelease(getStorage: () => KeyStore | null = () => globalThis.localStorage ?? null): string | null {
+  try {
+    return getStorage()?.getItem(SEEN_RELEASE_KEY) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 見た更新の id を残す（書けなくても続ける。書けなければ次に開いたときもう一度知らせる）。
+ * 今の印より新しいときだけ書く（古い版を開いたままのタブが、新しい版で見た印を古くしない）
+ */
+export function rememberRelease(
+  id: string,
+  getStorage: () => BookingStore | null = () => globalThis.localStorage ?? null,
+): void {
+  try {
+    const s = getStorage();
+    const cur = s?.getItem(SEEN_RELEASE_KEY) ?? null;
+    if (cur !== null && compareRelease(id, cur) <= 0) return;
+    s?.setItem(SEEN_RELEASE_KEY, id);
+  } catch {
+    // 書けなくても続ける
   }
 }

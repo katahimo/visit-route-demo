@@ -177,7 +177,6 @@ async function attention(page) {
   check(await onPlan(page, SECOND), '?date=…&do=unassigned でその日を選ぶ', await dayOf(page));
   check(await scrolledToNone(page), '?do=unassigned で「入らなかった訪問」の列へ巻く');
   check(hashOf(page) === '#/plan', '?do=unassigned は読んだら消す', hashOf(page));
-  check((await page.getByTestId('tour').count()) === 0, '?do= のリンクでは案内ツアーを出さない');
 
   // 拘束が上限を超える → 稼働の見込み（その月・その人）
   row = await attentionRow(page, 'overSpan');

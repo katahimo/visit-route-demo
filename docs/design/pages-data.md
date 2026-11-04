@@ -1,6 +1,6 @@
 # データの画面と管理者設定
 
-> この画面のファイル：`src/pages/DataPage.tsx`（組み立てだけ。状態と処理は `useDataBackup`（`useLastExport`・`useDataBackup`・`useDataRestore`）・`useDataExcel`・`useDataTidy`・`useDataTerms`、見た目は `dataParts.tsx`（保存の誤り・直前の状態に戻す・呼び方・控え（JSON）・古い訪問を片づける・使い方の案内・初期状態に戻す）・`dataExcel.tsx`（Excel の欄）・`dataBookings.tsx`（予約の CSV の欄）、文と判定は `src/lib/dataScreen.ts`・`bookingScreen.ts`）・`SettingsPage.tsx`（`settings.css`）・`RestartCard.tsx`・`mailScheduleSettings.tsx`、`src/components/FilePick.tsx`（`filePick.css`）・`Tour.tsx`・`DataNotices.tsx`（`dataNotices.css`）・`dirtyForms.ts`（`useDirtyMark`）、`src/lib/filePick.ts`・`features.ts`・`backupReminder.ts`・`tidy.ts`・`dirtyForms.ts`。関連 ADR：0006・0028・0032・0068・0069・0073・0075・0090・0095。関連 PRD：D191〜D193・D210〜D216・D227・D260・D275・D322・D366・D379・D381・D395・D408・D428。
+> この画面のファイル：`src/pages/DataPage.tsx`（組み立てだけ。状態と処理は `useDataBackup`（`useLastExport`・`useDataBackup`・`useDataRestore`）・`useDataExcel`・`useDataTidy`・`useDataTerms`、見た目は `dataParts.tsx`（保存の誤り・直前の状態に戻す・呼び方・控え（JSON）・古い訪問を片づける・初期状態に戻す）・`dataExcel.tsx`（Excel の欄）・`dataBookings.tsx`（予約の CSV の欄）、文と判定は `src/lib/dataScreen.ts`・`bookingScreen.ts`）・`SettingsPage.tsx`（`settings.css`）・`RestartCard.tsx`・`mailScheduleSettings.tsx`、`src/components/FilePick.tsx`（`filePick.css`）・`DataNotices.tsx`（`dataNotices.css`）・`dirtyForms.ts`（`useDirtyMark`）、`src/lib/filePick.ts`・`features.ts`・`backupReminder.ts`・`tidy.ts`・`dirtyForms.ts`。関連 ADR：0006・0028・0032・0068・0069・0073・0075・0090・0095。関連 PRD：D191・D210〜D216・D227・D260・D275・D322・D366・D379・D381・D395・D408・D428。
 > Excel の変換は design.md の「excel」、機能の表と判定は design.md の「features」。
 
 ### データ（`#/data`）
@@ -46,9 +46,8 @@
 - 知らせは担当の組み方を案内する（エキスパート機能が入なら「担当を組む」、切なら予定の上の要対応の帯の「要対応を組む」）
 - 足す・直す訪問が無ければ確認を出さず、入れなかった予約・読めなかった行があれば欄の誤りに「入れる訪問はありませんでした」と一緒に、無ければ「変更はありませんでした」の知らせ。読み込みの部品を読めなかった（新しい版の公開）ときは Excel の欄と同じ「画面を読み直す」の文
 
-#### 使い方の案内・初期状態に戻す
+#### 初期状態に戻す
 
-- 「案内をもう一度見る」（`tour-again`。`useTour()`）：短い案内（3枚）を1枚目から開く。初回に自動では出さないので、ここだけが入口。見たかは覚えない
 - 「初期状態に戻す」：デモの架空の事業所のデータ（今日から7日分の担当を含む）に戻す（独自の確認。危険の色）。機能の入り切りはそのまま。最初の2問の問2の答え（単発／定期。`store/start.ts` の印 `vrdemo:booking:last`）が残っていれば「デモ×その答え」のデータ（単発＝単発のデモ・お客様／シッター、定期＝初期データ）、無ければ（印 `all` のときも）定期の初期データ。説明と確認の本文に「機能の入り切り（管理者設定）はそのまま」。取り消すと知らせなし、確定で知らせ。戻したあと、今日〜翌月末の要対応（担当なし・間に合わない・重なり・休みの人）を1回自動で組む（要対応の帯の［要対応を組む］と同じ処理・知らせ・［元に戻す］。印 `all` のときは組まない。PRD D409）
 - 「画面を読み直す」
 
@@ -89,6 +88,5 @@
 ### 完了の条件
 
 - [ ] 控えと Excel が同じファイル選択の部品・「ファイルを選ぶ」と未選択の文・input は見えない形・名前・Tab と枠・Space・確認・同じファイルをもう一度・Excel の誤り・名簿は一覧へのリンク（`lib/filePick` のテスト・`scripts/e2e-tour.cjs`）
-- [ ] 「案内をもう一度見る」でツアーが出る・閉じるとフォーカスがボタンへ戻る（`scripts/e2e-tour.cjs`）
 - [ ] 初期状態に戻したあと「直前の状態に戻す」で戻る・書き出すと最後に書き出した日が今日になる・片づけで古い訪問と確定した内容が消え新しいものは残る・壊れたデータの知らせと書き出し（`store`・`lib/backupReminder`・`lib/tidy` のテスト・`scripts/e2e-tour.cjs`）
 - [ ] 管理者設定：ひな形の5通りごとにメニュー・下のタブ・パレット・画面の中の入口・ルートの移し先、相性を切るときの確認（`scripts/e2e-features.cjs`）

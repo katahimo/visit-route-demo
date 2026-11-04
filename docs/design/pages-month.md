@@ -1,6 +1,6 @@
 # 月の予定と月の印刷
 
-> この画面のファイル：`src/pages/MonthPage.tsx`（`month.css`。組み立てだけ。状態と処理は `useMonthNav`・`useMonthFocus`・`useMonthDays`・`useMonthFocusDays`・`useMonthOff`・`useMonthAside`・`useMonthBatch`・`useMonthMenu`（`useMonthPanels`・`monthMore`）・`useMonthDayList`・`useMonthVisitRows`・`useMonthListRows`、見た目は `monthSections.tsx`（区画）・`monthParts.tsx`（見出しの欄・凡例）・`monthGrid.tsx`（カレンダーの表・日ごとの一覧）・`monthCell.tsx`（`DayCell`）・`monthCellTip.tsx`（`MonthCellTip`）・`monthAside.tsx`（右の欄・下から出る欄）、計算は `src/lib/monthCell.ts`（`dayCellText`）・`monthView.ts`（表示の選択・日ごとの集計・一覧の行））・`MonthPrintPage.tsx`（`monthPrint.css`）、`src/lib/month.ts`・`monthList.ts`・`monthGuide.ts`・`monthPrint.ts`・`monthRest.ts`・`requestedOff.ts`・`dayStatuses.ts`・`confirmDay.ts`・`settledView.ts`・`attentionBand.ts`、`src/components/useDayStatuses.ts`・`useBulkConfirm.ts`（週と共通）・`visitParts.tsx`（マスの選ぶ・その日の回の一覧の行・ドラッグ）・`scheduleParts.tsx`（選択の帯の「別の日へ」）。関連 ADR：0012〜0015・0031・0032・0042・0051〜0053・0056・0057・0063・0073・0074・0079・0099。関連 PRD：D36〜D44・D53〜D55・D65・D69・D70・D151〜D154・D176・D189〜D192・D201〜D204・D223・D228・D256・D257・D278・D295・D313・D321・D332・D334・D339〜D343・D347・D382・D384・D393・D400〜D404・D433。
+> この画面のファイル：`src/pages/MonthPage.tsx`（`month.css`。組み立てだけ。状態と処理は `useMonthNav`・`useMonthFocus`・`useMonthDays`・`useMonthFocusDays`・`useMonthOff`・`useMonthAside`・`useMonthBatch`・`useMonthMenu`（`useMonthPanels`・`monthMore`）・`useMonthDayList`・`useMonthVisitRows`・`useMonthListRows`、見た目は `monthSections.tsx`（区画）・`monthParts.tsx`（見出しの欄・凡例）・`monthGrid.tsx`（カレンダーの表・日ごとの一覧）・`monthCell.tsx`（`DayCell`）・`monthCellTip.tsx`（`MonthCellTip`）・`monthAside.tsx`（右の欄・下から出る欄）、計算は `src/lib/monthCell.ts`（`dayCellText`）・`monthView.ts`（表示の選択・日ごとの集計・一覧の行））・`MonthPrintPage.tsx`（`monthPrint.css`）、`src/lib/month.ts`・`monthList.ts`・`monthGuide.ts`・`monthPrint.ts`・`monthRest.ts`・`requestedOff.ts`・`dayStatuses.ts`・`confirmDay.ts`・`settledView.ts`・`attentionBand.ts`、`src/components/useDayStatuses.ts`・`useBulkConfirm.ts`（週と共通）・`visitParts.tsx`（マスの選ぶ・その日の回の一覧の行・ドラッグ）・`scheduleParts.tsx`（選択の帯の「別の日へ」）。関連 ADR：0012〜0015・0031・0032・0042・0051〜0053・0056・0057・0063・0073・0074・0079・0099。関連 PRD：D36〜D44・D53〜D55・D65・D69・D70・D151〜D154・D176・D189〜D191・D201〜D204・D223・D228・D256・D257・D278・D295・D313・D321・D332・D334・D339〜D343・D347・D382・D384・D393・D400〜D404・D433。
 > 3段のバー・混み具合の塗りは [pages-bars.md](pages-bars.md)、進み具合の帯は [pages-progress.md](pages-progress.md)、操作の行・訪問の札・選ぶ・キー・`VisitRow`・落とし先の判定は [pages-common.md](pages-common.md)。
 > 担当は訪問に持ち、日の状態は「まだ伝えていない／確定済み／未連絡の変更あり」、要対応は訪問ごとの検査。
 
@@ -171,7 +171,7 @@
 
 ### 月の印刷（`#/month/print?ym=&staff=`）
 
-- `pages/MonthPrintPage.tsx`：`AdminShell` の外（`Guarded`）。ツアーは出ない
+- `pages/MonthPrintPage.tsx`：`AdminShell` の外（`Guarded`）
 - 上の操作の帯（`.no-print`）：月の予定に戻る・前後の月・〈スタッフ〉の選択（全員／1人）・主ボタン「印刷する」＝`window.print()`
 - 見出し：「2026年11月の予定（〈名前〉さん）」・事業所名・凡例・印刷日
 - 日曜はじまりの週の表（その月の日が無い週は出さない）。マスは 日付・「確」／「案」・件数、行ごとに 種類の色の点・時刻・〈利用者さん〉・担当の名字（絞ったときは出さない。担当なしは「未定」）、下に「休：山田(希)・佐藤(欠)・鈴木」と「〈利用者さん〉休：…」

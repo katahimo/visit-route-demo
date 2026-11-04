@@ -227,7 +227,7 @@ function fixedSamples(kind: RosterKind): Sample[] {
 export function guideIntro(sheetName: string): string[] {
   return [
     `『${sheetName}』のシートに1行に1人ずつ書きます。`,
-    '保存して、アプリの［CSV・Excel を読み込む］で選びます。',
+    '保存して、アプリの名簿の欄の［ファイルを選ぶ］で選びます。',
     '名前だけでも読めます。空の列には決まった値が入ります。',
     `この『${GUIDE_SHEET}』『${SAMPLE_SHEET}』のシートは読み込みません。`,
   ];

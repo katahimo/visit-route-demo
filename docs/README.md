@@ -25,7 +25,7 @@
 |---|---|
 | [pages.md](design/pages.md) | 共通事項・ルート一覧・確認ダイアログ・機能の入り切り |
 | [pages-nav.md](design/pages-nav.md) | メニュー・下のタブ・引き出し・要対応の帯・設定のタブ・Ctrl+Z・パレット |
-| [pages-common.md](design/pages-common.md) | 右の欄・予定の共通の部品・訪問の札・訪問の詳細の欄・名前の吹き出し・用語・ツアー・メール・道順 |
+| [pages-common.md](design/pages-common.md) | 右の欄・予定の共通の部品・訪問の札・訪問の詳細の欄・名前の吹き出し・用語・メール・道順 |
 | [pages-bars.md](design/pages-bars.md) | 3段の時間帯のバー |
 | [pages-progress.md](design/pages-progress.md) | 月の進み具合の帯・日の状態の共通フック |
 | [pages-plan.md](design/pages-plan.md) | 日の予定 |
@@ -142,6 +142,8 @@
 | [0098](adr/0098-unassigned-reason-guide.md) | 担当なしの訪問の組めない理由を型に分け、直し方と直す画面を案内する |
 | [0099](adr/0099-month-cells-same-for-expert-on-off.md) | 月のマスはエキスパート機能の入切で同じ表示（ADR-0079 の月のマスを置き換え） |
 | [0100](adr/0100-remove-standard-edit-rules-from-menu.md) | 組み方の標準を廃止し、条件の重みをメニューから直接直す |
+| [0101](adr/0101-osrm-road-travel-time.md) | 車の移動時間を OSRM の道路の所要から取る |
+| [0102](adr/0102-release-notice-keep-data-remove-tour.md) | デモの更新を最初の2問の画面で知らせ「今のデータを使い続ける」を上に・案内ツアーをなくす |
 
 ## 文書の保ち方
 

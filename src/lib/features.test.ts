@@ -28,7 +28,6 @@ import {
 import { attentionTarget, dayHref, linkIfOn, suddenHref, unassignedHref, workloadHref } from './links';
 import type { Attention, DayStatus } from './month';
 import { bottomTabs, menuSections, screenSections, settingsTabs } from './nav';
-import { tourSteps } from './tour';
 
 const terms = { client: '利用者さん', staff: 'スタッフ' };
 const TODAY = '2026-10-21';
@@ -438,7 +437,7 @@ function st(date: string, x: Partial<DayStatus> = {}): DayStatus {
     ...x,
   };
 }
-describe('表の整合（メニュー・パレット・要対応の帯・ツアー・links の行き先が、土台か表のどれかに属する）', () => {
+describe('表の整合（メニュー・パレット・要対応の帯・links の行き先が、土台か表のどれかに属する）', () => {
   it('メニューの項目', () => {
     for (const g of menuSections(terms, TODAY, {})) for (const i of g.items) expect(belongs(i.to), i.to).toBe(true);
     for (const g of screenSections(terms, {})) for (const i of g.items) expect(belongs(i.to), i.to).toBe(true);
@@ -454,9 +453,6 @@ describe('表の整合（メニュー・パレット・要対応の帯・ツア�
     ];
     expect(gos.every((g) => g !== undefined)).toBe(true);
     for (const g of gos) expect(belongs(g!.to), g!.to).toBe(true);
-  });
-  it('ツアーの枚の機能は表のどれか（無ければ土台）', () => {
-    for (const s of tourSteps(terms)) if (s.feature) expect(FEATURE_IDS).toContain(s.feature);
   });
   it('links の行き先', () => {
     for (const h of [
@@ -478,11 +474,6 @@ describe('切った機能の入口を出さない（PRD D213）', () => {
     expect(ids({ vacancy: false })).not.toContain('action:vacancy');
     // expert 切（基本）は確定の段階の「確定していない日を見る」だけ出さない（ADR-0073）
     expect(ids(applyTemplate('basic'))).toEqual(ids({}).filter((id) => id !== 'action:unconfirmed'));
-  });
-  it('ツアー：欠勤・キャンセルの枚を出さず、枚数が減る（ホームの枚は無い。基本はすべてと同じ2枚）', () => {
-    expect(tourSteps(terms, {}).map((s) => s.key)).toEqual(['plan', 'absence']);
-    expect(tourSteps(terms, applyTemplate('basic')).map((s) => s.key)).toEqual(['plan', 'absence']);
-    expect(tourSteps(terms, { sudden: false }).map((s) => s.key)).toEqual(['plan']);
   });
   it('links：切った機能なら null、土台はそのまま', () => {
     expect(linkIfOn({}, suddenHref(TODAY))).toBe(suddenHref(TODAY));
