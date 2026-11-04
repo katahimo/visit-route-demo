@@ -187,7 +187,7 @@ export function MonthUnconfirmed({
   );
 }
 
-/** 要対応（今日以降。行き先を添える。PRD D201）。エキスパート機能が入のときだけ（切は出さない。PRD D410） */
+/** 要対応（今日以降。行き先を添える。PRD D201） */
 export function MonthAttention({
   attention,
   features,

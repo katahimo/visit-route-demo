@@ -17,7 +17,7 @@
 // 5e 人の画面は畳む・日の予定の地図はボタンで開く・月のマスの読み方（PRD D385・D384）：〈利用者さん〉の一覧は名前・住所・いつもの予定の3列、
 //    〈スタッフ〉は名前・勤務日・勤務時間の3列。詳細は〈利用者さん〉＝名前・住所・予定（繰り返し）／〈スタッフ〉＝名前・勤務日・勤務時間を出し、
 //    段階・特性・決まりごと（「基本」は決まりごとの機能が入。ADR-0086）・担当・相性（〈スタッフ〉は自宅・特性・求めること・日ごとの勤務ほか）は「詳しく ▾」の中（閉じていると見えない・開くと見える）。
-//    日の予定の地図はふだん閉じ、「地図」のボタンで開く（1366px・390px）。月のマスは例外だけで吹き出しを出さず、読み方は見出しの ⓘ（帯の4種類と「変更あり」。PRD D410）、
+//    日の予定の地図はふだん閉じ、「地図」のボタンで開く（1366px・390px）。月のマスは入と同じ表示（種類の帯・混み具合の棒・理由の札・マスの吹き出し・右の欄の要対応の一覧。確定の鍵と確定の言葉だけ出さない。PRD D433）、
 // 5f 「定期の予定を追加」（単発のみは「予約を追加」）と〈スタッフ〉・〈利用者さん〉のタブ（PRD D402）：月・週の主ボタンは「定期の予定を追加」（操作の行は2つまで。要対応を組むのは帯の［要対応を組む］）、
 //    押すと引き出し（定期＝〈利用者さん〉・曜日・くり返し・開始日（既定は今日・今日より前は誤り。PRD D416）・時刻・所要／単発＝〈利用者さん〉・日付・時刻・所要）で
 //    「追加」→ 予定に出て開始日からの回に担当が自動で付く。くり返しは 毎週〜4週ごと・毎月（第N）（「基本」は毎月の第N の機能が入。ADR-0086）。
@@ -698,21 +698,21 @@ async function exceptions(page) {
       .evaluate((e) => e.open)),
     '日：札の詳細の理由は初め閉じている',
   );
-  // 月のマスは例外だけ（PRD D410）：理由の札・種類の積み上げ・混み具合の棒を出さない。右の欄は日を押す前は1行の案内だけ
+  // 月のマスは入と同じ表示（PRD D433）：種類の積み上げ・混み具合の棒・理由の札を出し、確定の鍵・確定の言葉だけ出さない。右の欄は要対応の一覧
   await open1(page, '/month');
   const cells = await page.locator('.month-cell').allInnerTexts();
-  check(!cells.some((t) => /条件に合わない|拘束超|担当なし|変更あり/.test(t)), '月：マスに理由の札を出さない');
+  check(!cells.some((t) => /未連絡|確定済み|まだ伝えていない/.test(t)), '月：マスに確定の言葉を出さない');
+  check((await page.locator('.month-cell .month-lock').count()) === 0, '月：マスに確定の鍵を出さない');
+  check((await page.locator('.month-cell .month-load').count()) > 0, '月：マスに混み具合の棒を出す');
   check(
-    (await page.locator('.month-cell .month-load, .month-cell [data-testid="month-unassigned"]').count()) === 0,
-    '月：マスに混み具合の棒・「担当なし N」を出さない',
+    (await page.getByTestId('month-aside-pick').count()) === 0,
+    '月：右の欄に「日を押すと〜」の1行の案内を出さない',
   );
-  const aside = await page.getByTestId('month-aside').innerText();
+  // 要対応が0件の日は一覧（ul）の代わりに「ありません」の文。見出し「要対応」があれば一覧の欄が出ている
   check(
-    aside.trim() === '日を押すとその日の訪問が出ます',
-    '月：右の欄は日を押す前は1行の案内だけ',
-    aside.slice(0, 120),
+    (await page.locator('.month-aside-title').filter({ hasText: '要対応' }).count()) === 1,
+    '月：右の欄に要対応の一覧を出す',
   );
-  check((await page.getByTestId('month-attention').count()) === 0, '月：右の欄に要対応の一覧を出さない');
   // 過去の週：要対応・印を出さず、1行の状態の無い「詳しく」は凡例だけ
   await page.goto('about:blank');
   await page.goto(`${BASE}#/week`);
@@ -1302,29 +1302,20 @@ async function planMap(page, w) {
   } else check(true, `日の予定（${w}）：訪問の選びでは担当に絞らない（全員のルートのまま）`);
 }
 
-/** 月のマスの読み方（PRD D410）：切はマスに吹き出しを出さず、見出しの ⓘ に出す。要対応は帯の3種類と「変更あり」 */
+/** 月のマスの読み方（PRD D433）：入と同じく、マスに吹き出しを出す（見出しの ⓘ は無い） */
 async function monthTip(page) {
   await open1(page, '/month');
   const cell = page.locator('[data-testid="month-day"]').first();
   await cell.waitFor({ timeout: 30000 });
-  check((await page.locator('.month-cell [data-tip]').count()) === 0, '月のマス：吹き出しの印（data-tip）を付けない');
+  check((await page.locator('.month-cell [data-tip]').count()) > 0, '月のマス：吹き出しの印（data-tip）を付ける');
   await cell.hover();
-  // 吹き出しが出ないことを確かめる（出るまでの 300ms より長く待つ。固定の待ち）
-  await page.waitForTimeout(600);
-  check((await page.getByTestId('month-cell-tip').count()) === 0, '月のマス：マウスを乗せても吹き出しを出さない');
+  await page.getByTestId('month-cell-tip').waitFor({ timeout: 10000 });
   const label = await cell.getAttribute('aria-label');
-  check(/訪問/.test(label ?? ''), '月のマス：読み上げの文は残す', label);
-  await page.locator('.page-head .hint summary').click();
-  const hint = page.getByTestId('month-cell-hint');
-  await hint.waitFor({ timeout: 10000 });
-  const t = await hint.innerText();
-  check(
-    /担当なし・間に合わない・重なり・休みの人/.test(t),
-    '月のマスの読み方（ⓘ）：要対応は 担当なし・間に合わない・重なり・休みの人',
-    t,
-  );
-  check(!/条件に合わない|拘束|棒/.test(t), '月のマスの読み方（ⓘ）：条件に合わない・拘束超・棒は言わない', t);
-  check(!BANNED.test(t), '月のマスの読み方（ⓘ）：禁句が出ない', t.match(BANNED)?.[0]);
+  check(/訪問/.test(label ?? ''), '月のマス：読み上げの文がある', label);
+  const t = await page.getByTestId('month-cell-tip').innerText();
+  check(!BANNED.test(t), '月のマスの吹き出し：禁句が出ない', t.match(BANNED)?.[0]);
+  check(!/確定|未連絡/.test(t), '月のマスの吹き出し：確定の言葉を出さない', t);
+  check((await page.getByTestId('month-cell-hint').count()) === 0, '月：見出しの ⓘ（マスの読み方）は無い');
   await shot(page, 'simple-month-tip-1366');
   await page.mouse.move(0, 0);
 }

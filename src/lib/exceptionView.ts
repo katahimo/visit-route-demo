@@ -80,11 +80,10 @@ const DETAILS: Record<ScheduleZoom, readonly DetailItem[]> = {
 
 /**
  * 「詳しく」に入れるもの（入切とも畳む。PRD D393）。入はさらに日の要対応の訪問の帯を入れる。
- * 切の月は凡例を入れない（マスに出す印が少なく、読み方は見出しの ⓘ。PRD D410）
+ * 月のマスは入切とも同じ表示なので、月の凡例も入切とも入れる（PRD D433。ADR-0099）
  */
 export function detailItems(zoom: ScheduleZoom, only: boolean): readonly DetailItem[] {
   if (zoom === 'day' && !only) return [...DETAILS.day, 'care'];
-  if (zoom === 'month' && only) return DETAILS.month.filter((i) => i !== 'legend');
   return DETAILS[zoom];
 }
 
@@ -114,43 +113,6 @@ export const showLegs = (only: boolean): boolean => !only;
 
 /** 担当なしの札の下の「入れられない理由」の札を出すか（切は出さない：理由は例外の知らせの外） */
 export const showUnplacedReasons = (only: boolean): boolean => !only;
-
-// ---- 月のマス・日ごとの一覧（PRD D410。ADR-0079） ----
-
-/** 月のマス・日ごとの一覧の行・右の欄に出すもの。切は例外だけ（日付・訪問の件数・要対応の札・休 N・今日の印）、入は今のまま */
-export type MonthCellView = {
-  /** 種類の積み上げの帯と混み具合の棒（全体のとき。PRD D53・D54） */
-  bars: boolean;
-  /** 「休 N」のほかの印（欠勤・始まる▶／終わる■・〈利用者さん〉の休み・最終勤務日） */
-  otherMarks: boolean;
-  /** 理由の行（担当なし N・担当が休み N・変更あり N・拘束超 N）と日の状態の印（確定の鍵・変更ありの印・状態の言葉） */
-  reasons: boolean;
-  /** マスの読み方：マスの吹き出し（入）か見出しの ⓘ（切）。読み上げの文はどちらも同じ */
-  guide: 'tip' | 'hint';
-  /** 右の欄の要対応の一覧（切は出さず、日を押す前は1行の案内。件数の正は上の要対応の帯。PRD D404） */
-  attentionList: boolean;
-};
-
-const MONTH_CELL_EXPERT: MonthCellView = {
-  bars: true,
-  otherMarks: true,
-  reasons: true,
-  guide: 'tip',
-  attentionList: true,
-};
-const MONTH_CELL_EXCEPTIONS: MonthCellView = {
-  bars: false,
-  otherMarks: false,
-  reasons: false,
-  guide: 'hint',
-  attentionList: false,
-};
-
-/** 月のマスの見せ方（入と切の差はここ1か所） */
-export const monthCellView = (only: boolean): MonthCellView => (only ? MONTH_CELL_EXCEPTIONS : MONTH_CELL_EXPERT);
-
-/** 切の右の欄で、日を押す前に出す1行 */
-export const MONTH_ASIDE_PICK_TEXT = '日を押すとその日の訪問が出ます';
 
 // ---- 画面の上の説明 ----
 
