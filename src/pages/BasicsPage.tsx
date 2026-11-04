@@ -1,4 +1,4 @@
-// 予定と相性の表（#/basics。PRD D361・D362。ADR-0067・ADR-0099）：〈利用者さん〉のタブの1つ。〈利用者さん〉の繰り返しごと・曜日ごとに
+// 予定と相性の表（#/basics。PRD D361・D362。ADR-0067・ADR-0100）：〈利用者さん〉のタブの1つ。〈利用者さん〉の繰り返しごと・曜日ごとに
 // 時間の約束・いつもの担当・相性・勤務時間の外を1枚の表で確かめ、マスで時刻を直す。名前から〈利用者さん〉・〈スタッフ〉の画面へ。
 // 時刻を直すのは〈利用者さん〉の画面と同じく今日から分けて
 // （確認のあと store の update の1回。全体の「元に戻す」で戻せる）
@@ -61,7 +61,7 @@ export default function BasicsPage() {
   return (
     <div className="stack basics-page">
       <PageHeader
-        // 〈利用者さん〉のタブ（入切とも。ADR-0099）
+        // 〈利用者さん〉のタブ（入切とも。ADR-0100）
         nav={<PeopleTabs />}
         icon={CalendarRange}
         title="予定と相性"

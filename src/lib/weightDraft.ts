@@ -1,4 +1,4 @@
-// 条件の重みの画面（#/rules）の下書き（PRD D286。ADR-0048・ADR-0099）：表の重みのスライダー・必須の切り替えは、動かしても保存せず
+// 条件の重みの画面（#/rules）の下書き（PRD D286。ADR-0048・ADR-0100）：表の重みのスライダー・必須の切り替えは、動かしても保存せず
 // 画面の中の下書き（型ごとの重み・必須）に置き、「保存」で「調整した重み」に書く（lib/presets の saveTunedWeights）。
 // ここは下書きの差分・保存の確認の文を作る純粋関数。データを書き換えるのは画面の update(fn) だけ
 import { HARDABLE, type Preset, type Rule, type RuleType } from '../contracts/rules';
@@ -136,7 +136,7 @@ export function draftWeights(base: Preset['weights'], draft: WeightDraft): Prese
 }
 
 /**
- * プリセットの値を下書きに入れる（ADR-0099）：types の型ごとに、プリセットの重み・必須を触った欄として重ねる
+ * プリセットの値を下書きに入れる（ADR-0100）：types の型ごとに、プリセットの重み・必須を触った欄として重ねる
  * （保存済みと同じ型は下書きから外れる。条件の無い型は入れない）
  */
 export function fillDraft(
@@ -148,11 +148,11 @@ export function fillDraft(
   return types.reduce((d, t) => editDraft(d, saved, t, weights[t]), draft);
 }
 
-/** 保存の確認の見出し（PRD D286。ADR-0099） */
+/** 保存の確認の見出し（PRD D286。ADR-0100） */
 export const confirmTitle = (n: number): string => `重みを保存しますか？（${n}件）`;
 
 /**
- * 保存の確認の本文（PRD D286。ADR-0099）：変わる条件と重み（前→後）、次に組むときから使うこと、今の担当は変えないこと（ADR-0053）
+ * 保存の確認の本文（PRD D286。ADR-0100）：変わる条件と重み（前→後）、次に組むときから使うこと、今の担当は変えないこと（ADR-0053）
  */
 export function confirmBody(changes: readonly WeightChange[]): string {
   const lines = changes.map((c) => `・${c.labels.join('・')}：${changeText(c)}`);

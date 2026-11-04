@@ -1,4 +1,4 @@
-// 条件の重みの画面の重みの下書き（PRD D286。ADR-0048・ADR-0099）：表の重み・必須は動かしても保存せず、画面の中の下書きに置く。
+// 条件の重みの画面の重みの下書き（PRD D286。ADR-0048・ADR-0100）：表の重み・必須は動かしても保存せず、画面の中の下書きに置く。
 // プリセットの［値を入れる］も下書きに入れる。「保存（N件）」で確認（変わる重み）のあと「調整した重み」に書いて点数の基準にし、
 // 「取り消す」で捨てる。下書きのまま画面を離れるときは確かめる。下書きの計算は lib/weightDraft、保存は lib/presets の saveTunedWeights
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -49,7 +49,7 @@ export function useRulesDraft() {
   /** 最新のデータ（確認を待つ間に別のタブで変わったかを見る） */
   const dataRef = useRef(data);
   dataRef.current = data;
-  /** 調整した重みがまだ無く、プリセットが6つあれば保存できない（使わない考え方を消してから。ADR-0099） */
+  /** 調整した重みがまだ無く、プリセットが6つあれば保存できない（使わない考え方を消してから。ADR-0100） */
   const full = tunedFull(data);
   /** 点数の基準のプリセット（この画面で表の重みの元にする考え方。ADR-0035・ADR-0065） */
   const basis = scorePresetOf(data.presets, data.scorePresetId);
@@ -82,7 +82,7 @@ export function useRulesDraft() {
   const changeOf = (type: RuleType) => changes.find((c) => c.type === type);
   const setWeight = (type: RuleType, patch: Partial<{ weight: number; hard: boolean }>) =>
     setRawDraft({ basisId, values: editDraft(draft, saved, type, patch) });
-  /** プリセットの値を下書きに入れる（保存はしない。ADR-0099） */
+  /** プリセットの値を下書きに入れる（保存はしない。ADR-0100） */
   const fill = (weights: Preset['weights'], types: readonly RuleType[]) =>
     setRawDraft({ basisId, values: fillDraft(draft, saved, weights, types) });
   const focusHead = useFocusHead();
@@ -93,7 +93,7 @@ export function useRulesDraft() {
     focusHead();
     toast('重みの変更を取り消しました');
   };
-  /** 保存する（ADR-0099）：確認のあと「調整した重み」に書いて点数の基準にする（ほかのプリセットは変えない） */
+  /** 保存する（ADR-0100）：確認のあと「調整した重み」に書いて点数の基準にする（ほかのプリセットは変えない） */
   const saveDraft = async () => {
     const list = changes;
     const values = draft;

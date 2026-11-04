@@ -31,7 +31,7 @@ const withPreset = (d: DemoData, id: string, wait: number): DemoData => {
   return setScorePreset({ ...d, presets: [...d.presets, p] }, id);
 };
 
-describe('調整した重みとして保存（ADR-0099。PRD D286）', () => {
+describe('調整した重みとして保存（ADR-0100。PRD D286）', () => {
   it('基準の保存済みの重みに下書きを重ねて「調整した重み」を最後に足し、点数の基準にする。ほかのプリセットは変えない', () => {
     const d0 = base();
     const d = saveTunedWeights(d0, { wait: { weight: 1 } });

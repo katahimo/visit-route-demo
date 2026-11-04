@@ -24,7 +24,7 @@ export const SCHEDULE_GROUP = '予定';
 /** メニューの「予定」が受け持つ画面（月・週・日の予定と、その日の案を比べる。PRD D273） */
 export const SCHEDULE_PATHS: readonly string[] = ['/month', '/week', '/plan'];
 /**
- * メニューの「組む」が受け持つ画面（エキスパート機能が入。ADR-0099）：条件の重み・担当を組む・案を比べる
+ * メニューの「組む」が受け持つ画面（エキスパート機能が入。ADR-0100）：条件の重み・担当を組む・案を比べる
  */
 export const ARRANGE_PATHS: readonly string[] = ['/rules', '/arrange', '/compare'];
 /** メニューの「予定」で開く表示として覚える画面（比較は覚えない） */
@@ -202,7 +202,7 @@ export const scheduleHref = (last?: string | null): string =>
   last && SCHEDULE_VIEWS.includes(last) ? last : SCHEDULE_DEFAULT;
 
 /**
- * 組む（エキスパート機能が入のとき。ADR-0099）：条件の重み・担当を組む。条件の重みは自動の組み・担当を組むで AI が使う重みで、
+ * 組む（エキスパート機能が入のとき。ADR-0100）：条件の重み・担当を組む。条件の重みは自動の組み・担当を組むで AI が使う重みで、
  * いつでもここから開く。〈利用者さん〉・〈スタッフ〉の一覧と予定と相性は人の項目（PRD D401）。
  * 件数の印は「組む」の1つだけ（担当なしの日の数）
  */
@@ -240,7 +240,7 @@ function arrangeBadge(badges: MenuBadges): MenuItem['badge'] {
  * メニューの並び（PRD D400・D401。ADR-0054・0063・0067・0072・0073・0074・0078）：見出しの無いグループ1つ。
  * エキスパート機能が切なら 予定・空き状況・〈利用者さん〉・〈スタッフ〉・設定 の5つ（呼び名は terms）、入なら その〈スタッフ〉と設定の間に「組む」を足した6つ。
  * ホームは無く（要対応は予定の上の帯。PRD D404）、欠勤・キャンセルは予定の操作の行から開く。
- * 子の項目を持つのは入の「組む」だけ（条件の重み・担当を組む。ADR-0099）。件数の印も「組む」の1つ（badges）。
+ * 子の項目を持つのは入の「組む」だけ（条件の重み・担当を組む。ADR-0100）。件数の印も「組む」の1つ（badges）。
  * 担当を組む（#/arrange）は切では日の予定などから開き、メニューには出さない。
  * 今の画面の印：予定は月・週・日（切はさらに比較・担当を組む）、空き状況は空き状況、〈利用者さん〉は一覧・予定と相性、
  * 〈スタッフ〉は一覧・勤務時間（シフト）・勤務の見込み、相性は最後に開いた側（入切とも。lib/peopleTabs。PRD D394）、
@@ -325,7 +325,7 @@ export function screenSections(terms: Pick<Terms, 'client' | 'staff'>, features:
         vacancyScreen,
       ],
     },
-    // 人：区分の名前は付けず、1つのグループに並べる（上の帯は項目名だけ。PRD D400・D385・D394）。予定と相性は入切ともここ（ADR-0099）
+    // 人：区分の名前は付けず、1つのグループに並べる（上の帯は項目名だけ。PRD D400・D385・D394）。予定と相性は入切ともここ（ADR-0100）
     { items: [basicsScreen, clientsScreen, staffScreen, ...workScreens] },
     {
       title: '組む',

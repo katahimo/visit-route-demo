@@ -168,7 +168,7 @@ function ArrangeProgress({ run }: { run: BatchRun }) {
 /** 「AI で組む」の区画の入力 */
 export type ArrangeRunProps = {
   headingId: string;
-  /** エキスパート機能が入（考え方を替える条件の重みの案内を出す。ADR-0099） */
+  /** エキスパート機能が入（考え方を替える条件の重みの案内を出す。ADR-0100） */
   expert: boolean;
   mode: BatchMode;
   careDays: number;

@@ -106,7 +106,7 @@ describe('下書きの差分（PRD D286）', () => {
   });
 });
 
-describe('保存の確認（PRD D286。ADR-0099）', () => {
+describe('保存の確認（PRD D286。ADR-0100）', () => {
   it('見出し・本文：変わる条件（前→後）・次に組むときから使う・今の担当は変わらない', () => {
     expect(confirmTitle(2)).toBe('重みを保存しますか？（2件）');
     const rules = [rule('a', 'wait', 3, false, '待ち')];

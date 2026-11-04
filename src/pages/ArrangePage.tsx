@@ -1,4 +1,4 @@
-// 担当を組む（#/arrange。ADR-0063・ADR-0099）：範囲を選んで AI で担当を組む画面（予定を入れたときの自動の組みとは別）。
+// 担当を組む（#/arrange。ADR-0063・ADR-0100）：範囲を選んで AI で担当を組む画面（予定を入れたときの自動の組みとは別）。
 // 範囲（月・週・日）を選び、選んだ範囲の担当なし・要対応を見て、「AI で組む」で範囲の提案を出す（lib/monthBatch。画面の外で計算し、
 // ほかの画面へ移っても続く。ADR-0042）。提案は範囲の提案の帯で見て［反映する］［捨てる］（反映は全体の「元に戻す」で1手戻る）。
 // いつも条件の重み（点数の基準）で組む。いつもの担当がその日に担当できる回はピンと同じに扱う。
@@ -52,7 +52,7 @@ export default function ArrangePage() {
   const allTargets = targetsOf('all');
   const targets = mode === 'care' ? careTargets : allTargets;
 
-  /** 考え方：いつも点数の基準（替えるのは条件の重み。ADR-0099） */
+  /** 考え方：いつも点数の基準（替えるのは条件の重み。ADR-0100） */
   const basisName = scorePresetOf(data.presets, data.scorePresetId)?.name ?? '今の重み';
 
   const run = useValueStore(monthBatch.run);

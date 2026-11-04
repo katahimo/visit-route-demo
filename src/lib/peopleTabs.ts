@@ -1,5 +1,5 @@
 // 〈利用者さん〉・〈スタッフ〉の小さいタブ（入切とも。PRD D394。ADR-0073 第4段・ADR-0074 段3）の決まり：
-// 〈スタッフ〉＝一覧・勤務（勤務時間・シフト／勤務の見込み）・相性、〈利用者さん〉＝一覧・予定と相性・相性（ADR-0099）。
+// 〈スタッフ〉＝一覧・勤務（勤務時間・シフト／勤務の見込み）・相性、〈利用者さん〉＝一覧・予定と相性・相性（ADR-0100）。
 // 相性は〈利用者さん〉×〈スタッフ〉の1つの表なので、どちらから来たかを覚えて（lib の外。components/peopleSide）タブとメニューの印を決める。
 // 画面はここを読み、切／入の判定を画面ごとに持たない。データは書き換えない
 import type { Terms } from '../contracts/documents';
@@ -48,7 +48,7 @@ export function rememberedSide(pathname: string, remembered: PeopleSide | undefi
 
 /**
  * メニューの〈利用者さん〉・〈スタッフ〉が受け持つ画面（今の画面の印。相性は覚えた側）。
- * 予定と相性（/basics）は入切とも〈利用者さん〉（PRD D401・D394。ADR-0099）
+ * 予定と相性（/basics）は入切とも〈利用者さん〉（PRD D401・D394。ADR-0100）
  */
 export function peopleMatch(side: PeopleSide, remembered: PeopleSide | undefined): string[] {
   const compat = (remembered ?? 'clients') === side ? ['/compat'] : [];

@@ -1,4 +1,4 @@
-/* 予定と相性の表（#/basics。ADR-0067・ADR-0099） */
+/* 予定と相性の表（#/basics。ADR-0067・ADR-0100） */
 .basics-grid-scroll {
   /* 中の sr-only（position: absolute）を巻く箱の中に収める */
   position: relative;

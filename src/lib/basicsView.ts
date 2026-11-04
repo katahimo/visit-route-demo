@@ -1,4 +1,4 @@
-// 予定と相性の表（#/basics。ADR-0067・ADR-0099。PRD D362）のための純粋関数：行（今日以降に続く繰り返し）・マス（時間の約束・いつもの担当・
+// 予定と相性の表（#/basics。ADR-0067・ADR-0100。PRD D362）のための純粋関数：行（今日以降に続く繰り返し）・マス（時間の約束・いつもの担当・
 // 相性・勤務時間の外）・行の相性の一覧・マスで時刻を直したときの繰り返し
 import type { DemoData } from '../contracts/data';
 import type { Pattern, Staff } from '../contracts/documents';

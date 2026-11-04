@@ -739,7 +739,7 @@
   left: 0;
   z-index: 3;
 }
-/* 詳細設定（乱数の種。PRD D174）・考え方（プリセット）の管理（ADR-0099）：ふだんは畳む */
+/* 詳細設定（乱数の種。PRD D174）・考え方（プリセット）の管理（ADR-0100）：ふだんは畳む */
 .rules-presets > summary,
 .rules-advanced-summary {
   display: inline-flex;

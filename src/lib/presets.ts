@@ -1,4 +1,4 @@
-// 条件のプリセットの編集（ADR-0008・ADR-0065・ADR-0099）。データを書き換えるのは store の update(fn) を通した画面だけ。ここは新しい DemoData を返す純粋関数。
+// 条件のプリセットの編集（ADR-0008・ADR-0065・ADR-0100）。データを書き換えるのは store の update(fn) を通した画面だけ。ここは新しい DemoData を返す純粋関数。
 // 初期の3つ・名前を付けたプリセットの重みは変えない。条件の重みの表で変えた重みは「調整した重み」（1つだけ）に書き、点数の基準にする（saveTunedWeights）
 import type { DemoData } from '../contracts/data';
 import { HARDABLE, MAX_PRESETS, type Preset, type Rule } from '../contracts/rules';
@@ -12,7 +12,7 @@ export const PRESET_NOTE_MAX = 60;
 /** 初期の3つ（バランス・移動を短く・人の組み合わせ重視。seed/presets の id）か。初期の3つは消せない（ADR-0065） */
 export const isInitialPreset = (id: string): boolean => INITIAL_PRESETS.some((p) => p.id === id);
 
-/** 条件の重みの表で保存した重みのプリセットの id と名前（ADR-0099。1つだけ持ち、保存のたびに上書きする） */
+/** 条件の重みの表で保存した重みのプリセットの id と名前（ADR-0100。1つだけ持ち、保存のたびに上書きする） */
 export const TUNED_PRESET_ID = 'tuned';
 export const TUNED_PRESET_NAME = '調整した重み';
 
@@ -62,7 +62,7 @@ export function renamePreset(d: DemoData, id: string, patch: Partial<Pick<Preset
 }
 
 /**
- * 条件の重みの表の下書きを保存する（ADR-0099。PRD D286）：点数の基準のプリセットの保存済みの重みに下書きの欄を重ね、
+ * 条件の重みの表の下書きを保存する（ADR-0100。PRD D286）：点数の基準のプリセットの保存済みの重みに下書きの欄を重ね、
  * 「調整した重み」（TUNED_PRESET_ID）に書いて点数の基準にする。無ければ最後に足し、あれば重みだけ上書きする（名前・一言はそのまま）。
  * ほかのプリセットは変えない。基準が無い・保存できない（tunedFull）ときはそのまま返す
  */

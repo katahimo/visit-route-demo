@@ -1,4 +1,4 @@
-// 条件の重みの画面のプリセットの管理（D20・D235。ADR-0008・ADR-0035・ADR-0099）の状態と処理：点数の基準を替える・名前と一言を直す・消す。
+// 条件の重みの画面のプリセットの管理（D20・D235。ADR-0008・ADR-0035・ADR-0100）の状態と処理：点数の基準を替える・名前と一言を直す・消す。
 // プリセットの重み・必須は変えない。データの組み立ては lib/presets
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';

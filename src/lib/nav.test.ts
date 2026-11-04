@@ -55,13 +55,13 @@ describe('menuSections（入。PRD D401。ADR-0054・0063・0067・0074・0078�
     expect(item('home')).toBeUndefined();
     expect(item('vacancy').to).toBe('/vacancy');
   });
-  it('子の項目を持つのは「組む」だけ：条件の重み・担当を組む（ADR-0099）。〈利用者さん〉・〈スタッフ〉は子にしない', () => {
+  it('子の項目を持つのは「組む」だけ：条件の重み・担当を組む（ADR-0100）。〈利用者さん〉・〈スタッフ〉は子にしない', () => {
     expect(groups[0]!.items.filter((i) => i.children).map((i) => i.key)).toEqual(['arrange']);
     expect(item('arrange').children?.map((i) => [i.key, i.label, i.to])).toEqual([
       ['arrange:rules', '条件の重み', '/rules'],
       ['arrange:assign', '担当を組む', '/arrange?ym=2026-11'],
     ]);
-    // 予定と相性は〈利用者さん〉の項目（入切とも。ADR-0099）
+    // 予定と相性は〈利用者さん〉の項目（入切とも。ADR-0100）
     for (const p of ['/clients', '/clients/c1', '/compat', '/basics'])
       expect(isActiveNav(item('clients'), p)).toBe(true);
     for (const p of ['/staff', '/staff/s1', '/availability', '/workload'])
@@ -371,7 +371,7 @@ describe('エキスパート機能が切のメニュー（PRD D400。ADR-0073・
       '/plan',
       '/vacancy',
     ]);
-    // 予定と相性・相性・勤務は人のグループ（入切で同じ。ADR-0099）
+    // 予定と相性・相性・勤務は人のグループ（入切で同じ。ADR-0100）
     expect(on.some((x) => x.title === '基本情報')).toBe(false);
     expect(on.find((x) => x.items.some((i) => i.to === '/clients'))?.items.map((i) => i.to)).toEqual([
       '/basics',
