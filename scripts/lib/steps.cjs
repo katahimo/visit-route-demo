@@ -61,7 +61,7 @@ function guard(fn, { label, info = message, page, shot = label }) {
 const closeContext = (ctx) => (ctx ? withTimeout(ctx.close(), 30 * 1000, '文脈を閉じる').catch(() => {}) : undefined);
 
 /**
- * ブラウザ・文脈・ページを開く（多くのスクリプトの準備）：初回の案内ツアーを見た扱い（PRD D193。start は skipTour へ）・
+ * ブラウザ・文脈・ページを開く（多くのスクリプトの準備）：最初の2問を出さない扱い（PRD D379。start は skipTour へ）・
  * ページの時計を NOW に止める・ページのエラーを集める（env.cjs の pageErrors）
  */
 async function openPage({
@@ -107,7 +107,7 @@ const blockGeocode = (ctx) =>
   });
 
 /**
- * pagePerStep の段ごとの文脈とページを開く：案内ツアーを見た扱い・地図のタイルを取りに行かない・ページの時計を NOW に止める・
+ * pagePerStep の段ごとの文脈とページを開く：最初の2問を出さない扱い・地図のタイルを取りに行かない・ページの時計を NOW に止める・
  * ページのエラーを pageErrors に集める。確認は独自のダイアログで受け（dlg。answerConfirms）、confirms: false なら
  * 答えずにネイティブのダイアログだけ記録する（dlg.native）
  */

@@ -114,3 +114,30 @@ export function clearArrangePending(getStorage: () => PendingStore | null = sess
     // 消せなくても続ける
   }
 }
+
+/**
+ * 最後に見たデモの更新の印のキー（PRD D437。ADR-0102。DemoData とは別。データの版・書き出し・初期状態に戻すに入れない。
+ * 値は更新の id（lib/releaseNotes）だけで個人の情報は持たない）。最初の2問・更新の知らせに答えたとき・知らせを出さずに開いたときに書く
+ */
+export const SEEN_RELEASE_KEY = 'vrdemo:release:seen';
+
+/** 最後に見た更新の id。印が無い・読めないなら null */
+export function seenRelease(getStorage: () => KeyStore | null = () => globalThis.localStorage ?? null): string | null {
+  try {
+    return getStorage()?.getItem(SEEN_RELEASE_KEY) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** 見た更新の id を残す（書けなくても続ける。書けなければ次に開いたときもう一度知らせる） */
+export function rememberRelease(
+  id: string,
+  getStorage: () => BookingStore | null = () => globalThis.localStorage ?? null,
+): void {
+  try {
+    getStorage()?.setItem(SEEN_RELEASE_KEY, id);
+  } catch {
+    // 書けなくても続ける
+  }
+}

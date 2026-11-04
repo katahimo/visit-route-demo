@@ -676,7 +676,7 @@ async function scoreColor(page) {
 // ---- タッチ・390px・印刷 ----
 async function mobile(browser) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
-  // 初回の案内ツアーを見た扱いにする（PRD D193）
+  // 最初の2問を出さない扱いにする（PRD D379）
   await skipTour(ctx);
   const page = await ctx.newPage();
   await page.clock.setFixedTime(NOW);

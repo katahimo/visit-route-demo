@@ -4,9 +4,17 @@ import { DATA_VERSION, type DemoData, demoDataSchema, type ImportError, STORAGE_
 import { type Features, featuresSchema } from '../contracts/features';
 import { jstDate } from '../domain/time';
 import { bookingOfUse, createFirstRunData, type FirstRunAnswer, firstRunSetup, firstRunUseOf } from '../lib/firstRun';
+import { LATEST_RELEASE, notesSince, type ReleaseNote } from '../lib/releaseNotes';
 import { createInitialData } from '../seed/plans';
 import { repair } from './repair';
-import { lastBooking, markArrangeAfterStart, rememberBooking, startsWithAll } from './start';
+import {
+  lastBooking,
+  markArrangeAfterStart,
+  rememberBooking,
+  rememberRelease,
+  seenRelease,
+  startsWithAll,
+} from './start';
 
 /** 壊れた JSON の退避先 */
 export const BROKEN_KEY = 'vrdemo:data:broken';
@@ -193,7 +201,9 @@ function keepBroken(ls: Storage, text: string): boolean {
  * outdated：読めなかった理由が前の版（版1）のデータ（ADR-0053。画面は「データの形が変わったので初期データで始めます」と知らせる。broken も true）。
  * brokenKept：元の文字を退避できた（できなければ画面は「今すぐ書き出してください」と知らせる。元の文字は開いている間 brokenText で書き出せる）。
  * firstRun：保存データが無く、初めて開いた（印「all」が無いとき。画面は最初の2問を出し、答えが決まるまでデータを書かない。PRD D379）。
- * 印「all」（start.ts）があれば2問を出さず、今の初期データ＋すべて入（{}）で書いて始める（e2e の前準備）
+ * 印「all」（start.ts）があれば2問を出さず、今の初期データ＋すべて入（{}）で書いて始める（e2e の前準備）。
+ * releaseNotes：保存データが読め、まだ見ていないデモの更新（新しい順。空なら知らせない。PRD D437。画面は変わったところと「今のデータを使い続ける」を出す）。
+ * 印「all」のとき・読めなかったときは知らせず、見たことにする
  */
 export function loadWithStatus(): {
   data: DemoData;
@@ -201,6 +211,7 @@ export function loadWithStatus(): {
   outdated: boolean;
   brokenKept: boolean;
   firstRun: boolean;
+  releaseNotes: ReleaseNote[];
 } {
   const ls = storage();
   const todayDate = today();
@@ -210,12 +221,13 @@ export function loadWithStatus(): {
       const d = createInitialData(todayDate, {});
       writeNow(d);
       current = d;
-      return { data: d, broken: false, outdated: false, brokenKept: false, firstRun: false };
+      rememberRelease(LATEST_RELEASE);
+      return { data: d, broken: false, outdated: false, brokenKept: false, firstRun: false, releaseNotes: [] };
     }
     // 最初の2問に答えるまでは書かない（読み直すとまた2問）。それまでの仮のデータは空（画面は2問の画面だけを出す）
     const d = createFirstRunData({ start: 'own', use: 'basic' }, todayDate);
     current = d;
-    return { data: d, broken: false, outdated: false, brokenKept: false, firstRun: true };
+    return { data: d, broken: false, outdated: false, brokenKept: false, firstRun: true, releaseNotes: [] };
   }
   const r = importJson(text);
   if (isImportError(r)) {
@@ -239,10 +251,14 @@ export function loadWithStatus(): {
     // 退避できなかったときは元の文字を残す（上書きすると壊れたデータが消える。brokenText が本体のキーから返す）
     if (brokenKept) writeNow(d);
     current = d;
-    return { data: d, broken: true, outdated, brokenKept, firstRun: false };
+    rememberRelease(LATEST_RELEASE);
+    return { data: d, broken: true, outdated, brokenKept, firstRun: false, releaseNotes: [] };
   }
   current = r;
-  return { data: r, broken: false, outdated: false, brokenKept: false, firstRun: false };
+  const all = startsWithAll();
+  if (all) rememberRelease(LATEST_RELEASE);
+  const releaseNotes = all ? [] : notesSince(seenRelease());
+  return { data: r, broken: false, outdated: false, brokenKept: false, firstRun: false, releaseNotes };
 }
 
 export function load(): DemoData {
@@ -506,6 +522,12 @@ function commitNew(d: DemoData): DemoData {
  */
 export function startWithAnswer(answer: FirstRunAnswer): DemoData {
   rememberBooking(bookingOfUse(answer.use));
+  rememberRelease(LATEST_RELEASE);
   markArrangeAfterStart({ kind: 'answer', start: answer.start });
   return commitNew(createFirstRunData(answer, today()));
+}
+
+/** 更新の知らせで「今のデータを使い続ける」を選んだ（データはそのまま。今の更新を見たことにする。PRD D437） */
+export function keepAfterRelease(): void {
+  rememberRelease(LATEST_RELEASE);
 }

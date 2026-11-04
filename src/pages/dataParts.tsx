@@ -1,6 +1,6 @@
-// データの画面の区画の部品：保存の誤り・直前の状態に戻す・呼び方・控え（JSON のファイル）・古い訪問を片づける・使い方の案内（最初からやり直すは RestartCard）。
+// データの画面の区画の部品：保存の誤り・直前の状態に戻す・呼び方・控え（JSON のファイル）・古い訪問を片づける（最初からやり直すは RestartCard）。
 // 状態と処理は画面専用のフック（useData*）が持ち、ここは表示と押したときだけ
-import { ArchiveRestore, CircleHelp, Download, Eraser, Save, Tags } from 'lucide-react';
+import { ArchiveRestore, Download, Eraser, Save, Tags } from 'lucide-react';
 import { useId } from 'react';
 import { FieldError, invalidAttrs, submitHandler } from '../components/FieldError';
 import { FilePick } from '../components/FilePick';
@@ -186,24 +186,5 @@ export function TidyCard({ tidy }: { tidy: DataTidy }) {
         <WithIcon icon={Eraser}>古い訪問を消す</WithIcon>
       </button>
     </section>
-  );
-}
-
-/** 使い方の案内をもう一度見る */
-export function TourCard({ onOpen }: { onOpen: () => void }) {
-  return (
-    <div className="card stack">
-      <SectionTitle icon={CircleHelp}>使い方の案内</SectionTitle>
-      <Hint>初めて開いたときの短い案内（3枚）を、もう一度見られます。</Hint>
-      <button
-        type="button"
-        className="btn"
-        style={{ alignSelf: 'flex-start' }}
-        onClick={onOpen}
-        data-testid="tour-again"
-      >
-        <WithIcon icon={CircleHelp}>案内をもう一度見る</WithIcon>
-      </button>
-    </div>
   );
 }

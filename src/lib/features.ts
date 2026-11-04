@@ -1,6 +1,6 @@
 // 機能の入り切り（PRD D210〜D213・D216。ADR-0028。design.md §4 features）の表と、入り切りの判定・ひな形を決める純粋関数。
 // 機能の名前・説明・グループ・依存・その機能の URL・切ると隠れるもの・ひな形の入り切りはここの1か所。
-// メニュー（lib/nav）・ルート（app/App）・パレット（lib/commandPalette）・ツアー（lib/tour）・
+// メニュー（lib/nav）・ルート（app/App）・パレット（lib/commandPalette）・
 // 行き先（lib/links）はここから引く。データは書き換えない（入り切りを書くのは画面の update(fn)）
 import type { DemoData } from '../contracts/data';
 import type { Pattern, Terms } from '../contracts/documents';

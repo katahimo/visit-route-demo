@@ -1,5 +1,4 @@
 import { Database, TriangleAlert } from 'lucide-react';
-import { useTour } from '../components/Tour';
 import { PageHeader } from '../components/ui';
 import { useFeature } from '../components/useFeature';
 import { useDemoData } from '../store';
@@ -8,7 +7,7 @@ import '../components/features.css';
 import { SettingsTabs } from '../components/SettingsTabs';
 import { BookingCard } from './dataBookings';
 import { ExcelCard } from './dataExcel';
-import { BackupCard, PrevCard, SaveErrorCard, TermsCard, TidyCard, TourCard } from './dataParts';
+import { BackupCard, PrevCard, SaveErrorCard, TermsCard, TidyCard } from './dataParts';
 import { RestartCard } from './RestartCard';
 import { useDataBackup, useDataRestore, useLastExport } from './useDataBackup';
 import { useDataExcel } from './useDataExcel';
@@ -21,7 +20,6 @@ import { useDataTidy } from './useDataTidy';
 export default function DataPage() {
   const { data, saveError, previous } = useDemoData();
   const excelOn = useFeature('excel');
-  const openTour = useTour();
   const lastExport = useLastExport();
   const excel = useDataExcel({ markExported: lastExport.mark });
   const backup = useDataBackup({ markExported: lastExport.mark });
@@ -34,7 +32,7 @@ export default function DataPage() {
         nav={<SettingsTabs />}
         icon={Database}
         title="データ"
-        lead={`データの書き出し・読み込み${excelOn ? '（Excel も）' : ''}・使い方の案内・最初からやり直す`}
+        lead={`データの書き出し・読み込み${excelOn ? '（Excel も）' : ''}・最初からやり直す`}
       />
       <div className="warn-box">
         <TriangleAlert size={20} strokeWidth={2.2} aria-hidden="true" />
@@ -65,8 +63,6 @@ export default function DataPage() {
       {excelOn && <BookingCard t={data.org.terms} />}
 
       <TidyCard tidy={tidy} />
-
-      <TourCard onOpen={openTour} />
 
       {/* 最初からやり直す：初期状態に戻す・始め方を選び直す（ADR-0092） */}
       <RestartCard onReset={restore.doReset} />

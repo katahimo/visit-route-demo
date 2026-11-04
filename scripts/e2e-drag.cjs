@@ -244,7 +244,7 @@ const steps = sharedPage({
   open: async () => {
     const b = await launch();
     const page = await b.newPage({ viewport: { width: 1400, height: 1000 } });
-    // 初回の案内ツアーを見た扱いにする（PRD D193）
+    // 最初の2問を出さない扱いにする（PRD D379）
     await skipTour(page);
     // ページの時計を週の途中の日本時間の日中に止める（FAKE_NOW。アプリの「今日」とテストの TODAY をそろえる）
     await page.clock.setFixedTime(NOW);
