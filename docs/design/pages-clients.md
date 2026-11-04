@@ -5,7 +5,7 @@
 
 ### 〈利用者さん〉一覧（`#/clients`）
 
-- 題名「〈利用者さん〉」（「一覧」を付けない）。下に入切とも小さいタブ 一覧・相性（`PeopleTabs`。`lib/peopleTabs`。予定を組むの段・基本情報のタブは出さない）。右に「Excel・CSV」（`roster-toggle`。「名簿の欄」）と主ボタン「〈利用者さん〉を追加」（`client-add`。`#/clients/new`）
+- 題名「〈利用者さん〉」（「一覧」を付けない）。下に入切とも小さいタブ 一覧・予定と相性・相性（`PeopleTabs`。`lib/peopleTabs`。予定と相性は [pages-basics.md](pages-basics.md)）。右に「Excel・CSV」（`roster-toggle`。「名簿の欄」）と主ボタン「〈利用者さん〉を追加」（`client-add`。`#/clients/new`）
 - 一覧の上に `ClientFilter`（`clients-filter`。画面の状態。URL に残さない。既定 `EMPTY_FILTER`）。期間は選んでいる日（`useDay`）を含む週（月〜日）で、`weekDay` を7日分作って `filterFacts` に渡す。終了の人は「終了の人も出す」のときだけ
 - 狭い画面（600px 以下）：絞り込みの中身を「絞り込み（N）」のボタン（`narrow-filter-toggle`。`aria-expanded`・`aria-controls`）の下に畳み、横に「N人を表示」（`narrow-filter-count`）。N は `activeFilterCount`。はじめは畳み、開いたかは画面の中だけ。広い画面はいつも開いたまま
 - 一覧の上に「緯度・経度が未登録の〈利用者さん〉」のカード（下の「住所から緯度・経度をまとめて入れる」）。絞り込みに足すチップ「緯度・経度なし」（`extraChips`・`lib/placeAll` の `NO_PLACE_CHIP`。判定は `noPlaceIds`）。住所のセルに、位置の無い人（終了を除く）は「緯度・経度なし」の印と［住所から探す］（`no-place-search`）・［緯度・経度を編集］（`no-place-map`）（`components/NoPlaceActions` の `NoPlaceCell`・値は `useNoPlaceRow`。PRD D427）
