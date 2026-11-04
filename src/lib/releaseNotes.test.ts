@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LATEST_RELEASE, notesSince, RELEASE_NOTES, type ReleaseNote } from './releaseNotes';
+import { compareRelease, LATEST_RELEASE, notesSince, RELEASE_NOTES, type ReleaseNote } from './releaseNotes';
 
 const notes: ReleaseNote[] = [
   { id: '2026-12-01', items: ['c'] },
@@ -22,11 +22,24 @@ describe('notesSince（PRD D437：まだ見ていない更新）', () => {
   });
 });
 
+describe('compareRelease（id の新旧）', () => {
+  it('日付で比べ、同じ日は番号で比べる（-10 は -2 より新しい。番号なしは1回目）', () => {
+    expect(compareRelease('2026-11-10-10', '2026-11-10-2')).toBeGreaterThan(0);
+    expect(compareRelease('2026-11-10-2', '2026-11-10')).toBeGreaterThan(0);
+    expect(compareRelease('2026-11-10', '2026-11-10')).toBe(0);
+    expect(compareRelease('2026-11-09-9', '2026-11-10')).toBeLessThan(0);
+  });
+  it('同じ日の10回目も、まだ見ていない更新に入る', () => {
+    const n = [{ id: '2026-11-10-10', items: ['x'] }, ...notes.slice(1)];
+    expect(notesSince('2026-11-10-2', n).map((x) => x.id)).toEqual(['2026-11-10-10']);
+  });
+});
+
 describe('RELEASE_NOTES', () => {
   it('新しい順で id は重ならず、日付の形。今の版は先頭', () => {
     const ids = RELEASE_NOTES.map((n) => n.id);
     expect(new Set(ids).size).toBe(ids.length);
-    expect([...ids].sort().reverse()).toEqual(ids);
+    expect([...ids].sort((a, b) => compareRelease(b, a))).toEqual(ids);
     for (const id of ids) expect(id).toMatch(/^\d{4}-\d{2}-\d{2}(-\d+)?$/);
     expect(LATEST_RELEASE).toBe(ids[0]);
     for (const n of RELEASE_NOTES) expect(n.items.length).toBeGreaterThan(0);

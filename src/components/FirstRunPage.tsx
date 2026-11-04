@@ -20,10 +20,10 @@ import {
   RELEASE_KEEP_DESC,
   RELEASE_KEEP_LABEL,
   RELEASE_KEEP_SUBMIT,
-  RELEASE_Q1,
   RELEASE_TITLE,
   RELEASE_WARN,
   type ReleaseNote,
+  releaseQ1,
 } from '../lib/releaseNotes';
 import { useDemoData } from '../store';
 import './firstRun.css';
@@ -62,6 +62,7 @@ function FirstRunPage() {
   const [kind, setKind] = useState<FirstRunUse>('basic');
   const headingRef = useRef<HTMLHeadingElement>(null);
   const titleId = useId();
+  const warnId = useId();
   useEffect(() => {
     headingRef.current?.focus();
   }, []);
@@ -97,7 +98,8 @@ function FirstRunPage() {
         </h1>
         {releaseNotice && <ReleaseChanges notes={releaseNotice} />}
         <ChoiceGroup<StartPick>
-          title={releaseNotice ? RELEASE_Q1 : FIRST_RUN_Q1}
+          title={releaseNotice ? releaseQ1(!keep) : FIRST_RUN_Q1}
+          describedBy={releaseNotice && !keep ? warnId : undefined}
           choices={releaseNotice ? [KEEP_CHOICE, ...FIRST_RUN_START_CHOICES] : FIRST_RUN_START_CHOICES}
           value={start}
           onPick={setStart}
@@ -113,7 +115,7 @@ function FirstRunPage() {
           />
         )}
         {releaseNotice && !keep && (
-          <p className="first-run-warn" data-testid="first-run-warn">
+          <p id={warnId} className="first-run-warn" data-testid="first-run-warn">
             {RELEASE_WARN}
           </p>
         )}
@@ -161,6 +163,7 @@ function ChoiceGroup<T extends string>({
   value,
   onPick,
   testKey,
+  describedBy,
 }: {
   title: string;
   choices: readonly FirstRunChoice<T>[];
@@ -168,11 +171,18 @@ function ChoiceGroup<T extends string>({
   onPick: (v: T) => void;
   /** data-testid の元（`first-run-<testKey>-<値>`） */
   testKey: string;
+  /** 選んだ答えで出る注意の id（選び直したときに読み上げで伝える） */
+  describedBy?: string;
 }) {
   const name = useId();
   const titleId = useId();
   return (
-    <fieldset className="first-run-choice" aria-labelledby={titleId} data-testid={`first-run-${testKey}`}>
+    <fieldset
+      className="first-run-choice"
+      aria-labelledby={titleId}
+      aria-describedby={describedBy}
+      data-testid={`first-run-${testKey}`}
+    >
       <legend id={titleId} className="first-run-choice-title">
         {title}
       </legend>

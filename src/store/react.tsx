@@ -207,8 +207,9 @@ function useStorageSync(st: StoreState): void {
       // 別のタブの変更で読み直したら、履歴は捨てる（古いデータへ戻さない）
       appHistory.clear();
       setData(r);
-      // 別のタブで最初の2問に答えて保存されたら、このタブの2問は出さない（そのデータで開く）
-      setFirstRun(null);
+      // 別のタブで最初の2問に答えて保存されたら、このタブの2問は出さない（そのデータで開く）。
+      // 更新の知らせは閉じない（本人が選ぶまで出し、見たことにしないまま消さない。PRD D437）
+      setFirstRun((k) => (k === 'release' ? k : null));
       replaced();
       setExternalReloads((n) => n + 1);
     };
@@ -318,7 +319,8 @@ function useReplaceActions(st: StoreState) {
   const startFirstRun = useCallback(
     (answer: FirstRunAnswer) => {
       // すでにデータがあるとき（やり直し・更新の知らせ）は、先に1世代の控えに残す
-      if (firstRun === 'redo' || firstRun === 'release') keepPrevious('始め方を選び直す');
+      if (firstRun === 'redo') keepPrevious('始め方を選び直す');
+      if (firstRun === 'release') keepPrevious('デモの更新で始め直す');
       setSaveError(null);
       swapIn(startWithAnswer(answer));
       replaced();

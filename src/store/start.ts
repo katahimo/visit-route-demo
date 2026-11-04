@@ -5,6 +5,7 @@
 // デモを作った直後に要対応を組む印（PRD D409。要対応の帯の［要対応を組む］と同じ依頼）もここに置く（sessionStorage。読み直しをまたいで、組み終える前に消さない）
 
 import type { FirstRunBooking, FirstRunStart } from '../lib/firstRun';
+import { compareRelease } from '../lib/releaseNotes';
 
 /** localStorage のキー（DemoData の STORAGE_KEY とは別。データの版・書き出し・初期状態に戻すに入れない） */
 export const FEATURES_START_KEY = 'vrdemo:features:start';
@@ -130,13 +131,19 @@ export function seenRelease(getStorage: () => KeyStore | null = () => globalThis
   }
 }
 
-/** 見た更新の id を残す（書けなくても続ける。書けなければ次に開いたときもう一度知らせる） */
+/**
+ * 見た更新の id を残す（書けなくても続ける。書けなければ次に開いたときもう一度知らせる）。
+ * 今の印より新しいときだけ書く（古い版を開いたままのタブが、新しい版で見た印を古くしない）
+ */
 export function rememberRelease(
   id: string,
   getStorage: () => BookingStore | null = () => globalThis.localStorage ?? null,
 ): void {
   try {
-    getStorage()?.setItem(SEEN_RELEASE_KEY, id);
+    const s = getStorage();
+    const cur = s?.getItem(SEEN_RELEASE_KEY) ?? null;
+    if (cur !== null && compareRelease(id, cur) <= 0) return;
+    s?.setItem(SEEN_RELEASE_KEY, id);
   } catch {
     // 書けなくても続ける
   }

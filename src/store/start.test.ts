@@ -6,6 +6,9 @@ import {
   arrangesAfterStart,
   clearArrangePending,
   markArrangeAfterStart,
+  rememberRelease,
+  SEEN_RELEASE_KEY,
+  seenRelease,
 } from './start';
 
 describe('arrangesAfterStart', () => {
@@ -62,5 +65,25 @@ describe('組む印（読み直しをまたぐ）', () => {
     expect(() => markArrangeAfterStart({ kind: 'reset' }, false, broken)).not.toThrow();
     expect(arrangePending(broken)).toBe(false);
     expect(() => clearArrangePending(broken)).not.toThrow();
+  });
+});
+
+describe('rememberRelease（見た更新の印は新しいときだけ書く。PRD D437）', () => {
+  const store = () => {
+    const m = new Map<string, string>();
+    return {
+      m,
+      get: () => ({ getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v) }),
+    };
+  };
+  it('印が無ければ書き、古い id では戻さない', () => {
+    const { m, get } = store();
+    rememberRelease('2026-11-10', get);
+    expect(m.get(SEEN_RELEASE_KEY)).toBe('2026-11-10');
+    rememberRelease('2026-11-04', get);
+    expect(m.get(SEEN_RELEASE_KEY)).toBe('2026-11-10');
+    rememberRelease('2026-11-10-2', get);
+    expect(m.get(SEEN_RELEASE_KEY)).toBe('2026-11-10-2');
+    expect(seenRelease(get)).toBe('2026-11-10-2');
   });
 });

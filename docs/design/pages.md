@@ -1,6 +1,6 @@
 # pages（画面）：共通事項と索引
 
-> この画面のファイル：`src/app/App.tsx`（`shellBars.tsx`・`shellNav.tsx`・`useAdminShell.ts`）・`src/app/NavDrawer.tsx`・`src/components/`・`src/lib/`（画面横断の部品）。関連 ADR：0009・0019・0022〜0028・0033・0036・0037・0039・0050・0053。関連 PRD：D59・D102・D122〜D126・D132〜D135・D146〜D150・D173〜D183・D189〜D197・D201〜D204・D210〜D216・D220〜D222。
+> この画面のファイル：`src/app/App.tsx`（`shellBars.tsx`・`shellNav.tsx`・`useAdminShell.ts`）・`src/app/NavDrawer.tsx`・`src/components/`・`src/lib/`（画面横断の部品）。関連 ADR：0009・0019・0022〜0028・0033・0036・0037・0039・0050・0053。関連 PRD：D59・D102・D122〜D126・D132〜D135・D146〜D150・D173〜D183・D189〜D191・D194〜D197・D201〜D204・D210〜D216・D220〜D222。
 > 画面ごとの詳細は下の「画面別ファイルの索引」から。画面共通の部品（右の欄・名前から開く詳細・用語・リンク・メール）は [pages-common.md](pages-common.md)。
 > 担当は訪問に持ち（`Visit` の `staffId`・`start`・`pinned`）、AI は提案を出すだけ、確定は〈スタッフ〉に伝えた内容（`snapshots`）。AI で組むのは担当を組むと欠勤の振り直し・自動の組みで、予定（月・週・日）は手で直す
 

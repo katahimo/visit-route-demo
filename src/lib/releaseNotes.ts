@@ -25,7 +25,19 @@ export const LATEST_RELEASE: string = RELEASE_NOTES[0]?.id ?? '';
  */
 export function notesSince(seen: string | null, notes: readonly ReleaseNote[] = RELEASE_NOTES): ReleaseNote[] {
   if (seen === null) return notes.slice(0, 1);
-  return notes.filter((n) => n.id > seen);
+  return notes.filter((n) => compareRelease(n.id, seen) > 0);
+}
+
+/** id の新旧（a が新しければ正）。日付で比べ、同じ日は後ろの番号（無ければ1）で比べる（文字の順だと -10 が -2 より古くなる） */
+export function compareRelease(a: string, b: string): number {
+  const parse = (id: string): [string, number] => {
+    const m = /^(\d{4}-\d{2}-\d{2})(?:-(\d+))?$/.exec(id);
+    return m ? [m[1]!, m[2] ? Number(m[2]) : 1] : [id, 1];
+  };
+  const [da, na] = parse(a);
+  const [db, nb] = parse(b);
+  if (da !== db) return da < db ? -1 : 1;
+  return na - nb;
 }
 
 /** 更新の画面の見出しと、変わったところの見出し */
@@ -36,7 +48,7 @@ export const RELEASE_KEEP_LABEL = '今のデータを使い続ける';
 export const RELEASE_KEEP_DESC = 'これまでに入れた・直したデータのまま開きます';
 /** 今のデータを使い続けるときの主ボタン（ほかは「はじめる」） */
 export const RELEASE_KEEP_SUBMIT = '開く';
-/** 更新のときの問1（どのデータで続けるか） */
-export const RELEASE_Q1 = '1. どのデータで続けますか';
+/** 更新のときの問1（どのデータで続けるか）。問2を出すときだけ番号を付ける */
+export const releaseQ1 = (numbered: boolean): string => `${numbered ? '1. ' : ''}どのデータで続けますか`;
 /** デモ・自分のデータを選んだときに畳まずに出す注意（今のデータは1世代の控えに残る） */
 export const RELEASE_WARN = 'いまのデータは消えます（データの画面の「直前の状態に戻す」で1回だけ戻せます）。';

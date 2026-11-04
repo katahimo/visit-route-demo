@@ -39,22 +39,14 @@ export function RosterButton({ open, onToggle, controls }: { open: boolean; onTo
  * 見届けたら呼ぶ（位置の無い人を自動でまとめて置き始める。PRD D427。ADR-0094）。郵便番号・住所の検索が切なら渡さない。
  * inline（登録の案内の①②。PRD D381）：開け閉めせずいつも出し、見出し・「閉じる」・カードの枠を出さない（画面の見出しが同じことを言う）
  */
-export function RosterCard({
-  kind,
-  id,
-  open = false,
-  onClose,
-  onPlace,
-  inline = false,
-}: {
-  kind: RosterKind;
-  id: string;
-  /** inline のときは要らない */
-  open?: boolean;
-  onClose?: () => void;
-  onPlace?: () => void;
-  inline?: boolean;
-}) {
+/** 開け閉めする欄（一覧の画面）は open と onClose が要る。inline（登録の案内）は要らない */
+type RosterCardShow = { inline: true } | { inline?: false; open: boolean; onClose: () => void };
+
+export function RosterCard(props: { kind: RosterKind; id: string; onPlace?: () => void } & RosterCardShow) {
+  const { kind, id, onPlace } = props;
+  const inline = props.inline === true;
+  const open = props.inline === true || props.open;
+  const onClose = props.inline === true ? undefined : props.onClose;
   const roster = useRosterCard(kind, onPlace);
   const titleId = useId();
   const { term } = roster;
@@ -64,7 +56,7 @@ export function RosterCard({
       className={inline ? 'stack roster-card' : 'card stack roster-card'}
       aria-labelledby={inline ? undefined : titleId}
       aria-label={inline ? `${term}の名簿（Excel・CSV）` : undefined}
-      hidden={!inline && !open}
+      hidden={!open}
       data-testid="roster-card"
     >
       {!inline && (
