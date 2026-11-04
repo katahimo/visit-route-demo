@@ -1,29 +1,25 @@
-// 基本情報・予定と相性の表（#/basics。PRD D361・D362。ADR-0067）：予定を組むの 1 の段。〈利用者さん〉の繰り返しごと・曜日ごとに
-// 時間の約束・標準の担当・相性・勤務時間の外を1枚の表で確かめ、マスで時刻を直す。名前から〈利用者さん〉・〈スタッフ〉の画面へ。
-// 決まったら［次へ］（標準が無ければ案をくらべる、あれば担当を組む）。時刻を直すのは〈利用者さん〉の画面と同じく今日から分けて
+// 予定と相性の表（#/basics。PRD D361・D362。ADR-0067・ADR-0100）：〈利用者さん〉のタブの1つ。〈利用者さん〉の繰り返しごと・曜日ごとに
+// 時間の約束・いつもの担当・相性・勤務時間の外を1枚の表で確かめ、マスで時刻を直す。名前から〈利用者さん〉・〈スタッフ〉の画面へ。
+// 時刻を直すのは〈利用者さん〉の画面と同じく今日から分けて
 // （確認のあと store の update の1回。全体の「元に戻す」で戻せる）
 import { CalendarRange } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useConfirm } from '../components/ConfirmDialog';
-import { BasicsNav } from '../components/SettingsTabs';
+import { PeopleTabs } from '../components/SettingsTabs';
 import { useToast } from '../components/Toast';
 import { PageHeader } from '../components/ui';
 import { useFeature } from '../components/useFeature';
 import { jstDate } from '../domain/time';
-import { basicsRows, canEditTime, changePatternTime, issueCount } from '../lib/basicsView';
+import { basicsRows, basicsWeekdays, canEditTime, changePatternTime, issueCount } from '../lib/basicsView';
 import { newId, WEEKDAY_LABELS } from '../lib/common';
-import { arrangeSteps, nextArrangeStep } from '../lib/nav';
 import { patternSplitConfirm } from '../lib/patternConfirm';
 import { patternConfirmedDays } from '../lib/patternForm';
-import { hasStandard } from '../lib/standard';
-import { setStandardStep } from '../lib/standardDraft';
-import { standardWeekdays } from '../lib/standardView';
 import { timesOn } from '../patterns';
 import { useDemoData } from '../store';
 import { type BasicsCellRef, BasicsTable, BasicsTimeEditor, focusCell } from './basicsParts';
 import './settings.css';
-import './standard.css';
+import './basics.css';
 
 export default function BasicsPage() {
   const { data, update } = useDemoData();
@@ -32,14 +28,11 @@ export default function BasicsPage() {
   const perDayOn = useFeature('patternMonthly');
   const terms = data.org.terms;
   const rows = useMemo(() => basicsRows(data, today, compatOn), [data, today, compatOn]);
-  const weekdays = useMemo(() => standardWeekdays(rows.map((r) => r.pattern)), [rows]);
+  const weekdays = useMemo(() => basicsWeekdays(rows.map((r) => r.pattern)), [rows]);
   const [open, setOpen] = useState<BasicsCellRef | null>(null);
   const cellRefs = useRef(new Map<string, HTMLButtonElement>());
   const clientName = (id: string) => data.clients.find((c) => c.id === id)?.displayName ?? id;
   const staffName = (id: string) => data.staff.find((s) => s.id === id)?.name ?? '（いない人）';
-  const expert = useFeature('expert');
-  // 段はエキスパート機能が入のときだけ（切なら「次へ」は出さない。ADR-0072）
-  const next = expert ? nextArrangeStep(arrangeSteps(!hasStandard(data)), 'basics') : null;
   const issues = issueCount(rows);
   const confirmDialog = useConfirm();
   const toast = useToast();
@@ -68,11 +61,11 @@ export default function BasicsPage() {
   return (
     <div className="stack basics-page">
       <PageHeader
-        // 予定を組むの段と基本情報のタブは入だけ（切は予定と相性を人のタブに入れない旧画面。PRD D394）
-        nav={expert ? <BasicsNav /> : undefined}
+        // 〈利用者さん〉のタブ（入切とも。ADR-0100）
+        nav={<PeopleTabs />}
         icon={CalendarRange}
         title="予定と相性"
-        lead={`${terms.client}の予定（繰り返し）と、${expert ? '標準の担当' : 'いつもの担当'}・相性・勤務時間（シフト）を1枚の表で確かめて直します。決まったら AI で担当を組みます`}
+        lead={`${terms.client}の予定（繰り返し）と、いつもの担当・相性・勤務時間（シフト）を1枚の表で確かめて直します`}
       />
       <div className="card stack">
         {rows.length === 0 ? (
@@ -120,25 +113,8 @@ export default function BasicsPage() {
             />
           </>
         )}
-        <p className="sub">
-          相性を直すのは「相性」、勤務日・勤務時間を直すのは「勤務時間（シフト）」のタブ。
-          {expert && '標準の担当は組み方の標準で決めます'}
-        </p>
+        <p className="sub">相性を直すのは「相性」のタブ、勤務日・勤務時間を直すのは{terms.staff}の「勤務」のタブ</p>
       </div>
-      {next && (
-        <div className="row standard-step-nav" data-testid="basics-step-nav">
-          <Link
-            to={next.to}
-            className="btn btn-primary"
-            onClick={() => {
-              if (next.key === 'proposals') setStandardStep('proposals');
-            }}
-            data-testid="basics-next"
-          >
-            次へ：{next.label}
-          </Link>
-        </div>
-      )}
     </div>
   );
 }

@@ -85,13 +85,11 @@ describe('monthListRow', () => {
     const past = monthListRow({ ...s, date: '2026-10-20' }, today);
     expect(past.care).toBe(false);
     expect(past.isPast).toBe(true);
-    // 切（理由を出さない。PRD D410）：見た目の印は無く、読み上げには残す
-    const only = monthListRow(s, today, [], { attention: 3, confirmStep: false, reasons: false });
-    expect(only.flags).toEqual([]);
-    expect(only.reasons).toBe(false);
+    // 切（確定の段階なし）：理由の印は入と同じに出し、確定の言葉だけ出さない
+    const only = monthListRow(s, today, [], { attention: 3, confirmStep: false });
+    expect(only.flags.map((f) => f.text)).toContain('担当なし 2');
     expect(only.attention).toBe(3);
     expect(only.label).toContain('担当なし 2');
-    expect(r.reasons).toBe(true);
   });
   it('補足の文を読み上げの最後に足す', () => {
     const r = monthListRow(status({ date: '2026-10-22', count: 3, state: 'told' }), today, ['担当 2件']);

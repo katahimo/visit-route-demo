@@ -1,5 +1,5 @@
-// 条件の重みの画面のプリセットの節（D20・D235。ADR-0008・ADR-0035・ADR-0065）の状態と処理：点数の基準を替える・名前と一言を直す・消す。
-// プリセットの重み・必須は変えない（ADR-0065）。データの組み立ては lib/presets
+// 条件の重みの画面のプリセットの管理（D20・D235。ADR-0008・ADR-0035・ADR-0100）の状態と処理：点数の基準を替える・名前と一言を直す・消す。
+// プリセットの重み・必須は変えない。データの組み立ては lib/presets
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useConfirm } from '../components/ConfirmDialog';
@@ -15,11 +15,14 @@ export function usePresetSection({ draftCount }: { draftCount: number }) {
   const ref = useRef<HTMLDivElement>(null);
   /** 点数の基準のプリセット（ADR-0010） */
   const ruler = scorePresetOf(data.presets, data.scorePresetId);
-  // #/rules#presets から来たら、この節を見せる
+  // #/rules#presets から来たら、畳んだ管理を開いてこの節を見せる
   useEffect(() => {
-    if (location.hash === '#presets') ref.current?.scrollIntoView({ block: 'start' });
+    if (location.hash !== '#presets') return;
+    const fold = ref.current?.closest('details');
+    if (fold) fold.open = true;
+    ref.current?.scrollIntoView({ block: 'start' });
   }, [location.hash]);
-  /** 名前・一言を直す（すぐ保存。重みは変わらないので点・標準に影響しない） */
+  /** 名前・一言を直す（すぐ保存。重みは変わらないので点に影響しない） */
   const rename = (id: string, patch: Partial<Pick<Preset, 'name' | 'note'>>) =>
     update((d) => renamePreset(d, id, patch));
   /** 点数の基準を替える。重みの下書きがあれば、捨てることを確かめてから（黙って捨てない。PRD D286） */

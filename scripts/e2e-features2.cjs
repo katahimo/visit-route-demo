@@ -1,5 +1,5 @@
 // 機能の入り切り その2（PRD D211・D213〜D215）：ひな形の5通りごとに画面の中の入口（日の画面の欠勤・キャンセル・メール・点数の理由、
-// 担当を組むの「AI で組む」・考え方（プリセット）の数・「案を比べる」・予定を組むの段、〈利用者さん〉の欄の段階の選択・紹介元・担当できる人・休み・決まりごと・住所の検索・絞り込みのチップ、
+// 担当を組むの「AI で組む」・考え方（条件の重みへのリンク）・「案を比べる」・組むの子、〈利用者さん〉の欄の段階の選択・紹介元・担当できる人・休み・決まりごと・住所の検索・絞り込みのチップ、
 // 〈利用者さん〉の画面の紹介元・決まりごと・休みのタブ、〈スタッフ〉の画面のメールアドレス・最終勤務日、月の「休みを追加」・印刷、空き状況の案内文、
 // データの Excel、稼働の見込みの交通費の単価）。相性を切るときの独自の確認（件数と効き方。取り消すと変わらない）と、
 // 相性×の組は AI で組むと担当にならず、切ると担当に入ること（別のタブで×を書き、担当を組むの日の範囲（#/arrange?date=）で AI で組んで反映する）。
@@ -12,7 +12,6 @@
 const path = require('node:path');
 const { answerConfirms } = require('./lib/confirmDialog.cjs');
 const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, runSteps, settle } = require('./lib/env.cjs');
-const { markStandard } = require('./lib/standard.cjs');
 const { planDays } = require('./lib/plan.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
 const { toolCount } = require('./lib/ui.cjs');
@@ -35,7 +34,7 @@ async function openFold(page) {
   await page.getByTestId('person-details-summary').click();
 }
 
-/** 担当・相性（入はタブ。切はタブが無く基本情報の「詳しく」の中）の画面を開く。base は `/clients/ID` か `/staff/ID`、tab は staffing か compat */
+/** 担当・相性（入はタブ。切はタブが無く人の画面の基本情報の「詳しく」の中）の画面を開く。base は `/clients/ID` か `/staff/ID`、tab は staffing か compat */
 async function openPart(page, base, tab) {
   await open(page, `${base}?tab=${tab}`, '[data-testid="person-view"]');
   if ((await page.getByTestId('person-tabs').locator(`[data-tab="${tab}"]`).count()) > 0) {
@@ -56,7 +55,6 @@ async function insideEntries(page, dlg, ctx) {
     await writeFeaturesInOtherTab(ctx, asFeatures(TEMPLATE_ON[t]));
     const data = await page.evaluate((k) => JSON.parse(localStorage.getItem(k)), STORAGE_KEY);
     check(same(data.org.features, asFeatures(TEMPLATE_ON[t])), `${label}：入り切りを書いた`);
-    await markStandard(page); // 標準が無い間は担当を組むで組めない（ADR-0065）
     const count = (id) => page.getByTestId(id).count();
 
     // 日の画面（今日）
@@ -86,33 +84,18 @@ async function insideEntries(page, dlg, ctx) {
       `${label}：担当を組むは「考え方：〈点数の基準〉」だけ（選ぶ欄は無い）`,
     );
     check((await count('arrange-compare-open')) === (on('compare') ? 1 : 0), `${label}：担当を組むの「案を比べる」`);
-    // 標準を登録したあとも予定を組むの段は出し（基本情報・担当を組むの2段）、［標準の組み方を変える］も出す（機能の入り切りで変わらない。ADR-0067）
-    const stepKeys = await page
-      .locator('[data-testid="arrange-steps"] li')
-      .evaluateAll((els) => els.map((e) => e.dataset.step));
-    // エキスパート機能が切（基本・労務・月次）なら段の表示も［標準の組み方を変える］も出さない（ADR-0072）
+    // 考え方の横の「替えるのは条件の重み」のリンクはエキスパート機能が入のときだけ（ADR-0100）
+    const basisLink = page.getByTestId('arrange-basis').locator('a[href="#/rules"]');
     check(
-      same(stepKeys, on('expert') ? ['basics', 'arrange'] : []),
-      `${label}：標準があれば担当を組むの段は 基本情報・担当を組む の2つ（エキスパート機能が切なら出さない）`,
-      stepKeys,
+      (await basisLink.count()) === (on('expert') ? 1 : 0),
+      `${label}：担当を組むの「（替えるのは条件の重み）」のリンク（エキスパート機能が入のときだけ）`,
+      await page.getByTestId('arrange-basis').innerText(),
     );
-    check(
-      (await count('arrange-change-standard')) === (on('expert') ? 1 : 0),
-      `${label}：担当を組むの［標準の組み方を変える］（エキスパート機能が入のときだけ）`,
-    );
-    // 予定を組むの子は基本情報・担当を組む（標準を登録したあと）
+    // 組むの子は条件の重み・担当を組む（エキスパート機能が入のときだけ。ADR-0100）
     const kids = await page
       .locator('.side-nav [data-parent="arrange"] > .nav-sub > .nav-link.nav-child')
       .evaluateAll((els) => els.map((e) => e.dataset.key));
-    check(same(kids, arrangeKidsFor(t, true)), `${label}：標準があれば予定を組むの子は基本情報・担当を組むだけ`, kids);
-    // 組み方の標準の 1 の条件の重みへの寄り道は rules が入のときだけ（ADR-0066）。組み方の標準はエキスパート機能が入のときだけ開ける（ADR-0072）
-    if (on('expert')) {
-      await open(page, '/standard', '[data-testid="standard-steps"]');
-      check(
-        (await count('standard-rules-link')) === (on('rules') ? 1 : 0),
-        `${label}：組み方の標準の条件の重みへのリンク`,
-      );
-    }
+    check(same(kids, arrangeKidsFor(t)), `${label}：組むの子は条件の重み・担当を組む（切なら組むは無い）`, kids);
 
     // 〈利用者さん〉：その人の画面の節（PRD D308）
     const client = data.clients.find((c) => c.referrer.name) ?? data.clients[0];
@@ -337,11 +320,9 @@ async function keepData(page, dlg, ctx) {
 
 /**
  * 担当を組む（#/arrange?date=。日の範囲）で「AI で組む」の提案を出して反映する（提案は反映するまで担当を変えない。
- * ADR-0053・ADR-0063）。担当の入った訪問も組み直すので、組む日は「伝えていない日をすべて組み直す」。
- * 組み方の標準が無いと組めない（ADR-0065）ので、先に標準を登録したデータにする
+ * ADR-0053・ADR-0063）。担当の入った訪問も組み直すので、組む日は「伝えていない日をすべて組み直す」
  */
 async function proposeAndApply(page, date) {
-  await markStandard(page);
   await open(page, `/arrange?date=${date}`, '[data-testid="arrange-start"]');
   if ((await page.getByTestId('arrange-mode-all').count()) > 0) await page.getByTestId('arrange-mode-all').check();
   await page.getByTestId('arrange-start').click();

@@ -250,13 +250,12 @@ export const patternDayTimeSchema = z.object({
   latestStart: hhmmSchema,
 });
 
-/** 曜日ごとの標準の開始（組み方の標準。ADR-0062） */
+/** 曜日ごとのいつもの開始（繰り返しの欄で入れる。ADR-0062） */
 export const patternUsualStartSchema = z.object({
   /** 0=日〜6=土 */
   weekday: z.number().int().min(0).max(6),
   start: hhmmSchema,
 });
-export type PatternUsualStart = z.infer<typeof patternUsualStartSchema>;
 
 /** 定期パターン（ADR-0012。利用者さんごと。複数持てる） */
 export const patternSchema = z

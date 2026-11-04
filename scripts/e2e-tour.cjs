@@ -625,8 +625,10 @@ async function tourDialog(b) {
       check(
         (await page.getByTestId('tour-title').innerText()) === '予定を組んで、直して、確定します' &&
           (await page.getByTestId('tour-body').innerText()).includes('［月｜週｜日］') &&
-          // 印「all」（すべて入。エキスパート機能も入）なので、組むのはメニューの「組む」で、帯の種類も案内する（ADR-0072・ADR-0074）
-          (await page.getByTestId('tour-body').innerText()).includes('「組む」で組みます') &&
+          // 印「all」（すべて入。エキスパート機能も入）なので、組むのはメニューの「組む」の「担当を組む」で、帯の種類も案内する
+          // （ADR-0072・ADR-0074。組み方の標準は無い。ADR-0100）
+          (await page.getByTestId('tour-body').innerText()).includes('「組む」の「担当を組む」で') &&
+          !(await page.getByTestId('tour-body').innerText()).includes('標準') &&
           (await page.getByTestId('tour-body').innerText()).includes('赤い帯') &&
           points.length === 3 &&
           /^組む（AI）：/.test(points[0]) &&

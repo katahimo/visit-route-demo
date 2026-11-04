@@ -1,4 +1,4 @@
-// 基本情報の表（#/basics。ADR-0067。PRD D362）のための純粋関数：行（標準の表と同じ繰り返し）・マス（時間の約束・標準の担当・
+// 予定と相性の表（#/basics。ADR-0067・ADR-0100。PRD D362）のための純粋関数：行（今日以降に続く繰り返し）・マス（時間の約束・いつもの担当・
 // 相性・勤務時間の外）・行の相性の一覧・マスで時刻を直したときの繰り返し
 import type { DemoData } from '../contracts/data';
 import type { Pattern, Staff } from '../contracts/documents';
@@ -6,8 +6,40 @@ import type { PatternChange, PatternInput } from '../contracts/patterns';
 import type { CompatLevel } from '../contracts/rules';
 import { hhmmToMinutes } from '../domain/time';
 import { splitPattern, timesOn } from '../patterns';
+import { WEEKDAY_ORDER } from './common';
 import { compatLevelOf } from './compatLevel';
-import { standardRows } from './standardView';
+
+type PatternData = Pick<DemoData, 'patterns' | 'clients'>;
+
+/**
+ * 表の行にする繰り返し：利用中の〈利用者さん〉の、today 以降に続く（終わっていない）繰り返し。
+ * ただし先で終わり、同じ〈利用者さん〉・種類の後に始まる繰り返しがあるもの（「いつから」で分けた前の側）は除き、後の側を行にする
+ */
+export function basicsPatterns(data: PatternData, today: string): Pattern[] {
+  const active = new Set(data.clients.filter((c) => c.active).map((c) => c.id));
+  const live = data.patterns.filter((p) => active.has(p.clientId) && (p.to === null || p.to >= today));
+  return live.filter(
+    (p) =>
+      p.to === null ||
+      !live.some(
+        (q) => q.id !== p.id && q.clientId === p.clientId && q.typeId === p.typeId && q.from > (p.to as string),
+      ),
+  );
+}
+
+/** 行の並び：〈利用者さん〉の名前順（日本語）、同じなら最初の曜日（月曜はじまり）順 */
+export function basicsRowPatterns(data: PatternData, today: string): Pattern[] {
+  const names = new Map(data.clients.map((c) => [c.id, c.displayName]));
+  const firstWd = (p: Pattern) => Math.min(...p.weekdays.map((w) => (w + 6) % 7));
+  return [...basicsPatterns(data, today)].sort(
+    (a, b) => (names.get(a.clientId) ?? '').localeCompare(names.get(b.clientId) ?? '', 'ja') || firstWd(a) - firstWd(b),
+  );
+}
+
+/** 表に出す曜日（行のどれかが行く曜日だけ。月曜はじまり） */
+export function basicsWeekdays(rows: readonly Pick<Pattern, 'weekdays'>[]): number[] {
+  return WEEKDAY_ORDER.filter((wd) => rows.some((p) => p.weekdays.includes(wd)));
+}
 
 /** 担当がそのマスに行けない理由：休止（最終勤務日の後も）・勤務日でない・勤務時間の外 */
 export type ShiftIssue = 'inactive' | 'off' | 'outside';
@@ -19,7 +51,7 @@ export const SHIFT_ISSUE_TEXT: Record<ShiftIssue, string> = {
   outside: '勤務時間外',
 };
 
-/** 表の1マス（その曜日の時間の約束・標準の担当・その組の相性・勤務時間の外） */
+/** 表の1マス（その曜日の時間の約束・いつもの担当・その組の相性・勤務時間の外） */
 export type BasicsCell = {
   earliestStart: string;
   latestStart: string;
@@ -36,7 +68,7 @@ export type BasicsRow = {
 };
 
 /**
- * 担当がその曜日・時間の約束に行けるか（基本の勤務日・勤務時間で見る。標準の週の表なので日ごとの上書きは見ない）。
+ * 担当がその曜日・時間の約束に行けるか（基本の勤務日・勤務時間で見る。毎週の表なので日ごとの上書きは見ない）。
  * 約束の幅の中に勤務に収まる開始が1つも無ければ勤務時間の外（domain/scheduleModel の fitInSlots と同じ決まり）
  */
 export function shiftIssue(
@@ -58,7 +90,7 @@ export function shiftIssue(
 export const issueCount = (rows: readonly BasicsRow[]): number =>
   rows.reduce((n, r) => n + Object.values(r.cells).filter((c) => c.issue).length, 0);
 
-/** 基本情報の表の行（並びは標準の表と同じ。compatOn を切れば相性は 0・一覧は空） */
+/** 予定と相性の表の行（並びは basicsRowPatterns。compatOn を切れば相性は 0・一覧は空） */
 export function basicsRows(
   data: Pick<DemoData, 'patterns' | 'clients' | 'staff' | 'compat'>,
   today: string,
@@ -66,7 +98,7 @@ export function basicsRows(
 ): BasicsRow[] {
   const staffById = new Map(data.staff.map((s) => [s.id, s]));
   const names = new Map(data.staff.map((s) => [s.id, s.name]));
-  return standardRows(data, today).map((p) => {
+  return basicsRowPatterns(data, today).map((p) => {
     const row = compatOn ? data.compat[p.clientId] : undefined;
     const cells: Record<number, BasicsCell> = {};
     for (const wd of p.weekdays) {

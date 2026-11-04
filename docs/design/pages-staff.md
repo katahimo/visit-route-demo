@@ -5,7 +5,7 @@
 
 ### 〈スタッフ〉一覧（`#/staff`）
 
-- 題名「〈スタッフ〉」（「一覧」を付けない）。下に入切とも小さいタブ 一覧・勤務（勤務時間（シフト）・勤務の見込み）・相性（`PeopleTabs`。`lib/peopleTabs`。予定を組むの段・基本情報のタブは出さない）。右に主ボタン「〈スタッフ〉を追加」（`staff-add`。`#/staff/new`）。名前の前は〈スタッフ〉の印（`StaffMark` の md。[pages.md](pages.md) の「〈スタッフ〉の印」）
+- 題名「〈スタッフ〉」（「一覧」を付けない）。下に入切とも小さいタブ 一覧・勤務（勤務時間（シフト）・勤務の見込み）・相性（`PeopleTabs`。`lib/peopleTabs`）。右に主ボタン「〈スタッフ〉を追加」（`staff-add`。`#/staff/new`）。名前の前は〈スタッフ〉の印（`StaffMark` の md。[pages.md](pages.md) の「〈スタッフ〉の印」）
 - 行（`staff-row`）はどこを押してもその人の画面（`#/staff/:id`。行の中のボタン・リンク・文字の選択は除く）。右端に文字のボタン「詳しく」（その人の画面。`Eye` を文字の前に。`staff-open`）と「今日の画面」（今日のスマホ画面 `staffViewHref(id, 今日)`。`Smartphone`。`staff-view-open`）。読み上げの名前は文字から始める（「詳しく（〈名前〉）」「今日の画面（〈名前〉）」。PRD D417）。`?id=` はその人の画面へ移る
 - 列（`lib/peopleView` の `staffColumns(detailed)`）：名前・勤務日（`staff-days`）・勤務時間（`staff-hours`）と右端の「詳しく」「今日の画面」（状態の列が無い間は休止中だけ名前のそばに印＝`staffNameNote`）。**エキスパート機能が入のときだけ**表の上に「くわしい列」のチェック（`people-columns-toggle`。`components/DetailColumns`）。入れると 特性・求めること・自宅の緯度・経度・状態の列を足す。一覧ごとに端末に覚える（`store/navOpen` の鍵 `columns:staff`）。切は見出しの下の説明を初回だけ（`useIntro('staff')`。`peopleIntro`）
 - 見出しの右に「Excel・CSV」（`roster-toggle`）。押すと名簿の欄（[pages-clients.md](pages-clients.md)「名簿の欄」。`kind="staff"`）

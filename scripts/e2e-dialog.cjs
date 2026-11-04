@@ -1,6 +1,6 @@
 // 独自の確認ダイアログ（PRD D146〜D150。ADR-0026）を本物のブラウザで確かめる：
 // 代表の数か所（条件を消す・項目を消す・データを初期状態に戻す・日の画面の「確定（伝えた）」・〈スタッフ〉の変更を捨てる・
-// 条件の重みの「新しい考え方として保存」（名前の欄つき。ADR-0065））で、
+// 条件の重みの「保存」（調整した重みに書く。ADR-0100））で、
 // 画面の中央に独自のダイアログが出て、ブラウザのネイティブのダイアログは出ない（page.on('dialog') が呼ばれたら失敗）。
 // role=alertdialog・aria-modal・見出しと本文の aria-labelledby/describedby、最初のフォーカスは取り消し、Tab・Shift+Tab は中で回る、
 // 裏（#root）は inert・巻かない。Esc・取り消す・背景を押すでは何も変わらず、確定で処理が進む。閉じたら押したボタンへフォーカスが戻る。
@@ -210,25 +210,40 @@ async function rules(page) {
   );
 }
 
-// ---- 条件の重みの「新しい考え方として保存」（ADR-0065・ADR-0066。PRD D286）：名前の欄つきの確認・元のプリセットは変えず新しいプリセットを
-// 足して点数の基準にする・プリセットの節は重みを変えられず初期の3つは消せない・6つあると保存できない ----
+// ---- 条件の重みの保存（ADR-0100。PRD D286）：保存は「調整した重み」（id tuned）に書いて点数の基準にする（2回目は上書き）・
+// ［値を入れる］でプリセットの値を下書きに入れる・プリセットの管理は畳んだ中（重みは変えられず初期の3つは消せない）・
+// 調整した重みが無く6つあると保存できない ----
 async function rulesSave(page) {
-  await open(page, '/rules', '[data-testid="preset-section"]');
+  await open(page, '/rules', '[data-testid="narrow-rules"]');
   const d0 = await stored(page);
   const basis0 = d0.presets.find((p) => p.id === d0.scorePresetId);
+  const fold = page.getByTestId('preset-fold');
   const section = page.getByTestId('preset-section');
-  // ADR-0066：プリセットの節は条件の表より上・「組み方の標準へ戻る」がある
+  // プリセットの管理は表の下の畳んだ中（既定で閉じる）。組み方の標準へ戻るは無い
   const order = await page.evaluate(() => {
-    const sec = document.querySelector('[data-testid="preset-section"]');
+    const f = document.querySelector('[data-testid="preset-fold"]');
     const tbl = document.querySelector('[data-testid="narrow-rules"]');
-    return !!sec && !!tbl && !!(sec.compareDocumentPosition(tbl) & Node.DOCUMENT_POSITION_FOLLOWING);
+    return !!f && !!tbl && !!(tbl.compareDocumentPosition(f) & Node.DOCUMENT_POSITION_FOLLOWING);
   });
-  check(order, 'プリセットの節は条件の表より上にある（ADR-0066）');
   check(
-    (await page.getByTestId('rules-back').innerText()).includes('組み方の標準へ戻る') &&
-      (await page.getByTestId('rules-back').getAttribute('href')) === '#/standard',
-    '条件の重みに「組み方の標準へ戻る」（#/standard）',
+    order &&
+      (await fold.evaluate((e) => e.tagName === 'DETAILS' && !e.open)) &&
+      (await fold.locator(':scope > summary').innerText()).trim() === '考え方（プリセット）の管理' &&
+      !(await section.isVisible()) &&
+      (await page.getByTestId('rules-back').count()) === 0,
+    'プリセットの管理は表の下の「考え方（プリセット）の管理」に畳み、閉じて始まる（組み方の標準へ戻るは無い）',
   );
+  // ［値を入れる］：点数の基準のほかのプリセットのボタン
+  const fills = await page
+    .getByTestId('rules-fill-preset')
+    .evaluateAll((els) => els.map((e) => e.getAttribute('data-preset')));
+  check(
+    JSON.stringify(fills) === JSON.stringify(d0.presets.filter((p) => p.id !== basis0.id).map((p) => p.id)),
+    '表の上の［値を入れる］：点数の基準のほかのプリセットのボタン',
+    fills,
+  );
+  await fold.locator(':scope > summary').click();
+  await section.waitFor();
   check(
     (await section.locator('input[type="range"], input[type="checkbox"]').count()) === 0 &&
       (await section.getByRole('button', { name: /初期値に戻す|基準の重みを写して保存/ }).count()) === 0,
@@ -239,8 +254,7 @@ async function rulesSave(page) {
       (await section.getByTestId('preset-remove').count()) === 0,
     'プリセットの節：初期の3つに「初期」の札・消すボタンは無い',
   );
-  // ADR-0088：点数の基準はプリセットの一覧の各行の丸で選ぶ（別の並びは無い）。基準のプリセットの重みは下の表に寄せる。
-  // 次の段の案内（rules-next-note）は保存の確認の本文と［組み方の標準へ戻る］に寄せた
+  // ADR-0088：点数の基準はプリセットの一覧の各行の丸で選ぶ（別の並びは無い）。基準のプリセットの重みは上の表に寄せる
   const radios = section.getByTestId('score-ruler-radio');
   check(
     (await radios.count()) === d0.presets.length &&
@@ -250,10 +264,8 @@ async function rulesSave(page) {
         .count()) === 0 &&
       (await section
         .locator(`[data-testid="preset-edit"][data-preset="${basis0.id}"] [data-testid="preset-weights-basis"]`)
-        .count()) === 1 &&
-      (await page.getByTestId('rules-next-note').count()) === 0 &&
-      (await page.getByTestId('rules-trial-note').count()) === 0,
-    'プリセットの一覧の各行に点数の基準の丸（プリセットの数だけ）・基準の重みは条件の表に寄せる・次の段の案内の文は無い',
+        .count()) === 1,
+    'プリセットの一覧の各行に点数の基準の丸（プリセットの数だけ）・基準の重みは条件の表に寄せる',
   );
   // 表の重みを1つ動かす → 保存の帯
   const range = page.getByTestId('narrow-rules').locator('input[type="range"]:not([disabled])').first();
@@ -263,35 +275,16 @@ async function rulesSave(page) {
   const confirm = page.getByTestId('rules-draft-confirm');
   await confirm.waitFor();
   check(
-    (await confirm.innerText()).trim() === '新しい考え方として保存（1件）',
-    '保存の帯：主ボタンの名前',
+    (await confirm.innerText()).trim() === '保存（1件）',
+    '保存の帯：主ボタンは「保存（1件）」',
     await confirm.innerText(),
   );
   await confirm.click();
-  const a = await shape(page, '新しい考え方として保存');
-  const name = page.getByTestId('rules-draft-name');
+  const a = await shape(page, '重みを保存');
   check(
-    a.title === '新しい考え方として保存しますか？（1件）' &&
-      (await name.inputValue()) === `${basis0.name}（改）` &&
-      a.body.includes(`「${basis0.name}」はそのまま残ります`),
-    '保存の確認：見出し・名前の既定「〈元の名前〉（改）」・本文',
-    { title: a.title, name: await name.inputValue(), body: a.body },
-  );
-  // 空・重なる名前は保存できない（文で知らせ、確定を押しても閉じない）
-  await name.fill('');
-  check(
-    (await page.getByTestId('confirm-ok').getAttribute('aria-disabled')) === 'true' &&
-      (await page.getByTestId('rules-draft-name-error').innerText()) === '名前を入れてください',
-    '保存の確認：名前が空なら保存できない',
-  );
-  await name.fill(basis0.name);
-  // aria-disabled のボタンは Playwright が押せないものと見るので、押す操作を直に送る（押しても閉じないことを見る）
-  await page.getByTestId('confirm-ok').dispatchEvent('click');
-  await settle(page);
-  check(
-    (await dialog(page).count()) === 1 &&
-      (await page.getByTestId('rules-draft-name-error').innerText()) === '同じ名前のプリセットがあります',
-    '保存の確認：同じ名前は保存できない（押しても閉じない）',
+    a.title === '重みを保存しますか？（1件）' && (await page.getByTestId('rules-draft-name').count()) === 0,
+    '保存の確認：見出し「重みを保存しますか？（1件）」・名前の欄は無い',
+    a.title,
   );
   // Esc は取り消し（何も書かない・下書きは残る）
   await page.keyboard.press('Escape');
@@ -304,33 +297,59 @@ async function rulesSave(page) {
   );
   await confirm.click();
   await dialog(page).waitFor();
-  await page.getByTestId('rules-draft-name').fill('ふだん（改）');
-  await page.getByTestId('rules-draft-name').press('Enter');
-  await page.locator('.toast').filter({ hasText: '「ふだん（改）」を保存して、ふだんの考え方にしました' }).waitFor();
-  // 保存（localStorage）は少し遅れて書くので、足したプリセットが入るまで待つ
+  await page.getByTestId('confirm-ok').click();
+  await page.locator('.toast').filter({ hasText: '重みを保存しました。次に組むときから使います' }).waitFor();
+  // 保存（localStorage）は少し遅れて書くので、調整した重みが入るまで待つ
   await page.waitForFunction(
-    ([k, n]) => (JSON.parse(localStorage.getItem(k) ?? 'null')?.presets?.length ?? 0) > n,
-    [STORAGE_KEY, d0.presets.length],
+    (k) => JSON.parse(localStorage.getItem(k) ?? 'null')?.scorePresetId === 'tuned',
+    STORAGE_KEY,
   );
   const d1 = await stored(page);
-  const added = d1.presets.at(-1);
+  const added = d1.presets.find((p) => p.id === 'tuned');
   check(
     d1.presets.length === d0.presets.length + 1 &&
-      added.name === 'ふだん（改）' &&
-      d1.scorePresetId === added.id &&
+      added?.name === '調整した重み' &&
+      d1.presets.at(-1)?.id === 'tuned' &&
       JSON.stringify(d1.presets.find((p) => p.id === basis0.id).weights) === JSON.stringify(basis0.weights) &&
       JSON.stringify(added.weights) !== JSON.stringify(basis0.weights),
-    '保存：元のプリセットは変えず、新しいプリセットを足して点数の基準にする',
-    { n: d1.presets.length, added: added.name, score: d1.scorePresetId },
+    '保存：元のプリセットは変えず、「調整した重み」（id tuned）を足して点数の基準にする',
+    { n: d1.presets.length, added: added?.name, score: d1.scorePresetId },
   );
   check(
     (await page.getByTestId('rules-draft-bar').count()) === 0 &&
       (await page.evaluate(() => document.activeElement?.tagName)) === 'H1' &&
-      (await page.getByTestId('rules-basis').innerText()).includes('ふだん（改）'),
-    '保存のあと：帯は消え、フォーカスは見出し・直しているのは新しい考え方',
+      (await page.getByTestId('rules-basis').innerText()).includes('調整した重み'),
+    '保存のあと：帯は消え、フォーカスは見出し・今の重みは「調整した重み」',
   );
-  // 足したものは消せる（基準を消すと基準はバランスへ）
-  const row = section.locator(`[data-testid="preset-edit"][data-preset="${added.id}"]`);
+  // 2回目：［値を入れる］で元のプリセットの値を入れて保存すると、調整した重みを上書きする（プリセットは増えない）
+  await page.locator(`[data-testid="rules-fill-preset"][data-preset="${basis0.id}"]`).click();
+  await confirm.waitFor();
+  const label2 = (await confirm.innerText()).trim();
+  check(/^保存（\d+件）$/.test(label2), '［値を入れる］でプリセットの値が下書きに入り、保存の帯が出る', label2);
+  await confirm.click();
+  await dialog(page).waitFor();
+  await page.getByTestId('confirm-ok').click();
+  // 保存（localStorage）は少し遅れて書くので、調整した重みが元のプリセットの値になるまで待つ
+  const sameAsBasis0 = await page
+    .waitForFunction(
+      ([k, w]) => {
+        const t = JSON.parse(localStorage.getItem(k) ?? 'null')?.presets?.find((p) => p.id === 'tuned');
+        return !!t && Object.keys(w).every((x) => JSON.stringify(t.weights[x]) === JSON.stringify(w[x]));
+      },
+      [STORAGE_KEY, basis0.weights],
+      { timeout: 10000 },
+    )
+    .then(() => true)
+    .catch(() => false);
+  const d1b = await stored(page);
+  const tuned2 = d1b.presets.find((p) => p.id === 'tuned');
+  check(
+    d1b.presets.length === d1.presets.length && d1b.scorePresetId === 'tuned' && !!tuned2 && sameAsBasis0,
+    '2回目の保存は「調整した重み」を上書きする（プリセットは増えない）',
+    { n: d1b.presets.length, score: d1b.scorePresetId },
+  );
+  // 調整した重みは消せる（基準を消すと基準はバランスへ）
+  const row = section.locator('[data-testid="preset-edit"][data-preset="tuned"]');
   await row.locator('summary').click();
   await row.getByTestId('preset-remove').click();
   const r = await shape(page, 'プリセットを消す');
@@ -363,7 +382,7 @@ async function rulesSave(page) {
   const switched = await waitRuler(second.id);
   await section.locator('[data-testid="score-ruler-radio"][value="balance"]').check();
   check(switched && (await waitRuler('balance')), '行の丸で点数の基準を替えられ、戻せる', second.id);
-  // 6つあるときは保存できない
+  // 調整した重みが無く6つあるときは保存できない
   await page.evaluate((k) => {
     const d = JSON.parse(localStorage.getItem(k));
     const base = d.presets[0];
@@ -371,20 +390,20 @@ async function rulesSave(page) {
       d.presets.push({ ...base, id: `full${d.presets.length}`, name: `満杯${d.presets.length}`, note: '' });
     localStorage.setItem(k, JSON.stringify(d));
   }, STORAGE_KEY);
-  await open(page, '/rules', '[data-testid="preset-section"]');
+  await open(page, '/rules', '[data-testid="narrow-rules"]');
   await range.focus();
   await page.keyboard.press(v0 > 0 ? 'ArrowLeft' : 'ArrowRight');
   await page.getByTestId('rules-draft-full').waitFor();
   check(
     (await confirm.getAttribute('aria-disabled')) === 'true' &&
       (await page.getByTestId('rules-draft-full').innerText()).includes('プリセットは6つまでです'),
-    '6つあるとき：保存の主ボタンは押せず、消すよう知らせる',
+    '調整した重みが無く6つあるとき：保存の主ボタンは押せず、消すよう知らせる',
   );
   await confirm.dispatchEvent('click');
   await settle(page);
   check(
     (await dialog(page).count()) === 0 && (await stored(page)).presets.length === 6,
-    '6つあるとき：押しても確認を出さない',
+    '調整した重みが無く6つあるとき：押しても確認を出さない',
   );
   await page.getByTestId('rules-draft-discard').click();
 }

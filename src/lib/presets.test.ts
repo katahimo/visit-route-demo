@@ -1,81 +1,86 @@
 import { describe, expect, it } from 'vitest';
+import type { DemoData } from '../contracts/data';
+import type { Preset } from '../contracts/rules';
 import { MAX_PRESETS } from '../contracts/rules';
 import { naivePlan, normalize, score, toHundred } from '../evaluate';
 import { compile } from '../matching';
-import { applyPreset, createDemoData, INITIAL_PRESETS, presetOf, scorePresetOf, scoreRulesOf } from '../seed';
+import { applyPreset, createDemoData, INITIAL_PRESETS, scorePresetOf, scoreRulesOf } from '../seed';
 import {
-  addPresetError,
   addRule,
-  draftPresetName,
   isInitialPreset,
   removePreset,
   renamePreset,
-  saveDraftAsPreset,
+  saveTunedWeights,
   setScorePreset,
+  TUNED_PRESET_ID,
+  TUNED_PRESET_NAME,
+  tunedFull,
   withBasisRules,
 } from './presets';
 
 const base = () => createDemoData('2026-10-12');
 const waitOf = (rules: { type: string; weight: number }[]) => rules.find((r) => r.type === 'wait')!.weight;
+/** テスト用：名前を付けたプリセットを足して点数の基準にする（重みはバランスの wait だけ変える） */
+const withPreset = (d: DemoData, id: string, wait: number): DemoData => {
+  const p: Preset = {
+    id,
+    name: id,
+    note: '',
+    weights: { ...INITIAL_PRESETS[0]!.weights, wait: { weight: wait, hard: false } },
+  };
+  return setScorePreset({ ...d, presets: [...d.presets, p] }, id);
+};
 
-describe('新しい考え方として保存（ADR-0065。PRD D286）', () => {
-  it('基準の保存済みの重みに下書きを重ねたプリセットを最後に足し、点数の基準にする。元のプリセットは変えない', () => {
+describe('調整した重みとして保存（ADR-0100。PRD D286）', () => {
+  it('基準の保存済みの重みに下書きを重ねて「調整した重み」を最後に足し、点数の基準にする。ほかのプリセットは変えない', () => {
     const d0 = base();
-    const d = saveDraftAsPreset(d0, { wait: { weight: 1 } }, '  バランス（改） ');
+    const d = saveTunedWeights(d0, { wait: { weight: 1 } });
     expect(d.presets).toHaveLength(4);
     expect(d.presets.slice(0, 3)).toEqual(d0.presets);
     const p = d.presets[3]!;
-    expect(p.name).toBe('バランス（改）');
-    expect(p.note).toBe('');
+    expect(p.id).toBe(TUNED_PRESET_ID);
+    expect(p.name).toBe(TUNED_PRESET_NAME);
     expect(p.weights).toEqual({ ...d0.presets[0]!.weights, wait: { weight: 1, hard: false } });
     // 元のプリセットと中身を共有しない
     expect(p.weights.balance).not.toBe(d0.presets[0]!.weights.balance);
-    expect(d.scorePresetId).toBe(p.id);
+    expect(d.scorePresetId).toBe(TUNED_PRESET_ID);
     // 条件（data.rules）も新しい基準にそろう
     expect(waitOf(d.rules)).toBe(1);
     expect(waitOf(scoreRulesOf(d))).toBe(1);
-    expect(presetOf(d.rules, d.presets)?.id).not.toBe('balance');
   });
 
-  it('基準でないプリセットが基準なら、その重みに重ねる', () => {
+  it('2回目は同じ「調整した重み」の重みを上書きする（名前・一言はそのまま。数は増えない）', () => {
+    const d1 = saveTunedWeights(base(), { wait: { weight: 1 } });
+    const renamed = renamePreset(d1, TUNED_PRESET_ID, { name: 'うちの重み' });
+    const d2 = saveTunedWeights(renamed, { balance: { weight: 5 } });
+    expect(d2.presets).toHaveLength(4);
+    const p = d2.presets.at(-1)!;
+    expect(p.name).toBe('うちの重み');
+    expect(p.weights.wait).toEqual({ weight: 1, hard: false });
+    expect(p.weights.balance).toEqual({ weight: 5, hard: false });
+  });
+
+  it('基準がほかのプリセットなら、その重みに重ねて「調整した重み」に書く', () => {
     const d0 = setScorePreset(base(), 'travel');
-    const d = saveDraftAsPreset(d0, { compatibility: { weight: 4 } }, '移動を短く（改）');
+    const d = saveTunedWeights(d0, { compatibility: { weight: 4 } });
     expect(d.presets.at(-1)!.weights).toEqual({
       ...INITIAL_PRESETS[1]!.weights,
       compatibility: { weight: 4, hard: false },
     });
+    expect(d.presets.find((p) => p.id === 'travel')).toEqual(d0.presets.find((p) => p.id === 'travel'));
   });
 
-  it(`足せないとき（名前が空・長すぎる・重なる・${MAX_PRESETS}つある）はそのまま返す`, () => {
-    const d0 = base();
-    expect(saveDraftAsPreset(d0, { wait: { weight: 1 } }, ' ')).toBe(d0);
-    expect(saveDraftAsPreset(d0, { wait: { weight: 1 } }, 'あ'.repeat(21))).toBe(d0);
-    expect(saveDraftAsPreset(d0, { wait: { weight: 1 } }, 'バランス')).toBe(d0);
-    let d = d0;
-    for (let i = 0; i < MAX_PRESETS - 3; i++) d = saveDraftAsPreset(d, { wait: { weight: i } }, `案${i}`);
-    expect(d.presets).toHaveLength(MAX_PRESETS);
-    expect(saveDraftAsPreset(d, { wait: { weight: 1 } }, 'もう1つ')).toBe(d);
-  });
-
-  it('足せない理由の文', () => {
-    const d = base();
-    expect(addPresetError(d, ' ')).toBe('名前を入れてください');
-    expect(addPresetError(d, 'あ'.repeat(21))).toBe('名前は20文字までです');
-    expect(addPresetError(d, ' バランス ')).toBe('同じ名前のプリセットがあります');
-    expect(addPresetError(d, '新しい')).toBeNull();
-    const full = {
-      ...d,
-      presets: [...d.presets, ...d.presets.map((p) => ({ ...p, id: `${p.id}2`, name: `${p.name}2` }))],
-    };
-    expect(addPresetError(full, '新しい')).toContain(`${MAX_PRESETS}つまで`);
-  });
-
-  it('既定の名前は「〈元の名前〉（改）」、重なれば「（改2）」…', () => {
-    expect(draftPresetName('バランス', [{ name: 'バランス' }])).toBe('バランス（改）');
-    expect(draftPresetName('バランス', [{ name: 'バランス（改）' }])).toBe('バランス（改2）');
-    expect(draftPresetName('バランス', [{ name: 'バランス（改）' }, { name: 'バランス（改2）' }])).toBe(
-      'バランス（改3）',
-    );
+  it(`調整した重みが無くプリセットが${MAX_PRESETS}つあれば保存しない。あれば上書きできる`, () => {
+    let d = base();
+    for (let i = 0; i < MAX_PRESETS - 3; i++) d = withPreset(d, `p${i}`, i);
+    expect(tunedFull(d)).toBe(true);
+    expect(saveTunedWeights(d, { wait: { weight: 1 } })).toBe(d);
+    const withTuned = saveTunedWeights(withPreset(base(), 'p0', 0), { wait: { weight: 1 } });
+    let full = withTuned;
+    for (let i = 1; full.presets.length < MAX_PRESETS; i++) full = withPreset(full, `q${i}`, i);
+    full = setScorePreset(full, TUNED_PRESET_ID);
+    expect(tunedFull(full)).toBe(false);
+    expect(saveTunedWeights(full, { wait: { weight: 2 } }).presets).toHaveLength(MAX_PRESETS);
   });
 });
 
@@ -94,7 +99,7 @@ describe('プリセットの節（ADR-0008・ADR-0065）', () => {
     expect(INITIAL_PRESETS.every((p) => isInitialPreset(p.id))).toBe(true);
     const d0 = base();
     for (const p of INITIAL_PRESETS) expect(removePreset(d0, p.id)).toBe(d0);
-    const d = saveDraftAsPreset(d0, { wait: { weight: 1 } }, '足した');
+    const d = withPreset(d0, '足した', 1);
     const added = d.presets.at(-1)!;
     expect(isInitialPreset(added.id)).toBe(false);
     expect(removePreset(d, added.id).presets.map((p) => p.id)).toEqual(['balance', 'travel', 'people']);
@@ -105,23 +110,17 @@ describe('プリセットの節（ADR-0008・ADR-0065）', () => {
     expect(removePreset(d, 'only')).toBe(d);
   });
 
-  it('既定の名前は上限に収める', () => {
-    const long = 'あ'.repeat(20);
-    expect(draftPresetName(long, [])).toBe(`${'あ'.repeat(17)}（改）`);
-    expect(draftPresetName(long, [{ name: `${'あ'.repeat(17)}（改）` }])).toBe(`${'あ'.repeat(16)}（改2）`);
-  });
-
   it('基準を消したとき、バランスが先頭でなくてもバランスへ移る', () => {
     const d0 = base();
     const d = { ...d0, presets: [...d0.presets.slice(1), d0.presets[0]!] };
-    const a = saveDraftAsPreset(d, { wait: { weight: 1 } }, 'A');
+    const a = withPreset(d, 'A', 1);
     expect(removePreset(a, a.scorePresetId!).scorePresetId).toBe('balance');
   });
 
   it('基準のプリセットを消すと、基準は残りの先頭（バランス）に移り、条件の重みもそろう。ほかを消しても変わらない', () => {
     const d0 = base();
-    const a = saveDraftAsPreset(d0, { wait: { weight: 1 } }, 'A');
-    const b = saveDraftAsPreset(a, { wait: { weight: 2 } }, 'B');
+    const a = withPreset(d0, 'A', 1);
+    const b = withPreset(a, 'B', 2);
     const aId = a.presets.at(-1)!.id;
     const bId = b.presets.at(-1)!.id;
     expect(b.scorePresetId).toBe(bId);

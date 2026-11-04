@@ -1,4 +1,4 @@
-// 時間軸の帯の小さな印（予定の画面の時間軸と、組み方の標準の日で見るの時間軸で同じ見た目。routeTimeline.css の .tl-mark）
+// 時間軸の帯の小さな印（予定の画面の時間軸。routeTimeline.css の .tl-mark）
 import type { ReactNode } from 'react';
 
 /** 印の色：赤（要対応）・注意（時刻の変化）・ピン・仮・担当の入れ替わり */

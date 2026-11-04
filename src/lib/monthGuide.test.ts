@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { type CellGuideInput, cellGuide, createTipStore, monthCellHint, monthHelpLines } from './monthGuide';
+import { type CellGuideInput, cellGuide, createTipStore, monthHelpLines } from './monthGuide';
 
 const base: CellGuideInput = {
   focus: 'all',
@@ -79,22 +79,20 @@ describe('cellGuide', () => {
     });
     expect(lines.filter((l) => /^「(担当なし|担当が休み|未連絡|拘束超)/.test(l))).toHaveLength(4);
   });
-  it('切は見出しの ⓘ（monthCellHint）：件数・要対応の札・休 N・今日だけを読み、棒・理由の行は言わない（PRD D410）', () => {
-    const lines = monthCellHint('スタッフ');
-    expect(lines.some((l) => l.startsWith('「N件」'))).toBe(true);
-    expect(lines.some((l) => l.startsWith('赤い「要対応 N」') && l.includes('重なり'))).toBe(true);
-    expect(lines.some((l) => l.startsWith('「休 N」＝休むスタッフの人数'))).toBe(true);
-    expect(lines.some((l) => l.startsWith('「今日」'))).toBe(true);
-    expect(lines.some((l) => /棒|色の帯|拘束|条件に合わない|確定/.test(l))).toBe(false);
+  it('確定の段階が無い（切）：訪問のある日に「訪問の無い日」と言わず、確定の言葉を使わない', () => {
+    const lines = cellGuide({ ...base, count: 3, attention: 1, changed: true, confirmStep: false });
+    expect(lines.some((l) => l.includes('白い背景'))).toBe(false);
+    expect(lines.some((l) => l.startsWith('「変更あり N」'))).toBe(true);
+    expect(lines.some((l) => /確定|未連絡/.test(l))).toBe(false);
   });
-  it('マスの見方の説明（PRD D327）：切は切のマスに出ない印（未連絡・混み具合・端の印・凡例）を書かず、入は書く', () => {
-    const off = monthHelpLines('スタッフ', true);
-    expect(off.some((l) => /未連絡|混み具合|◀|凡例/.test(l))).toBe(false);
-    expect(off.some((l) => l.includes('見出しの ⓘ'))).toBe(true);
-    expect(off.some((l) => l.includes('「要対応 N」'))).toBe(true);
-    const on = monthHelpLines('スタッフ', false);
-    expect(on.some((l) => l.startsWith('「未連絡 N」'))).toBe(true);
+  it('マスの見方の説明（PRD D327）：入切とも同じ印を書き、切は確定の言葉を使わず「変更あり N」と言う', () => {
+    const on = monthHelpLines('スタッフ', true);
+    expect(on.some((l) => l.startsWith('「未連絡 N」') && l.includes('確定（伝えた）'))).toBe(true);
     expect(on.some((l) => l.startsWith('混み具合のバー') && l.includes('スタッフの人数'))).toBe(true);
+    const off = monthHelpLines('スタッフ', false);
+    expect(off.some((l) => l.startsWith('「変更あり N」'))).toBe(true);
+    expect(off.some((l) => l.startsWith('混み具合のバー'))).toBe(true);
+    expect(off.some((l) => /確定|未連絡/.test(l))).toBe(false);
   });
   it('〈スタッフ〉・〈利用者さん〉の表示：全体の印（件数・休 N）は書かず、その表示の棒・印', () => {
     const staff = cellGuide({ ...base, focus: 'staff', count: 3, stateText: 'まだ伝えていない', resting: 2 });

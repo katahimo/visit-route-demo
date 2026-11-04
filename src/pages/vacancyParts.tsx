@@ -6,11 +6,10 @@ import { Term } from '../components/Term';
 import type { VisitType } from '../contracts/documents';
 import type { VacancyCell, VacancyResult } from '../contracts/vacancy';
 import { minutesToHhmm } from '../domain/time';
-import { WEEKDAY_LABELS } from '../lib/common';
+import { WEEKDAY_LABELS, WEEKDAY_ORDER } from '../lib/common';
 import { clockTime, dateText, mdText, monthLabel } from '../lib/dateText';
 import { type InquiryDayMark, type InquiryRow, inquiryDayLevel, vacancyLevel } from '../lib/glance';
 import { unassignedHref } from '../lib/links';
-import { WEEKDAY_ORDER } from '../lib/standard';
 import { type AnswerCard, cellFace, markLegend, VACANCY_MARK, VACANCY_MARK_TEXT } from '../lib/vacancyView';
 import { ymOf } from '../lib/ym';
 
