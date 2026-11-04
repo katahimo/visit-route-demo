@@ -100,9 +100,9 @@ export type Terms = z.infer<typeof termsSchema>;
 /** 拘束の上限の既定（時間。ADR-0015） */
 export const SPAN_LIMIT_DEFAULT_HOURS = 10;
 
-/** 道路の移動時間の補正の既定（ADR-0099）：駐車・玄関までの分。遅刻を避けるため安全側にとる */
+/** 道路の移動時間の補正の既定（ADR-0101）：駐車・玄関までの分。遅刻を避けるため安全側にとる */
 export const ROAD_PARK_MINUTES_DEFAULT = 5;
-/** 道路の移動時間の補正の既定（ADR-0099）：混雑係数（道路の所要は渋滞・信号待ちを含まない）。遅刻を避けるため安全側にとる */
+/** 道路の移動時間の補正の既定（ADR-0101）：混雑係数（道路の所要は渋滞・信号待ちを含まない）。遅刻を避けるため安全側にとる */
 export const ROAD_TRAFFIC_FACTOR_DEFAULT = 1.5;
 /** 駐車・玄関までの分の上限 */
 export const ROAD_PARK_MINUTES_MAX = 60;
@@ -111,7 +111,7 @@ export const ROAD_TRAFFIC_FACTOR_MIN = 1;
 export const ROAD_TRAFFIC_FACTOR_MAX = 3;
 
 /**
- * 道路の移動時間の補正（PRD D433。ADR-0099）：車の区間の移動（分）＝ parkMinutes ＋ trafficFactor × 道路の所要（分）。
+ * 道路の移動時間の補正（PRD D436。ADR-0101）：車の区間の移動（分）＝ parkMinutes ＋ trafficFactor × 道路の所要（分）。
  * 道路の所要は DemoData.roads にあるときだけ使う。無い古いデータは既定
  */
 export const roadTravelSchema = z.object({
@@ -133,7 +133,7 @@ export const ROAD_TRAVEL_DEFAULT: RoadTravel = {
 export const ROAD_POINTS_MAX = 100;
 
 /**
- * 道路の所要の表（PRD D433。ADR-0099）：OSRM（OpenStreetMap の道路・車）から押したときに取った、地点どうしの所要（秒）と道のり（m）。
+ * 道路の所要の表（PRD D436。ADR-0101）：OSRM（OpenStreetMap の道路・車）から押したときに取った、地点どうしの所要（秒）と道のり（m）。
  * seconds[i][j]・meters[i][j] は points[i] → points[j]。道が見つからなければ null。地点は緯度・経度（小数5桁）で重複なし
  */
 export const roadTableSchema = z.object({
@@ -161,7 +161,7 @@ export const orgSchema = z.object({
    * 知らない ID は読むときに捨てる。Excel のブックには入れない
    */
   features: featuresSchema.default({}),
-  /** 道路の移動時間の補正（PRD D433。ADR-0099）。無い古いデータは既定（駐車 5分・混雑係数 1.5）。Excel のブックには入れない */
+  /** 道路の移動時間の補正（PRD D436。ADR-0101）。無い古いデータは既定（駐車 5分・混雑係数 1.5）。Excel のブックには入れない */
   roadTravel: roadTravelSchema.default(ROAD_TRAVEL_DEFAULT),
 });
 export type Org = z.infer<typeof orgSchema>;
@@ -297,13 +297,12 @@ export const patternDayTimeSchema = z.object({
   latestStart: hhmmSchema,
 });
 
-/** 曜日ごとの標準の開始（組み方の標準。ADR-0062） */
+/** 曜日ごとのいつもの開始（繰り返しの欄で入れる。ADR-0062） */
 export const patternUsualStartSchema = z.object({
   /** 0=日〜6=土 */
   weekday: z.number().int().min(0).max(6),
   start: hhmmSchema,
 });
-export type PatternUsualStart = z.infer<typeof patternUsualStartSchema>;
 
 /** 定期パターン（ADR-0012。利用者さんごと。複数持てる） */
 export const patternSchema = z

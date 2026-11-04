@@ -1,4 +1,4 @@
-// 道路の所要の表（DemoData.roads）を引く・補正する（PRD D433。ADR-0099）。純粋関数
+// 道路の所要の表（DemoData.roads）を引く・補正する（PRD D436。ADR-0101）。純粋関数
 import type { LatLng, RoadTable, RoadTravel } from '../contracts/documents';
 
 /** 道路の1区間：所要（秒）と道のり（m） */

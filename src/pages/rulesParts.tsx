@@ -1,5 +1,5 @@
 // 条件の重みの画面（PRD D173〜D175・D220・D271・D286）の区画の部品：点のしくみの説明・条件の表（狭い画面ではカード）・
-// 条件の名前・足す条件の種類・詳細設定（乱数の種）・確定していない重みの変更の帯（新しい考え方として保存。ADR-0065）
+// プリセットの値を入れる・条件の名前・足す条件の種類・詳細設定（乱数の種）・確定していない重みの変更の帯（保存。ADR-0100）
 import {
   Dices,
   Heart,
@@ -19,7 +19,7 @@ import { WeightSlider } from '../components/parts';
 import { Term } from '../components/Term';
 import { Hint, IconButton, WithIcon } from '../components/ui';
 import type { Terms } from '../contracts/documents';
-import { HARDABLE, MAX_PRESETS, type Rule, type RuleType } from '../contracts/rules';
+import { HARDABLE, MAX_PRESETS, type Preset, type Rule, type RuleType } from '../contracts/rules';
 import { ruleTypeHelp, ruleTypeLabel, weightLocked } from '../lib/common';
 import { narrowRole } from '../lib/narrowRoles';
 import { parseSeed, RULE_NAME_MAX, ruleNameOf, ruleRowClass, setSeed } from '../lib/ruleEdit';
@@ -39,7 +39,7 @@ export const RULE_ICONS: Record<RuleType, LucideIcon> = {
   wait: Hourglass,
 };
 
-/** 点のしくみの説明と、直している基準のプリセット（次の段の案内は保存の確認と［組み方の標準へ戻る］に寄せる。ADR-0088） */
+/** 点のしくみの説明と、今の重み（点数の基準のプリセット）の名前 */
 export function RulesIntro({ basisName }: { basisName: string | undefined }) {
   return (
     <>
@@ -55,12 +55,46 @@ export function RulesIntro({ basisName }: { basisName: string | undefined }) {
         </ul>
       </Hint>
       <p className="sub" data-testid="rules-basis">
-        直しているのは
+        今の重み（
         <Term k="scoreBase" testId="term-score-base" />
-        の「<strong>{basisName ?? '—'}</strong>
-        」の重みです。基準は上のプリセットの丸で替えられます。同じ種類の条件は同じ重みになります。
+        ）：「<strong>{basisName ?? '—'}</strong>」。同じ種類の条件は同じ重みになります。
       </p>
     </>
+  );
+}
+
+/**
+ * プリセットの値を入れる（ADR-0100）：押すとそのプリセットの重み・必須を表の下書きに入れる（保存はしない。保存は下の帯）。
+ * 今の重み（点数の基準）のプリセットは出さない
+ */
+export function RulesFill({
+  presets,
+  basisId,
+  onFill,
+}: {
+  presets: readonly Preset[];
+  basisId: string | undefined;
+  onFill: (p: Preset) => void;
+}) {
+  const others = presets.filter((p) => p.id !== basisId);
+  if (others.length === 0) return null;
+  return (
+    <div className="row" data-testid="rules-fill">
+      <span className="sub">値を入れる：</span>
+      {others.map((p) => (
+        <button
+          key={p.id}
+          type="button"
+          className="btn btn-small"
+          title={p.note || undefined}
+          onClick={() => onFill(p)}
+          data-testid="rules-fill-preset"
+          data-preset={p.id}
+        >
+          {p.name}
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -336,7 +370,7 @@ export function RulesAdvanced() {
 
 /**
  * 重みの下書きがある間だけ：画面の下に貼り付く保存の帯（下のタブの上。巻いても押せる。印刷では出さない）。
- * プリセットは書き換えず、新しい考え方として保存する（ADR-0065）。6つあるときは押せず、消すよう出す
+ * 保存すると「調整した重み」に書く（ADR-0100）。調整した重みが無くプリセットが6つあるときは押せず、消すよう出す
  */
 export function RulesDraftBar({
   count,
@@ -345,7 +379,7 @@ export function RulesDraftBar({
   onConfirm,
 }: {
   count: number;
-  /** プリセットが6つある（保存できない） */
+  /** 調整した重みが無く、プリセットが6つある（保存できない） */
   full: boolean;
   onDiscard: () => void;
   onConfirm: () => Promise<void>;
@@ -354,10 +388,11 @@ export function RulesDraftBar({
     <section className="rules-draft-bar" aria-label="確定していない重みの変更" data-testid="rules-draft-bar">
       <p className="rules-draft-text">
         <span className="chip chip-warn">変更あり</span>
-        <span>プリセットは書き換えません。保存すると新しい考え方として足し、ふだんの考え方（点数の基準）にします</span>
+        <span>保存すると、次に組むときからこの重みを使います</span>
         {full && (
           <span className="error" data-testid="rules-draft-full">
-            プリセットは{MAX_PRESETS}つまでです。使わない考え方を上の節で消してから保存してください
+            プリセットは{MAX_PRESETS}
+            つまでです。使わない考え方を「考え方（プリセット）の管理」で消してから保存してください
           </span>
         )}
       </p>
@@ -374,7 +409,7 @@ export function RulesDraftBar({
           }}
           data-testid="rules-draft-confirm"
         >
-          新しい考え方として保存（{count}件）
+          保存（{count}件）
         </button>
       </span>
     </section>

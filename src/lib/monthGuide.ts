@@ -39,6 +39,8 @@ export type CellGuideInput = {
   edited?: boolean;
   staffTerm: string;
   clientTerm: string;
+  /** 確定（伝えた）の段階を出すか（省略は出す。切は確定の言葉を使わず「変更あり N」と言う。lib/settledView） */
+  confirmStep?: boolean;
 };
 
 /** 要対応の内訳の文（入の4種類） */
@@ -46,15 +48,18 @@ const CARE_KINDS = '担当なし・担当が休み・条件に合わない・時
 
 /**
  * マスの読み方の行（エキスパート機能が入のマスの吹き出し。出ている印の順。出ていない印は書かない）。例「休 2＝休む〈スタッフ〉の人数（希＝希望休の人数）」
- * 「下の3段の棒＝30分ごとの空きの人数（高いほど空きが少ない）」。切は見出しの ⓘ（monthCellHint。PRD D410）
+ * 「下の3段の棒＝30分ごとの空きの人数（高いほど空きが少ない）」
  */
 export function cellGuide(x: CellGuideInput): string[] {
   const out: string[] = [];
+  const confirmStep = x.confirmStep !== false;
   if (x.stateText) out.push(`背景の色＝日の状態（${x.stateText}）`);
-  else out.push('白い背景＝訪問の無い日');
+  else if (x.count === 0) out.push('白い背景＝訪問の無い日');
   if (x.care) out.push(`${x.attention ? '赤い枠' : '赤い点・赤い枠'}＝要対応（${CARE_KINDS}）`);
   if (x.attention)
-    out.push('赤い「要対応 N」の札＝要対応の件数（右の「要対応」の欄の行の数。要対応の訪問・未連絡の変更・拘束超）');
+    out.push(
+      `赤い「要対応 N」の札＝要対応の件数（右の「要対応」の欄の行の数。要対応の訪問・${confirmStep ? '未連絡の変更' : '変更あり'}・拘束超）`,
+    );
   if (x.focus === 'all') {
     if (x.count > 0) out.push('右上の「N件」＝この日の訪問の件数');
     if (x.types) out.push('色の帯＝訪問の種類ごとの件数');
@@ -67,7 +72,12 @@ export function cellGuide(x: CellGuideInput): string[] {
   }
   if (x.unassigned) out.push('「担当なし N」＝担当の決まっていない訪問の件数');
   if (x.issues) out.push('「担当が休み N」など＝担当を確かめる訪問の件数（日の予定で直す）');
-  if (x.changed) out.push('「未連絡 N」＝確定（伝えた）あとに担当・時刻が変わった訪問の件数（連絡の一覧で確かめる）');
+  if (x.changed)
+    out.push(
+      confirmStep
+        ? '「未連絡 N」＝確定（伝えた）あとに担当・時刻が変わった訪問の件数（連絡の一覧で確かめる）'
+        : '「変更あり N」＝決まったあとに担当・時刻が変わった訪問の件数（連絡の一覧で確かめる）',
+    );
   if (x.overSpan) out.push('「拘束超 N」＝出勤〜退勤（拘束）が上限を超える人数');
   if (x.loadBar === 'load') out.push(`下の3段の棒＝30分ごとの空きの人数（高いほど空きが少ない。${barRowsText()}）`);
   else if (x.loadBar === 'noPlan') out.push('棒が無い＝この日は空きを数えられない');
@@ -82,39 +92,22 @@ export function cellGuide(x: CellGuideInput): string[] {
 }
 
 /**
- * 切（エキスパート機能が切）のマスの読み方（見出しの ⓘ。PRD D410）：マスに出すのは 日付・訪問の件数・要対応の札・休 N・今日の印だけ。
- * 理由（担当なし・重なりなど）は押した日の右の欄と日の予定で見る
+ * 「その他 ▾」の「マスの見方の説明」の行（PRD D327）。入切とも同じ印を説明する。確定の段階が無い（切）ときは、
+ * 確定の言葉を使わず、決まったあとの変更を「変更あり N」で言う
  */
-export function monthCellHint(staffTerm: string): string[] {
-  return [
-    '「N件」＝その日の訪問の件数',
-    '赤い「要対応 N」＝手当ての要る訪問の件数（担当なし・間に合わない・重なり・休みの人・変更あり）',
-    `「休 N」＝休む${staffTerm}の人数（同じ曜日のふだんより多い日だけ。「（希 N）」はそのうち希望休）`,
-    '「今日」＝今日のマス',
-    '日を押すと、その日の訪問と理由が右の欄に出ます。もう一度押すと日の予定',
-  ];
-}
-
-/**
- * 「その他 ▾」の「マスの見方の説明」の行（PRD D327）。切（only）は切のマスに出ない印（日の状態の凡例・「未連絡 N」・混み具合のバー・端の印）を
- * 書かず、印の意味は見出しの ⓘ（monthCellHint。PRD D410）へ案内する
- */
-export function monthHelpLines(staffTerm: string, only: boolean): string[] {
+export function monthHelpLines(staffTerm: string, confirmStep: boolean): string[] {
   const press =
     '日のマスを押すと、その日の訪問を右の欄（スマホは下から出る欄）に出します。もう一度押すと、その日の「日の予定」を開きます。';
   const rows =
     '右の欄の訪問の行は、押すと訪問の詳細、Shift・Ctrl＋クリックで選べます。行を別の日のマスへドラッグするか、選んで「別の日へ」を押すと日付を移せます（時刻はそのまま）。';
-  if (only)
-    return [
-      `${press}マスの印の意味は見出しの ⓘ（マスの読み方）にあります。`,
-      rows,
-      '赤い枠や「要対応 N」の札の日は、手当ての要る訪問がある日です。N はその件数で、理由は日を押すと右の欄に出ます。',
-    ];
+  const changed = confirmStep
+    ? '「未連絡 N」は、確定（伝えた）あとに担当・時刻が変わった訪問の件数です。日の予定の連絡の一覧で確かめます。'
+    : '「変更あり N」は、決まったあとに担当・時刻が変わった訪問の件数です。日の予定の連絡の一覧で確かめます。';
   return [
     `${press}マスの色と印は日の状態です（下の凡例）。`,
     rows,
     '赤い枠や「要対応 N」の札の日は、担当なし・担当が休み・条件に合わない・時間に間に合わない訪問がある日です。N は右の「要対応」の欄の行の数です。',
-    '「未連絡 N」は、確定（伝えた）あとに担当・時刻が変わった訪問の件数です。日の予定の連絡の一覧で確かめます。',
+    changed,
     `混み具合のバーは、${barRangeText()} を3段（${BAR_ROWS.map(([a, b]) => `${a}〜${b}時`).join('・')}）に分け、30分ごとに空いている${staffTerm}の人数で色を付けます。`,
     `${edgeLabel('early')}・${edgeLabel('late')}に働く人がいる日は、段の端に「◀」「▶」が付きます。マウスを乗せると時刻が出ます。`,
   ];

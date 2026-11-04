@@ -1,7 +1,6 @@
 import { type RefObject, useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { IS_MAC } from '../components/CommandPalette';
 import { rememberPeopleSide } from '../components/peopleSide';
-import { useBasisChanged } from '../components/useArrangeBasis';
 import { NARROW_QUERY } from '../components/useMedia';
 import type { DemoData } from '../contracts/data';
 import { jstDate } from '../domain/time';
@@ -45,9 +44,7 @@ export function useShellNav(data: DemoData, pathname: string) {
   const lastPeople = last.people;
   // 切った機能の項目は出さない（PRD D213）。下のタブもここから引く
   // 件数の印（PRD D401。compile しないので軽い）
-  // 基本情報が最後に組んだあとに変われば担当を組むに「変更」の印（ADR-0067）
-  const basisChanged = useBasisChanged(data);
-  const badges = useMemo(() => ({ ...menuBadges(data, today), basisChanged }), [data, today, basisChanged]);
+  const badges = useMemo(() => menuBadges(data, today), [data, today]);
   const groups = useMemo(
     () =>
       menuSections(

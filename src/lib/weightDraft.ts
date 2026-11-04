@@ -1,5 +1,5 @@
-// 条件の重みの画面（#/rules）の下書き（PRD D286。ADR-0048・ADR-0065）：表の重みのスライダー・必須の切り替えは、動かしても保存せず
-// 画面の中の下書き（型ごとの重み・必須）に置き、「新しい考え方として保存」で新しいプリセットにする（lib/presets の saveDraftAsPreset）。
+// 条件の重みの画面（#/rules）の下書き（PRD D286。ADR-0048・ADR-0100）：表の重みのスライダー・必須の切り替えは、動かしても保存せず
+// 画面の中の下書き（型ごとの重み・必須）に置き、「保存」で「調整した重み」に書く（lib/presets の saveTunedWeights）。
 // ここは下書きの差分・保存の確認の文を作る純粋関数。データを書き換えるのは画面の update(fn) だけ
 import { HARDABLE, type Preset, type Rule, type RuleType } from '../contracts/rules';
 import { weightLocked } from './common';
@@ -135,26 +135,38 @@ export function draftWeights(base: Preset['weights'], draft: WeightDraft): Prese
   ) as Preset['weights'];
 }
 
-/** 保存の確認の見出し（PRD D286。ADR-0065） */
-export const confirmTitle = (n: number): string => `新しい考え方として保存しますか？（${n}件）`;
+/**
+ * プリセットの値を下書きに入れる（ADR-0100）：types の型ごとに、プリセットの重み・必須を触った欄として重ねる
+ * （保存済みと同じ型は下書きから外れる。条件の無い型は入れない）
+ */
+export function fillDraft(
+  draft: WeightDraft,
+  saved: SavedWeights,
+  weights: Preset['weights'],
+  types: readonly RuleType[],
+): WeightDraft {
+  return types.reduce((d, t) => editDraft(d, saved, t, weights[t]), draft);
+}
+
+/** 保存の確認の見出し（PRD D286。ADR-0100） */
+export const confirmTitle = (n: number): string => `重みを保存しますか？（${n}件）`;
 
 /**
- * 保存の確認の本文（PRD D286。ADR-0065）：変わる条件と重み（前→後）、元のプリセットは残り新しい考え方を点数の基準にすること、
- * 今の担当は変えないこと（ADR-0053）
+ * 保存の確認の本文（PRD D286。ADR-0100）：変わる条件と重み（前→後）、次に組むときから使うこと、今の担当は変えないこと（ADR-0053）
  */
-export function confirmBody(changes: readonly WeightChange[], basis: string): string {
+export function confirmBody(changes: readonly WeightChange[]): string {
   const lines = changes.map((c) => `・${c.labels.join('・')}：${changeText(c)}`);
   return [
     '変わる条件：',
     ...lines,
     '',
-    `「${basis}」はそのまま残ります。新しい考え方を点数の基準にし、AI で組む・点数・要対応の検査に使います。`,
-    '今の担当は変わりません。組み直したいときは、「担当を組む」の画面の「AI で組む」で提案を出して反映します。',
+    '予定を入れたときの自動の組み・「担当を組む」の AI で組む・点数・要対応の検査に、次から使います。',
+    '今の担当は変わりません。組み直したいときは「担当を組む」で AI で組みます。',
   ].join('\n');
 }
 
 /** 保存のあとの知らせ */
-export const savedText = (name: string): string => `「${name}」を保存して、ふだんの考え方にしました`;
+export const SAVED_TEXT = '重みを保存しました。次に組むときから使います';
 
 /** 画面を離れるときの確認（〈スタッフ〉・〈利用者さん〉の画面の「変更を捨てる」と同じ形。components/personPage の discardChanges） */
 export function leaveDialog(n: number) {

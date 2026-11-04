@@ -9,7 +9,7 @@
 
 | 型 | フィールド |
 |---|---|
-| `Org` | `name` 1〜100・`industry`（`sitter`/`care`/`nursing`/`other`）・`terms`・`fareYenPerKm` 0〜1000（0＝交通費なし）・`spanLimitHours` 0〜24・0.5刻み（10。0＝注意しない）・`features`（`{}`）・`roadTravel`（`parkMinutes` 0〜60 の整数（5）・`trafficFactor` 1〜3（1.5）。道路の所要の補正。ADR-0099） |
+| `Org` | `name` 1〜100・`industry`（`sitter`/`care`/`nursing`/`other`）・`terms`・`fareYenPerKm` 0〜1000（0＝交通費なし）・`spanLimitHours` 0〜24・0.5刻み（10。0＝注意しない）・`features`（`{}`）・`roadTravel`（`parkMinutes` 0〜60 の整数（5）・`trafficFactor` 1〜3（1.5）。道路の所要の補正。ADR-0101） |
 | `Staff` | `id`・`name` 1〜50・`home`・`travelMode`（`DRIVE`/`BICYCLE`/`WALK`/`TRANSIT`）・`workDays`（0=日〜6=土）・`shiftStart`・`shiftEnd`・`active`・`traits`・`requirements`・`preferences`（訪問先の特性に対して。各20まで）・`lastDay`（最終勤務日。翌日から勤務なし。null）・`email`（''）・`icon`（印の中の1〜2文字。絵文字も可。''＝未設定で苗字の最初の1文字。無い古いデータは ''。版は上げない。schema は形だけ＝前後の空白なし・32コード単位まで。見た目で2文字まで（書記素）は画面の `staffIconError` と Excel の `readStaffIcon` で見る） |
 | `Client` | `id`・`displayName` 1〜50・`kana` ≤50（''）・`place`（＋`postalCode` 空か7桁。''。任意の `travelMinutes` 1〜720 の整数（移動時間（片道・分））・`farTrip`（遠方（出張））。無し＝距離から見積もる・印なし。ADR-0096）・`note` ≤500・`color` 0〜7・`active`・`traits`・`requirements`・`preferences`・`tentative`（仮押さえ。false）・`entryNote`・`keyNote`・`parkingNote`・`cautionNote`（各 ≤200。''）・`allowedStaffIds` ≤50（`[]`＝限らない）・`stage`・`referrer`（`name` ≤50・`contact` ≤100・`note` ≤200・`email`。空＝`EMPTY_REFERRER`） |
 | `VisitType` | `id`・`name` 1〜20・`color` 0〜7・`durationMinutes` 5〜720（新しい訪問・パターンの初期値だけ）・`requirements` ≤20（常に必須）・`note` ≤200。20まで（`MAX_VISIT_TYPES`） |
@@ -36,9 +36,8 @@ DemoData = { version: 2, baseDate /* seed の基準日 */, seed /* 乱数の種 
   visits /* 保存した訪問：単発と、繰り返しの変えた回 */, availability, absences /* ≤2000 */, visitTypes /* ≤20 */,
   patterns /* ≤2000 */, clientLeaves /* ≤2000 */,
   snapshots /* date → DaySnapshot＝伝えた内容（確定） */, reassigns /* date → ReassignInfo（反映した振り直しの日だけ） */,
-  presets /* 1〜6 */, scorePresetId?, standard? /* 組み方の標準を登録した記録。ADR-0062 */,
-  roads? /* 道路の所要の表 { at, points: LatLng[]（100まで）, seconds, meters: (number|null)[][] }。ADR-0099 */ }
-StandardInfo = { at /* 登録した時刻 ms */, presetId /* 登録したときの点数の基準 */, from /* いつから */, weeks /* 周期 1〜4 */ }
+  presets /* 1〜6 */, scorePresetId?,
+  roads? /* 道路の所要の表 { at, points: LatLng[]（100まで）, seconds, meters: (number|null)[][] }。ADR-0101 */ }
 DaySnapshot = { date, at /* 確定した時刻 ms */, visits: ToldVisit[] /* ≤500。取り消し・休みは入れない */ }
 ToldVisit = { id, clientId, staffId /* null＝担当なし */, start /* HH:mm。null 可 */ }
 ReassignInfo = { method: 'insert' | 'anneal', stayWeight? /* 案B 0〜5 */, insertRoutes? /* 案A の結果 */,
@@ -57,7 +56,7 @@ BookingImportResult = { data /* migrate 済み */, added, updated, unchanged, ca
 - その日の割当は訪問から決まる（`lib/dayPlan` の `dayRoutes`：計算に入れる訪問を担当ごとに組んだ開始の順。担当なしは `unassignedOf`）。AI の提案・ドラッグ・担当の変更・振り直し・月や週の AI で組むは `writeRoutes` で担当と開始を訪問に書く
 - 日の状態（`toldStateOf`）：`snapshots` に無ければ `'none'`（まだ伝えていない）、伝えた内容と今の差（`toldChanges`。担当が変わる・開始が四捨五入で1分以上変わる訪問）が無ければ `'told'`（確定済み）、あれば `'changed'`（未連絡の変更あり）
 - 要対応は訪問ごとの検査（`visitIssues`）：担当なし・担当が休み・条件に合わない・時間に間に合わない（担当が休みの訪問には重ねない）。重みだけを変えても要対応にしない（「条件が変わった」の判定は無い）
-- 標準のピン（`lib/dayPlan` の `standardPinsOf`・`aiPinsOf`）：AI で組む（範囲・日・比べる）ときは、担当できる計算した回の担当をピンにする
+- いつもの担当のピン（`lib/dayPlan` の `standardPinsOf`・`aiPinsOf`。PRD D435）：AI で組む（範囲・日・比べる）ときは、繰り返しのいつもの担当（`usualStaffId`）がその日に担当できる計算した回の担当をピンにする
 - 提案・比較の提案は保存しない（画面の状態）。比較の画面は提案を点数の基準の物差し（`scoreRulesOf`）で採点する
 
 ### 版と移行
@@ -82,8 +81,8 @@ POINTS_PER_WEIGHT = 10; DROP_POINTS = 10000; KEEP_DROP_POINTS = DROP_POINTS * 10
 ```
 
 - プリセットはデータ。型ごとの重み・必須を条件の同じ型に上書きする（`applyPreset`）。プリセットの重み・必須は変えず、条件の重みの表で変えた重みは新しいプリセットとして足す（`saveDraftAsPreset`）。初期の3つと最後の1つは消せない
-- 点数の基準のプリセット（`scorePresetId`）＝ふだんの考え方（PRD D233）：点数はいつもこのプリセットを当てた物差し（`scoreRulesOf`）で付ける。担当を組む・訪問ごとの検査もこれで計算する。組み方の標準の案はすべてのプリセットで作り、案から作った表を登録するとそのプリセットを点数の基準にする。条件の重みの画面の表はこのプリセットの重み・必須から始め、変えた重みは新しいプリセットとして足して基準にする（`saveDraftAsPreset`）
-- `data.rules` の重み・必須はいつも点数の基準のプリセットと同じ。基準が替わる（基準を選ぶ・新しい考え方を保存する・基準のプリセットを消して基準が移る）と `withBasisRules` で基準にそろえ、store の repair も読み込みのたびにそろえる（`lib/presets` の `setScorePreset`・`saveDraftAsPreset`・`removePreset`）。ほかのプリセットは組み方の標準の案・案を比べるの提案を作るときだけ当てる（`applyPreset`）
+- 点数の基準のプリセット（`scorePresetId`）＝ふだんの考え方（PRD D233）：点数はいつもこのプリセットを当てた物差し（`scoreRulesOf`）で付ける。担当を組む・訪問ごとの検査もこれで計算する。条件の重みの画面の表はこのプリセットの重み・必須から始め、変えた重みは「調整した重み」（`id: tuned`。1つだけ。無ければ足し、あれば重みだけ上書き）に書いて基準にする（`saveTunedWeights`）
+- `data.rules` の重み・必須はいつも点数の基準のプリセットと同じ。基準が替わる（基準を選ぶ・重みを保存する・基準のプリセットを消して基準が移る）と `withBasisRules` で基準にそろえ、store の repair も読み込みのたびにそろえる（`lib/presets` の `setScorePreset`・`saveTunedWeights`・`removePreset`）。ほかのプリセットは案を比べるの提案を作るときだけ当てる（`applyPreset`）
 
 | 初期のプリセット | 必要条件 | 訪問先の希望 | スタッフの希望 | 相性 | いつもの担当 | 負担の均等 | 待ち |
 |---|---|---|---|---|---|---|---|

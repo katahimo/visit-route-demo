@@ -1,5 +1,5 @@
 // 予定（日・週・月）の共通の部品（ADR-0054。PRD D326〜D332）を本物のブラウザで確かめる：
-// メニューの「基本情報」は予定と相性（#/basics）を開く・パレットに案を比べるが出ない（メニューの並び・子の項目・基本情報のタブは e2e-nav）、
+// メニューの「条件の重み」は #/rules を開く・パレットに案を比べるが出ない（メニューの並び・子の項目は e2e-nav）、
 // 日・週・月の切り替えで同じ操作の行（欠勤・キャンセルを登録／元に戻す／（月だけ）その他 ▾。「AI で組む ▾」は無い）、
 // 担当を組むの画面で週を組んだ範囲の提案の帯（反映するまで訪問は変わらない・週・日の予定にも出る・画面を移って月に戻っても残る・「反映する」で1回の update・
 // Ctrl+Z で戻る・Ctrl+Shift+Z でやり直す）、
@@ -11,7 +11,6 @@
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）
 // 終了コード：全部通れば 0、通らないものがあれば 1。ページのエラー（pageerror）も失敗に数える
 const { BASE, TODAY, STORAGE_KEY, check, settle, stored, runSteps, waitStored, MOD, shot } = require('./lib/env.cjs');
-const { markStandard } = require('./lib/standard.cjs');
 const { watchNative } = require('./lib/confirmDialog.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
 const { clickMenu, closeMore, openMore, pressTool, undoState } = require('./lib/ui.cjs');
@@ -23,15 +22,15 @@ async function openView(page, hash) {
   await page.getByTestId('schedule-toolbar').waitFor({ timeout: 60000 });
   await settle(page, 400);
 }
-// ---- メニューの「基本情報」の行き先・パレット（メニューの並び・子の項目・基本情報のタブは e2e-nav の menu） ----
+// ---- メニューの「条件の重み」の行き先・パレット（メニューの並び・子の項目は e2e-nav の menu） ----
 async function menu(page) {
   await page.goto(`${BASE}#/data`);
   await page.locator('h1').waitFor();
   await settle(page, 300);
   await clickMenu(page, '予定');
   await page.waitForURL(/#\/plan/);
-  const basicsHref = await page.locator('.side-nav [data-key="arrange:basics"]').getAttribute('href');
-  check(/#\/basics$/.test(basicsHref ?? ''), 'メニューの「基本情報」は予定と相性（#/basics）を開く', basicsHref);
+  const rulesHref = await page.locator('.side-nav [data-key="arrange:rules"]').getAttribute('href');
+  check(/#\/rules$/.test(rulesHref ?? ''), 'メニューの「条件の重み」は #/rules を開く', rulesHref);
   // パレット：案を比べるは出ない（担当を組むの画面から開く）
   await page.keyboard.press(`${MOD}+k`);
   const input = page.getByTestId('cmdk-input');
@@ -125,7 +124,6 @@ async function scope(page) {
   );
   await page.reload();
   await page.locator('h1').waitFor();
-  await markStandard(page); // 標準が無い間は担当を組むで組めない（ADR-0065）
   await openView(page, '/week');
   const before = await stored(page);
   // 週を組むのは担当を組むの画面（ADR-0063）
@@ -183,15 +181,15 @@ async function scope(page) {
     (await page.locator('[data-testid="proposal-band"][data-kind="range"]').count()) === 1,
     '範囲の提案は週の予定にも出る',
   );
-  // 画面を移っても残る：メニューで予定・基本情報へ移り、月の予定に戻っても出る
+  // 画面を移っても残る：メニューで予定・条件の重みへ移り、月の予定に戻っても出る
   await clickMenu(page, '予定');
   await page.waitForURL(/#\/(plan|week|month)/);
-  await clickMenu(page, '基本情報');
-  await page.waitForURL(/#\/basics/);
+  await clickMenu(page, '条件の重み');
+  await page.waitForURL(/#\/rules/);
   await openView(page, '/month');
   check(
     (await page.locator('[data-testid="proposal-band"][data-kind="range"]').count()) === 1,
-    '範囲の提案：予定・基本情報へ移って月の予定に戻っても残る',
+    '範囲の提案：予定・条件の重みへ移って月の予定に戻っても残る',
   );
   await openView(page, '/week');
   if (moved + shifted === 0) {

@@ -1,4 +1,4 @@
-# ADR-0099：車の移動時間を OSRM の道路の所要から取り、駐車・混雑の補正を足す
+# ADR-0101：車の移動時間を OSRM の道路の所要から取り、駐車・混雑の補正を足す
 
 - 日付：2026-11-04
 - 状態：採用
@@ -34,6 +34,6 @@
 - ADR-0096 で捨てた「経路検索の API」は、毎回送ることとキー・費用を理由にしていた。この決定は押したときだけ送り、キー・費用が無いので、その理由に当たらない
 
 ## 影響
-- `src/contracts/documents.ts`（`roadTravelSchema`・`roadTableSchema`・既定と上限）・`data.ts`（`roads`）、`src/matching/roads.ts`（新規）・`travel.ts`・`compile.ts`（`CompileInput` に `roads`）、`src/lib/roadTable.ts`・`roadTravelView.ts`（新規）・`dayStatuses.ts`、`src/components/useRoadTable.ts`・`useDayModel.ts`、`src/pages/roadTravelSettings.tsx`（新規）・`SettingsPage.tsx`、`src/excel/importBook.ts`、seed、PRD D433、design.md §2・L3・§9
+- `src/contracts/documents.ts`（`roadTravelSchema`・`roadTableSchema`・既定と上限）・`data.ts`（`roads`）、`src/matching/roads.ts`（新規）・`travel.ts`・`compile.ts`（`CompileInput` に `roads`）、`src/lib/roadTable.ts`・`roadTravelView.ts`（新規）・`dayStatuses.ts`、`src/components/useRoadTable.ts`・`useDayModel.ts`、`src/pages/roadTravelSettings.tsx`（新規）・`SettingsPage.tsx`、`src/excel/importBook.ts`、seed、PRD D436、design.md §2・L3・§9
 - Content-Security-Policy を置くときは `connect-src` に `https://router.project-osrm.org` を足す
 - 見直す条件：公開サーバーが止まる・使い方の決まりが変わる、実データで使う（緯度経度を外部へ送ってよいかの判断と自前のサーバー）、補正が場所・時間帯で合わないという声、自転車・徒歩でも道路の所要が要るとき

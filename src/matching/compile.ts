@@ -481,7 +481,7 @@ export function compile(data: CompileInput, date: string, pins?: Record<string, 
     ...staffDocs.map(() => null),
     ...visitDocs.map((v) => clients.get(v.clientId)!.place.travelMinutes ?? null),
   ];
-  // 道路の所要の表（ADR-0099）：取ってあれば車の区間に使う
+  // 道路の所要の表（ADR-0101）：取ってあれば車の区間に使う
   const road = roadModelOf(data.roads, data.org.roadTravel);
   const { travel, meters } = travelMatrices(places, fixed, keys, staffDocs, road);
 

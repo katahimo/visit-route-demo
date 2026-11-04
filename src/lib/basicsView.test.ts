@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Pattern } from '../contracts/documents';
 import { createDemoData } from '../seed';
 import {
+  basicsRowPatterns,
   basicsRows,
   basicsTimeError,
   canEditTime,
@@ -10,7 +11,6 @@ import {
   setPatternTime,
   shiftIssue,
 } from './basicsView';
-import { standardRows } from './standardView';
 
 const today = '2026-10-26';
 const data = createDemoData(today);
@@ -37,7 +37,7 @@ describe('shiftIssue', () => {
 describe('basicsRows', () => {
   it('行は標準の表と同じ並び、マスは行く曜日だけで担当は繰り返しのいつもの担当', () => {
     const rows = basicsRows(data, today, true);
-    expect(rows.map((r) => r.pattern.id)).toEqual(standardRows(data, today).map((p) => p.id));
+    expect(rows.map((r) => r.pattern.id)).toEqual(basicsRowPatterns(data, today).map((p) => p.id));
     for (const r of rows) {
       expect(Object.keys(r.cells).map(Number).sort()).toEqual([...r.pattern.weekdays].sort());
       for (const c of Object.values(r.cells)) expect(c.staffId).toBe(r.pattern.usualStaffId);

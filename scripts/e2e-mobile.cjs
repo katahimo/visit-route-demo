@@ -176,11 +176,11 @@ async function drawerOpenClose(page) {
   // 画面を選ぶ
   await btn.click();
   await d.waitFor();
-  await d.locator('[data-key="arrange:basics"]').click();
+  await d.locator('[data-key="arrange:rules"]').click();
   await d.waitFor({ state: 'detached' });
-  await page.waitForURL(/#\/basics/);
+  await page.waitForURL(/#\/rules/);
   check(
-    (await isFocused(btn)) && /組む・予定と相性$/.test(await page.getByTestId('screen-name').innerText()),
+    (await isFocused(btn)) && /組む・条件の重み$/.test(await page.getByTestId('screen-name').innerText()),
     '画面を選ぶと移って閉じ、フォーカスが「メニュー」へ',
   );
   // 今の画面を選んでも閉じるだけ（URL のクエリ＝画面の状態を消さない）。今の画面そのもの（週の予定）を指す「予定」に印がある
@@ -487,6 +487,9 @@ async function narrowRules(page) {
     '条件の重み：行がカードで、1つ目の条件のスライダーと必須が画面の中・横にはみ出さない（PRD D220）',
     { display, slider, hard, sw },
   );
+  // プリセットの管理は畳んだ中（ADR-0100）。開いてから見る
+  await page.getByTestId('preset-fold').locator(':scope > summary').click();
+  await page.getByTestId('preset-section').waitFor();
   const lines = await page.evaluate(() => {
     const h = (el) => Math.round(el.getBoundingClientRect().height);
     const lh = (el) => Number.parseFloat(getComputedStyle(el).lineHeight) || 24;

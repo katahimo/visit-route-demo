@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Rule } from '../contracts/rules';
-import { createDemoData, scorePresetOf, scoreRulesOf } from '../seed';
+import { createDemoData, INITIAL_PRESETS, scorePresetOf, scoreRulesOf } from '../seed';
 import { leaveTarget } from './leaveGuard';
 import {
   changeText,
@@ -9,9 +9,10 @@ import {
   draftChanges,
   draftWeights,
   editDraft,
+  fillDraft,
   leaveDialog,
   pruneDraft,
-  savedText,
+  SAVED_TEXT,
   savedWeights,
   type WeightDraft,
   withDraft,
@@ -105,18 +106,29 @@ describe('下書きの差分（PRD D286）', () => {
   });
 });
 
-describe('新しい考え方として保存する確認（PRD D286。ADR-0065）', () => {
-  it('見出し・本文：変わる条件（前→後）・元のプリセットは残る・新しい考え方を基準にする・今の担当は変わらない', () => {
-    expect(confirmTitle(2)).toBe('新しい考え方として保存しますか？（2件）');
+describe('保存の確認（PRD D286。ADR-0100）', () => {
+  it('見出し・本文：変わる条件（前→後）・次に組むときから使う・今の担当は変わらない', () => {
+    expect(confirmTitle(2)).toBe('重みを保存しますか？（2件）');
     const rules = [rule('a', 'wait', 3, false, '待ち')];
     const ch = draftChanges(rules, { wait: { weight: 4, hard: false } });
-    const body = confirmBody(ch, 'バランス');
+    const body = confirmBody(ch);
     expect(body).toContain('・待ち：3→4');
-    expect(body).toContain(
-      '「バランス」はそのまま残ります。新しい考え方を点数の基準にし、AI で組む・点数・要対応の検査に使います。',
-    );
+    expect(body).toContain('次から使います');
     expect(body).toContain('今の担当は変わりません');
-    expect(savedText('バランス（改）')).toBe('「バランス（改）」を保存して、ふだんの考え方にしました');
+    expect(SAVED_TEXT).toBe('重みを保存しました。次に組むときから使います');
+  });
+
+  it('fillDraft：プリセットの値を下書きに入れ、保存済みと同じ型は外す。条件の無い型・渡さない型は入れない', () => {
+    const rules = [rule('a', 'wait', 3, false, '待ち'), rule('b', 'balance', 2, false, '偏り')];
+    const saved = savedWeights(rules);
+    const weights = {
+      ...INITIAL_PRESETS[0]!.weights,
+      wait: { weight: 1, hard: false },
+      balance: { weight: 2, hard: false },
+      continuity: { weight: 5, hard: false },
+    };
+    expect(fillDraft({}, saved, weights, ['wait', 'balance', 'continuity'])).toEqual({ wait: { weight: 1 } });
+    expect(fillDraft({ wait: { weight: 4 } }, saved, weights, ['balance'])).toEqual({ wait: { weight: 4 } });
   });
 
   it('離れるときの確認は〈スタッフ〉の変更を捨てる確認と同じ形（危険の色・「編集を続ける」）', () => {

@@ -1,4 +1,4 @@
-// 道路の所要の表（PRD D433。ADR-0099）を取る・消す。通信は lib/roadTable の fetchRoadTable の1か所で、押したときだけ呼ぶ
+// 道路の所要の表（PRD D436。ADR-0101）を取る・消す。通信は lib/roadTable の fetchRoadTable の1か所で、押したときだけ呼ぶ
 import { useEffect, useRef, useState } from 'react';
 import { fetchRoadTable, ROAD_FAIL_TEXT, roadPointsOf } from '../lib/roadTable';
 import { useDemoData } from '../store';

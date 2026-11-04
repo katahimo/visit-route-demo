@@ -10,7 +10,6 @@
 const path = require('node:path');
 const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, urlOf, runSteps, settle } = require('./lib/env.cjs');
 const { sharedPage } = require('./lib/steps.cjs');
-const { markStandard } = require('./lib/standard.cjs');
 
 const addDays = (d, n) => {
   const t = new Date(`${d}T00:00:00Z`);
@@ -455,7 +454,6 @@ async function weekPrep(page) {
   await page.setViewportSize({ width: 1400, height: 1000 });
   check(!!CROSS, '月をまたぐ週がある（組む・確定を2つの月で確かめる前提）', TODAY);
   if (!CROSS) return;
-  await markStandard(page); // 標準が無い間は担当を組むで組めない（ADR-0065）
   // 担当をすべて外す（訪問のある日は「N件・担当なしM」）
   await page.goto(`${BASE}#/week?d=${CROSS.start}`);
   await page.evaluate(unassignAll, STORAGE_KEY);

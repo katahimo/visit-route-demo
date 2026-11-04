@@ -8,9 +8,7 @@ import {
   introKey,
   introShown,
   introText,
-  MONTH_ASIDE_PICK_TEXT,
   mainTools,
-  monthCellView,
   proposalWords,
   reassignWords,
   showLegs,
@@ -83,29 +81,8 @@ describe('foldedParts（詳しく：中身があるものだけ）', () => {
     expect(foldedParts('month', true, { progress: true, summary: true, legend: true })).toEqual([
       'progress',
       'summary',
+      'legend',
     ]);
-  });
-});
-
-describe('monthCellView（月のマス。PRD D410）', () => {
-  it('切は例外だけ：棒・ほかの印・理由の行・右の要対応の一覧を出さず、読み方は見出しの ⓘ', () => {
-    expect(monthCellView(true)).toEqual({
-      bars: false,
-      otherMarks: false,
-      reasons: false,
-      guide: 'hint',
-      attentionList: false,
-    });
-    expect(MONTH_ASIDE_PICK_TEXT).toBe('日を押すとその日の訪問が出ます');
-  });
-  it('入は今のまま（積み上げ・混み具合・理由・吹き出し・右の要対応の一覧）', () => {
-    expect(monthCellView(false)).toEqual({
-      bars: true,
-      otherMarks: true,
-      reasons: true,
-      guide: 'tip',
-      attentionList: true,
-    });
   });
 });
 
@@ -128,9 +105,9 @@ describe('詳しく・説明・言葉', () => {
     expect(detailItems('week', false)).toEqual(detailItems('week', true));
     expect(detailItems('day', false)).toEqual(['oneLine', 'dayLines', 'care']);
     expect(detailItems('day', true)).toEqual(['oneLine', 'dayLines']);
-    // 切の月は凡例を入れない（読み方は見出しの ⓘ。PRD D410）
+    // 月のマスは入切とも同じなので、凡例も入切とも入れる
     expect(detailItems('month', false)).toEqual(['progress', 'summary', 'legend']);
-    expect(detailItems('month', true)).toEqual(['progress', 'summary']);
+    expect(detailItems('month', true)).toEqual(['progress', 'summary', 'legend']);
     expect(detailItems('week', true)).toEqual(['status', 'legend']);
     expect(showLegs(true)).toBe(false);
     expect(showLegs(false)).toBe(true);
@@ -170,7 +147,7 @@ describe('arrangeWords（担当を組むの画面の言葉。ADR-0074 段1）', 
   it('入は今のまま（提案・反映・ピン）', () => {
     const w = arrangeWords(false);
     expect(w.lead).toContain('提案を見て反映します');
-    expect(w.note('組み方の標準の担当')).toContain('ピンの訪問（手で替えた訪問・組み方の標準の担当）');
+    expect(w.note('繰り返しのいつもの担当')).toContain('ピンの訪問（手で替えた訪問・繰り返しのいつもの担当）');
     expect(w.note('x')).toContain('「反映する」');
   });
 });

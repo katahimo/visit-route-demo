@@ -1,5 +1,5 @@
 // 担当を組む画面（ArrangePage）の区画：範囲・AI で組む（組む日・考え方・進み具合）・案を比べる
-import { CalendarCheck, GitCompareArrows, RefreshCw, Sparkles, Square } from 'lucide-react';
+import { GitCompareArrows, Sparkles, Square } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { FieldError } from '../components/FieldError';
 import { WithIcon } from '../components/ui';
@@ -10,49 +10,6 @@ import { arrangeWords } from '../lib/exceptionView';
 import { isDate } from '../lib/isDate';
 import type { BatchMode } from '../lib/month';
 import { type BatchRun, type BatchSource, monthBatch } from '../lib/monthBatch';
-import { setStandardStep } from '../lib/standardDraft';
-
-/**
- * 基本情報が最後に組んだあとに変わった知らせ（ADR-0067。PRD D363）：［組み直す］で範囲の伝えていない日をすべて AI で組む
- * （提案の帯で確かめて反映。主ボタンは「AI で組む」のまま、ここは枠のボタン）
- */
-export function ArrangeBasisNotice({
-  rangeLabel,
-  days,
-  running,
-  onRedo,
-}: {
-  rangeLabel: string;
-  days: number;
-  running: boolean;
-  onRedo: () => void;
-}) {
-  return (
-    <section className="card stack arrange-basis" aria-label="基本情報の変更" data-testid="arrange-basis-changed">
-      <p className="warn">
-        <strong>基本情報が、最後に組んだあとに変わりました</strong>
-        （予定・相性・勤務時間（シフト）など）。組み直すと今の基本情報で担当を組みます
-      </p>
-      <div className="row">
-        <button
-          type="button"
-          className="btn"
-          onClick={onRedo}
-          disabled={running || days === 0}
-          data-testid="arrange-basis-redo"
-        >
-          <WithIcon icon={RefreshCw}>
-            {rangeLabel}を組み直す（伝えていない {days}日）
-          </WithIcon>
-        </button>
-        {days === 0 && <span className="sub">範囲に組める日がありません（今日より前・確定した日は組みません）</span>}
-        <Link to="/basics" className="btn btn-text" data-testid="arrange-basis-link">
-          基本情報を見る
-        </Link>
-      </div>
-    </section>
-  );
-}
 
 /** 範囲の呼び名 */
 const SCOPE_LABEL: Record<BatchSource, string> = { month: '月', week: '週', day: '日' };
@@ -211,10 +168,10 @@ function ArrangeProgress({ run }: { run: BatchRun }) {
 /** 「AI で組む」の区画の入力 */
 export type ArrangeRunProps = {
   headingId: string;
-  /** 組み方の標準がまだ無い（範囲にかかわらず AI で組まず、組み方の標準へ案内する。ADR-0065） */
-  needStandard: boolean;
-  /** エキスパート機能が入（［標準の組み方を変える］の案内を出す。ADR-0072） */
+  /** エキスパート機能が入（注記の言い方） */
   expert: boolean;
+  /** 条件の重みの画面を開ける（考え方を替える案内のリンクを出す。ADR-0100） */
+  rulesOn: boolean;
   mode: BatchMode;
   careDays: number;
   allDays: number;
@@ -233,69 +190,43 @@ export type ArrangeRunActions = {
   onStart: () => void;
 };
 
-/** 組み方の標準が無いときの案内（文と［組み方の標準を決める］だけ） */
-function NeedStandard() {
-  return (
-    <>
-      <p data-testid="arrange-need-standard">
-        組み方の標準がまだありません。先に「組み方の標準」で、考え方ごとの案をくらべて標準の週を決めてください。標準を決めると、この画面では標準で埋まらない所を
-        AI で埋めます
-      </p>
-      <div className="row">
-        <Link
-          className="btn btn-primary"
-          to="/standard"
-          onClick={() => setStandardStep('proposals')}
-          data-testid="arrange-to-standard"
-        >
-          <WithIcon icon={CalendarCheck}>組み方の標準を決める</WithIcon>
-        </Link>
-      </div>
-    </>
-  );
-}
-
-/** AI で組む（標準が無ければ組み方の標準へ案内、それ以外は組む日・考え方・開始・進み具合） */
+/** AI で組む（組む日・考え方・開始・進み具合） */
 export function ArrangeRunSection({ view, actions }: { view: ArrangeRunProps; actions: ArrangeRunActions }) {
-  const { headingId, needStandard, mode, run, runDays } = view;
+  const { headingId, mode, run, runDays } = view;
   return (
     <section className="card stack" aria-labelledby={headingId} data-testid="arrange-run">
       <h2 id={headingId} className="arrange-title">
         AI で組む
       </h2>
-      {needStandard ? (
-        <NeedStandard />
-      ) : (
-        <>
-          <ArrangeModeFields mode={mode} careDays={view.careDays} allDays={view.allDays} onMode={actions.onMode} />
-          <p data-testid="arrange-basis">
-            考え方：<strong>{view.basisName}</strong>
-            {view.expert && <span className="sub">（点数の基準。替えるのは［標準の組み方を変える］）</span>}
-          </p>
-          <p data-testid="arrange-count">
-            組む日：<strong>{runDays}日</strong>
-            {runDays > 0 && <span className="sub">（見込み {etaText(runDays)}）</span>}
-          </p>
-          <div className="row">
-            <button
-              type="button"
-              className="btn btn-primary"
-              aria-disabled={run !== null || runDays === 0 || undefined}
-              onClick={actions.onStart}
-              data-testid="arrange-start"
-            >
-              <WithIcon icon={Sparkles}>{run ? '組んでいます…' : 'AI で組む'}</WithIcon>
-            </button>
-            {/* 反映した提案は全体の「元に戻す」で1手戻せる（PRD D329） */}
-            <UndoButtons />
-          </div>
-        </>
-      )}
+      <ArrangeModeFields mode={mode} careDays={view.careDays} allDays={view.allDays} onMode={actions.onMode} />
+      <p data-testid="arrange-basis">
+        考え方：<strong>{view.basisName}</strong>
+        {view.rulesOn && (
+          <span className="sub">
+            （替えるのは<Link to="/rules">条件の重み</Link>）
+          </span>
+        )}
+      </p>
+      <p data-testid="arrange-count">
+        組む日：<strong>{runDays}日</strong>
+        {runDays > 0 && <span className="sub">（見込み {etaText(runDays)}）</span>}
+      </p>
+      <div className="row">
+        <button
+          type="button"
+          className="btn btn-primary"
+          aria-disabled={run !== null || runDays === 0 || undefined}
+          onClick={actions.onStart}
+          data-testid="arrange-start"
+        >
+          <WithIcon icon={Sparkles}>{run ? '組んでいます…' : 'AI で組む'}</WithIcon>
+        </button>
+        {/* 反映した提案は全体の「元に戻す」で1手戻せる（PRD D329） */}
+        <UndoButtons />
+      </div>
       {run && <ArrangeProgress run={run} />}
       <FieldError>{view.error}</FieldError>
-      {!needStandard && (
-        <p className="sub">{arrangeWords(!view.expert).note(view.expert ? '組み方の標準の担当' : '繰り返しの担当')}</p>
-      )}
+      <p className="sub">{arrangeWords(!view.expert).note('繰り返しのいつもの担当')}</p>
     </section>
   );
 }

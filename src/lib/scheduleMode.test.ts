@@ -53,13 +53,11 @@ describe('unassignedDayCount', () => {
   });
 });
 
-describe('menuBadges の組み方の標準（PRD D360）', () => {
+describe('menuBadges', () => {
   const empty = { visits: [], patterns: [], clients: [], clientLeaves: [], snapshots: [] } as unknown as Parameters<
     typeof menuBadges
   >[0];
-  it('標準があるかを返す（あれば予定を組むの子は担当を組むだけ）', () => {
-    expect(menuBadges(empty, '2026-10-26').hasStandard).toBe(false);
-    const std = { ...empty, standard: { at: 1, presetId: 'p1', from: '2026-11-02', weeks: 1 } } as typeof empty;
-    expect(menuBadges(std, '2026-10-26').hasStandard).toBe(true);
+  it('組む月の担当なしの日の数を返す', () => {
+    expect(menuBadges(empty, '2026-10-26')).toEqual({ planUnassignedDays: 0 });
   });
 });

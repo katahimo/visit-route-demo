@@ -1,4 +1,4 @@
-// OSRM から道路の所要の表を取る（PRD D433。ADR-0099）：fetch の偽物で確かめる
+// OSRM から道路の所要の表を取る（PRD D436。ADR-0101）：fetch の偽物で確かめる
 import { describe, expect, it } from 'vitest';
 import { ROAD_POINTS_MAX } from '../contracts/documents';
 import { client, makeData, staff } from '../matching/fixtures.testkit';

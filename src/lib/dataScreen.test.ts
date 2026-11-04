@@ -243,16 +243,11 @@ describe('別の事業所の Excel（ADR-0006）', () => {
     expect(otherOrgOf(org('みどり訪問'), org('あおば訪問'))).toEqual({ current: 'みどり訪問', read: 'あおば訪問' });
   });
 
-  it('withoutOrgState：伝えた内容・振り直し・組み方の標準の記録を外し、ほかは変えない', () => {
+  it('withoutOrgState：伝えた内容・振り直しを外し、ほかは変えない', () => {
     const d = createDemoData('2026-10-01');
-    const withState = {
-      ...d,
-      standard: { at: 1, presetId: d.presets[0]!.id, from: '2026-10-05', weeks: 1 },
-    };
-    const r = withoutOrgState(withState);
+    const r = withoutOrgState(d);
     expect(r.snapshots).toEqual({});
     expect(r.reassigns).toEqual({});
-    expect(r.standard).toBeUndefined();
     expect(r.visits).toBe(d.visits);
     expect(r.staff).toBe(d.staff);
   });

@@ -45,7 +45,7 @@ type Matrices = { travel: number[][]; meters: number[][] };
 /**
  * 2地点の移動（分）と距離（m）。fixed は手で決めた移動時間（片道・分。ADR-0096）で、どちらかにあれば距離の計算ではなくそれを使う
  * （両方にあれば長いほう。距離は 0 m＝交通費に入れない）。位置が未登録の側があれば UNPLACED_TRAVEL_MIN 分・0 m（ADR-0093）。
- * 車の区間で道路の所要の表に組があれば、補正した道路の所要と道のり（ADR-0099）。無ければ直線距離からの見積もり
+ * 車の区間で道路の所要の表に組があれば、補正した道路の所要と道のり（ADR-0101）。無ければ直線距離からの見積もり
  */
 function legOf(
   a: { at: LatLng | null; fixed: number | null },
@@ -64,7 +64,7 @@ function legOf(
 /**
  * 地点どうしの移動（分）と距離（m）の行列（先に自宅、続いて訪問先）。keys は地点の鍵で、同じ鍵なら位置が未登録でも 0 分。
  * fixed は地点ごとの手で決めた移動時間（片道・分。自宅・決めていない訪問先は null）。
- * road は道路の所要の表（ADR-0099。取っていなければ null）：車の区間だけ使う
+ * road は道路の所要の表（ADR-0101。取っていなければ null）：車の区間だけ使う
  */
 export function travelMatrices(
   places: (LatLng | null)[],

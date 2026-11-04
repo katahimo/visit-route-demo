@@ -4,7 +4,6 @@ import type { DemoData } from '../contracts/data';
 import { addDays } from '../domain/time';
 import { own } from './common';
 import { activeDayVisits } from './dayPlan';
-import { hasStandard } from './standard';
 import { monthDates, ymOf } from './ym';
 
 /** 来月（YYYY-MM） */
@@ -56,15 +55,12 @@ function countUnassigned(
 }
 
 /**
- * メニューの件数の印（PRD D401）：組む月の担当なしの日の数（unassignedDayCount）と、組み方の標準があるか（PRD D360）。
+ * メニューの件数の印（PRD D401）：組む月の担当なしの日の数（unassignedDayCount）。
  * compile しないので画面を移るたびに数えても軽い
  */
 export function menuBadges(
-  data: Pick<DemoData, 'visits' | 'patterns' | 'clients' | 'clientLeaves' | 'snapshots' | 'standard'>,
+  data: Pick<DemoData, 'visits' | 'patterns' | 'clients' | 'clientLeaves' | 'snapshots'>,
   today: string,
-): { planUnassignedDays: number; hasStandard: boolean } {
-  return {
-    hasStandard: hasStandard(data),
-    planUnassignedDays: unassignedDayCount(data, planYm(today), today),
-  };
+): { planUnassignedDays: number } {
+  return { planUnassignedDays: unassignedDayCount(data, planYm(today), today) };
 }

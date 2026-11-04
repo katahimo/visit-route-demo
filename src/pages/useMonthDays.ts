@@ -75,18 +75,13 @@ export function useMonthDays(data: DemoData, compileInput: CompileInput, ym: str
   const summary = useMemo(() => monthSummary(days, statuses, visitsByDate), [days, statuses, visitsByDate]);
 
   /** 進み具合の帯（PRD D151〜D154・D316）：今月の準備と同じ数え方。週・日の画面の帯と同じもの */
-  const band = useMemo(
-    (): BandModel => ({
-      ym,
-      progress,
-      emptyTargets: batchTargets(data, days, today, 'care', (d) => {
-        const s = statuses.get(d);
-        return s && s.unassigned > 0 ? s : undefined;
-      }).length,
-      urgent: urgentCount(attention),
-    }),
-    [ym, progress, data, days, today, statuses, attention],
-  );
+  const band = useMemo((): BandModel => {
+    const emptyDays = batchTargets(data, days, today, 'care', (d) => {
+      const s = statuses.get(d);
+      return s && s.unassigned > 0 ? s : undefined;
+    });
+    return { ym, progress, emptyTargets: emptyDays.length, emptyDays, urgent: urgentCount(attention) };
+  }, [ym, progress, data, days, today, statuses, attention]);
 
   // ---- 問題の無い日をまとめて確定（PRD D223。右の欄の「確定していない日」）----
   /** 確定していない日（今日以降）のうち、一度も確定していない日で、必須の違反が無く要対応に出ない日（ADR-0031） */

@@ -1,4 +1,4 @@
-// 管理者設定の「道路の移動時間（車）」（PRD D433。ADR-0099）：OSRM から道路の所要を取る・消すボタンと、補正（駐車・玄関までの分・混雑係数）の欄
+// 管理者設定の「道路の移動時間（車）」（PRD D436。ADR-0101）：OSRM から道路の所要を取る・消すボタンと、補正（駐車・玄関までの分・混雑係数）の欄
 import { Route, Trash2 } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
 import { useConfirm } from '../components/ConfirmDialog';

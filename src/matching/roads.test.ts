@@ -1,4 +1,4 @@
-// 道路の所要の表を移動の行列に使う（PRD D433。ADR-0099）
+// 道路の所要の表を移動の行列に使う（PRD D436。ADR-0101）
 import { describe, expect, it } from 'vitest';
 import type { RoadTable } from '../contracts/documents';
 import { estimateLeg } from '../domain/geo';

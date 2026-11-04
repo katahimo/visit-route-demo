@@ -1,9 +1,8 @@
-// 条件のプリセットの編集（ADR-0008・ADR-0065）。データを書き換えるのは store の update(fn) を通した画面だけ。ここは新しい DemoData を返す純粋関数。
-// プリセットの重み・必須は変えない（ADR-0065）。条件の重みの表で変えた重みは、新しいプリセットとして足す（saveDraftAsPreset）
+// 条件のプリセットの編集（ADR-0008・ADR-0065・ADR-0100）。データを書き換えるのは store の update(fn) を通した画面だけ。ここは新しい DemoData を返す純粋関数。
+// 初期の3つ・名前を付けたプリセットの重みは変えない。条件の重みの表で変えた重みは「調整した重み」（1つだけ）に書き、点数の基準にする（saveTunedWeights）
 import type { DemoData } from '../contracts/data';
 import { HARDABLE, MAX_PRESETS, type Preset, type Rule } from '../contracts/rules';
 import { INITIAL_PRESETS, scorePresetOf, scoreRulesOf } from '../seed';
-import { newId } from './common';
 import { draftWeights, type WeightDraft } from './weightDraft';
 
 /** プリセットの名前の上限（contracts の presetSchema と同じ） */
@@ -13,28 +12,13 @@ export const PRESET_NOTE_MAX = 60;
 /** 初期の3つ（バランス・移動を短く・人の組み合わせ重視。seed/presets の id）か。初期の3つは消せない（ADR-0065） */
 export const isInitialPreset = (id: string): boolean => INITIAL_PRESETS.some((p) => p.id === id);
 
-/** 足せない理由（足せるなら null）：名前が空・長すぎる・同じ名前がある・6つある */
-export function addPresetError(d: Pick<DemoData, 'presets'>, name: string): string | null {
-  const n = name.trim();
-  if (n === '') return '名前を入れてください';
-  if (n.length > PRESET_NAME_MAX) return `名前は${PRESET_NAME_MAX}文字までです`;
-  if (d.presets.some((p) => p.name === n)) return '同じ名前のプリセットがあります';
-  if (d.presets.length >= MAX_PRESETS) return `プリセットは${MAX_PRESETS}つまでです。使わないものを消してください`;
-  return null;
-}
+/** 条件の重みの表で保存した重みのプリセットの id と名前（ADR-0100。1つだけ持ち、保存のたびに上書きする） */
+export const TUNED_PRESET_ID = 'tuned';
+export const TUNED_PRESET_NAME = '調整した重み';
 
-/**
- * 表の下書きを新しい考え方として保存するときの既定の名前（ADR-0065）：「〈元の名前〉（改）」、同じ名前があれば「（改2）」「（改3）」…。
- * 名前の上限を超えるときは元の名前を詰めて収める
- */
-export function draftPresetName(baseName: string, presets: readonly Pick<Preset, 'name'>[]): string {
-  const names = new Set(presets.map((p) => p.name));
-  for (let i = 1; ; i++) {
-    const suffix = `（改${i === 1 ? '' : i}）`;
-    const name = `${baseName.slice(0, PRESET_NAME_MAX - suffix.length)}${suffix}`;
-    if (!names.has(name)) return name;
-  }
-}
+/** 調整した重みを保存できないか（まだ無く、プリセットが上限の数あるとき） */
+export const tunedFull = (d: Pick<DemoData, 'presets'>): boolean =>
+  !d.presets.some((p) => p.id === TUNED_PRESET_ID) && d.presets.length >= MAX_PRESETS;
 
 /**
  * 条件（data.rules）の重み・必須を点数の基準の重みにそろえる（ADR-0035・ADR-0053）。基準が替わったら呼ぶ。
@@ -78,18 +62,19 @@ export function renamePreset(d: DemoData, id: string, patch: Partial<Pick<Preset
 }
 
 /**
- * 条件の重みの表の下書きを、新しい考え方として保存する（ADR-0065。PRD D286）：点数の基準のプリセットの保存済みの重みに
- * 下書きの欄を重ねたプリセットを名前を付けて最後に足し、それを点数の基準にする（元のプリセットはそのまま）。
- * 足せないとき（名前の誤り・6つある）・基準が無いときはそのまま返す
+ * 条件の重みの表の下書きを保存する（ADR-0100。PRD D286）：点数の基準のプリセットの保存済みの重みに下書きの欄を重ね、
+ * 「調整した重み」（TUNED_PRESET_ID）に書いて点数の基準にする。無ければ最後に足し、あれば重みだけ上書きする（名前・一言はそのまま）。
+ * ほかのプリセットは変えない。基準が無い・保存できない（tunedFull）ときはそのまま返す
  */
-export function saveDraftAsPreset(d: DemoData, draft: WeightDraft, name: string): DemoData {
+export function saveTunedWeights(d: DemoData, draft: WeightDraft): DemoData {
   const basis = scorePresetOf(d.presets, d.scorePresetId);
-  if (!basis || addPresetError(d, name)) return d;
-  const used = new Set(d.presets.map((p) => p.id));
-  let id = newId('p');
-  while (used.has(id)) id = newId('p');
-  const preset: Preset = { id, name: name.trim(), note: '', weights: draftWeights(basis.weights, draft) };
-  return setScorePreset({ ...d, presets: [...d.presets, preset] }, id);
+  if (!basis || tunedFull(d)) return d;
+  const weights = draftWeights(basis.weights, draft);
+  const has = d.presets.some((p) => p.id === TUNED_PRESET_ID);
+  const presets = has
+    ? d.presets.map((p) => (p.id === TUNED_PRESET_ID ? { ...p, weights } : p))
+    : [...d.presets, { id: TUNED_PRESET_ID, name: TUNED_PRESET_NAME, note: '条件の重みの画面で直した重み', weights }];
+  return withBasisRules({ ...d, presets, scorePresetId: TUNED_PRESET_ID });
 }
 
 /**

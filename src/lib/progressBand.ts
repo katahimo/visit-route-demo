@@ -3,7 +3,7 @@
 // データは書き換えない
 import type { Attention, AttentionKind, MonthProgress } from './month';
 
-/** 帯から行う操作：batch＝担当を組むの画面（#/arrange）、attention・unconfirmed＝月の画面の欄（?do=。PRD D404） */
+/** 帯から行う操作：batch＝担当を AI で組む（入は担当を組むの画面 #/arrange、切はその場で組む）、attention・unconfirmed＝月の画面の欄（?do=。PRD D404） */
 export type BandOp = 'batch' | 'attention' | 'unconfirmed';
 
 /**
@@ -34,13 +34,16 @@ export type BandInput = {
   emptyTargets: number;
   /** 要対応のうち手当てが要る件数（urgentCount） */
   urgent: number;
-  /** 確定（伝えた）の段階を出すか（lib/settledView の showConfirmStep。省略は出す）。切なら「確定していない日を見る」の段を飛ばす（ADR-0073） */
+  /**
+   * 確定（伝えた）の段階を出すか（lib/settledView の showConfirmStep。省略は出す）。切なら「確定していない日を見る」の段を飛ばし（ADR-0073）、
+   * 担当を AI で組むは画面を移らずその場で組むので、担当なしの日が1日でも出す
+   */
   confirmStep?: boolean;
 };
 
 /**
  * 帯の次の一手（PRD D152）。仕事の順（担当を組む → 手当て → 確定）で最初に残っているもの：
- * 1. 担当なしの訪問がある日が2日以上 → 担当を AI で組む
+ * 1. 担当なしの訪問がある日が2日以上（expert 切は1日以上） → 担当を AI で組む
  * 2. 手当てが要る要対応（要対応の訪問）がある → 要対応を見る
  * 3. 確定していない日がある → 確定していない日を見る（expert 切は飛ばす）
  * 4. 見るだけの要対応（未連絡の変更・拘束が上限を超える）が残る → 要対応を見る
@@ -49,7 +52,8 @@ export type BandInput = {
 export function bandNext(input: BandInput): BandNext {
   const { progress: p, emptyTargets, urgent } = input;
   if (p.days === 0) return { kind: 'empty', label: '今日以降の訪問はありません', short: '訪問なし' };
-  if (emptyTargets >= 2) return { kind: 'batch', label: '担当を AI で組む', short: '組む' };
+  const batchFrom = input.confirmStep === false ? 1 : 2;
+  if (emptyTargets >= batchFrom) return { kind: 'batch', label: '担当を AI で組む', short: '組む' };
   if (urgent > 0) return { kind: 'attention', label: '要対応を見る', short: '要対応' };
   if (input.confirmStep !== false && p.unconfirmed.length > 0)
     return { kind: 'unconfirmed', label: '確定していない日を見る', short: '未確定' };

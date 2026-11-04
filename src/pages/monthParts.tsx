@@ -7,19 +7,22 @@ import { LoadLegend, LoadRowsSample } from '../components/loadBar';
 import type { MenuItem } from '../components/MenuButton';
 import { StaffLegend } from '../components/staffBar';
 import { Term } from '../components/Term';
-import { Hint, WithIcon } from '../components/ui';
+import { WithIcon } from '../components/ui';
 import type { Client, Staff, VisitType } from '../contracts/documents';
 import { barEdgeNote, barRowsText } from '../lib/barRows';
 import { mdText } from '../lib/dateText';
 import type { DayStatus } from '../lib/month';
 import type { BatchRun } from '../lib/monthBatch';
-import { monthCellHint, monthHelpLines } from '../lib/monthGuide';
+import { monthHelpLines } from '../lib/monthGuide';
 import { DAY_STATE_TEXT, type MonthLayout } from '../lib/monthList';
 import { batchProgressValue, type MonthFocus } from '../lib/monthView';
 import { REQUESTED_OFF_NOTE } from '../lib/requestedOff';
+import { dayStateText } from '../lib/settledView';
 import type { OffNote } from './useMonthOff';
 
 const STATE_ORDER: DayStatus['state'][] = ['none', 'told', 'changed'];
+/** 確定の段階が無い（切）ときの凡例：決まったあとの変更だけ */
+const STATE_ORDER_CHANGED_ONLY: DayStatus['state'][] = ['changed'];
 
 /** カレンダーと日ごとの一覧の切り替えを「その他 ▾」の項目で（操作の行のボタンを2つまでにするため。PRD D189・D384・D402。600px 以下ははじめ一覧。URL の ?layout=） */
 export function monthLayoutItems(layout: MonthLayout, onPick: (next: MonthLayout) => void): MenuItem[] {
@@ -153,18 +156,19 @@ export function MonthPickers({
 export function MonthHelp({
   helpRef,
   staffTerm,
-  only,
+  confirmStep,
   onClose,
 }: {
   helpRef: RefObject<HTMLDivElement | null>;
   staffTerm: string;
-  only: boolean;
+  /** 確定（伝えた）の段階を出すか（lib/settledView） */
+  confirmStep: boolean;
   onClose: () => void;
 }) {
   return (
     <div ref={helpRef} className="hint-body month-help" tabIndex={-1} data-testid="month-help">
       <ul className="plan-help-list">
-        {monthHelpLines(staffTerm, only).map((l) => (
+        {monthHelpLines(staffTerm, confirmStep).map((l) => (
           <li key={l}>{l}</li>
         ))}
       </ul>
@@ -253,7 +257,7 @@ export function MonthBatchProgress({
  * はじめは1行の要約と「凡例を見る」に畳む（PRD D177。開いたかどうかは保存しない）。
  * bar：全体は混み具合（load）、〈スタッフ〉を選んだときはその人の時間帯の状態（staff。PRD D75）
  */
-export function MonthLegend({ bar }: { bar: 'load' | 'staff' | null }) {
+export function MonthLegend({ bar, confirmStep }: { bar: 'load' | 'staff' | null; confirmStep: boolean }) {
   return (
     <details className="month-legend-fold" data-testid="month-legend-fold">
       <summary className="month-legend-summary" data-testid="month-legend-toggle">
@@ -267,37 +271,26 @@ export function MonthLegend({ bar }: { bar: 'load' | 'staff' | null }) {
           。マスにマウスを乗せるかフォーカスすると、そのマスの読み方が出ます
         </span>
       </summary>
-      <MonthLegendBody bar={bar} />
+      <MonthLegendBody bar={bar} confirmStep={confirmStep} />
     </details>
   );
 }
 
-/** マスの読み方（エキスパート機能が切。見出しの ⓘ。マスに吹き出しは出さない。PRD D410） */
-export function MonthCellHint({ staffTerm }: { staffTerm: string }) {
-  return (
-    <Hint label="マスの読み方">
-      <ul className="hint-list" data-testid="month-cell-hint">
-        {monthCellHint(staffTerm).map((l) => (
-          <li key={l}>{l}</li>
-        ))}
-      </ul>
-    </Hint>
-  );
-}
-
-/** 凡例の中身（開いたとき。凡例はエキスパート機能が入のときだけ。切はマスの読み方を見出しの ⓘ に出す。PRD D410） */
-function MonthLegendBody({ bar }: { bar: 'load' | 'staff' | null }) {
+/** 凡例の中身（開いたとき。確定の段階が無い（切）ときは、確定の状態の凡例を出さず「変更あり」だけ） */
+function MonthLegendBody({ bar, confirmStep }: { bar: 'load' | 'staff' | null; confirmStep: boolean }) {
   return (
     <div className="month-legend" data-testid="month-legend">
       <span className="month-legend-group">
-        {STATE_ORDER.map((st) => (
+        {(confirmStep ? STATE_ORDER : STATE_ORDER_CHANGED_ONLY).map((st) => (
           <span key={st} className="month-legend-item">
             <span className={`month-swatch is-state-${st}`} aria-hidden="true">
               {st === 'told' && <Lock size={9} />}
               {st === 'changed' && <PencilLine size={9} />}
             </span>
             {/* 確定済み・未連絡の変更ありは説明つき（PRD D323） */}
-            {st === 'told' ? (
+            {!confirmStep ? (
+              dayStateText(st, false, DAY_STATE_TEXT)
+            ) : st === 'told' ? (
               <Term k="confirmed">{DAY_STATE_TEXT[st]}</Term>
             ) : st === 'changed' ? (
               <Term k="confirmDiff">{DAY_STATE_TEXT[st]}</Term>

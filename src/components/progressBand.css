@@ -44,7 +44,7 @@
 .pb-item strong {
   font-variant-numeric: tabular-nums;
 }
-.pb-item:hover {
+a.pb-item:hover {
   border-color: var(--primary);
 }
 .pb-item:focus-visible {

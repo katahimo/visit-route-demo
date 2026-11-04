@@ -1,9 +1,9 @@
 // メニューの用途ごとの並びとコマンドパレット（PRD D179〜D183・D326・D273〜D275。ADR-0027・0045）を本物のブラウザで確かめる：
-// メニュー（最上位6項目 予定・空き状況・〈利用者さん〉・〈スタッフ〉・組む・設定。ホームは無い。子の項目を持つのは組むだけ（基本情報・組み方の標準・担当を組む。
-// PRD D401・ADR-0063・ADR-0067・ADR-0074・ADR-0078。「人」は無い）・同じ名前が無い・件数の印は1つ・aria-current（月・週・日は予定、空き状況は空き状況、担当を組む・比較は組むの子「担当を組む」、
-// 組み方の標準は「組み方の標準」、条件の重みは組み方の標準に印、予定と相性・相性・勤務時間（シフト）・勤務の見込みは組むの子「基本情報」、〈利用者さん〉・〈スタッフ〉は上の段の項目、
+// メニュー（最上位6項目 予定・空き状況・〈利用者さん〉・〈スタッフ〉・組む・設定。ホームは無い。子の項目を持つのは組むだけ（条件の重み・担当を組む。
+// PRD D401・ADR-0063・ADR-0074・ADR-0078・ADR-0100。「人」は無い）・同じ名前が無い・件数の印は1つ・aria-current（月・週・日は予定、空き状況は空き状況、担当を組む・比較は組むの子「担当を組む」、
+// 条件の重みは組むの子「条件の重み」、予定と相性・相性は〈利用者さん〉、勤務時間（シフト）・勤務の見込みは〈スタッフ〉（上の段の項目）、
 // 設定のタブは「設定」。親は has-current。畳むと親に印）、欠勤・キャンセルは予定の操作の行から今日の日の画面の欄を開く）・
-// 「予定」「設定」は最後に開いた表示・タブ・設定のタブ（4つ）・組むの段（4段。標準があれば2段。ADR-0066・ADR-0067）・メニューから外した画面の入口
+// 「予定」「設定」は最後に開いた表示・タブ・設定のタブ（4つ）・予定と相性は〈利用者さん〉のタブ（ADR-0100）・メニューから外した画面の入口
 // （勤務の見込み、提案を比べるは担当を組むの「案を比べる」）・画面の見出しが画面の名前とそろう）、
 // コマンドパレット（Ctrl+K で開く・role=dialog・aria-modal・combobox と listbox（aria-activedescendant）・裏の inert とスクロールのロック・
 // 打つと絞り込む・↑↓（端で回る）・Enter で移る・操作（欠勤・キャンセル・N月の担当を組む）・人の名前（よみ・カタカナ）でその人の画面・Esc とフォーカスの戻り・
@@ -28,7 +28,6 @@ const {
   runSteps,
   settle,
 } = require('./lib/env.cjs');
-const { markStandard } = require('./lib/standard.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
 const { goTo, pressTool } = require('./lib/ui.cjs');
 
@@ -75,12 +74,9 @@ const toKata = (s) => s.replace(/[ぁ-ゖ]/g, (ch) => String.fromCharCode(ch.cha
 // メニューの最上位6つ（PRD D401。ADR-0067・ADR-0074・ADR-0078）：見出しは無い。ホームは無く、空き状況は予定の次。子の項目を持つのは「組む」だけ
 const GROUPS = [];
 const LABELS = ['予定', '空き状況', '利用者さん', 'スタッフ', '組む', '設定'];
-/**
- * 子の項目の key（組むだけ：基本情報・組み方の標準・担当を組む（条件の重みは組み方の標準の寄り道。ADR-0066・ADR-0067）。
- * 〈利用者さん〉・〈スタッフ〉は上の段の項目）
- */
+/** 子の項目の key（組むだけ：条件の重み・担当を組む。ADR-0100。〈利用者さん〉・〈スタッフ〉は上の段の項目） */
 const KIDS = {
-  arrange: ['arrange:basics', 'arrange:standard', 'arrange:assign'],
+  arrange: ['arrange:rules', 'arrange:assign'],
 };
 /** メニューの最上位の項目（子の無い項目と、畳める親の行の項目） */
 const TOP_LINKS =
@@ -93,19 +89,16 @@ const HEADINGS = [
   ['/week', '週の予定'],
   ['/plan', '日の予定'],
   ['/arrange', '担当を組む'],
-  ['/standard', '組み方の標準'],
   ['/basics', '予定と相性'],
   ['/availability', '勤務時間（シフト）'],
   ['/workload', '勤務の見込み'],
 ];
-/** 予定を組むの画面（ADR-0063・ADR-0066・ADR-0067）：URL・見出し・メニューの子の key（比較は担当を組むの続き。条件の重みは組み方の標準に印） */
+/** 組むの画面（ADR-0063・ADR-0100）：URL・見出し・メニューの子の key（比較は担当を組むの続き） */
 const ARRANGE = [
-  ['/basics', '予定と相性', 'arrange:basics'],
-  ['/rules', '条件の重み', 'arrange:standard'],
-  ['/standard', '組み方の標準', 'arrange:standard'],
+  ['/rules', '条件の重み', 'arrange:rules'],
   ['/arrange', '担当を組む', 'arrange:assign'],
 ];
-/** 設定のタブ（PRD D275。組み方の標準・条件の重みは予定を組む。ADR-0063・ADR-0066）：URL と見出し */
+/** 設定のタブ（PRD D275。条件の重みは組む。ADR-0063・ADR-0100）：URL と見出し */
 const SETTINGS = [
   ['/types', '訪問の種類'],
   ['/items', '特性の項目'],
@@ -134,7 +127,7 @@ async function menu(page) {
       .evaluateAll((els) => els.map((e) => e.dataset.key));
   check(
     JSON.stringify(kids) === JSON.stringify(KIDS),
-    'メニュー：「組む」の子の項目の並び（基本情報・組み方の標準・担当を組む）',
+    'メニュー：「組む」の子の項目の並び（条件の重み・担当を組む）',
     kids,
   );
   const parents = await side.locator('[data-parent]').evaluateAll((els) => els.map((e) => e.dataset.parent));
@@ -178,49 +171,20 @@ async function menu(page) {
   check(JSON.stringify(await current()) === '["arrange"]', 'aria-current：組むを畳むと親の「組む」に印');
   await side.locator('[data-parent="arrange"] [data-testid="nav-toggle"]').click();
   check(JSON.stringify(await current()) === '["arrange:assign"]', 'aria-current：組むを開き直すと子に印が戻る');
-  // 組むの画面（ADR-0063・ADR-0066）：メニューの子は組み方の標準・担当を組む（条件の重みは組み方の標準に印）。
-  // 基本情報・組み方の標準・担当を組むは見出しの下に4段（基本情報・案をくらべる・標準にする・担当を組む）、条件の重み・比較は寄り道なので段を出さない（ADR-0088）
-  const STEP_LABELS = ['基本情報', '案をくらべる', '標準にする', '担当を組む'];
+  // 組むの画面（ADR-0063・ADR-0100）：メニューの子は条件の重み・担当を組む（比較は担当を組むの続き）。段の表示・設定のタブは無い
   for (const [hash, h1, key] of [...ARRANGE, ['/compare', '提案を比べる', 'arrange:assign']]) {
     await open(page, hash, 'h1');
-    const steps = page.getByTestId('arrange-steps');
-    const withSteps = hash !== '/rules' && hash !== '/compare';
-    const names = withSteps
-      ? (await steps.locator('li').allInnerTexts()).map((x) => x.replace(/^\d+\s*/, '').trim())
-      : [];
-    const cur = withSteps
-      ? await steps.locator('[aria-current="step"]').evaluateAll((els) => els.map((e) => e.closest('li').dataset.step))
-      : [];
     check(
       (await page.locator('h1').innerText()).trim() === h1 &&
         (await page.getByTestId('arrange-tabs').count()) === 0 &&
-        (withSteps
-          ? JSON.stringify(names) === JSON.stringify(STEP_LABELS) &&
-            (hash === '/standard'
-              ? cur.length === 1
-              : JSON.stringify(cur) === (hash === '/basics' ? '["basics"]' : '["arrange"]'))
-          : (await steps.count()) === 0) &&
+        (await page.getByTestId('arrange-steps').count()) === 0 &&
+        (await page.getByTestId('settings-tabs').count()) === 0 &&
         JSON.stringify(await current()) === JSON.stringify([key]) &&
         (await parentOn('arrange')),
-      `組む ${hash}：見出し「${h1}」・${withSteps ? '4段（基本情報・案をくらべる・標準にする・担当を組む）に今の段の aria-current="step"' : '段は出さない'}・メニューは組むの子 ${key}`,
-      { names, cur, current: await current() },
+      `組む ${hash}：見出し「${h1}」・段は出さない・メニューは組むの子 ${key}`,
+      { current: await current() },
     );
   }
-  // 段のリンク：担当を組むの「案をくらべる」で #/standard、組み方の標準の「案をくらべる」から条件の重み（寄り道）→ 戻る
-  await open(page, '/arrange', '[data-testid="arrange-steps"]');
-  await page.locator('[data-testid="arrange-steps"] li[data-step="proposals"] a').click();
-  await page.locator('h1').filter({ hasText: '組み方の標準' }).waitFor();
-  check(hashOf(page) === '#/standard', '予定を組むの段「案をくらべる」で #/standard', hashOf(page));
-  await page.locator('[data-testid="standard-rules-link"] a').click();
-  await page.locator('h1').filter({ hasText: '条件の重み' }).waitFor();
-  check(
-    hashOf(page) === '#/rules' && (await page.getByTestId('settings-tabs').count()) === 0,
-    '組み方の標準の「案をくらべる」の寄り道で #/rules（設定のタブは出さない。ADR-0066）',
-    hashOf(page),
-  );
-  await page.getByTestId('rules-back').click();
-  await page.locator('h1').filter({ hasText: '組み方の標準' }).waitFor();
-  check(hashOf(page) === '#/standard', '条件の重みの「組み方の標準へ戻る」で #/standard', hashOf(page));
   for (const [hash, h1] of HEADINGS) {
     await open(page, hash);
     check((await page.locator('h1').innerText()).trim() === h1, `見出しは画面の名前「${h1}」`);
@@ -286,7 +250,7 @@ async function menu(page) {
   await page.getByTestId('settings-tabs').locator('a').filter({ hasText: 'データ' }).click();
   await page.locator('h1').filter({ hasText: 'データ' }).waitFor();
   check(hashOf(page) === '#/data', '設定のタブを押すと前の URL の画面（#/data）', hashOf(page));
-  // 条件の重みは設定のタブではないので、開いても「設定」の覚えは変わらない（ADR-0066。メニューに無いので URL で開く）
+  // 条件の重みは設定のタブではないので、開いても「設定」の覚えは変わらない（ADR-0100。URL で開く）
   await page.evaluate(() => {
     location.hash = '#/rules';
   });
@@ -324,34 +288,27 @@ async function menu(page) {
     await page.getByTestId('compat-table').waitFor();
     check(hashOf(page) === '#/compat', `${h} の人のタブ「相性」で相性の画面へ`, hashOf(page));
   }
-  // 予定を組むの4段は「組む」の画面だけ：人の画面（一覧・相性・勤務・勤務の見込み）には出さない（PRD D394）
-  for (const h of ['/clients', '/staff', '/compat', '/availability', '/workload']) {
-    await open(page, h, '[data-testid="people-tabs"]');
-    check((await page.getByTestId('arrange-steps').count()) === 0, `${h}：予定を組むの4段は出さない（組む画面だけ）`);
-  }
-  // 基本情報のタブは先頭に「予定と相性」・aria-label は「基本情報の切り替え」。メニューの「基本情報」は予定と相性（#/basics）を開く
+  // 予定と相性は〈利用者さん〉のタブ（一覧・予定と相性・相性。ADR-0100）。メニューの印は〈利用者さん〉
   await open(page, '/basics', '[data-testid="people-tabs"]');
   const btabs = (await page.getByTestId('people-tabs').locator('a').allInnerTexts()).map((x) => x.trim());
   check(
-    JSON.stringify(btabs) === JSON.stringify(['予定と相性', '相性', '勤務時間（シフト）']) &&
-      (await page.getByTestId('people-tabs').getAttribute('aria-label')) === '基本情報の切り替え',
-    '基本情報のタブ：予定と相性・相性・勤務時間（シフト）（〈利用者さん〉・〈スタッフ〉は人のタブ。aria-label「基本情報の切り替え」）',
+    JSON.stringify(btabs) === JSON.stringify(['一覧', '予定と相性', '相性']) &&
+      (await page.getByTestId('people-tabs').getAttribute('aria-label')) === '利用者さんの画面の切り替え',
+    '予定と相性：〈利用者さん〉のタブ（一覧・予定と相性・相性。aria-label「利用者さんの画面の切り替え」）',
     btabs,
   );
   check(
     (await page.getByTestId('people-tabs').locator('[aria-current="page"]').getAttribute('data-tab')) === 'basics' &&
-      (await page.getByTestId('arrange-steps').count()) === 1,
-    '予定と相性のタブに印・タブの上に予定を組むの段',
+      JSON.stringify(await current()) === '["clients"]' &&
+      !(await parentOn('arrange')) &&
+      (await page.getByTestId('arrange-steps').count()) === 0,
+    '予定と相性のタブに印・メニューの印は〈利用者さん〉（組むではない）・段の表示は無い',
+    await current(),
   );
-  await link('予定').click();
-  await page
-    .locator('h1')
-    .filter({ hasText: /の予定/ })
-    .waitFor();
   check(
-    (await side.locator('[data-key="arrange:basics"]').getAttribute('href')) === '#/basics' &&
-      (await side.locator('[data-key="people"]').count()) === 0,
-    'メニューの「基本情報」は #/basics。「人」の項目は無い',
+    (await side.locator('[data-key="arrange:basics"], [data-key="arrange:standard"], [data-key="people"]').count()) ===
+      0,
+    'メニューに「基本情報」「組み方の標準」「人」の項目は無い',
   );
   // メニューから外した画面の入口が残る（PRD D275）：勤務の見込みは勤務時間（シフト）と月の予定の「その他 ▾」、提案を比べるは担当を組むの「案を比べる」（ADR-0063）
   await open(page, '/availability', '[data-testid="avail-workload"]');
@@ -551,11 +508,7 @@ async function keyboard(page) {
   );
   await page.keyboard.press('Enter');
   await page.waitForURL(/#\/arrange/);
-  // 標準が無い間の月は「AI で組む」でなく案内（ADR-0064）。どちらでも画面が開いたと見る
-  await page
-    .locator('[data-testid="arrange-start"], [data-testid="arrange-need-standard"]')
-    .first()
-    .waitFor({ timeout: 30000 });
+  await page.getByTestId('arrange-start').waitFor({ timeout: 30000 });
   check(
     hashOf(page) === `#/arrange?ym=${TODAY.slice(0, 7)}` &&
       (await page.locator('h1').innerText()).trim() === '担当を組む',
@@ -741,7 +694,7 @@ async function mobile(page) {
   for (const [h, name] of [
     ['/plan', '日の予定'],
     ['/month', '月の予定'],
-    ['/basics', '組む・予定と相性'],
+    ['/basics', '予定と相性'],
     ['/availability', '勤務時間（シフト）'],
     ['/rules', '組む・条件の重み'],
   ]) {
@@ -1096,93 +1049,6 @@ async function fullscreen(page) {
   });
 }
 
-/**
- * 組み方の標準を登録したあと（ADR-0066・ADR-0067）：予定を組むの子は基本情報・担当を組む、担当を組む・比較・組み方の標準・条件の重みで印は担当を組む
- * （基本情報の画面は基本情報）、予定を組むの段はどの画面にもいつも出す（標準があれば 基本情報・担当を組む の2段。組み方の標準はいつも4段）、
- * 担当を組むの見出しに［標準の組み方を変える］
- */
-async function menuWithStandard(page) {
-  await open(page, '/data');
-  await markStandard(page);
-  const side = page.locator('.side-nav');
-  for (const t of await side.locator('[data-testid="nav-toggle"][aria-expanded="false"]').all()) await t.click();
-  const kids = await side
-    .locator('[data-parent="arrange"] > .nav-sub > .nav-link.nav-child')
-    .evaluateAll((els) => els.map((e) => e.dataset.key));
-  check(
-    JSON.stringify(kids) === '["arrange:basics","arrange:assign"]',
-    '標準がある：組むの子は基本情報・担当を組むだけ',
-    kids,
-  );
-  const current = () => side.locator('[aria-current="page"]').evaluateAll((els) => els.map((e) => e.dataset.key));
-  for (const [hash, stepCount] of [
-    ['/arrange', 2],
-    ['/compare', 0],
-    ['/standard', 4],
-    ['/rules', 0],
-  ]) {
-    await open(page, hash);
-    check(
-      JSON.stringify(await current()) === '["arrange:assign"]',
-      `標準がある：${hash} はメニューの組むの子「担当を組む」に印`,
-      await current(),
-    );
-    check(
-      (await page.locator('[data-testid="arrange-steps"] li').count()) === stepCount,
-      `標準がある：${hash} の組むの段は${stepCount === 0 ? '出さない（条件の重み・比較は寄り道）' : `${stepCount}段（段の表示はいつも出す）`}`,
-    );
-  }
-  await open(page, '/basics');
-  check(
-    JSON.stringify(await current()) === '["arrange:basics"]' &&
-      (await page.locator('[data-testid="arrange-steps"] li').count()) === 2,
-    '標準がある：/basics はメニューの予定を組むの子「基本情報」に印・段は 基本情報・担当を組む の2つ',
-    await current(),
-  );
-  await open(page, '/arrange');
-  const change = page.getByTestId('arrange-change-standard');
-  check(
-    (await change.count()) === 1 && (await change.getAttribute('href')) === '#/standard',
-    '標準がある：担当を組むの見出しに［標準の組み方を変える］（#/standard へ）',
-  );
-  await change.click();
-  await page.getByTestId('standard-steps').waitFor({ timeout: 30000 });
-  check(
-    hashOf(page) === '#/standard' &&
-      (await page.getByTestId('standard-steps').getAttribute('data-step')) === 'proposals',
-    '［標準の組み方を変える］で組み方の標準の 2（案をくらべる）が開く',
-    hashOf(page),
-  );
-  // 標準が無いときは子が2つ・担当を組むに段を出し、［標準の組み方を変える］は無い（あとの確認のため元に戻す）
-  await page.evaluate((key) => {
-    const d = JSON.parse(localStorage.getItem(key));
-    delete d.standard;
-    localStorage.setItem(key, JSON.stringify(d));
-  }, STORAGE_KEY);
-  await page.reload();
-  await open(page, '/arrange');
-  check(
-    (await page.locator('[data-testid="arrange-steps"] li').count()) === 4 &&
-      (await page.getByTestId('arrange-change-standard').count()) === 0,
-    '標準が無い：担当を組むに予定を組むの4段を出し、［標準の組み方を変える］は出さない',
-  );
-  await open(page, '/compare');
-  await page.getByTestId('compare-back').waitFor({ timeout: 30000 });
-  check(
-    (await page.getByTestId('arrange-steps').count()) === 0,
-    '標準が無い：案を比べるは寄り道なので段を出さない（ADR-0088）',
-  );
-  for (const t of await side.locator('[data-testid="nav-toggle"][aria-expanded="false"]').all()) await t.click();
-  const kids0 = await side
-    .locator('[data-parent="arrange"] > .nav-sub > .nav-link.nav-child')
-    .evaluateAll((els) => els.map((e) => e.dataset.key));
-  check(
-    JSON.stringify(kids0) === '["arrange:basics","arrange:standard","arrange:assign"]',
-    '標準が無い：組むの子は基本情報・組み方の標準・担当を組む',
-    kids0,
-  );
-}
-
 const steps = sharedPage({
   open: async () => {
     const s = await openPage();
@@ -1192,7 +1058,6 @@ const steps = sharedPage({
   call: (fn, s) => fn(s.page, s),
   steps: [
     ['menu', menu],
-    ['menu-with-standard', menuWithStandard],
     ['keyboard', keyboard],
     ['people', people],
     ['focus', focus],

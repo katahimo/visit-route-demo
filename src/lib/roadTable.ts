@@ -1,5 +1,5 @@
 /**
- * 道路の所要の表を OSRM（OpenStreetMap の道路・車）から取る（PRD D433。ADR-0099）。OSRM を呼ぶ**ただ1か所**。
+ * 道路の所要の表を OSRM（OpenStreetMap の道路・車）から取る（PRD D436。ADR-0101）。OSRM を呼ぶ**ただ1か所**。
  * 呼ぶのは管理者設定の「道路の移動時間」のカードで、利用者がボタンを押したときだけ。送るのは地点の緯度・経度だけ（名前・住所は送らない）。
  * solver・matching・evaluate・seed・patterns・vacancy・reassign・excel・store からは呼ばない。
  *

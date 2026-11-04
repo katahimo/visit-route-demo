@@ -5,7 +5,7 @@ import { peopleMatch, peopleSideOf, peopleTabs, peopleTabsLabel, rememberedSide 
 const basic = applyTemplate('basic');
 
 describe('peopleTabs', () => {
-  it('〈スタッフ〉は 一覧・勤務・相性、〈利用者さん〉は 一覧・相性', () => {
+  it('〈スタッフ〉は 一覧・勤務・相性、〈利用者さん〉は 一覧・予定と相性・相性', () => {
     expect(peopleTabs('staff', basic).map((t) => [t.label, t.to])).toEqual([
       ['一覧', '/staff'],
       ['勤務', '/availability'],
@@ -13,6 +13,7 @@ describe('peopleTabs', () => {
     ]);
     expect(peopleTabs('clients', basic).map((t) => [t.label, t.to])).toEqual([
       ['一覧', '/clients'],
+      ['予定と相性', '/basics'],
       ['相性', '/compat'],
     ]);
   });
@@ -21,7 +22,7 @@ describe('peopleTabs', () => {
   });
   it('切った機能の画面へのタブは出さない', () => {
     const off = withFeature(basic, 'compat', false);
-    expect(peopleTabs('clients', off).map((t) => t.label)).toEqual(['一覧']);
+    expect(peopleTabs('clients', off).map((t) => t.label)).toEqual(['一覧', '予定と相性']);
     expect(peopleTabs('staff', off).some((t) => t.to === '/compat')).toBe(false);
   });
   it('タブのナビの名前は呼び名から', () => {
@@ -37,7 +38,7 @@ describe('どちらの側か', () => {
     expect(peopleSideOf('/workload', undefined)).toBe('staff');
     expect(peopleSideOf('/compat', 'staff')).toBe('staff');
     expect(peopleSideOf('/compat', undefined)).toBe('clients');
-    expect(peopleSideOf('/basics', 'staff')).toBeNull();
+    expect(peopleSideOf('/basics', 'staff')).toBe('clients');
     expect(peopleSideOf('/month', 'staff')).toBeNull();
   });
   it('覚えるのは専用の画面だけ（相性・ほかの画面では変えない）', () => {
@@ -47,11 +48,9 @@ describe('どちらの側か', () => {
     expect(rememberedSide('/month', 'staff')).toBe('staff');
   });
   it('メニューの印：相性は覚えた側の1つにだけ付く', () => {
-    expect(peopleMatch('clients', undefined, true)).toEqual(['/clients', '/basics', '/compat']);
-    expect(peopleMatch('staff', undefined, true)).toEqual(['/staff', '/availability', '/workload']);
-    expect(peopleMatch('staff', 'staff', true)).toEqual(['/staff', '/availability', '/workload', '/compat']);
-    expect(peopleMatch('clients', 'staff', true)).toEqual(['/clients', '/basics']);
-    // 入は予定と相性を「組む」の基本情報に付けるので〈利用者さん〉に含めない
-    expect(peopleMatch('clients', undefined, false)).toEqual(['/clients', '/compat']);
+    expect(peopleMatch('clients', undefined)).toEqual(['/clients', '/basics', '/compat']);
+    expect(peopleMatch('staff', undefined)).toEqual(['/staff', '/availability', '/workload']);
+    expect(peopleMatch('staff', 'staff')).toEqual(['/staff', '/availability', '/workload', '/compat']);
+    expect(peopleMatch('clients', 'staff')).toEqual(['/clients', '/basics']);
   });
 });

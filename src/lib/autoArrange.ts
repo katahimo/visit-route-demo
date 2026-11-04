@@ -202,7 +202,7 @@ export type AutoDayPlan = { visits: Visit[]; problem: Problem; targetIds: string
  *   対象が入らなくなる。外した訪問は担当なしのまま残り、あとで手で選ぶ
  * - 担当が休止中（問題にいない人）の訪問も、動かせないので問題から外す。担当が休み・条件に合わない訪問は、ピンで担当を固定したまま
  *   解けない（担当なし扱い）が、書くのは対象の訪問だけなので担当は変わらない
- * 標準（data.standard）は見ない（無くても組む）。点数の基準は今のデータの条件（dayProblemOf と同じ）。
+ * 点数の基準は今のデータの条件（dayProblemOf と同じ）。
  * 伝えた日・対象が無い日・問題が作れない日（担当がいない・計算できない）は null
  */
 export function autoDayPlan(data: DemoData, date: string, targetIds: readonly string[]): AutoDayPlan | null {

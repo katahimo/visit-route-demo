@@ -1,4 +1,4 @@
-// 管理者設定の「道路の移動時間（車）」の文と入力の確かめ（PRD D433。ADR-0099）。純粋関数
+// 管理者設定の「道路の移動時間（車）」の文と入力の確かめ（PRD D436。ADR-0101）。純粋関数
 import {
   type LatLng,
   ROAD_PARK_MINUTES_MAX,

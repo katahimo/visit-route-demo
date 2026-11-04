@@ -1,14 +1,11 @@
 // 月の画面の右の欄（選ばないとき。PRD D404・D153・D223）：要対応／確定していない日の切り替えと、そこへ移る（帯の数字・ボタン、
 // 週・日の帯・要対応の帯から来たときの ?do=）、問題の無い日をまとめて確定。
-// エキスパート機能が切なら右の欄に要対応の一覧は無いので（PRD D410）、「要対応を見る」はいちばん早い要対応の行き先（一覧の行を押したのと同じ）へ移る
 import { useEffect, useRef, useState } from 'react';
 import type { NavigateFunction } from 'react-router-dom';
 import { useBulkConfirm } from '../components/useBulkConfirm';
-import { useConfirmStep, useExceptionsOnly } from '../components/useFeature';
+import { useConfirmStep } from '../components/useFeature';
 import type { Problem } from '../contracts/problem';
 import type { BulkConfirm } from '../lib/confirmDay';
-import { monthCellView } from '../lib/exceptionView';
-import type { LinkTarget } from '../lib/links';
 import { scrollBehavior } from '../lib/motion';
 import { type BandOp, bandHref } from '../lib/progressBand';
 import type { ParamsPatch } from './useMonthNav';
@@ -24,9 +21,8 @@ export function useMonthAside(x: {
   showAll: (extra?: ParamsPatch) => void;
   problemOf: (date: string) => Problem | null | undefined;
   bulk: BulkConfirm;
-  /** いちばん早い要対応の行き先（無ければ null。右の欄に要対応の一覧が無いときに使う） */
-  firstAttention: LinkTarget | null;
-  openTarget: (t: LinkTarget) => void;
+  /** 担当を AI で組む（expert 切の帯の「担当を AI で組む」。担当を組むの画面へ移らずその場で組む） */
+  arrange: () => void;
 }) {
   const { ym, navigate } = x;
   /** 確定（伝えた）の段階を出すか（expert 入）。切なら「確定していない日」の欄は無く、行き先は要対応にする（ADR-0073） */
@@ -35,14 +31,8 @@ export function useMonthAside(x: {
   /** 選ばないときの右の欄：要対応／確定していない日（進み具合の帯の「確定」から。PRD D153） */
   const [asideView, setAsideView] = useState<AsideView>('attention');
   const asideRef = useRef<HTMLElement>(null);
-  const attentionList = monthCellView(useExceptionsOnly()).attentionList;
-  /** 右の欄へ移る（要対応・確定していない日）。要対応の一覧が無い（切）ときは、いちばん早い要対応の行き先へ */
+  /** 右の欄へ移る（要対応・確定していない日） */
   const showAside = (view: AsideView, extra: ParamsPatch = {}) => {
-    if (view === 'attention' && !attentionList && x.firstAttention) {
-      if (Object.keys(extra).length > 0) x.patchParams(extra);
-      x.openTarget(x.firstAttention);
-      return;
-    }
     // 全体の表示にする（pickFocus('all') と同じ。extra は一緒に URL から消すもの）
     x.showAll(extra);
     setAsideView(view);
@@ -51,10 +41,14 @@ export function useMonthAside(x: {
       asideRef.current?.focus({ preventScroll: true });
     });
   };
-  /** 帯の数字・ボタン：担当を組むは担当を組むの画面へ（その月。ADR-0063）、ほかはこの画面の中で欄を開く */
+  /**
+   * 帯の数字・ボタン：担当を組むは、入は担当を組むの画面へ（その月。ADR-0063）、切はその場で AI で組む。
+   * ほかはこの画面の中で欄を開く
+   */
   const onBandOp = (op: BandOp) => {
-    if (op === 'batch') navigate(bandHref(ym, 'batch'));
-    else showAside(viewOf(op));
+    if (op !== 'batch') showAside(viewOf(op));
+    else if (confirmStep) navigate(bandHref(ym, 'batch'));
+    else x.arrange();
   };
 
   // ---- 週・日の帯・要対応の帯から来たときの操作（PRD D153・D404。?do=）----
