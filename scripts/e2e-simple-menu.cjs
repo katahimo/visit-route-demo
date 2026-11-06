@@ -515,8 +515,9 @@ const TOOLBAR = '[data-testid="schedule-toolbar"]';
 const INTRO_KEY = 'visit-route-demo:nav-open';
 
 /** 操作の行のボタン（その他 ▾ のボタンは数えない）の名前 */
+// 「休みを取り込む」（cal-off-open。毎日使うので行に置く例外。PRD D440。ADR-0107）は数えない
 const toolbarButtons = (page) =>
-  page.locator(`${TOOLBAR} > button.btn, ${TOOLBAR} > a.btn`).evaluateAll((els) =>
+  page.locator(`${TOOLBAR} > button.btn:not([data-testid="cal-off-open"]), ${TOOLBAR} > a.btn`).evaluateAll((els) =>
     els.map((e) => ({
       text: e.textContent.trim().replace(/\s+/g, ' '),
       primary: e.classList.contains('btn-primary'),
