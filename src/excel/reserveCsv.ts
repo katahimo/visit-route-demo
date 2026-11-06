@@ -1,5 +1,5 @@
 // 予約システムの形（ADR-0075。PRD D396・D397）：予約システムから書き出したスタッフの CSV（ID・氏名・TEL・mail address・緯度・経度・入社日・退職日 …）と
-// 顧客の CSV（顧客ID・姓・名・姓（カナ）・住所・駐車場・緯度・経度 …）を、〈スタッフ〉・〈利用者さん〉の名簿の列の表に写す。
+// 顧客の CSV（顧客ID・姓・名・姓（カナ）・住所・駐車場・住所2・緯度・経度 …）を、〈スタッフ〉・〈利用者さん〉の名簿の列の表に写す。
 // 名簿のブックと同じ読み方（rosterRows）に渡すための純粋関数（顧客台帳の形 ledgerCsv と同じ作り）
 import { normalizeEmail } from '../lib/mailto';
 import { normalizePostalCode } from '../lib/postalCode';
@@ -50,6 +50,10 @@ const CLIENT = {
   status: '会員状況（有効／無効）',
   memo: '顧客メモ',
   address: '住所',
+  /** 訪問先の住所（契約者の住所と違う所へ訪ねるとき。あれば訪問先はこちら。住所は契約者の住所としてメモへ） */
+  address2: '住所2',
+  address2From: '住所2[適用開始日YYYY/MM/DD]',
+  address2To: '住所2[適用終了日YYYY/MM/DD]',
   parking: '駐車場',
   parkingDetail: '駐車場番号・指定場所の詳細など',
   latLng: '緯度・経度',
@@ -95,8 +99,8 @@ export const reserveStaffErrorMessage = columnMessage({
 /** 名簿の列名 → 顧客の CSV の列名（誤りの文に使う） */
 export const reserveClientErrorMessage = columnMessage({
   [CLIENT_COLS.name]: `${CLIENT.family}・${CLIENT.given}`,
-  [CLIENT_POSTAL_COL]: CLIENT.address,
-  [CLIENT_COLS.address]: CLIENT.address,
+  [CLIENT_POSTAL_COL]: `${CLIENT.address2}・${CLIENT.address}`,
+  [CLIENT_COLS.address]: `${CLIENT.address2}・${CLIENT.address}`,
   [CLIENT_COLS.lat]: CLIENT.latLng,
   [CLIENT_COLS.lng]: CLIENT.latLng,
   [CLIENT_COLS.note]: `${CLIENT.phone}・${CLIENT.memo}`,
@@ -180,15 +184,31 @@ function clientName(v: (h: string) => string): string {
 }
 
 /**
+ * 訪問先の住所と、メモに足す契約者の住所の行。住所2 があれば訪問先は住所2、住所は「契約者の住所」の行にする
+ * （住所2 と同じなら行は付けない）。住所2 の適用期間があれば行に添える（期間で訪問先は切り替えない）
+ */
+function visitAddress(v: (h: string) => string): { visit: string; contractLine: string } {
+  const home = v(CLIENT.address);
+  const visit = v(CLIENT.address2);
+  if (visit === '') return { visit: home, contractLine: '' };
+  const from = v(CLIENT.address2From);
+  const to = v(CLIENT.address2To);
+  const term = from === '' && to === '' ? '' : `（住所2の期間 ${from}〜${to}）`;
+  const contract = home === '' || home === visit ? '' : `契約者の住所 ${home}`;
+  return { visit, contractLine: [contract, term].filter((x) => x !== '').join('') };
+}
+
+/**
  * 顧客の CSV（1行目が列名）→〈利用者さん〉の名簿の列の表。形が違えば null。
  * - 表示名：姓＋名（空ならカナ、それも空なら顧客ID）。同じ名前の人は全員「名前（顧客ID）」にして分ける（ファイルの並びに左右されない）
  * - よみ：姓（カナ）＋名（カナ）をひらがなにし、空白を詰める（normalizeKana）
- * - 住所：先頭の郵便番号（〒 付きも）は郵便番号の列へ分ける
+ * - 住所：訪問先の住所。住所2 があれば住所2（住所は「契約者の住所」としてメモの電話の次の行へ。visitAddress）。
+ *   先頭の郵便番号（〒 付きも）は郵便番号の列へ分ける
  * - 緯度・経度：「緯度, 経度」を2つの列に分ける
  * - 駐車場：駐車場＋詳細を決まりごとの「駐車場」へ
  * - 電話：メモの先頭に1行（顧客メモを続ける）
  * - 会員状況：無効＝終了、ほか（空を含む）＝利用中
- * - メールアドレス・会費・パスワード・性別・年代・緊急連絡先・避難場所・世帯の情報・住所2 などは読まず、skipped に名前を挙げる
+ * - メールアドレス・会費・パスワード・性別・年代・緊急連絡先・避難場所・世帯の情報などは読まず、skipped に名前を挙げる
  */
 export function reserveClientToRoster(table: readonly (readonly string[])[]): RosterTable | null {
   const header = table[0];
@@ -220,10 +240,11 @@ export function reserveClientToRoster(table: readonly (readonly string[])[]): Ro
       return;
     }
     const v = cellOf(at, r);
-    const { postal, address } = splitPostal(v(CLIENT.address));
+    const { visit, contractLine } = visitAddress(v);
+    const { postal, address } = splitPostal(visit);
     const { lat, lng } = splitLatLng(v(CLIENT.latLng));
     const parking = [v(CLIENT.parking), v(CLIENT.parkingDetail)].filter((x) => x !== '').join('　');
-    const note = [phoneLine(v(CLIENT.phone), ''), v(CLIENT.memo)].filter((x) => x !== '').join('\n');
+    const note = [phoneLine(v(CLIENT.phone), ''), contractLine, v(CLIENT.memo)].filter((x) => x !== '').join('\n');
     out.push([
       names[i] ?? '',
       clip(normalizeKana(`${v(CLIENT.familyKana)}${v(CLIENT.givenKana)}`), MAX.kana),

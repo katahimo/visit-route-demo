@@ -8,6 +8,12 @@ export type ReleaseNote = { id: string; items: readonly string[] };
 /** 更新の一覧（新しい順。先頭が今の版） */
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    id: '2026-11-06-2',
+    items: [
+      '予約システムの顧客の CSV で「住所2」が入っている人は、住所2 を訪問先にし、住所は契約者の住所としてメモに残します',
+    ],
+  },
+  {
     id: '2026-11-06',
     items: [
       '上の帯の左端に「戻る」「進む」のボタンを置きました（前の画面に戻れます）',
