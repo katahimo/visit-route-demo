@@ -83,7 +83,7 @@
 - 切った機能の URL を開くと予定の画面（`homePath`）へ移り、閉じられる知らせと管理者設定へのリンク（`FeatureOffNotice`）
 - 390px で横にはみ出さない。印刷で知らせ・「適用」を出さない
 - 「メールの予約送信（Google）」のカード（`pages/mailScheduleSettings`・`mail-schedule-settings`。メールの機能が入のときだけ。[mail-schedule.md](mail-schedule.md)）：1行の説明（確定するときにまとめて Google に預け、前日の時刻に自動で送る）と ⓘ（aria-label「メールの予約送信の説明」。中は `mail-schedule-notes`：遅れる分数・Google のアカウントを通ること・使わないときは「メールを作る」で送れること）、手順の4行は「詳しく ▾」（`mail-schedule-steps-fold`。見出しの横に「手順 4つ」。ひな型のコピーのリンク `mail-schedule-template`。`GAS_TEMPLATE_URL` が空なら「まだ用意されていません」）、欄 `mail-schedule-url`・`mail-schedule-token`（password）・`mail-schedule-time`（time）、`mail-schedule-test`「接続を試す」・`mail-schedule-save`「保存」・`mail-schedule-clear`「この端末の設定を消す」（確認つき。設定があるときだけ）。誤りは押したあとに欄ごと（`settingsErrors`）。つないでいれば見出しに「つないでいます」
-- データの画面のいちばん下に「最初からやり直す」のカード（`pages/RestartCard`・`restart-first-run`。ADR-0092）：畳まない注意「いまのデータは消えます。」（`restart-first-run-warn`）と2行。［デモの初期状態に戻す］（`reset-demo-button`）と［始め方を選び直す］（`restart-first-run-button`。説明1行 `RESTART_HINT`）。始め方を選び直すは独自の確認（危険の色。本文は `lib/firstRun` の `restartConfirmBody`：元に戻す（Ctrl+Z）の対象外なので先に書き出す案内と、1世代の控えの文 `keepNote`）。OK で `askFirstRun()`（2問の画面 `components/FirstRunPage` へ。答えるまで今のデータのまま・読み直すと元のデータで開く）。答えると `startFirstRun(answer)` が1世代の控えを残してデータを作り直し、最初の画面（デモ＝週／月、自分のデータ＝登録の案内）へ移る
+- データの画面のいちばん下に「最初からやり直す」のカード（`pages/RestartCard`・`restart-first-run`。ADR-0092）：畳まない注意「いまのデータは消えます。」（`restart-first-run-warn`）と2行。［デモの初期状態に戻す］（`reset-demo-button`）と［最初の設定をやり直す］（`restart-first-run-button`。説明1行 `RESTART_HINT`）。最初の設定をやり直すは独自の確認（危険の色。本文は `lib/firstRun` の `restartConfirmBody`：元に戻す（Ctrl+Z）の対象外なので先に書き出す案内と、1世代の控えの文 `keepNote`）。OK で `askFirstRun()`（2問の画面 `components/FirstRunPage` へ。答えるまで今のデータのまま・読み直すと元のデータで開く）。答えると `startFirstRun(answer)` が1世代の控えを残してデータを作り直し、最初の画面（デモ＝週／月、自分のデータ＝登録の案内）へ移る
 
 ### 完了の条件
 

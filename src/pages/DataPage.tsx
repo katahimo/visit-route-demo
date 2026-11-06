@@ -64,7 +64,7 @@ export default function DataPage() {
 
       <TidyCard tidy={tidy} />
 
-      {/* 最初からやり直す：初期状態に戻す・始め方を選び直す（ADR-0092） */}
+      {/* 最初からやり直す：初期状態に戻す・最初の設定をやり直す（ADR-0092） */}
       <RestartCard onReset={restore.doReset} />
     </div>
   );

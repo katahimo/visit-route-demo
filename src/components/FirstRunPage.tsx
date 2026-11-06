@@ -2,6 +2,7 @@ import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FIRST_RUN_CANCEL,
+  FIRST_RUN_ENTRY,
   FIRST_RUN_NOTE,
   FIRST_RUN_Q1,
   FIRST_RUN_Q2,
@@ -27,16 +28,19 @@ import {
 } from '../lib/releaseNotes';
 import { useDemoData } from '../store';
 import './firstRun.css';
+import { useFirstRunBack } from './useFirstRunBack';
 
 /**
- * 最初の2問の門（PRD D379〜D381・D437。ADR-0073・ADR-0102）：保存データが無く初めて開いたとき・データの画面の「始め方を選び直す」のあと・
+ * 最初の2問の門（PRD D379〜D381・D437。ADR-0073・ADR-0102）：保存データが無く初めて開いたとき・データの画面・登録の案内の「最初の設定をやり直す」のあと・
+ * ブラウザの「戻る」で最初の設定を出していた履歴の項目へ戻ったとき（useFirstRunBack）・
  * まだ見ていないデモの更新があるとき（問1のいちばん上に「今のデータを使い続ける」）は、
  * 本体の画面の代わりに2問の画面を出す。答えると store がデータを作って書き、最初の画面（デモ＝予定の週／月、
  * 自分のデータ＝登録の案内）へ移る。ルーターの中で使う
  */
 export function FirstRunGate({ children }: { children: ReactNode }) {
   const { needsFirstRun } = useDemoData();
-  return needsFirstRun ? <FirstRunPage /> : children;
+  const backToFirstRun = useFirstRunBack();
+  return needsFirstRun || backToFirstRun ? <FirstRunPage /> : children;
 }
 
 /** 問1の答え：更新の知らせのときは「今のデータを使い続ける」（keep）も選べる */
@@ -59,6 +63,8 @@ function FirstRunPage() {
   // 初めに選んでおく：更新の知らせは今のデータ、ほかはデモで試す・定期の訪問（基本）（今までの初期データと同じ。あとからデータの画面で選び直せる）
   const [start, setStart] = useState<StartPick>(releaseNotice ? 'keep' : 'demo');
   const keep = start === 'keep';
+  // 答えるとデータが消えるとき（やり直し・更新の知らせでデモ／自分のデータを選んだ）は注意を出す
+  const warn = redoingFirstRun || (releaseNotice !== null && !keep);
   const [kind, setKind] = useState<FirstRunUse>('basic');
   const headingRef = useRef<HTMLHeadingElement>(null);
   const titleId = useId();
@@ -69,7 +75,7 @@ function FirstRunPage() {
   // 答えたら、先に最初の画面へ移ってから（ルーターの移動が済んでから）データを作る。
   // 逆にすると、本体の画面が今の URL（`#/`）のまま先に出て、知らない URL の予定への移動に上書きされる
   const [answer, setAnswer] = useState<FirstRunAnswer | null>(null);
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const landing = answer ? firstRunLanding(answer) : null;
   useEffect(() => {
     if (answer && landing === pathname) startFirstRun(answer);
@@ -81,7 +87,9 @@ function FirstRunPage() {
     }
     const a: FirstRunAnswer = { start, use: kind };
     setAnswer(a);
-    navigate(firstRunLanding(a), { replace: true });
+    // 2問の画面の項目に印を付けてから先へ進む（ブラウザの「戻る」で最初の設定へ戻れる。PRD D381・D438）
+    navigate({ pathname, search }, { replace: true, state: FIRST_RUN_ENTRY });
+    navigate(firstRunLanding(a));
   };
   return (
     <main className="first-run" data-testid="first-run">
@@ -99,7 +107,7 @@ function FirstRunPage() {
         {releaseNotice && <ReleaseChanges notes={releaseNotice} />}
         <ChoiceGroup<StartPick>
           title={releaseNotice ? releaseQ1(!keep) : FIRST_RUN_Q1}
-          describedBy={releaseNotice && !keep ? warnId : undefined}
+          describedBy={warn ? warnId : undefined}
           choices={releaseNotice ? [KEEP_CHOICE, ...FIRST_RUN_START_CHOICES] : FIRST_RUN_START_CHOICES}
           value={start}
           onPick={setStart}
@@ -114,7 +122,7 @@ function FirstRunPage() {
             testKey="use"
           />
         )}
-        {releaseNotice && !keep && (
+        {warn && (
           <p id={warnId} className="first-run-warn" data-testid="first-run-warn">
             {RELEASE_WARN}
           </p>

@@ -93,7 +93,7 @@ export default function StartGuidePage() {
               戻る
             </Link>
           )}
-          {/* 始め方（デモか自分のデータか・使い方）を選び直す（ADR-0092） */}
+          {/* 最初の設定（デモか自分のデータか・使い方）をやり直す（ADR-0092） */}
           <button type="button" className="btn" onClick={() => void restart()} data-testid="start-guide-restart">
             <WithIcon icon={Undo2}>{RESTART_TITLE}</WithIcon>
           </button>

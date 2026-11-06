@@ -3,9 +3,9 @@
 // 読み直してもまた2問・Tab は選んだ方だけ・矢印で選び直す）・デモ×定期（今の初期データ・利用者さん／スタッフ・「基本」・最初は月。
 // 作った直後に今日〜翌月末の要対応（担当なし・間に合わない・重なり・休みの人）を1回自動で組み、知らせ「N件の担当を組みました」と［元に戻す］。組む印（sessionStorage）は読み直しをまたいで起動で読む。PRD D409）・
 // デモ×単発（架空の単発の予約が今日から2週間分・お客様／シッター・「単発のみ」・最初は週）・
-// 自分のデータ（空のデータ＋3段の登録の案内：上に「1/3」・①②は名簿の欄をはじめから出す・下の段に「始め方を選び直す」・③は予定へ・
+// 自分のデータ（空のデータ＋3段の登録の案内：上に「1/3」・①②は名簿の欄をはじめから出す・下の段に「最初の設定をやり直す」・③は予定へ・
 // 空のデータで月・週・日・一覧・設定などが壊れない。組まない）・印「all」（scripts/lib/startFeatures.cjs）があれば2問を出さず今の初期データ＋すべて入（組まない）・
-// データの画面の「始め方を選び直す」（確認の文は元に戻す Ctrl+Z の対象外・先に書き出す案内 → 2問へ戻る → 答えでデータを作り直す・控えが残る）、
+// データの画面の「最初の設定をやり直す」（確認の文は元に戻す Ctrl+Z の対象外・先に書き出す案内 → 2問へ戻る → 答えでデータを作り直す・控えが残る）、
 // 更新の知らせ（見た更新の印が古いと「デモを更新しました」・問1の上に「今のデータを使い続ける」を選んでおく・開くとデータはそのまま・デモを選ぶと作り直し控えが残る）、
 // データの画面のファイル選択（すべて同じ部品・日本語のボタン「ファイルを選ぶ」と未選択の文・ブラウザ標準の input は見えない・
 // input はボタンと同じ大きさ・入力欄の名前（何を読み込むか＋ファイルを選ぶ）・Tab で届きフォーカスの枠・Space で選ぶ画面・控え（JSON）を選ぶと確認と
@@ -384,7 +384,17 @@ async function firstRunOwn(b) {
     (await page.getByTestId('start-guide-add').count()) === 0,
     '案内：「1人ずつ入れる」は無い（一覧の画面の追加から入れる）',
   );
-  check((await page.getByTestId('start-guide-restart').count()) === 1, '案内：下の段に「始め方を選び直す」');
+  check((await page.getByTestId('start-guide-restart').count()) === 1, '案内：下の段に「最初の設定をやり直す」');
+  // 上の帯の「戻る」で最初の設定へ戻る（やり直しの2問。「閉じる」と注意が出る）→ 進むで案内へ戻ると閉じる（PRD D381・D438）
+  await page.getByTestId('history-back').click();
+  await page.getByTestId('first-run').waitFor({ timeout: 30000 });
+  check(
+    (await page.getByTestId('first-run-cancel').count()) === 1 && (await visible(page.getByTestId('first-run-warn'))),
+    '案内：上の帯の「戻る」で最初の設定へ戻る（「閉じる」・いまのデータは消えますの注意）',
+  );
+  await page.goForward();
+  await page.getByTestId('start-guide-count').filter({ hasText: '1/3' }).waitFor({ timeout: 30000 });
+  check((await page.getByTestId('first-run').count()) === 0, '案内：進むで案内へ戻ると最初の設定は閉じる');
   // ② スタッフ
   await page.getByTestId('start-guide-next').click();
   await page.waitForURL(/step=2/);
@@ -463,7 +473,7 @@ async function firstRunOwn(b) {
   await o.ctx.close();
 }
 
-// データの画面の「始め方を選び直す」：確認（元に戻すの対象外・先に書き出す案内）→ 2問へ戻る → 選んだ答えでデータを作り直す
+// データの画面の「最初の設定をやり直す」：確認（元に戻すの対象外・先に書き出す案内）→ 2問へ戻る → 選んだ答えでデータを作り直す
 async function firstRunRestart(b) {
   const { ctx, page } = await newPage(b, { human: false });
   await page.goto(`${BASE}#/data`);

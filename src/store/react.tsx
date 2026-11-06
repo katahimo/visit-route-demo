@@ -72,10 +72,10 @@ export type DemoStore = {
   dismissBroken(): void;
   /**
    * 最初の2問を出すか（PRD D379〜D381。ADR-0073）：保存データが無く初めて開いたとき（印「all」が無ければ）と、
-   * データの画面の「始め方を選び直す」（askFirstRun）のあと、まだ見ていないデモの更新があるとき（PRD D437）。答えるまでデータは書かない
+   * データの画面の「最初の設定をやり直す」（askFirstRun）・ブラウザの「戻る」で最初の設定へ戻ったあと、まだ見ていないデモの更新があるとき（PRD D437）。答えるまでデータは書かない
    */
   needsFirstRun: boolean;
-  /** 2問がデータの画面の「始め方を選び直す」のあとか（true なら画面は「閉じる」を出せる。初めて開いたときは false） */
+  /** 2問がやり直し（「最初の設定をやり直す」・ブラウザの「戻る」）か（true なら画面は「閉じる」を出せる。初めて開いたときは false） */
   redoingFirstRun: boolean;
   /** デモの更新の知らせなら、まだ見ていない更新（新しい順。画面は変わったところと「今のデータを使い続ける」を出す）。ほかは null（PRD D437） */
   releaseNotice: readonly ReleaseNote[] | null;
@@ -86,7 +86,7 @@ export type DemoStore = {
    * やり直し（すでにデータがあったとき）は、先に1世代の控えに残す（「直前の状態に戻す」で戻せる）
    */
   startFirstRun(answer: FirstRunAnswer): void;
-  /** 最初の2問をもう一度出す（データの画面の「始め方を選び直す」。答えるまでは今のデータのまま） */
+  /** 最初の2問をもう一度出す（「最初の設定をやり直す」・ブラウザの「戻る」。答えるまでは今のデータのまま） */
   askFirstRun(): void;
   /** 別のタブの変更で読み直した回数（画面が知らせを出すきっかけ） */
   externalReloads: number;
@@ -319,7 +319,7 @@ function useReplaceActions(st: StoreState) {
   const startFirstRun = useCallback(
     (answer: FirstRunAnswer) => {
       // すでにデータがあるとき（やり直し・更新の知らせ）は、先に1世代の控えに残す
-      if (firstRun === 'redo') keepPrevious('始め方を選び直す');
+      if (firstRun === 'redo') keepPrevious('最初の設定をやり直す');
       if (firstRun === 'release') keepPrevious('デモの更新で始め直す');
       setSaveError(null);
       swapIn(startWithAnswer(answer));
