@@ -190,6 +190,15 @@ async function insideEntries(t, page, dlg, ctx) {
   if (on('vacancy')) {
     await open(page, '/vacancy', '[data-testid="vacancy-step-next"]');
     check((await count('notice-card')) === (on('vacancyNotice') ? 1 : 0), `${label}：空き状況の案内文の欄`);
+    // 見出しの「紹介元へメール」は、紹介元へのメールの欄を出すとき（段階・紹介元が入）だけ（ADR-0106）
+    if (on('vacancyNotice')) {
+      const head = await page.getByTestId('notice-toggle').locator('h3').innerText();
+      check(
+        head.includes('紹介元へメール') === on('clientStage'),
+        `${label}：案内文の見出しの「紹介元へメール」は段階・紹介元が入のときだけ`,
+        head,
+      );
+    }
   }
   // データの Excel
   await open(page, '/data');

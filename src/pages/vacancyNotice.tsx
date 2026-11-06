@@ -41,7 +41,7 @@ export function NoticeCard({
       <summary data-testid="notice-toggle">
         <h3 className="vacancy-sub-title">
           <WithIcon icon={ClipboardList} size={16}>
-            空き枠の案内文・紹介元へメール
+            {stageOn ? '空き枠の案内文・紹介元へメール' : '空き枠の案内文'}
           </WithIcon>
         </h3>
         <span className="vacancy-stage-line" data-testid="notice-line">

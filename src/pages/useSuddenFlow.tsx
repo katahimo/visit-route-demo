@@ -145,7 +145,7 @@ type SuddenArgs = {
   applyCancel: (visitId: string, sameDay: boolean) => void;
   adopt: () => Promise<boolean>;
   /** 〈スタッフ〉あてのメール */
-  staffMail?: (staffId: string, text: string) => BuiltMail | null;
+  staffMail: (staffId: string, text: string) => BuiltMail | null;
   onCopied: (ok: boolean, what: string) => void;
   /** 列の見出し（欄を閉じたとき、フォーカスの戻り先が消えていたらここへ） */
   colHeadOf: (sid: string) => HTMLElement | null;
@@ -240,7 +240,7 @@ export function useSuddenFlow(x: SuddenArgs): {
       onRevert: flow.info ? flow.revertToBase : undefined,
       contacts: list ? contactRows(list, state.cancel ? [state.cancel.cancelled] : [], x.contactWords) : null,
       leftCount: flow.left.length,
-      contactMail: x.staffMail ? (row) => x.staffMail?.(row.id, row.text) ?? null : undefined,
+      contactMail: (row) => x.staffMail(row.id, row.text),
       onCopied: x.onCopied,
       fallbackFocus: () => (sudden.staffId ? x.colHeadOf(sudden.staffId) : (state.btnRef.current ?? moreFocusTarget())),
       returnFocus: () => (state.toBar.current ? document.getElementById(flow.barId) : null),
