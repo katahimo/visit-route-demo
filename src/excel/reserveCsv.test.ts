@@ -244,8 +244,9 @@ describe('顧客の CSV', () => {
       メモ: '',
     });
     expect(row(2)).toMatchObject({ 住所: '架空市泉1丁目', 緯度: '35.7', 住所2: '', 住所2の緯度: '' });
-    expect(row(3)).toMatchObject({ 住所2: '架空市港3丁目', 住所2の開始日: '', 住所2の終了日: '' });
-    expect(out.skipped).toContain('住所2の適用期間（読めない日付 1件）');
+    // 読めない日付：期間を空にすると毎日が住所2 になるので、住所2 を入れない
+    expect(row(3)).toMatchObject({ 住所2: '', 住所2の開始日: '', 住所2の終了日: '' });
+    expect(out.skipped).toContain('住所2（適用期間の日付が読めない・逆のため入れなかった 1件）');
     expect(out.skipped).not.toContain('住所2');
   });
   it('住所2 の列が無い CSV は住所2 の列を出さない（アプリの住所2 は今のまま）', () => {
@@ -301,6 +302,48 @@ describe('顧客の CSV', () => {
       await importRoster(csvBuf([CLIENT_HEAD, row({})]), again, 'client', 'merge', '2026-08-15'),
     ).data;
     expect(cleared.clients.find((c) => c.displayName === '架空 戻子')?.place2).toBeUndefined();
+  });
+  it('以前の取り込みで住所に入った住所2 の位置は外す。住所の空白・全角半角の違いでは位置を消さない', async () => {
+    const head = CLIENT_HEAD.filter((h) => !h.startsWith('住所2'));
+    const old = rok(
+      await importRoster(
+        csvBuf([
+          head,
+          head.map(
+            (h) =>
+              ({ 顧客ID: 'C8', 姓: '架空', 名: '旧子', 住所: '架空市本町1丁目', 緯度・経度: '35.6, 139.6' })[h] ?? '',
+          ),
+        ]),
+        base(),
+        'client',
+        'merge',
+        '2026-08-15',
+      ),
+    ).data;
+    expect(old.clients.find((c) => c.displayName === '架空 旧子')?.place.lat).toBe(35.6);
+    const row = clientRow({
+      顧客ID: 'C8',
+      姓: '架空',
+      名: '旧子',
+      住所: '架空市本町１丁目 ',
+      住所2: '架空市駅前2丁目',
+      緯度・経度: '35.6, 139.6',
+    });
+    const now = rok(await importRoster(csvBuf([CLIENT_HEAD, row]), old, 'client', 'merge', '2026-08-15')).data;
+    const c = now.clients.find((x) => x.displayName === '架空 旧子');
+    expect(c?.place).toMatchObject({ lat: null, lng: null });
+    expect(c?.place2).toMatchObject({ lat: 35.6, lng: 139.6 });
+    // 住所2 の無い人：表記の違うだけの住所では位置を消さない
+    const kept = rok(
+      await importRoster(
+        csvBuf([head, head.map((h) => ({ 顧客ID: 'C8', 姓: '架空', 名: '旧子', 住所: '架空市本町１丁目' })[h] ?? '')]),
+        old,
+        'client',
+        'merge',
+        '2026-08-15',
+      ),
+    ).data;
+    expect(kept.clients.find((x) => x.displayName === '架空 旧子')?.place.lat).toBe(35.6);
   });
   it('〈利用者さん〉の名簿として読み込める。読まない値はデータに残さない', async () => {
     const r = rok(await importRoster(csvBuf(CLIENT_TABLE), base(), 'client', 'merge', '2026-10-31'));

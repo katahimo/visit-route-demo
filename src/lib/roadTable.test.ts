@@ -75,6 +75,13 @@ describe('roadPointsOf・roadMissingCount', () => {
     expect(roadMissingCount(undefined, pts)).toBe(2);
     expect(roadMissingCount({ at: 0, points: [P[0]!], near: [[]], seconds: [[]], meters: [[]] }, pts)).toBe(1);
   });
+  it('住所2 の位置も入れる。期間が今日より前に終わった住所2 は入れない（ADR-0105）', () => {
+    const p2 = (to: string) => ({ address: '', postalCode: '', ...P[2]!, from: '', to });
+    const d = (to: string) => makeData({ staff: [], clients: [client('a', P[1]!.lat, P[1]!.lng, { place2: p2(to) })] });
+    expect(roadPointsOf(d(''), '2026-11-06')).toEqual([P[1], P[2]]);
+    expect(roadPointsOf(d('2026-11-06'), '2026-11-06')).toEqual([P[1], P[2]]);
+    expect(roadPointsOf(d('2026-11-05'), '2026-11-06')).toEqual([P[1]]);
+  });
 });
 
 describe('roadBlocks・roadTableUrl', () => {

@@ -11,8 +11,11 @@ import { useConfirm } from './ConfirmDialog';
 import { IMPORT_CHANGED_TEXT, usePendingImport } from './usePendingImport';
 import { reloadOnStale, useResumeAfterReload } from './useReloadResume';
 
-/** onDone：入れたあとに呼ぶ（引き出しを閉じるなど） */
-export function useBookingImport(onDone?: () => void) {
+/**
+ * onDone：入れたあとに呼ぶ（引き出しを閉じるなど）。target は読み直しの控えの欄の名前（欄ごとに分ける。
+ * 予定の引き出しとデータの画面で同じ控えを取り合わない）
+ */
+export function useBookingImport(onDone?: () => void, target = 'bookings') {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const { data, toast, changedSince, commit } = usePendingImport(setError);
@@ -64,7 +67,7 @@ export function useBookingImport(onDone?: () => void) {
     try {
       await loadBookings(file);
     } catch (e) {
-      if (await reloadOnStale(e, { target: 'bookings', file, resumed })) {
+      if (await reloadOnStale(e, { target, file, resumed })) {
         toast(EXCEL_RELOADING_TEXT);
         return;
       }
@@ -75,6 +78,6 @@ export function useBookingImport(onDone?: () => void) {
       setBusy(false);
     }
   };
-  useResumeAfterReload('bookings', (file) => void load(file, true));
+  useResumeAfterReload(target, (file) => void load(file, true));
   return { load, error, busy };
 }

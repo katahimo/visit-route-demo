@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { RELOAD_FILE_KEY, RELOAD_FILE_MAX_BYTES, stashReloadFile, takeReloadFile } from './reloadResume';
+import {
+  RELOAD_FILE_KEY,
+  RELOAD_FILE_MAX_BYTES,
+  RELOAD_FILE_TTL_MS,
+  stashReloadFile,
+  takeReloadFile,
+} from './reloadResume';
 
 /** sessionStorage の代わり（setItem が投げるかを選べる） */
 function memory(full = false) {
@@ -53,6 +59,17 @@ describe('読み直しをまたぐファイルの控え', () => {
     expect(stashReloadFile(file(new Uint8Array([1])), memory(true).get)).toBe(false);
     s.m.set(RELOAD_FILE_KEY, '{壊れた');
     expect(takeReloadFile('roster-client', s.get)).toBeNull();
+    expect(s.m.size).toBe(0);
     expect(stashReloadFile(file(new Uint8Array([1])), () => null)).toBe(false);
+  });
+  it('期限を過ぎた控えは、どの欄でも取り出さずに消す（あとで開いた欄が古いファイルを読み始めない）', () => {
+    const s = memory();
+    stashReloadFile(file(new Uint8Array([1]), 'bookings'), s.get, 1000);
+    expect(takeReloadFile('roster-client', s.get, 1000 + RELOAD_FILE_TTL_MS)).toBeNull();
+    expect(s.m.has(RELOAD_FILE_KEY)).toBe(true);
+    expect(takeReloadFile('roster-client', s.get, 1001 + RELOAD_FILE_TTL_MS)).toBeNull();
+    expect(s.m.has(RELOAD_FILE_KEY)).toBe(false);
+    stashReloadFile(file(new Uint8Array([1]), 'bookings'), s.get, 1000);
+    expect(takeReloadFile('bookings', s.get, 1001 + RELOAD_FILE_TTL_MS)).toBeNull();
   });
 });

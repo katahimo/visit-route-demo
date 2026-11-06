@@ -61,9 +61,9 @@ function usePlanCore(date: string) {
   const whyOf = useMemo(
     () =>
       problem && hasPlan
-        ? unassignedReasons(problem, routes, m.data.org.terms, { clients: m.data.clients })
+        ? unassignedReasons(problem, routes, m.data.org.terms, { clients: m.clients })
         : new Map<string, UnassignedReason>(),
-    [problem, hasPlan, routes, m.data.org.terms, m.data.clients],
+    [problem, hasPlan, routes, m.data.org.terms, m.clients],
   );
   const staffName = (id: string) => staffById.get(id)?.name ?? '（不明）';
   const clientOf = (visitId: string) => {

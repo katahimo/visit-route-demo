@@ -23,7 +23,7 @@ import {
   STAFF_ICON_COL,
   STAFF_LAST_DAY_COL,
 } from './layout';
-import { readPlace2 } from './place2Cols';
+import { readPlace2, sameAddress, withoutPlace2Pin } from './place2Cols';
 import {
   checkGivenId,
   Errors,
@@ -145,11 +145,11 @@ function pick<T>(ctx: RosterCtx, r: Row, h: string, read: () => T, keep: T): T {
 }
 
 /**
- * 住所が変わった人の、空のセルで今のままにする位置の値（緯度・経度・郵便番号）：今の値でなく空にする
- * （古い住所の位置を新しい住所に付けない。住所から位置を入れ直す）。住所が同じなら今の値
+ * 〈利用者さん〉の住所が変わった人の、空のセルで今のままにする位置の値（緯度・経度・郵便番号）：今の値でなく空にする
+ * （古い住所の位置を新しい住所に付けない。住所から位置を入れ直す）。住所が同じ（空白・全角半角の違いは同じ）なら今の値
  */
 const sameAddressOr = <T>(address: string, cur: { address: string } | undefined, keep: T, blank: T): T =>
-  cur === undefined || cur.address === address ? keep : blank;
+  cur === undefined || sameAddress(cur.address, address) ? keep : blank;
 
 /**
  * 新しい人の空のセルは、画面で足すときと同じ既定値（keep）にする（テンプレートに名前だけ書いて読めるように。ADR-0092）。
@@ -307,23 +307,10 @@ export function readStaffRows(ctx: RosterCtx, rows: Row[], match: (r: Row) => Ma
       () => (!cur && r.text(C.active) === '' ? true : r.yes(C.active)),
       cur?.active ?? true,
     );
-    const homeAddress = pick(ctx, r, C.address, () => r.optional(C.address, 200), cur?.home.address ?? '');
     const home = {
-      address: homeAddress,
-      lat: pick(
-        ctx,
-        r,
-        C.lat,
-        () => r.num(C.lat, { min: -90, max: 90 }) ?? null,
-        sameAddressOr(homeAddress, cur?.home, cur?.home.lat ?? null, null),
-      ),
-      lng: pick(
-        ctx,
-        r,
-        C.lng,
-        () => r.num(C.lng, { min: -180, max: 180 }) ?? null,
-        sameAddressOr(homeAddress, cur?.home, cur?.home.lng ?? null, null),
-      ),
+      address: pick(ctx, r, C.address, () => r.optional(C.address, 200), cur?.home.address ?? ''),
+      lat: pick(ctx, r, C.lat, () => r.num(C.lat, { min: -90, max: 90 }) ?? null, cur?.home.lat ?? null),
+      lng: pick(ctx, r, C.lng, () => r.num(C.lng, { min: -180, max: 180 }) ?? null, cur?.home.lng ?? null),
     };
     const lastDay = pick(
       ctx,
@@ -482,7 +469,8 @@ export function readClientRows(ctx: RosterCtx, rows: Row[], match: (r: Row) => M
       id: m.id,
       displayName: m.name,
       kana: text(CLIENT_KANA_COL, 50, cur?.kana),
-      place: withTravel({ ...(cur?.place ?? {}), ...place }, travelMinutes, farTrip),
+      // 以前の取り込みで住所に入った住所2 の位置は外す（withoutPlace2Pin）
+      place: withTravel({ ...(cur?.place ?? {}), ...withoutPlace2Pin(place, place2) }, travelMinutes, farTrip),
       note: text(C.note, 500, cur?.note),
       color,
       ...p,

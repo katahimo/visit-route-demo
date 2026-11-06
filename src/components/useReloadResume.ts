@@ -4,7 +4,7 @@
 import { useEffect, useRef } from 'react';
 import { isStaleBuild } from '../lib/common';
 import { reloadPage } from '../lib/reloadPage';
-import { flushSave, stashReloadFile, takeReloadFile } from '../store';
+import { flushSave, type ReloadFile, stashReloadFile, takeReloadFile } from '../store';
 
 /**
  * e が古い版の部品の失敗で、読み直したあとの続き（resumed）でなければ、file を控えて読み直す。読み直すなら true
@@ -13,11 +13,15 @@ import { flushSave, stashReloadFile, takeReloadFile } from '../store';
 export async function reloadOnStale(
   e: unknown,
   x: { target: string; file: File; option?: string; resumed: boolean },
+  deps: { stash: (f: ReloadFile) => boolean; reload: () => void } = {
+    stash: (f) => stashReloadFile(f),
+    reload: () => reloadPage(flushSave),
+  },
 ): Promise<boolean> {
   if (!isStaleBuild(e) || x.resumed) return false;
   const bytes = new Uint8Array(await x.file.arrayBuffer());
-  const ok = stashReloadFile({ target: x.target, option: x.option ?? '', name: x.file.name, type: x.file.type, bytes });
-  if (ok) reloadPage(flushSave);
+  const ok = deps.stash({ target: x.target, option: x.option ?? '', name: x.file.name, type: x.file.type, bytes });
+  if (ok) deps.reload();
   return ok;
 }
 

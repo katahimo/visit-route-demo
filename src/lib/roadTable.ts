@@ -11,6 +11,8 @@
 
 import type { DemoData } from '../contracts/data';
 import { type LatLng, ROAD_NEAR_K, ROAD_POINTS_MAX, type RoadTable } from '../contracts/documents';
+import { place2Ended } from '../domain/place2';
+import { jstDate } from '../domain/time';
 import { roadPointKey } from '../matching';
 
 const OSRM_TABLE_URL = 'https://router.project-osrm.org/table/v1/driving/';
@@ -53,7 +55,7 @@ export const ROAD_FAIL_TEXT: Record<RoadFail, string> = {
  * 表に入れる地点：位置のある〈スタッフ〉の自宅と、位置があり移動時間を手で決めていない、終了でない〈利用者さん〉の場所（ADR-0096 の手で決めた人は表を使わない）。
  * 位置（小数5桁）が同じものは1つ。並びは自宅 → 〈利用者さん〉の順
  */
-export function roadPointsOf(data: Pick<DemoData, 'staff' | 'clients'>): LatLng[] {
+export function roadPointsOf(data: Pick<DemoData, 'staff' | 'clients'>, today: string = jstDate(Date.now())): LatLng[] {
   const out = new Map<string, LatLng>();
   const add = (lat: number | null, lng: number | null) => {
     if (lat === null || lng === null) return;
@@ -66,8 +68,8 @@ export function roadPointsOf(data: Pick<DemoData, 'staff' | 'clients'>): LatLng[
   for (const c of data.clients) {
     if (c.stage === 'ended') continue;
     if (c.place.travelMinutes === undefined) add(c.place.lat, c.place.lng);
-    // 期間つきの訪問先（住所2。ADR-0105）も回る地点
-    if (c.place2) add(c.place2.lat, c.place2.lng);
+    // 期間つきの訪問先（住所2。ADR-0105）も回る地点（期間が終わったものは除く）
+    if (c.place2 && !place2Ended(c.place2, today)) add(c.place2.lat, c.place2.lng);
   }
   return [...out.values()];
 }

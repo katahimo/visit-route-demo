@@ -1,6 +1,6 @@
 // 名簿の欄（ADR-0068。〈利用者さん〉一覧・〈スタッフ〉一覧）の状態と処理：読み込み方の選び、
 // Excel・CSV への書き出しと、Excel のブックか CSV の読み込み。ExcelJS は重いので、押したときだけ読み込む
-import { useState } from 'react';
+import { type Dispatch, type SetStateAction, useRef, useState } from 'react';
 import type { RosterKind, RosterMode, RosterSource } from '../contracts/data';
 import { jstDate } from '../domain/time';
 import { formError, isStaleBuild } from '../lib/common';
@@ -18,6 +18,12 @@ export function useRosterCard(kind: RosterKind, onPlace?: () => void) {
   const toast = useToast();
   const offboardOn = useFeature('offboard');
   const [error, setError] = useState<string | null>(null);
+  /** 読み直したあとの続きの読み込み中か（名簿の欄は閉じて戻るので、誤りはトーストでも出す） */
+  const resuming = useRef(false);
+  const report: Dispatch<SetStateAction<string | null>> = (v) => {
+    setError(v);
+    if (resuming.current && typeof v === 'string') toast(v);
+  };
   const [busy, setBusy] = useState(false);
   /** 名簿の読み込み方（PRD D104）：追加・更新（既定）か総入れ替え */
   const [rosterMode, setRosterMode] = useState<RosterMode>('merge');
@@ -27,7 +33,7 @@ export function useRosterCard(kind: RosterKind, onPlace?: () => void) {
   // 0人の間は選ばせないので既定に戻す（人が入って選択肢が出たとき、前の総入れ替えが残らないように）
   if (empty && rosterMode !== 'merge') setRosterMode('merge');
   const mode = empty ? 'merge' : rosterMode;
-  const loadRoster = useRosterImport({ rosterMode: mode, offboardOn, setError, onPlace });
+  const loadRoster = useRosterImport({ rosterMode: mode, offboardOn, setError: report, onPlace });
 
   /**
    * 名簿を Excel のブックか CSV（BOM 付きの UTF-8）で書き出す。名簿だけの書き出しは「最後に書き出した日」に数えない。
@@ -57,6 +63,7 @@ export function useRosterCard(kind: RosterKind, onPlace?: () => void) {
   const load = async (file: File, use: RosterMode = mode, resumed = false) => {
     setError(null);
     setBusy(true);
+    resuming.current = resumed;
     try {
       await loadRoster(file, kind, use);
     } catch (e) {
@@ -65,10 +72,11 @@ export function useRosterCard(kind: RosterKind, onPlace?: () => void) {
         toast(EXCEL_RELOADING_TEXT);
         return;
       }
-      setError(
+      report(
         isStaleBuild(e) ? EXCEL_STALE_TEXT : `読み込めませんでした：${formError(e)}（いまのデータはそのままです）`,
       );
     } finally {
+      resuming.current = false;
       setBusy(false);
     }
   };

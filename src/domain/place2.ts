@@ -22,3 +22,6 @@ export function clientOn<C extends Pick<Client, 'place' | 'place2'>>(c: C, date:
   const place = placeOn(c, date);
   return place === c.place ? c : { ...c, place };
 }
+
+/** 住所2 の期間が today（YYYY-MM-DD）より前に終わったか（もう訪ねない。位置を探す・道路の表の対象から外す） */
+export const place2Ended = (p2: Pick<ClientPlace2, 'to'>, today: string): boolean => p2.to !== '' && p2.to < today;

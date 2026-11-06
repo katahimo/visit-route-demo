@@ -74,6 +74,14 @@ describe('住所2（期間つきの訪問先。ADR-0105）', () => {
     ]);
     expect([...noPlaceIds({ clients: [c], staff: [] }, 'client')]).toEqual(['か']);
   });
+  it('期間が今日より前に終わった住所2 は置かない', () => {
+    const c = client('か', 38, 140, { displayName: 'か', place2: { ...p2, from: '', to: '2026-08-30' } });
+    expect(placePeople({ clients: [c], staff: [] }, 'client', '2026-08-31').map((p) => p.id)).toEqual(['か']);
+    expect(placePeople({ clients: [c], staff: [] }, 'client', '2026-08-30').map((p) => p.id)).toEqual([
+      'か',
+      'か#住所2',
+    ]);
+  });
   it('見つけた位置は住所2 に書く（住所・期間はそのまま）', () => {
     const c = client('か', 38, 140, { displayName: 'か', place2: p2 });
     const d = makeData({ clients: [c] });

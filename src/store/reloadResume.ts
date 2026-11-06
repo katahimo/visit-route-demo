@@ -5,6 +5,12 @@
 /** 控えのキー */
 export const RELOAD_FILE_KEY = 'vrdemo:reload:file';
 
+/**
+ * 控えの期限（ミリ秒）。読み直した直後に同じ欄が開かなかったとき（引き出しが閉じた・別の画面へ移った）に、
+ * あとで開いた欄が古いファイルを勝手に読み始めないよう、期限を過ぎた控えは捨てる
+ */
+export const RELOAD_FILE_TTL_MS = 60_000;
+
 /** 控えるファイルの大きさの上限（base64 にすると約 4/3 倍。sessionStorage の 5MB に収める） */
 export const RELOAD_FILE_MAX_BYTES = 2_000_000;
 
@@ -37,13 +43,17 @@ function fromBase64(b64: string): Uint8Array<ArrayBuffer> {
 }
 
 /** ファイルを控える。大きすぎる・書けなければ false（控えは残さない） */
-export function stashReloadFile(f: ReloadFile, getStorage: () => FileStore | null = sessionStore): boolean {
+export function stashReloadFile(
+  f: ReloadFile,
+  getStorage: () => FileStore | null = sessionStore,
+  now: number = Date.now(),
+): boolean {
   if (f.bytes.length > RELOAD_FILE_MAX_BYTES) return false;
   try {
     const store = getStorage();
     if (!store) return false;
     const { bytes, ...rest } = f;
-    store.setItem(RELOAD_FILE_KEY, JSON.stringify({ ...rest, b64: toBase64(bytes) }));
+    store.setItem(RELOAD_FILE_KEY, JSON.stringify({ ...rest, at: now, b64: toBase64(bytes) }));
     return true;
   } catch {
     try {
@@ -55,16 +65,31 @@ export function stashReloadFile(f: ReloadFile, getStorage: () => FileStore | nul
   }
 }
 
-/** target の欄の控えを取り出して消す（無い・ほかの欄の控え・壊れていれば null。ほかの欄の控えは残す） */
+/**
+ * target の欄の控えを取り出して消す（無い・ほかの欄の控え・期限切れ・壊れていれば null）。
+ * ほかの欄の控えは期限内なら残し、期限切れ・壊れた控えは消す
+ */
 export function takeReloadFile(
   target: string,
   getStorage: () => FileStore | null = sessionStore,
+  now: number = Date.now(),
 ): Omit<ReloadFile, 'target'> | null {
   try {
     const store = getStorage();
     const raw = store?.getItem(RELOAD_FILE_KEY);
     if (!store || !raw) return null;
-    const v = JSON.parse(raw) as Partial<Record<'target' | 'option' | 'name' | 'type' | 'b64', unknown>>;
+    let v: Partial<Record<'target' | 'option' | 'name' | 'type' | 'b64' | 'at', unknown>>;
+    try {
+      v = JSON.parse(raw);
+    } catch {
+      store.removeItem(RELOAD_FILE_KEY);
+      return null;
+    }
+    const fresh = typeof v.at === 'number' && now - v.at >= 0 && now - v.at <= RELOAD_FILE_TTL_MS;
+    if (!fresh) {
+      store.removeItem(RELOAD_FILE_KEY);
+      return null;
+    }
     if (v.target !== target) return null;
     store.removeItem(RELOAD_FILE_KEY);
     if (typeof v.name !== 'string' || typeof v.b64 !== 'string') return null;

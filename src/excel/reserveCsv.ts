@@ -195,16 +195,21 @@ const termDate = (text: string): string | null => (text === '' ? '' : parseDateT
 
 /**
  * 住所2 の列（名簿の CLIENT_PLACE2_COLS の並び）。住所2 が空なら全部空（名簿の読み込みで住所2 なし）。
- * 緯度・経度の列は、住所2 があれば住所2 の位置（無ければ住所の位置）。読めない期間の日付は空にして bad に数える
+ * 緯度・経度の列は、住所2 があれば住所2 の位置。期間の日付が読めない・終了日が開始日より前なら、
+ * 期間を空にすると毎日が住所2 になってしまうので住所2 を入れず（全部空）、bad に数える
  */
 function place2Row(v: (h: string) => string, bad: { n: number }): string[] {
+  const none = ['', '', '', '', '', ''];
   const second = v(CLIENT.address2);
-  if (second === '') return ['', '', '', '', '', ''];
+  if (second === '') return none;
+  const [from, to] = [termDate(v(CLIENT.address2From)), termDate(v(CLIENT.address2To))];
+  if (from === null || to === null || (from !== '' && to !== '' && to < from)) {
+    bad.n++;
+    return none;
+  }
   const { postal, address } = splitPostal(second);
   const { lat, lng } = splitLatLng(v(CLIENT.latLng));
-  const [from, to] = [termDate(v(CLIENT.address2From)), termDate(v(CLIENT.address2To))];
-  if (from === null || to === null) bad.n++;
-  return [clip(address, MAX.address), postal, lat, lng, from ?? '', to ?? ''];
+  return [clip(address, MAX.address), postal, lat, lng, from, to];
 }
 
 /**
@@ -213,7 +218,7 @@ function place2Row(v: (h: string) => string, bad: { n: number }): string[] {
  * - よみ：姓（カナ）＋名（カナ）をひらがなにし、空白を詰める（normalizeKana）
  * - 住所：契約者の住所（いつもの訪問先）。先頭の郵便番号（〒 付きも）は郵便番号の列へ分ける
  * - 住所2・適用開始日・適用終了日：期間つきの訪問先（ADR-0105）。期間内の訪問は住所2 へ行く（domain/place2）。
- *   住所2 の列がある CSV では、住所2 が空の人は住所2 なしにする（正本は予約システム）。読めない期間の日付は空にし、skipped に件数
+ *   住所2 の列がある CSV では、住所2 が空の人は住所2 なしにする（正本は予約システム）。期間の日付が読めない・逆なら住所2 を入れず、skipped に件数
  * - 緯度・経度：「緯度, 経度」を2つの列に分ける。住所2 があればその位置（無ければ住所の位置）
  * - 駐車場：駐車場＋詳細を決まりごとの「駐車場」へ
  * - 電話：メモの先頭に1行（顧客メモを続ける）
@@ -255,8 +260,8 @@ export function reserveClientToRoster(table: readonly (readonly string[])[]): Ro
     }
     const v = cellOf(at, r);
     const { postal, address } = splitPostal(v(CLIENT.address));
+    // 緯度・経度は住所2 があれば住所2 の位置なので、住所の位置には使わない（住所2 を入れなかった行も）
     const second = withPlace2 && v(CLIENT.address2) !== '';
-    // 緯度・経度は住所2 があれば住所2 の位置なので、住所の位置には使わない
     const { lat, lng } = second ? { lat: '', lng: '' } : splitLatLng(v(CLIENT.latLng));
     const parking = [v(CLIENT.parking), v(CLIENT.parkingDetail)].filter((x) => x !== '').join('　');
     const note = [phoneLine(v(CLIENT.phone), ''), v(CLIENT.memo)].filter((x) => x !== '').join('\n');
@@ -274,6 +279,6 @@ export function reserveClientToRoster(table: readonly (readonly string[])[]): Ro
     ]);
   });
   const skipped = skippedColumns(header, body, Object.values(CLIENT));
-  if (badTerms.n > 0) skipped.push(`住所2の適用期間（読めない日付 ${badTerms.n}件）`);
+  if (badTerms.n > 0) skipped.push(`住所2（適用期間の日付が読めない・逆のため入れなかった ${badTerms.n}件）`);
   return { rows: out, skipped };
 }

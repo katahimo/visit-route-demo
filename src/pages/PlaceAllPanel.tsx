@@ -8,6 +8,7 @@ import { EXTERNAL_NOTICE, lookupMessage } from '../lib/geocode';
 import {
   hasAddressNotFound,
   NO_PLACE_NOTE,
+  ownerId,
   type PlaceAllResult,
   type PlaceAllTexts,
   type PlacePerson,
@@ -188,7 +189,7 @@ function FailList({
               )}
               {lookupMessage(f.reason, f.step)}{' '}
               {p && (
-                <button type="button" className="btn btn-small" onClick={() => onEdit(p.id)}>
+                <button type="button" className="btn btn-small" onClick={() => onEdit(ownerId(p.id))}>
                   <WithIcon icon={Pencil} size={13}>
                     編集
                   </WithIcon>
@@ -217,7 +218,7 @@ function SkippedList({
       <span className="sub">{t.skipped}（編集の欄で入れてください）</span>
       <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
         {skipped.map((p) => (
-          <button key={p.id} type="button" className="btn btn-small" onClick={() => onEdit(p.id)}>
+          <button key={p.id} type="button" className="btn btn-small" onClick={() => onEdit(ownerId(p.id))}>
             <WithIcon icon={Pencil} size={13}>
               {p.name}
             </WithIcon>

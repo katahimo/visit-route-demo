@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useDayModel } from '../components/useDayModel';
 import type { Visit } from '../contracts/documents';
+import { byDisplayName } from '../lib/common';
 import { staffLabels } from '../lib/monthPrint';
 import { type Band, qualificationBadges, qualificationItem, staffWeekTable, type WeekDay, weekDay } from '../lib/week';
 import { staffCellBands } from '../lib/weekScreen';
@@ -12,8 +13,12 @@ import type { WeekTab } from './useWeekNav';
  * マスの訪問・資格の札・担当と〈利用者さん〉の呼び方
  */
 export function useWeekModel(date: string, dates: readonly string[], tab: WeekTab) {
-  const model = useDayModel(date);
-  const { data, compileInput, staff, staffById, clientById } = model;
+  const dayModel = useDayModel(date);
+  // 週は日をまたぐので、〈利用者さん〉の場所はその日の訪問先（住所2。ADR-0105）に置き換えず住所のまま（絞り込みの地区など）
+  const clients = useMemo(() => [...dayModel.data.clients].sort(byDisplayName), [dayModel.data.clients]);
+  const clientById = useMemo(() => new Map(clients.map((c) => [c.id, c])), [clients]);
+  const model = { ...dayModel, clients, clientById };
+  const { data, compileInput, staff, staffById } = model;
   const activeStaff = useMemo(() => staff.filter((s) => s.active), [staff]);
   const days: WeekDay[] = useMemo(() => dates.map((d) => weekDay(compileInput, d)), [compileInput, dates]);
   const dayOf = useMemo(() => new Map(days.map((d) => [d.date, d])), [days]);

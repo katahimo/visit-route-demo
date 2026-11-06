@@ -53,4 +53,12 @@ describe('prevStopOf（道順の起点）', () => {
     expect(prevStopOf(d, 'v2')).toBeNull();
     expect(prevStopOf(d, 'nope')).toBeNull();
   });
+
+  it('前の訪問先は、その日が住所2 の期間内なら住所2（ADR-0105）', () => {
+    const p2 = { address: '住所2', postalCode: '', lat: 36, lng: 140, from: DATE, to: DATE };
+    const d = data({
+      clients: [client('c1', 35.1, 139), client('c2', 35.2, 139, { place2: p2 }), client('c3', 35.3, 139)],
+    });
+    expect(prevStopOf(d, 'v3')?.from).toEqual({ address: '住所2', postalCode: '', lat: 36, lng: 140 });
+  });
 });
