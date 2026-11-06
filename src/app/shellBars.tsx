@@ -6,6 +6,7 @@ import { BatchBand } from '../components/batchBand';
 import { IS_MAC } from '../components/CommandPalette';
 import { useDay } from '../components/day';
 import { FullscreenButton } from '../components/FullscreenButton';
+import { HistoryNav } from '../components/HistoryNav';
 import type { Features } from '../contracts/features';
 import { dateText } from '../lib/dateText';
 import {
@@ -20,7 +21,7 @@ import {
 } from '../lib/nav';
 import { NAV_ICONS } from './shellNav';
 
-/** 上の帯（範囲の AI で組む（担当を組む）の進み具合・スマホの今の画面の名前・探す・日付の切り替え・全画面） */
+/** 上の帯（戻る・進む・範囲の AI で組む（担当を組む）の進み具合・スマホの今の画面の名前・探す・日付の切り替え・全画面） */
 export function AppHeader({
   headerRef,
   screenName,
@@ -39,6 +40,8 @@ export function AppHeader({
 }) {
   return (
     <header ref={headerRef} className="app-header">
+      {/* 左端：前の画面に戻る・次の画面に進む（Alt＋←→ を知らなくても、リンクで移った先から戻れる） */}
+      <HistoryNav />
       {/* 範囲の AI で組む（担当を組む）の進み具合と［止める］（PRD D256。ほかの画面へ移っても続く。月の予定では画面の中に出す） */}
       <BatchBand />
       {/* 欄の保存・要対応の帯の［要対応を組む］の自動の組みの進み具合（長引いたときだけ。ADR-0072） */}

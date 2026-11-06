@@ -81,6 +81,8 @@ jobs:
           node -e "(async()=>{for(let i=0;i<60;i++){try{if((await fetch(process.env.BASE)).ok)process.exit(0)}catch{}await new Promise(r=>setTimeout(r,1000))}process.exit(1)})()" || { cat preview.log; exit 1; }
       - run: npx playwright test --project=e2e --shard=${{ matrix.shard }}/4
       - uses: actions/upload-artifact@v4
+        # 保存の容量の上限などで残せなくても、テストの結果（前の段）でジョブの成否を決める
+        continue-on-error: true
         if: ${{ !cancelled() }}
         with:
           name: playwright-report-e2e-${{ strategy.job-index }}
@@ -88,6 +90,8 @@ jobs:
           retention-days: 14
       # test-results（落ちた test の trace.zip・動画・スクリーンショット・記録）は失敗のときに残す（ADR-0041）
       - uses: actions/upload-artifact@v4
+        # 保存の容量の上限などで残せなくても、テストの結果（前の段）でジョブの成否を決める
+        continue-on-error: true
         if: ${{ failure() }}
         with:
           name: test-results-e2e-${{ strategy.job-index }}
@@ -128,12 +132,16 @@ jobs:
           node -e "(async()=>{for(let i=0;i<60;i++){try{if((await fetch(process.env.BASE)).ok)process.exit(0)}catch{}await new Promise(r=>setTimeout(r,1000))}process.exit(1)})()" || { cat preview.log; exit 1; }
       - run: npm run e2e:perf
       - uses: actions/upload-artifact@v4
+        # 保存の容量の上限などで残せなくても、テストの結果（前の段）でジョブの成否を決める
+        continue-on-error: true
         if: ${{ !cancelled() }}
         with:
           name: playwright-report-perf-${{ strategy.job-index }}
           path: playwright-report/
           retention-days: 14
       - uses: actions/upload-artifact@v4
+        # 保存の容量の上限などで残せなくても、テストの結果（前の段）でジョブの成否を決める
+        continue-on-error: true
         if: ${{ failure() }}
         with:
           name: test-results-perf-${{ strategy.job-index }}

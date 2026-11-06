@@ -30,7 +30,7 @@
 // 6c 入の人の一覧（PRD D394）：〈スタッフ〉・〈利用者さん〉の一覧は見出しがメニューの名前で、切と同じ人のタブ（一覧・勤務・相性／一覧・予定と相性・相性）と3列で始まり、
 //    表の上の「くわしい列」を入れると専門の列が足され、一覧ごとに端末に覚えて読み直しても同じ（外すと3列に戻る。切は切り替えが無い）。休止中は状態の列に重ねない。
 //    相性は来た側のタブ・メニューの印。1366px・390px（入のメニューの子は e2e-nav）。
-// スクリーンショット：simple-band-go-day-1366（3）、simple-next-month-plan-1366・simple-next-month-390（3c）、simple-add-*（5f）・simple-clients-1366・simple-staff-1366・simple-plan-map-closed-1366 ほか（5e は simple-people-*・simple-plan-map-*）、simple-month-1366・simple-band-plan-1366・simple-menu-more-1366・simple-week-390・simple-tabs-390・simple-drawer-390
+// スクリーンショット：simple-band-go-day-1366（3）、simple-next-month-plan-1366・simple-next-month-390（3c）、simple-add-*（5f）・simple-clients-1366・simple-staff-1366・simple-plan-map-1366 ほか（5e は simple-people-*・simple-plan-map-*）、simple-month-1366・simple-band-plan-1366・simple-menu-more-1366・simple-week-390・simple-tabs-390・simple-drawer-390
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-simple-menu.cjs
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）
@@ -1254,47 +1254,15 @@ async function people(page) {
   await monthTip(page);
 }
 
-/** 日の予定の地図：ふだん閉じ、「地図」のボタンで開く（PC もスマホと同じ形） */
+/** 日の予定の地図：切でも入と同じ全幅のカードを置く（ADR-0103） */
 async function planMap(page, w) {
   await open1(page, '/plan');
-  // 目印は地図のボタン（デモは組み終えて始め、要対応を組むで間に合わない・重なりも組み直すので、帯が出ないこともある。PRD D322・ADR-0089）
-  const fab = page.locator('.map-dock-fab');
-  await fab.waitFor({ timeout: 60000 });
-  check((await page.getByTestId('plan-map').count()) === 0, `日の予定（${w}）：地図は閉じている（ページに置かない）`);
-  check(/地図/.test(await fab.innerText()), `日の予定（${w}）：「地図」のボタンがある`);
-  check((await page.locator('section.map-dock').count()) === 0, `日の予定（${w}）：ボタンを押すまで地図は出ない`);
-  await shot(page, `simple-plan-map-closed-${page.viewportSize().width}`);
-  await fab.click();
-  const dock = page.locator('section.map-dock');
-  await dock.waitFor({ timeout: 10000 });
+  const card = page.getByTestId('plan-map');
+  await card.waitFor({ timeout: 60000 });
+  check(await card.isVisible(), `日の予定（${w}）：地図のカードがある`);
+  await card.scrollIntoViewIfNeeded();
   await settle(page, 1200);
-  check(await dock.isVisible(), `日の予定（${w}）：「地図」を押すと地図が開く`);
-  const focused = (name) => page.evaluate((n) => document.activeElement?.getAttribute('aria-label') === n, name);
-  check(await focused('地図を閉じる'), `日の予定（${w}）：開いたら閉じるボタンへフォーカス`);
-  check(
-    (await dock.getByLabel('地図を閉じる').getAttribute('aria-expanded')) === 'true',
-    `日の予定（${w}）：閉じるボタンに aria-expanded=true`,
-  );
-  check((await dock.getByLabel('ページの地図へ移る').count()) === 0, `日の予定（${w}）：ページの地図へ移る矢印は無い`);
-  await shot(page, `simple-plan-map-open-${page.viewportSize().width}`);
-  // 訪問の帯を選ぶと担当に絞られる：地図の見出しの「全員のルートを見る」で解ける（ページに地図が無いのでここに出す）
-  await dock.getByLabel('地図を閉じる').click();
-  await fab.waitFor({ timeout: 10000 });
-  check(await focused('地図を開く'), `日の予定（${w}）：閉じたら「地図」のボタンへフォーカス`);
-  check(
-    (await fab.getAttribute('aria-expanded')) === 'false',
-    `日の予定（${w}）：「地図」のボタンに aria-expanded=false`,
-  );
-  const band = page.locator('.tl-band-btn');
-  if ((await band.count()) === 0) return;
-  await band.first().click();
-  await settle(page, 600);
-  const clear = page.getByTestId('dock-clear-focus');
-  if (await clear.count()) {
-    await clear.click();
-    await settle(page, 300);
-    check((await clear.count()) === 0, `日の予定（${w}）：「全員のルートを見る」で絞りが解ける`);
-  } else check(true, `日の予定（${w}）：訪問の選びでは担当に絞らない（全員のルートのまま）`);
+  await shot(page, `simple-plan-map-${page.viewportSize().width}`);
 }
 
 /** 月のマスの読み方（PRD D433）：入と同じく、マスに吹き出しを出す（見出しの ⓘ は無い） */

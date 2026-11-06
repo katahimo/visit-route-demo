@@ -1049,6 +1049,32 @@ async function fullscreen(page) {
   });
 }
 
+/** 上の帯の「戻る」「進む」（PRD D438。ADR-0103）：開いた直後は押せない・移ると戻れる・戻ると進める・読み直しても進める・新しく移ると進めない */
+async function historyButtons(page) {
+  await open(page, '/clients');
+  const back = page.getByTestId('history-back');
+  const fwd = page.getByTestId('history-forward');
+  check((await back.isDisabled()) && (await fwd.isDisabled()), '開いた直後は「戻る」「進む」とも押せない');
+  await page.locator('.side-nav [data-testid="nav-link"][data-key="staff"]').first().click();
+  await page.waitForFunction(() => location.hash.startsWith('#/staff'), null, { timeout: 10000 });
+  check(!(await back.isDisabled()) && (await fwd.isDisabled()), 'メニューで移ると「戻る」が押せ、「進む」は押せない');
+  await back.click();
+  await page.waitForFunction(() => location.hash.startsWith('#/clients'), null, { timeout: 10000 });
+  check(await back.isDisabled(), '「戻る」で前の画面へ。最初の画面では「戻る」が押せない');
+  check(!(await fwd.isDisabled()), '戻ると「進む」が押せる');
+  await page.reload();
+  await page.locator('h1').first().waitFor({ timeout: 30000 });
+  check(!(await fwd.isDisabled()), '読み直しても「進む」が押せる');
+  await fwd.click();
+  await page.waitForFunction(() => location.hash.startsWith('#/staff'), null, { timeout: 10000 });
+  check(await fwd.isDisabled(), '「進む」で次の画面へ。先が無ければ押せない');
+  await back.click();
+  await page.waitForFunction(() => location.hash.startsWith('#/clients'), null, { timeout: 10000 });
+  await page.locator('.side-nav [data-testid="nav-link"][data-key="settings"]').first().click();
+  await page.waitForFunction(() => !location.hash.startsWith('#/clients'), null, { timeout: 10000 });
+  check(await fwd.isDisabled(), '戻ってから新しく移ると「進む」は押せない');
+}
+
 const steps = sharedPage({
   open: async () => {
     const s = await openPage();
@@ -1065,6 +1091,7 @@ const steps = sharedPage({
     ['print', print],
     ['screen-1366', screen1366],
     ['fullscreen', fullscreen],
+    ['history', historyButtons],
     // 速さは時計を止めない別の文脈で測る（scripts/lib/env.cjs の withRealClock）
     ['perf', (_page, s) => withRealClock(s.b, pageErrors, perf)],
   ],

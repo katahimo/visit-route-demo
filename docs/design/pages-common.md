@@ -70,7 +70,7 @@
 
 ### 浮いている部品とトースト
 
-- 地図の浮かせた表示：`components/MapDock.tsx`（画面の外の地図を右下に浮かせる。`target` が null なら、ページに地図を置かない画面（切の日の予定）で、いつも「地図」のボタンを出し押すと開く）。位置は `--map-dock-left`・`--map-dock-top`
+- 地図の浮かせた表示：`components/MapDock.tsx`（画面の外の地図を右下に浮かせる。ページの地図のカード `target` が見えていないときだけ出す）。位置は `--map-dock-left`・`--map-dock-top`
 - `components/floating.ts`（`FLOATING_EVENT`・`useFloatingEdge(name)`）：知らせ（トースト）は欠勤の振り直しの帯・地図より上に出す（`--reassign-dock-top`・`--map-dock-top`）
 - `components/Toast.tsx`：z-index 1200。body の直下の `div.toast-layer[data-inert-keep]` に出す（右の欄の inert に巻き込まれず、欄が開いていても読み上げ・「元に戻す」を押せる。確認ダイアログ・パレットの間は inert）。`toast(msg)` は文だけ（`output.toast`・2.5秒・押しても下へ抜ける）。`toast(msg, { action })` はボタン1つ付き（`.toast.has-action`。文は中の `output`・ボタンだけ押せる・`toastMs`＝6秒から文の長さ（1字 120ms）で延ばし10秒まで・フォーカスがある間・マウスを重ねている間は消さず、両方が外れたら2.5秒で消す。ボタン付きの箱（文の幅だけ）はマウスを受ける（`pointer-events: auto`））。`toast(msg, { action, more, long })`：`more` は action の前に置くもう1つのボタン、`long` は10秒（自動の組みの［理由を見る］。PRD D430）。使う所は全体の「元に戻す」（`components/undo` の `useUndoAction`。data-testid `toast-undo`。戻したあとは「やり直す」 `toast-redo`）と、範囲の AI で組むの終わりの［月の予定を見る］／［週の予定を見る］（`components/batchBand` の `MonthBatchHost`。提案を出したときに日・週・月の予定か（空き状況から始めたなら）空き状況にいれば、提案の帯が見えるのでボタンを付けない。提案が無いときは、担当を組むの画面にいれば付けない）
 
