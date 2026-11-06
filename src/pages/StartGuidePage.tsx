@@ -1,6 +1,7 @@
 import { ListChecks, Undo2 } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { CAL_OFF_ICON, CAL_OFF_LABEL, CalendarOffPanel } from '../components/CalendarOffPanel';
 import { RoadTravelChoice } from '../components/RoadTravelChoice';
 import { RosterCard } from '../components/RosterCard';
 import { PageHeader, WithIcon } from '../components/ui';
@@ -140,7 +141,38 @@ function RosterStep({
         いま登録されているのは {registered}人です
       </p>
       <PlaceAllPanel model={run} geocodeOn={geocodeOn} ref={autoPlace.panelRef} onEdit={openPlace} />
+      {step.person === 'staff' && <CalendarOffStep registered={registered} />}
     </>
+  );
+}
+
+/**
+ * ②の下：休みのカレンダー（Google カレンダーの書き出しの zip）を取り込む（PRD D440。ADR-0107）。〈スタッフ〉を読み込んだあとに押せる。
+ * 欠勤・キャンセルの機能が切なら出さない。ふだんは予定の画面の「休みを取り込む」から
+ */
+function CalendarOffStep({ registered }: { registered: number }) {
+  const suddenOn = useFeature('sudden');
+  const [open, setOpen] = useState(false);
+  if (!suddenOn) return null;
+  return (
+    <div className="stack" data-testid="start-guide-cal-off">
+      <p className="sub">
+        休みを Google カレンダーに入れているなら、書き出した zip
+        をそのまま取り込めます。ふだんは予定の画面の「休みを取り込む」から取り込み直せます。
+      </p>
+      <button
+        type="button"
+        className="btn"
+        style={{ alignSelf: 'flex-start' }}
+        onClick={() => registered > 0 && setOpen(true)}
+        aria-disabled={registered === 0 || undefined}
+        title={registered === 0 ? '名簿を読み込んでから押せます' : undefined}
+        data-testid="start-guide-cal-off-open"
+      >
+        <WithIcon icon={CAL_OFF_ICON}>{CAL_OFF_LABEL}</WithIcon>
+      </button>
+      {open && <CalendarOffPanel onClose={() => setOpen(false)} />}
+    </div>
   );
 }
 

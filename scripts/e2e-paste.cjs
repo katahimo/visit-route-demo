@@ -13,6 +13,10 @@
 const { STORAGE_KEY, TODAY, check, settle, stored, waitStored, runSteps } = require('./lib/env.cjs');
 const { openPage, sharedPage } = require('./lib/steps.cjs');
 const { goTo, pressTool, toolCount, undoState } = require('./lib/ui.cjs');
+const { waitStartArranged } = require('./lib/firstRun.cjs');
+
+/** 貼り付けたあとの自動の組みの知らせ（組まなければ空） */
+let arrangedText = '';
 
 /** 日付の足し算（YYYY-MM-DD） */
 const addDays = (date, n) => new Date(Date.parse(`${date}T00:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
@@ -172,12 +176,12 @@ const steps = sharedPage({
       },
     ],
     [
-      '入れる：1回で書き、知らせ・振り直さない',
+      '入れる：1回で書き、知らせ。そのあと要対応を自動で組む（PRD D442）',
       async (page) => {
         const before = await stored(page);
         await page.getByTestId('paste-apply').click();
         await panel(page).waitFor({ state: 'detached', timeout: 10000 });
-        const toast = page.locator('.toast .toast-text');
+        const toast = page.locator('.toast .toast-text').filter({ hasText: '件を入れました' });
         await toast.waitFor({ timeout: 5000 });
         const msg = await toast.textContent();
         check(/^3件を入れました。要対応 \d+件$/.test(msg ?? ''), '知らせ「3件を入れました。要対応 M件」', msg);
@@ -195,12 +199,9 @@ const steps = sharedPage({
         check(l?.from === DAY && l?.to === LEAVE_TO && l?.note === '入院', '休みの期間とメモ', JSON.stringify(l));
         const v = d.visits.find((x) => x.clientId === names.cancel.id && x.date === DAY);
         check(v?.cancelled === true && v?.pattern?.edited === true, '訪問はこの回だけ取り消し', JSON.stringify(v));
-        // 振り直さない：担当（staffId）の変わった保存した訪問が無い
-        const moved = before.visits.filter((x) => {
-          const y = d.visits.find((z) => z.id === x.id);
-          return y && y.staffId !== x.staffId;
-        });
-        check(moved.length === 0, '担当は振り直さない', JSON.stringify(moved.map((x) => x.id)));
+        // 入れたあと、要対応の帯の［要対応を組む］と同じ組みが自動で1回走る（組むものが無ければ走らない）
+        arrangedText = await waitStartArranged(page, 60000);
+        check(true, `自動の組み：${arrangedText || '組むものなし'}`);
       },
     ],
     [
@@ -223,6 +224,16 @@ const steps = sharedPage({
     [
       '元に戻す：1回で3件とも戻る',
       async (page) => {
+        // 自動の組みが書いていれば、先にその1手を戻す
+        if (/件の担当を組みました/.test(arrangedText)) {
+          check(
+            (await undoState(page)).title.includes('自動で組む'),
+            '先に戻すのは自動の組み',
+            (await undoState(page)).title,
+          );
+          await pressTool(page, '元に戻す');
+          await settle(page, 300);
+        }
         const undoTitle = (await undoState(page)).title;
         check(undoTitle.includes('連絡を貼り付けて入れる'), '戻す手の名前', undoTitle);
         await pressTool(page, '元に戻す');

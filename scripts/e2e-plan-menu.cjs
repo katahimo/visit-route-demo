@@ -317,7 +317,8 @@ async function moreMenus(page) {
   // 日の予定：操作の行に見せるのは「訪問を1件追加」と「確定（伝えた）」の2つと「その他 ▾」だけ（PRD D402。AI で組む ▾ は無い。ADR-0063）
   const shown = await page
     .getByTestId('schedule-toolbar')
-    .locator('button.btn:visible')
+    // 「休みを取り込む」（cal-off-open。毎日使うので行に置く例外。PRD D440。ADR-0107）は除く
+    .locator('button.btn:visible:not([data-testid="cal-off-open"])')
     .evaluateAll((els) => els.map((el) => el.textContent.trim()));
   check(
     JSON.stringify(shown) === JSON.stringify(['訪問を1件追加', '確定（伝えた）', 'その他']),

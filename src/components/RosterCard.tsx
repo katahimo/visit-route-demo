@@ -131,7 +131,7 @@ export function RosterCard(props: { kind: RosterKind; id: string; onPlace?: () =
   );
 }
 
-/** 名簿の読み込み方（PRD D104）：追加・更新（既定）か総入れ替え */
+/** 名簿の読み込み方（PRD D104・D441）：総入れ替え（既定。予約システムなどの名簿を写す）か追加・更新 */
 function RosterModeFields({ roster }: { roster: RosterCardModel }) {
   const name = useId();
   return (
@@ -141,21 +141,23 @@ function RosterModeFields({ roster }: { roster: RosterCardModel }) {
         <input
           type="radio"
           name={name}
-          checked={roster.rosterMode === 'merge'}
-          onChange={() => roster.setRosterMode('merge')}
+          checked={roster.rosterMode === 'replace'}
+          onChange={() => roster.setRosterMode('replace')}
           style={{ width: 'auto' }}
+          data-testid="roster-mode-replace"
         />
-        追加・更新（ファイルに無い人はそのまま）
+        総入れ替え（ファイルに無い人を{roster.kind === 'staff' ? '休止' : '段階「終了」'}にします。消しはしません）
       </label>
       <label className="check">
         <input
           type="radio"
           name={name}
-          checked={roster.rosterMode === 'replace'}
-          onChange={() => roster.setRosterMode('replace')}
+          checked={roster.rosterMode === 'merge'}
+          onChange={() => roster.setRosterMode('merge')}
           style={{ width: 'auto' }}
+          data-testid="roster-mode-merge"
         />
-        総入れ替え（ファイルに無い人を{roster.kind === 'staff' ? '休止' : '段階「終了」'}にします。消しはしません）
+        追加・更新（ファイルに無い人はそのまま）
       </label>
     </fieldset>
   );

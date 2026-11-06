@@ -5,3 +5,7 @@ __pycache__/
 .claude/worktrees/
 test-results/
 playwright-report/
+# 実在の人の名前が入るカレンダーの書き出し（休みの取り込みで使う。公開リポジトリに置かない。ADR-0107）
+*.ics
+*.ical.zip
+*.ics.zip

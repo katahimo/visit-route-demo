@@ -171,6 +171,61 @@ describe('予約を訪問として読み込む', () => {
     });
   });
 
+  it('総入れ替え：ファイルの日の範囲で、ファイルに無い単発の訪問と取り消しの予約の訪問を消す（範囲の外・繰り返しは残す）', () => {
+    const first = ok(importBookings(buf(table), withClients())).data;
+    const r1 = bookingVisitId({ id: 'reserve' }, 'R1');
+    const oneOff = (id: string, date: string) => ({ ...first.visits.find((v) => v.id === r1)!, id, date });
+    const withMore: DemoData = {
+      ...first,
+      visits: [
+        ...first.visits,
+        oneOff('hand-in', '2026-11-04'), // 範囲の中・ファイルに無い → 消す
+        oneOff('hand-out', '2026-11-20'), // 範囲の外 → 残す
+      ],
+    };
+    const file = [
+      HEAD,
+      row({ 予約番号: 'R1', 予約日: '2026/11/03', 予約時: '13:00～15:00', 状況: 'キャンセル', 氏名: '架空花子' }),
+      row({ 予約番号: 'R4', 予約日: '2026/11/05', 予約時: '10:00～11:00', 氏名: '架空 次郎' }),
+    ];
+    const r = ok(importBookings(buf(file), withMore));
+    expect(r).toMatchObject({ added: 1, updated: 0, removed: 2, keptMissing: false });
+    const ids = r.data.visits.map((v) => v.id);
+    expect(ids).not.toContain(r1);
+    expect(ids).not.toContain('hand-in');
+    expect(ids).toContain('hand-out');
+    // 繰り返しの回は消さない
+    const patterned = (d: DemoData) => d.visits.filter((v) => v.pattern !== null).length;
+    expect(patterned(r.data)).toBe(patterned(withMore));
+  });
+
+  it('総入れ替え：読めない行・名前が当たらない行があれば、ファイルに無い訪問は消さない（取り消しの予約の訪問は消す）', () => {
+    const first = ok(importBookings(buf(table), withClients())).data;
+    const r1 = bookingVisitId({ id: 'reserve' }, 'R1');
+    const withHand: DemoData = {
+      ...first,
+      visits: [...first.visits, { ...first.visits.find((v) => v.id === r1)!, id: 'hand-in', date: '2026-11-04' }],
+    };
+    const unmatched = [
+      HEAD,
+      row({ 予約番号: 'R1', 予約日: '2026/11/03', 予約時: '13:00～15:00', 状況: 'キャンセル', 氏名: '架空花子' }),
+      row({ 予約番号: 'R3', 予約日: '2026/11/05', 予約時: '10:00～11:00', 氏名: 'いない 人' }),
+    ];
+    const r = ok(importBookings(buf(unmatched), withHand));
+    expect(r).toMatchObject({ removed: 1, keptMissing: true });
+    expect(r.data.visits.map((v) => v.id)).toContain('hand-in');
+    // 読めない行（日をまたぐ予約）でも同じ
+    const bad = [
+      HEAD,
+      row({ 予約番号: 'R5', 予約日: '2026/11/03', 予約時: '23:00～23:30', '所要時間(分)': '120', 氏名: '架空花子' }),
+      row({ 予約番号: 'R6', 予約日: '2026/11/05', 予約時: '10:00～11:00', 氏名: '架空 次郎' }),
+    ];
+    const r2 = ok(importBookings(buf(bad), withHand));
+    expect(r2.badRows.length).toBeGreaterThan(0);
+    expect(r2).toMatchObject({ removed: 0, keptMissing: true });
+    expect(r2.data.visits.map((v) => v.id)).toEqual(expect.arrayContaining([r1, 'hand-in']));
+  });
+
   it('名簿で「名前（顧客ID）」に分けた同じ名前の人がいれば入れない（どの人か分からない）', () => {
     const d = withClients();
     const split: DemoData = {
@@ -190,7 +245,7 @@ describe('予約を訪問として読み込む', () => {
     expect(ok(importBookings(buf(table.slice(0, 2)), one)).added).toBe(1);
   });
 
-  it('まだ入れていない取り消し済みの予約は足さず、アプリで取り消した訪問は読み直しても取り消しのまま', () => {
+  it('まだ入れていない取り消し済みの予約は足さず、アプリで取り消した訪問もファイルで有効なら有効に戻す（ファイルが元）', () => {
     const cancelled = [
       HEAD,
       row({ 予約番号: 'R9', 予約日: '2026/11/03', 予約時: '13:00～15:00', 状況: 'キャンセル', 氏名: '架空 花子' }),
@@ -204,8 +259,8 @@ describe('予約を訪問として読み込む', () => {
       visits: first.visits.map((v) => (v.id === id ? { ...v, cancelled: true, cancelKind: 'sameDay' as const } : v)),
     };
     const again = ok(importBookings(buf(table), sameDay));
-    expect(again.unchanged).toBe(1);
-    expect(again.data.visits.find((v) => v.id === id)).toMatchObject({ cancelled: true, cancelKind: 'sameDay' });
+    expect(again.updated).toBe(1);
+    expect(again.data.visits.find((v) => v.id === id)).toMatchObject({ cancelled: false, cancelKind: null });
   });
 
   it('同じ名前の〈利用者さん〉が2人なら入れない', () => {

@@ -2,6 +2,7 @@
 // トーストに添える「元に戻す」。履歴は lib/history の appHistory（store が積む）
 import { Redo2, Undo2 } from 'lucide-react';
 import { type ReactNode, useEffect, useMemo } from 'react';
+import { AUTO_ARRANGE_LABEL } from '../lib/autoArrangeBatch';
 import { hashPathname, isMacPlatform } from '../lib/commandPalette';
 import { appHistory, historyKey, historyKeysOn, isTextTarget } from '../lib/history';
 import { useDemoData } from '../store';
@@ -38,6 +39,30 @@ export function useHistoryOps(): { undo(): void; redo(): void } {
       toast(`やり直しました（${label}）`, { action: { label: '元に戻す', onClick: undo, testId: 'toast-undo' } });
     };
     return { undo, redo };
+  }, [undoStore, redoStore, toast]);
+}
+
+/**
+ * 取り込みの知らせに添える「元に戻す」（PRD D442）：取り込みのあとに自動の組み（「自動で組む」）が書いていれば、それも一緒に戻し、
+ * 取り込みの手まで戻す（組みだけ戻って取り込みが残らないように）
+ */
+export function useUndoImportAction(): ToastAction {
+  const { undo: undoStore, redo: redoStore } = useDemoData();
+  const toast = useToast();
+  return useMemo(() => {
+    const onClick = () => {
+      let label = undoStore();
+      // 自動の組みの手は続けて戻す（2回まで。組みは取り込みのあとに1回だけ）
+      for (let i = 0; i < 2 && label === AUTO_ARRANGE_LABEL; i++) label = undoStore();
+      if (label === null) {
+        toast('戻せる操作がありません');
+        return;
+      }
+      toast(`元に戻しました（${label}）`, {
+        action: { label: 'やり直す', onClick: () => void redoStore(), testId: 'toast-redo' },
+      });
+    };
+    return { label: '元に戻す', onClick, testId: 'toast-undo' };
   }, [undoStore, redoStore, toast]);
 }
 
