@@ -144,6 +144,7 @@
 | [0100](adr/0100-remove-standard-edit-rules-from-menu.md) | 組み方の標準を廃止し、条件の重みをメニューから直接直す |
 | [0101](adr/0101-osrm-road-travel-time.md) | 車の移動時間を OSRM の道路の所要から取る |
 | [0102](adr/0102-release-notice-keep-data-remove-tour.md) | デモの更新を最初の2問の画面で知らせ「今のデータを使い続ける」を上に・案内ツアーをなくす |
+| [0103](adr/0103-history-buttons-and-plan-map-always.md) | 上の帯に「戻る」「進む」・日の予定の地図を入切とも全幅のカードに・選択肢の多い特性を全幅の列に |
 
 ## 文書の保ち方
 

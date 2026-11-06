@@ -88,7 +88,7 @@ export function TraitInput({
       );
     case 'multi': {
       const arr = Array.isArray(value) ? value : [];
-      return <OptionChecks options={item.options} value={arr} onChange={onChange} />;
+      return <OptionChecks options={item.options} value={arr} onChange={onChange} columns />;
     }
     case 'number':
       return (
@@ -154,18 +154,21 @@ function StartYearInput({
   );
 }
 
+/** 選択肢のチェック。columns は幅のそろった列に並べる（選択肢が多い特性の入力で、行ごとに数が揃わず余白が出るのを防ぐ） */
 function OptionChecks({
   options,
   value,
   onChange,
+  columns = false,
 }: {
   options: string[];
   value: string[];
   onChange: (v: string[]) => void;
+  columns?: boolean;
 }) {
   if (options.length === 0) return <span className="sub">選択肢がありません（「特性の項目」で足します）</span>;
   return (
-    <div className="row" style={{ flexWrap: 'wrap', gap: 10 }}>
+    <div className={columns ? 'option-checks' : 'row'} style={columns ? undefined : { flexWrap: 'wrap', gap: 10 }}>
       {options.map((o) => (
         <Check
           key={o}
@@ -181,6 +184,10 @@ function OptionChecks({
   );
 }
 
+/** 横幅いっぱいに置く項目：選択肢が多い複数選択 */
+const WIDE_OPTIONS = 6;
+const isWideItem = (it: Item) => it.kind === 'multi' && it.options.length > WIDE_OPTIONS;
+
 /** 項目ごとの特性の入力（スタッフ・訪問先の編集フォーム） */
 export function TraitsEditor({
   items,
@@ -195,7 +202,8 @@ export function TraitsEditor({
   return (
     <div className="form-grid">
       {items.map((it) => (
-        <div key={it.id} className="field">
+        // 選択肢の多い複数選択は横幅いっぱいに置く（2列の片側だけが縦に伸びて、隣に大きな余白が出るのを防ぐ）
+        <div key={it.id} className={isWideItem(it) ? 'field field-wide' : 'field'}>
           <span className="field-label">
             <WithIcon icon={itemIcon(it.name)} size={14}>
               {it.name}

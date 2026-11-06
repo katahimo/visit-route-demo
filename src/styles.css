@@ -398,6 +398,22 @@ tbody tr:hover td {
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
 }
+/* 横幅いっぱいの欄（選択肢の多い複数選択など） */
+.form-grid > .field-wide {
+  grid-column: 1 / -1;
+}
+/* 選択肢のチェックを幅のそろった列に並べる（長い名前は列の中で折り返す） */
+.option-checks {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10.5em, 1fr));
+  gap: 6px 12px;
+}
+.option-checks label.check {
+  align-items: flex-start;
+}
+.option-checks label.check input {
+  margin-top: 0.2em;
+}
 
 /* 予定：訪問の一覧と回る順番 */
 .nowrap {
@@ -2554,6 +2570,23 @@ html[data-drawer-toast="side"] body:has(.drawer-wrap) .toast {
   from {
     transform: translateY(32px);
     opacity: 0;
+  }
+}
+/* 上の帯の左端の戻る・進む（HistoryNav）。広い画面は残りを右へ寄せる。印刷では出さない */
+.history-nav {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-right: auto;
+}
+@media (max-width: 860px) {
+  .history-nav {
+    margin-right: 0;
+  }
+}
+@media print {
+  .history-nav {
+    display: none !important;
   }
 }
 /* 全画面の切り替え（上の帯の右端）。印刷では出さない */
