@@ -1,5 +1,7 @@
 // 予約の CSV → 今のデータに訪問（単発）として入れる（ADR-0075。PRD D408）。形の見分けは bookingForms、ここはどの形でも共通の処理：
 // 文字コードを見分けて読み、〈利用者さん〉と名前で突き合わせ、予約番号から決まる ID の訪問を足す・直す。
+// 総入れ替え（PRD D441。ADR-0108）：予約システムのデータを写す前提で、ファイルの最初の日〜最後の日の単発の訪問はファイルに合わせる
+// （ファイルに無い訪問と、取り消しになった予約の訪問は消す）。繰り返しの回とその範囲の外の日は変えない。
 // データは書き換えない（ADR-0006）：新しい DemoData と件数を返し、画面が確かめてから store の update で入れる。最後は store の migrate を通す
 import type { BookingImportResult, DemoData, ImportError } from '../contracts/data';
 import type { Client, Visit } from '../contracts/documents';
@@ -102,7 +104,9 @@ function countNames(names: readonly string[]): string[] {
  * 予約の CSV → 訪問を入れた結果。形が分からない・読めなければ ImportError（何も変えない）。
  * - 〈利用者さん〉は名前（全角半角・空白を同一視）で突き合わせる。いない・同じ名前が2人の予約は入れず unmatched に挙げる
  * - 担当は決めない（担当なし）。今ある訪問（同じ予約番号）の担当・ピンは残す
- * - ファイルに無い訪問は消さない。まだ入れていない取り消し済みの予約は足さない（cancelledSkipped に数える）
+ * - 総入れ替え：ファイルの最初の日〜最後の日（取り消しの行も含めた日付）の単発の訪問のうち、ファイルに無いものを消す（removed）。
+ *   入れなかった行（名前が無い・読めない重なりなど）が指す訪問は消さない。取り消しの予約は、入っている訪問を消し、まだ入っていなければ足さない
+ *   （cancelledSkipped に数える）。繰り返しの回は消さない
  */
 export function importBookings(buf: ArrayBuffer, base: DemoData): BookingImportResult | ImportError {
   if (buf.byteLength > MAX_FILE_BYTES)
@@ -128,6 +132,9 @@ export function importBookings(buf: ArrayBuffer, base: DemoData): BookingImportR
   let updated = 0;
   let unchanged = 0;
   let cancelledSkipped = 0;
+  /** 取り消しの予約で消す訪問 */
+  const drop = new Set<string>();
+  const dates = table.bookings.map((b) => b.date).sort();
   for (const b of table.bookings) {
     const key = b.visitId ?? bookingVisitId(form, b.ref);
     const before = seen.get(key);
@@ -166,9 +173,10 @@ export function importBookings(buf: ArrayBuffer, base: DemoData): BookingImportR
       badRows.push(`${b.row}行目：訪問ID「${b.ref}」は別の人の訪問です（訪問先は変えられません）`);
       continue;
     }
-    // まだ入れていない予約が取り消し済みなら、取り消しの訪問を足さない
-    if (!cur && b.cancelled) {
-      cancelledSkipped++;
+    // 取り消しの予約は、入っている訪問を消し、まだ入れていなければ足さない（総入れ替え）
+    if (b.cancelled) {
+      if (cur) drop.add(id);
+      else cancelledSkipped++;
       continue;
     }
     const v = bookingToVisit(b, id, c.id, cur);
@@ -177,8 +185,15 @@ export function importBookings(buf: ArrayBuffer, base: DemoData): BookingImportR
     else updated++;
     next.set(id, cur && same(v, cur) ? cur : v);
   }
+  const from = dates[0];
+  const to = dates[dates.length - 1];
+  // ファイルの日の範囲の単発の訪問で、ファイルの行が指していないもの（入れなかった行が指す訪問は seen に入っていて残る）
+  const gone = (v: Visit) =>
+    drop.has(v.id) ||
+    (from !== undefined && to !== undefined && v.pattern === null && v.date >= from && v.date <= to && !seen.has(v.id));
+  const removed = base.visits.filter(gone).length;
   const visits = [
-    ...base.visits.map((v) => next.get(v.id) ?? v),
+    ...base.visits.filter((v) => !gone(v)).map((v) => next.get(v.id) ?? v),
     ...[...next.values()].filter((v) => !curOf.has(v.id)),
   ];
   const r = migrate({ ...base, visits });
@@ -187,6 +202,7 @@ export function importBookings(buf: ArrayBuffer, base: DemoData): BookingImportR
     data: r,
     added,
     updated,
+    removed,
     unchanged,
     cancelledSkipped,
     unmatched: countNames(unmatched),

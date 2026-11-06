@@ -1,6 +1,7 @@
 // カレンダーの休みを取り込む（PRD D440。ADR-0107）：〈スタッフ〉ごとの Google カレンダーの書き出し（.ics。lib/icsRead）から、
-// 件名に「休み」などのある予定をその日の欠勤（absences。ADR-0011）にする。毎日取り込み直す前提で、カレンダーから入れた欠勤
-// （ID が `cal-〈スタッフ〉-日付`）を カレンダーに合わせて 入れる・直す・外す。手で入れた欠勤（ID が違う）は変えない。
+// 件名に「休み」などのある予定をその日の欠勤（absences。ADR-0011）にする。毎日取り込み直す前提の入れ替え（PRD D441。ADR-0108）：
+// カレンダーに当たった〈スタッフ〉の、今日から CAL_OFF_DAYS 日の欠勤を、手で入れたものも含めてカレンダーの内容に入れ替える
+// （入れる・直す・外す）。入れる欠勤の ID は `cal-〈スタッフ〉-日付`。
 // カレンダーの名前（X-WR-CALNAME）を〈スタッフ〉の名前に当てる（空白・全角半角・かなの違いは問わない）。
 // 見る日は今日から CAL_OFF_DAYS 日。過ぎた日は変えない。振り直さない（ADR-0084 と同じ）。どれも純粋関数（データを書き換えない）
 import type { DemoData } from '../contracts/data';
@@ -24,9 +25,6 @@ const PM_RE = /PM|午後/i;
 
 /** カレンダーから入れた欠勤の ID（〈スタッフ〉と日付で決まる。取り込み直すと同じ ID を直す） */
 export const calAbsenceId = (staffId: string, date: string): string => `cal-${staffId}-${date}`;
-/** カレンダーから入れた欠勤か */
-export const isCalAbsence = (a: Pick<Absence, 'id' | 'staffId' | 'date'>): boolean =>
-  a.id === calAbsenceId(a.staffId, a.date);
 
 /** 休みの件名か */
 export const isOffSummary = (summary: string): boolean => OFF_RE.test(summary.normalize('NFKC'));
@@ -102,8 +100,8 @@ export function offSpansOf(occurrences: readonly IcsOccurrence[], from: string, 
   );
 }
 
-/** 一覧の1行の種類：入れる・直す・外す（チェックで選ぶ）、入れられない（理由） */
-export type CalOffKind = 'add' | 'change' | 'remove' | 'skip';
+/** 一覧の1行の種類：入れる・直す・外す */
+export type CalOffKind = 'add' | 'change' | 'remove';
 
 /** 一覧の1行 */
 export type CalOffRow = {
@@ -114,7 +112,8 @@ export type CalOffRow = {
   text: string;
   /** 入れる・直すときの欠勤 */
   absence: Absence | null;
-  reason: string | null;
+  /** 直す・外すときの今の欠勤の ID */
+  currentId: string | null;
 };
 
 /** 種類の名前（一覧の行の頭） */
@@ -122,14 +121,7 @@ export const CAL_OFF_KIND_LABEL: Record<CalOffKind, string> = {
   add: '入れる',
   change: '直す',
   remove: '外す',
-  skip: '入れない',
 };
-
-/** 入れられない理由 */
-export const CAL_OFF_REASONS = {
-  manual: '手で入れた欠勤がある',
-  noShift: '勤務の無い日',
-} as const;
 
 /** 読んだカレンダーのまとめ */
 export type CalOffSummary = {
@@ -140,6 +132,8 @@ export type CalOffSummary = {
   unmatched: string[];
   /** 変わらない欠勤の数 */
   unchanged: number;
+  /** 勤務の無い日なので入れない休みの数 */
+  noShift: number;
   /** 読めない繰り返しの予定の数 */
   unsupported: number;
 };
@@ -164,38 +158,35 @@ function staffRows(
   wanted: Map<string, OffSpan>,
   today: string,
   last: string,
-): { rows: CalOffRow[]; unchanged: number } {
+): { rows: CalOffRow[]; unchanged: number; noShift: number } {
   const name = data.staff.find((s) => s.id === staffId)?.name ?? '';
   const mine = new Map(
     data.absences.filter((a) => a.staffId === staffId && a.date >= today && a.date <= last).map((a) => [a.date, a]),
   );
-  const dates = [...new Set([...wanted.keys(), ...[...mine.values()].filter(isCalAbsence).map((a) => a.date)])].sort();
+  const dates = [...new Set([...wanted.keys(), ...mine.keys()])].sort();
   const rows: CalOffRow[] = [];
   let unchanged = 0;
+  let noShift = 0;
   for (const date of dates) {
     const want = wanted.get(date);
     const have = mine.get(date);
-    const key = `${staffId}:${date}`;
-    const base = { key, staffId, date };
+    const base = { key: `${staffId}:${date}`, staffId, date };
     if (!want) {
-      // カレンダーから消えた休み
-      const { from, to, note } = have!;
+      // カレンダーに無い休み（手で入れたものも外す）
+      const { id, from, to, note } = have!;
       const text = actionText({ kind: 'absence', staffId, date, from, to, note }, name, today);
-      rows.push({ ...base, kind: 'remove', text, absence: null, reason: null });
+      rows.push({ ...base, kind: 'remove', text, absence: null, currentId: id });
       continue;
     }
     const absence: Absence = { id: calAbsenceId(staffId, date), staffId, date, ...want };
     const text = actionText({ kind: 'absence', ...absence }, name, today);
-    if (have && !isCalAbsence(have))
-      rows.push({ ...base, kind: 'skip', text, absence: null, reason: CAL_OFF_REASONS.manual });
-    else if (have) {
-      if (sameSpan(have, want)) unchanged++;
-      else rows.push({ ...base, kind: 'change', text, absence, reason: null });
-    } else if (offDayState(data, staffId, date, today) === 'noShift')
-      rows.push({ ...base, kind: 'skip', text, absence: null, reason: CAL_OFF_REASONS.noShift });
-    else rows.push({ ...base, kind: 'add', text, absence, reason: null });
+    if (have) {
+      if (have.id === absence.id && sameSpan(have, want)) unchanged++;
+      else rows.push({ ...base, kind: 'change', text, absence, currentId: have.id });
+    } else if (offDayState(data, staffId, date, today) === 'noShift') noShift++;
+    else rows.push({ ...base, kind: 'add', text, absence, currentId: null });
   }
-  return { rows, unchanged };
+  return { rows, unchanged, noShift };
 }
 
 /**
@@ -214,6 +205,7 @@ export function calendarOffRows(
     matched: [],
     unmatched: [],
     unchanged: 0,
+    noShift: 0,
     unsupported: 0,
   };
   for (const cal of calendars) {
@@ -237,6 +229,7 @@ export function calendarOffRows(
     const r = staffRows(data, s.id, w, today, last);
     rows.push(...r.rows);
     summary.unchanged += r.unchanged;
+    summary.noShift += r.noShift;
   }
   return { rows, summary };
 }
@@ -247,12 +240,12 @@ const mergeSpan = (a: OffSpan, b: OffSpan): OffSpan => ({
   note: a.note === b.note ? a.note : `${a.note}・${b.note}`.slice(0, 100),
 });
 
-/** 選んだ行を書く（1回の update の中で呼ぶ）：入れる・直すは saveAbsence、外すは removeAbsence。振り直さない */
+/** 入れ替える（1回の update の中で呼ぶ）：直す・外すは今の欠勤を消し、入れる・直すは saveAbsence。振り直さない */
 export function applyCalendarOff(d: DemoData, rows: readonly CalOffRow[]): DemoData {
   let out = d;
   for (const r of rows) {
-    if ((r.kind === 'add' || r.kind === 'change') && r.absence) out = saveAbsence(out, r.absence);
-    else if (r.kind === 'remove') out = removeAbsence(out, calAbsenceId(r.staffId, r.date));
+    if (r.currentId !== null) out = removeAbsence(out, r.currentId);
+    if (r.absence) out = saveAbsence(out, r.absence);
   }
   return out;
 }
@@ -262,11 +255,11 @@ export function calOffSummaryText(s: CalOffSummary, staffTerm: string): string {
   return `カレンダー ${s.calendars}件を読みました。${staffTerm}に合う ${s.matched.length}件`;
 }
 
-/** 選んだ行の件数の文（主ボタン） */
-export const calOffApplyLabel = (n: number): string => (n === 0 ? '変わる休みはありません' : `${n}件を反映する`);
+/** 主ボタンの文（変わる件数） */
+export const calOffApplyLabel = (n: number): string => (n === 0 ? '変わる休みはありません' : `入れ替える（${n}件）`);
 
-/** 反映したあとの知らせ */
+/** 入れ替えたあとの知らせ */
 export const calOffDoneText = (rows: readonly CalOffRow[], care: number): string => {
   const n = (k: CalOffKind) => rows.filter((r) => r.kind === k).length;
-  return `休みを反映しました（入れる ${n('add')}・直す ${n('change')}・外す ${n('remove')}）。要対応 ${care}件`;
+  return `休みを入れ替えました（入れる ${n('add')}・直す ${n('change')}・外す ${n('remove')}）。要対応 ${care}件`;
 };

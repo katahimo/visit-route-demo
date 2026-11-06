@@ -164,7 +164,7 @@ export type RosterImportResult = {
 
 /**
  * 予約の CSV の読み込みの結果（ADR-0075。PRD D408）。data は予約を訪問（単発）として入れた新しいデータ（store の migrate を通したもの。
- * 画面が確かめてから store の update で入れる）。同じ予約番号の訪問は直し、ファイルに無い訪問はそのまま
+ * 画面が確かめてから store の update で入れる）。同じ予約番号の訪問は直し、ファイルの日の範囲でファイルに無い単発の訪問は消す（総入れ替え。PRD D441）
  */
 export type BookingImportResult = {
   data: DemoData;
@@ -172,6 +172,11 @@ export type BookingImportResult = {
   added: number;
   /** 直した訪問の数（日付・時刻・所要・取り消し・メモが変わった） */
   updated: number;
+  /**
+   * 消した単発の訪問の数（総入れ替え。PRD D441。ADR-0108）：ファイルの最初の日〜最後の日の、ファイルに無い単発の訪問と、
+   * ファイルで取り消しになった予約の訪問
+   */
+  removed: number;
   /** 変わらなかった訪問の数 */
   unchanged: number;
   /** まだ入れていない取り消し済みの予約で、足さなかった数 */

@@ -5,7 +5,6 @@ import { makeData, staff } from '../matching/fixtures.testkit';
 import { readCalendarFile } from './calendarFile';
 import {
   applyCalendarOff,
-  CAL_OFF_REASONS,
   calAbsenceId,
   calendarOffRows,
   calOffApplyLabel,
@@ -114,32 +113,38 @@ describe('一覧と反映', () => {
     parseIcs(ics('事務所', [allDay('20261013', '休み')])),
   ];
 
-  it('入れる・勤務の無い日・合わないカレンダー', () => {
+  it('入れる・勤務の無い日は数えて入れない・合わないカレンダー', () => {
     const { rows, summary } = calendarOffRows(data(), cals(), TODAY);
-    expect(rows.map((r) => [r.kind, r.date, r.reason])).toEqual([
-      ['add', '2026-10-13', null],
-      ['add', '2026-10-14', null],
-      ['skip', '2026-10-17', CAL_OFF_REASONS.noShift],
+    expect(rows.map((r) => [r.kind, r.date])).toEqual([
+      ['add', '2026-10-13'],
+      ['add', '2026-10-14'],
     ]);
     expect(rows[1]!.absence).toMatchObject({ id: calAbsenceId('s1', '2026-10-14'), from: '09:00', to: '12:00' });
-    expect(summary).toMatchObject({ calendars: 2, matched: ['架空花子'], unmatched: ['事務所'], unchanged: 0 });
+    expect(summary).toMatchObject({
+      calendars: 2,
+      matched: ['架空花子'],
+      unmatched: ['事務所'],
+      unchanged: 0,
+      noShift: 1,
+    });
   });
 
-  it('取り込み直すと 変わらない・直す・外す。手で入れた欠勤は変えない', () => {
+  it('入れ替え：変わらない・直す・外す。手で入れた欠勤も入れ替える', () => {
     const first = calendarOffRows(data(), cals(), TODAY).rows;
     const d1 = applyCalendarOff(data(), first);
     expect(d1.absences.map((a) => a.date)).toEqual(['2026-10-13', '2026-10-14']);
-    // カレンダーで 10/13 を消し、10/14 を AM休み（終日）に直し、10/16 に足す。10/16 は手で入れた欠勤がある
-    const manual = { id: 'a-1', staffId: 's1', date: '2026-10-16', from: null, to: null, note: '' };
-    const d2 = { ...d1, absences: [...d1.absences, manual] };
+    // カレンダーで 10/13 を消し、10/14 を AM休み（終日）に直し、10/16 に足す。10/15・10/16 は手で入れた欠勤がある
+    const hand15 = { id: 'a-1', staffId: 's1', date: '2026-10-15', from: null, to: null, note: '' };
+    const hand16 = { id: 'a-2', staffId: 's1', date: '2026-10-16', from: null, to: null, note: '' };
+    const d2 = { ...d1, absences: [...d1.absences, hand15, hand16] };
     const again = [parseIcs(ics('架空 花子', [allDay('20261014', 'AM休み'), allDay('20261016', '休み')]))];
-    const { rows, summary } = calendarOffRows(d2, again, TODAY);
+    const { rows } = calendarOffRows(d2, again, TODAY);
     expect(rows.map((r) => [r.kind, r.date])).toEqual([
       ['remove', '2026-10-13'],
       ['change', '2026-10-14'],
-      ['skip', '2026-10-16'],
+      ['remove', '2026-10-15'],
+      ['change', '2026-10-16'],
     ]);
-    expect(rows[2]!.reason).toBe(CAL_OFF_REASONS.manual);
     const d3 = applyCalendarOff(d2, rows);
     expect(d3.absences).toEqual([
       {
@@ -150,13 +155,12 @@ describe('一覧と反映', () => {
         to: '12:00',
         note: 'AM休み',
       },
-      manual,
+      { id: calAbsenceId('s1', '2026-10-16'), staffId: 's1', date: '2026-10-16', from: null, to: null, note: '休み' },
     ]);
     // もう一度読むと変わらない
     const third = calendarOffRows(d3, again, TODAY);
-    expect(third.rows.map((r) => r.kind)).toEqual(['skip']);
-    expect(third.summary.unchanged).toBe(1);
-    expect(summary.unchanged).toBe(0);
+    expect(third.rows).toEqual([]);
+    expect(third.summary.unchanged).toBe(2);
   });
 
   it('過ぎた日のカレンダーの欠勤・当たらない人の欠勤は外さない', () => {
@@ -182,9 +186,9 @@ describe('一覧と反映', () => {
 
   it('文', () => {
     expect(calOffApplyLabel(0)).toBe('変わる休みはありません');
-    expect(calOffApplyLabel(3)).toBe('3件を反映する');
+    expect(calOffApplyLabel(3)).toBe('入れ替える（3件）');
     const { rows } = calendarOffRows(data(), cals(), TODAY);
-    expect(calOffDoneText(rows.slice(0, 2), 1)).toBe('休みを反映しました（入れる 2・直す 0・外す 0）。要対応 1件');
+    expect(calOffDoneText(rows.slice(0, 2), 1)).toBe('休みを入れ替えました（入れる 2・直す 0・外す 0）。要対応 1件');
   });
 });
 

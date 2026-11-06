@@ -13,13 +13,13 @@ const SHOWN = 5;
 const listText = (xs: readonly string[]): string =>
   `${xs.slice(0, SHOWN).join('・')}${xs.length > SHOWN ? ` ほか ${xs.length - SHOWN}件` : ''}`;
 
-/** 予約の読み込みで、足す・直す訪問があるか */
-export const bookingHasChanges = (r: Pick<BookingImportResult, 'added' | 'updated'>): boolean =>
-  r.added + r.updated > 0;
+/** 予約の読み込みで、足す・直す・消す訪問があるか */
+export const bookingHasChanges = (r: Pick<BookingImportResult, 'added' | 'updated' | 'removed'>): boolean =>
+  r.added + r.updated + r.removed > 0;
 
-/** 件数の行（「追加 3件・更新 1件・変更なし 5件」） */
-export const bookingSummary = (r: Pick<BookingImportResult, 'added' | 'updated' | 'unchanged'>): string =>
-  `追加 ${r.added}件・更新 ${r.updated}件・変更なし ${r.unchanged}件`;
+/** 件数の行（「追加 3件・更新 1件・削除 2件・変更なし 5件」） */
+export const bookingSummary = (r: Pick<BookingImportResult, 'added' | 'updated' | 'removed' | 'unchanged'>): string =>
+  `追加 ${r.added}件・更新 ${r.updated}件・削除 ${r.removed}件・変更なし ${r.unchanged}件`;
 
 /** 入れなかった行・読めなかった行の文（無ければ空の並び） */
 export function bookingProblems(r: Pick<BookingImportResult, 'unmatched' | 'badRows'>, clientTerm: string): string[] {
@@ -48,7 +48,7 @@ export function bookingConfirmBody(x: {
     ...bookingProblems(r, x.clientTerm),
     ...(x.outsideNote ? [x.outsideNote] : []),
     otherFormSkippedText(r.otherForm),
-    '担当は空のままです。すでに入っている予約は、日時・所要時間・メモをファイルに合わせます（担当は残ります）。ファイルに無い訪問はそのままです。',
+    '総入れ替えです。ファイルの最初の日〜最後の日の単発の訪問をファイルに合わせ、ファイルに無い訪問と取り消しの予約の訪問は消します（繰り返しの訪問・範囲の外の日はそのまま）。すでに入っている予約の担当は残ります。新しい予約の担当は空です。',
     keepNote(x.keep),
   ].join('\n');
 }
@@ -59,8 +59,8 @@ const arrangeHint = (features: Features): string =>
 
 /** 読み込んだあとの知らせ */
 export const bookingDoneText = (
-  r: Pick<BookingImportResult, 'added' | 'updated'>,
+  r: Pick<BookingImportResult, 'added' | 'updated' | 'removed'>,
   features: Features,
   keep: KeepState,
 ): string =>
-  `訪問を読み込みました（追加 ${r.added}件・更新 ${r.updated}件）。担当は${arrangeHint(features)}で組めます${keptSuffix(keep)}`;
+  `訪問を読み込みました（追加 ${r.added}件・更新 ${r.updated}件・削除 ${r.removed}件）。担当は${arrangeHint(features)}で組めます${keptSuffix(keep)}`;

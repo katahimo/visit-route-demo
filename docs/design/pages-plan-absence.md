@@ -104,15 +104,15 @@
 
 ### 「休みのカレンダーを取り込む」の欄（PRD D440。ADR-0107）
 
-〈スタッフ〉ごとの Google カレンダーの書き出し（zip）から休みを欠勤にする。毎日取り込み直す前提で、カレンダーから入れた欠勤をカレンダーに合わせる。読むのは決まりだけ。ファイルは端末の中で読むだけで送らない。振り直さない（PRD §4）。
+〈スタッフ〉ごとの Google カレンダーの書き出し（zip）から休みを欠勤にする。毎日取り込み直す前提の入れ替え（PRD D441。ADR-0108）：当たった〈スタッフ〉の今日から93日の欠勤を、手で入れたものも含めてカレンダーの内容にする。読むのは決まりだけ。ファイルは端末の中で読むだけで送らない。振り直さない（PRD §4）。
 
 - 入口：予定（月・週・日）の操作の行の「休みを取り込む」（`cal-off-open`。入切とも。元に戻す・やり直すの前。スマホ（600px 以下）は行に収まらないので「その他 ▾」の先頭）と、登録の案内②の名簿の下の「休みのカレンダーを取り込む」（`start-guide-cal-off-open`。〈スタッフ〉が0人なら押せない）。機能 `sudden` が切ならどちらも出さない
-- `components/CalendarOffPanel.tsx`：`SidePanel`（見出し「休みのカレンダーを取り込む」・`cal-off-panel`。スマホは下から出る）。説明・ファイルを選ぶ（`FilePick`。`cal-off-file`。.zip・.ics）・読めない理由（`cal-off-error`）・まとめ（`cal-off-summary`「カレンダー N件を読みました。〈スタッフ〉に合う M件。変わらない休み K件」、合わないカレンダーの名前 `cal-off-unmatched`、読めない繰り返しの数）・一覧（`cal-off-rows`。行 `cal-off-row`・`data-state`＝`ok|ng`・`data-kind`＝`add|change|remove|skip`）。読めた行はチェック（`cal-off-row-check`。初めは入）と「入れる／直す／外す」と内容（`pasteRows` の `actionText`）、入れない行は内容と理由。変わる休みが無ければ「変わる休みはありません」（`cal-off-none`）。帯は主ボタン［N件を反映する］（`cal-off-apply`。0件は「変わる休みはありません」で `aria-disabled`）と［閉じる］
-- `components/useCalendarOff.ts`：選んだファイルを `readCalendarFile` で読み、カレンダーを持つ（一覧はデータが変わるたびに `calendarOffRows` で作り直す）。外したチェックは行の鍵（〈スタッフ〉と日付）で覚える。［N件を反映する］は `applyCalendarOff` を1回の `update`（手の名前「休みのカレンダーを取り込む」。元に戻せる）。知らせ `calOffDoneText`「休みを反映しました（入れる a・直す c・外す r）。要対応 M件」（［元に戻す］付き。要対応は `pasteRows` の `careCountOn`）で欄を閉じる
+- `components/CalendarOffPanel.tsx`：`SidePanel`（見出し「休みのカレンダーを取り込む」・`cal-off-panel`。スマホは下から出る）。説明・ファイルを選ぶ（`FilePick`。`cal-off-file`。.zip・.ics）・読めない理由（`cal-off-error`）・まとめ（`cal-off-summary`「カレンダー N件を読みました。〈スタッフ〉に合う M件。変わらない休み K件。勤務の無い日の休み L件は入れません」、合わないカレンダーの名前 `cal-off-unmatched`、読めない繰り返しの数）・一覧（`cal-off-rows`。行 `cal-off-row`・`data-kind`＝`add|change|remove`。チェックは無く、全部を入れ替える）。行は「入れる／直す／外す」と内容（`pasteRows` の `actionText`）。変わる休みが無ければ「変わる休みはありません」（`cal-off-none`）。帯は主ボタン［入れ替える（N件）］（`cal-off-apply`。0件は「変わる休みはありません」で `aria-disabled`）と［閉じる］
+- `components/useCalendarOff.ts`：選んだファイルを `readCalendarFile` で読み、カレンダーを持つ（一覧はデータが変わるたびに `calendarOffRows` で作り直す）。［入れ替える（N件）］は `applyCalendarOff` を1回の `update`（手の名前「休みのカレンダーを取り込む」。元に戻せる）。知らせ `calOffDoneText`「休みを入れ替えました（入れる a・直す c・外す r）。要対応 M件」（［元に戻す］付き。要対応は `pasteRows` の `careCountOn`）で欄を閉じる
 - `lib/zipRead.ts`：zip の中央ディレクトリを読み、無圧縮・デフレート（`DecompressionStream('deflate-raw')`）を開く。暗号化・zip64 は読めない理由。ファイル500個・展開50MB まで
 - `lib/icsRead.ts`：`parseIcs`（折り返しを戻し、VEVENT の UID・SUMMARY・STATUS・DTSTART・DTEND・RRULE・EXDATE・RECURRENCE-ID。VALARM の中は読まない）・`icsTime`（末尾 Z は +9時間、TZID 付き・無しはそのまま、VALUE=DATE は終日）・`occurrencesIn(cal, from, to)`（範囲にかかる回。取り消し・除く日・直した回の元の回を除く。`parseRule` が読めない繰り返しは数えて飛ばす）
 - `lib/calendarFile.ts`：zip なら中の `.ics`、でなければ .ics 1つ。名前の無いカレンダーはファイル名を名前に
-- `lib/calendarOff.ts`：`staffOfCalendar`（`lib/search` の `normalizeKana` で名前を比べ、利用中の〈スタッフ〉1人だけに当てる）・`isOffSummary`・`offDaysOf`（終日の AM・PM、時刻つきは `floor30`・`ceil30` で広げ、0:00 始まり・24:00 終わりは null）・`offSpansOf`（同じ日はまとめ、終日の「希望休」はメモ「希望休」）・`calendarOffRows(data, calendars, today)`（今日から `CAL_OFF_DAYS`＝93日。カレンダーから入れた欠勤（`calAbsenceId`）は 同じなら変わらない・違えば直す・カレンダーに無ければ外す、手で入れた欠勤の日は入れない、勤務の無い日（`offDayState`）は入れない）・`applyCalendarOff`（`saveAbsence`・`removeAbsence`）
+- `lib/calendarOff.ts`：`staffOfCalendar`（`lib/search` の `normalizeKana` で名前を比べ、利用中の〈スタッフ〉1人だけに当てる）・`isOffSummary`・`offDaysOf`（終日の AM・PM、時刻つきは `floor30`・`ceil30` で広げ、0:00 始まり・24:00 終わりは null）・`offSpansOf`（同じ日はまとめ、終日の「希望休」はメモ「希望休」）・`calendarOffRows(data, calendars, today)`（今日から `CAL_OFF_DAYS`＝93日。その〈スタッフ〉の欠勤（手で入れたものも）を、カレンダーと同じ（ID `calAbsenceId` で中身も同じ）なら変わらない・違えば直す・カレンダーに無ければ外す。今の欠勤が無く勤務の無い日（`offDayState`）は入れず数える）・`applyCalendarOff`（今の欠勤を `removeAbsence`、入れる欠勤を `saveAbsence`）
 
 ### 振り直し（案A）
 

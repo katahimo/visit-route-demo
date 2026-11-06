@@ -171,6 +171,39 @@ describe('予約を訪問として読み込む', () => {
     });
   });
 
+  it('総入れ替え：ファイルの日の範囲で、ファイルに無い単発の訪問と取り消しの予約の訪問を消す（範囲の外・繰り返し・入れなかった行の訪問は残す）', () => {
+    const d = withClients();
+    const first = ok(importBookings(buf(table), d)).data;
+    const r1 = bookingVisitId({ id: 'reserve' }, 'R1');
+    const r3 = bookingVisitId({ id: 'reserve' }, 'R3');
+    const oneOff = (id: string, date: string) => ({ ...first.visits.find((v) => v.id === r1)!, id, date });
+    const withMore: DemoData = {
+      ...first,
+      visits: [
+        ...first.visits,
+        oneOff('hand-in', '2026-11-04'), // 範囲の中・ファイルに無い → 消す
+        oneOff('hand-out', '2026-11-20'), // 範囲の外 → 残す
+        oneOff(r3, '2026-11-05'), // 入れなかった行（いない人）が指す → 残す
+      ],
+    };
+    const cancelled = [
+      HEAD,
+      row({ 予約番号: 'R1', 予約日: '2026/11/03', 予約時: '13:00～15:00', 状況: 'キャンセル', 氏名: '架空花子' }),
+      row({ 予約番号: 'R3', 予約日: '2026/11/05', 予約時: '10:00～11:00', 氏名: 'いない 人' }),
+    ];
+    const r = ok(importBookings(buf(cancelled), withMore));
+    expect(r).toMatchObject({ added: 0, updated: 0, removed: 2 });
+    const ids = r.data.visits.map((v) => v.id);
+    expect(ids).not.toContain(r1);
+    expect(ids).not.toContain('hand-in');
+    expect(ids).toContain('hand-out');
+    expect(ids).toContain(r3);
+    // 繰り返しの回は消さない
+    expect(r.data.visits.filter((v) => v.pattern !== null).length).toBe(
+      withMore.visits.filter((v) => v.pattern !== null).length,
+    );
+  });
+
   it('名簿で「名前（顧客ID）」に分けた同じ名前の人がいれば入れない（どの人か分からない）', () => {
     const d = withClients();
     const split: DemoData = {

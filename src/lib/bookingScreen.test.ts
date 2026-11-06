@@ -13,6 +13,7 @@ const result = (over: Partial<BookingImportResult> = {}): BookingImportResult =>
   data: {} as DemoData,
   added: 2,
   updated: 1,
+  removed: 0,
   unchanged: 3,
   cancelledSkipped: 0,
   unmatched: [],
@@ -25,9 +26,10 @@ const keep = { kept: true, why: null };
 
 describe('予約の読み込みの文', () => {
   it('件数と変更の有無', () => {
-    expect(bookingSummary(result())).toBe('追加 2件・更新 1件・変更なし 3件');
+    expect(bookingSummary(result())).toBe('追加 2件・更新 1件・削除 0件・変更なし 3件');
     expect(bookingHasChanges(result())).toBe(true);
     expect(bookingHasChanges(result({ added: 0, updated: 0 }))).toBe(false);
+    expect(bookingHasChanges(result({ added: 0, updated: 0, removed: 1 }))).toBe(true);
   });
 
   it('入れなかった予約・読めなかった行は5件まで出し、残りは件数', () => {
@@ -56,7 +58,7 @@ describe('予約の読み込みの文', () => {
     expect(body).toContain('「Reserve.csv」を訪問として読み込みます（予約システムの予約の CSV）。');
     expect(body).not.toContain('文字コード');
     expect(body).toContain('読まなかった列：支払金額');
-    expect(body).toContain('担当は空のままです');
+    expect(body).toContain('総入れ替えです');
     expect(body).not.toContain('取り消し済みで');
     expect(
       bookingConfirmBody({ fileName: 'a.csv', r: result({ cancelledSkipped: 2 }), clientTerm: 'お客様', keep }),
@@ -66,7 +68,7 @@ describe('予約の読み込みの文', () => {
 
   it('知らせ（控えを残せなければ理由を添える）', () => {
     expect(bookingDoneText(result(), { expert: true }, keep)).toBe(
-      '訪問を読み込みました（追加 2件・更新 1件）。担当は「担当を組む」で組めます',
+      '訪問を読み込みました（追加 2件・更新 1件・削除 0件）。担当は「担当を組む」で組めます',
     );
     expect(bookingDoneText(result(), { expert: false }, keep)).toContain('予定の上の要対応の帯の「要対応を組む」');
     expect(bookingDoneText(result(), { expert: true }, { kept: false, why: '容量が足りません' })).toContain(

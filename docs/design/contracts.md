@@ -49,7 +49,7 @@ RosterImportResult = { data /* migrate 済み */, added /* 行の順。「名前
   lastDaySet, activeBefore /* 外せる人の数 */, source /* ADR-0068 */,
   otherForm /* ほかのソフトの形で読んだときだけ OtherFormRead。名簿の形・.xlsx は null */ }
 OtherFormRead = { label /* 形の名前。例「顧客台帳」「予約システムの顧客」 */, skippedColumns: string[] /* 読まなかった列 */ }
-BookingImportResult = { data /* migrate 済み */, added, updated, unchanged, cancelledSkipped /* まだ入れていない取り消し済みの予約 */: number,
+BookingImportResult = { data /* migrate 済み */, added, updated, removed /* 総入れ替えで消した単発の訪問。D441 */, unchanged, cancelledSkipped /* まだ入れていない取り消し済みの予約 */: number,
   unmatched /* 入れなかった予約「名前（N件）」 */, badRows /* 「N行目：理由」 */, source, otherForm: OtherFormRead /* ADR-0075 */ }
 ```
 

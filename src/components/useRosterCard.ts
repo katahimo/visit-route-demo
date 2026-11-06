@@ -25,13 +25,11 @@ export function useRosterCard(kind: RosterKind, onPlace?: () => void) {
     if (resuming.current && typeof v === 'string') toast(v);
   };
   const [busy, setBusy] = useState(false);
-  /** 名簿の読み込み方（PRD D104）：追加・更新（既定）か総入れ替え */
-  const [rosterMode, setRosterMode] = useState<RosterMode>('merge');
+  /** 名簿の読み込み方（PRD D104・D441）：総入れ替え（既定）か追加・更新 */
+  const [rosterMode, setRosterMode] = useState<RosterMode>('replace');
   const term = kind === 'staff' ? data.org.terms.staff : data.org.terms.client;
-  /** 一覧が0人か（書き出しは列名だけのテンプレートになる。読み込み方は選ばせず追加・更新） */
+  /** 一覧が0人か（書き出しは列名だけのテンプレートになる。読み込み方は選ばせず追加・更新＝総入れ替えと同じ結果） */
   const empty = rosterIsEmpty(data, kind);
-  // 0人の間は選ばせないので既定に戻す（人が入って選択肢が出たとき、前の総入れ替えが残らないように）
-  if (empty && rosterMode !== 'merge') setRosterMode('merge');
   const mode = empty ? 'merge' : rosterMode;
   const loadRoster = useRosterImport({ rosterMode: mode, offboardOn, setError: report, onPlace });
 
