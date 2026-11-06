@@ -223,7 +223,7 @@ describe('予約を訪問として読み込む', () => {
     expect(ok(importBookings(buf(table.slice(0, 2)), one)).added).toBe(1);
   });
 
-  it('まだ入れていない取り消し済みの予約は足さず、アプリで取り消した訪問は読み直しても取り消しのまま', () => {
+  it('まだ入れていない取り消し済みの予約は足さず、アプリで取り消した訪問もファイルで有効なら有効に戻す（ファイルが元）', () => {
     const cancelled = [
       HEAD,
       row({ 予約番号: 'R9', 予約日: '2026/11/03', 予約時: '13:00～15:00', 状況: 'キャンセル', 氏名: '架空 花子' }),
@@ -237,8 +237,8 @@ describe('予約を訪問として読み込む', () => {
       visits: first.visits.map((v) => (v.id === id ? { ...v, cancelled: true, cancelKind: 'sameDay' as const } : v)),
     };
     const again = ok(importBookings(buf(table), sameDay));
-    expect(again.unchanged).toBe(1);
-    expect(again.data.visits.find((v) => v.id === id)).toMatchObject({ cancelled: true, cancelKind: 'sameDay' });
+    expect(again.updated).toBe(1);
+    expect(again.data.visits.find((v) => v.id === id)).toMatchObject({ cancelled: false, cancelKind: null });
   });
 
   it('同じ名前の〈利用者さん〉が2人なら入れない', () => {

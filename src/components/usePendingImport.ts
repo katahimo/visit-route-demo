@@ -1,8 +1,10 @@
 // 読み込んだデータを入れる共通の手（名簿の読み込み useRosterImport・予約の読み込み useBookingImport。ADR-0020・ADR-0075）：
 // 1世代の控えを残して store の update で入れ、入ったかは次の描画で data を見て決める（入らなければ成功と言わず、残した控えを前の世代に戻す）。
-// 読み込みや確認のあいだに別のところ（別のタブなど）でデータが変わったかも見る
+// 読み込みや確認のあいだに別のところ（別のタブなど）でデータが変わったかも見る。入ったら担当なし・要対応を自動で組む（PRD D442）
 import { type Dispatch, type SetStateAction, useEffect, useRef } from 'react';
 import type { DemoData } from '../contracts/data';
+import { jstDate } from '../domain/time';
+import { requestImportArrange } from '../lib/autoArrangeBatch';
 import { type PreviousKeep, useDemoData } from '../store';
 import { useToast } from './Toast';
 
@@ -29,6 +31,7 @@ export function usePendingImport(setError: Dispatch<SetStateAction<string | null
       pending.current = null;
       toast(p.done);
       p.onDone?.();
+      requestImportArrange(p.base, p.next, jstDate(Date.now()));
     } else if (data !== p.base) {
       pending.current = null;
       // 入らなかったので、残した控えは前の世代に戻す

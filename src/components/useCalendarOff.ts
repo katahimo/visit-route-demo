@@ -3,6 +3,7 @@
 // （元に戻せる。PRD D441。ADR-0108）。振り直さない
 import { useMemo, useState } from 'react';
 import { jstDate } from '../domain/time';
+import { requestImportArrange } from '../lib/autoArrangeBatch';
 import { readCalendarFile } from '../lib/calendarFile';
 import { applyCalendarOff, calendarOffRows, calOffDoneText } from '../lib/calendarOff';
 import type { IcsCalendar } from '../lib/icsRead';
@@ -48,9 +49,11 @@ export function useCalendarOff(onClose: () => void) {
       rows.map((r) => r.date),
       today,
     );
-    update((d) => applyCalendarOff(d, rows), '休みのカレンダーを取り込む');
+    update((d) => (d === data ? next : applyCalendarOff(d, rows)), '休みのカレンダーを取り込む');
     toast(calOffDoneText(rows, care), { action: undoAction });
     onClose();
+    // 休みの人の訪問・担当なしを自動で組む（PRD D442）
+    requestImportArrange(data, next, today);
   };
 
   return {

@@ -46,7 +46,7 @@ export function clientFinder(clients: readonly Client[]): (name: string) => Clie
 
 /**
  * 予約 → 訪問（今の訪問があれば担当・ピン・種類を残し、日付と時刻が変わらなければ組んだ開始も残す。
- * アプリで取り消した訪問（当日キャンセルなど）は、ファイルが取り消していなくても取り消しのまま）
+ * 取り消しはファイルに合わせる：アプリで取り消した訪問も、ファイルで有効なら有効に戻す（予約システムが元。PRD D441。ADR-0108）
  */
 export function bookingToVisit(b: Booking, id: string, clientId: string, cur: Visit | undefined): Visit {
   const latest = b.latestStart ?? b.start;
@@ -63,11 +63,11 @@ export function bookingToVisit(b: Booking, id: string, clientId: string, cur: Vi
     staffId: cur?.staffId ?? null,
     start: sameSlot ? (cur?.start ?? null) : null,
     pinned: cur?.pinned ?? false,
-    cancelled: b.cancelled || (cur?.cancelled ?? false),
+    cancelled: b.cancelled,
     note: b.note,
     typeId: cur?.typeId ?? null,
     pattern: null,
-    cancelKind: cur?.cancelled ? cur.cancelKind : null,
+    cancelKind: null,
   };
 }
 

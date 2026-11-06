@@ -361,3 +361,15 @@ export function requestBandArrange(data: DemoData, today: string): boolean {
   const targets = bandTargets(data, today, range);
   return autoArrange.request({ targets, writeUsual: false, rangeTo: range.to, since: null, after: null, today });
 }
+
+/**
+ * 読み込み・取り込み（予約の CSV・名簿・休みのカレンダー・連絡の貼り付け）のあとに、要対応の帯の［要対応を組む］と同じ対象
+ * （今日〜翌月末の担当なしと、切なら間に合わない・重なり・休みの人の訪問）を自動で組む依頼を出す（PRD D442。ADR-0108）。
+ * before・after は入れる前と入れたあとのデータ（描き直される前は after を読む）。依頼を出したら true
+ */
+export function requestImportArrange(before: DemoData, after: DemoData, today: string): boolean {
+  const range = autoRange(today);
+  const targets = bandTargets(after, today, range);
+  if (targets.length === 0) return false;
+  return autoArrange.request({ targets, writeUsual: false, rangeTo: range.to, since: before, after, today });
+}

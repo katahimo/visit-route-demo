@@ -55,7 +55,7 @@ export function useBookingImport(onDone?: () => void, target = 'bookings') {
       base,
       next: r.data,
       label: '訪問の読み込み',
-      done: (keep) => bookingDoneText(r, base.org.features, keep),
+      done: (keep) => bookingDoneText(r, keep),
       onDone,
     });
   };

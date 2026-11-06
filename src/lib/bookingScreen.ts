@@ -1,8 +1,6 @@
 // 予約の CSV の読み込み（ADR-0075。PRD D408）の文と判定の純粋関数。確認の本文・知らせの文を組み立てる。データの書き換えは画面が store で行う
 import type { BookingImportResult } from '../contracts/data';
-import type { Features } from '../contracts/features';
 import { keepNote, keptSuffix, otherFormSkippedText } from './dataScreen';
-import { isOn } from './features';
 
 type KeepState = { kept: boolean; why: string | null };
 
@@ -48,19 +46,14 @@ export function bookingConfirmBody(x: {
     ...bookingProblems(r, x.clientTerm),
     ...(x.outsideNote ? [x.outsideNote] : []),
     otherFormSkippedText(r.otherForm),
-    '総入れ替えです。ファイルの最初の日〜最後の日の単発の訪問をファイルに合わせ、ファイルに無い訪問と取り消しの予約の訪問は消します（繰り返しの訪問・範囲の外の日はそのまま）。すでに入っている予約の担当は残ります。新しい予約の担当は空です。',
+    '総入れ替えです。ファイルの最初の日〜最後の日の単発の訪問をファイルに合わせ、ファイルに無い訪問と取り消しの予約の訪問は消します（繰り返しの訪問・範囲の外の日はそのまま）。アプリで取り消した訪問も、ファイルで有効なら戻します。すでに入っている予約の担当は残ります。読み込んだあと、担当なしと要対応を自動で組みます。',
     keepNote(x.keep),
   ].join('\n');
 }
 
-/** 担当の組み方の案内（エキスパート機能が入なら「担当を組む」、切なら予定の上の要対応の帯の「要対応を組む」。ADR-0072・ADR-0077・ADR-0089） */
-const arrangeHint = (features: Features): string =>
-  isOn(features, 'expert') ? '「担当を組む」' : '予定の上の要対応の帯の「要対応を組む」';
-
-/** 読み込んだあとの知らせ */
+/** 読み込んだあとの知らせ（担当なし・要対応はこのあと自動で組む。PRD D442） */
 export const bookingDoneText = (
   r: Pick<BookingImportResult, 'added' | 'updated' | 'removed'>,
-  features: Features,
   keep: KeepState,
 ): string =>
-  `訪問を読み込みました（追加 ${r.added}件・更新 ${r.updated}件・削除 ${r.removed}件）。担当は${arrangeHint(features)}で組めます${keptSuffix(keep)}`;
+  `訪問を読み込みました（追加 ${r.added}件・更新 ${r.updated}件・削除 ${r.removed}件）。担当なしは自動で組みます${keptSuffix(keep)}`;

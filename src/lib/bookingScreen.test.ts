@@ -67,12 +67,9 @@ describe('予約の読み込みの文', () => {
   });
 
   it('知らせ（控えを残せなければ理由を添える）', () => {
-    expect(bookingDoneText(result(), { expert: true }, keep)).toBe(
-      '訪問を読み込みました（追加 2件・更新 1件・削除 0件）。担当は「担当を組む」で組めます',
+    expect(bookingDoneText(result(), keep)).toBe(
+      '訪問を読み込みました（追加 2件・更新 1件・削除 0件）。担当なしは自動で組みます',
     );
-    expect(bookingDoneText(result(), { expert: false }, keep)).toContain('予定の上の要対応の帯の「要対応を組む」');
-    expect(bookingDoneText(result(), { expert: true }, { kept: false, why: '容量が足りません' })).toContain(
-      '（容量が足りません）',
-    );
+    expect(bookingDoneText(result(), { kept: false, why: '容量が足りません' })).toContain('（容量が足りません）');
   });
 });

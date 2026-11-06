@@ -110,7 +110,7 @@ PoC本体は「性別希望」と「NG」しか持たず、相性は登録のみ
 
 | テーマ | ファイル | D番号 |
 |---|---|---|
-| 予定を組む・定期パターン | [prd/arrange.md](prd/arrange.md) | D38〜D40 D64 D151〜D154 D165 D256 D257 D353 D355 D356 D358 D362 D372 D373 D376 D378 D405〜D407 D416 D434 D435 |
+| 予定を組む・定期パターン | [prd/arrange.md](prd/arrange.md) | D38〜D40 D64 D151〜D154 D165 D256 D257 D353 D355 D356 D358 D362 D372 D373 D376 D378 D405〜D407 D416 D434 D435 D442 |
 | 予定の形・日の予定・予定の共通の部品 | [prd/schedule.md](prd/schedule.md) | D4 D16 D18 D58 D63 D84 D217 D219 D224 D237 D269 D300〜D304 D306 D314〜D319 D321〜D332 D344〜D347 D417 |
 | 月・週の予定・訪問の札・時間帯のバー | [prd/schedule-views.md](prd/schedule-views.md) | D42 D49〜D51 D53〜D57 D60 D62 D69 D70 D75〜D78 D80〜D82 D85 D108 D136〜D140 D177 D188 D189 D201 D223 D228 D266 D295 D339〜D343 D413 D433 |
 | AI の提案・条件・点数 | [prd/ai.md](prd/ai.md) | D7 D9 D10 D12 D17 D20 D25 D173 D229 D233 D235 D271 D286 |
