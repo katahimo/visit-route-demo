@@ -98,7 +98,6 @@ function StaffPageBody({
   const only = useExceptionsOnly();
   const folded = staffFolded(only);
   const compatOn = useFeature('compat');
-  const mailOn = useFeature('mail');
   const allowedStaffOn = useFeature('allowedStaff');
   const isNew = id === NEW_PERSON_ID;
   const saved = data.staff.find((s) => s.id === id);
@@ -154,7 +153,6 @@ function StaffPageBody({
           s={s}
           isNew={isNew}
           ed={ed}
-          mailOn={mailOn}
           offboardOn={offboardOn}
           folded={folded}
           more={folded.includes('compat') && saved ? <StaffCompatTab saved={saved} compatOn={compatOn} /> : null}

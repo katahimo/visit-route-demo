@@ -122,8 +122,8 @@ export default function SettingsPage() {
       {/* 移動時間の見積もり方（PRD D436。ADR-0101）：車道の道のりは押したときだけ OSRM から取る */}
       <RoadTravelSettingsCard />
 
-      {/* メールの予約送信（PRD D366。ADR-0069）：メールの機能が入のときだけ */}
-      {isOn(features, 'mail') && <MailScheduleSettingsCard />}
+      {/* メールの予約送信（PRD D366。ADR-0069） */}
+      <MailScheduleSettingsCard />
     </div>
   );
 }

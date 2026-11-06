@@ -71,11 +71,8 @@ async function insideEntries(t, page, dlg, ctx) {
     (await page.locator('.absence-btn').count()) > 0 === on('sudden'),
     `${label}：列の見出しの「この人の欠勤を登録」`,
   );
-  // メールで送るは操作の行の「その他 ▾」の中（PRD D306・D402・D419）
-  check(
-    (await toolCount(page, 'day-mail')) === (on('mail') ? 1 : 0),
-    `${label}：日の予定の「その他 ▾」の「メールで送る」`,
-  );
+  // メールで送るは操作の行の「その他 ▾」の中（PRD D306・D402・D419）。メールは入り切りせずいつも出す（ADR-0106）
+  check((await toolCount(page, 'day-mail')) === 1, `${label}：日の予定の「その他 ▾」の「メールで送る」（いつも出す）`);
   if (!on('rules')) check((await count('plan-reason')) === 0, `${label}：点数の横の理由を出さない`);
   check((await count('plan-menu')) === 0, `${label}：日の予定に「AI で組む ▾」は無い`);
   // 担当を組む（週の範囲）：AI で組む・考え方（点数の基準。選ぶ欄は無い）・案を比べる（ADR-0063・ADR-0065）
@@ -164,10 +161,10 @@ async function insideEntries(t, page, dlg, ctx) {
   await open(page, `/staff/${sid}?tab=basic`, '[data-testid="person-sec"]');
   await openFold(page);
   const staffView = await page.getByTestId('person-view').innerText();
-  check(staffView.includes('メールアドレス') === on('mail'), `${label}：〈スタッフ〉の基本情報のメールアドレス`);
+  check(staffView.includes('メールアドレス'), `${label}：〈スタッフ〉の基本情報のメールアドレス（いつも出す）`);
   check((await csec('lastDay').count()) === (on('offboard') ? 1 : 0), `${label}：最終勤務日の節`);
   await csec('basic').getByTestId('sec-edit').click();
-  check((await count('staff-email')) === (on('mail') ? 1 : 0), `${label}：〈スタッフ〉のメールアドレスの欄`);
+  check((await count('staff-email')) === 1, `${label}：〈スタッフ〉のメールアドレスの欄（いつも出す）`);
   await csec('basic').getByTestId('sec-cancel').click();
   await openPart(page, `/staff/${sid}`, 'compat');
   check(
@@ -196,7 +193,7 @@ async function insideEntries(t, page, dlg, ctx) {
   }
   // データの Excel
   await open(page, '/data');
-  check((await count('excel-card')) === (on('excel') ? 1 : 0), `${label}：データの Excel の欄`);
+  check((await count('excel-card')) === 1, `${label}：データの Excel の欄（いつも出す）`);
   // 稼働の見込みの交通費の単価
   if (on('workload')) {
     await open(page, '/workload');
@@ -242,6 +239,7 @@ async function keepData(page, dlg, ctx) {
       p.monthWeeks = [1, 3];
       p.dayTimes = [];
     }
+    // mail は前の版で切れた機能（ADR-0106 でなくした）。古いデータに残っていても読んで捨て、メールの欄を出す
     data.org.features = { clientStage: false, allowedStaff: false, mail: false, patternMonthly: false };
     localStorage.setItem(k, JSON.stringify(data));
     return {
@@ -305,17 +303,20 @@ async function keepData(page, dlg, ctx) {
     );
   }
 
-  // 〈スタッフ〉：メールアドレスの欄が無いまま保存する
+  // 〈スタッフ〉：古いデータの mail: false が残っていても、メールアドレスの欄を出す（ADR-0106）
   await open(page, `/staff/${encodeURIComponent(ids.staff)}?tab=basic`, '[data-testid="person-sec"]');
   await sec('basic').getByTestId('sec-edit').click();
   await sec('basic').locator('input').first().waitFor({ timeout: 5000 });
-  check((await page.getByTestId('staff-email').count()) === 0, 'メールを切るとメールアドレスの欄が無い');
+  check(
+    (await page.getByTestId('staff-email').count()) === 1,
+    '古いデータに mail: false があってもメールアドレスの欄を出す',
+  );
   await sec('basic').getByTestId('sec-save').click();
   await sec('basic').getByTestId('sec-edit').waitFor({ timeout: 5000 });
   await settle(page, 300);
   data = await stored();
   const s = data.staff.find((x) => x.id === ids.staff);
-  check(s.email === 'keep@example.com', '切ったまま保存しても〈スタッフ〉のメールアドレスが残る', s.email);
+  check(s.email === 'keep@example.com', '保存しても〈スタッフ〉のメールアドレスが残る', s.email);
   await applyTemplate(page, dlg, 'all');
 }
 

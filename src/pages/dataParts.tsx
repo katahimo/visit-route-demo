@@ -108,8 +108,6 @@ export function TermsCard() {
 
 /** 控え（JSON）の書き出し・読み込み（PRD D2・D3・D227） */
 export function BackupCard(x: {
-  /** Excel の入出力が入か（ADR-0028 の excel。切っていれば Excel との使い分けの行を出さない） */
-  excelOn: boolean;
   lastExport: LastExport | null;
   error: string | null;
   onDownload: () => void;
@@ -123,7 +121,7 @@ export function BackupCard(x: {
       <Hint>
         <ul className="hint-list">
           <li>全部のデータを1つのファイルに書き出します。控えや、別の端末へ移すときに使います。</li>
-          {x.excelOn && <li>中身を見て直すときは、下の「Excel」を使います。</li>}
+          <li>中身を見て直すときは、下の「Excel」を使います。</li>
           <li>書き出したファイルを読み込むと、いまのデータと置き換わります。</li>
         </ul>
       </Hint>

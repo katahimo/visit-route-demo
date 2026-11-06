@@ -75,7 +75,7 @@ export type FirstRunSetup = {
   /** 呼び名（単発＝お客様／シッター、定期＝利用者さん／スタッフ。org.terms に書く） */
   terms: Terms;
   industry: Industry;
-  /** 機能のひな形（問2で選んだもの。エキスパート機能は切）を当てた入り切り（22の ID を明示） */
+  /** 機能のひな形（問2で選んだもの。エキスパート機能は切）を当てた入り切り（20の ID を明示） */
   features: Features;
   /** 最初に開く予定の画面（単発＝週、定期＝月） */
   firstPath: '/week' | '/month';

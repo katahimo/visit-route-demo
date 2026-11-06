@@ -17,7 +17,7 @@
 
 #### 名簿の欄（〈利用者さん〉一覧・〈スタッフ〉一覧）
 
-- 部品 `components/RosterCard`（見出しのボタン `RosterButton`・欄 `RosterCard`）、状態と処理 `components/useRosterCard`、読み込みの確かめ `components/useRosterImport`。`excel` が切ならボタンも欄も出さない
+- 部品 `components/RosterCard`（見出しのボタン `RosterButton`・欄 `RosterCard`）、状態と処理 `components/useRosterCard`、読み込みの確かめ `components/useRosterImport`。ボタンも欄もいつも出す（入り切りしない。ADR-0106）
 - 「Excel・CSV」（`aria-expanded`・`aria-controls`）で一覧の上に欄（`section.roster-card`・`roster-card`）を開け閉めする（画面の中だけ）。右上に「閉じる」（`roster-close`）
 - 「Excel に書き出す」（`roster-export-xlsx`。`exportRosterWorkbook`）・「CSV に書き出す」（`roster-export-csv`。`exportRosterCsv`。BOM 付きの UTF-8）。ファイル名は `rosterFileName`（`staff-assign-demo-clients-YYYY-MM-DD.csv` など英字だけ）。「最後に書き出した日」に数えない
 - 読み込み方 `roster-mode`：追加・更新（ファイルに無い人はそのまま）／総入れ替え（ファイルに無い人を〈スタッフ〉は休止、〈利用者さん〉は段階「終了」にする。消さない）。一覧が0人なら出さず、追加・更新で読む（PRD D104）

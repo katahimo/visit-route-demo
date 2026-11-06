@@ -1,6 +1,6 @@
 // 「予約を追加」（単発）の引き出しのいちばん上の「予約の CSV を読み込む」（ADR-0090。PRD D408・D423）：読み込み・テンプレート・
 // 見ている月の単発の訪問の書き出し。毎日の予約の取り込みが主なので開いたまま出す。定期の引き出しには出さない（CSV は単発の訪問だけ読む）。
-// 名簿の読み込み（登録の案内）と同じく、Excel の入出力（機能 excel）の入り切りにかかわらず出す。状態と処理は usePlanCsv
+// 名簿の読み込み（登録の案内）と同じく、いつも出す。状態と処理は usePlanCsv
 import { Download, FileText } from 'lucide-react';
 import { useId } from 'react';
 import { Link } from 'react-router-dom';

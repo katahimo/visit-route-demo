@@ -42,8 +42,7 @@ export default function ClientsPage() {
   const geocodeOn = useFeature('geocode');
   // 一覧の列は名前・住所・いつもの予定の3列。入は表の上の「くわしい列」で専門の列を足せる（PRD D385・D394）
   const { available: expert, detailed } = useDetailColumns('clients');
-  // 名簿の欄（Excel・CSV。ADR-0068）。Excel の入出力を切っていれば出さない（ADR-0028 の excel）
-  const excelOn = useFeature('excel');
+  // 名簿の欄（Excel・CSV。ADR-0068）。いつも出す（ADR-0106）
   const [rosterOpen, setRosterOpen] = useState(false);
   const rosterId = useId();
   /**
@@ -82,9 +81,7 @@ export default function ClientsPage() {
         lead={lead}
         actions={
           <>
-            {excelOn && (
-              <RosterButton open={rosterOpen} onToggle={() => setRosterOpen((o) => !o)} controls={rosterId} />
-            )}
+            <RosterButton open={rosterOpen} onToggle={() => setRosterOpen((o) => !o)} controls={rosterId} />
             <Link to="/clients/new" className="btn btn-primary" data-testid="client-add">
               <WithIcon icon={Plus}>{terms.client}を追加</WithIcon>
             </Link>
@@ -92,15 +89,13 @@ export default function ClientsPage() {
         }
       />
 
-      {excelOn && (
-        <RosterCard
-          kind="client"
-          id={rosterId}
-          open={rosterOpen}
-          onClose={() => setRosterOpen(false)}
-          onPlace={autoPlace.onPlace}
-        />
-      )}
+      <RosterCard
+        kind="client"
+        id={rosterId}
+        open={rosterOpen}
+        onClose={() => setRosterOpen(false)}
+        onPlace={autoPlace.onPlace}
+      />
 
       <div className="card stack" data-testid="clients-filter">
         {narrow && (

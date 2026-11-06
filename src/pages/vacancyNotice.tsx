@@ -9,7 +9,7 @@ import { NO_TYPE_TEXT, NOTICE_PERIODS, type NoticePeriod, noticeLine } from '../
 import type { VacancyNoticeState } from './useVacancyNotice';
 import { FoldMark } from './vacancyParts';
 
-/** 空き枠の案内文の欄（PRD D67。ADR-0013）：期間・種類を選んで文を作り、コピー・紹介元へメール（mailOn のとき） */
+/** 空き枠の案内文の欄（PRD D67。ADR-0013）：期間・種類を選んで文を作り、コピー・紹介元へメール */
 export function NoticeCard({
   notice: n,
   terms,
@@ -18,7 +18,6 @@ export function NoticeCard({
   typeId,
   duration,
   hasPlace,
-  mailOn,
   stageOn,
 }: {
   notice: VacancyNoticeState;
@@ -29,8 +28,6 @@ export function NoticeCard({
   /** 上の条件の所要（正しくなければ null） */
   duration: number | null;
   hasPlace: boolean;
-  /** メール（ADR-0028 の mail）：切なら紹介元へのメールを出さない */
-  mailOn: boolean;
   /** 段階・紹介元（ADR-0028 の clientStage）：切なら紹介元の一覧と BCC のメールを出さない */
   stageOn: boolean;
 }) {
@@ -44,7 +41,7 @@ export function NoticeCard({
       <summary data-testid="notice-toggle">
         <h3 className="vacancy-sub-title">
           <WithIcon icon={ClipboardList} size={16}>
-            {mailOn ? '空き枠の案内文・紹介元へメール' : '空き枠の案内文'}
+            空き枠の案内文・紹介元へメール
           </WithIcon>
         </h3>
         <span className="vacancy-stage-line" data-testid="notice-line">
@@ -120,7 +117,7 @@ export function NoticeCard({
                 <WithIcon icon={Copy}>案内文をコピー</WithIcon>
               </button>
             </div>
-            {mailOn && stageOn && <NoticeMail notice={n} />}
+            {stageOn && <NoticeMail notice={n} />}
           </>
         )}
       </div>

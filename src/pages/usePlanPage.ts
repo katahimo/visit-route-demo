@@ -29,11 +29,10 @@ function usePlanFeatures() {
     /** 稼働の見込み（の画面へ移るボタン・リンク） */
     workloadOn: useFeature('workload'),
     /**
-     * 画面の中の欄・ボタン（ADR-0028）：欠勤・キャンセル（操作の行・列の見出し・当日キャンセルの選択）、メール（ボタン・欄・連絡の一覧）、
+     * 画面の中の欄・ボタン（ADR-0028）：欠勤・キャンセル（操作の行・列の見出し・当日キャンセルの選択）、
      * 条件の重み（点数の横の理由）。欠勤の印・帯（事実）は残す
      */
     suddenOn: useFeature('sudden'),
-    mailOn: useFeature('mail'),
     rulesOn: useFeature('rules'),
     compatOn: useFeature('compat'),
     /** 確定（伝えた）の段階（expert 入。切なら自動で決まり、確定のボタンなどは出さない。ADR-0073） */
@@ -111,11 +110,9 @@ export function usePlanPage() {
       clientById: d.clientById,
       visits: d.m.allVisits,
     }),
-    /** 〈スタッフ〉あての連絡のメール（PRD D94。メールを切っていれば出さない） */
-    staffMail: f.mailOn
-      ? (staffId: string, text: string) =>
-          mailTo(d.staffById.get(staffId)?.email ?? '', contactMailText(d.data.org, date, text), mailLimit)
-      : undefined,
+    /** 〈スタッフ〉あての連絡のメール（PRD D94） */
+    staffMail: (staffId: string, text: string) =>
+      mailTo(d.staffById.get(staffId)?.email ?? '', contactMailText(d.data.org, date, text), mailLimit),
     onCopied: (ok: boolean, what: string) =>
       toast(ok ? `${what}をコピーしました` : 'コピーできませんでした。文を選んでコピーしてください'),
     /** 日の予定をチャット用の文にしてコピーする（PRD D419。鍵はメールの欄と同じ「鍵の情報も入れる」のときだけ） */

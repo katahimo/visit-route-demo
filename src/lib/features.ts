@@ -44,7 +44,7 @@ export type FeatureDef = {
 };
 
 /**
- * 機能の表（22。ADR-0028 の「機能の一覧」）。土台（月の予定・週の予定・日の予定・〈利用者さん〉一覧・〈スタッフ〉一覧・
+ * 機能の表（20。ADR-0028 の「機能の一覧」）。土台（月の予定・週の予定・日の予定・〈利用者さん〉一覧・〈スタッフ〉一覧・
  * 勤務時間（シフト）・訪問の種類・データ・管理者設定）は表に入れず、切れない
  */
 export const FEATURES: readonly FeatureDef[] = [
@@ -200,14 +200,6 @@ export const FEATURES: readonly FeatureDef[] = [
     hides: 'メニューの「組む」の「条件の重み」と設定の「特性の項目」のタブ、点数の理由（切ると今の重みのまま組む）',
   },
   {
-    id: 'mail',
-    label: 'メール',
-    description: '予定・連絡・案内文を、端末のメールアプリで開きます',
-    group: '現場との共有',
-    paths: [],
-    hides: 'メールのボタン・欄、メールアドレスの欄',
-  },
-  {
     id: 'mapsLink',
     label: '道順のリンク',
     description: '訪問先への道順を Google マップで開くリンクを出します',
@@ -222,14 +214,6 @@ export const FEATURES: readonly FeatureDef[] = [
     group: '入力の補助',
     paths: [],
     hides: '検索のボタン・まとめて緯度・経度を入れる（地図のクリックで入れるのは残る）',
-  },
-  {
-    id: 'excel',
-    label: 'Excel の入出力',
-    description: 'データを Excel のブックで、名簿を Excel・CSV で書き出し・読み込みします',
-    group: '入力の補助',
-    paths: [],
-    hides: 'データの画面の Excel の欄・一覧の名簿の欄（Excel・CSV）。控えは残る',
   },
 ];
 
@@ -320,7 +304,7 @@ export type TemplateDef = {
   on: readonly FeatureId[];
 };
 
-/** 基本のひな形で入れる機能（予定・繰り返し・毎月の第N・曜日ごとの時刻・〈利用者さん〉の休み・欠勤・キャンセル・空き状況・相性・決まりごと・退職・担当替え・道順のリンク・住所の検索・Excel の入出力。ADR-0086・ADR-0091） */
+/** 基本のひな形で入れる機能（予定・繰り返し・毎月の第N・曜日ごとの時刻・〈利用者さん〉の休み・欠勤・キャンセル・空き状況・相性・決まりごと・退職・担当替え・道順のリンク・住所の検索。ADR-0086・ADR-0091） */
 const BASIC_ON: readonly FeatureId[] = [
   'patterns',
   'patternMonthly',
@@ -332,7 +316,6 @@ const BASIC_ON: readonly FeatureId[] = [
   'offboard',
   'mapsLink',
   'geocode',
-  'excel',
 ];
 
 /** 単発の予約のひな形で入れる機能：基本から繰り返し（patterns・patternMonthly）と決まりごと（visitNotes）を外したもの（ADR-0072 第2段・ADR-0086・ADR-0091。PRD D378） */
@@ -509,10 +492,6 @@ export function turnOffImpact(
         [c.entryNote, c.keyNote, c.parkingNote, c.cautionNote].some((x) => x.trim() !== ''),
       ).length;
       return one(n, `訪問先の決まりごと ${n}人（${client}）は残ります`);
-    }
-    case 'mail': {
-      const n = data.staff.filter((s) => s.email.trim() !== '').length;
-      return one(n, `メールアドレス ${n}人（${staff}）は残ります`);
     }
     default:
       return null;

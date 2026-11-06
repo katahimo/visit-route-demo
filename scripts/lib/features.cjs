@@ -25,10 +25,8 @@ const FEATURE_IDS = [
   'workload',
   'fare',
   'rules',
-  'mail',
   'mapsLink',
   'geocode',
-  'excel',
 ];
 /** ひな形で入れる機能（ADR-0028 の表。基本に毎月の第N・決まりごとを足したのは ADR-0086、休み・退職・Excel を足したのは ADR-0091） */
 const BASIC_ON = [
@@ -42,7 +40,6 @@ const BASIC_ON = [
   'offboard',
   'mapsLink',
   'geocode',
-  'excel',
 ];
 const TEMPLATE_ON = {
   oneOff: BASIC_ON.filter((id) => !['patterns', 'patternMonthly', 'visitNotes'].includes(id)),

@@ -1,6 +1,5 @@
 import { Database, TriangleAlert } from 'lucide-react';
 import { PageHeader } from '../components/ui';
-import { useFeature } from '../components/useFeature';
 import { useDemoData } from '../store';
 import './settings.css';
 import '../components/features.css';
@@ -19,7 +18,6 @@ import { useDataTidy } from './useDataTidy';
  */
 export default function DataPage() {
   const { data, saveError, previous } = useDemoData();
-  const excelOn = useFeature('excel');
   const lastExport = useLastExport();
   const excel = useDataExcel({ markExported: lastExport.mark });
   const backup = useDataBackup({ markExported: lastExport.mark });
@@ -32,7 +30,7 @@ export default function DataPage() {
         nav={<SettingsTabs />}
         icon={Database}
         title="データ"
-        lead={`データの書き出し・読み込み${excelOn ? '（Excel も）' : ''}・最初の設定をやり直す`}
+        lead="データの書き出し・読み込み（Excel も）・最初の設定をやり直す"
       />
       <div className="warn-box">
         <TriangleAlert size={20} strokeWidth={2.2} aria-hidden="true" />
@@ -49,18 +47,17 @@ export default function DataPage() {
       <TermsCard />
 
       <BackupCard
-        excelOn={excelOn}
         lastExport={lastExport.last}
         error={backup.error}
         onDownload={backup.download}
         onPick={(f) => void backup.load(f)}
       />
 
-      {/* Excel の入出力を切っていれば欄ごと出さない（控え（JSON）は残す。ADR-0028 の excel） */}
-      {excelOn && <ExcelCard excel={excel} t={data.org.terms} />}
+      {/* Excel の入出力の欄はいつも出す（ADR-0106） */}
+      <ExcelCard excel={excel} t={data.org.terms} />
 
-      {/* ほかのソフトの予約の CSV（ADR-0075）。Excel・CSV の入出力と一緒に入り切りする */}
-      {excelOn && <BookingCard t={data.org.terms} />}
+      {/* ほかのソフトの予約の CSV（ADR-0075）。Excel・CSV の入出力と一緒にいつも出す */}
+      <BookingCard t={data.org.terms} />
 
       <TidyCard tidy={tidy} />
 

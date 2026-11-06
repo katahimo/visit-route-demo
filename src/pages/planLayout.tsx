@@ -369,7 +369,7 @@ export function PlanPanels({ p }: { p: PlanCtx }) {
           onClose={() => v.setPanel(null)}
         />
       )}
-      {v.panel === 'mail' && f.mailOn && (
+      {v.panel === 'mail' && (
         <DayMailPanel
           data={data}
           date={date}

@@ -134,7 +134,7 @@ function RosterStep({
   return (
     <>
       <p className="sub">{START_GUIDE_ROSTER_FORMS}</p>
-      {/* 名簿の欄（ADR-0068）をそのまま使う。Excel の入出力の入り切りにかかわらず、ここでは読み込める */}
+      {/* 名簿の欄（ADR-0068）をそのまま使う。ここでも読み込める */}
       <RosterCard kind={step.person} id={`start-guide-roster-${step.person}`} onPlace={autoPlace.onPlace} inline />
       <p className="sub" data-testid="start-guide-registered">
         いま登録されているのは {registered}人です
@@ -159,7 +159,7 @@ function PlanStep({
       <p>
         予約の CSV があれば読み込みます。無ければ、予定の画面で訪問を追加します。追加した訪問には自動で担当が付きます。
       </p>
-      {/* データの画面の予約の CSV の欄をそのまま使う。Excel の入出力の入り切りにかかわらず、ここでは読み込める */}
+      {/* データの画面の予約の CSV の欄をそのまま使う。ここでも読み込める */}
       <BookingCard t={terms} />
       <p className="sub" data-testid="start-guide-visits">
         いま登録されている訪問は {visits}件です

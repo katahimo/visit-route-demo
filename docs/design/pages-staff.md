@@ -29,7 +29,7 @@
 
 #### 基本情報のタブ（節）
 
-- 基本（`basic`）：名前（`staff-name`）・アイコン（`staff-icon`。左にその場の見本（`StaffMark` の lg。色は保存後の名前の並びの色）、空なら `placeholder` に苗字の最初の1文字。保存で前後の空白を落とし、見た目で2文字を超えれば保存しない）・メールアドレス（`mail` が入のとき。`staff-email`。`normalizeEmail`）・移動手段・利用中（外すと休止）。読むときは印と「アイコン「…」」／「アイコンは未設定（苗字の最初の1文字）」（`view-staff-mark`）・状態・メール・移動手段
+- 基本（`basic`）：名前（`staff-name`）・アイコン（`staff-icon`。左にその場の見本（`StaffMark` の lg。色は保存後の名前の並びの色）、空なら `placeholder` に苗字の最初の1文字。保存で前後の空白を落とし、見た目で2文字を超えれば保存しない）・メールアドレス（`staff-email`。`normalizeEmail`）・移動手段・利用中（外すと休止）。読むときは印と「アイコン「…」」／「アイコンは未設定（苗字の最初の1文字）」（`view-staff-mark`）・状態・メール・移動手段
 - 自宅（`home`：`AddressField`（testId `staff-home`）。郵便番号は保存しない（「郵便番号（任意。住所を探すためだけで、保存しません）」））
 - 特性（`traits`）・〈利用者さん〉に求めること（`conds`）
 - 最終勤務日（`lastDay`。`offboard` が入のとき。`staff-lastday-input`・「最終勤務日を消す」・「M/D から勤務なし」）

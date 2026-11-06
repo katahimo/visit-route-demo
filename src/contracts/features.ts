@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 /**
  * 機能の入り切り（PRD D210〜D216。ADR-0028。design.md §5「機能の入り切り」）。
- * 管理者設定で入・切する機能の ID（22）。表（名前・グループ・依存・URL・ひな形）は lib/features.ts の1か所
+ * 管理者設定で入・切する機能の ID（20。メールと Excel の入出力はいつも入で、入り切りしない。ADR-0106）。表（名前・グループ・依存・URL・ひな形）は lib/features.ts の1か所
  */
 export const FEATURE_IDS = [
   'patterns',
@@ -23,10 +23,8 @@ export const FEATURE_IDS = [
   'workload',
   'fare',
   'rules',
-  'mail',
   'mapsLink',
   'geocode',
-  'excel',
 ] as const;
 export type FeatureId = (typeof FEATURE_IDS)[number];
 

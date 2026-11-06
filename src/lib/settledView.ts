@@ -26,7 +26,7 @@ export function dayStateText(state: ToldState, confirmStep: boolean, words: Reco
 export const headerToldChip = (state: ToldState, confirmStep: boolean): ToldState | null =>
   confirmStep ? state : state === 'changed' ? 'changed' : null;
 
-/** 連絡の一覧の「連絡した」ボタンを出すか：expert 切で未連絡の変更があるとき（メール機能の入り切りに関係なく） */
+/** 連絡の一覧の「連絡した」ボタンを出すか：expert 切で未連絡の変更があるとき */
 export const showContactedButton = (state: ToldState, confirmStep: boolean): boolean =>
   !confirmStep && state === 'changed';
 
