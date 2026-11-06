@@ -27,6 +27,7 @@ const {
   isFocused,
   runSteps,
   settle,
+  until,
 } = require('./lib/env.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
 const { goTo, pressTool } = require('./lib/ui.cjs');
@@ -1054,25 +1055,42 @@ async function historyButtons(page) {
   await open(page, '/clients');
   const back = page.getByTestId('history-back');
   const fwd = page.getByTestId('history-forward');
-  check((await back.isDisabled()) && (await fwd.isDisabled()), '開いた直後は「戻る」「進む」とも押せない');
+  // ボタンの状態は画面が移ったあとの描き直しで変わるので、目当ての状態になるまで待ってから確かめる（遅い CI で先に読まない）
+  const state = async () => ({ back: !(await back.isDisabled()), fwd: !(await fwd.isDisabled()) });
+  const reach = async (want) =>
+    (await until(async () => {
+      const st = await state();
+      return st.back === want.back && st.fwd === want.fwd ? st : undefined;
+    }, 5000)) !== undefined;
+  const hashIs = (re) =>
+    page.waitForFunction((src) => new RegExp(src).test(location.hash), re.source, { timeout: 10000 });
+  check(await reach({ back: false, fwd: false }), '開いた直後は「戻る」「進む」とも押せない', await state());
   await page.locator('.side-nav [data-testid="nav-link"][data-key="staff"]').first().click();
-  await page.waitForFunction(() => location.hash.startsWith('#/staff'), null, { timeout: 10000 });
-  check(!(await back.isDisabled()) && (await fwd.isDisabled()), 'メニューで移ると「戻る」が押せ、「進む」は押せない');
+  await hashIs(/^#\/staff/);
+  check(await reach({ back: true, fwd: false }), 'メニューで移ると「戻る」が押せ、「進む」は押せない', await state());
   await back.click();
-  await page.waitForFunction(() => location.hash.startsWith('#/clients'), null, { timeout: 10000 });
-  check(await back.isDisabled(), '「戻る」で前の画面へ。最初の画面では「戻る」が押せない');
-  check(!(await fwd.isDisabled()), '戻ると「進む」が押せる');
+  await hashIs(/^#\/clients/);
+  check(
+    await reach({ back: false, fwd: true }),
+    '「戻る」で前の画面へ。最初の画面では「戻る」が押せず、「進む」が押せる',
+    await state(),
+  );
   await page.reload();
   await page.locator('h1').first().waitFor({ timeout: 30000 });
-  check(!(await fwd.isDisabled()), '読み直しても「進む」が押せる');
+  check(await reach({ back: false, fwd: true }), '読み直しても「進む」が押せる', await state());
   await fwd.click();
-  await page.waitForFunction(() => location.hash.startsWith('#/staff'), null, { timeout: 10000 });
-  check(await fwd.isDisabled(), '「進む」で次の画面へ。先が無ければ押せない');
+  await hashIs(/^#\/staff/);
+  check(await reach({ back: true, fwd: false }), '「進む」で次の画面へ。先が無ければ押せない', await state());
   await back.click();
-  await page.waitForFunction(() => location.hash.startsWith('#/clients'), null, { timeout: 10000 });
+  await hashIs(/^#\/clients/);
+  await reach({ back: false, fwd: true });
   await page.locator('.side-nav [data-testid="nav-link"][data-key="settings"]').first().click();
   await page.waitForFunction(() => !location.hash.startsWith('#/clients'), null, { timeout: 10000 });
-  check(await fwd.isDisabled(), '戻ってから新しく移ると「進む」は押せない');
+  check(await reach({ back: true, fwd: false }), '戻ってから新しく移ると「進む」は押せない', {
+    ...(await state()),
+    hash: await page.evaluate(() => location.hash),
+    idx: await page.evaluate(() => history.state?.idx),
+  });
 }
 
 const steps = sharedPage({

@@ -1,7 +1,9 @@
 name: e2e（本物のブラウザ）
 
-# PR・手動・夜間に、速い検査（lint・型・ユニットテスト・コードの検査・PRD の検査）と e2e（scripts/e2e-*.cjs を @playwright/test で。ADR-0029）を並列に走らせる。
-# e2e は shard で4つのジョブに分け、速さを見る perf は別のジョブで1本ずつ。
+# 速い検査（lint・型・ユニットテスト・コードの検査・PRD の検査）は PR の push のたびに走らせる。
+# e2e（scripts/e2e-*.cjs を @playwright/test で。ADR-0029）は重いので、PR では「e2e」のラベルを付けたときと、付いている PR への push だけ。
+# 手動（workflow_dispatch。ブランチを選べる）と夜間（週1回）は全部（ADR-0104）。
+# e2e は shard で4つのジョブに分け、速さを見る perf は別のジョブで1本ずつ（PR では走らせない。手動・夜間だけ）。
 # ブラウザと依存は Playwright の公式イメージに入っているので、毎回のインストール（約3分）をしない。
 # 公開（deploy.yml）はまだこれを待たない
 #
@@ -10,6 +12,8 @@ name: e2e（本物のブラウザ）
 # ・夜間は毎週月曜に1回だけ（約700分/月 → 約100分/月）
 on:
   pull_request:
+    # labeled：「e2e」のラベルを付けたときに e2e を走らせる
+    types: [opened, synchronize, reopened, labeled]
     paths-ignore:
       - 'docs/**'
       - '**/*.md'
@@ -22,7 +26,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: e2e-${{ github.event_name }}-${{ github.ref }}
+  # ラベルを付けたときの実行は、ラベルごとに push の実行と別の組にし、互いに止めない（ほかのラベルを付けても e2e を止めない）
+  group: e2e-${{ github.event_name }}-${{ github.ref }}-${{ github.event.action == 'labeled' && format('label-{0}', github.event.label.name) || 'run' }}
   cancel-in-progress: true
 
 env:
@@ -33,6 +38,8 @@ env:
 jobs:
   check:
     name: 速い検査
+    # ラベルを付けただけ（コードは同じ）のときは走らせない
+    if: ${{ github.event.action != 'labeled' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -52,6 +59,13 @@ jobs:
       - run: npm test
 
   e2e:
+    # PR では「e2e」のラベルがあるときだけ（付けたとき・付いた PR への push）。ほかのラベルを付けたときは走らせない。
+    # ラベル付きで PR を作ると opened と labeled の両方が来るので、opened では走らせない（labeled の側で走る）
+    if: >-
+      ${{ github.event_name != 'pull_request' ||
+          (github.event.action == 'labeled' && github.event.label.name == 'e2e') ||
+          (github.event.action != 'labeled' && github.event.action != 'opened' &&
+           contains(github.event.pull_request.labels.*.name, 'e2e')) }}
     # Playwright の版（package.json の @playwright/test）と同じイメージを使う。版を上げるときはここも上げる
     runs-on: ubuntu-24.04
     container:
@@ -83,11 +97,12 @@ jobs:
       - uses: actions/upload-artifact@v4
         # 保存の容量の上限などで残せなくても、テストの結果（前の段）でジョブの成否を決める
         continue-on-error: true
-        if: ${{ !cancelled() }}
+        # 報告は落ちたときだけ残す（保存の容量を使い切らない。ADR-0104）
+        if: ${{ failure() }}
         with:
           name: playwright-report-e2e-${{ strategy.job-index }}
           path: playwright-report/
-          retention-days: 14
+          retention-days: 3
       # test-results（落ちた test の trace.zip・動画・スクリーンショット・記録）は失敗のときに残す（ADR-0041）
       - uses: actions/upload-artifact@v4
         # 保存の容量の上限などで残せなくても、テストの結果（前の段）でジョブの成否を決める
@@ -96,10 +111,12 @@ jobs:
         with:
           name: test-results-e2e-${{ strategy.job-index }}
           path: test-results/
-          retention-days: 14
+          retention-days: 3
 
   perf:
-    # 速さの上限を見るもの（e2e/legacy.spec.ts の PERF）。ほかと同時に走らせると遅れるので、別のジョブで1本ずつ
+    # 速さの上限を見るもの（e2e/legacy.spec.ts の PERF）。ほかと同時に走らせると遅れるので、別のジョブで1本ずつ。
+    # 共有ランナーの速さはぶれるので PR では走らせず、手動・夜間だけ
+    if: ${{ github.event_name != 'pull_request' }}
     runs-on: ubuntu-24.04
     container:
       image: mcr.microsoft.com/playwright:v1.56.1-noble
@@ -134,11 +151,12 @@ jobs:
       - uses: actions/upload-artifact@v4
         # 保存の容量の上限などで残せなくても、テストの結果（前の段）でジョブの成否を決める
         continue-on-error: true
-        if: ${{ !cancelled() }}
+        # 報告は落ちたときだけ残す（保存の容量を使い切らない。ADR-0104）
+        if: ${{ failure() }}
         with:
           name: playwright-report-perf-${{ strategy.job-index }}
           path: playwright-report/
-          retention-days: 14
+          retention-days: 3
       - uses: actions/upload-artifact@v4
         # 保存の容量の上限などで残せなくても、テストの結果（前の段）でジョブの成否を決める
         continue-on-error: true
@@ -146,4 +164,4 @@ jobs:
         with:
           name: test-results-perf-${{ strategy.job-index }}
           path: test-results/
-          retention-days: 14
+          retention-days: 3
