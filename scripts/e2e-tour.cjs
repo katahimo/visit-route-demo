@@ -914,6 +914,20 @@ async function dataProtect(b) {
   await page.waitForURL(/#\/month/);
   await settle(page, 800);
   check((await stored(page)).seed !== 424242, 'デモで作り直した（印が消えた）');
+  // 戻るで最初の設定（データの画面の項目）→「閉じる」で印を外す → 別の画面へ移ってから戻っても2問は出ない（PRD D381・D438）
+  await page.getByTestId('history-back').click();
+  await page.getByTestId('first-run').waitFor({ timeout: 30000 });
+  await page.getByTestId('first-run-cancel').click();
+  await page.getByTestId('restart-first-run-button').waitFor({ timeout: 30000 });
+  await page.goto(`${BASE}#/week`);
+  await page.locator('.app-main h1').first().waitFor({ timeout: 30000 });
+  await page.goBack();
+  await page.getByTestId('restart-first-run-button').waitFor({ timeout: 30000 });
+  await settle(page, 500);
+  check(
+    (await page.getByTestId('first-run').count()) === 0,
+    '最初の設定を「閉じる」と、あとでその画面へ戻っても2問は出ない',
+  );
   await page.goto(`${BASE}#/data`);
   await page.getByTestId('data-prev-text').waitFor({ timeout: 30000 });
   const prevText = await page.getByTestId('data-prev-text').innerText();

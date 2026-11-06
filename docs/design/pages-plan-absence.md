@@ -26,7 +26,7 @@
 - 段の表示は無い。段の見出し（`h3.sudden-step-title`・`data-return-focus`。1段目「休み・キャンセルを選ぶ」・2段目「変更を伝えて確定する」＝`SUDDEN_HEADINGS`）へ `focusKey`（段）でフォーカス
 - 1段目は `onSubmit` を渡して form にする（欠勤のメモの Enter で主ボタンと同じ：［この案で決める］、担当のある訪問が無い日は［欠勤だけ登録］。`lib/sudden` の `suddenPrimary`。PRD D251）。種類を選んでも form のまま（form と div を切り替えると中身が作り直され、押したボタンのフォーカスが消える）
 - 閉じる（`sudden-close`。1段目の帯）。Esc で閉じると入口へフォーカス。`onClose(toBar)`：振り直したあと Esc で閉じれば差の欄へ（`returnFocus` と `goToBar`）。「あとで確定する」「連絡したので確定」は差の欄へ移らない。戻る段は無い（決めたあとは「振り直す前に戻す」）
-- 振り直し・欠勤だけ登録・欠勤の取り消し・取り消し・確定・振り直す前に戻すは日の予定の関数を呼ぶだけ。2段目の振り直しの結果（`ReassignResultBox`＝`ReassignSummary`・`ReassignMoves`・`AnnealBox`）は `result`、連絡の一覧は `contacts`（`ContactRow[]`。差を出せなければ null）、〈スタッフ〉あてのメールは `contactMail`（メールが切なら渡さない）、案B の「変更を減らす」は `weight`・`onWeight`（差の欄の案B と同じ値）で受ける
+- 振り直し・欠勤だけ登録・欠勤の取り消し・取り消し・確定・振り直す前に戻すは日の予定の関数を呼ぶだけ。2段目の振り直しの結果（`ReassignResultBox`＝`ReassignSummary`・`ReassignMoves`・`AnnealBox`）は `result`、連絡の一覧は `contacts`（`ContactRow[]`。差を出せなければ null）、〈スタッフ〉あてのメールは `contactMail`、案B の「変更を減らす」は `weight`・`onWeight`（差の欄の案B と同じ値）で受ける
 - エキスパート機能が切なら確定の段階を出さない：2段目の「連絡したので確定」「あとで確定する」と確定の状態の文は出さず（`confirmNote` の `confirmStep`。変更ありのときだけ「連絡の一覧で『連絡した』を押す」案内）、帯は「終わる」だけ。振り直しは store の `update` が自動で伝えた記録を付ける／伝えた日なら「変更あり」になる
 - 決める・確定のボタンは欄の下の帯（`footer`）。600px 以下は幅いっぱい、2段目の表は欄の中で横に巻く
 - `plan.css`：`.plan-sudden-btn`（入口）・`.sudden-kind`（種類の選び。390px ではアイコンを隠して名前を1行に）・`.sudden-alt`（ほかのやり方）・`.sudden-result-box`（2段目の振り直しの結果）・`.sudden-contacts`・`.sudden-contact`（2段目の1人1枚）

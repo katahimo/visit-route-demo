@@ -144,7 +144,7 @@ type SuddenArgs = {
   /** 訪問を取り消す（取り消しの欄と共通） */
   applyCancel: (visitId: string, sameDay: boolean) => void;
   adopt: () => Promise<boolean>;
-  /** 〈スタッフ〉あてのメール（メールを切っていれば undefined） */
+  /** 〈スタッフ〉あてのメール */
   staffMail?: (staffId: string, text: string) => BuiltMail | null;
   onCopied: (ok: boolean, what: string) => void;
   /** 列の見出し（欄を閉じたとき、フォーカスの戻り先が消えていたらここへ） */

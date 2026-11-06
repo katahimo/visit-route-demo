@@ -49,7 +49,7 @@ export function ContactPanel({
   /** コピーしたあと（ok：できたか） */
   onCopied: (ok: boolean, what: string) => void;
   /**
-   * 「連絡した」（expert 切の未連絡の変更の一覧だけ。メール機能の入り切りに関係なく出す。ADR-0073）：今の担当・時刻を伝えた記録にする。
+   * 「連絡した」（expert 切の未連絡の変更の一覧だけ。ADR-0073）：今の担当・時刻を伝えた記録にする。
    * 渡さなければボタンを出さない
    */
   onContacted?: () => void;

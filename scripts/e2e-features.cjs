@@ -1,6 +1,6 @@
 // 機能の入り切り その1（PRD D210〜D213・D216。ADR-0028）を本物のブラウザで確かめる：
 // すべて入（初期データ。e2e は初回もすべて入に固定。PRD D276）でメニューの最後に「設定」（タブに管理者設定・データ）、管理者設定の画面（見出し・説明・ひな形の5つ・
-// 「いまの設定」とカスタムの印・22のスイッチの role=switch・aria-checked・名前・説明）。
+// 「いまの設定」とカスタムの印・20のスイッチの role=switch・aria-checked・名前・説明）。
 // ひな形の5通り（基本・月次予定・現場共有・すべては管理者設定で適用する（独自の確認ダイアログに入る機能・切れる機能、取り消すと変わらない）、
 // 労務・契約管理は別のタブで localStorage を書き換えて作る）ごとに、メニューの項目（入は 予定・空き状況・〈利用者さん〉・〈スタッフ〉・組む・設定 の6項目で、空き状況の機能を切ると空き状況が消える（欠勤・キャンセルの入り切りでは変わらない）。
 // 子は組むだけ：条件の重み・担当を組む。ADR-0063・ADR-0074・ADR-0100）・設定のタブ・下のタブ・パレットの画面と操作・ホームのいつでもの入口・
@@ -154,7 +154,11 @@ async function allOn(page) {
     .evaluateAll((els) =>
       els.map((el) => ({ checked: el.getAttribute('aria-checked'), disabled: el.getAttribute('aria-disabled') })),
     );
-  check(sw.length === 22 && sw.every((s) => s.checked === 'true' && s.disabled === null), 'スイッチは22・すべて入', sw);
+  check(
+    sw.length === 20 && sw.every((s) => s.checked === 'true' && s.disabled === null),
+    'スイッチは20・すべて入（メール・Excel はスイッチなし。ADR-0106）',
+    sw,
+  );
   // スイッチは1枚のカード（feature-switches）の中にグループ（ADR-0092）。各グループ見出しに「N / M 入」
   const groups = await page.getByTestId('feature-switches').getByTestId('feature-group').count();
   const counts = await page.getByTestId('feature-group-count').allInnerTexts();
@@ -402,7 +406,7 @@ async function templates(page, dlg) {
     .locator('.toast')
     .filter({ hasText: 'ひな形「定期の訪問（基本）」を適用しました' })
     .waitFor({ timeout: 5000 });
-  check(same(await storedFeatures(page), asFeatures(TEMPLATE_ON.basic)), '基本：全22の ID を明示して書く');
+  check(same(await storedFeatures(page), asFeatures(TEMPLATE_ON.basic)), '基本：全20の ID を明示して書く');
   await checkTemplate(page, 'basic');
   await page.screenshot({ path: path.join(OUT_DIR, 'settings-basic.png'), fullPage: true });
 }

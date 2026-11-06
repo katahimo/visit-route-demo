@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useLocation, useNavigationType } from 'react-router-dom';
-import { isFirstRunEntry } from '../lib/firstRun';
+import { firstRunBackAction, isFirstRunEntry } from '../lib/firstRun';
 import { useDemoData } from '../store';
 
 /**
@@ -20,9 +20,9 @@ export function useFirstRunBack(): boolean {
   useEffect(() => {
     if (lastKey.current === location.key) return;
     lastKey.current = location.key;
-    if (navType !== 'POP') return;
-    if (marked && !needsFirstRun) askFirstRun();
-    else if (!marked && redoingFirstRun) cancelFirstRun();
+    const act = firstRunBackAction({ pop: navType === 'POP', marked, needsFirstRun, redoing: redoingFirstRun });
+    if (act === 'ask') askFirstRun();
+    else if (act === 'cancel') cancelFirstRun();
   }, [location.key]);
   return moved && marked;
 }

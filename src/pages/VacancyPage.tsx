@@ -35,7 +35,6 @@ export default function VacancyPage() {
   const { data, update } = useDemoData();
   const terms = data.org.terms;
   const noticeOn = useFeature('vacancyNotice');
-  const mailOn = useFeature('mail');
   /** 段階・紹介元（ADR-0028 の clientStage）：切なら紹介元の名前・メールアドレスの一覧と BCC のメールを出さない（データは残す） */
   const stageOn = useFeature('clientStage');
   const toast = useToast();
@@ -133,7 +132,7 @@ export default function VacancyPage() {
         clientWord={terms.client}
         onHoldOpen={() => setHold({ name: '', error: null })}
       >
-        {/* 空き枠の案内文（ADR-0028 の vacancyNotice）を切っていれば欄ごと出さない。メールを切っていれば紹介元へのメールを出さない */}
+        {/* 空き枠の案内文（ADR-0028 の vacancyNotice）を切っていれば欄ごと出さない */}
         {noticeOn && (
           <NoticeCard
             notice={notice}
@@ -143,7 +142,6 @@ export default function VacancyPage() {
             typeId={{ value: input.noticeTypeId, set: input.setNoticeTypeId }}
             duration={durationOk ? durationNum : null}
             hasPlace={!!exactPlace}
-            mailOn={mailOn}
             stageOn={stageOn}
           />
         )}

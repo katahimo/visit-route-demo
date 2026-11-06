@@ -75,7 +75,7 @@ export type FirstRunSetup = {
   /** 呼び名（単発＝お客様／シッター、定期＝利用者さん／スタッフ。org.terms に書く） */
   terms: Terms;
   industry: Industry;
-  /** 機能のひな形（問2で選んだもの。エキスパート機能は切）を当てた入り切り（22の ID を明示） */
+  /** 機能のひな形（問2で選んだもの。エキスパート機能は切）を当てた入り切り（20の ID を明示） */
   features: Features;
   /** 最初に開く予定の画面（単発＝週、定期＝月） */
   firstPath: '/week' | '/month';
@@ -147,4 +147,21 @@ export const FIRST_RUN_ENTRY = { firstRun: true } as const;
 /** 履歴の項目が最初の設定を出していたものか（FIRST_RUN_ENTRY の印があるか） */
 export function isFirstRunEntry(state: unknown): boolean {
   return (state as { firstRun?: unknown } | null)?.firstRun === true;
+}
+
+/**
+ * 履歴の項目を移ったときにすること（components/useFirstRunBack）：ブラウザの「戻る」「進む」（pop）で印の項目へ来て、
+ * 2問を出していなければ出す（ask）。やり直しの2問を出しているあいだに印の無い項目へ来たら閉じる（cancel）。ほかは何もしない（null）。
+ * 初めて開いたとき（first）・更新の知らせ（release）の2問は閉じない（redoing が偽）
+ */
+export function firstRunBackAction(x: {
+  pop: boolean;
+  marked: boolean;
+  needsFirstRun: boolean;
+  redoing: boolean;
+}): 'ask' | 'cancel' | null {
+  if (!x.pop) return null;
+  if (x.marked && !x.needsFirstRun) return 'ask';
+  if (!x.marked && x.redoing) return 'cancel';
+  return null;
 }

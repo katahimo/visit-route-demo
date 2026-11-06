@@ -44,7 +44,10 @@ export function BookingCard({ t }: { t: Pick<Terms, 'client' | 'staff'> }) {
         caption="読み込む予約の CSV"
         accept=".csv,.tsv,.txt,text/csv"
         disabled={booking.busy}
-        onPick={(f) => void booking.load(f)}
+        onPick={(f) => {
+          tpl.clearError();
+          void booking.load(f);
+        }}
         testId="booking-file"
       />
       <FieldError style={{ whiteSpace: 'pre-line' }}>{tpl.error ?? booking.error}</FieldError>

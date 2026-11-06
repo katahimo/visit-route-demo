@@ -36,27 +36,21 @@ import type { StaffSchedule } from './useStaffSchedule';
 /** 節の編集（useStaffEdit の戻り値） */
 type StaffEdit = ReturnType<typeof useStaffEdit>;
 
-type StaffBasicArgs = { s: Staff; ed: StaffEdit; mailOn: boolean; offboardOn: boolean; data: DemoData };
+type StaffBasicArgs = { s: Staff; ed: StaffEdit; offboardOn: boolean; data: DemoData };
 
 /** 基本情報のタブの節（欄の種類つき。切は畳む欄を分ける。lib/peopleView の splitFolded） */
-function basicSections({ s, ed, mailOn, offboardOn, data }: StaffBasicArgs): { part: StaffPart; node: ReactNode }[] {
+function basicSections({ s, ed, offboardOn, data }: StaffBasicArgs): { part: StaffPart; node: ReactNode }[] {
   const terms = data.org.terms;
   const staffItems = data.items.filter((i) => i.target === 'staff');
   const { form, setForm, bad, sec } = ed;
   const basicFields = form && (
-    <StaffBasicFields form={form} setForm={setForm} bad={bad} previewColor={ed.previewColor} mailOn={mailOn} />
+    <StaffBasicFields form={form} setForm={setForm} bad={bad} previewColor={ed.previewColor} />
   );
   return [
     {
       part: 'basic',
       node: (
-        <EditSection
-          key="basic"
-          {...sec('basic')}
-          icon={UserRound}
-          title="基本"
-          view={<StaffBasicView s={s} mailOn={mailOn} />}
-        >
+        <EditSection key="basic" {...sec('basic')} icon={UserRound} title="基本" view={<StaffBasicView s={s} />}>
           {basicFields}
         </EditSection>
       ),
@@ -201,7 +195,6 @@ export function StaffBasicTab({
   s,
   isNew,
   ed,
-  mailOn,
   offboardOn,
   folded,
   more,
@@ -209,7 +202,6 @@ export function StaffBasicTab({
   s: Staff;
   isNew: boolean;
   ed: StaffEdit;
-  mailOn: boolean;
   offboardOn: boolean;
   /** 「詳しく ▾」へ畳む欄（切のとき。入は空。lib/peopleView の staffFolded） */
   folded: readonly StaffPart[];
@@ -218,7 +210,7 @@ export function StaffBasicTab({
 }) {
   const { data } = useDemoData();
   const { edit, form, setForm, bad } = ed;
-  const parts = splitFolded(basicSections({ s, ed, mailOn, offboardOn, data }), isNew ? [] : folded);
+  const parts = splitFolded(basicSections({ s, ed, offboardOn, data }), isNew ? [] : folded);
   if (isNew && edit)
     return (
       <div className="person-sections">
@@ -234,9 +226,7 @@ export function StaffBasicTab({
           errorId={ed.errorId}
           view={null}
         >
-          {form && (
-            <StaffBasicFields form={form} setForm={setForm} bad={bad} previewColor={ed.previewColor} mailOn={mailOn} />
-          )}
+          {form && <StaffBasicFields form={form} setForm={setForm} bad={bad} previewColor={ed.previewColor} />}
           {form && <StaffHoursFields form={form} setForm={setForm} bad={bad} />}
           <Hint label="ほかの項目">自宅・特性・求めること・最終勤務日は、保存してから入れられます。</Hint>
         </EditSection>

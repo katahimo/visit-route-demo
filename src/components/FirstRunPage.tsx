@@ -15,6 +15,7 @@ import {
   type FirstRunStart,
   type FirstRunUse,
   firstRunLanding,
+  isFirstRunEntry,
 } from '../lib/firstRun';
 import {
   RELEASE_CHANGES,
@@ -75,14 +76,19 @@ function FirstRunPage() {
   // 答えたら、先に最初の画面へ移ってから（ルーターの移動が済んでから）データを作る。
   // 逆にすると、本体の画面が今の URL（`#/`）のまま先に出て、知らない URL の予定への移動に上書きされる
   const [answer, setAnswer] = useState<FirstRunAnswer | null>(null);
-  const { pathname, search } = useLocation();
+  const { pathname, search, state } = useLocation();
   const landing = answer ? firstRunLanding(answer) : null;
   useEffect(() => {
     if (answer && landing === pathname) startFirstRun(answer);
   }, [answer, landing, pathname, startFirstRun]);
+  // 閉じる（今のデータのまま）：印の項目なら印を外す（外さないと、あとでこの項目へ戻るたびに2問が出る）
+  const close = () => {
+    cancelFirstRun();
+    if (isFirstRunEntry(state)) navigate({ pathname, search }, { replace: true, state: null });
+  };
   const submit = () => {
     if (start === 'keep') {
-      cancelFirstRun();
+      close();
       return;
     }
     const a: FirstRunAnswer = { start, use: kind };
@@ -131,7 +137,7 @@ function FirstRunPage() {
         <div className="first-run-actions">
           {/* やり直しのときだけ：今のデータのまま戻る（従のボタン。主ボタンは「はじめる」1つ） */}
           {redoingFirstRun && (
-            <button type="button" className="btn" onClick={cancelFirstRun} data-testid="first-run-cancel">
+            <button type="button" className="btn" onClick={close} data-testid="first-run-cancel">
               {FIRST_RUN_CANCEL}
             </button>
           )}

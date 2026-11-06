@@ -32,7 +32,7 @@
 
 - 「詳しく ▾」（`day-details`）：開け閉めは日の画面として端末に覚える（鍵 `details:day`）。中は1行のまとめ（訪問・入らない・守れない条件・移動・点数・理由）と担当ごとの1日。入は見出しの1行に「点数・移動 N分・入らない N・守れない条件 N」（0 は出さない。`lib/detailsHeading` の `dayHeading`）を出し、中の先頭に「要対応の訪問 N件」の帯（`band-care`。`CareBand`）。切は要対応の訪問の帯を出さない（上の要対応の帯が知らせる）
 - 操作の行（共通の部品は [pages-common.md](pages-common.md) の `ScheduleToolbar`）：入＝主「訪問を1件追加」（`plan-visit-add`。`ADD_VISIT_LABEL`。〈利用者さん〉がいなければ `aria-disabled` と title に理由。開く欄の見出しも同じ）＋「確定（伝えた）」（`adopt`。確定済みの日は枠）、切＝主「訪問を1件追加」＋「欠勤・キャンセルを登録」（`sudden-open`）。スマホは「訪問を1件追加」を「その他 ▾」に入れ（`tb-keep-label`）、入は主が「確定（伝えた）」、切は主ボタン無し。要対応を組むのは要対応の帯
-- 「その他 ▾」（`MenuButton`・`plan-more`）：訪問を1件追加（スマホ）・表示（`plan-view-〈k〉`。広い画面は時間軸・順番・一覧、スマホは日ごとのリスト・順番・一覧。訪問のある日だけ）・入は欠勤・キャンセルを登録・使い方（`plan-more-help`。操作の行の下に `plan-help` を開きフォーカスを移す。開いていれば「使い方を閉じる」）・**書き出し**（見出し「書き出し」。行き先ごとに1つずつ。`planToolbar.tsx` の `exportItemsOf`。PRD D419・ADR-0085）：「チャット用にコピー」（`day-chat-copy`。文に出す訪問のある日＝`lib/dayPlan` の `activeDayVisits` が1件以上。取り消し・休み・休止中の〈利用者さん〉の訪問だけの日は出さない。`usePlanPage` の `contact.hasShownVisits`）・「メールで送る」（`day-mail`。`mail` が入で、訪問のある日・未連絡の変更のある日）・「印刷」（`day-print`。チャット用にコピーと同じ日。`window.print()` で今の日の予定を印刷。印刷では時間軸の代わりに順番）・連絡を貼り付けて入れる（`paste-open`。いちばん最後。[pages-plan-absence.md](pages-plan-absence.md)）
+- 「その他 ▾」（`MenuButton`・`plan-more`）：訪問を1件追加（スマホ）・表示（`plan-view-〈k〉`。広い画面は時間軸・順番・一覧、スマホは日ごとのリスト・順番・一覧。訪問のある日だけ）・入は欠勤・キャンセルを登録・使い方（`plan-more-help`。操作の行の下に `plan-help` を開きフォーカスを移す。開いていれば「使い方を閉じる」）・**書き出し**（見出し「書き出し」。行き先ごとに1つずつ。`planToolbar.tsx` の `exportItemsOf`。PRD D419・ADR-0085）：「チャット用にコピー」（`day-chat-copy`。文に出す訪問のある日＝`lib/dayPlan` の `activeDayVisits` が1件以上。取り消し・休み・休止中の〈利用者さん〉の訪問だけの日は出さない。`usePlanPage` の `contact.hasShownVisits`）・「メールで送る」（`day-mail`。訪問のある日・未連絡の変更のある日）・「印刷」（`day-print`。チャット用にコピーと同じ日。`window.print()` で今の日の予定を印刷。印刷では時間軸の代わりに順番）・連絡を貼り付けて入れる（`paste-open`。いちばん最後。[pages-plan-absence.md](pages-plan-absence.md)）
 - 欠勤の振り直しの案B の計算中は、行に進み具合と止める（回数とバーは `PlanProgressText` が外の入れ物 `lib/valueStore` から `useValueStore` で読み、画面全体は描き直さない）
 
 #### エキスパート機能が切のとき
@@ -48,7 +48,7 @@
 
 - 主ボタン「確定（伝えた）」・「確定済み」「まだ伝えていない」の印・「次の確定していない日へ」は出さない。今日から1か月先は、手で直す・組むと store の `update` が自動で伝えた記録を付ける（`lib/settled` の `autoTell`。`confirmDay`・`tellDay` と同じ書き方）。伝えた記録のある日は書き換えず、そのあとの変更が「変更あり」になる
 - 決まったあとの変更は、日の上の「変更あり N件」（`confirm-state`。押すと連絡の一覧）と、訪問の「変更あり」の印（`visitLook` の `told`。`data-told-date`。押すとその日の連絡の一覧。日の画面はその場、週・月は `/plan?date=…&do=told` で開く。札の選択・ドラッグは壊さず、クリックの中で印を見分ける＝`components/openTold`）
-- 連絡の一覧（未連絡の変更）に「連絡した」（`contacted`。メール機能の入り切りに関係なく）。押すと今の担当・開始を伝えた記録にし（確認なし・「元に戻す」で戻る。`useConfirmDay` の `contacted`）、「変更あり」が消える
+- 連絡の一覧（未連絡の変更）に「連絡した」（`contacted`）。押すと今の担当・開始を伝えた記録にし（確認なし・「元に戻す」で戻る。`useConfirmDay` の `contacted`）、「変更あり」が消える
 - メールで送る・予約したときの伝えた記録（`confirmByMail`）は入切とも同じ
 
 入：

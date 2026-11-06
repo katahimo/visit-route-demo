@@ -48,7 +48,7 @@ const viewItem = (k: string, text: string, i: number, current: boolean, onSelect
 
 /**
  * 書き出し（行き先ごとに1つずつ。PRD D419）：チャット用にコピー・印刷（文に出す訪問のある日。取り消し・休みの訪問だけの日は出さない）、
- * メールで送る（`mail` が入で、訪問のある日・未連絡の変更のある日）
+ * メールで送る（訪問のある日・未連絡の変更のある日）
  */
 function exportItemsOf(p: PlanCtx): MenuItem[] {
   const hasVisits = p.contact.hasShownVisits;
@@ -64,7 +64,7 @@ function exportItemsOf(p: PlanCtx): MenuItem[] {
           },
         ]
       : []),
-    ...(p.f.mailOn && (p.d.hasPlan || p.d.toldState === 'changed')
+    ...(p.d.hasPlan || p.d.toldState === 'changed'
       ? [{ key: 'mail', label: 'メールで送る', icon: Mail, onSelect: () => p.v.setPanel('mail'), testId: 'day-mail' }]
       : []),
     ...(hasVisits
