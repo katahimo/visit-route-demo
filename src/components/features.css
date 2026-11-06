@@ -249,7 +249,7 @@
   font-size: 0.9rem;
 }
 
-/* 最初からやり直すの1行（説明とボタン。狭い画面では縦） */
+/* 最初の設定をやり直すの1行（説明とボタン。狭い画面では縦） */
 .restart-row {
   display: flex;
   align-items: center;

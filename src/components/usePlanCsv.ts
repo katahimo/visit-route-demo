@@ -23,15 +23,21 @@ export function usePlanCsv(onImported: () => void) {
     count,
     busy: booking.busy,
     error: error ?? tpl.error ?? booking.error,
-    template: tpl.template,
-    exportMonth: () =>
+    template: () => {
+      setError(null);
+      tpl.template();
+    },
+    exportMonth: () => {
+      tpl.clearError();
       save(
         () => exportVisitsCsv(data, range.from, range.to),
         planCsvFileName(range.ym),
         `単発の訪問 ${count}件を書き出しました`,
-      ),
+      );
+    },
     load: (file: File) => {
       setError(null);
+      tpl.clearError();
       void booking.load(file);
     },
   };

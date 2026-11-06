@@ -1,4 +1,4 @@
-// データの画面の区画の部品：保存の誤り・直前の状態に戻す・呼び方・控え（JSON のファイル）・古い訪問を片づける（最初からやり直すは RestartCard）。
+// データの画面の区画の部品：保存の誤り・直前の状態に戻す・呼び方・控え（JSON のファイル）・古い訪問を片づける（最初の設定をやり直すは RestartCard）。
 // 状態と処理は画面専用のフック（useData*）が持ち、ここは表示と押したときだけ
 import { ArchiveRestore, Download, Eraser, Save, Tags } from 'lucide-react';
 import { useId } from 'react';

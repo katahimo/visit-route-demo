@@ -9,6 +9,7 @@ import {
   FIRST_RUN_START_CHOICES,
   FIRST_RUN_USE_CHOICES,
   type FirstRunAnswer,
+  firstRunBackAction,
   firstRunLanding,
   firstRunSetup,
   isFirstRunEntry,
@@ -131,6 +132,28 @@ describe('isFirstRunEntry（最初の設定を出していた履歴の項目か�
     expect(isFirstRunEntry(undefined)).toBe(false);
     expect(isFirstRunEntry({ firstRun: 'true' })).toBe(false);
     expect(isFirstRunEntry({ other: 1 })).toBe(false);
+  });
+});
+
+describe('firstRunBackAction（戻る・進むで最初の設定を出す・閉じる）', () => {
+  const at = (o: Partial<Parameters<typeof firstRunBackAction>[0]>) =>
+    firstRunBackAction({ pop: true, marked: false, needsFirstRun: false, redoing: false, ...o });
+  it('印の項目へ戻り、2問を出していなければ出す', () => {
+    expect(at({ marked: true })).toBe('ask');
+  });
+  it('2問を出しているあいだに印の項目へ来ても何もしない', () => {
+    expect(at({ marked: true, needsFirstRun: true, redoing: true })).toBeNull();
+    expect(at({ marked: true, needsFirstRun: true })).toBeNull();
+  });
+  it('やり直しの2問のあいだに印の無い項目へ移ったら閉じる', () => {
+    expect(at({ needsFirstRun: true, redoing: true })).toBe('cancel');
+  });
+  it('初めて開いたとき・更新の知らせの2問は閉じない', () => {
+    expect(at({ needsFirstRun: true })).toBeNull();
+  });
+  it('履歴での移動（pop）でなければ何もしない', () => {
+    expect(at({ pop: false, marked: true })).toBeNull();
+    expect(at({ pop: false, needsFirstRun: true, redoing: true })).toBeNull();
   });
 });
 

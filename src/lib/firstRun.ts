@@ -148,3 +148,20 @@ export const FIRST_RUN_ENTRY = { firstRun: true } as const;
 export function isFirstRunEntry(state: unknown): boolean {
   return (state as { firstRun?: unknown } | null)?.firstRun === true;
 }
+
+/**
+ * 履歴の項目を移ったときにすること（components/useFirstRunBack）：ブラウザの「戻る」「進む」（pop）で印の項目へ来て、
+ * 2問を出していなければ出す（ask）。やり直しの2問を出しているあいだに印の無い項目へ来たら閉じる（cancel）。ほかは何もしない（null）。
+ * 初めて開いたとき（first）・更新の知らせ（release）の2問は閉じない（redoing が偽）
+ */
+export function firstRunBackAction(x: {
+  pop: boolean;
+  marked: boolean;
+  needsFirstRun: boolean;
+  redoing: boolean;
+}): 'ask' | 'cancel' | null {
+  if (!x.pop) return null;
+  if (x.marked && !x.needsFirstRun) return 'ask';
+  if (!x.marked && x.redoing) return 'cancel';
+  return null;
+}
