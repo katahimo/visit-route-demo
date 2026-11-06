@@ -29,6 +29,12 @@ export type PlacePerson = {
   mark: { label: string; color: string };
 };
 
+/** 住所2（ADR-0105）をまとめて置くときの ID の後ろ（〈利用者さん〉の ID に付ける） */
+const PLACE2_SUFFIX = '#住所2';
+
+/** まとめて置く人の ID → 持ち主の ID（住所2 なら〈利用者さん〉の ID） */
+const ownerId = (id: string): string => (id.endsWith(PLACE2_SUFFIX) ? id.slice(0, -PLACE2_SUFFIX.length) : id);
+
 /** 画面の文（種類ごと） */
 export type PlaceAllTexts = {
   /** 欄の見出し（「緯度・経度が未登録の〈利用者さん〉」） */
@@ -59,18 +65,27 @@ function placeAccess(kind: PlaceKind): PlaceAccess {
   switch (kind) {
     case 'client':
       return {
+        // 期間つきの訪問先（住所2。ADR-0105）も1人分として置く（ID は「〈利用者さん〉の ID＋PLACE2_SUFFIX」）
         people: (d) =>
-          d.clients.map((c) => ({
-            id: c.id,
-            name: c.displayName,
-            place: c.place,
-            counted: c.stage !== 'ended',
-            mark: { label: initialOf(c.displayName), color: colorOf(c.color) },
-          })),
-        write: (d, id, p) => ({
-          ...d,
-          clients: d.clients.map((c) => (c.id === id ? { ...c, place: { ...c.place, ...p } } : c)),
-        }),
+          d.clients.flatMap((c) => {
+            const mark = { label: initialOf(c.displayName), color: colorOf(c.color) };
+            const counted = c.stage !== 'ended';
+            const main = { id: c.id, name: c.displayName, place: c.place, counted, mark };
+            if (!c.place2) return [main];
+            const { from: _f, to: _t, ...place } = c.place2;
+            return [main, { id: `${c.id}${PLACE2_SUFFIX}`, name: `${c.displayName}（住所2）`, place, counted, mark }];
+          }),
+        write: (d, id, p) => {
+          const own = ownerId(id);
+          return {
+            ...d,
+            clients: d.clients.map((c) => {
+              if (c.id !== own) return c;
+              if (own === id) return { ...c, place: { ...c.place, ...p } };
+              return c.place2 ? { ...c, place2: { ...c.place2, ...p } } : c;
+            }),
+          };
+        },
         texts: (t) => ({
           heading: `緯度・経度が未登録の${t.client}`,
           has: '住所・郵便番号あり',
@@ -141,7 +156,7 @@ export function noPlaceIds(d: Pick<DemoData, 'clients' | 'staff'>, kind: PlaceKi
   return new Set(
     placePeople(d, kind)
       .filter((p) => p.counted && !hasLocation(p.place))
-      .map((p) => p.id),
+      .map((p) => ownerId(p.id)),
   );
 }
 

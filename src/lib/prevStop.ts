@@ -3,6 +3,7 @@
 import type { DemoData } from '../contracts/data';
 import type { Place, Staff } from '../contracts/documents';
 import { isOnLeave } from '../domain/leaves';
+import { placeOn } from '../domain/place2';
 import { findVisit, visitsOn } from '../patterns';
 import { HOME_LABEL } from './mapsLink';
 
@@ -28,5 +29,5 @@ export function prevStopOf(
   const prev = i > 0 ? order[i - 1] : undefined;
   if (!prev) return { staff, from: staff.home, fromName: HOME_LABEL };
   const c = data.clients.find((x) => x.id === prev.clientId);
-  return { staff, from: c?.place, fromName: c?.displayName ?? '（不明）' };
+  return { staff, from: c ? placeOn(c, v.date) : undefined, fromName: c?.displayName ?? '（不明）' };
 }

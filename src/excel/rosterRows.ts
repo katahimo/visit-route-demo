@@ -12,6 +12,7 @@ import {
   CLIENT_ALLOWED_COL,
   CLIENT_COLS,
   CLIENT_KANA_COL,
+  CLIENT_PLACE2_COLS,
   CLIENT_POSTAL_COL,
   CLIENT_RULE_COLS,
   CLIENT_STAGE_COLS,
@@ -22,6 +23,7 @@ import {
   STAFF_ICON_COL,
   STAFF_LAST_DAY_COL,
 } from './layout';
+import { readPlace2 } from './place2Cols';
 import {
   checkGivenId,
   Errors,
@@ -189,6 +191,7 @@ export function openRoster(
           CLIENT_KANA_COL,
           CLIENT_POSTAL_COL,
           ...Object.values(CLIENT_TRAVEL_COLS),
+          ...Object.values(CLIENT_PLACE2_COLS),
           CLIENT_ALLOWED_COL,
           ...Object.values(CLIENT_RULE_COLS),
           ...Object.values(CLIENT_STAGE_COLS),
@@ -454,6 +457,9 @@ export function readClientRows(ctx: RosterCtx, rows: Row[], match: (r: Row) => M
       () => r.yes(CLIENT_TRAVEL_COLS.farTrip),
       cur?.place.farTrip === true,
     );
+    // 期間つきの訪問先（住所2。ADR-0105）：列が無ければ今のまま。「住所2」が空なら無し（読めなければ誤りを残して今のまま）
+    const read2 = ctx.sheet.has(CLIENT_PLACE2_COLS.address) ? readPlace2(r, cur?.place2) : null;
+    const place2 = read2 === null ? cur?.place2 : read2;
     const allowedStaffIds = pick(
       ctx,
       r,
@@ -496,6 +502,8 @@ export function readClientRows(ctx: RosterCtx, rows: Row[], match: (r: Row) => M
         email: referrerEmail,
       },
     };
+    if (place2 === undefined) delete person.place2;
+    else person.place2 = place2;
     out.push({ row: r, person, cur });
   }
   return out;

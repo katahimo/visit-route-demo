@@ -1,6 +1,7 @@
 import { ClipboardList, Plus } from 'lucide-react';
 import { createContext, type ReactNode, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import type { DemoData } from '../contracts/data';
+import { clientOn } from '../domain/place2';
 import { jstDate } from '../domain/time';
 import { ADD_VISIT_LABEL } from '../lib/exceptionView';
 import { typeOf } from '../lib/patternText';
@@ -78,6 +79,11 @@ export function useOpenVisit(): OpenFn {
   return v;
 }
 
+/** 訪問の〈利用者さん〉。場所はその訪問の日の訪問先（住所2 の期間内なら住所2。ADR-0105）。書き換えには使わない */
+function visitClient(data: DemoData, clientId: string, date: string | undefined) {
+  const c = data.clients.find((x) => x.id === clientId);
+  return c && date ? clientOn(c, date) : c;
+}
 /** 欄を画面全体で1つ持つ（App の殻に置く。開いている訪問は画面を移っても残す） */
 export function VisitPanelProvider({ children }: { children: ReactNode }) {
   // トーストの「元に戻す」は欄を閉じたあとに押すので、今のデータを殻で追う
@@ -121,7 +127,7 @@ function VisitPanel({
   const [act, setAct] = useState<VisitAct>(null);
   const mapsOn = useFeature('mapsLink');
   const savedRef = useRef<string | null>(null);
-  const client = data.clients.find((c) => c.id === (v?.clientId ?? draft.clientId));
+  const client = visitClient(data, v?.clientId ?? draft.clientId, v?.date);
   const staffById = useMemo(() => new Map(data.staff.map((s) => [s.id, s])), [data.staff]);
   const cancelled = !!v?.cancelled;
   const editable = isNew || (!!info?.editable && !cancelled);

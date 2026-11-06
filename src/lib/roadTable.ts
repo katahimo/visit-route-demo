@@ -63,8 +63,12 @@ export function roadPointsOf(data: Pick<DemoData, 'staff' | 'clients'>): LatLng[
   };
   for (const s of data.staff) add(s.home.lat, s.home.lng);
   // 終了した〈利用者さん〉は回らないので送らない（住所の一括検索と同じ。PRD D89）
-  for (const c of data.clients)
-    if (c.stage !== 'ended' && c.place.travelMinutes === undefined) add(c.place.lat, c.place.lng);
+  for (const c of data.clients) {
+    if (c.stage === 'ended') continue;
+    if (c.place.travelMinutes === undefined) add(c.place.lat, c.place.lng);
+    // 期間つきの訪問先（住所2。ADR-0105）も回る地点
+    if (c.place2) add(c.place2.lat, c.place2.lng);
+  }
   return [...out.values()];
 }
 

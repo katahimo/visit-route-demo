@@ -64,6 +64,36 @@ describe('placeAllTargets（まとめて置く対象）', () => {
   });
 });
 
+describe('住所2（期間つきの訪問先。ADR-0105）', () => {
+  const p2 = { address: '宮城県仙台市駅前', lat: null, lng: null, postalCode: '', from: '2026-08-01', to: '' };
+  it('位置の無い住所2 も1人分として置く。一覧の「位置なし」は〈利用者さん〉の ID', () => {
+    const c = client('か', 38, 140, { displayName: 'か', place2: p2 });
+    const { targets } = placeAllTargets({ clients: [c], staff: [] }, 'client');
+    expect(targets.map((t) => [t.id, t.name, t.place.address])).toEqual([
+      ['か#住所2', 'か（住所2）', '宮城県仙台市駅前'],
+    ]);
+    expect([...noPlaceIds({ clients: [c], staff: [] }, 'client')]).toEqual(['か']);
+  });
+  it('見つけた位置は住所2 に書く（住所・期間はそのまま）', () => {
+    const c = client('か', 38, 140, { displayName: 'か', place2: p2 });
+    const d = makeData({ clients: [c] });
+    const next = withFoundPlace(
+      d,
+      'client',
+      'か#住所2',
+      { address: p2.address, postalCode: '' },
+      {
+        lat: 38.26,
+        lng: 140.88,
+        address: '',
+      },
+    );
+    const got = next.clients.find((x) => x.id === 'か');
+    expect(got?.place2).toEqual({ ...p2, lat: 38.26, lng: 140.88 });
+    expect(got?.place).toEqual(c.place);
+  });
+});
+
 describe('noPlaceIds・canSearchOne（一覧の「位置なし」）', () => {
   it('数える人のうち位置の無い人（住所の有無は問わない）', () => {
     const d = {
