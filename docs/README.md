@@ -148,6 +148,7 @@
 | [0104](adr/0104-ci-e2e-on-label.md) | CI の e2e は PR に「e2e」のラベルを付けたときだけ・perf は手動と夜間・記録は失敗のときだけ3日 |
 | [0105](adr/0105-client-place2-term.md) | 〈利用者さん〉に期間つきの訪問先（住所2）を持ち、訪問の日で訪問先を選ぶ |
 | [0106](adr/0106-mail-excel-always-on.md) | メールと Excel の入出力を入り切りせず、いつも入にする |
+| [0107](adr/0107-staff-off-from-google-calendar.md) | 〈スタッフ〉の休みを Google カレンダーの書き出し（zip）から毎日取り込み、カレンダーから入れた欠勤を合わせる |
 
 ## 文書の保ち方
 

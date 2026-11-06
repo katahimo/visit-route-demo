@@ -8,6 +8,12 @@ export type ReleaseNote = { id: string; items: readonly string[] };
 /** 更新の一覧（新しい順。先頭が今の版） */
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    id: '2026-11-07',
+    items: [
+      '予定の画面の「休みを取り込む」で、Google カレンダーの書き出し（スタッフごとのカレンダーの zip）から休みを欠勤として取り込めます。毎日取り込み直すと、カレンダーで直した・消した休みも反映します。最初の設定の②（スタッフの名簿）のあとにも取り込めます',
+    ],
+  },
+  {
     id: '2026-11-06-3',
     items: [
       'メールと Excel の入出力を、管理者設定で切れないようにしました（いつも使えます）',

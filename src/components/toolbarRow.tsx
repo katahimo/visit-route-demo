@@ -4,13 +4,15 @@
 // もう1つは「欠勤・キャンセルを登録」。要対応を組むのは要対応の帯（PRD D403。ADR-0077）。
 // 入：月・週は「定期の予定を追加」＋「担当を組む」（担当を組むの画面へ）、日は「訪問を1件追加」＋「確定（伝えた）」。欠勤・キャンセルは「その他 ▾」の中。
 // 入切とも、ボタンの右に アイコンだけの［元に戻す］［やり直す］（数えない補助。PRD D432）。
-// 入切とも「その他 ▾」の最後に「連絡を貼り付けて入れる」（PRD D418。欠勤・キャンセルか〈利用者さん〉の休みの機能が入のとき）
+// 入切とも「その他 ▾」の最後に「連絡を貼り付けて入れる」（PRD D418。欠勤・キャンセルか〈利用者さん〉の休みの機能が入のとき）。
+// 入切とも、元に戻す・やり直すの前に「休みを取り込む」（毎日使うので「その他 ▾」に入れず見える所に。PRD D440。欠勤・キャンセルの機能が入のとき）
 import { ClipboardPaste, Plus, Sparkles } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { planAddLabel } from '../lib/addPlan';
 import { ADD_VISIT_LABEL, mainTools, type ScheduleZoom } from '../lib/exceptionView';
 import { AddPlanPanel } from './AddPlanPanel';
+import { CAL_OFF_ICON, CAL_OFF_LABEL, CAL_OFF_SHORT, CalendarOffPanel } from './CalendarOffPanel';
 import { MenuButton, type MenuItem } from './MenuButton';
 import { PASTE_LABEL, PastePanel } from './PastePanel';
 import { WithIcon } from './ui';
@@ -51,6 +53,7 @@ export function ToolbarRow({
 }) {
   const [adding, setAdding] = useState(false);
   const [pasting, setPasting] = useState(false);
+  const [calOff, setCalOff] = useState(false);
   const features = useFeatures();
   const suddenOn = useFeature('sudden');
   const leaveOn = useFeature('clientLeave');
@@ -118,6 +121,19 @@ export function ToolbarRow({
         </Link>
       )}
       {second === 'absence' && absence?.node}
+      {suddenOn && (
+        <button
+          type="button"
+          className="btn"
+          onClick={() => setCalOff(true)}
+          title={CAL_OFF_LABEL}
+          data-testid="cal-off-open"
+        >
+          <WithIcon icon={CAL_OFF_ICON}>
+            <span className="tb-label">{CAL_OFF_SHORT}</span>
+          </WithIcon>
+        </button>
+      )}
       <UndoIconButtons />
       <MenuButton
         label="その他"
@@ -128,6 +144,7 @@ export function ToolbarRow({
       {after}
       {adding && <AddPlanPanel onClose={() => setAdding(false)} />}
       {pasting && <PastePanel onClose={() => setPasting(false)} />}
+      {calOff && <CalendarOffPanel onClose={() => setCalOff(false)} />}
     </div>
   );
 }

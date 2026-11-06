@@ -28,11 +28,15 @@
 }
 .paste-row > label {
   display: flex;
+  /* 全体の label（縦並び）を横並びに戻す */
+  flex-direction: row;
   gap: 8px;
   align-items: flex-start;
 }
 .paste-row > label > input {
   margin-top: 3px;
+  width: auto;
+  flex: none;
 }
 .paste-row[data-state='ng'] {
   display: flex;
@@ -44,5 +48,12 @@
   color: var(--sub);
 }
 .paste-row-reason {
+  color: var(--warn-ink);
+}
+/* 「休みのカレンダーを取り込む」の欄（components/CalendarOffPanel。PRD D440）の行の頭（入れる・直す・外す） */
+.cal-off-kind {
+  font-weight: 600;
+}
+.paste-row[data-kind='remove'] .cal-off-kind {
   color: var(--warn-ink);
 }

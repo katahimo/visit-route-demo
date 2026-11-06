@@ -264,7 +264,7 @@
   - 月のマスは入切とも同じ表示（切は確定の鍵・確定の言葉だけ出さない。PRD D433。[pages-month.md](pages-month.md)）
   - 日の予定の地図：入切とも地図のカード（`plan-map`）を置き、画面の外のときだけ浮かせる（`components/MapDock`。ADR-0103）
 - 「詳しく ▾」（`components/DetailsFold`。入切とも）：閉じて始まり、開け閉めは月・週・日と空き状況の画面ごとに端末に覚える（`store/navOpen` の `detailsOpenKey`）。中身：空き状況＝曜日×週のマス・凡例・曜日×開始時刻の表（PRD D412）、月＝進み具合の帯・月全体の件数・凡例、週＝1行の状態・時間軸の凡例と使い方、日＝今の担当の1行（点数・理由・移動）と担当ごとの1日。入は日の要対応の訪問の帯も中に入れ、見出しの1行に数（`lib/detailsHeading`。月＝担当 a/b日・確定 c/d日、週＝未確定 N日・要対応 M件、日＝点数・移動・入らない・守れない条件）
-- 操作の行（入切とも。`components/toolbarRow`・`mainTools(zoom, avail, expert)`）：主ボタン1つ＋ボタン1つまで、ほかは「その他 ▾」。入＝月・週は「定期の予定を追加」＋「担当を組む」、日は「訪問を1件追加」＋「確定（伝えた）」。切＝「定期の予定を追加」＋「欠勤・キャンセルを登録」（スマホの日は主ボタンなし）。「その他 ▾」の最後に「連絡を貼り付けて入れる」（PRD D418。[pages-plan-absence.md](pages-plan-absence.md)）。要対応を組むのは帯の［要対応を組む］（`components/useBandArrange`。[pages-nav.md](pages-nav.md)「要対応の帯」）
+- 操作の行（入切とも。`components/toolbarRow`・`mainTools(zoom, avail, expert)`）：主ボタン1つ＋ボタン1つまで、ほかは「その他 ▾」。入＝月・週は「定期の予定を追加」＋「担当を組む」、日は「訪問を1件追加」＋「確定（伝えた）」。切＝「定期の予定を追加」＋「欠勤・キャンセルを登録」（スマホの日は主ボタンなし）。「その他 ▾」の最後に「連絡を貼り付けて入れる」（PRD D418。[pages-plan-absence.md](pages-plan-absence.md)）。入切とも、元に戻す・やり直すの前に「休みを取り込む」（`cal-off-open`。毎日使うので「その他 ▾」に入れない。機能 `sudden` が入のとき。PRD D440）。要対応を組むのは帯の［要対応を組む］（`components/useBandArrange`。[pages-nav.md](pages-nav.md)「要対応の帯」）
 - 来月の確認（PRD D413。ADR-0081）：[pages-nav.md](pages-nav.md)「要対応の帯」
 - 画面の上の説明は入切とも1行・初回だけ（`components/useIntro`。閉じたら `store/navOpen` の鍵 `intro:month`・`intro:week`・`intro:day`）。範囲の案の帯・使い方は 標準・提案・反映・ピン・プリセット の言葉を使わない（`proposalWords`）
 - 「定期の予定を追加」（入切とも。PRD D416・D423。ADR-0090）：
