@@ -889,16 +889,16 @@ async function dataProtect(b) {
     (await page.getByTestId('data-last-export').innerText()).includes('まだ書き出していません'),
     '最後に書き出した日：まだ書き出していません',
   );
-  // いまのデータに印（乱数の種）を付けてから、初期状態に戻す
+  // いまのデータに印（乱数の種）を付けてから、最初の設定をやり直す（デモで試す）
   await writeData(page, (d) => ({ ...d, seed: 424242 }));
   await page.getByTestId('data-last-export').waitFor();
   await settle(page, 400);
-  await page.getByRole('button', { name: 'デモの初期状態に戻す' }).click();
+  await page.getByTestId('restart-first-run-button').click();
   await page.getByTestId('confirm-dialog').waitFor();
   const body = await page.getByTestId('confirm-body').innerText();
   check(
     /元に戻すときは、データの画面の［直前の状態に戻す］を押します/.test(body) && /直前の状態に戻す/.test(body),
-    '初期状態に戻す：確認の本文に控えの文',
+    '最初の設定をやり直す：確認の本文に控えの文',
     body,
   );
   // 取り消すと控えは前の世代のまま（無い）
@@ -906,14 +906,19 @@ async function dataProtect(b) {
   await settle(page, 300);
   check((await page.getByTestId('data-prev-card').count()) === 0, '取り消すと控えは残らない（前の世代に戻す）');
   check((await stored(page)).seed === 424242, '取り消すとデータはそのまま');
-  await page.getByRole('button', { name: 'デモの初期状態に戻す' }).click();
+  await page.getByTestId('restart-first-run-button').click();
   await page.getByTestId('confirm-ok').click();
-  await page.locator('.toast').filter({ hasText: '初期状態に戻しました' }).waitFor();
-  await settle(page, 500);
-  check((await stored(page)).seed !== 424242, '初期状態に戻した（印が消えた）');
+  await page.getByTestId('first-run').waitFor({ timeout: 30000 });
+  await page.getByTestId('first-run-start-demo').check();
+  await page.getByTestId('first-run-submit').click();
+  await page.waitForURL(/#\/month/);
+  await settle(page, 800);
+  check((await stored(page)).seed !== 424242, 'デモで作り直した（印が消えた）');
+  await page.goto(`${BASE}#/data`);
+  await page.getByTestId('data-prev-text').waitFor({ timeout: 30000 });
   const prevText = await page.getByTestId('data-prev-text').innerText();
   check(
-    /^\d{1,2}\/\d{1,2} \d{2}:\d{2} の『初期状態に戻す』の前の状態に戻せます$/.test(prevText),
+    /^\d{1,2}\/\d{1,2} \d{2}:\d{2} の『最初の設定をやり直す』の前の状態に戻せます$/.test(prevText),
     '「直前の状態に戻す」の欄の文',
     prevText,
   );
@@ -924,7 +929,7 @@ async function dataProtect(b) {
   await page.getByTestId('confirm-ok').click();
   await page.locator('.toast').filter({ hasText: '直前の状態に戻しました' }).waitFor();
   await settle(page, 500);
-  check((await stored(page)).seed === 424242, '直前の状態に戻すと、初期状態に戻す前のデータになる');
+  check((await stored(page)).seed === 424242, '直前の状態に戻すと、作り直す前のデータになる');
   check(
     /『直前の状態に戻す』の前の状態に戻せます/.test(await page.getByTestId('data-prev-text').innerText()),
     '戻したあとは、戻す前のデータが控えに残る（もう一度戻せる）',

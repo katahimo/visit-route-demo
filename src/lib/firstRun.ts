@@ -128,7 +128,8 @@ export function firstRunLanding(answer: FirstRunAnswer): string {
 
 /** データの画面・登録の案内の「最初の設定をやり直す」（確認のあと2問へ戻り、答えでデータを作り直す。PRD D381。ADR-0092） */
 export const RESTART_TITLE = '最初の設定をやり直す';
-export const RESTART_HINT = '最初の設定の2つの質問に答え直して、データを作り直します。';
+export const RESTART_HINT =
+  '最初の設定の2つの質問に答え直して、データを作り直します。デモのデータに戻すときも、ここで「デモで試す」を選びます。';
 /** 畳まずに出す注意（答えたあとデータが作り直される） */
 export const RESTART_WARN = 'いまのデータは消えます。';
 export const RESTART_CONFIRM_TITLE = '最初の設定をやり直しますか？';

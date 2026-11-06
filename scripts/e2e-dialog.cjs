@@ -429,28 +429,26 @@ async function backWhileAsking(page) {
   check(!rootInert, '確認中に戻る：裏の inert が残らない');
 }
 
-// ---- データを初期状態に戻す（#/data）：取り消しでトーストなし、確定でトースト ----
+// ---- 最初の設定をやり直す（#/data）：取り消しで何もしない、確定で最初の設定（2問）へ ----
 async function dataReset(page) {
   await open(page, '/data', 'h1');
-  await page.getByRole('button', { name: 'デモの初期状態に戻す' }).click();
-  const a = await shape(page, '初期状態に戻す');
-  check(/いまの変更はすべて消えます/.test(a.body), '初期状態に戻す：本文（aria-describedby）', a.body);
   check(
-    /管理者設定の機能の入り切りは、そのまま/.test(a.body),
-    '初期状態に戻す：本文に「管理者設定の機能の入り切りは、そのまま」（PRD D216）',
-    a.body,
+    (await page.getByRole('button', { name: 'デモの初期状態に戻す' }).count()) === 0,
+    'データの画面に「デモの初期状態に戻す」は無い（最初の設定をやり直すにまとめた）',
   );
+  await page.getByTestId('restart-first-run-button').click();
+  const a = await shape(page, '最初の設定をやり直す');
+  check(/「元に戻す」でも戻せません/.test(a.body), '最初の設定をやり直す：本文（aria-describedby）', a.body);
   await page.getByTestId('confirm-cancel').click();
   await settle(page);
-  check((await page.locator('.toast').count()) === 0, '初期状態に戻す：取り消すと何もしない（知らせも出ない）');
-  await page.getByRole('button', { name: 'デモの初期状態に戻す' }).click();
+  check((await page.getByTestId('first-run').count()) === 0, '最初の設定をやり直す：取り消すと何もしない');
+  await page.getByTestId('restart-first-run-button').click();
   await dialog(page).waitFor();
   await page.getByTestId('confirm-ok').click();
-  await page.locator('.toast').waitFor({ timeout: 5000 });
-  check(
-    ((await page.locator('.toast').textContent()) ?? '').includes('初期状態に戻しました'),
-    '初期状態に戻す：確定で戻り、知らせ（トースト）が出る',
-  );
+  await page.getByTestId('first-run').waitFor({ timeout: 5000 });
+  check(true, '最初の設定をやり直す：確定で最初の設定（2問）が出る');
+  await page.getByTestId('first-run-cancel').click();
+  await settle(page);
 }
 
 // ---- 日の画面の「確定（伝えた）」（#/plan）：取り消しでは未確定のまま、確定で「確定済み」 ----
