@@ -447,7 +447,7 @@ flowchart LR
   - [ ] `npm test`・`npm run typecheck`・`npm run lint`・`npm run e2e`・`npm run e2e:perf` が通る
 
 ### deploy（公開）
-- 責務：main への push で `npm ci → npm run lint（biome・競合の印）→ npm test → npm run build → Cloudflare Workers へ公開（`wrangler deploy`）`。e2e は別のワークフローで PR・手動・夜間に `npm run e2e → npm run e2e:perf`（夜間は `FAKE_NOW` を月末の日にも替えて3通り）。公開は e2e を待たない
+- 責務：main への push で `npm ci → npm run lint（biome・競合の印）→ npm test → npm run build → Cloudflare Workers へ公開（`wrangler deploy`）`。e2e は別のワークフローで、速い検査は PR の push ごと、`npm run e2e` は PR に「e2e」のラベルを付けたとき（付いた PR への push も）・手動・週1回の夜間、`npm run e2e:perf` は手動・夜間だけ（夜間は `FAKE_NOW` を月末の日にも替えて3通り。ADR-0104）。失敗したときだけ報告と記録を3日残す。公開は e2e を待たない
 - 持つデータ（持ち主）：なし
 - 提供するAPI：なし
 - 依存するもの：GitHub Actions（`cloudflare/wrangler-action`。Secrets：`CLOUDFLARE_API_TOKEN`・`CLOUDFLARE_ACCOUNT_ID`）、e2e は `@playwright/test`（devDependency）と Chromium

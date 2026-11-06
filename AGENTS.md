@@ -40,7 +40,7 @@ src/
   pages/       … 画面（components と lib を組み合わせる）
   app/         … 殻（App・ErrorBoundary・ルートと分けた画面 lazyPages）
 .github/workflows/deploy.yml … test → build → Cloudflare Workers（wrangler。ADR-0071）
-.github/workflows/e2e.yml … PR・手動・夜間の速い検査（lint・型・check:code・check:prd・vitest）と e2e（4つに分けて並列）・perf（ADR-0029）。Playwright の版を上げるときはイメージの版も上げる
+.github/workflows/e2e.yml … 速い検査（lint・型・check:code・check:prd・vitest）は PR の push ごと。e2e（4つに分けて並列）は PR に「e2e」のラベルを付けたとき・手動・週1回の夜間、perf は手動・夜間だけ（ADR-0029・ADR-0104）。Playwright の版を上げるときはイメージの版も上げる
 e2e/ … @playwright/test の spec（scripts/e2e-*.cjs の段を test.step で回す。ADR-0041）
 scripts/ … e2e のスクリプト（e2e-*.cjs）と共通の部品（lib/）
 gas/ … メールの予約送信の Google Apps Script のひな型（Code.gs）と手順（README.md）。やりとりの正は src/contracts/mailSchedule.ts（ADR-0069）
@@ -74,6 +74,7 @@ docs/ … README.md（索引）/ prd.md・prd/（テーマ別の要件の表） 
 
 ## 完了の定義
 - [ ] テスト・リント・型チェック・ビルド・コードの検査・PRD の検査がすべて通る
+- [ ] 画面・計算・e2e に関わる PR は、マージの前に「e2e」のラベルを付けて CI の e2e を通す（push ごとには走らない。ADR-0104）
 - [ ] 足した計算（純粋関数）にテストがある。使われなくなったコードを消した
 - [ ] 契約（`src/contracts/`）どおりの入出力・エラーになっている
 - [ ] 変更点と、推測した箇所（あれば）を報告した
