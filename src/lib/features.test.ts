@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Client, Staff } from '../contracts/documents';
-import { FEATURE_IDS, type FeatureId, type Features } from '../contracts/features';
+import { FEATURE_IDS, type FeatureId, type Features, featuresSchema } from '../contracts/features';
 import { createDemoData } from '../seed';
 import { attentionBand } from './attentionBand';
 import { paletteActions } from './commandPalette';
@@ -262,7 +262,7 @@ describe('ひな形（ADR-0028 の表）', () => {
     expect([...groupsOf('laborContract')]).toEqual(['勤務・契約']);
     expect(groupsOf('monthlyField').size).toBeLessThanOrEqual(4);
   });
-  it.each(TEMPLATE_IDS)('%s を適用すると表どおりの入り切り（全22の ID を明示）で、matchTemplate がそれを返す', (id) => {
+  it.each(TEMPLATE_IDS)('%s を適用すると表どおりの入り切り（全20の ID を明示）で、matchTemplate がそれを返す', (id) => {
     const f = applyTemplate(id);
     expect(Object.keys(f).sort()).toEqual([...FEATURE_IDS].sort());
     const on = FEATURE_IDS.filter((x) => f[x]);
@@ -300,6 +300,11 @@ describe('ひな形（ADR-0028 の表）', () => {
   it('{}（無い古いデータ・初期データ）は すべて', () => {
     expect(matchTemplate({})).toBe('all');
     expect(matchTemplate({ compat: true })).toBe('all');
+  });
+  it('前の版のデータに残る mail・excel は読むときに捨て、ひな形の一致を変えない（ADR-0106）', () => {
+    const old = featuresSchema.parse({ ...applyTemplate('basic'), mail: false, excel: true });
+    expect('mail' in old || 'excel' in old).toBe(false);
+    expect(matchTemplate(old)).toBe('basic');
   });
   it('1つ直すと custom', () => {
     expect(matchTemplate({ compat: false })).toBe('custom');

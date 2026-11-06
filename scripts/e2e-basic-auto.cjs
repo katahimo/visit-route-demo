@@ -404,7 +404,7 @@ async function changed(page) {
     await page.locator('.tl-band.is-picked').count(),
   );
   const done = page.getByTestId('contacted');
-  check((await done.count()) === 1, '連絡の一覧に「連絡した」ボタン（メール機能の入り切りに関係なく）');
+  check((await done.count()) === 1, '連絡の一覧に「連絡した」ボタン');
   // 連絡した → 今の担当が伝えた記録になり、印が消える
   await done.click();
   const after = await dataWhen(page, (x) => x.snapshots[TODAY].at !== before.at);

@@ -84,7 +84,7 @@ function doneHead({ p, s }: StepCtx, done: Done) {
 function ContactItem({ ctx, r }: { ctx: StepCtx; r: ContactRow }) {
   const { terms, contactMail } = ctx.p;
   const { sent, copyRow, toggleSent } = ctx.s;
-  const mail = r.to === 'staff' && contactMail ? contactMail(r) : null;
+  const mail = r.to === 'staff' ? contactMail(r) : null;
   return (
     <li
       className={`sudden-contact${sent.has(sentKey(r)) ? ' is-sent' : ''}`}
@@ -125,7 +125,7 @@ function ContactItem({ ctx, r }: { ctx: StepCtx; r: ContactRow }) {
             文をコピー
           </WithIcon>
         </button>
-        {r.to === 'staff' && contactMail && (
+        {r.to === 'staff' && (
           <>
             <MailButton
               mail={mail}

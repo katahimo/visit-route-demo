@@ -383,7 +383,7 @@ export function templateBasicDelta(id: TemplateId): { add: FeatureId[]; drop: Fe
   };
 }
 
-/** ひな形を適用したときの入り切り（全22の ID を明示して書く。業種とは連動しない） */
+/** ひな形を適用したときの入り切り（全20の ID を明示して書く。業種とは連動しない） */
 export function applyTemplate(id: TemplateId): Features {
   const on = new Set(templateDef(id).on);
   return Object.fromEntries(FEATURE_IDS.map((f) => [f, on.has(f)])) as Features;

@@ -138,6 +138,9 @@ describe('isFirstRunEntry（最初の設定を出していた履歴の項目か�
 describe('firstRunBackAction（戻る・進むで最初の設定を出す・閉じる）', () => {
   const at = (o: Partial<Parameters<typeof firstRunBackAction>[0]>) =>
     firstRunBackAction({ pop: true, marked: false, needsFirstRun: false, redoing: false, ...o });
+  it('印の無い項目へ移り、2問を出していなければ何もしない（ふだんの戻る・進む）', () => {
+    expect(at({})).toBeNull();
+  });
   it('印の項目へ戻り、2問を出していなければ出す', () => {
     expect(at({ marked: true })).toBe('ask');
   });
