@@ -517,7 +517,7 @@ function commitNew(d: DemoData): DemoData {
 }
 
 /**
- * 最初の2問の答えでデータを作って書く（初めて開いたとき・データの画面の「始め方を選び直す」。PRD D379〜D381）。
+ * 最初の2問の答えでデータを作って書く（初めて開いたとき・データの画面の「最初の設定をやり直す」。PRD D379〜D381）。
  * 呼び名・ひな形・データは答えで決まる（lib/firstRun）。機能の入り切りも答えのひな形で決め直す
  */
 export function startWithAnswer(answer: FirstRunAnswer): DemoData {

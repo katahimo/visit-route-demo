@@ -24,7 +24,7 @@
 //    5f3 最初の2問で定期を選んだデータ（「基本」）のままで、くり返しに「毎月（第N）」と第1〜第5 のチップ（選ばなければ誤り。入れた回に担当が自動で付き、組みの終わりまで待って次の段へ）、
 //    〈スタッフ〉の一覧の上のタブ（一覧・勤務・相性）と〈利用者さん〉のタブ（一覧・予定と相性・相性。ADR-0100）で行き来でき、メニューの印は〈スタッフ〉／〈利用者さん〉に付き、
 //    相性・勤務の画面に禁句・点数が出ない。1366px・390px。幅は落ちても戻す、
-// 5f4 「CSV でまとめて追加」（PRD D423）：Excel の入出力を切っても（単発のみで excel を切る）引き出しに畳んで出る。テンプレート・見ている月の書き出し・1件足したファイルの読み込み（確認のあと引き出しが閉じる）、
+// 5f4 「予約の CSV を読み込む」（PRD D423）：Excel の入出力を切っても（単発のみで excel を切る）「予約を追加」の引き出しのいちばん上に出る。テンプレート・見ている月の書き出し・1件足したファイルの読み込み（確認のあと引き出しが閉じる）、
 // 6 エキスパート機能を入にすると帯に 未確定 N日 が足され［要対応を組む］は出ない（入のメニュー・ホームが無いことは e2e-nav・e2e-home）。
 // 6b 入の操作の行（主ボタン＋1つ＋「その他 ▾」）・「詳しく ▾」の見出しの数と開け閉めの覚え・説明1行。
 // 6c 入の人の一覧（PRD D394）：〈スタッフ〉・〈利用者さん〉の一覧は見出しがメニューの名前で、切と同じ人のタブ（一覧・勤務・相性／一覧・予定と相性・相性）と3列で始まり、
@@ -1337,6 +1337,7 @@ async function addRecurring(page, w) {
     labels,
   );
   check((await box.getByTestId('add-plan-date').count()) === 0, `定期（${w}）：日付の欄は無い`);
+  check((await box.getByTestId('plan-csv').count()) === 0, `定期（${w}）：CSV の欄は無い（CSV は単発の訪問だけ読む）`);
   // 開始日（PRD D416）：既定は今日・今日より前は選べない。くり返しは 毎週〜4週ごと・毎月（第N）（「基本」は毎月の第N の機能が入。ADR-0086）
   const from = box.getByTestId('add-plan-from');
   check(
@@ -1444,8 +1445,8 @@ async function addRecurring(page, w) {
 }
 
 /**
- * 5f4 「CSV でまとめて追加」（PRD D423。ADR-0090）：Excel の入出力を切っても（単発のデモ。「単発のみ」は Excel の入出力が入なので
- * ADR-0091 から excel だけ切って読み直す）引き出しに畳んで出る。
+ * 5f4 「予約の CSV を読み込む」（PRD D408・D423。ADR-0090）：Excel の入出力を切っても（単発のデモ。「単発のみ」は Excel の入出力が入なので
+ * ADR-0091 から excel だけ切って読み直す）「予約を追加」の引き出しのいちばん上に開いて出る。
  * テンプレートは列名の行だけ、書き出しは見ている月の単発の訪問（件数がボタンに出る）。書き出した列で1件足したファイルを読むと、
  * 確認のあと訪問が1件増え、引き出しが閉じる
  */
@@ -1462,8 +1463,12 @@ async function addCsv(page) {
   check(d0.org.features.excel === false, '前提：Excel の入出力が切', d0.org.features.excel);
   const box = await openAdd(page, 'oneOff', 'CSV');
   const csv = box.getByTestId('plan-csv');
-  check((await csv.getAttribute('open')) === null, 'CSV：ふだんは畳む');
-  await box.getByTestId('plan-csv-open').click();
+  // 単発（予約を追加）は毎日の予約の取り込みが主なので、引き出しのいちばん上に出す
+  check(await csv.evaluate((el) => el.parentElement.firstElementChild === el), 'CSV：単発は引き出しのいちばん上');
+  check(
+    (await csv.locator('h3').innerText()).includes('予約の CSV を読み込む'),
+    'CSV：見出しは「予約の CSV を読み込む」',
+  );
   const tpl = await Promise.all([page.waitForEvent('download'), box.getByTestId('plan-csv-template').click()]);
   const head = fs
     .readFileSync(await tpl[0].path(), 'utf8')
@@ -1781,7 +1786,7 @@ const steps = sharedPage({
       restoreWidth(addAndTabs(390)),
     ],
     ['5f3 切：「定期の予定を追加」の毎月（第N）・誤りの欄（「基本」のまま）', addMonthly],
-    ['5f4 切：「予約を追加」の CSV でまとめて追加（単発のみ）', addCsv],
+    ['5f4 切：「予約を追加」のいちばん上の予約の CSV（単発のみ）', addCsv],
     ['6 入：メニュー6つ・ホームなし・帯の入の種類', expertOn],
     ['6b 入：操作の行（2つ＋その他）・「詳しく」の見出しの数と開け閉めの覚え・説明1行', expertSame],
     ['6c 入：人の一覧は3列＋「くわしい列」（覚える）・人のタブ', restoreWidth(expertPeople)],

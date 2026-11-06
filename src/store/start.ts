@@ -53,7 +53,7 @@ export function lastBooking(
   }
 }
 
-/** デモを作った操作：最初の2問の「はじめる」（やり直しも）・デモの初期状態に戻す */
+/** デモを作った操作：最初の2問の「はじめる」（やり直しも）・例外の画面の初期状態に戻す */
 export type DemoStart = { kind: 'answer'; start: FirstRunStart } | { kind: 'reset' };
 
 /**

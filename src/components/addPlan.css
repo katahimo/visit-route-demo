@@ -16,21 +16,17 @@
 .add-plan .form-grid {
   grid-template-columns: minmax(0, 1fr);
 }
-/* CSV でまとめて追加（components/PlanCsvSection。ADR-0090）：入力の欄と線で分け、ふだんは畳む */
+/* 予約の CSV を読み込む（components/PlanCsvSection。単発の引き出しのいちばん上。ADR-0090）：下の入力の欄と線で分ける */
 .add-plan-csv {
-  margin-top: 8px;
-  padding-top: 12px;
-  border-top: 1px solid var(--line);
-}
-.add-plan-csv[open] {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  margin: 0 0 8px;
+  padding: 0 0 12px;
+  border-bottom: 1px solid var(--line);
 }
 .add-plan-csv-title {
-  cursor: pointer;
+  margin: 0;
+  font-size: 1rem;
   font-weight: 600;
-  min-height: 44px;
-  display: flex;
-  align-items: center;
 }

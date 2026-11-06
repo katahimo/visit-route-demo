@@ -5,11 +5,13 @@ import { applyTemplate, isOn, matchTemplate } from './features';
 import {
   bookingOfUse,
   createFirstRunData,
+  FIRST_RUN_ENTRY,
   FIRST_RUN_START_CHOICES,
   FIRST_RUN_USE_CHOICES,
   type FirstRunAnswer,
   firstRunLanding,
   firstRunSetup,
+  isFirstRunEntry,
   restartConfirmBody,
 } from './firstRun';
 import { START_GUIDE_PATH } from './startGuide';
@@ -122,7 +124,17 @@ describe('firstRunLanding（最初に開く画面）', () => {
   });
 });
 
-describe('restartConfirmBody（始め方を選び直す）', () => {
+describe('isFirstRunEntry（最初の設定を出していた履歴の項目か）', () => {
+  it('FIRST_RUN_ENTRY の印だけを真にする', () => {
+    expect(isFirstRunEntry(FIRST_RUN_ENTRY)).toBe(true);
+    expect(isFirstRunEntry(null)).toBe(false);
+    expect(isFirstRunEntry(undefined)).toBe(false);
+    expect(isFirstRunEntry({ firstRun: 'true' })).toBe(false);
+    expect(isFirstRunEntry({ other: 1 })).toBe(false);
+  });
+});
+
+describe('restartConfirmBody（最初の設定をやり直す）', () => {
   it('「元に戻す」で戻せないことと、先に控えを書き出す案内と、控えの文を含む', () => {
     const body = restartConfirmBody('控えの文。');
     expect(body).toContain('「元に戻す」でも戻せません');

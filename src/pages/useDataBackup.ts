@@ -66,25 +66,11 @@ export function useDataBackup(x: { markExported: (kind: ExportKind) => void }) {
   return { error, download, load };
 }
 
-/** 初期状態に戻す・直前の状態に戻す（どちらも確認つき） */
+/** 直前の状態に戻す（確認つき） */
 export function useDataRestore() {
-  const { reset, keepPrevious, restorePrevious, previous } = useDemoData();
+  const { restorePrevious, previous } = useDemoData();
   const toast = useToast();
   const confirmDialog = useConfirm();
-
-  const doReset = async () => {
-    const ok = await confirmDialog({
-      title: 'データを初期状態に戻しますか？',
-      body: `データをデモの初期状態に戻します。いまの変更はすべて消えます。管理者設定の機能の入り切りは、そのままです。\n${keepNote(canKeepPrevious())}`,
-      confirmLabel: '消して初期状態に戻す',
-      tone: 'danger',
-    });
-    if (!ok) return;
-    // 確認で OK になってから控えを残す（確認中に閉じても控えは残らない。PRD D227）
-    const keep = keepPrevious('初期状態に戻す');
-    reset();
-    toast(`初期状態に戻しました${keptSuffix(keep)}`);
-  };
 
   /** 直前の状態に戻す（PRD D227）：控えと入れ替える */
   const doRestore = async () => {
@@ -104,5 +90,5 @@ export function useDataRestore() {
     toast('直前の状態に戻しました');
   };
 
-  return { doReset, doRestore };
+  return { doRestore };
 }

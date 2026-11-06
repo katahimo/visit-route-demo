@@ -32,7 +32,7 @@ export default function DataPage() {
         nav={<SettingsTabs />}
         icon={Database}
         title="データ"
-        lead={`データの書き出し・読み込み${excelOn ? '（Excel も）' : ''}・最初からやり直す`}
+        lead={`データの書き出し・読み込み${excelOn ? '（Excel も）' : ''}・最初の設定をやり直す`}
       />
       <div className="warn-box">
         <TriangleAlert size={20} strokeWidth={2.2} aria-hidden="true" />
@@ -64,8 +64,8 @@ export default function DataPage() {
 
       <TidyCard tidy={tidy} />
 
-      {/* 最初からやり直す：初期状態に戻す・始め方を選び直す（ADR-0092） */}
-      <RestartCard onReset={restore.doReset} />
+      {/* 最初の設定をやり直す（ADR-0092） */}
+      <RestartCard />
     </div>
   );
 }

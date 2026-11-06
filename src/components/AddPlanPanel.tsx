@@ -170,7 +170,7 @@ function AddPlanFields({ a }: { a: ReturnType<typeof useAddPlan> }) {
  * 「定期の予定を追加」（単発のみは「予約を追加」）の引き出し（エキスパート機能が切のとき、月・週の主ボタン。PRD D402）：
  * 〈利用者さん〉を選び、定期は 曜日・くり返し（毎月なら第N）・開始日・時刻・所要（〈利用者さん〉の繰り返しを足す）、単発は 日付・時刻・所要（その日の訪問を足す）を入れて「追加」（閉じるは「閉じる」。日の訪問の欄と同じ言葉）。
  * 入れたら担当なしの分は自動で組む（ADR-0072）。入れ方は繰り返しを使うか（機能 patterns）で決まる。状態と保存は useAddPlan。
- * 下に「CSV でまとめて追加」の欄（PlanCsvSection。単発の訪問のテンプレート・書き出し・読み込み。ADR-0090）
+ * 単発だけ、いちばん上に「予約の CSV を読み込む」（PlanCsvSection。読み込み・テンプレート・書き出し。ADR-0090）。定期には CSV の欄を出さない
  */
 export function AddPlanPanel({ onClose }: { onClose: () => void }) {
   const a = useAddPlan(onClose);
@@ -202,6 +202,8 @@ export function AddPlanPanel({ onClose }: { onClose: () => void }) {
       }
     >
       <div className="add-plan stack" data-testid="add-plan" data-kind={a.kind}>
+        {/* 単発は予約の CSV の取り込みが主なので上に出す（定期には出さない。CSV は単発の訪問だけ読む） */}
+        {a.kind === 'oneOff' && <PlanCsvSection clientTerm={a.terms.client} onImported={onClose} />}
         {noClients ? (
           <p className="sub" data-testid="add-plan-none">
             先に{a.terms.client}を入れてください。
@@ -212,7 +214,6 @@ export function AddPlanPanel({ onClose }: { onClose: () => void }) {
         <FieldError id={a.errorId} token={a.errorState}>
           {a.errorState?.text}
         </FieldError>
-        <PlanCsvSection clientTerm={a.terms.client} onImported={onClose} />
       </div>
     </SidePanel>
   );

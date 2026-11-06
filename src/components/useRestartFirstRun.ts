@@ -4,9 +4,9 @@ import { canKeepPrevious, useDemoData } from '../store';
 import { useConfirm } from './ConfirmDialog';
 
 /**
- * 始め方を選び直す（PRD D381。ADR-0092）：確認（いまのデータは消え「元に戻す」でも戻せないこと・先に控えを書き出す案内・
+ * 最初の設定をやり直す（PRD D381。ADR-0092）：確認（いまのデータは消え「元に戻す」でも戻せないこと・先に控えを書き出す案内・
  * 直前の状態に戻せるか）のあと、最初の2問へ戻る。答えるまでは今のデータのまま、答えるとデータを作り直す（1世代の控えは残す）。
- * データの画面の「最初からやり直す」の［始め方を選び直す］と、登録の案内の［始め方を選び直す］から使う
+ * データの画面のいちばん下の［最初の設定をやり直す］と、登録の案内の［最初の設定をやり直す］から使う
  */
 export function useRestartFirstRun(): () => Promise<void> {
   const { askFirstRun } = useDemoData();
