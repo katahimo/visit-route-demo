@@ -26,8 +26,8 @@ permissions:
   contents: read
 
 concurrency:
-  # ラベルを付けたときの実行（e2e）と push の実行（速い検査）は別の組にし、互いに止めない
-  group: e2e-${{ github.event_name }}-${{ github.ref }}-${{ github.event.action == 'labeled' && 'label' || 'run' }}
+  # ラベルを付けたときの実行は、ラベルごとに push の実行と別の組にし、互いに止めない（ほかのラベルを付けても e2e を止めない）
+  group: e2e-${{ github.event_name }}-${{ github.ref }}-${{ github.event.action == 'labeled' && format('label-{0}', github.event.label.name) || 'run' }}
   cancel-in-progress: true
 
 env:
@@ -59,11 +59,13 @@ jobs:
       - run: npm test
 
   e2e:
-    # PR では「e2e」のラベルがあるときだけ（付けたとき・付いた PR への push）。ほかのラベルを付けたときは走らせない
+    # PR では「e2e」のラベルがあるときだけ（付けたとき・付いた PR への push）。ほかのラベルを付けたときは走らせない。
+    # ラベル付きで PR を作ると opened と labeled の両方が来るので、opened では走らせない（labeled の側で走る）
     if: >-
       ${{ github.event_name != 'pull_request' ||
           (github.event.action == 'labeled' && github.event.label.name == 'e2e') ||
-          (github.event.action != 'labeled' && contains(github.event.pull_request.labels.*.name, 'e2e')) }}
+          (github.event.action != 'labeled' && github.event.action != 'opened' &&
+           contains(github.event.pull_request.labels.*.name, 'e2e')) }}
     # Playwright の版（package.json の @playwright/test）と同じイメージを使う。版を上げるときはここも上げる
     runs-on: ubuntu-24.04
     container:

@@ -12,7 +12,7 @@ e2e は手書きの Playwright のスクリプト（`scripts/e2e-*.cjs`）を1�
 - ページの時計は止めて「今日」を固定。速さを測る確かめは `withRealClock` で測る。上限はスクリプトごとの名前（無ければ `PERF_MS`）
 - 包み：`playwright.config.ts` と `e2e/legacy.spec.ts`。スクリプト1本＝1 test、worker は手元4・CI 3。`BASE` が無ければ build して `vite preview`。`@perf` は project `perf`（worker 1）
 - コマンド：`npm run e2e`・`e2e:perf`・`e2e:all`
-- CI：`.github/workflows/e2e.yml` を PR・手動・夜間（日本時間 03:00）に。速い検査・e2e（`--shard` で4つ）・perf を並列。Playwright の公式イメージを使う。夜間は月末近くの「今日」でも走らせる。CI では速さの上限を緩める
+- CI：`.github/workflows/e2e.yml` を PR・手動・夜間（日本時間 03:00）に（PR の e2e は「e2e」のラベルのときだけ、perf は手動・夜間だけに変えた。ADR-0104）。速い検査・e2e（`--shard` で4つ）・perf を並列。Playwright の公式イメージを使う。夜間は月末近くの「今日」でも走らせる。CI では速さの上限を緩める
 - 開き直しは about:blank を挟む。filechooser の受け口は開いた直後に付ける
 - 単独の `node scripts/e2e-*.cjs` も走らせ続けられる
 

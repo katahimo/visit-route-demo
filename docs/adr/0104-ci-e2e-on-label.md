@@ -16,7 +16,8 @@ PR への push のたびに、速い検査・e2e（4つに分けたジョブ）�
 ## 決定
 - 案A
 - `pull_request` の `types` に `labeled` を足す。速い検査はラベルを付けただけの実行では走らせない。e2e は PR では「e2e」のラベルがあるときだけ。perf は `pull_request` では走らせない
-- ラベルを付けたときの実行と push の実行は `concurrency` の組を分け、互いに取り消さない
+- ラベルを付けたときの実行は、ラベルの名前ごとに push の実行と `concurrency` の組を分け、互いに取り消さない（ほかのラベルを付けても走っている e2e を止めない）。ラベル付きで PR を作ると opened と labeled の両方が来るので、e2e は opened では走らせない
+- e2e のジョブは必須のチェックにしない（ラベルが無いと skipped になる）
 - playwright-report・test-results は失敗のときだけ残し、`retention-days` は 3
 - 手動（workflow_dispatch）はブランチを選んで e2e と perf を全部走らせられる。夜間（週1回）は今までどおり全部
 
