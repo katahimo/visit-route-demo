@@ -19,15 +19,18 @@ export const CAL_OFF_DAYS = 93;
 
 /** 休みとみなす件名（「休眠」などは当たらない） */
 const OFF_RE = /休み|休業|産休|育休|欠勤|希望休|有休|有給|公休/;
-/** 終日の予定の、午前だけ・午後だけ（境12:00。D26） */
-const AM_RE = /AM|午前/i;
-const PM_RE = /PM|午後/i;
+/** 休みの言葉を含んでも休みでない件名（昼休み・休憩・休み時間など。先に消してから OFF_RE を当てる） */
+const NOT_OFF_RE = /昼休み?|お昼休み?|休憩|休み時間/g;
+/** 終日の予定の、午前だけ・午後だけ（境12:00。D26）。AM・PM は英字の語の一部（Team の am など）に当てない */
+const AM_RE = /(?<![a-z])am(?![a-z])|午前/i;
+const PM_RE = /(?<![a-z])pm(?![a-z])|午後/i;
 
 /** カレンダーから入れた欠勤の ID（〈スタッフ〉と日付で決まる。取り込み直すと同じ ID を直す） */
 export const calAbsenceId = (staffId: string, date: string): string => `cal-${staffId}-${date}`;
 
 /** 休みの件名か */
-export const isOffSummary = (summary: string): boolean => OFF_RE.test(summary.normalize('NFKC'));
+export const isOffSummary = (summary: string): boolean =>
+  OFF_RE.test(summary.normalize('NFKC').replace(NOT_OFF_RE, ''));
 
 /** その日の欠勤の時間帯とメモ */
 export type OffSpan = Pick<Absence, 'from' | 'to' | 'note'>;
@@ -54,6 +57,8 @@ export function offDaysOf(o: IcsOccurrence): { date: string; from: string | null
   }
   // 終わりが 0:00 ちょうどなら前の日まで
   const endTime = o.end.time ?? '00:00';
+  // 長さの無い時刻つきの予定（終わりが無い・開始と同じ）は休みにしない
+  if (o.end.date === o.start.date && endTime === o.start.time) return out;
   const last = endTime === '00:00' && o.end.date > o.start.date ? addDays(o.end.date, -1) : o.end.date;
   for (let d = o.start.date; d <= last; d = addDays(d, 1)) {
     const from = d === o.start.date ? floor30(o.start.time) : null;
@@ -134,7 +139,7 @@ export type CalOffSummary = {
   unchanged: number;
   /** 勤務の無い日なので入れない休みの数 */
   noShift: number;
-  /** 読めない繰り返しの予定の数 */
+  /** 読めない繰り返しの休みの予定の数（その〈スタッフ〉のカレンダーに無い欠勤は外さない） */
   unsupported: number;
 };
 
@@ -158,6 +163,7 @@ function staffRows(
   wanted: Map<string, OffSpan>,
   today: string,
   last: string,
+  keepOthers: boolean,
 ): { rows: CalOffRow[]; unchanged: number; noShift: number } {
   const name = data.staff.find((s) => s.id === staffId)?.name ?? '';
   const mine = new Map(
@@ -172,6 +178,8 @@ function staffRows(
     const have = mine.get(date);
     const base = { key: `${staffId}:${date}`, staffId, date };
     if (!want) {
+      // 読めない繰り返しの休みがある人は、カレンダーに無い欠勤を外さない（読めない回かもしれない）
+      if (keepOthers) continue;
       // カレンダーに無い休み（手で入れたものも外す）
       const { id, from, to, note } = have!;
       const text = actionText({ kind: 'absence', staffId, date, from, to, note }, name, today);
@@ -200,6 +208,8 @@ export function calendarOffRows(
 ): { rows: CalOffRow[]; summary: CalOffSummary } {
   const last = addDays(today, CAL_OFF_DAYS - 1);
   const wanted = new Map<string, Map<string, OffSpan>>();
+  /** 読めない繰り返しの休みがある〈スタッフ〉（外すを出さない） */
+  const unsure = new Set<string>();
   const summary: CalOffSummary = {
     calendars: calendars.length,
     matched: [],
@@ -215,8 +225,9 @@ export function calendarOffRows(
       continue;
     }
     summary.matched.push(cal.name);
-    const { list, unsupported } = occurrencesIn(cal, today, last);
+    const { list, unsupported } = occurrencesIn(cal, today, last, isOffSummary);
     summary.unsupported += unsupported;
+    if (unsupported > 0) unsure.add(staffId);
     const spans = offSpansOf(list, today, last);
     const prev = wanted.get(staffId);
     if (!prev) wanted.set(staffId, spans);
@@ -226,7 +237,7 @@ export function calendarOffRows(
   for (const s of data.staff) {
     const w = wanted.get(s.id);
     if (!w) continue;
-    const r = staffRows(data, s.id, w, today, last);
+    const r = staffRows(data, s.id, w, today, last, unsure.has(s.id));
     rows.push(...r.rows);
     summary.unchanged += r.unchanged;
     summary.noShift += r.noShift;

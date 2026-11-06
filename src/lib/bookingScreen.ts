@@ -42,6 +42,9 @@ export function bookingConfirmBody(x: {
   return [
     `「${x.fileName}」を訪問として読み込みます（${r.otherForm.label}の CSV）。`,
     bookingSummary(r),
+    ...(r.keptMissing
+      ? ['読めない行・入れなかった行があるので、ファイルに無い訪問は消しません（直して読み直すと消します）。']
+      : []),
     ...(r.cancelledSkipped > 0 ? [`取り消し済みで、まだ入れていない ${r.cancelledSkipped}件は入れません。`] : []),
     ...bookingProblems(r, x.clientTerm),
     ...(x.outsideNote ? [x.outsideNote] : []),

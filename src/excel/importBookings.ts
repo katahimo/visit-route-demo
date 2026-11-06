@@ -125,6 +125,8 @@ export function importBookings(buf: ArrayBuffer, base: DemoData): BookingImportR
   const find = clientFinder(base.clients);
   const curOf = new Map(base.visits.map((v) => [v.id, v]));
   const badRows = [...table.badRows];
+  /** どの訪問を指すか分からない行がある（読めない行・名前が当たらない行・同じ枠が2件）。あればファイルに無い訪問は消さない */
+  let unsure = table.badRows.length > 0;
   const unmatched: string[] = [];
   const seen = new Map<string, number>();
   const next = new Map<string, Visit>();
@@ -146,10 +148,13 @@ export function importBookings(buf: ArrayBuffer, base: DemoData): BookingImportR
     const c = find(b.clientName);
     if (c === null || c === 'many') {
       unmatched.push(c === 'many' ? `${b.clientName}（同じ名前が2人以上）` : b.clientName);
+      // どの訪問を指す行か分からないので、ファイルに無い訪問を消さない
+      unsure = true;
       continue;
     }
     const slot = b.matchSlot ? slotVisitId(base.visits, b, c.id) : null;
     if (slot === 'many') {
+      unsure = true;
       badRows.push(`${b.row}行目：同じ日・開始・訪問先の訪問が2件以上あるので、訪問ID を入れてください`);
       continue;
     }
@@ -190,7 +195,13 @@ export function importBookings(buf: ArrayBuffer, base: DemoData): BookingImportR
   // ファイルの日の範囲の単発の訪問で、ファイルの行が指していないもの（入れなかった行が指す訪問は seen に入っていて残る）
   const gone = (v: Visit) =>
     drop.has(v.id) ||
-    (from !== undefined && to !== undefined && v.pattern === null && v.date >= from && v.date <= to && !seen.has(v.id));
+    (!unsure &&
+      from !== undefined &&
+      to !== undefined &&
+      v.pattern === null &&
+      v.date >= from &&
+      v.date <= to &&
+      !seen.has(v.id));
   const removed = base.visits.filter(gone).length;
   const visits = [
     ...base.visits.filter((v) => !gone(v)).map((v) => next.get(v.id) ?? v),
@@ -203,6 +214,7 @@ export function importBookings(buf: ArrayBuffer, base: DemoData): BookingImportR
     added,
     updated,
     removed,
+    keptMissing: unsure,
     unchanged,
     cancelledSkipped,
     unmatched: countNames(unmatched),

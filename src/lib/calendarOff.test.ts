@@ -46,6 +46,9 @@ describe('件名と時間帯', () => {
     expect(isOffSummary('産前産後休業')).toBe(true);
     expect(isOffSummary('評価委員会（休眠預金）')).toBe(false);
     expect(isOffSummary('mtg')).toBe(false);
+    expect(isOffSummary('昼休み')).toBe(false);
+    expect(isOffSummary('休憩')).toBe(false);
+    expect(isOffSummary('昼休みのあと休み')).toBe(true);
   });
   it('終日の AM・PM は午前・午後、時刻つきは30分単位に広げる', () => {
     const at = (date: string, time: string | null) => ({ date, time });
@@ -57,6 +60,16 @@ describe('件名と時間帯', () => {
       from: '12:00',
       to: null,
     });
+    // Team の am に当てない
+    expect(offDaysOf({ summary: 'Team 休み', start: at('2026-10-13', null), end: at('2026-10-14', null) })[0]).toEqual({
+      date: '2026-10-13',
+      from: null,
+      to: null,
+    });
+    // 長さの無い時刻つきの予定は休みにしない
+    expect(offDaysOf({ summary: '休み', start: at('2026-10-13', '00:00'), end: at('2026-10-13', '00:00') })).toEqual(
+      [],
+    );
     expect(offDaysOf({ summary: '休み', start: at('2026-10-13', '09:15'), end: at('2026-10-13', '12:45') })).toEqual([
       { date: '2026-10-13', from: '09:00', to: '13:00' },
     ]);
@@ -161,6 +174,18 @@ describe('一覧と反映', () => {
     const third = calendarOffRows(d3, again, TODAY);
     expect(third.rows).toEqual([]);
     expect(third.summary.unchanged).toBe(2);
+  });
+
+  it('読めない繰り返しの休みがある人は、カレンダーに無い欠勤を外さない', () => {
+    const hand = { id: 'a-1', staffId: 's1', date: '2026-10-15', from: null, to: null, note: '' };
+    const odd = 'UID:odd\nDTSTART;VALUE=DATE:20261013\nRRULE:FREQ=MONTHLY;BYSETPOS=2;BYDAY=TU\nSUMMARY:休み';
+    const { rows, summary } = calendarOffRows(
+      data({ absences: [hand] }),
+      [parseIcs(ics('架空花子', [allDay('20261013', '休み'), odd]))],
+      TODAY,
+    );
+    expect(summary.unsupported).toBe(1);
+    expect(rows.map((r) => [r.kind, r.date])).toEqual([['add', '2026-10-13']]);
   });
 
   it('過ぎた日のカレンダーの欠勤・当たらない人の欠勤は外さない', () => {

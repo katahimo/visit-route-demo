@@ -14,7 +14,7 @@ import {
 } from '../lib/pasteRows';
 import { useDemoData } from '../store';
 import { useToast } from './Toast';
-import { useUndoAction } from './undo';
+import { useUndoImportAction } from './undo';
 
 /** 打つ・貼るたびに読み直すまでの待ち（ミリ秒） */
 export const PASTE_READ_DELAY_MS = 250;
@@ -22,7 +22,7 @@ export const PASTE_READ_DELAY_MS = 250;
 export function usePasteNotices(onClose: () => void) {
   const { data, update } = useDemoData();
   const toast = useToast();
-  const undoAction = useUndoAction();
+  const undoAction = useUndoImportAction();
   const today = jstDate(Date.now());
   const [text, setText] = useState('');
   /** 読んだ文（入力のたびに読み直さず、少し待ってから） */

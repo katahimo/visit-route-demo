@@ -2,6 +2,7 @@
 // 予定（VEVENT）の 件名・開始・終了・繰り返し（RRULE の DAILY・WEEKLY・MONTHLY・YEARLY と INTERVAL・COUNT・UNTIL・
 // BYDAY・BYMONTHDAY）・除く日（EXDATE）・1回だけ直した回（RECURRENCE-ID）・取り消し（STATUS:CANCELLED）を見る。
 // 時刻は日本時間にそろえる（末尾 Z の UTC は +9 時間、TZID 付き・TZID 無しはその時刻のまま。業務は日本時間だけ。domain/time）。
+// UTC の繰り返しは UTC の日付で曜日・日を当ててから日本時間に直す。週の頭は WKST（無ければ月曜）。
 // 読めない繰り返し（BYSETPOS など）の予定は数えて飛ばす。どれも純粋関数（データを書き換えない）
 import { addDays, weekday } from '../domain/time';
 import { daysBetween } from './ym';
@@ -15,6 +16,8 @@ export type IcsEvent = {
   summary: string;
   cancelled: boolean;
   start: IcsTime;
+  /** 開始が UTC（末尾 Z）なら UTC の日付と時刻（繰り返しはこちらで当てる）。ほかは null */
+  startUtc: IcsTime | null;
   /** 終了（終日は次の日＝含まない日。無ければ null） */
   end: IcsTime | null;
   rrule: string | null;
@@ -30,8 +33,26 @@ export type IcsCalendar = { name: string; events: IcsEvent[] };
 /** 開いた1回（終了は必ずある。終日は含まない日） */
 export type IcsOccurrence = { summary: string; start: IcsTime; end: IcsTime };
 
-/** 繰り返しを開く上限の日数（古い開始日から先を見るため。約30年） */
+/** 回数（COUNT）のある繰り返しを最初の回から数える上限の日数（約30年） */
 const MAX_SCAN_DAYS = 11000;
+
+/** 日付と時刻を分だけずらす */
+function shiftMinutes(t: IcsTime, minutes: number): IcsTime {
+  const [h = 0, m = 0] = (t.time ?? '00:00').split(':').map(Number);
+  const iso = new Date(
+    Date.UTC(+t.date.slice(0, 4), +t.date.slice(5, 7) - 1, +t.date.slice(8, 10), h, m) + minutes * 60000,
+  ).toISOString();
+  return { date: iso.slice(0, 10), time: iso.slice(11, 16) };
+}
+
+/** 2つの時刻の差（分） */
+const minutesBetween = (a: IcsTime, b: IcsTime): number => {
+  const ms = (t: IcsTime) => {
+    const [h = 0, m = 0] = (t.time ?? '00:00').split(':').map(Number);
+    return Date.UTC(+t.date.slice(0, 4), +t.date.slice(5, 7) - 1, +t.date.slice(8, 10), h, m);
+  };
+  return Math.round((ms(b) - ms(a)) / 60000);
+};
 
 /** 1行（折り返しを戻したあと）を 名前・パラメータ・値 に分ける（パラメータの中の引用符の : は区切りにしない） */
 function splitLine(line: string): { name: string; params: Record<string, string>; value: string } | null {
@@ -82,7 +103,8 @@ export function parseIcs(text: string): IcsCalendar {
     const l = splitLine(raw);
     if (!l) continue;
     if (l.name === 'BEGIN') {
-      if (l.value.toUpperCase() === 'VEVENT' && ev === null) ev = { exdates: [], recurrenceId: null, rrule: null };
+      if (l.value.toUpperCase() === 'VEVENT' && ev === null)
+        ev = { exdates: [], recurrenceId: null, rrule: null, startUtc: null };
       else if (ev) depth++;
       continue;
     }
@@ -116,9 +138,12 @@ function readProp(ev: Partial<IcsEvent>, l: { name: string; params: Record<strin
     case 'STATUS':
       ev.cancelled = l.value.toUpperCase() === 'CANCELLED';
       break;
-    case 'DTSTART':
+    case 'DTSTART': {
       ev.start = icsTime(l.value, l.params) ?? undefined;
+      const utc = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})\d{2}Z$/.exec(l.value.trim());
+      ev.startUtc = utc ? { date: `${utc[1]}-${utc[2]}-${utc[3]}`, time: `${utc[4]}:${utc[5]}` } : null;
       break;
+    }
     case 'DTEND':
       ev.end = icsTime(l.value, l.params);
       break;
@@ -147,6 +172,8 @@ type Rule = {
   /** 曜日（0=日〜6=土）と何番目（0＝毎週。-1＝最後） */
   byDay: { day: number; nth: number }[];
   byMonthDay: number[];
+  /** 週の頭の曜日（WKST。0=日〜6=土。無ければ月曜） */
+  wkst: number;
 };
 
 const DAYS = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
@@ -175,6 +202,8 @@ export function parseRule(value: string): Rule | null {
   if (freq === 'WEEKLY' && (byMonthDay.length > 0 || byDay.some((b) => b.nth !== 0))) return null;
   const until = parts.UNTIL ? icsTime(parts.UNTIL) : null;
   if (parts.UNTIL && !until) return null;
+  const wkst = parts.WKST ? DAYS.indexOf(parts.WKST) : 1;
+  if (wkst < 0) return null;
   return {
     freq,
     interval: Math.max(1, Number(parts.INTERVAL ?? 1) || 1),
@@ -182,6 +211,7 @@ export function parseRule(value: string): Rule | null {
     until: until ? `${until.date}T${until.time ?? '23:59'}` : null,
     byDay,
     byMonthDay,
+    wkst,
   };
 }
 
@@ -203,9 +233,9 @@ function ruleHits(rule: Rule, start: string, date: string): boolean {
     case 'DAILY':
       return daysBetween(start, date) % rule.interval === 0;
     case 'WEEKLY': {
-      // 週は月曜はじまり（WKST=MO。Google の既定）
-      const monday = (d: string) => addDays(d, -((weekday(d) + 6) % 7));
-      if ((daysBetween(monday(start), monday(date)) / 7) % rule.interval !== 0) return false;
+      // 週の頭は WKST（無ければ月曜）。隔週などはその週の数で数える
+      const head = (d: string) => addDays(d, -((weekday(d) - rule.wkst + 7) % 7));
+      if ((daysBetween(head(start), head(date)) / 7) % rule.interval !== 0) return false;
       const days = rule.byDay.length > 0 ? rule.byDay.map((b) => b.day) : [weekday(start)];
       return days.includes(weekday(date));
     }
@@ -241,18 +271,20 @@ function overlaps(o: IcsOccurrence, from: string, to: string): boolean {
 
 /**
  * from〜to（日本時間の日付。両端を含む）にかかる回を開く（取り消した予定・除く回・直した回の元の回は除き、直した回はその内容で）。
+ * keep があれば、件名が当たる予定だけを開く（ほかの予定は開かず、読めない繰り返しにも数えない）。
  * unsupported は読めない繰り返しの予定の数
  */
 export function occurrencesIn(
   cal: Pick<IcsCalendar, 'events'>,
   from: string,
   to: string,
+  keep: (summary: string) => boolean = () => true,
 ): { list: IcsOccurrence[]; unsupported: number } {
   const moved = new Set(cal.events.filter((e) => e.recurrenceId !== null).map((e) => `${e.uid}@${e.recurrenceId}`));
   const list: IcsOccurrence[] = [];
   let unsupported = 0;
   for (const e of cal.events) {
-    if (e.cancelled) continue;
+    if (e.cancelled || !keep(e.summary)) continue;
     const end = endOf(e);
     if (!e.rrule || e.recurrenceId !== null) {
       const o = { summary: e.summary, start: e.start, end };
@@ -269,7 +301,10 @@ export function occurrencesIn(
   return { list, unsupported };
 }
 
-/** 繰り返しの予定を開く（最初の回から数える。COUNT は見る範囲より前の回も数える） */
+/**
+ * 繰り返しの予定を開く。曜日・日は開始の時間帯（UTC の開始なら UTC の日付）で当て、回は日本時間に直す。
+ * 回数（COUNT）があれば最初の回から数え、無ければ見る範囲の少し前から当てる（古い開始日でも速く、範囲に届く）
+ */
 function expand(
   e: IcsEvent,
   rule: Rule,
@@ -278,22 +313,31 @@ function expand(
   to: string,
   moved: ReadonlySet<string>,
 ): IcsOccurrence[] {
-  const span = daysBetween(e.start.date, end.date);
+  const base = e.startUtc ?? e.start;
+  const toLocal = (date: string): IcsTime =>
+    e.startUtc ? shiftMinutes({ date, time: base.time }, 9 * 60) : { date, time: base.time };
+  const allDay = e.start.time === null;
+  const spanDays = daysBetween(e.start.date, end.date);
+  const spanMinutes = allDay ? 0 : minutesBetween(e.start, end);
   const ex = new Set(e.exdates);
   const out: IcsOccurrence[] = [];
+  // 回数が無ければ、範囲の初めから予定の長さと時差（1日）だけ前から当てる
+  const skip = rule.count === null ? Math.max(0, daysBetween(base.date, from) - spanDays - 2) : 0;
+  const limit = rule.count === null ? daysBetween(base.date, to) + 2 : MAX_SCAN_DAYS;
   let n = 0;
-  for (let i = 0; i <= MAX_SCAN_DAYS; i++) {
-    const date = addDays(e.start.date, i);
-    if (date > to) break;
-    if (rule.until !== null && `${date}T${e.start.time ?? '00:00'}` > rule.until) break;
-    if (i > 0 && !ruleHits(rule, e.start.date, date)) continue;
+  for (let i = skip; i <= limit; i++) {
+    const date = addDays(base.date, i);
+    const start = toLocal(date);
+    if (start.date > to) break;
+    if (rule.until !== null && `${start.date}T${start.time ?? '00:00'}` > rule.until) break;
+    if (i > 0 && !ruleHits(rule, base.date, date)) continue;
     n++;
     if (rule.count !== null && n > rule.count) break;
-    if (ex.has(date) || moved.has(`${e.uid}@${date}`)) continue;
+    if (ex.has(start.date) || moved.has(`${e.uid}@${start.date}`)) continue;
     const o = {
       summary: e.summary,
-      start: { date, time: e.start.time },
-      end: { date: addDays(date, span), time: end.time },
+      start,
+      end: allDay ? { date: addDays(start.date, spanDays), time: null } : shiftMinutes(start, spanMinutes),
     };
     if (overlaps(o, from, to)) out.push(o);
   }

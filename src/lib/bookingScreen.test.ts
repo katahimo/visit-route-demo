@@ -14,6 +14,7 @@ const result = (over: Partial<BookingImportResult> = {}): BookingImportResult =>
   added: 2,
   updated: 1,
   removed: 0,
+  keptMissing: false,
   unchanged: 3,
   cancelledSkipped: 0,
   unmatched: [],

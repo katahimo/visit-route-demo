@@ -77,7 +77,9 @@ export function CalendarOffPanel({ onClose }: { onClose: () => void }) {
                 {p.terms.staff}に合わないカレンダー（読みません）：{s.unmatched.join('、')}
               </p>
             )}
-            {s.unsupported > 0 && <p className="sub">読めない繰り返しの予定 {s.unsupported}件は飛ばしました</p>}
+            {s.unsupported > 0 && (
+              <p className="sub">読めない繰り返しの休み {s.unsupported}件は飛ばしました（その人の欠勤は外しません）</p>
+            )}
           </div>
         )}
         {s && p.rows.length === 0 && <p data-testid="cal-off-none">変わる休みはありません</p>}

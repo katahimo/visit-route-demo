@@ -97,4 +97,39 @@ describe('parseRule と繰り返し', () => {
     expect(occurrencesIn(c, '2026-11-01', '2026-11-30').list).toHaveLength(1);
     expect(occurrencesIn(c, '2026-11-05', '2026-11-30').list).toHaveLength(0);
   });
+  it('WKST=SU の隔週（日曜を含む）は日曜はじまりの週で数える', () => {
+    // 2026-11-01 は日曜
+    const c = parseIcs(
+      cal(['UID:w\nDTSTART;VALUE=DATE:20261101\nRRULE:FREQ=WEEKLY;WKST=SU;INTERVAL=2;BYDAY=SU,MO\nSUMMARY:休み']),
+    );
+    expect(occurrencesIn(c, '2026-11-01', '2026-11-16').list.map((o) => o.start.date)).toEqual([
+      '2026-11-01',
+      '2026-11-02',
+      '2026-11-15',
+      '2026-11-16',
+    ]);
+  });
+  it('UTC の繰り返しは UTC の曜日で当ててから日本時間にする', () => {
+    // 2026-11-04（水）15:00Z ＝ 日本時間 11-05（木）0:00
+    const c = parseIcs(
+      cal(['UID:u\nDTSTART:20261104T150000Z\nDTEND:20261104T160000Z\nRRULE:FREQ=WEEKLY;BYDAY=WE\nSUMMARY:休み']),
+    );
+    const list = occurrencesIn(c, '2026-11-01', '2026-11-20').list;
+    expect(list.map((o) => `${o.start.date} ${o.start.time}-${o.end.time}`)).toEqual([
+      '2026-11-05 00:00-01:00',
+      '2026-11-12 00:00-01:00',
+      '2026-11-19 00:00-01:00',
+    ]);
+  });
+  it('件名で絞ると、ほかの予定は開かず読めない繰り返しにも数えない。古い開始日の繰り返しも範囲に届く', () => {
+    const c = parseIcs(
+      cal([
+        'UID:a\nDTSTART;VALUE=DATE:19900101\nRRULE:FREQ=DAILY\nSUMMARY:休み',
+        'UID:b\nDTSTART;VALUE=DATE:20261101\nRRULE:FREQ=MONTHLY;BYSETPOS=1;BYDAY=MO\nSUMMARY:mtg',
+      ]),
+    );
+    const r = occurrencesIn(c, '2026-11-01', '2026-11-03', (s) => s.includes('休'));
+    expect(r.unsupported).toBe(0);
+    expect(r.list.map((o) => o.start.date)).toEqual(['2026-11-01', '2026-11-02', '2026-11-03']);
+  });
 });

@@ -10,12 +10,12 @@ import type { IcsCalendar } from '../lib/icsRead';
 import { careCountOn } from '../lib/pasteRows';
 import { useDemoData } from '../store';
 import { useToast } from './Toast';
-import { useUndoAction } from './undo';
+import { useUndoImportAction } from './undo';
 
 export function useCalendarOff(onClose: () => void) {
   const { data, update } = useDemoData();
   const toast = useToast();
-  const undoAction = useUndoAction();
+  const undoAction = useUndoImportAction();
   const today = jstDate(Date.now());
   const [calendars, setCalendars] = useState<IcsCalendar[] | null>(null);
   const [error, setError] = useState<string | null>(null);

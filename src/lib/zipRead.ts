@@ -59,8 +59,8 @@ async function inflate(data: Uint8Array, limit: number): Promise<Uint8Array> {
   return out;
 }
 
-/** zip の中のファイル（中央ディレクトリの順。フォルダは除く）。読めなければ ZipReadError */
-export async function readZip(bytes: Uint8Array): Promise<ZipEntry[]> {
+/** zip の中のファイル（中央ディレクトリの順。フォルダは除く）。読めなければ ZipReadError。maxBytes は開いた合計の上限 */
+export async function readZip(bytes: Uint8Array, maxBytes: number = ZIP_MAX_BYTES): Promise<ZipEntry[]> {
   if (bytes.byteLength < 22) throw new ZipReadError(ZIP_ERRORS.notZip);
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const end = findEnd(view);
@@ -89,11 +89,16 @@ export async function readZip(bytes: Uint8Array): Promise<ZipEntry[]> {
     const start = local + 30 + view.getUint16(local + 26, true) + view.getUint16(local + 28, true);
     if (start + packed > bytes.byteLength) throw new ZipReadError(ZIP_ERRORS.notZip);
     const data = bytes.subarray(start, start + packed);
-    total += size;
-    if (total > ZIP_MAX_BYTES) throw new ZipReadError(ZIP_ERRORS.tooBig);
-    if (method === 0) out.push({ name, bytes: data.slice() });
-    else if (method === 8) out.push({ name, bytes: await inflate(data, ZIP_MAX_BYTES - total + size) });
+    // 上限は実際に開いた大きさで数える（中央ディレクトリの申告は信じない）
+    let body: Uint8Array;
+    if (method === 0) {
+      if (packed !== size) throw new ZipReadError(ZIP_ERRORS.notZip);
+      body = data.slice();
+    } else if (method === 8) body = await inflate(data, maxBytes - total);
     else throw new ZipReadError(ZIP_ERRORS.method);
+    total += body.byteLength;
+    if (total > maxBytes) throw new ZipReadError(ZIP_ERRORS.tooBig);
+    out.push({ name, bytes: body });
   }
   return out;
 }

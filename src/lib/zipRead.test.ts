@@ -20,4 +20,12 @@ describe('readZip', () => {
     expect(isZip(new TextEncoder().encode('BEGIN:VCALENDAR'))).toBe(false);
     await expect(readZip(new TextEncoder().encode('not a zip file at all, really'))).rejects.toThrow(ZIP_ERRORS.notZip);
   });
+  it('上限は実際に開いた大きさで数える（申告が0でも止める）・無圧縮の申告の食い違い・暗号化', async () => {
+    const big = 'x'.repeat(5000);
+    await expect(readZip(makeZip([{ name: 'a', data: big, deflate: true, declaredSize: 0 }]), 1000)).rejects.toThrow(
+      ZIP_ERRORS.tooBig,
+    );
+    await expect(readZip(makeZip([{ name: 'a', data: 'abc', declaredSize: 9 }]))).rejects.toThrow(ZIP_ERRORS.notZip);
+    await expect(readZip(makeZip([{ name: 'a', data: 'abc', encrypted: true }]))).rejects.toThrow(ZIP_ERRORS.encrypted);
+  });
 });

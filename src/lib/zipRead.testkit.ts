@@ -1,7 +1,10 @@
 // テスト用に zip を作る（無圧縮かデフレート。CRC は読む側で見ないので 0）
 import { deflateRawSync } from 'node:zlib';
 
-export function makeZip(files: { name: string; data: string; deflate?: boolean }[]): Uint8Array {
+/** declaredSize は中央ディレクトリに書く展開後の大きさ（偽りの申告を試す）。encrypted は暗号化の印 */
+export function makeZip(
+  files: { name: string; data: string; deflate?: boolean; declaredSize?: number; encrypted?: boolean }[],
+): Uint8Array {
   const enc = new TextEncoder();
   const locals: Uint8Array[] = [];
   const cens: Uint8Array[] = [];
@@ -22,10 +25,10 @@ export function makeZip(files: { name: string; data: string; deflate?: boolean }
     const cen = new Uint8Array(46 + name.length);
     const cv = new DataView(cen.buffer);
     cv.setUint32(0, 0x02014b50, true);
-    cv.setUint16(8, 0x0800, true);
+    cv.setUint16(8, f.encrypted ? 0x0801 : 0x0800, true);
     cv.setUint16(10, f.deflate ? 8 : 0, true);
     cv.setUint32(20, body.length, true);
-    cv.setUint32(24, raw.length, true);
+    cv.setUint32(24, f.declaredSize ?? raw.length, true);
     cv.setUint16(28, name.length, true);
     cv.setUint32(42, offset, true);
     cen.set(name, 46);
