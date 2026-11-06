@@ -26,5 +26,6 @@
 - 捨てた案：案B は画面ごとに戻り先を決める手間が大きく、漏れが出る。地図の切り替えのボタンは、地図が邪魔にならないので要らない
 
 ## 影響
-- PRD D385（日の予定の地図）を直し、D438（戻る・進む）を足す。design の pages.md・pages-common.md・pages-plan.md を直す
-- e2e：`scripts/e2e-simple-menu.cjs` の日の予定の地図の段を、切でも地図のカードがある形に直す
+- PRD D385（日の予定の地図）を直し、D438（戻る・進む）を足す。design の pages.md・pages-common.md・pages-plan.md・pages-nav.md を直す
+- 「戻る」「進む」は、ほかのアプリの中の移動のボタンと同じく、移る前に下書きの離脱確認（`lib/leaveGuard` の `confirmLeave`）を通す。進めるかの番号はタブの間 sessionStorage に覚え、読み直しても押せる
+- e2e：`scripts/e2e-simple-menu.cjs` の日の予定の地図の段を、切でも地図のカードがある形に直す。`scripts/e2e-nav.cjs` に戻る・進むの段（history）を足す

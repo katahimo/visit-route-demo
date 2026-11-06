@@ -40,12 +40,12 @@ export function AppHeader({
 }) {
   return (
     <header ref={headerRef} className="app-header">
+      {/* 左端：前の画面に戻る・次の画面に進む（Alt＋←→ を知らなくても、リンクで移った先から戻れる） */}
+      <HistoryNav />
       {/* 範囲の AI で組む（担当を組む）の進み具合と［止める］（PRD D256。ほかの画面へ移っても続く。月の予定では画面の中に出す） */}
       <BatchBand />
       {/* 欄の保存・要対応の帯の［要対応を組む］の自動の組みの進み具合（長引いたときだけ。ADR-0072） */}
       <AutoArrangeBand />
-      {/* 左端：前の画面に戻る・次の画面に進む（Alt＋←→ を知らなくても、リンクで移った先から戻れる） */}
-      <HistoryNav />
       {/* スマホだけ：ロゴと今の画面の名前（PRD D132。広い画面では出さない。「メニュー」は下のタブ。PRD D401） */}
       <div className="m-head-title">
         <span className="brand-mark" aria-hidden="true">
