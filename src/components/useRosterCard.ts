@@ -4,11 +4,12 @@ import { useState } from 'react';
 import type { RosterKind, RosterMode, RosterSource } from '../contracts/data';
 import { jstDate } from '../domain/time';
 import { formError, isStaleBuild } from '../lib/common';
-import { EXCEL_STALE_TEXT, rosterFileName, rosterIsEmpty } from '../lib/dataScreen';
+import { EXCEL_RELOADING_TEXT, EXCEL_STALE_TEXT, rosterFileName, rosterIsEmpty } from '../lib/dataScreen';
 import { saveBlob } from '../lib/download';
 import { useDemoData } from '../store';
 import { useToast } from './Toast';
 import { useFeature } from './useFeature';
+import { reloadOnStale, useResumeAfterReload } from './useReloadResume';
 import { useRosterImport } from './useRosterImport';
 
 /** onPlace は名簿が入ったあと、位置の無い人を自動でまとめて置き始める（PRD D427。郵便番号・住所の検索が切なら undefined） */
@@ -25,7 +26,8 @@ export function useRosterCard(kind: RosterKind, onPlace?: () => void) {
   const empty = rosterIsEmpty(data, kind);
   // 0人の間は選ばせないので既定に戻す（人が入って選択肢が出たとき、前の総入れ替えが残らないように）
   if (empty && rosterMode !== 'merge') setRosterMode('merge');
-  const loadRoster = useRosterImport({ rosterMode: empty ? 'merge' : rosterMode, offboardOn, setError, onPlace });
+  const mode = empty ? 'merge' : rosterMode;
+  const loadRoster = useRosterImport({ rosterMode: mode, offboardOn, setError, onPlace });
 
   /**
    * 名簿を Excel のブックか CSV（BOM 付きの UTF-8）で書き出す。名簿だけの書き出しは「最後に書き出した日」に数えない。
@@ -51,13 +53,18 @@ export function useRosterCard(kind: RosterKind, onPlace?: () => void) {
     }
   };
 
-  /** 先に読んで検査し、通ったら件数を見せて確かめる（取り消しならデータは変えない） */
-  const load = async (file: File) => {
+  /** 先に読んで検査し、通ったら件数を見せて確かめる（取り消しならデータは変えない）。resumed は読み直したあとの続き */
+  const load = async (file: File, use: RosterMode = mode, resumed = false) => {
     setError(null);
     setBusy(true);
     try {
-      await loadRoster(file, kind);
+      await loadRoster(file, kind, use);
     } catch (e) {
+      // 古い版の部品で読めなければ、ファイルと読み込み方を控えて読み直し、続きを読み直した先でする
+      if (await reloadOnStale(e, { target: `roster-${kind}`, file, option: use, resumed })) {
+        toast(EXCEL_RELOADING_TEXT);
+        return;
+      }
       setError(
         isStaleBuild(e) ? EXCEL_STALE_TEXT : `読み込めませんでした：${formError(e)}（いまのデータはそのままです）`,
       );
@@ -65,6 +72,11 @@ export function useRosterCard(kind: RosterKind, onPlace?: () => void) {
       setBusy(false);
     }
   };
+
+  useResumeAfterReload(
+    `roster-${kind}`,
+    (file, option) => void load(file, option === 'replace' ? 'replace' : 'merge', true),
+  );
 
   return { kind, term, empty, rosterMode, setRosterMode, busy, error, download, load };
 }

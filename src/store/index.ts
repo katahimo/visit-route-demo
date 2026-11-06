@@ -6,6 +6,7 @@ export { MAIL_SCHEDULE_KEY, type MailScheduleState, mailScheduleMemory } from '.
 export { columnsOpenKey, type DetailsScreen, detailsOpenKey, navOpenMemory } from './navOpen';
 export * from './persist';
 export { DemoDataProvider, type UpdateOptions, useDemoData } from './react';
+export { type ReloadFile, stashReloadFile, takeReloadFile } from './reloadResume';
 export { repair } from './repair';
 export { FEATURES_START_ALL, FEATURES_START_KEY, startsWithAll } from './start';
 export { cancelTentative } from './tentative';

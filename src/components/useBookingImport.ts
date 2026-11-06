@@ -5,10 +5,11 @@ import { useState } from 'react';
 import { bookingsOutsideHours, outsideHoursNote } from '../lib/bookingFit';
 import { bookingConfirmBody, bookingDoneText, bookingHasChanges, bookingProblems } from '../lib/bookingScreen';
 import { formError, isStaleBuild } from '../lib/common';
-import { EXCEL_STALE_TEXT } from '../lib/dataScreen';
+import { EXCEL_RELOADING_TEXT, EXCEL_STALE_TEXT } from '../lib/dataScreen';
 import { canKeepPrevious } from '../store';
 import { useConfirm } from './ConfirmDialog';
 import { IMPORT_CHANGED_TEXT, usePendingImport } from './usePendingImport';
+import { reloadOnStale, useResumeAfterReload } from './useReloadResume';
 
 /** onDone：入れたあとに呼ぶ（引き出しを閉じるなど） */
 export function useBookingImport(onDone?: () => void) {
@@ -56,13 +57,17 @@ export function useBookingImport(onDone?: () => void) {
     });
   };
 
-  /** 読んで検査し、通ったら件数を見せて確かめる（取り消しならデータは変えない） */
-  const load = async (file: File) => {
+  /** 読んで検査し、通ったら件数を見せて確かめる（取り消しならデータは変えない）。resumed は読み直したあとの続き */
+  const load = async (file: File, resumed = false) => {
     setError(null);
     setBusy(true);
     try {
       await loadBookings(file);
     } catch (e) {
+      if (await reloadOnStale(e, { target: 'bookings', file, resumed })) {
+        toast(EXCEL_RELOADING_TEXT);
+        return;
+      }
       setError(
         isStaleBuild(e) ? EXCEL_STALE_TEXT : `読み込めませんでした：${formError(e)}（いまのデータはそのままです）`,
       );
@@ -70,5 +75,6 @@ export function useBookingImport(onDone?: () => void) {
       setBusy(false);
     }
   };
+  useResumeAfterReload('bookings', (file) => void load(file, true));
   return { load, error, busy };
 }

@@ -32,6 +32,10 @@ export const keptSuffix = (k: KeepState): string => (k.kept ? '' : `（${k.why ?
 export const EXCEL_STALE_TEXT =
   'アプリが新しくなったため、Excel を開けませんでした。「画面を読み直す」を押してから、もう一度試してください（データはそのままです）';
 
+/** 古い版の部品で読めなかったので、選んだファイルを控えて画面を自動で読み直すとき */
+export const EXCEL_RELOADING_TEXT =
+  'アプリが新しくなったので、画面を読み直してから同じファイルを読み込みます（データはそのままです）';
+
 /** 呼び方の入力の判定：2つが同じだと項目の対象・Excel のシートを区別できない（PRD D250） */
 export function termsCheck(
   input: { client: string; staff: string },
