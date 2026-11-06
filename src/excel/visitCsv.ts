@@ -24,8 +24,13 @@ export const VISIT_CSV_COLS = {
   staff: '担当',
 } as const;
 
-/** 形を見分ける列（どれも無ければこの形ではない） */
-const REQUIRED = [VISIT_CSV_COLS.date, VISIT_CSV_COLS.start, VISIT_CSV_COLS.minutes, VISIT_CSV_COLS.client];
+/** 形を見分ける列（必ず入れる列。どれも無ければこの形ではない） */
+export const VISIT_CSV_REQUIRED: readonly string[] = [
+  VISIT_CSV_COLS.date,
+  VISIT_CSV_COLS.start,
+  VISIT_CSV_COLS.minutes,
+  VISIT_CSV_COLS.client,
+];
 /** 取り消しの列に書く値 */
 const CANCELLED_TEXT = '取り消し';
 
@@ -40,7 +45,8 @@ function readCancelled(text: string): boolean | null {
 const ID_MAX = 100;
 
 /** 1行目の列名が予定の CSV の形か */
-export const isVisitCsvHeader = (header: readonly string[]): boolean => hasColumns(columnsOf(header), REQUIRED);
+export const isVisitCsvHeader = (header: readonly string[]): boolean =>
+  hasColumns(columnsOf(header), VISIT_CSV_REQUIRED);
 
 /** 1行 → 予約の1件（読めなければ理由の文）。値の先頭の数式よけの「'」は外す */
 function readRow(raw: (h: string) => string, row: number): Booking | string {

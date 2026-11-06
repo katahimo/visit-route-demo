@@ -417,6 +417,15 @@ async function firstRunOwn(b) {
     '案内 3/3：③ 予定。主ボタンは「予定の画面へ」',
     btns,
   );
+  // 予約の CSV のテンプレート（名簿と同じく「テンプレートをダウンロード」。予定の CSV の列名の行だけ）
+  const tpl = await Promise.all([page.waitForEvent('download'), page.getByTestId('booking-template').click()]);
+  check(
+    fs
+      .readFileSync(await tpl[0].path(), 'utf8')
+      .replace(/^﻿/, '')
+      .trim() === '訪問ID,日付,開始,開始の上限,所要(分),訪問先,メモ,取り消し,担当',
+    '案内③：予約の CSV のテンプレートをダウンロードできる（列名の行だけ）',
+  );
   await page.screenshot({ path: path.join(OUT_DIR, 'start-guide-3.png') });
   await page.getByTestId('start-guide-plan').click();
   await page.waitForURL(/#\/month/);

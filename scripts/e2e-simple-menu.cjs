@@ -1444,8 +1444,8 @@ async function addRecurring(page, w) {
 }
 
 /**
- * 5f4 「CSV でまとめて追加」（PRD D423。ADR-0090）：Excel の入出力を切っても（単発のデモ。「単発のみ」は Excel の入出力が入なので
- * ADR-0091 から excel だけ切って読み直す）引き出しに畳んで出る。
+ * 5f4 「予約の CSV を読み込む」（PRD D408・D423。ADR-0090）：Excel の入出力を切っても（単発のデモ。「単発のみ」は Excel の入出力が入なので
+ * ADR-0091 から excel だけ切って読み直す）「予約を追加」の引き出しのいちばん上に開いて出る。
  * テンプレートは列名の行だけ、書き出しは見ている月の単発の訪問（件数がボタンに出る）。書き出した列で1件足したファイルを読むと、
  * 確認のあと訪問が1件増え、引き出しが閉じる
  */
@@ -1462,8 +1462,13 @@ async function addCsv(page) {
   check(d0.org.features.excel === false, '前提：Excel の入出力が切', d0.org.features.excel);
   const box = await openAdd(page, 'oneOff', 'CSV');
   const csv = box.getByTestId('plan-csv');
-  check((await csv.getAttribute('open')) === null, 'CSV：ふだんは畳む');
-  await box.getByTestId('plan-csv-open').click();
+  // 単発（予約を追加）は毎日の予約の取り込みが主なので、引き出しのいちばん上に開いて出す
+  check((await csv.getAttribute('open')) !== null, 'CSV：単発は開いて出す');
+  check(await csv.evaluate((el) => el.parentElement.firstElementChild === el), 'CSV：単発は引き出しのいちばん上');
+  check(
+    (await box.getByTestId('plan-csv-open').innerText()).includes('予約の CSV を読み込む'),
+    'CSV：見出しは「予約の CSV を読み込む」',
+  );
   const tpl = await Promise.all([page.waitForEvent('download'), box.getByTestId('plan-csv-template').click()]);
   const head = fs
     .readFileSync(await tpl[0].path(), 'utf8')

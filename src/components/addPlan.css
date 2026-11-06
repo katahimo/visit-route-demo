@@ -34,3 +34,10 @@
   display: flex;
   align-items: center;
 }
+/* 単発（予約を追加）は CSV の欄を上に開いて出すので、線は下に引く */
+.add-plan-csv[data-kind="oneOff"] {
+  margin: 0 0 8px;
+  padding: 0 0 12px;
+  border-top: 0;
+  border-bottom: 1px solid var(--line);
+}
