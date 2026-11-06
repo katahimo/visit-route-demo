@@ -143,6 +143,13 @@ function pick<T>(ctx: RosterCtx, r: Row, h: string, read: () => T, keep: T): T {
 }
 
 /**
+ * 住所が変わった人の、空のセルで今のままにする位置の値（緯度・経度・郵便番号）：今の値でなく空にする
+ * （古い住所の位置を新しい住所に付けない。住所から位置を入れ直す）。住所が同じなら今の値
+ */
+const sameAddressOr = <T>(address: string, cur: { address: string } | undefined, keep: T, blank: T): T =>
+  cur === undefined || cur.address === address ? keep : blank;
+
+/**
  * 新しい人の空のセルは、画面で足すときと同じ既定値（keep）にする（テンプレートに名前だけ書いて読めるように。ADR-0092）。
  * 今いる人の空のセルは今までどおり read に任せる（空にできない列はエラー）
  */
@@ -297,10 +304,23 @@ export function readStaffRows(ctx: RosterCtx, rows: Row[], match: (r: Row) => Ma
       () => (!cur && r.text(C.active) === '' ? true : r.yes(C.active)),
       cur?.active ?? true,
     );
+    const homeAddress = pick(ctx, r, C.address, () => r.optional(C.address, 200), cur?.home.address ?? '');
     const home = {
-      address: pick(ctx, r, C.address, () => r.optional(C.address, 200), cur?.home.address ?? ''),
-      lat: pick(ctx, r, C.lat, () => r.num(C.lat, { min: -90, max: 90 }) ?? null, cur?.home.lat ?? null),
-      lng: pick(ctx, r, C.lng, () => r.num(C.lng, { min: -180, max: 180 }) ?? null, cur?.home.lng ?? null),
+      address: homeAddress,
+      lat: pick(
+        ctx,
+        r,
+        C.lat,
+        () => r.num(C.lat, { min: -90, max: 90 }) ?? null,
+        sameAddressOr(homeAddress, cur?.home, cur?.home.lat ?? null, null),
+      ),
+      lng: pick(
+        ctx,
+        r,
+        C.lng,
+        () => r.num(C.lng, { min: -180, max: 180 }) ?? null,
+        sameAddressOr(homeAddress, cur?.home, cur?.home.lng ?? null, null),
+      ),
     };
     const lastDay = pick(
       ctx,
@@ -394,11 +414,30 @@ export function readClientRows(ctx: RosterCtx, rows: Row[], match: (r: Row) => M
     const active = pickNew(ctx, r, C.active, cur === undefined, () => r.yes(C.active), cur?.active ?? true);
     const tentative = pick(ctx, r, CLIENT_TENTATIVE_COL, () => r.yes(CLIENT_TENTATIVE_COL), cur?.tentative ?? false);
     const stage = readStage(ctx, r, cur, { active, tentative });
+    const address = pick(ctx, r, C.address, () => r.optional(C.address, 200), cur?.place.address ?? '');
     const place = {
-      address: pick(ctx, r, C.address, () => r.optional(C.address, 200), cur?.place.address ?? ''),
-      lat: pick(ctx, r, C.lat, () => r.num(C.lat, { min: -90, max: 90 }) ?? null, cur?.place.lat ?? null),
-      lng: pick(ctx, r, C.lng, () => r.num(C.lng, { min: -180, max: 180 }) ?? null, cur?.place.lng ?? null),
-      postalCode: pick(ctx, r, CLIENT_POSTAL_COL, () => readPostal(r) ?? '', cur?.place.postalCode ?? ''),
+      address,
+      lat: pick(
+        ctx,
+        r,
+        C.lat,
+        () => r.num(C.lat, { min: -90, max: 90 }) ?? null,
+        sameAddressOr(address, cur?.place, cur?.place.lat ?? null, null),
+      ),
+      lng: pick(
+        ctx,
+        r,
+        C.lng,
+        () => r.num(C.lng, { min: -180, max: 180 }) ?? null,
+        sameAddressOr(address, cur?.place, cur?.place.lng ?? null, null),
+      ),
+      postalCode: pick(
+        ctx,
+        r,
+        CLIENT_POSTAL_COL,
+        () => readPostal(r) ?? '',
+        sameAddressOr(address, cur?.place, cur?.place.postalCode ?? '', ''),
+      ),
     };
     // 移動時間（片道・分）・遠方（出張）（ADR-0096）：列が無ければ今のまま
     const travelMinutes = pick(

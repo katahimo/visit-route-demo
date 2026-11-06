@@ -182,7 +182,7 @@ describe('顧客の CSV', () => {
     expect(isReserveClientHeader(['顧客ID', '姓', '名'])).toBe(false);
   });
   it('名簿の列に写す（名前が無ければカナ・同じ名前は顧客ID を添える・無効は終了）', () => {
-    const out = reserveClientToRoster(CLIENT_TABLE)!;
+    const out = reserveClientToRoster(CLIENT_TABLE, '2026-10-31')!;
     expect(out.rows[0]).toEqual(['表示名', 'よみ', '郵便番号', '住所', '緯度', '経度', '駐車場', 'メモ', '段階']);
     expect(out.rows[1]).toEqual([
       '架空 花子（C1）',
@@ -202,33 +202,80 @@ describe('顧客の CSV', () => {
     // 読まなかった列はファイルの表記のまま
     expect(out.skipped).toContain('世帯全員の情報（名前・生年月日・職業/所属・アレルギー・その他共有事項）');
   });
-  it('住所2 があれば訪問先は住所2。住所は契約者の住所としてメモへ（期間も添える。住所2 と同じなら付けない）', () => {
-    const out = reserveClientToRoster([
-      CLIENT_HEAD,
+  it('住所2 は期間が空か期間内なら訪問先、期間外なら住所に戻す（取り込んだ日で決める）', () => {
+    const second = (id: string, from: string, to: string) =>
       clientRow({
-        顧客ID: 'C5',
+        顧客ID: id,
         姓: '架空',
-        名: '星子',
+        名: id,
         '電話番号※必須項目': '000-0000-0005',
         住所: '架空県架空市本町1丁目',
         住所2: '〒100-0005 架空市駅前2丁目',
-        '住所2[適用開始日YYYY/MM/DD]': '2026/8/1',
-        '住所2[適用終了日YYYY/MM/DD]': '2026/8/30',
+        '住所2[適用開始日YYYY/MM/DD]': from,
+        '住所2[適用終了日YYYY/MM/DD]': to,
         緯度・経度: '35.6, 139.6',
         顧客メモ: '鍵は管理人',
-      }),
-      clientRow({ 顧客ID: 'C6', 姓: '架空', 名: '雪子', 住所2: '架空市港3丁目' }),
-      clientRow({ 顧客ID: 'C7', 姓: '架空', 名: '雨子', 住所: '架空市泉1丁目', 住所2: '架空市泉1丁目' }),
-    ])!;
-    expect(out.rows[1]?.slice(2, 6)).toEqual(['1000005', '架空市駅前2丁目', '35.6', '139.6']);
-    expect(out.rows[1]?.[7]).toBe(
-      '電話 000-0000-0005\n契約者の住所 架空県架空市本町1丁目（住所2の期間 2026/8/1〜2026/8/30）\n鍵は管理人',
+      });
+    const out = reserveClientToRoster(
+      [
+        CLIENT_HEAD,
+        second('A', '2026/8/1', '2026/8/30'),
+        second('B', '2026/8/31', '2026/8/31'),
+        second('C', '2026/9/1', '2026/9/30'),
+        second('D', '', ''),
+        second('E', '2026/8/1', ''),
+        clientRow({ 顧客ID: 'F', 姓: '架空', 名: 'F', 住所: '架空市泉1丁目', 住所2: '架空市泉1丁目' }),
+        clientRow({ 顧客ID: 'G', 姓: '架空', 名: 'G', 住所2: '架空市港3丁目' }),
+      ],
+      '2026-08-31',
+    )!;
+    const [, a, b, c, d, e, f, g] = out.rows;
+    // 期間外（終わった）：住所に戻し、住所2 の位置は読まない。住所2 はメモに残す
+    expect(a?.slice(2, 6)).toEqual(['', '架空県架空市本町1丁目', '', '']);
+    expect(a?.[7]).toBe(
+      '電話 000-0000-0005\n住所2 〒100-0005 架空市駅前2丁目（期間 2026/8/1〜2026/8/30。期間外）\n鍵は管理人',
     );
-    expect(out.rows[2]?.[3]).toBe('架空市港3丁目');
-    expect(out.rows[2]?.[7]).toBe('');
-    expect(out.rows[3]?.[3]).toBe('架空市泉1丁目');
-    expect(out.rows[3]?.[7]).toBe('');
+    // 期間内（開始・終了の日も入る）：住所2 と位置。住所は契約者の住所としてメモへ
+    expect(b?.slice(2, 6)).toEqual(['1000005', '架空市駅前2丁目', '35.6', '139.6']);
+    expect(b?.[7]).toBe(
+      '電話 000-0000-0005\n契約者の住所 架空県架空市本町1丁目（住所2の期間 2026/8/31〜2026/8/31）\n鍵は管理人',
+    );
+    // まだ始まっていない：住所
+    expect(c?.[3]).toBe('架空県架空市本町1丁目');
+    // 期間が空：いつも住所2
+    expect(d?.[3]).toBe('架空市駅前2丁目');
+    expect(d?.[7]).toBe('電話 000-0000-0005\n契約者の住所 架空県架空市本町1丁目\n鍵は管理人');
+    // 終了日が空：開始日からずっと
+    expect(e?.[3]).toBe('架空市駅前2丁目');
+    // 住所と同じ・住所が空：契約者の住所の行は付けない
+    expect(f?.[3]).toBe('架空市泉1丁目');
+    expect(f?.[7]).toBe('');
+    expect(g?.[3]).toBe('架空市港3丁目');
+    expect(g?.[7]).toBe('');
     expect(out.skipped).not.toContain('住所2');
+  });
+  it('期間が終わって住所に戻ったら、住所2 の位置を残さない（住所が変わった人の空の位置は空にする）', async () => {
+    const row = clientRow({
+      顧客ID: 'C9',
+      姓: '架空',
+      名: '戻子',
+      住所: '架空市本町1丁目',
+      住所2: '架空市駅前2丁目',
+      '住所2[適用開始日YYYY/MM/DD]': '2026/8/1',
+      '住所2[適用終了日YYYY/MM/DD]': '2026/8/30',
+      緯度・経度: '35.6, 139.6',
+    });
+    const during = rok(await importRoster(csvBuf([CLIENT_HEAD, row]), base(), 'client', 'merge', '2026-08-15')).data;
+    expect(during.clients.find((c) => c.displayName === '架空 戻子')?.place).toMatchObject({
+      address: '架空市駅前2丁目',
+      lat: 35.6,
+    });
+    const after = rok(await importRoster(csvBuf([CLIENT_HEAD, row]), during, 'client', 'merge', '2026-09-01')).data;
+    expect(after.clients.find((c) => c.displayName === '架空 戻子')?.place).toMatchObject({
+      address: '架空市本町1丁目',
+      lat: null,
+      lng: null,
+    });
   });
   it('〈利用者さん〉の名簿として読み込める。読まない値はデータに残さない', async () => {
     const r = rok(await importRoster(csvBuf(CLIENT_TABLE), base(), 'client', 'merge', '2026-10-31'));

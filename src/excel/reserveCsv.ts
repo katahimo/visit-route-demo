@@ -183,34 +183,51 @@ function clientName(v: (h: string) => string): string {
   return kana !== '' ? kana : v(CLIENT.id);
 }
 
+/** 住所2 の適用期間に today（YYYY-MM-DD）が入るか。空・読めない日付の端は限らない（開始・終了の日も入る） */
+function inTerm(from: string, to: string, today: string): boolean {
+  const f = parseDateText(from);
+  const t = parseDateText(to);
+  return (f === null || f <= today) && (t === null || today <= t);
+}
+
 /**
- * 訪問先の住所と、メモに足す契約者の住所の行。住所2 があれば訪問先は住所2、住所は「契約者の住所」の行にする
- * （住所2 と同じなら行は付けない）。住所2 の適用期間があれば行に添える（期間で訪問先は切り替えない）
+ * 訪問先の住所と、メモに足す行（取り込んだ日 today で決める。顧客の正本は予約システムで、読み直すたびに決め直す）。
+ * - 住所2 が空：訪問先は住所
+ * - 住所2 があり、期間が空か期間内：訪問先は住所2。住所は「契約者の住所」の行にする（住所2 と同じなら付けない）。緯度・経度は住所2 の位置
+ * - 住所2 があり、期間外：訪問先は住所。住所2 は「住所2 …（期間外）」の行にする。緯度・経度は住所2 の位置なので読まない
+ * 期間があれば行に添える
  */
-function visitAddress(v: (h: string) => string): { visit: string; contractLine: string } {
+function visitAddress(v: (h: string) => string, today: string): { visit: string; line: string; useLatLng: boolean } {
   const home = v(CLIENT.address);
-  const visit = v(CLIENT.address2);
-  if (visit === '') return { visit: home, contractLine: '' };
+  const second = v(CLIENT.address2);
+  if (second === '') return { visit: home, line: '', useLatLng: true };
   const from = v(CLIENT.address2From);
   const to = v(CLIENT.address2To);
-  const term = from === '' && to === '' ? '' : `（住所2の期間 ${from}〜${to}）`;
-  const contract = home === '' || home === visit ? '' : `契約者の住所 ${home}`;
-  return { visit, contractLine: [contract, term].filter((x) => x !== '').join('') };
+  const term = from === '' && to === '' ? '' : `期間 ${from}〜${to}`;
+  if (inTerm(from, to, today)) {
+    const contract = home === '' || home === second ? '' : `契約者の住所 ${home}`;
+    return {
+      visit: second,
+      line: contract === '' ? '' : `${contract}${term ? `（住所2の${term}）` : ''}`,
+      useLatLng: true,
+    };
+  }
+  return { visit: home, line: `住所2 ${second}（${term}。期間外）`, useLatLng: false };
 }
 
 /**
  * 顧客の CSV（1行目が列名）→〈利用者さん〉の名簿の列の表。形が違えば null。
  * - 表示名：姓＋名（空ならカナ、それも空なら顧客ID）。同じ名前の人は全員「名前（顧客ID）」にして分ける（ファイルの並びに左右されない）
  * - よみ：姓（カナ）＋名（カナ）をひらがなにし、空白を詰める（normalizeKana）
- * - 住所：訪問先の住所。住所2 があれば住所2（住所は「契約者の住所」としてメモの電話の次の行へ。visitAddress）。
- *   先頭の郵便番号（〒 付きも）は郵便番号の列へ分ける
+ * - 住所：訪問先の住所。住所2 があり、期間が空か today が期間内なら住所2（住所は「契約者の住所」としてメモの電話の次の行へ）、
+ *   期間外なら住所（住所2 はメモへ）。visitAddress。先頭の郵便番号（〒 付きも）は郵便番号の列へ分ける
  * - 緯度・経度：「緯度, 経度」を2つの列に分ける
  * - 駐車場：駐車場＋詳細を決まりごとの「駐車場」へ
  * - 電話：メモの先頭に1行（顧客メモを続ける）
  * - 会員状況：無効＝終了、ほか（空を含む）＝利用中
  * - メールアドレス・会費・パスワード・性別・年代・緊急連絡先・避難場所・世帯の情報などは読まず、skipped に名前を挙げる
  */
-export function reserveClientToRoster(table: readonly (readonly string[])[]): RosterTable | null {
+export function reserveClientToRoster(table: readonly (readonly string[])[], today: string): RosterTable | null {
   const header = table[0];
   if (!header || !isReserveClientHeader(header)) return null;
   const at = columnsOf(header);
@@ -240,11 +257,11 @@ export function reserveClientToRoster(table: readonly (readonly string[])[]): Ro
       return;
     }
     const v = cellOf(at, r);
-    const { visit, contractLine } = visitAddress(v);
+    const { visit, line, useLatLng } = visitAddress(v, today);
     const { postal, address } = splitPostal(visit);
-    const { lat, lng } = splitLatLng(v(CLIENT.latLng));
+    const { lat, lng } = useLatLng ? splitLatLng(v(CLIENT.latLng)) : { lat: '', lng: '' };
     const parking = [v(CLIENT.parking), v(CLIENT.parkingDetail)].filter((x) => x !== '').join('　');
-    const note = [phoneLine(v(CLIENT.phone), ''), contractLine, v(CLIENT.memo)].filter((x) => x !== '').join('\n');
+    const note = [phoneLine(v(CLIENT.phone), ''), line, v(CLIENT.memo)].filter((x) => x !== '').join('\n');
     out.push([
       names[i] ?? '',
       clip(normalizeKana(`${v(CLIENT.familyKana)}${v(CLIENT.givenKana)}`), MAX.kana),

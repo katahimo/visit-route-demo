@@ -63,7 +63,7 @@ export const ROSTER_FORMS: readonly RosterForm[] = [
     id: 'reserve-client',
     label: '予約システムの顧客',
     kind: 'client',
-    toRoster: (t) => reserveClientToRoster(t),
+    toRoster: (t, env) => reserveClientToRoster(t, env.today),
     errorMessage: reserveClientErrorMessage,
     keepBlank: RESERVE_CLIENT_KEEP_BLANK,
   },
