@@ -5,6 +5,7 @@ import type { Problem, ProblemStaff, ProblemVisit, Reason } from '../contracts/p
 import { type Condition, type Item, POINTS_PER_WEIGHT, type Rule, type Traits } from '../contracts/rules';
 import { afterLastDay, availabilityOf, withoutAbsences } from '../domain/availability';
 import { leaveOn } from '../domain/leaves';
+import { clientOn } from '../domain/place2';
 import { hhmmToMinutes } from '../domain/time';
 import { visitsOn } from '../patterns';
 import { conditionText, matches } from './conditions';
@@ -429,7 +430,8 @@ function balanceOf(rules: Rule[], staff: ProblemStaff[], working: Set<string>, n
 export function compile(data: CompileInput, date: string, pins?: Record<string, string>): Problem {
   const terms = data.org.terms;
   const staffDocs = data.staff.filter((s) => s.active);
-  const clients = new Map<string, Client>(data.clients.filter((c) => c.active).map((c) => [c.id, c]));
+  // その日の訪問先（住所2 の期間内なら住所2。ADR-0105）に置き換えて使う
+  const clients = new Map<string, Client>(data.clients.filter((c) => c.active).map((c) => [c.id, clientOn(c, date)]));
   // 〈利用者さん〉の休み（ADR-0013）の訪問は、取り消しと同じく問題に入れない（訪問のデータは消さない）
   const leaves = data.clientLeaves.filter((l) => l.from <= date && date <= l.to);
   // その日の訪問：保存した回と繰り返しから計算した回（版2。ADR-0053）

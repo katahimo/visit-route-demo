@@ -1,7 +1,9 @@
 // 訪問の詳細の欄の担当：欄の日時での担当の候補（staffChoices・staffPickError）と、担当の割り当て（assignOnDays）。
 // どれも純粋関数で、DemoData を書き換えない（書いたデータは呼ぶ側が store の update(fn) で反映する）
+
 import type { DemoData } from '../contracts/data';
 import type { Visit } from '../contracts/documents';
+import { clientOn } from '../domain/place2';
 import { bestInsertion, compile } from '../matching';
 import { findVisit, putVisits, visitsOn } from '../patterns';
 import { attempt } from './common';
@@ -75,7 +77,16 @@ export function staffChoices(d: DemoData, visitId: string | null, draft: VisitDr
   const choices = reassignChoices(problem, all, moved.id, current, (sid) => working.has(sid));
   const selectable = choices.some((c) => !c.current && !c.disabled);
   const blocked =
-    current === null || !selectable ? unassignedReasonOf(problem, all, moved.id, d.org.terms, d.clients) : null;
+    current === null || !selectable
+      ? unassignedReasonOf(
+          problem,
+          all,
+          moved.id,
+          d.org.terms,
+          // その日の訪問先（住所2。ADR-0105）の移動時間・遠方で案内の文を選ぶ
+          d.clients.map((c) => clientOn(c, draft.date)),
+        )
+      : null;
   const others = choices.some((c) => !c.current);
   const why = !others && blocked ? `ほかに担当できる${d.org.terms.staff}がいません（${blocked.summary}）` : null;
   return { date: draft.date, currentStaffId: current, choices, why, blocked };

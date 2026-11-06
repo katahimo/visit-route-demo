@@ -5,13 +5,17 @@ import { useState } from 'react';
 import { bookingsOutsideHours, outsideHoursNote } from '../lib/bookingFit';
 import { bookingConfirmBody, bookingDoneText, bookingHasChanges, bookingProblems } from '../lib/bookingScreen';
 import { formError, isStaleBuild } from '../lib/common';
-import { EXCEL_STALE_TEXT } from '../lib/dataScreen';
+import { EXCEL_RELOADING_TEXT, EXCEL_STALE_TEXT } from '../lib/dataScreen';
 import { canKeepPrevious } from '../store';
 import { useConfirm } from './ConfirmDialog';
 import { IMPORT_CHANGED_TEXT, usePendingImport } from './usePendingImport';
+import { reloadOnStale, useResumeAfterReload } from './useReloadResume';
 
-/** onDone：入れたあとに呼ぶ（引き出しを閉じるなど） */
-export function useBookingImport(onDone?: () => void) {
+/**
+ * onDone：入れたあとに呼ぶ（引き出しを閉じるなど）。target は読み直しの控えの欄の名前（欄ごとに分ける。
+ * 予定の引き出しとデータの画面で同じ控えを取り合わない）
+ */
+export function useBookingImport(onDone?: () => void, target = 'bookings') {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const { data, toast, changedSince, commit } = usePendingImport(setError);
@@ -56,13 +60,17 @@ export function useBookingImport(onDone?: () => void) {
     });
   };
 
-  /** 読んで検査し、通ったら件数を見せて確かめる（取り消しならデータは変えない） */
-  const load = async (file: File) => {
+  /** 読んで検査し、通ったら件数を見せて確かめる（取り消しならデータは変えない）。resumed は読み直したあとの続き */
+  const load = async (file: File, resumed = false) => {
     setError(null);
     setBusy(true);
     try {
       await loadBookings(file);
     } catch (e) {
+      if (await reloadOnStale(e, { target, file, resumed })) {
+        toast(EXCEL_RELOADING_TEXT);
+        return;
+      }
       setError(
         isStaleBuild(e) ? EXCEL_STALE_TEXT : `読み込めませんでした：${formError(e)}（いまのデータはそのままです）`,
       );
@@ -70,5 +78,6 @@ export function useBookingImport(onDone?: () => void) {
       setBusy(false);
     }
   };
+  useResumeAfterReload(target, (file) => void load(file, true));
   return { load, error, busy };
 }

@@ -94,6 +94,24 @@ export const clientPlaceSchema = placeSchema.extend({
 });
 export type ClientPlace = z.infer<typeof clientPlaceSchema>;
 
+/**
+ * 期間つきの訪問先（住所2。PRD D439。ADR-0105）：契約者の住所（place）と違う所へ、決まった期間だけ訪ねるとき。
+ * 訪問の日が from〜to（両端を含む。空は限らない）に入れば、その日の訪問先は住所2（domain/place2 の placeOn）。
+ * 移動時間・遠方（place の travelMinutes・farTrip）は place の住所のものなので、住所2 の日は使わない。
+ * 予約システムの顧客の CSV の「住所2」から読む（正本は予約システム。読み直すたびに置き換える）。無い＝住所2 なし
+ */
+export const clientPlace2Schema = placeSchema.extend({
+  postalCode: z
+    .string()
+    .regex(/^(\d{7})?$/, '郵便番号は7桁の数字で入れてください')
+    .default(''),
+  /** 適用開始日（YYYY-MM-DD。空＝限らない） */
+  from: z.union([dateSchema, z.literal('')]).default(''),
+  /** 適用終了日（YYYY-MM-DD。空＝限らない） */
+  to: z.union([dateSchema, z.literal('')]).default(''),
+});
+export type ClientPlace2 = z.infer<typeof clientPlace2Schema>;
+
 export const termsSchema = z.object({ client: z.string().max(10), staff: z.string().max(10) });
 export type Terms = z.infer<typeof termsSchema>;
 
@@ -265,8 +283,10 @@ const clientObject = z.object({
   displayName: z.string().min(1).max(50),
   /** よみ（ひらがな・任意。PRD D61）。検索に使う。無い古いデータは '' */
   kana: z.string().max(50).default(''),
-  /** 場所（住所・位置・郵便番号。ADR-0016） */
+  /** 場所（住所・位置・郵便番号。ADR-0016）。住所2 があれば契約者の住所 */
   place: clientPlaceSchema,
+  /** 期間つきの訪問先（住所2。ADR-0105）。無い＝住所2 なし */
+  place2: clientPlace2Schema.optional(),
   note: z.string().max(500),
   /** 色の丸の番号（0〜7） */
   color: z.number().int().min(0).max(7),

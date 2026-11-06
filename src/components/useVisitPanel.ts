@@ -4,6 +4,7 @@ import { useDeferredValue, useEffect, useId, useMemo, useRef, useState } from 'r
 import { useLocation, useNavigate } from 'react-router-dom';
 import type { DemoData } from '../contracts/data';
 import type { Client, Visit } from '../contracts/documents';
+import { placeOn } from '../domain/place2';
 import { requestAutoArrange } from '../lib/autoArrangeBatch';
 import { newId } from '../lib/common';
 import { dateText } from '../lib/dateText';
@@ -270,9 +271,11 @@ export function useVisitRoute(data: DemoData, v: Visit | null, client: Client | 
   const routeHref = useMemo(() => {
     if (!v || !client || !mapsOn) return null;
     const mode = route?.staff.travelMode ?? 'DRIVE';
+    // 行き先はその日の訪問先（住所2 の期間内なら住所2。ADR-0105）
+    const to = placeOn(client, v.date);
     return (
-      (route?.from ? directionsHref({ origin: route.from, destination: client.place, mode }) : null) ??
-      directionsHref({ origin: null, destination: client.place, mode })
+      (route?.from ? directionsHref({ origin: route.from, destination: to, mode }) : null) ??
+      directionsHref({ origin: null, destination: to, mode })
     );
   }, [v, client, route, mapsOn]);
   return { route, routeHref };

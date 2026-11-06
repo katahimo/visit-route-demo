@@ -8,6 +8,7 @@ import {
   CLIENT_ALLOWED_COL,
   CLIENT_COLS,
   CLIENT_KANA_COL,
+  CLIENT_PLACE2_COLS,
   CLIENT_POSTAL_COL,
   CLIENT_RULE_COLS,
   CLIENT_STAGE_COLS,
@@ -18,6 +19,7 @@ import {
   STAFF_ICON_COL,
   STAFF_LAST_DAY_COL,
 } from './layout';
+import { readPlace2 } from './place2Cols';
 import {
   idOf,
   personCols,
@@ -138,6 +140,7 @@ export function readClients(ctx: BookCtx, clientSheet: Sheet): Client[] {
     CLIENT_KANA_COL,
     CLIENT_POSTAL_COL,
     ...Object.values(CLIENT_TRAVEL_COLS),
+    ...Object.values(CLIENT_PLACE2_COLS),
     CLIENT_ALLOWED_COL,
     ...Object.values(CLIENT_RULE_COLS),
     ...Object.values(CLIENT_STAGE_COLS),
@@ -166,6 +169,8 @@ export function readClients(ctx: BookCtx, clientSheet: Sheet): Client[] {
     // 移動時間（片道・分）・遠方（出張）（ADR-0096）：列が無い古いブック・空は無し
     const travelMinutes = readTravelMinutes(r);
     const farTrip = r.yes(CLIENT_TRAVEL_COLS.farTrip);
+    // 期間つきの訪問先（住所2。ADR-0105）：列が無い古いブック・空は無し
+    const place2 = readPlace2(r);
     const allowed = readAllowedStaff(ctx, r);
     const note = r.optional(C.note, 500);
     // 訪問先の決まりごと（ADR-0013）：列が無い古いブックは空
@@ -195,6 +200,7 @@ export function readClients(ctx: BookCtx, clientSheet: Sheet): Client[] {
       lat !== undefined &&
       lng !== undefined &&
       travelMinutes !== undefined &&
+      place2 !== null &&
       allowed.ok
     ) {
       clients.push({
@@ -202,6 +208,7 @@ export function readClients(ctx: BookCtx, clientSheet: Sheet): Client[] {
         displayName,
         kana,
         place: withTravel({ address, lat, lng, postalCode }, travelMinutes, farTrip),
+        ...(place2 ? { place2 } : {}),
         note,
         color: color - 1,
         active,

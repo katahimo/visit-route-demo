@@ -54,6 +54,9 @@ const CLIENT_HEAD = [
   '駐車場番号・指定場所の詳細など',
   '緊急連絡先',
   '世帯全員の情報（名前・生年月日・職業/所属・アレルギー・その他共有事項）',
+  '住所2',
+  '住所2[適用開始日YYYY/MM/DD]',
+  '住所2[適用終了日YYYY/MM/DD]',
   '緯度・経度',
 ];
 const clientRow = (v: Record<string, string>) => CLIENT_HEAD.map((h) => v[h] ?? '');
@@ -180,8 +183,18 @@ describe('顧客の CSV', () => {
   });
   it('名簿の列に写す（名前が無ければカナ・同じ名前は顧客ID を添える・無効は終了）', () => {
     const out = reserveClientToRoster(CLIENT_TABLE)!;
-    expect(out.rows[0]).toEqual(['表示名', 'よみ', '郵便番号', '住所', '緯度', '経度', '駐車場', 'メモ', '段階']);
-    expect(out.rows[1]).toEqual([
+    expect(out.rows[0]?.slice(0, 9)).toEqual([
+      '表示名',
+      'よみ',
+      '郵便番号',
+      '住所',
+      '緯度',
+      '経度',
+      '駐車場',
+      'メモ',
+      '段階',
+    ]);
+    expect(out.rows[1]?.slice(0, 9)).toEqual([
       '架空 花子（C1）',
       'かくうはなこ',
       '1000001',
@@ -198,6 +211,139 @@ describe('顧客の CSV', () => {
     expect(out.rows[4]?.[0]).toBe('架空 月子');
     // 読まなかった列はファイルの表記のまま
     expect(out.skipped).toContain('世帯全員の情報（名前・生年月日・職業/所属・アレルギー・その他共有事項）');
+  });
+  it('住所2・期間は期間つきの訪問先の列へ（緯度・経度は住所2 の位置。住所2 が空なら空）', () => {
+    const out = reserveClientToRoster([
+      CLIENT_HEAD,
+      clientRow({
+        顧客ID: 'A',
+        姓: '架空',
+        名: 'A',
+        住所: '〒100-0001 架空県架空市本町1丁目',
+        住所2: '〒100-0005 架空市駅前2丁目',
+        '住所2[適用開始日YYYY/MM/DD]': '2026/8/1',
+        '住所2[適用終了日YYYY/MM/DD]': '2026/8/30',
+        緯度・経度: '35.6, 139.6',
+      }),
+      clientRow({ 顧客ID: 'B', 姓: '架空', 名: 'B', 住所: '架空市泉1丁目', 緯度・経度: '35.7, 139.7' }),
+      clientRow({ 顧客ID: 'C', 姓: '架空', 名: 'C', 住所2: '架空市港3丁目', '住所2[適用開始日YYYY/MM/DD]': '不明' }),
+    ])!;
+    const head = out.rows[0]!;
+    const row = (i: number) => Object.fromEntries(head.map((h, k) => [h, out.rows[i]?.[k]]));
+    expect(row(1)).toMatchObject({
+      郵便番号: '1000001',
+      住所: '架空県架空市本町1丁目',
+      緯度: '',
+      経度: '',
+      住所2: '架空市駅前2丁目',
+      住所2の郵便番号: '1000005',
+      住所2の緯度: '35.6',
+      住所2の経度: '139.6',
+      住所2の開始日: '2026-08-01',
+      住所2の終了日: '2026-08-30',
+      メモ: '',
+    });
+    expect(row(2)).toMatchObject({ 住所: '架空市泉1丁目', 緯度: '35.7', 住所2: '', 住所2の緯度: '' });
+    // 読めない日付：期間を空にすると毎日が住所2 になるので、住所2 を入れない
+    expect(row(3)).toMatchObject({ 住所2: '', 住所2の開始日: '', 住所2の終了日: '' });
+    expect(out.skipped).toContain('住所2（適用期間の日付が読めない・逆のため入れなかった 1件）');
+    expect(out.skipped).not.toContain('住所2');
+  });
+  it('住所2 の列が無い CSV は住所2 の列を出さない（アプリの住所2 は今のまま）', () => {
+    const head = CLIENT_HEAD.filter((h) => !h.startsWith('住所2'));
+    const out = reserveClientToRoster([head, head.map((h) => (h === '姓' ? '架空' : ''))])!;
+    expect(out.rows[0]).not.toContain('住所2');
+  });
+  it('読み直すたびに住所2 を置き換える。住所2 が空になれば無し。同じ住所2 の空の位置は今のまま', async () => {
+    const row = (v: Record<string, string>) =>
+      clientRow({ 顧客ID: 'C9', 姓: '架空', 名: '戻子', 住所: '架空市本町1丁目', ...v });
+    const first = rok(
+      await importRoster(
+        csvBuf([
+          CLIENT_HEAD,
+          row({
+            住所2: '架空市駅前2丁目',
+            '住所2[適用開始日YYYY/MM/DD]': '2026/8/1',
+            '住所2[適用終了日YYYY/MM/DD]': '2026/8/30',
+            緯度・経度: '35.6, 139.6',
+          }),
+        ]),
+        base(),
+        'client',
+        'merge',
+        '2026-08-15',
+      ),
+    ).data;
+    const c1 = first.clients.find((c) => c.displayName === '架空 戻子');
+    expect(c1?.place.address).toBe('架空市本町1丁目');
+    expect(c1?.place2).toEqual({
+      address: '架空市駅前2丁目',
+      postalCode: '',
+      lat: 35.6,
+      lng: 139.6,
+      from: '2026-08-01',
+      to: '2026-08-30',
+    });
+    const again = rok(
+      await importRoster(
+        csvBuf([CLIENT_HEAD, row({ 住所2: '架空市駅前2丁目', '住所2[適用終了日YYYY/MM/DD]': '2026/9/30' })]),
+        first,
+        'client',
+        'merge',
+        '2026-08-15',
+      ),
+    ).data;
+    expect(again.clients.find((c) => c.displayName === '架空 戻子')?.place2).toMatchObject({
+      lat: 35.6,
+      from: '',
+      to: '2026-09-30',
+    });
+    const cleared = rok(
+      await importRoster(csvBuf([CLIENT_HEAD, row({})]), again, 'client', 'merge', '2026-08-15'),
+    ).data;
+    expect(cleared.clients.find((c) => c.displayName === '架空 戻子')?.place2).toBeUndefined();
+  });
+  it('以前の取り込みで住所に入った住所2 の位置は外す。住所の空白・全角半角の違いでは位置を消さない', async () => {
+    const head = CLIENT_HEAD.filter((h) => !h.startsWith('住所2'));
+    const old = rok(
+      await importRoster(
+        csvBuf([
+          head,
+          head.map(
+            (h) =>
+              ({ 顧客ID: 'C8', 姓: '架空', 名: '旧子', 住所: '架空市本町1丁目', 緯度・経度: '35.6, 139.6' })[h] ?? '',
+          ),
+        ]),
+        base(),
+        'client',
+        'merge',
+        '2026-08-15',
+      ),
+    ).data;
+    expect(old.clients.find((c) => c.displayName === '架空 旧子')?.place.lat).toBe(35.6);
+    const row = clientRow({
+      顧客ID: 'C8',
+      姓: '架空',
+      名: '旧子',
+      住所: '架空市本町１丁目 ',
+      住所2: '架空市駅前2丁目',
+      緯度・経度: '35.6, 139.6',
+    });
+    const now = rok(await importRoster(csvBuf([CLIENT_HEAD, row]), old, 'client', 'merge', '2026-08-15')).data;
+    const c = now.clients.find((x) => x.displayName === '架空 旧子');
+    expect(c?.place).toMatchObject({ lat: null, lng: null });
+    expect(c?.place2).toMatchObject({ lat: 35.6, lng: 139.6 });
+    // 住所2 の無い人：表記の違うだけの住所では位置を消さない
+    const kept = rok(
+      await importRoster(
+        csvBuf([head, head.map((h) => ({ 顧客ID: 'C8', 姓: '架空', 名: '旧子', 住所: '架空市本町１丁目' })[h] ?? '')]),
+        old,
+        'client',
+        'merge',
+        '2026-08-15',
+      ),
+    ).data;
+    expect(kept.clients.find((x) => x.displayName === '架空 旧子')?.place.lat).toBe(35.6);
   });
   it('〈利用者さん〉の名簿として読み込める。読まない値はデータに残さない', async () => {
     const r = rok(await importRoster(csvBuf(CLIENT_TABLE), base(), 'client', 'merge', '2026-10-31'));

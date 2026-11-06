@@ -29,11 +29,12 @@ export function useRosterImport(x: {
   setError: Dispatch<SetStateAction<string | null>>;
   onPlace?: () => void;
 }) {
-  const { rosterMode, offboardOn, setError, onPlace } = x;
+  const { rosterMode: chosenMode, offboardOn, setError, onPlace } = x;
   const { data, toast, changedSince, commit } = usePendingImport(setError);
   const confirmDialog = useConfirm();
 
-  return async (file: File, kind: RosterKind) => {
+  /** mode は読み込み方（読み直したあとの続きでは控えた読み込み方。省けば今の選び） */
+  return async (file: File, kind: RosterKind, rosterMode: RosterMode = chosenMode) => {
     const base = data;
     const { importRoster, rosterSummary, rosterWarning } = await import('../excel');
     const r = await importRoster(await file.arrayBuffer(), base, kind, rosterMode, jstDate(Date.now()));

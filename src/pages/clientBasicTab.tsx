@@ -28,6 +28,7 @@ import {
   newClientShowsStage,
   splitFolded,
 } from '../lib/peopleView';
+import { PLACE2_NOTE, place2AddressText, place2TermText } from '../lib/place2View';
 import { formatPostalCode } from '../lib/postalCode';
 import { orDash } from '../lib/viewMode';
 import {
@@ -51,7 +52,15 @@ function ClientPlaceView({ c }: { c: Client }) {
         <ClientAreaRow client={c} />
         <DlRow term="緯度・経度" value={placeText(c.place)} />
         <DlRow term="移動" value={travelNote(c.place) || '距離から見積もる'} />
+        {c.place2 && (
+          <>
+            <DlRow term="住所2" value={place2AddressText(c.place2)} />
+            <DlRow term="住所2の期間" value={place2TermText(c.place2)} />
+            <DlRow term="住所2の緯度・経度" value={placeText(c.place2)} />
+          </>
+        )}
       </dl>
+      {c.place2 && <Hint>{PLACE2_NOTE}</Hint>}
       {points.length > 0 && <PlaceMap lat={points[0]!.lat} lng={points[0]!.lng} color={points[0]!.color} />}
     </>
   );

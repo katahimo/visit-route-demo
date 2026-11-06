@@ -9,6 +9,7 @@ import {
   CLIENT_ALLOWED_COL,
   CLIENT_COLS,
   CLIENT_KANA_COL,
+  CLIENT_PLACE2_COLS,
   CLIENT_POSTAL_COL,
   CLIENT_RULE_COLS,
   CLIENT_STAGE_COLS,
@@ -98,6 +99,18 @@ function clientDocs(t: DemoData['org']['terms']): [string, ColDoc][] {
       CLIENT_TRAVEL_COLS.farTrip,
       doc(`遠方（出張）の人に ○ を付けます。その日の${t.staff}にはほかの訪問を入れません`, '', '空なら付けない'),
     ],
+    [
+      CLIENT_PLACE2_COLS.address,
+      doc('契約者の住所と違う所へ、決まった期間だけ訪ねるときの訪問先の住所です', '', '空なら住所2 なし'),
+    ],
+    [CLIENT_PLACE2_COLS.postal, doc('住所2 の郵便番号（7桁の数字）です', '', '空のまま')],
+    [CLIENT_PLACE2_COLS.lat, doc('住所2 の緯度です。わからなければ空でかまいません', '', '空のまま')],
+    [CLIENT_PLACE2_COLS.lng, doc('住所2 の経度です。わからなければ空でかまいません', '', '空のまま')],
+    [
+      CLIENT_PLACE2_COLS.from,
+      doc('住所2 を訪問先にする最初の日です。この日から終了日までの訪問は住所2 へ行きます', '', '空なら限らない'),
+    ],
+    [CLIENT_PLACE2_COLS.to, doc('住所2 を訪問先にする最後の日です', '', '空なら限らない')],
     [
       CLIENT_ALLOWED_COL,
       doc(

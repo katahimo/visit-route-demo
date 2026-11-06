@@ -1,5 +1,7 @@
 import type { DemoData, RosterKind } from '../contracts/data';
 import type { ClientPlace, Place, Terms } from '../contracts/documents';
+import { place2Ended } from '../domain/place2';
+import { jstDate } from '../domain/time';
 import { UNPLACED_TRAVEL_MIN } from '../matching/travel';
 import { colorOf, initialOf } from './colors';
 import { byName, hasLocation } from './common';
@@ -29,6 +31,12 @@ export type PlacePerson = {
   mark: { label: string; color: string };
 };
 
+/** 住所2（ADR-0105）をまとめて置くときの ID の後ろ（〈利用者さん〉の ID に付ける） */
+const PLACE2_SUFFIX = '#住所2';
+
+/** まとめて置く人の ID → 持ち主の ID（住所2 なら〈利用者さん〉の ID） */
+export const ownerId = (id: string): string => (id.endsWith(PLACE2_SUFFIX) ? id.slice(0, -PLACE2_SUFFIX.length) : id);
+
 /** 画面の文（種類ごと） */
 export type PlaceAllTexts = {
   /** 欄の見出し（「緯度・経度が未登録の〈利用者さん〉」） */
@@ -49,7 +57,8 @@ export type PlaceAllTexts = {
 
 /** 種類ごとの違い（分岐はここ1か所） */
 type PlaceAccess = {
-  people: (d: Pick<DemoData, 'clients' | 'staff'>) => PlacePerson[];
+  /** today は住所2 の期間が終わったかを見る日（終わった住所2 は置かない） */
+  people: (d: Pick<DemoData, 'clients' | 'staff'>, today: string) => PlacePerson[];
   /** id の人の場所（住所・位置）を書く。郵便番号はそのまま */
   write: (d: DemoData, id: string, p: Place) => DemoData;
   texts: (t: Terms) => PlaceAllTexts;
@@ -59,18 +68,27 @@ function placeAccess(kind: PlaceKind): PlaceAccess {
   switch (kind) {
     case 'client':
       return {
-        people: (d) =>
-          d.clients.map((c) => ({
-            id: c.id,
-            name: c.displayName,
-            place: c.place,
-            counted: c.stage !== 'ended',
-            mark: { label: initialOf(c.displayName), color: colorOf(c.color) },
-          })),
-        write: (d, id, p) => ({
-          ...d,
-          clients: d.clients.map((c) => (c.id === id ? { ...c, place: { ...c.place, ...p } } : c)),
-        }),
+        // 期間つきの訪問先（住所2。ADR-0105）も1人分として置く（ID は「〈利用者さん〉の ID＋PLACE2_SUFFIX」）
+        people: (d, today) =>
+          d.clients.flatMap((c) => {
+            const mark = { label: initialOf(c.displayName), color: colorOf(c.color) };
+            const counted = c.stage !== 'ended';
+            const main = { id: c.id, name: c.displayName, place: c.place, counted, mark };
+            if (!c.place2 || place2Ended(c.place2, today)) return [main];
+            const { from: _f, to: _t, ...place } = c.place2;
+            return [main, { id: `${c.id}${PLACE2_SUFFIX}`, name: `${c.displayName}（住所2）`, place, counted, mark }];
+          }),
+        write: (d, id, p) => {
+          const own = ownerId(id);
+          return {
+            ...d,
+            clients: d.clients.map((c) => {
+              if (c.id !== own) return c;
+              if (own === id) return { ...c, place: { ...c.place, ...p } };
+              return c.place2 ? { ...c, place2: { ...c.place2, ...p } } : c;
+            }),
+          };
+        },
         texts: (t) => ({
           heading: `緯度・経度が未登録の${t.client}`,
           has: '住所・郵便番号あり',
@@ -115,8 +133,11 @@ function placeAccess(kind: PlaceKind): PlaceAccess {
 }
 
 /** その種類の人すべて（数えない人も。名前・地図の点を引くのに使う） */
-export const placePeople = (d: Pick<DemoData, 'clients' | 'staff'>, kind: PlaceKind): PlacePerson[] =>
-  placeAccess(kind).people(d);
+export const placePeople = (
+  d: Pick<DemoData, 'clients' | 'staff'>,
+  kind: PlaceKind,
+  today: string = jstDate(Date.now()),
+): PlacePerson[] => placeAccess(kind).people(d, today);
 
 /** 画面の文 */
 export const placeAllTexts = (kind: PlaceKind, terms: Terms): PlaceAllTexts => placeAccess(kind).texts(terms);
@@ -141,7 +162,7 @@ export function noPlaceIds(d: Pick<DemoData, 'clients' | 'staff'>, kind: PlaceKi
   return new Set(
     placePeople(d, kind)
       .filter((p) => p.counted && !hasLocation(p.place))
-      .map((p) => p.id),
+      .map((p) => ownerId(p.id)),
   );
 }
 
@@ -296,7 +317,7 @@ export function withFoundPlace(
   found: { lat: number | null; lng: number | null; address: string },
 ): DemoData {
   const access = placeAccess(kind);
-  const now = access.people(data).find((x) => x.id === personId)?.place;
+  const now = access.people(data, jstDate(Date.now())).find((x) => x.id === personId)?.place;
   if (!now || hasLocation(now)) return data;
   if (now.address !== from.address || now.postalCode !== from.postalCode) return data;
   const fillAddress = now.address.trim() === '' && found.address.trim() !== '';

@@ -123,15 +123,14 @@ export function readStaffIcon(r: Row, h: string): string | null {
  * 郵便番号の列（ADR-0016）：列が無い古いブック・空は ''。ハイフン・全角は7桁に直し、直せなければ行付きで止めて null。
  * 数値のセル（文字列の書式でない列に 0380000 と書くと 38000 になる）は、0〜9999999 の整数なら先頭を0で埋めて7桁にする
  */
-export function readPostal(r: Row): string | null {
-  const postalRaw = r.raw(CLIENT_POSTAL_COL);
+export function readPostal(r: Row, h: string = CLIENT_POSTAL_COL): string | null {
+  const postalRaw = r.raw(h);
   const postalCode = normalizePostalCode(
     typeof postalRaw === 'number' && Number.isInteger(postalRaw) && postalRaw >= 0 && postalRaw <= 9_999_999
       ? String(postalRaw).padStart(7, '0')
-      : r.text(CLIENT_POSTAL_COL),
+      : r.text(h),
   );
-  if (postalCode === null)
-    r.err(CLIENT_POSTAL_COL, '7桁の数字で書いてください（ハイフンは有っても無くても構いません）');
+  if (postalCode === null) r.err(h, '7桁の数字で書いてください（ハイフンは有っても無くても構いません）');
   return postalCode;
 }
 

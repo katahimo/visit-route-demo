@@ -82,6 +82,18 @@ export const CLIENT_POSTAL_COL = '郵便番号';
  */
 export const CLIENT_TRAVEL_COLS = { minutes: '移動時間（片道・分）', farTrip: '遠方（出張）' } as const;
 /**
+ * 〈利用者さん〉の期間つきの訪問先（住所2。PRD D439。ADR-0105）。書き出しは移動時間・遠方の次に置く。
+ * 古いブックには無いので必須の列にしない（無ければ住所2 なし。名簿の読み込みでは今のまま）。「住所2」が空なら住所2 なし
+ */
+export const CLIENT_PLACE2_COLS = {
+  address: '住所2',
+  postal: '住所2の郵便番号',
+  lat: '住所2の緯度',
+  lng: '住所2の経度',
+  from: '住所2の開始日',
+  to: '住所2の終了日',
+} as const;
+/**
  * 〈利用者さん〉の段階と紹介元（PRD D73。ADR-0015）。書き出しは固定の列の最後。古いブックには無いので必須の列にしない
  * （段階が無い・空なら「利用中」「仮押さえ」の列から読み替える。紹介元は空）
  */
@@ -95,7 +107,7 @@ export const CLIENT_STAGE_COLS = {
 } as const;
 /**
  * 書き出す〈利用者さん〉の固定の列（「表示名」の次に「よみ」、「利用中」の次に「仮押さえ」、「住所」の前に「郵便番号」、「経度」の次に
- * 移動時間（片道・分）・遠方（出張）と「担当できる人」、「メモ」の次に決まりごと、最後に段階と紹介元）。
+ * 移動時間（片道・分）・遠方（出張）・住所2 と「担当できる人」、「メモ」の次に決まりごと、最後に段階と紹介元）。
  * 版2：いつもの担当の列は無い（繰り返しのシートの担当。ADR-0053）
  */
 export const clientExportCols = (): string[] => {
@@ -110,6 +122,7 @@ export const clientExportCols = (): string[] => {
   const withAllowed = [
     ...withKana.slice(0, u),
     ...Object.values(CLIENT_TRAVEL_COLS),
+    ...Object.values(CLIENT_PLACE2_COLS),
     CLIENT_ALLOWED_COL,
     ...withKana.slice(u),
   ];
