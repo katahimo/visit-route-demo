@@ -8,6 +8,7 @@ import { BrokenDataNotice, DataWatch } from '../components/DataNotices';
 import { DayProvider, useDay } from '../components/day';
 import { FeatureOffNotice } from '../components/FeatureOffNotice';
 import { PersonPopoverProvider } from '../components/PersonPopover';
+import { PlaceRunHost } from '../components/placeRunHost';
 import { HistoryKeys } from '../components/undo';
 import { NARROW_QUERY } from '../components/useMedia';
 import { VisitPanelProvider } from '../components/VisitPanel';
@@ -83,6 +84,8 @@ export default function App() {
         <MonthBatchHost />
         {/* 自動の組み（欄の保存・要対応の帯の［要対応を組む］。ADR-0072 第2段）：同じく画面の外で続け、終わったら知らせて［元に戻す］ */}
         <AutoArrangeHost />
+        {/* 住所から位置をまとめて探す処理（PRD D427・D445）：画面を移っても続け、探し終えたら位置のそろったデータで自動で組む */}
+        <PlaceRunHost />
         {/* 訪問の詳細の欄（PRD D301〜D304。ADR-0051）：どの画面・コマンドパレットからでも開ける。欄は画面全体で1つ */}
         <VisitPanelProvider>
           {blocked ? (

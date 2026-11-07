@@ -320,6 +320,23 @@ export function createAutoArrange(solve: Solve = runSolve): AutoArrange {
 /** アプリで1つの入れ物 */
 export const autoArrange: AutoArrange = createAutoArrange();
 
+/** 自動の組みが終わる（待っている依頼も無い）まで待つ（住所からの位置の検索が、組んでいるあいだは書かない。PRD D445） */
+export function autoArrangeIdle(signal?: AbortSignal, a: Pick<AutoArrange, 'run'> = autoArrange): Promise<void> {
+  if (a.run.get() === null || signal?.aborted) return Promise.resolve();
+  return new Promise((resolve) => {
+    const finish = () => {
+      off();
+      signal?.removeEventListener('abort', finish);
+      resolve();
+    };
+    const off = a.run.subscribe(() => {
+      if (a.run.get() === null) finish();
+    });
+    // 止めたら待つのをやめる
+    signal?.addEventListener('abort', finish);
+  });
+}
+
 /**
  * 保存の前後で増えた・日時が変わった担当なしの訪問を自動で組む依頼を出す（欄の保存。PRD D407）。エキスパート機能が切なら、
  * その保存で変わった日（changedDays）の帯の種類（間に合わない・重なり・休みの人）の組み直してよい担当のある訪問も対象に足す

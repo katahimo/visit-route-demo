@@ -2,7 +2,6 @@
 // 一覧のチェックを持ち、［N件を入れる］で欠勤・訪問の取り消し・〈利用者さん〉の休みを1回の update で書く（元に戻せる）。振り直さない
 import { useEffect, useMemo, useState } from 'react';
 import { jstDate } from '../domain/time';
-import { requestImportArrange } from '../lib/autoArrangeBatch';
 import { newId } from '../lib/common';
 import {
   applyPasteRows,
@@ -12,6 +11,7 @@ import {
   pasteRowKeys,
   pasteRows,
 } from '../lib/pasteRows';
+import { arrangeAfterImport } from '../lib/placeRunner';
 import { useDemoData } from '../store';
 import { useToast } from './Toast';
 import { useUndoImportAction } from './undo';
@@ -51,7 +51,7 @@ export function usePasteNotices(onClose: () => void) {
     toast(pasteDoneText(list.length, care), { action: undoAction });
     onClose();
     // 休みの人の訪問・担当なしを自動で組む（PRD D442）
-    requestImportArrange(data, next, today);
+    arrangeAfterImport(data, next, today);
   };
 
   const toggle = (i: number) => {
