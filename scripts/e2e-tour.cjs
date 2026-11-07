@@ -1135,6 +1135,10 @@ async function releaseNotice(b) {
   await gate.waitFor({ timeout: 30000 });
   check((await gate.locator('h1').innerText()) === 'デモを更新しました', '更新：見出し「デモを更新しました」');
   check(await visible(page.getByTestId('first-run-release')), '更新：変わったところを出す');
+  check(
+    !(await page.getByTestId('first-run-release').evaluate((e) => e.open)),
+    '更新：変わったところは畳んで出す（場所を取らない）',
+  );
   check(await page.getByTestId('first-run-start-keep').isChecked(), '更新：「今のデータを使い続ける」を選んでおく');
   const radios = await page
     .locator('[data-testid="first-run-start"] input[type="radio"]')

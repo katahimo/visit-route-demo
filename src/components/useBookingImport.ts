@@ -2,6 +2,7 @@
 // 件数（追加・更新・変更なし・入れなかった行）を見せて確かめてから、store の update で訪問（単発・担当なし）として入れる。
 // 入れる手は usePendingImport（名簿の読み込みと同じ）
 import { useState } from 'react';
+import type { DemoData } from '../contracts/data';
 import { bookingsOutsideHours, outsideHoursNote } from '../lib/bookingFit';
 import { bookingConfirmBody, bookingDoneText, bookingHasChanges, bookingProblems } from '../lib/bookingScreen';
 import { formError, isStaleBuild } from '../lib/common';
@@ -18,17 +19,22 @@ import { reloadOnStale, useResumeAfterReload } from './useReloadResume';
 export function useBookingImport(onDone?: () => void, target = 'bookings') {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const { data, toast, changedSince, commit } = usePendingImport(setError);
+  const { data, toast, rebase, commit } = usePendingImport(setError);
   const confirmDialog = useConfirm();
 
   const loadBookings = async (file: File) => {
-    const base = data;
     const { importBookings } = await import('../excel');
-    const r = importBookings(await file.arrayBuffer(), base);
-    if ('code' in r) {
-      setError(`読み込めませんでした（いまのデータはそのままです）\n${r.message}`);
+    const buf = await file.arrayBuffer();
+    const read = (d: DemoData) => importBookings(buf, d);
+    const first = read(data);
+    if ('code' in first) {
+      setError(`読み込めませんでした（いまのデータはそのままです）\n${first.message}`);
       return;
     }
+    // 読んでいるあいだに別のところ（住所からの位置の検索など）でデータが変わっていたら、今のデータで読み直す
+    const before = await rebase(data, first, read);
+    if (!before) return setError(IMPORT_CHANGED_TEXT);
+    const { base, r } = before;
     const clientTerm = base.org.terms.client;
     if (!bookingHasChanges(r)) {
       const problems = bookingProblems(r, clientTerm);
@@ -37,7 +43,6 @@ export function useBookingImport(onDone?: () => void, target = 'bookings') {
       else toast(`変更はありませんでした（変更なし ${r.unchanged}件）`);
       return;
     }
-    if (changedSince(base)) return setError(IMPORT_CHANGED_TEXT);
     const ok = await confirmDialog({
       title: '訪問を読み込みますか？',
       body: bookingConfirmBody({
@@ -50,12 +55,14 @@ export function useBookingImport(onDone?: () => void, target = 'bookings') {
       confirmLabel: '読み込む',
     });
     if (!ok) return;
-    if (changedSince(base)) return setError(IMPORT_CHANGED_TEXT);
+    // 確かめているあいだに変わっていたら、今のデータで読み直す（確かめた内容と同じときだけ入れる）
+    const after = await rebase(base, r, read);
+    if (!after) return setError(IMPORT_CHANGED_TEXT);
     commit({
-      base,
-      next: r.data,
+      base: after.base,
+      next: after.r.data,
       label: '訪問の読み込み',
-      done: (keep) => bookingDoneText(r, keep),
+      done: (keep) => bookingDoneText(after.r, keep),
       onDone,
     });
   };
