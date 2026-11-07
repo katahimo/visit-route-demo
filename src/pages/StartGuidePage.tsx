@@ -11,7 +11,6 @@ import { useRestartFirstRun } from '../components/useRestartFirstRun';
 import { useRosterAutoPlace } from '../components/useRosterAutoPlace';
 import type { Terms } from '../contracts/documents';
 import { RESTART_TITLE } from '../lib/firstRun';
-import { createPlaceLane } from '../lib/placeRunQueue';
 import {
   START_GUIDE_ROSTER_FORMS,
   type StartGuideStep,
@@ -34,8 +33,8 @@ import './settings.css';
  * ③は予約の CSV の読み込み（データの画面の予約の CSV の欄と同じ）と予定の画面へ。主ボタンは各段で1つ（①②は「次へ」、③は「予定の画面へ」）。
  * 段は URL の `?step=`。名簿・予約の CSV を①→②→③の順に読み込めば、事業所の CSV でデモを始められる（ADR-0092）。
  * ①②で名簿が入ったら、郵便番号・住所の検索が入なら位置の無い人を自動でまとめて地図に置き始める（PRD D427。ADR-0094）。
- * 置く処理は段を替えても続くよう、この画面が〈利用者さん〉・〈スタッフ〉の2つを持つ。2つは1本の列に並べ、同時には走らせない
- * （片方が走っていれば、もう片方は終わるまで待って始める。外部の検索は同時に1本。ADR-0016）。
+ * 置く処理はアプリで1つの入れ物（lib/placeRunner）が持ち、段を替えても・予定の画面へ移っても続く。〈利用者さん〉・〈スタッフ〉は1本の列に並べ、
+ * 同時には走らせない（片方が走っていれば、もう片方は終わるまで待って始める。外部の検索は同時に1本。ADR-0016。PRD D445）。
  * 走っている間は、どの段にも進み具合と［止める］を出す（いまの段の欄に出ない種類の分は上の1行）
  */
 export default function StartGuidePage() {
@@ -45,8 +44,7 @@ export default function StartGuidePage() {
   const step = startGuideSteps(data.org.terms)[index - 1]!;
   const { prev, next } = startGuideNeighbors(index);
   const restart = useRestartFirstRun();
-  const [lane] = useState(createPlaceLane);
-  const placeRuns = { client: usePlaceAllRun('client', lane), staff: usePlaceAllRun('staff', lane) };
+  const placeRuns = { client: usePlaceAllRun('client'), staff: usePlaceAllRun('staff') };
   const shown = step.kind === 'roster' ? step.person : null;
   return (
     <div className="stack" style={{ maxWidth: 720 }} data-testid="start-guide" data-step={index}>

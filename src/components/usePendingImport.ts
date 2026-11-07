@@ -5,8 +5,8 @@
 import { type Dispatch, type SetStateAction, useEffect, useRef } from 'react';
 import type { DemoData, ImportError } from '../contracts/data';
 import { jstDate } from '../domain/time';
-import { requestImportArrange } from '../lib/autoArrangeBatch';
 import { rebaseImport } from '../lib/importRebase';
+import { arrangeAfterImport } from '../lib/placeRunner';
 import { type PreviousKeep, useDemoData } from '../store';
 import { useToast } from './Toast';
 
@@ -35,7 +35,8 @@ export function usePendingImport(setError: Dispatch<SetStateAction<string | null
       pending.current = null;
       toast(p.done);
       p.onDone?.();
-      requestImportArrange(p.base, p.next, jstDate(Date.now()));
+      // 住所を探しているあいだは組まずに待たせ、探し終えてから位置のそろったデータで組む（PRD D445）
+      arrangeAfterImport(p.base, p.next, jstDate(Date.now()));
     } else if (data !== p.base) {
       pending.current = null;
       // 入らなかったので、残した控えは前の世代に戻す

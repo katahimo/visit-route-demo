@@ -235,7 +235,7 @@ function PlacedMap({
   byId,
   t,
 }: {
-  results: PlaceAllResult[];
+  results: readonly PlaceAllResult[];
   byId: Map<string, PlacePerson>;
   t: PlaceAllTexts;
 }) {

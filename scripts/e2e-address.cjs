@@ -503,6 +503,12 @@ async function rosterPlaceAll(page, fake, dlg) {
     '名簿のあと：［名簿を読み込む］の続きで自動で始まる（名簿の欄を閉じ、まとめて置く欄へフォーカス・「止める」）',
   );
   await page.screenshot({ path: path.join(OUT_DIR, 'roster-place-running.png') });
+  // 探しているあいだは上の帯にも進み具合と［止める］（画面を移っても続く。PRD D445）
+  check(
+    /緯度・経度を探しています \d+\/\d+人/.test(await page.getByTestId('place-band-text').innerText()) &&
+      (await page.getByTestId('place-band-stop').count()) === 1,
+    '名簿のあと：探しているあいだは上の帯に進み具合と［止める］を出す',
+  );
   // 止める → 「止めました」と［続きを探す］
   await page.getByTestId('place-all-stop').click();
   await until(progress, /止めました/, 5000);

@@ -240,7 +240,7 @@ export type PlaceAllOptions = {
 /**
  * 住所から位置が見つからなかった人がいるか（PRD D427）。いれば結果に「市区町村の名前が無い住所は見つからないことがある」の1行を足す
  */
-export function hasAddressNotFound(results: PlaceAllResult[]): boolean {
+export function hasAddressNotFound(results: readonly PlaceAllResult[]): boolean {
   return results.some((r) => !r.ok && r.step === 'address' && r.reason === 'notFound');
 }
 
