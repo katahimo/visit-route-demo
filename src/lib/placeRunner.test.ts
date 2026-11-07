@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DemoData } from '../contracts/data';
 import type { Client } from '../contracts/documents';
-import { client, makeData, visit } from '../matching/fixtures.testkit';
+import { client, makeData, staff, visit } from '../matching/fixtures.testkit';
 import { type AutoRun, autoArrangeIdle } from './autoArrangeBatch';
 import type { GeoHit, LookupResult } from './geocode';
 import { createPlaceRunner, type PlaceHost, placeRunText } from './placeRunner';
@@ -91,7 +91,7 @@ describe('placeRunner', () => {
     expect(r.busy()).toBe(false);
     const p = r.run('client');
     expect(r.busy()).toBe(true);
-    r.holdArrange();
+    r.holdArrange(h.data(), h.data());
     expect(h.arranged).toHaveLength(0);
     f.release();
     await p;
@@ -105,7 +105,7 @@ describe('placeRunner', () => {
     const r = createPlaceRunner(f.deps);
     r.connect(h.host);
     const p = r.run('client');
-    r.holdArrange();
+    r.holdArrange(h.data(), h.data());
     r.abort();
     expect(r.busy()).toBe(false);
     expect(r.state.client.get()).toMatchObject({ running: false, results: [], total: 0 });
@@ -143,7 +143,7 @@ describe('placeRunner', () => {
       arrange(d);
     };
     const p = r.run('client');
-    r.holdArrange();
+    r.holdArrange(h.data(), h.data());
     await p;
     expect(f.calls).toEqual(['架空市c', '架空市a', '架空市b']);
     // c（予定あり）を探し終えた時点で1回だけ組む
@@ -163,7 +163,7 @@ describe('placeRunner', () => {
     const r2 = createPlaceRunner(f.deps);
     r2.connect(h2.host);
     const p = r2.run('client');
-    r2.holdArrange();
+    r2.holdArrange(h2.data(), h2.data());
     expect(h2.arranged).toHaveLength(1);
     f.release();
     await p;
@@ -177,10 +177,61 @@ describe('placeRunner', () => {
     r.connect(h.host);
     const p = r.run('client');
     r.abort();
-    r.holdArrange();
+    r.holdArrange(h.data(), h.data());
     f.release();
     await p;
     expect(h.arranged).toHaveLength(1);
+  });
+
+  it('入れた直後（つないだデータがまだ入れる前）に待たせたら、入れたあとのデータで組める段階を見る', async () => {
+    const f = fakeDeps(true);
+    const h = fakeHost([noPlace('a'), noPlace('b')]);
+    const r = createPlaceRunner(f.deps);
+    r.connect(h.host);
+    const p = r.run('client');
+    const before = h.data();
+    // b に予定を入れた（まだ描き直していないので host.get() は before のまま）
+    const after = { ...before, visits: [visitOf('b')] };
+    r.holdArrange(before, after);
+    // b はまだ探していないので組まない（入れる前のデータなら予定が無く、すぐ組んでしまう）
+    expect(h.arranged).toHaveLength(0);
+    f.release();
+    await p;
+    expect(h.arranged).toHaveLength(1);
+  });
+
+  it('位置の無い〈スタッフ〉は、〈スタッフ〉を探していなければ待たない', async () => {
+    const f = fakeDeps(true);
+    const h = fakeHost([noPlace('a')]);
+    h.host.get = ((g) => () => ({
+      ...g(),
+      staff: [staff('s1', 0, 0, { home: { address: '架空市', lat: null, lng: null } })],
+    }))(h.host.get);
+    const r = createPlaceRunner(f.deps);
+    r.connect(h.host);
+    const p = r.run('client');
+    r.holdArrange(h.host.get(), h.host.get());
+    expect(h.arranged).toHaveLength(1);
+    f.release();
+    await p;
+  });
+
+  it('組みが終わるのを待っているあいだに止めたら、待つのをやめる', async () => {
+    const h = fakeHost([noPlace('a'), noPlace('b')]);
+    let settled = 0;
+    h.host.settle = (signal) =>
+      new Promise((resolve) => {
+        settled++;
+        signal.addEventListener('abort', () => resolve());
+      });
+    const r = createPlaceRunner(fakeDeps().deps);
+    r.connect(h.host);
+    const p = r.run('client');
+    while (settled === 0) await new Promise((z) => setTimeout(z, 0));
+    r.stop('client');
+    await p;
+    expect(r.busy()).toBe(false);
+    expect(h.data().clients.every((c) => c.place.lat === null)).toBe(true);
   });
 
   it('帯の文', () => {
@@ -193,10 +244,10 @@ describe('placeRunner', () => {
 describe('autoArrangeIdle', () => {
   it('組んでいなければすぐ、組んでいれば終わってから進む（PRD D445）', async () => {
     const run = createValueStore<AutoRun | null>(null);
-    await autoArrangeIdle({ run });
+    await autoArrangeIdle(undefined, { run });
     run.set({ index: 0, total: 3, waiting: 0 });
     let resolved = false;
-    const p = autoArrangeIdle({ run }).then(() => {
+    const p = autoArrangeIdle(undefined, { run }).then(() => {
       resolved = true;
     });
     run.set({ index: 1, total: 3, waiting: 0 });

@@ -26,7 +26,7 @@ export function PlaceRunHost(): ReactNode {
         update: (fn, label, opts) => update(fn, label, opts),
         arrange: (d) => requestBandArrange(d, jstDate(Date.now())),
         today: () => jstDate(Date.now()),
-        settle: () => autoArrangeIdle(),
+        settle: (signal) => autoArrangeIdle(signal),
       }),
     [update],
   );

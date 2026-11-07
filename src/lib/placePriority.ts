@@ -40,14 +40,15 @@ export function mattersForArrange(d: PlanData, kind: PlaceKind, personId: string
 
 /**
  * 組める段階か：まだ探していない（tried に無い）位置の無い人のうち、組みに効く人がいない。
- * tried は探した人（見つからなかった人も。`${kind}:${id}`）
+ * tried は探した人（見つからなかった人も。`${kind}:${id}`）。opts.staff が false なら位置の無い〈スタッフ〉は待たない（探していない）
  */
 export function arrangeReady(
   d: PlanData & Pick<DemoData, 'clients' | 'staff'>,
   today: string,
   tried: ReadonlySet<string>,
+  opts: { staff: boolean } = { staff: true },
 ): boolean {
-  if (placeAllTargets(d, 'staff').targets.some((p) => !tried.has(`staff:${p.id}`))) return false;
+  if (opts.staff && placeAllTargets(d, 'staff').targets.some((p) => !tried.has(`staff:${p.id}`))) return false;
   const first = firstVisitDays(d, today);
   return !placeAllTargets(d, 'client').targets.some((p) => !tried.has(`client:${p.id}`) && first.has(ownerId(p.id)));
 }

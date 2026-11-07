@@ -61,7 +61,7 @@ export type PlaceHost = {
    * 自動の組みが終わるまで待つ（組んでいるあいだに位置を書くと、組みがその日を「組み始めたときと違う」として飛ばすので、
    * 途中で組んだら次の人を探す前に待つ）
    */
-  settle(): Promise<void>;
+  settle(signal: AbortSignal): Promise<void>;
 };
 
 /** 外部の検索（テストは差し替える） */
@@ -80,7 +80,7 @@ export type PlaceRunner = {
    * 組みに効く人（予定のある〈利用者さん〉・〈スタッフ〉）を探し終えたら自動で組む（読み込みのあとの自動の組みを、それまで待たせる。PRD D442・D445）。
    * もう探し終えていればすぐ組む
    */
-  holdArrange(): void;
+  holdArrange(before: DemoData, after: DemoData): void;
   /** データを丸ごと差し替えた：止めて、あとで組まない */
   abort(): void;
   connect(host: PlaceHost): () => void;
@@ -110,8 +110,8 @@ async function placeEach(x: {
   onPick: (id: string) => void;
   /** 1人探し終えた（見つからなかった人も） */
   onSearched: (id: string) => void;
-  /** 探すあいだに名簿で増えた人の数 */
-  onGrow: (n: number) => void;
+  /** 1人探し終えたあとの、まだ探していない人の数（対象の数を直す。名簿で増えた・手で置いた人も合う） */
+  onRemaining: (n: number) => void;
 }): Promise<{ stopped: boolean }> {
   let list = x.first;
   let firstCall = true;
@@ -120,14 +120,14 @@ async function placeEach(x: {
     x.onPick(next.id);
     if (!firstCall) await x.deps.wait(PLACE_ALL_INTERVAL_MS, x.signal);
     firstCall = false;
-    await x.host.settle();
+    await x.host.settle(x.signal);
+    if (x.signal.aborted) return { stopped: true };
     if (x.signal.aborted) return { stopped: true };
     const r = await placeAll([next], { ...x.deps, signal: x.signal, onResult: x.onResult });
     if (r.stopped) return r;
     x.onSearched(next.id);
-    const before = list.length - 1;
     list = x.remaining();
-    if (list.length > before) x.onGrow(list.length - before);
+    x.onRemaining(list.length);
   }
   return { stopped: false };
 }
@@ -181,19 +181,17 @@ export function createPlaceRunner(deps: PlaceDeps): PlaceRunner {
   const anyRunning = () => runGen.client === generation || runGen.staff === generation;
 
   /** 組む段階なら組む：組みを待たせていて、組みに効く人をみな探した（PRD D445。残りの人は裏で探し続ける） */
-  const arrangeIfReady = () => {
+  const arrangeIfReady = (data?: DemoData) => {
     const h = host;
-    if (!arrangeAfter || !h) return;
-    const d = h.get();
-    if (anyRunning() && !arrangeReady(d, h.today(), tried)) return;
+    const d = data ?? h?.get();
+    if (!arrangeAfter || !h || !d) return;
+    // 位置の無い〈スタッフ〉は、〈スタッフ〉を探しているときだけ待つ（探していなければ待っても入らない）
+    if (anyRunning() && !arrangeReady(d, h.today(), tried, { staff: runGen.staff === generation })) return;
     arrangeAfter = false;
     h.arrange(d);
   };
 
-  /**
-   * 1回分を置く。seen はこの続きで探し終えた人（見つからなかった人を続きで探し直さない）。対象がいなければ null。
-   * 1人ずつ、いまのデータで探す順（lib/placePriority の placeOrder）を決め直す（探すあいだに予約を読み込んでも、予定のある人を先に探す）
-   */
+  /** 1回分を置く（seen はこの続きで探し終えた人。見つからなかった人を続きで探し直さない。順は placeEach）。対象がいなければ null */
   const batch = async (
     kind: PlaceKind,
     c: AbortController,
@@ -231,7 +229,7 @@ export function createPlaceRunner(deps: PlaceDeps): PlaceRunner {
         tried.add(`${kind}:${id}`);
         if (gen === generation) arrangeIfReady();
       },
-      onGrow: (n) => set(kind, (s) => ({ total: s.total + n })),
+      onRemaining: (n) => set(kind, (s) => ({ total: s.results.length + n })),
     });
   };
 
@@ -292,9 +290,10 @@ export function createPlaceRunner(deps: PlaceDeps): PlaceRunner {
     run,
     stop,
     busy: anyRunning,
-    holdArrange: () => {
+    holdArrange: (before, after) => {
       arrangeAfter = true;
-      arrangeIfReady();
+      // 入れた直後で、描き直す前（つないだデータがまだ入れる前）なら入れたあとのデータで見る
+      arrangeIfReady(host?.get() === before ? after : undefined);
     },
     abort: () => {
       drop();
@@ -324,6 +323,6 @@ export const placeRunner: PlaceRunner = createPlaceRunner({
  * 読み込み・取り込みのあとの自動の組み（PRD D442）。住所を探しているあいだは組まずに待たせ、探し終えてから位置のそろったデータで組む（PRD D445）
  */
 export function arrangeAfterImport(before: DemoData, after: DemoData, today: string): void {
-  if (placeRunner.busy()) placeRunner.holdArrange();
+  if (placeRunner.busy()) placeRunner.holdArrange(before, after);
   else requestImportArrange(before, after, today);
 }

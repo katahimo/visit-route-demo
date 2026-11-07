@@ -321,14 +321,19 @@ export function createAutoArrange(solve: Solve = runSolve): AutoArrange {
 export const autoArrange: AutoArrange = createAutoArrange();
 
 /** 自動の組みが終わる（待っている依頼も無い）まで待つ（住所からの位置の検索が、組んでいるあいだは書かない。PRD D445） */
-export function autoArrangeIdle(a: Pick<AutoArrange, 'run'> = autoArrange): Promise<void> {
-  if (a.run.get() === null) return Promise.resolve();
+export function autoArrangeIdle(signal?: AbortSignal, a: Pick<AutoArrange, 'run'> = autoArrange): Promise<void> {
+  if (a.run.get() === null || signal?.aborted) return Promise.resolve();
   return new Promise((resolve) => {
-    const off = a.run.subscribe(() => {
-      if (a.run.get() !== null) return;
+    const finish = () => {
       off();
+      signal?.removeEventListener('abort', finish);
       resolve();
+    };
+    const off = a.run.subscribe(() => {
+      if (a.run.get() === null) finish();
     });
+    // 止めたら待つのをやめる
+    signal?.addEventListener('abort', finish);
   });
 }
 
