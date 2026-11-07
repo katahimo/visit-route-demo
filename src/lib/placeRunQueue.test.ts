@@ -1,71 +1,45 @@
 import { describe, expect, it } from 'vitest';
-import { createPlaceLane, createPlaceRunGate } from './placeRunQueue';
+import { createPlaceLock, createPlaceRunGate } from './placeRunQueue';
 
-/** 外から終わらせられる仕事 */
-function deferred() {
-  let resolve!: () => void;
-  const promise = new Promise<void>((r) => {
-    resolve = r;
+describe('createPlaceLock（外部の検索を同時に1本にする鍵。ADR-0016・PRD D445）', () => {
+  it('持っている間は待たせ、外したら次へ渡す。待っている人が複数なら priority の小さい方・同じなら先に待った方', async () => {
+    const lock = createPlaceLock();
+    const order: string[] = [];
+    const first = (await lock.acquire(1))!;
+    expect(lock.busy()).toBe(true);
+    const waits: boolean[] = [];
+    const client = lock
+      .acquire(1, undefined, (w) => waits.push(w))
+      .then((r) => {
+        order.push('client');
+        return r;
+      });
+    const staff = lock.acquire(0).then((r) => {
+      order.push('staff');
+      return r;
+    });
+    first();
+    (await staff)!();
+    (await client)!();
+    expect(order).toEqual(['staff', 'client']);
+    expect(waits).toEqual([true, false]);
+    expect(lock.busy()).toBe(false);
   });
-  return { promise, resolve };
-}
-const flush = () => new Promise((r) => setTimeout(r, 0));
-
-describe('createPlaceLane（外部の検索を同時に1本にする列。ADR-0016）', () => {
-  it('前の仕事が終わってから次を始める（同時に走るのは1本）', async () => {
-    const lane = createPlaceLane();
-    const log: string[] = [];
-    const a = deferred();
-    const pa = lane.run(async () => {
-      log.push('a始め');
-      await a.promise;
-      log.push('a終わり');
-      return 'a';
-    });
-    const pb = lane.run(async () => {
-      log.push('b始め');
-      return 'b';
-    });
-    await flush();
-    expect(log).toEqual(['a始め']);
-    expect(lane.busy()).toBe(true);
-    a.resolve();
-    expect(await pa).toBe('a');
-    expect(await pb).toBe('b');
-    expect(log).toEqual(['a始め', 'a終わり', 'b始め']);
-    expect(lane.busy()).toBe(false);
-  });
-  it('待っている間に止めたら仕事を呼ばず null。その後ろの仕事は前の仕事が終わるまで待つ', async () => {
-    const lane = createPlaceLane();
-    const log: string[] = [];
-    const a = deferred();
-    void lane.run(async () => {
-      await a.promise;
-      log.push('a');
-    });
+  it('待っている間に止めたら null（次の人へは渡さない）。外す手を二度呼んでもほかの人の鍵を外さない', async () => {
+    const lock = createPlaceLock();
+    const release = (await lock.acquire(1))!;
     const c = new AbortController();
-    const pb = lane.run(async () => {
-      log.push('b');
-    }, c.signal);
-    const pc = lane.run(async () => {
-      log.push('c');
-    });
+    const quitter = lock.acquire(1, c.signal);
+    const next = lock.acquire(1);
     c.abort();
-    expect(await pb).toBeNull();
-    await flush();
-    expect(log).toEqual([]);
-    a.resolve();
-    await pc;
-    expect(log).toEqual(['a', 'c']);
-  });
-  it('仕事が失敗しても次の仕事は始まる', async () => {
-    const lane = createPlaceLane();
-    const pa = lane.run(async () => {
-      throw new Error('x');
-    });
-    const pb = lane.run(async () => 'b');
-    await expect(pa).rejects.toThrow('x');
-    expect(await pb).toBe('b');
+    expect(await quitter).toBeNull();
+    release();
+    const r2 = (await next)!;
+    release();
+    expect(lock.busy()).toBe(true);
+    r2();
+    expect(lock.busy()).toBe(false);
+    expect(await lock.acquire(1, AbortSignal.abort())).toBeNull();
   });
 });
 

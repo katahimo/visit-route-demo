@@ -8,6 +8,12 @@ export type ReleaseNote = { id: string; items: readonly string[] };
 /** 更新の一覧（新しい順。先頭が今の版） */
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    id: '2026-11-07-4',
+    items: [
+      '住所から緯度・経度を探すとき、人数の少ないスタッフを先に探します（お客様を探している途中でスタッフの名簿を読み込んでも、スタッフを先に探します）',
+    ],
+  },
+  {
     id: '2026-11-07-3',
     items: [
       '住所から緯度・経度を探す処理を、予定の画面などへ移っても続けます。上の帯に進み具合と［止める］を出します',

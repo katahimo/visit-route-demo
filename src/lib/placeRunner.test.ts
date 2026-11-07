@@ -1,4 +1,4 @@
-// 住所から位置をまとめて探す入れ物（lib/placeRunner。PRD D427・D445）：画面に縛られず続ける・1本の列・探し終えてから1回組む・差し替えで止める。
+// 住所から位置をまとめて探す入れ物（lib/placeRunner。PRD D427・D445）：画面に縛られず続ける・〈スタッフ〉を先に・探し終えてから1回組む・差し替えで止める。
 // 外部には出さず、検索の偽物で確かめる
 import { describe, expect, it } from 'vitest';
 import type { DemoData } from '../contracts/data';
@@ -256,5 +256,36 @@ describe('autoArrangeIdle', () => {
     run.set(null);
     await p;
     expect(resolved).toBe(true);
+  });
+});
+
+describe('〈スタッフ〉を先に探す（PRD D445）', () => {
+  it('〈利用者さん〉を探している途中で〈スタッフ〉を頼まれたら、今の1人のあとに〈スタッフ〉をみな探してから続ける', async () => {
+    const f = fakeDeps(true);
+    const h = fakeHost([noPlace('a'), noPlace('b')]);
+    const get = h.host.get;
+    const home = (id: string) => staff(id, 0, 0, { name: id, home: { address: `架空市${id}`, lat: null, lng: null } });
+    let staffList = [home('s1'), home('s2')];
+    h.host.get = () => ({ ...get(), staff: staffList });
+    h.host.update = ((u) => (fn, label, opts) => {
+      u(
+        (d) => {
+          const next = fn({ ...d, staff: staffList });
+          staffList = next.staff;
+          return next;
+        },
+        label,
+        opts,
+      );
+    })(h.host.update);
+    const r = createPlaceRunner(f.deps);
+    r.connect(h.host);
+    const pc = r.run('client');
+    while (f.calls.length === 0) await new Promise((z) => setTimeout(z, 0));
+    const ps = r.run('staff');
+    expect(r.state.staff.get().waiting).toBe(true);
+    f.release();
+    await Promise.all([pc, ps]);
+    expect(f.calls).toEqual(['架空市a', '架空市s1', '架空市s2', '架空市b']);
   });
 });
