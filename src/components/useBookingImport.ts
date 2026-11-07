@@ -3,8 +3,16 @@
 // 入れる手は usePendingImport（名簿の読み込みと同じ）
 import { useState } from 'react';
 import type { DemoData } from '../contracts/data';
+import { jstDate } from '../domain/time';
 import { bookingsOutsideHours, outsideHoursNote } from '../lib/bookingFit';
-import { bookingConfirmBody, bookingDoneText, bookingHasChanges, bookingProblems } from '../lib/bookingScreen';
+import {
+  bookingConfirmBody,
+  bookingDoneText,
+  bookingHasChanges,
+  bookingProblems,
+  pastUnassignedCount,
+  pastUnassignedNote,
+} from '../lib/bookingScreen';
 import { formError, isStaleBuild } from '../lib/common';
 import { EXCEL_RELOADING_TEXT, EXCEL_STALE_TEXT } from '../lib/dataScreen';
 import { canKeepPrevious } from '../store';
@@ -51,6 +59,7 @@ export function useBookingImport(onDone?: () => void, target = 'bookings') {
         clientTerm,
         keep: canKeepPrevious(),
         outsideNote: outsideHoursNote(bookingsOutsideHours(base, r.data), base.org.terms.staff),
+        pastNote: pastUnassignedNote(pastUnassignedCount(r.data, jstDate(Date.now()))),
       }),
       confirmLabel: '読み込む',
     });

@@ -5,6 +5,7 @@ import ExcelJS from 'exceljs';
 import type { DemoData, ImportError, RosterKind, RosterSource } from '../contracts/data';
 import { nameKey } from '../lib/common';
 import { CSV_BOM, CSV_MIME, decodeText, parseCsv, toCsv, unguardCell } from '../lib/csv';
+import { rosterWrongPlace } from './csvPlace';
 import { exportProblem } from './exportBook';
 import { clientTable, staffTable } from './exportPersonTables';
 import { CLIENT_POSTAL_COL } from './layout';
@@ -54,6 +55,9 @@ export async function loadRosterBook(
     return { code: 'INVALID_ARGUMENT', message: 'Excel のファイル（.xlsx）か CSV のファイルとして読めませんでした' };
   const parsed = parseCsv(text);
   if (parsed.length === 0) return { code: 'INVALID_ARGUMENT', message: 'CSV のファイルが空です' };
+  // 予約の CSV・もう一方の名簿の CSV なら、読む欄を伝えて止める（取り違え。PRD D443）
+  const wrong = rosterWrongPlace(parsed, kind, base.org.terms);
+  if (wrong) return { code: 'INVALID_ARGUMENT', message: wrong };
   // 列名がほかのソフトの形（顧客台帳・予約システムなど。rosterForms）なら名簿の列に写して読む（ADR-0073・ADR-0075）
   const hit = readRosterForm(parsed, kind, env);
   const rows = hit ? hit.table.rows : parsed;

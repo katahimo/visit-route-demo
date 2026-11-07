@@ -12,6 +12,7 @@ import { isImportError, migrate } from '../store/persist';
 import type { Booking } from './booking';
 import { BOOKING_FORMS, type BookingForm, readBookingForm } from './bookingForms';
 import { clip } from './csvColumns';
+import { bookingWrongPlace } from './csvPlace';
 import { MAX_FILE_BYTES } from './reader';
 import { same } from './rosterRows';
 
@@ -116,6 +117,9 @@ export function importBookings(buf: ArrayBuffer, base: DemoData): BookingImportR
   const parsed = parseCsv(text);
   if (parsed.length === 0) return { code: 'INVALID_ARGUMENT', message: 'CSV のファイルが空です' };
   const hit = readBookingForm(parsed);
+  // 名簿の CSV を選んだときは、読む欄を伝える（取り違え。PRD D443）
+  const wrong = hit ? null : bookingWrongPlace(parsed, base.org.terms);
+  if (wrong) return { code: 'INVALID_ARGUMENT', message: wrong };
   if (!hit)
     return {
       code: 'INVALID_ARGUMENT',

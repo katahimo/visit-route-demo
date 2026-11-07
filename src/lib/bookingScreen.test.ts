@@ -7,6 +7,8 @@ import {
   bookingHasChanges,
   bookingProblems,
   bookingSummary,
+  pastUnassignedCount,
+  pastUnassignedNote,
 } from './bookingScreen';
 
 const result = (over: Partial<BookingImportResult> = {}): BookingImportResult => ({
@@ -52,6 +54,19 @@ describe('予約の読み込みの文', () => {
         '1件はどのシッターの勤務日・時間にも入りません（勤務時間外 1。例：11/5（木）17:00〜20:00）。シッターの勤務時間を広げると組めます',
     }).split('\n');
     expect(lines[2]).toContain('1件はどのシッターの勤務日・時間にも入りません');
+  });
+
+  it('今日より前の担当なしの数と文（取り消し・担当ありは数えない。PRD D372）', () => {
+    const v = (date: string, staffId: string | null, cancelled = false) => ({ date, staffId, cancelled });
+    const data = {
+      visits: [v('2026-11-06', null), v('2026-11-06', 's1'), v('2026-11-05', null, true), v('2026-11-07', null)],
+    } as unknown as Pick<DemoData, 'visits'>;
+    expect(pastUnassignedCount(data, '2026-11-07')).toBe(1);
+    expect(pastUnassignedNote(0)).toBeNull();
+    const note = pastUnassignedNote(13)!;
+    expect(note).toContain('今日より前の日の担当なし 13件は、担当なしのまま入ります（今日より前の訪問は見るだけです');
+    const body = bookingConfirmBody({ fileName: 'a.csv', r: result(), clientTerm: 'お客様', keep, pastNote: note });
+    expect(body).toContain(note);
   });
 
   it('確認の本文に形・読まなかった列・担当なしを出す（文字コードは出さない）', () => {
