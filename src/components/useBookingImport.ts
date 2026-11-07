@@ -2,7 +2,7 @@
 // 件数（追加・更新・変更なし・入れなかった行）を見せて確かめてから、store の update で訪問（単発・担当なし）として入れる。
 // 入れる手は usePendingImport（名簿の読み込みと同じ）
 import { useState } from 'react';
-import type { DemoData } from '../contracts/data';
+import type { BookingImportResult, DemoData } from '../contracts/data';
 import { jstDate } from '../domain/time';
 import { bookingsOutsideHours, outsideHoursNote } from '../lib/bookingFit';
 import {
@@ -51,22 +51,23 @@ export function useBookingImport(onDone?: () => void, target = 'bookings') {
       else toast(`変更はありませんでした（変更なし ${r.unchanged}件）`);
       return;
     }
+    /** 確認に出す注意（勤務に入らない予約・今日より前の担当なし）。読み直したあとも同じかを見る */
+    const notesOf = (b: DemoData, x: BookingImportResult) => ({
+      outsideNote: outsideHoursNote(bookingsOutsideHours(b, x.data), b.org.terms.staff),
+      pastNote: pastUnassignedNote(pastUnassignedCount(b, x.data, jstDate(Date.now()))),
+    });
+    const notes = notesOf(base, r);
     const ok = await confirmDialog({
       title: '訪問を読み込みますか？',
-      body: bookingConfirmBody({
-        fileName: file.name,
-        r,
-        clientTerm,
-        keep: canKeepPrevious(),
-        outsideNote: outsideHoursNote(bookingsOutsideHours(base, r.data), base.org.terms.staff),
-        pastNote: pastUnassignedNote(pastUnassignedCount(r.data, jstDate(Date.now()))),
-      }),
+      body: bookingConfirmBody({ fileName: file.name, r, clientTerm, keep: canKeepPrevious(), ...notes }),
       confirmLabel: '読み込む',
     });
     if (!ok) return;
     // 確かめているあいだに変わっていたら、今のデータで読み直す（確かめた内容と同じときだけ入れる）
     const after = await rebase(base, r, read);
-    if (!after) return setError(IMPORT_CHANGED_TEXT);
+    // 確かめた注意（勤務時間の外・今日より前）が変わったら入れない（確かめていない内容を入れない）
+    if (!after || JSON.stringify(notesOf(after.base, after.r)) !== JSON.stringify(notes))
+      return setError(IMPORT_CHANGED_TEXT);
     commit({
       base: after.base,
       next: after.r.data,

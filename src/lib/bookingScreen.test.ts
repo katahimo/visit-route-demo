@@ -56,12 +56,25 @@ describe('予約の読み込みの文', () => {
     expect(lines[2]).toContain('1件はどのシッターの勤務日・時間にも入りません');
   });
 
-  it('今日より前の担当なしの数と文（取り消し・担当ありは数えない。PRD D372）', () => {
-    const v = (date: string, staffId: string | null, cancelled = false) => ({ date, staffId, cancelled });
-    const data = {
-      visits: [v('2026-11-06', null), v('2026-11-06', 's1'), v('2026-11-05', null, true), v('2026-11-07', null)],
+  it('この読み込みで足した・直した今日より前の担当なしだけ数える（取り消し・担当あり・前からある訪問は数えない。PRD D372）', () => {
+    const v = (id: string, date: string, staffId: string | null, cancelled = false) => ({
+      id,
+      date,
+      staffId,
+      cancelled,
+    });
+    const old = v('old', '2026-11-01', null);
+    const before = { visits: [old] } as unknown as Pick<DemoData, 'visits'>;
+    const after = {
+      visits: [
+        old,
+        v('a', '2026-11-06', null),
+        v('b', '2026-11-06', 's1'),
+        v('c', '2026-11-05', null, true),
+        v('d', '2026-11-07', null),
+      ],
     } as unknown as Pick<DemoData, 'visits'>;
-    expect(pastUnassignedCount(data, '2026-11-07')).toBe(1);
+    expect(pastUnassignedCount(before, after, '2026-11-07')).toBe(1);
     expect(pastUnassignedNote(0)).toBeNull();
     const note = pastUnassignedNote(13)!;
     expect(note).toContain('今日より前の日の担当なし 13件は、担当なしのまま入ります（今日より前の訪問は見るだけです');

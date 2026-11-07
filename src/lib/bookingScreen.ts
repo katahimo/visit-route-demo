@@ -30,11 +30,18 @@ export function bookingProblems(r: Pick<BookingImportResult, 'unmatched' | 'badR
 }
 
 /**
- * 今日より前の日の、担当なしの訪問（取り消しでない）の数。自動の組み・［要対応を組む］は今日から翌月末までを組むので、
- * これらは担当なしのまま残る（今日より前の訪問は見るだけで、組み直さない。PRD D372）
+ * この読み込みで足した・直した訪問のうち、今日より前の日の担当なし（取り消しでない）の数。自動の組み・［要対応を組む］は
+ * 今日から翌月末までを組むので、これらは担当なしのまま残る（今日より前の訪問は見るだけで、組み直さない。PRD D372）。
+ * 読み込む前からある・変わらない訪問は数えない
  */
-export const pastUnassignedCount = (data: Pick<DemoData, 'visits'>, today: string): number =>
-  data.visits.filter((v) => v.date < today && v.staffId === null && !v.cancelled).length;
+export function pastUnassignedCount(
+  before: Pick<DemoData, 'visits'>,
+  after: Pick<DemoData, 'visits'>,
+  today: string,
+): number {
+  const was = new Map(before.visits.map((v) => [v.id, v]));
+  return after.visits.filter((v) => v.date < today && v.staffId === null && !v.cancelled && was.get(v.id) !== v).length;
+}
 
 /** 今日より前の担当なしの訪問の注意（無ければ null） */
 export const pastUnassignedNote = (n: number): string | null =>

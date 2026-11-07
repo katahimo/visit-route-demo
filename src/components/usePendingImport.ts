@@ -25,11 +25,13 @@ export function usePendingImport(setError: Dispatch<SetStateAction<string | null
     done: string;
     keep: PreviousKeep;
     onDone?: () => void;
+    /** store の更新の中で next を入れたか（入れた直後にほかの手（位置の検索など）が続いても、入ったと分かるように） */
+    applied: boolean;
   } | null>(null);
   useEffect(() => {
     const p = pending.current;
     if (!p) return;
-    if (data === p.next) {
+    if (p.applied || data === p.next) {
       pending.current = null;
       toast(p.done);
       p.onDone?.();
@@ -65,8 +67,17 @@ export function usePendingImport(setError: Dispatch<SetStateAction<string | null
       onDone?: () => void;
     }) => {
       const keep = keepPrevious(x.label);
-      pending.current = { base: x.base, next: x.next, done: x.done(keep), keep, onDone: x.onDone };
-      update((d) => (d === x.base ? x.next : d), x.label, { tell: false });
+      const p = { base: x.base, next: x.next, done: x.done(keep), keep, onDone: x.onDone, applied: false };
+      pending.current = p;
+      update(
+        (d) => {
+          if (d !== x.base) return d;
+          p.applied = true;
+          return x.next;
+        },
+        x.label,
+        { tell: false },
+      );
     },
   };
 }
