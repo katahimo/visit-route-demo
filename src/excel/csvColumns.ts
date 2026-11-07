@@ -1,11 +1,16 @@
 // ほかのソフトの CSV の形を読むときの共通の部品（ADR-0075）：列名の比べ方・列の位置・行の値の引き方・読まなかった列。
 // 顧客台帳（ledgerCsv）・予約システム（reserveCsv・reserveBookings）など、形ごとのファイルから使う純粋関数
+import type { Item } from '../contracts/rules';
 import { nameKey } from '../lib/common';
 
 /** ほかのソフトの形を名簿の列に写した結果：名簿の列の表と、読まなかった列の名前（rosterForms の形で共通） */
 export interface RosterTable {
   rows: string[][];
   skipped: string[];
+  /** 選択肢を足した項目の一覧（職員台帳で資格・研修の選択肢を足したときだけ。PRD D443） */
+  items?: Item[];
+  /** 足した選択肢の文（「資格（准看護師・保健師）」。items と一緒に） */
+  addedOptions?: string[];
 }
 
 /** UTF-16 の長さが max に収まるように、文字（コードポイント）の途中で切らずに前から切る */

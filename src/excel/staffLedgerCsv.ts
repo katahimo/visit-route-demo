@@ -16,6 +16,7 @@ import {
   skippedColumns,
 } from './csvColumns';
 import { STAFF_COLS, STAFF_EMAIL_COL, STAFF_LAST_DAY_COL, traitCols } from './layout';
+import { withLedgerOptions } from './staffLedgerItems';
 import { NO, parseDateText, YES } from './text';
 
 /** 職員台帳の列名（読む列） */
@@ -115,7 +116,8 @@ export const STAFF_LEDGER_KEEP_BLANK: readonly string[] = [STAFF_COLS.address, S
  * - 職員Eメールアドレス：形の違う値は読まず、skipped に「職員Eメールアドレス（形の違う値 N件）」
  * - 退社年月日：最終勤務日にする。在職状況が「退社済」か、退社年月日が today より前なら休止（×）、ほかは利用中（○）。
  *   読めない退社年月日はそのまま渡し、名簿の読み込みが『退社年月日』の誤りにする
- * - 資格・研修：〈スタッフ〉の選択肢から複数の項目の選択肢に合う列（qualificationCols）に値（取得日・取得日不明など）があれば ○、無ければ ×。
+ * - 資格・研修：先に、値のある資格・研修の列で選択肢に無いものを項目「資格」「研修」に足す（withLedgerOptions。足したら items・addedOptions を返す）。
+ *   〈スタッフ〉の選択肢から複数の項目の選択肢に合う列（qualificationCols）に値（取得日・取得日不明など）があれば ○、無ければ ×。
  *   台帳に列の無い選択肢は空（読み込むと持たない）
  * - カナ・入社年月日・電話・雇用形態・所属・ほかの資格などは読まず、skipped に名前を挙げる（データに残さない）
  */
@@ -128,7 +130,8 @@ export function staffLedgerToRoster(
   if (!header || !isStaffLedgerHeader(header)) return null;
   const at = columnsOf(header);
   const body = table.slice(1);
-  const quals = qualificationCols(header, items);
+  const ext = withLedgerOptions(header, body, items);
+  const quals = qualificationCols(header, ext.items);
   const names = distinctNames(
     body.map((r) => ({ name: cellOf(at, r)(STAFF_LEDGER.name), id: cellOf(at, r)(STAFF_LEDGER.no) })),
     MAX.name,
@@ -162,9 +165,9 @@ export function staffLedgerToRoster(
       ...quals.map((q) => (q.sources.length === 0 ? '' : q.sources.some((h) => v(h) !== '') ? YES : NO)),
     ]);
   });
-  const read = [...Object.values(STAFF_LEDGER), ...quals.flatMap((q) => q.sources)];
+  const read = [...Object.values(STAFF_LEDGER), ...quals.flatMap((q) => q.sources), ...ext.empty];
   const skipped = skippedColumns(header, body, read);
   if (badEmails > 0) skipped.push(`${STAFF_LEDGER.email}（形の違う値 ${badEmails}件）`);
   if (unnamed > 0) skipped.push(`${STAFF_LEDGER.name}（空の行 ${unnamed}件）`);
-  return { rows: out, skipped };
+  return { rows: out, skipped, ...(ext.added.length > 0 ? { items: ext.items, addedOptions: ext.added } : {}) };
 }

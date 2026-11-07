@@ -114,6 +114,7 @@ export function rosterConfirmBody(x: {
     ...(x.warning ? [x.warning, ''] : []),
     `「${x.fileName}」の${x.term}の名簿を読み込みます（${x.how}）。${rosterSourceText(x.source, x.otherForm?.label ?? null)}`,
     ...(x.otherForm ? [otherFormSkippedText(x.otherForm)] : []),
+    ...(x.otherForm?.addedOptions?.length ? [`足す選択肢：${x.otherForm.addedOptions.join('・')}`] : []),
     x.summary,
     // 0人なら消えるもの・戻すものが無いので省く
     ...(x.empty ? [] : ['予定は消えません。', keepNote(x.keep, '読み込む前の状態に戻す')]),

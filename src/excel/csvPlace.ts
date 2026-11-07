@@ -1,5 +1,5 @@
 // 読み込む欄の取り違え：名簿の欄に予約の CSV・もう一方の名簿の CSV を、予約の欄に名簿の CSV を選んだとき、
-// 名前の重なりなどの分かりにくい誤りや「列名から読んだ名簿」として読む前に、どの欄で読むファイルかを伝える（PRD D443）。純粋関数
+// 名前の重なりなどの分かりにくい誤りや「列名から読んだ名簿」として読む前に、どの欄で読むファイルかを伝える（PRD D444）。純粋関数
 import type { RosterKind } from '../contracts/data';
 import type { Terms } from '../contracts/documents';
 import { readBookingForm } from './bookingForms';

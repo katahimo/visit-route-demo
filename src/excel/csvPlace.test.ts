@@ -1,4 +1,4 @@
-// 読み込む欄の取り違え（PRD D443）：予約の CSV・もう一方の名簿の CSV を選んだら、どの欄で読むかを伝える。値は手引きのサンプル（架空）
+// 読み込む欄の取り違え（PRD D444）：予約の CSV・もう一方の名簿の CSV を選んだら、どの欄で読むかを伝える。値は手引きのサンプル（架空）
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { decodeText, parseCsv } from '../lib/csv';

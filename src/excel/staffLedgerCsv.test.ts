@@ -8,6 +8,7 @@ import { base } from './excel.testkit';
 import { importRoster } from './index';
 import { readRosterForm } from './rosterForms';
 import { isStaffLedgerHeader, qualificationCols, staffLedgerToRoster } from './staffLedgerCsv';
+import { withLedgerOptions } from './staffLedgerItems';
 
 /** 介護ソフトの職員台帳の1行目（56列。書き出しのまま） */
 const HEAD =
@@ -80,8 +81,12 @@ describe('職員台帳の形の見分け', () => {
 const QUAL_HEAD = HEAD.slice(16);
 
 describe('資格・研修の列', () => {
-  it('初期の項目「資格」「研修」の選択肢は、職員台帳の資格・研修の列をすべて網羅する（介護職員初任者研修は「初任者研修」）', () => {
-    const cols = qualificationCols(HEAD, items());
+  /** 資格・研修の列すべてに値のある1行 */
+  const ALL = rowOf({ 職員名: '架空 全子', ...Object.fromEntries(QUAL_HEAD.map((h) => [h, '2020/4/1'])) });
+
+  it('辞書は職員台帳の資格・研修の列をすべて網羅する。全部に値があれば資格27・研修14になり、40列を読む（介護職員初任者研修は「初任者研修」）', () => {
+    const ext = withLedgerOptions(HEAD, [ALL], items());
+    const cols = qualificationCols(HEAD, ext.items);
     const read = new Set(cols.flatMap((c) => c.sources));
     expect(QUAL_HEAD).toHaveLength(40);
     expect(QUAL_HEAD.filter((h) => !read.has(h))).toEqual([]);
@@ -97,6 +102,40 @@ describe('資格・研修の列', () => {
     ]);
     // 台帳に列の無い選択肢も出す（名簿の読み込みは選択肢の列をすべて求める）。セルは空
     expect(cols.filter((c) => c.sources.length === 0).map((c) => c.header)).toEqual(['特性：資格：保育士']);
+    expect(ext.empty).toEqual([]);
+  });
+  it('初期の項目は資格7つ・研修なし。職員名のある行に値のある列だけを足す（研修の項目は作る）', () => {
+    expect(items().find((it) => it.name === '資格')?.options).toHaveLength(7);
+    expect(items().some((it) => it.name === '研修')).toBe(false);
+    const ext = withLedgerOptions(HEAD, table.slice(1), items());
+    expect(ext.added).toEqual(['資格（准看護師）', '研修（ホームヘルパー2級）']);
+    expect(ext.items.find((it) => it.name === '資格')?.options.slice(7)).toEqual(['准看護師']);
+    expect(ext.items.find((it) => it.name === '研修')).toEqual({
+      id: 'training',
+      name: '研修',
+      target: 'staff',
+      kind: 'multi',
+      options: ['ホームヘルパー2級'],
+    });
+    // 値の無い列（介護支援専門員など）は足さない。もとの項目は書き換えない
+    expect(ext.empty).toContain('介護支援専門員');
+    expect(items().find((it) => it.name === '資格')?.options).toHaveLength(7);
+  });
+  it('すでにある選択肢（全角半角の違いも）は足さない。足すものが無ければ added は空', () => {
+    const its: Item[] = [
+      { id: 'qualification', name: '資格', target: 'staff', kind: 'multi', options: ['介護福祉士', '准看護師'] },
+      { id: 'x', name: '旧研修', target: 'staff', kind: 'multi', options: ['ホームヘルパー２級'] },
+    ];
+    const ext = withLedgerOptions(HEAD, table.slice(1), its);
+    expect(ext.added).toEqual([]);
+    expect(ext.items).toEqual(its);
+  });
+  it('選択肢は30まで。入らない列は足さない', () => {
+    const full = Array.from({ length: 29 }, (_, i) => `資格${i + 1}`);
+    const its: Item[] = [{ id: 'qualification', name: '資格', target: 'staff', kind: 'multi', options: full }];
+    const ext = withLedgerOptions(HEAD, [ALL], its);
+    expect(ext.items.find((it) => it.id === 'qualification')?.options).toHaveLength(30);
+    expect(ext.added[0]).toBe('資格（介護福祉士）');
   });
   it('台帳に合う列の無い項目（得意など）・項目が無いときは写さない', () => {
     expect(qualificationCols(HEAD, items()).some((c) => c.header.startsWith('特性：得意：'))).toBe(false);
@@ -121,6 +160,10 @@ describe('職員台帳 → 名簿の列', () => {
     expect(t.rows[2]?.slice(0, 5)).toEqual(['見本 次郎', '', '', '×', '2025-04-30']);
     // 退社年月日が先なら、それまでは利用中
     expect(t.rows[3]?.slice(0, 5)).toEqual(['例 三郎', '', '', '○', '2026-12-31']);
+  });
+  it('足した選択肢を返す', () => {
+    expect(t.addedOptions).toEqual(['資格（准看護師）', '研修（ホームヘルパー2級）']);
+    expect(t.items?.find((it) => it.name === '研修')?.options).toEqual(['ホームヘルパー2級']);
   });
   it('資格・研修：値（取得日・取得日不明）があれば ○。准看護師は看護師と分ける', () => {
     expect(at(1, '特性：資格：介護福祉士')).toBe('○');
@@ -163,6 +206,7 @@ describe('職員台帳を〈スタッフ〉の名簿として読み込む', () =
     const r = rok(await importRoster(buf(sjis), base(), 'staff', 'merge', TODAY));
     expect(r.source).toEqual({ format: 'csv', encoding: 'Shift_JIS' });
     expect(r.otherForm?.label).toBe('職員台帳');
+    expect(r.otherForm?.addedOptions).toEqual(['資格（准看護師）', '研修（ホームヘルパー2級）']);
     expect(r.added).toEqual(['架空 一子', '見本 次郎（休止）', '例 三郎']);
     const ichiko = r.data.staff.find((s) => s.name === '架空 一子');
     const qual = r.data.items.find((it) => it.name === '資格');
