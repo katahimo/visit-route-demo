@@ -138,7 +138,9 @@ export async function importRoster(
 ): Promise<RosterImportResult | ImportError> {
   const loaded = await loadRosterBook(buf, base, kind, { today, items: base.items });
   if ('code' in loaded) return loaded;
-  const r = readLoaded(loaded, base, kind, mode);
+  // 職員台帳で資格・研修の選択肢を足したなら、足した項目で読む（PRD D443）
+  const items = loaded.other?.items;
+  const r = readLoaded(loaded, items ? { ...base, items } : base, kind, mode);
   // ほかのソフトの形で読んだときは、誤りの文の列名もその形の列名で出す（ADR-0073・ADR-0075）
   const fix = loaded.other?.form.errorMessage;
   return 'code' in r && fix ? { ...r, message: fix(r.message) } : r;
@@ -195,7 +197,13 @@ function readLoaded(
     hoursDefaulted,
     activeBefore,
     source,
-    otherForm: other ? { label: other.form.label, skippedColumns: other.skipped } : null,
+    otherForm: other
+      ? {
+          label: other.form.label,
+          skippedColumns: other.skipped,
+          ...(other.addedOptions ? { addedOptions: other.addedOptions } : {}),
+        }
+      : null,
   };
 }
 

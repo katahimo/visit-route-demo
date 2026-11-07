@@ -131,7 +131,12 @@ export type RosterSource =
  * ほかのソフトの形（顧客台帳・予約システムなど）で読んだときの結果（ADR-0073・ADR-0075。PRD D386・D387・D396・D397）：
  * 形の名前（確認の文に出す。例「顧客台帳」）と、読まなかった列の名前（請求・口座・生年月日など。データに残さない）
  */
-export type OtherFormRead = { label: string; skippedColumns: string[] };
+export type OtherFormRead = {
+  label: string;
+  skippedColumns: string[];
+  /** 足した選択肢（職員台帳の資格・研修。「資格（准看護師・保健師）」。PRD D443）。足さなければ無い */
+  addedOptions?: string[];
+};
 /**
  * 名簿の読み込みの結果（PRD D106）。data は名簿を当てた新しいデータ（store の migrate を通したもの。画面が store の update で入れる）。
  * 件数は migrate のあとの結果を ID で引き、今の人と比べて数える（repair で元に戻る違いは変更とみなさない）

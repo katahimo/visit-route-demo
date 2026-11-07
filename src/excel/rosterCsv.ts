@@ -3,6 +3,7 @@
 // Excel の無い環境でも、表計算のアプリやメモ帳で名簿を直せるようにする
 import ExcelJS from 'exceljs';
 import type { DemoData, ImportError, RosterKind, RosterSource } from '../contracts/data';
+import type { Item } from '../contracts/rules';
 import { nameKey } from '../lib/common';
 import { CSV_BOM, CSV_MIME, decodeText, parseCsv, toCsv, unguardCell } from '../lib/csv';
 import { exportProblem } from './exportBook';
@@ -28,7 +29,7 @@ export function exportRosterCsv(data: DemoData, kind: RosterKind): Blob {
 export type LoadedRoster = {
   book: ExcelJS.Workbook;
   source: RosterSource;
-  other: { form: RosterForm; skipped: string[] } | null;
+  other: { form: RosterForm; skipped: string[]; items?: Item[]; addedOptions?: string[] } | null;
 };
 
 /**
@@ -70,6 +71,8 @@ export async function loadRosterBook(
   return {
     book,
     source: { format: 'csv', encoding },
-    other: hit ? { form: hit.form, skipped: hit.table.skipped } : null,
+    other: hit
+      ? { form: hit.form, skipped: hit.table.skipped, items: hit.table.items, addedOptions: hit.table.addedOptions }
+      : null,
   };
 }

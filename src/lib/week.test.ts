@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { DemoData } from '../contracts/data';
 import type { Pattern } from '../contracts/documents';
 import type { Item } from '../contracts/rules';
+import { LEDGER_QUALIFICATIONS } from '../excel/staffLedgerItems';
 import { compile } from '../matching';
 import { client, DATE, ITEMS, makeData, staff, visit } from '../matching/fixtures.testkit';
 import { QUALIFICATION_OPTIONS } from '../seed/qualifications';
@@ -189,11 +190,10 @@ describe('qualificationBadges・staffWithQualification（資格）', () => {
     expect(qualificationBadges(ITEMS, staff('s4', 38, 140))).toEqual([]);
   });
 
-  it('初期の資格の選択肢（27）のバッジは重ならない（先頭2文字で重なるものは別の短い名前。PRD D422）', () => {
-    const items: Item[] = [
-      { id: 'q', name: '資格', target: 'staff', kind: 'multi', options: [...QUALIFICATION_OPTIONS] },
-    ];
-    const all = qualificationBadges(items, staff('s9', 38, 140, { traits: { q: [...QUALIFICATION_OPTIONS] } }));
+  it('初期の資格と職員台帳から足す資格（27）のバッジは重ならない（先頭2文字で重なるものは別の短い名前。PRD D443）', () => {
+    const options = [...new Set([...QUALIFICATION_OPTIONS, ...LEDGER_QUALIFICATIONS])];
+    const items: Item[] = [{ id: 'q', name: '資格', target: 'staff', kind: 'multi', options }];
+    const all = qualificationBadges(items, staff('s9', 38, 140, { traits: { q: options } }));
     expect(all).toHaveLength(27);
     expect(new Set(all.map((b) => b.short)).size).toBe(27);
   });
