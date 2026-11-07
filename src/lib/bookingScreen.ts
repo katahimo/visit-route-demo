@@ -1,5 +1,5 @@
 // 予約の CSV の読み込み（ADR-0075。PRD D408）の文と判定の純粋関数。確認の本文・知らせの文を組み立てる。データの書き換えは画面が store で行う
-import type { BookingImportResult } from '../contracts/data';
+import type { BookingImportResult, DemoData } from '../contracts/data';
 import { keepNote, keptSuffix, otherFormSkippedText } from './dataScreen';
 
 type KeepState = { kept: boolean; why: string | null };
@@ -29,6 +29,26 @@ export function bookingProblems(r: Pick<BookingImportResult, 'unmatched' | 'badR
   ];
 }
 
+/**
+ * この読み込みで足した・直した訪問のうち、今日より前の日の担当なし（取り消しでない）の数。自動の組み・［要対応を組む］は
+ * 今日から翌月末までを組むので、これらは担当なしのまま残る（今日より前の訪問は見るだけで、組み直さない。PRD D372）。
+ * 読み込む前からある・変わらない訪問は数えない
+ */
+export function pastUnassignedCount(
+  before: Pick<DemoData, 'visits'>,
+  after: Pick<DemoData, 'visits'>,
+  today: string,
+): number {
+  const was = new Map(before.visits.map((v) => [v.id, v]));
+  return after.visits.filter((v) => v.date < today && v.staffId === null && !v.cancelled && was.get(v.id) !== v).length;
+}
+
+/** 今日より前の担当なしの訪問の注意（無ければ null） */
+export const pastUnassignedNote = (n: number): string | null =>
+  n > 0
+    ? `今日より前の日の担当なし ${n}件は、担当なしのまま入ります（今日より前の訪問は見るだけです。担当を組むのは今日から来月末まで）。`
+    : null;
+
 /** 予約の読み込みの確認の本文 */
 export function bookingConfirmBody(x: {
   fileName: string;
@@ -37,6 +57,8 @@ export function bookingConfirmBody(x: {
   keep: KeepState;
   /** 勤務日・時間に入らない予約の文（lib/bookingFit の outsideHoursNote。PRD D428）。無ければ null */
   outsideNote?: string | null;
+  /** 今日より前の担当なしの文（pastUnassignedNote）。無ければ null */
+  pastNote?: string | null;
 }): string {
   const { r } = x;
   return [
@@ -48,6 +70,7 @@ export function bookingConfirmBody(x: {
     ...(r.cancelledSkipped > 0 ? [`取り消し済みで、まだ入れていない ${r.cancelledSkipped}件は入れません。`] : []),
     ...bookingProblems(r, x.clientTerm),
     ...(x.outsideNote ? [x.outsideNote] : []),
+    ...(x.pastNote ? [x.pastNote] : []),
     otherFormSkippedText(r.otherForm),
     '総入れ替えです。ファイルの最初の日〜最後の日の単発の訪問をファイルに合わせ、ファイルに無い訪問と取り消しの予約の訪問は消します（繰り返しの訪問・範囲の外の日はそのまま）。アプリで取り消した訪問も、ファイルで有効なら戻します。すでに入っている予約の担当は残ります。読み込んだあと、担当なしと要対応を自動で組みます。',
     keepNote(x.keep),

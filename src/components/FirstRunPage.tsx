@@ -150,12 +150,13 @@ function FirstRunPage() {
   );
 }
 
-/** 更新の変わったところ（新しい順に、更新の日と箇条書き。PRD D437） */
+/** 更新の変わったところ（新しい順に、更新の日と箇条書き。PRD D437）。場所を取るので畳んで始め、見出しに更新の件数を出す */
 function ReleaseChanges({ notes }: { notes: readonly ReleaseNote[] }) {
-  const headingId = useId();
   return (
-    <section className="first-run-release" aria-labelledby={headingId} data-testid="first-run-release">
-      <h2 id={headingId}>{RELEASE_CHANGES}</h2>
+    <details className="first-run-release" data-testid="first-run-release">
+      <summary data-testid="first-run-release-summary">
+        {RELEASE_CHANGES}（{notes.length}件の更新）
+      </summary>
       {notes.map((n) => (
         <div key={n.id}>
           <p className="first-run-release-date">{n.id}</p>
@@ -166,7 +167,7 @@ function ReleaseChanges({ notes }: { notes: readonly ReleaseNote[] }) {
           </ul>
         </div>
       ))}
-    </section>
+    </details>
   );
 }
 

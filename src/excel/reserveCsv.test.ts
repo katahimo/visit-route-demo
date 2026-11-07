@@ -152,6 +152,16 @@ describe('スタッフの CSV', () => {
     const r = await importRoster(csvBuf(bad), base(), 'staff', 'merge', '2026-10-31');
     expect('code' in r && r.message).toContain('『退職日』');
   });
+  it('今いる人に H列の退職日（2026.03.31）を読み直すと、最終勤務日が入り、過ぎていれば休止になる', async () => {
+    const one = [STAFF_HEAD, staffRow({ ID: 'S1', 氏名: '架空 一子' })];
+    const first = rok(await importRoster(csvBuf(one), base(), 'staff', 'merge', '2026-11-07'));
+    expect(first.data.staff.find((x) => x.name === '架空 一子')).toMatchObject({ active: true, lastDay: null });
+    const t = [STAFF_HEAD, staffRow({ ID: 'S1', 氏名: '架空 一子', 退職日: '2026.03.31' })];
+    expect(STAFF_HEAD.indexOf('退職日')).toBe(7);
+    const r = rok(await importRoster(csvBuf(t), first.data, 'staff', 'merge', '2026-11-07'));
+    expect(r.updated).toEqual(['架空 一子']);
+    expect(r.data.staff.find((x) => x.name === '架空 一子')).toMatchObject({ active: false, lastDay: '2026-03-31' });
+  });
   it('同じ氏名は全員 ID を添えて分け、形の違うメールは読まずに知らせる', () => {
     const t = [
       STAFF_HEAD,

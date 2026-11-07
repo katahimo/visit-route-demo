@@ -202,6 +202,27 @@ describe('名簿の読み込みの文', () => {
     ]);
     expect(otherFormSkippedText({ label: '顧客台帳', skippedColumns: [] })).toBe('読まなかった列：なし');
   });
+  it('職員台帳で選択肢を足すなら、読まなかった列の次に足す選択肢を出す（PRD D443）', () => {
+    const body = rosterConfirmBody({
+      warning: null,
+      fileName: 'a.csv',
+      term: 'スタッフ',
+      how: '追加・更新',
+      summary: '追加 1人',
+      source: { format: 'csv', encoding: 'Shift_JIS' },
+      otherForm: {
+        label: '職員台帳',
+        skippedColumns: [],
+        addedOptions: ['資格（准看護師）', '研修（ホームヘルパー2級）'],
+      },
+      empty: false,
+      keep: { kept: true, why: null },
+    });
+    expect(body.split('\n').slice(1, 3)).toEqual([
+      '読まなかった列：なし',
+      '足す選択肢：資格（准看護師）・研修（ホームヘルパー2級）',
+    ]);
+  });
   it('読み込んだあとの知らせ：最終勤務日の入った人がいれば添え、控えを残せなければ理由', () => {
     const keep = { kept: true, why: null };
     expect(rosterDoneText({ term: '利用者', staffTerm: 'スタッフ', hasLastDay: false, keep })).toBe(
