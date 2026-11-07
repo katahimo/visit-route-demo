@@ -1,7 +1,7 @@
 import { Loader2 } from 'lucide-react';
 import { type ReactNode, useEffect, useLayoutEffect, useRef } from 'react';
 import { jstDate } from '../domain/time';
-import { requestBandArrange } from '../lib/autoArrangeBatch';
+import { autoArrangeIdle, requestBandArrange } from '../lib/autoArrangeBatch';
 import { type PlaceRunDone, placeRunner, placeRunText } from '../lib/placeRunner';
 import { useDemoData } from '../store';
 import { useToast } from './Toast';
@@ -25,6 +25,8 @@ export function PlaceRunHost(): ReactNode {
         get: () => latest.current,
         update: (fn, label, opts) => update(fn, label, opts),
         arrange: (d) => requestBandArrange(d, jstDate(Date.now())),
+        today: () => jstDate(Date.now()),
+        settle: () => autoArrangeIdle(),
       }),
     [update],
   );
