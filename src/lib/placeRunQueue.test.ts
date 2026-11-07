@@ -6,7 +6,6 @@ describe('createPlaceLock（外部の検索を同時に1本にする鍵。ADR-00
     const lock = createPlaceLock();
     const order: string[] = [];
     const first = (await lock.acquire(1))!;
-    expect(lock.busy()).toBe(true);
     const waits: boolean[] = [];
     const client = lock
       .acquire(1, undefined, (w) => waits.push(w))
@@ -23,7 +22,6 @@ describe('createPlaceLock（外部の検索を同時に1本にする鍵。ADR-00
     (await client)!();
     expect(order).toEqual(['staff', 'client']);
     expect(waits).toEqual([true, false]);
-    expect(lock.busy()).toBe(false);
   });
   it('待っている間に止めたら null（次の人へは渡さない）。外す手を二度呼んでもほかの人の鍵を外さない', async () => {
     const lock = createPlaceLock();
@@ -36,9 +34,7 @@ describe('createPlaceLock（外部の検索を同時に1本にする鍵。ADR-00
     release();
     const r2 = (await next)!;
     release();
-    expect(lock.busy()).toBe(true);
     r2();
-    expect(lock.busy()).toBe(false);
     expect(await lock.acquire(1, AbortSignal.abort())).toBeNull();
   });
 });

@@ -15,8 +15,6 @@ export type PlaceLock = {
     signal?: AbortSignal,
     onWait?: (waiting: boolean) => void,
   ) => Promise<(() => void) | null>;
-  /** 鍵を持っている・待っている人がいるか */
-  busy: () => boolean;
 };
 
 export function createPlaceLock(): PlaceLock {
@@ -57,7 +55,6 @@ export function createPlaceLock(): PlaceLock {
         signal?.addEventListener('abort', quit);
       });
     },
-    busy: () => held || waiters.length > 0,
   };
 }
 

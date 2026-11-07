@@ -134,14 +134,16 @@ async function placeEach(x: {
         const r = await placeAll([next], { ...x.deps, signal: x.signal, onResult: x.onResult });
         if (r.stopped) return r;
         x.onSearched(next.id);
-        x.onRemaining(x.remaining().length);
-        // 次の検索まで間隔をあける（鍵を持ったまま。外部の検索の間隔は種類をまたいでそろえる）
-        await x.deps.wait(PLACE_ALL_INTERVAL_MS, x.signal);
+        const left = x.remaining().length;
+        x.onRemaining(left);
+        // 次の検索まで間隔をあける（鍵を持ったまま。外部の検索の間隔は種類をまたいでそろえる。最後の人のあとはあけない）
+        if (left > 0) await x.deps.wait(PLACE_ALL_INTERVAL_MS, x.signal);
       } finally {
         release?.();
       }
     }
-    return { stopped: x.signal.aborted };
+    // みな探し終えた（最後の人のあとに止めても、探し終えたので止めたとしない）
+    return { stopped: false };
   } finally {
     whole?.();
   }
