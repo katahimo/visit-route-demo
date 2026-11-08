@@ -3,9 +3,11 @@
 import { useState } from 'react';
 import { useConfirm } from '../components/ConfirmDialog';
 import { useToast } from '../components/Toast';
+import { reloadOnStale, useResumeAfterReload } from '../components/useReloadResume';
 import { jstDate } from '../domain/time';
 import { formError, isStaleBuild } from '../lib/common';
 import {
+  EXCEL_RELOADING_TEXT,
   EXCEL_STALE_TEXT,
   excelFileName,
   keepNote,
@@ -41,7 +43,8 @@ export function useDataExcel(x: { markExported: (kind: ExportKind) => void }) {
     }
   };
 
-  const load = async (file: File) => {
+  /** resumed は読み直したあとの続き（古い版の部品で読めなかったときに控えたファイル） */
+  const load = async (file: File, resumed = false) => {
     setError(null);
     try {
       setBusy(true);
@@ -73,6 +76,10 @@ export function useDataExcel(x: { markExported: (kind: ExportKind) => void }) {
       replace(otherOrg ? withoutOrgState(r) : r);
       toast(`Excel を読み込みました${keptSuffix(keep)}`);
     } catch (e) {
+      if (await reloadOnStale(e, { target: 'workbook', file, resumed })) {
+        toast(EXCEL_RELOADING_TEXT);
+        return;
+      }
       setError(
         isStaleBuild(e) ? EXCEL_STALE_TEXT : `読み込めませんでした：${formError(e)}（いまのデータはそのままです）`,
       );
@@ -80,6 +87,8 @@ export function useDataExcel(x: { markExported: (kind: ExportKind) => void }) {
       setBusy(false);
     }
   };
+
+  useResumeAfterReload('workbook', (file) => void load(file, true));
 
   return { busy, error, download, load };
 }

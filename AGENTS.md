@@ -40,7 +40,7 @@ src/
   pages/       … 画面（components と lib を組み合わせる）
   app/         … 殻（App・ErrorBoundary・ルートと分けた画面 lazyPages）
 .github/workflows/deploy.yml … test → build → Cloudflare Workers（wrangler。ADR-0071）
-.github/workflows/e2e.yml … PR・手動・夜間の速い検査（lint・型・check:code・check:prd・vitest）と e2e（4つに分けて並列）・perf（ADR-0029）。Playwright の版を上げるときはイメージの版も上げる
+.github/workflows/e2e.yml … 速い検査（lint・型・check:code・check:prd・vitest）は PR の push ごと。e2e（4つに分けて並列）は PR に「e2e」のラベルを付けたとき・手動・週1回の夜間、perf は手動・夜間だけ（ADR-0029・ADR-0104）。Playwright の版を上げるときはイメージの版も上げる
 e2e/ … @playwright/test の spec（scripts/e2e-*.cjs の段を test.step で回す。ADR-0041）
 scripts/ … e2e のスクリプト（e2e-*.cjs）と共通の部品（lib/）
 gas/ … メールの予約送信の Google Apps Script のひな型（Code.gs）と手順（README.md）。やりとりの正は src/contracts/mailSchedule.ts（ADR-0069）
@@ -64,15 +64,17 @@ docs/ … README.md（索引）/ prd.md・prd/（テーマ別の要件の表） 
 - ルーティングは HashRouter（Pages のサブパスで再読込しても 404 にしない）
 - 再現性：solver・matching・evaluate・seed に `Math.random`・`Date.now` を入れない。乱数は seed 付き、止めるのは反復回数
 - 費用は「分」に換算する（design.md §5 の表）。solver と evaluate は同じ `Problem` を使い、合計点を一致させる
-- 外部送信は地図タイルの取得と、利用者がボタンを押したときの郵便番号・住所の検索（`src/lib/geocode.ts` の1か所。ADR-0016）と、日の予定のメールの予約送信（押したときに事業所自身の Google Apps Script へ。`src/lib/mailSchedule.ts` の1か所。ADR-0069）だけ。解析・ログ送信を入れない
+- 外部送信は地図タイルの取得と、利用者がボタンを押したときの郵便番号・住所の検索（`src/lib/geocode.ts` の1か所。ADR-0016）と、日の予定のメールの予約送信（押したときに事業所自身の Google Apps Script へ。`src/lib/mailSchedule.ts` の1か所。ADR-0069）と、押したときの道路の所要の取得（地点の緯度・経度だけを OSRM の公開サーバーへ。`src/lib/roadTable.ts` の1か所。ADR-0101）だけ。解析・ログ送信を入れない
 - リンク（Google マップの Maps URLs）・mailto は、押すのが人でアプリは送らないので外部送信に当たらない（ADR-0017・0018）
 - 同梱するデータは架空のものだけ。公開リポジトリに実在の人・住所・パスワード・キーを置かない
 - 要件（PRD）：要件の表は `docs/prd/<テーマ>.md` に置き、`docs/prd.md` には置かない。足すときは該当テーマの表に `npm run check:prd` が示す次の D番号で行を足す（ADR 単位・追加順の節は作らない）。置き換えた要件は表から消し、`docs/prd.md` の「廃止した D番号」に置き換え先を足す。D番号は振り直さない・使い回さない。索引は手で直さず `npm run check:prd -- --fix` で作る（手順は `.claude/skills/solo-architecture-design/SKILL.md`「設計書を育てる」）
 - 画面：主ボタン（濃い朱）は画面に1つ（多くて2つ）。呼び方は `org.terms` から引き、「お客様」「シッター」を直書きしない。表記は常用漢字
+- 更新の知らせ：利用者の目に見える変更を出すときは `src/lib/releaseNotes.ts` の `RELEASE_NOTES` の先頭に1件足す（id は出す日。PRD D437。ADR-0102）
 - 文言：事実を短く。AI っぽい言い回し（「〜だけ教えてください」「かんたん」「すぐに」「〜しましょう」）や大げさな形容を使わない
 
 ## 完了の定義
 - [ ] テスト・リント・型チェック・ビルド・コードの検査・PRD の検査がすべて通る
+- [ ] 画面・計算・e2e に関わる PR は、マージの前に「e2e」のラベルを付けて CI の e2e を通す（push ごとには走らない。ADR-0104）
 - [ ] 足した計算（純粋関数）にテストがある。使われなくなったコードを消した
 - [ ] 契約（`src/contracts/`）どおりの入出力・エラーになっている
 - [ ] 変更点と、推測した箇所（あれば）を報告した

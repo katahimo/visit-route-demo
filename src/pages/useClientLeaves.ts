@@ -87,7 +87,7 @@ export function useClientLeaves({
     update((d) => saveLeave(d, leave), '休みを保存');
     openForm(null);
     toast(
-      `休みを${form.id ? '直しました' : '入れました'}（${mdText(leave.from)}〜${mdText(leave.to)}・訪問 ${n}件は無しになります）`,
+      `休みを${form.id ? '直しました' : '追加しました'}（${mdText(leave.from)}〜${mdText(leave.to)}・訪問 ${n}件は無しになります）`,
     );
   };
 

@@ -1,6 +1,6 @@
 // 月の予定の進み具合の帯（PRD D151〜D154・D316・D332。ADR-0025・ADR-0053・ADR-0054。週・日には出さない）を本物のブラウザで確かめる：
 // 月の帯（data-ym・数字が要対応の帯の未確定の日と同じ。今月＋翌月。「詳しく ▾」の中。PRD D393）、月の画面の「担当を AI で組む」は帯の1か所
-// （見出しのボタン・今月の準備は無い。帯の次の一手は主ボタンにせず、主ボタンは操作の行の「定期の予定を入れる」で2つ目が「担当を組む」。PRD D402）で、押すと担当を組むの画面（#/arrange?ym=。ADR-0063）、
+// （見出しのボタン・今月の準備は無い。帯の次の一手は主ボタンにせず、主ボタンは操作の行の「定期の予定を追加」で2つ目が「担当を組む」。PRD D402）で、押すと担当を組むの画面（#/arrange?ym=。ADR-0063）、
 // 帯の数字で月の画面の欄が開く（URL を変えない）、`?do=batch` は担当を組むの画面へ移す、
 // 週・日からの `?do=`（確定していない日・要対応）で月の画面の欄が開き ?do= が消える、来月も担当なしの日が多ければ「担当を AI で組む」、
 // 日の予定で確定すると状態の印が確定済み・月の帯の確定 +1、週・日に進み具合の帯は無い（週は1行の状態）、
@@ -14,7 +14,6 @@
 const path = require('node:path');
 const { answerConfirms } = require('./lib/confirmDialog.cjs');
 const { BASE, OUT_DIR, TODAY, STORAGE_KEY, perfMs, check, hashOf, runSteps, settle, until } = require('./lib/env.cjs');
-const { markStandard } = require('./lib/standard.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
 const { openDetails, openScreenDetails } = require('./lib/ui.cjs');
 
@@ -115,7 +114,6 @@ const assignedIn = (page, ym) =>
 async function monthEntry(page) {
   await editData(page, (key) => localStorage.removeItem(key), STORAGE_KEY);
   await clearPlans(page);
-  await markStandard(page); // 標準が無い間は担当を組むで組めない（ADR-0065）
   await open(page, `/month?ym=${YM}`, '[data-testid="month-grid"]');
   check(
     (await page.getByTestId('progress-band').isVisible()) &&
@@ -135,7 +133,7 @@ async function monthEntry(page) {
   const next = page.getByTestId('band-next');
   check(
     (await next.getAttribute('data-kind')) === 'batch' && !/btn-primary/.test((await next.getAttribute('class')) ?? ''),
-    '月：担当なしの日があるので「詳しく ▾」の中の次の一手は「担当を AI で組む」（主ボタンにしない。主ボタンは操作の行の「定期の予定を入れる」）',
+    '月：担当なしの日があるので「詳しく ▾」の中の次の一手は「担当を AI で組む」（主ボタンにしない。主ボタンは操作の行の「定期の予定を追加」）',
   );
   const assign = page.getByTestId('toolbar-assign');
   check(
@@ -224,7 +222,6 @@ async function nextMonth(page) {
 // ---- 担当を組むで組み始めると画面を移っても続く（PRD D256・D257。ADR-0042）：上の帯に進み具合と［止める］、戻ると進み具合、知らせから担当を組むへ ----
 async function keepRunning(page) {
   await clearPlans(page);
-  await markStandard(page);
   await open(page, `/arrange?ym=${YM}`, '[data-testid="arrange-start"]');
   await settle(page, 500);
   await page.getByTestId('arrange-start').click();
@@ -401,7 +398,6 @@ async function links(page) {
 // ---- 週・日の操作の行が速く出る（日の割当は訪問から毎回計算する） ----
 async function perf(page) {
   await editData(page, (key) => localStorage.removeItem(key), STORAGE_KEY);
-  await markStandard(page);
   for (const [hash, ready] of [
     [`/week?d=${TODAY}`, '[data-testid="week-title"]'],
     ['/plan', '[data-testid="confirm-state"]'],

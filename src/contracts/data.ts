@@ -10,6 +10,7 @@ import {
   MAX_VISIT_TYPES,
   orgSchema,
   patternSchema,
+  roadTableSchema,
   staffSchema,
   visitSchema,
   visitTypeSchema,
@@ -64,19 +65,6 @@ export const daySnapshotSchema = z.object({
 });
 export type DaySnapshot = z.infer<typeof daySnapshotSchema>;
 
-/** 組み方の標準を登録した記録（ADR-0062） */
-export const standardInfoSchema = z.object({
-  /** 登録した時刻（ms） */
-  at: z.number(),
-  /** 登録したときの点数の基準のプリセット */
-  presetId: z.string().max(100),
-  /** いつから */
-  from: dateSchema,
-  /** 周期の週数 */
-  weeks: z.number().int().min(1).max(4),
-});
-export type StandardInfo = z.infer<typeof standardInfoSchema>;
-
 /** データ一式（store だけが書く。design.md §4） */
 export const demoDataSchema = z.object({
   version: z.literal(DATA_VERSION),
@@ -116,8 +104,11 @@ export const demoDataSchema = z.object({
    * 存在しない id は store の repair が先頭のプリセットにする
    */
   scorePresetId: z.string().max(100).optional(),
-  /** 組み方の標準を登録した記録（ADR-0062。無ければ登録していない） */
-  standard: standardInfoSchema.optional(),
+  /**
+   * 道路の所要の表（PRD D436。ADR-0101。無ければ取っていない＝移動は直線距離からの見積もり）。
+   * 取るのは画面で押したときだけ（lib/roadTable）。Excel のブックには入れない
+   */
+  roads: roadTableSchema.optional(),
 });
 export type DemoData = z.infer<typeof demoDataSchema>;
 
@@ -140,7 +131,12 @@ export type RosterSource =
  * ほかのソフトの形（顧客台帳・予約システムなど）で読んだときの結果（ADR-0073・ADR-0075。PRD D386・D387・D396・D397）：
  * 形の名前（確認の文に出す。例「顧客台帳」）と、読まなかった列の名前（請求・口座・生年月日など。データに残さない）
  */
-export type OtherFormRead = { label: string; skippedColumns: string[] };
+export type OtherFormRead = {
+  label: string;
+  skippedColumns: string[];
+  /** 足した選択肢（職員台帳の資格・研修。「資格（准看護師・保健師）」。PRD D443）。足さなければ無い */
+  addedOptions?: string[];
+};
 /**
  * 名簿の読み込みの結果（PRD D106）。data は名簿を当てた新しいデータ（store の migrate を通したもの。画面が store の update で入れる）。
  * 件数は migrate のあとの結果を ID で引き、今の人と比べて数える（repair で元に戻る違いは変更とみなさない）
@@ -161,6 +157,8 @@ export type RosterImportResult = {
   allowedEmptied: string[];
   /** 最終勤務日が入った・変わった利用中の〈スタッフ〉の名前（担当の振り直しを確かめてもらう。休止の人は数えない） */
   lastDaySet: string[];
+  /** 勤務する曜日・勤務開始・勤務終了のどれかの列が無い（か空の）新しい〈スタッフ〉の名前（空の所を既定にした）。使い方の既定の勤務にした（PRD D428。〈利用者さん〉の名簿では空） */
+  hoursDefaulted: string[];
   /** 読み込む前の、終了・休止にできる人の数（〈スタッフ〉は利用中、〈利用者さん〉は終了でない人）。取り違えの注意に使う */
   activeBefore: number;
   /** 読んだファイルの形（.xlsx か CSV と文字コード。ADR-0068） */
@@ -171,7 +169,7 @@ export type RosterImportResult = {
 
 /**
  * 予約の CSV の読み込みの結果（ADR-0075。PRD D408）。data は予約を訪問（単発）として入れた新しいデータ（store の migrate を通したもの。
- * 画面が確かめてから store の update で入れる）。同じ予約番号の訪問は直し、ファイルに無い訪問はそのまま
+ * 画面が確かめてから store の update で入れる）。同じ予約番号の訪問は直し、ファイルの日の範囲でファイルに無い単発の訪問は消す（総入れ替え。PRD D441）
  */
 export type BookingImportResult = {
   data: DemoData;
@@ -179,6 +177,16 @@ export type BookingImportResult = {
   added: number;
   /** 直した訪問の数（日付・時刻・所要・取り消し・メモが変わった） */
   updated: number;
+  /**
+   * 消した単発の訪問の数（総入れ替え。PRD D441。ADR-0108）：ファイルの最初の日〜最後の日の、ファイルに無い単発の訪問と、
+   * ファイルで取り消しになった予約の訪問
+   */
+  removed: number;
+  /**
+   * どの訪問を指すか分からない行（読めない行・名前が当たらない行・同じ日時の訪問が2件）があったので、ファイルに無い訪問を消さなかったか
+   * （取り消しの予約の訪問は消す。PRD D441）
+   */
+  keptMissing: boolean;
   /** 変わらなかった訪問の数 */
   unchanged: number;
   /** まだ入れていない取り消し済みの予約で、足さなかった数 */

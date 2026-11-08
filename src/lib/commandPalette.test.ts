@@ -88,14 +88,13 @@ describe('候補', () => {
       '週の予定',
       '日の予定',
       '空き状況',
+      '予定と相性',
       '利用者さん',
       'スタッフ',
       '相性',
       '勤務時間（シフト）',
       '勤務の見込み',
-      '予定と相性',
       '条件の重み',
-      '組み方の標準',
       '担当を組む',
       '訪問の種類',
       '特性の項目',
@@ -104,7 +103,7 @@ describe('候補', () => {
     ]);
     expect(s.find((x) => x.to === '/clients')!.hint).toBe('');
     expect(s.find((x) => x.to === '/availability')!.hint).toBe('');
-    expect(s.find((x) => x.to === '/basics')!.hint).toBe('組む');
+    expect(s.find((x) => x.to === '/basics')!.hint).toBe('');
     expect(s.find((x) => x.to === '/data')!.hint).toBe('設定');
     expect(s.find((x) => x.to === '/plan')!.hint).toBe('予定');
     expect(s.find((x) => x.to === '/vacancy')!.hint).toBe('予定');
@@ -399,7 +398,7 @@ describe('訪問の候補（PRD D304）', () => {
     expect(paletteVisits('要対応', people, far, TODAY, describeV)).toEqual([]);
     expect(paletteVisits('担当なし', people, far, TODAY, describeV).map((x) => x.visitId)).toEqual(['f1']);
   });
-  it('訪問を1件足すの操作', () => {
+  it('訪問を1件追加の操作', () => {
     expect(paletteActions(TODAY).find((x) => x.id === 'action:visit-add')).toMatchObject({ op: 'visit-add' });
   });
 });

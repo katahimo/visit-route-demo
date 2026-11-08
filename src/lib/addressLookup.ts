@@ -25,7 +25,7 @@ export function postalBlockReason(postalText: string, busy: LookupBusy): string 
   return null;
 }
 
-/** 「地図に置く」を押せない理由（押せるなら null） */
+/** 「住所から緯度・経度を入れる」を押せない理由（押せるなら null） */
 export function addressBlockReason(address: string, busy: LookupBusy): string | null {
   if (busy) return '探しています';
   return address.trim() === '' ? '住所を入れてください' : null;
@@ -38,7 +38,7 @@ export const postalInputError = (postalText: string): boolean =>
 /** 探しているあいだの知らせ */
 export const busyStatus = (what: 'postal' | 'address'): LookupStatus => ({
   kind: 'busy',
-  text: what === 'postal' ? '住所を探しています…' : '位置を探しています…',
+  text: what === 'postal' ? '住所を探しています…' : '緯度・経度を探しています…',
 });
 
 /** 失敗の知らせ（文は lib/geocode の lookupMessage） */
@@ -48,7 +48,7 @@ export const failStatus = (reason: LookupFail, what: 'postal' | 'address'): Look
 });
 
 /** 住所を差し替えたが、ピンは前の位置のまま残すときに足す知らせ（PRD D119） */
-export const PIN_KEPT_NOTE = '位置は前のままです。『住所から置き直す』を押してください';
+export const PIN_KEPT_NOTE = '緯度・経度は前のままです。『住所から入れ直す』を押してください';
 
 /**
  * 見つけた住所の当て方：いまの住所が見つけた住所で始まるなら（番地まで書いてあれば）そのまま、
@@ -94,7 +94,7 @@ export const canUndoAddress = (undo: string | null): undo is string => undo !== 
 /** ピンを置いたときの知らせ */
 export const pinStatus = (hit: GeoHit): LookupStatus => ({
   kind: 'ok',
-  text: `地図に置きました${hit.title ? `（${hit.title}）` : ''}。ずれていれば「位置を消す」を押してから地図をクリックしてください`,
+  text: `緯度・経度を入れました${hit.title ? `（${hit.title}）` : ''}。ずれていれば「緯度・経度を消す」を押してから地図をクリックしてください`,
 });
 
 /** 知らせの見た目の class */

@@ -1,6 +1,6 @@
 // 最初の2問（PRD D379〜D381。ADR-0073・ADR-0092）の純粋な部分：画面の文、答え → 決まるもの（呼び名・ひな形・機能の入り切り・最初に開く画面）、
 // 答え → 作るデータ。画面は components/FirstRunPage、保存は store（localStorage を触るのは store だけ）。
-// 初めて開いたとき（保存データが無い）と、データの画面の「始め方を選び直す」で同じ2問を出す。データは書き換えない（新しいデータを返す）
+// 初めて開いたとき（保存データが無い）と、データの画面の「最初の設定をやり直す」で同じ2問を出す。データは書き換えない（新しいデータを返す）
 
 import type { Industry } from '../contracts/codes';
 import type { DemoData } from '../contracts/data';
@@ -29,9 +29,9 @@ export type FirstRunChoice<T extends string> = { value: T; label: string; descri
 export const FIRST_RUN_TITLE = '最初の設定';
 export const FIRST_RUN_SUBMIT = 'はじめる';
 /** やり直しのときだけ出す従のボタン（今のデータのまま戻る） */
-export const FIRST_RUN_CANCEL = 'やめる';
+export const FIRST_RUN_CANCEL = '閉じる';
 export const FIRST_RUN_NOTE =
-  'あとから「データ」の画面の「始め方を選び直す」で選び直せます。機能は「管理者設定」で変えられます。';
+  'あとから「データ」の画面の「最初の設定をやり直す」で選び直せます。機能は「管理者設定」で変えられます。';
 export const FIRST_RUN_Q1 = '1. どちらで始めますか';
 export const FIRST_RUN_Q2 = '2. 使い方の近いものはどれですか';
 
@@ -75,7 +75,7 @@ export type FirstRunSetup = {
   /** 呼び名（単発＝お客様／シッター、定期＝利用者さん／スタッフ。org.terms に書く） */
   terms: Terms;
   industry: Industry;
-  /** 機能のひな形（問2で選んだもの。エキスパート機能は切）を当てた入り切り（22の ID を明示） */
+  /** 機能のひな形（問2で選んだもの。エキスパート機能は切）を当てた入り切り（20の ID を明示） */
   features: Features;
   /** 最初に開く予定の画面（単発＝週、定期＝月） */
   firstPath: '/week' | '/month';
@@ -126,13 +126,42 @@ export function firstRunLanding(answer: FirstRunAnswer): string {
   return answer.start === 'own' ? START_GUIDE_PATH : firstRunSetup(answer.use).firstPath;
 }
 
-/** データの画面の「始め方を選び直す」（確認のあと2問へ戻り、答えでデータを作り直す。PRD D381。ADR-0092） */
-export const RESTART_TITLE = '始め方を選び直す';
-export const RESTART_HINT = '最初の2つの質問に答え直して、データを作り直します。';
+/** データの画面・登録の案内の「最初の設定をやり直す」（確認のあと2問へ戻り、答えでデータを作り直す。PRD D381。ADR-0092） */
+export const RESTART_TITLE = '最初の設定をやり直す';
+export const RESTART_HINT =
+  '最初の設定の2つの質問に答え直して、データを作り直します。デモのデータに戻すときも、ここで「デモで試す」を選びます。';
 /** 畳まずに出す注意（答えたあとデータが作り直される） */
 export const RESTART_WARN = 'いまのデータは消えます。';
-export const RESTART_CONFIRM_TITLE = '始め方を選び直しますか？';
+export const RESTART_CONFIRM_TITLE = '最初の設定をやり直しますか？';
 /** 確認の本文：元に戻す（Ctrl+Z）の対象外なので、先にデータを書き出す案内（keep は1世代の控えの文） */
 export const restartConfirmBody = (keep: string): string =>
-  `最初の2つの質問へ戻り、データを作り直します。いまのデータはすべて消え、「元に戻す」でも戻せません。\n必要なら、先にデータの画面で控えを書き出してください。\n${keep}`;
-export const RESTART_CONFIRM_LABEL = '2つの質問へ戻る';
+  `最初の設定へ戻り、データを作り直します。いまのデータはすべて消え、「元に戻す」でも戻せません。\n必要なら、先にデータの画面で控えを書き出してください。\n${keep}`;
+export const RESTART_CONFIRM_LABEL = '最初の設定へ戻る';
+
+/**
+ * 最初の設定を出していた履歴の項目に付ける印（location.state）。答えて最初の画面へ移るとき、2問の画面の項目に付けてから先へ進む。
+ * ブラウザの「戻る」でこの項目へ戻ったら、最初の設定をもう一度出す（答えるまでは今のデータのまま。PRD D381・D438）
+ */
+export const FIRST_RUN_ENTRY = { firstRun: true } as const;
+
+/** 履歴の項目が最初の設定を出していたものか（FIRST_RUN_ENTRY の印があるか） */
+export function isFirstRunEntry(state: unknown): boolean {
+  return (state as { firstRun?: unknown } | null)?.firstRun === true;
+}
+
+/**
+ * 履歴の項目を移ったときにすること（components/useFirstRunBack）：ブラウザの「戻る」「進む」（pop）で印の項目へ来て、
+ * 2問を出していなければ出す（ask）。やり直しの2問を出しているあいだに印の無い項目へ来たら閉じる（cancel）。ほかは何もしない（null）。
+ * 初めて開いたとき（first）・更新の知らせ（release）の2問は閉じない（redoing が偽）
+ */
+export function firstRunBackAction(x: {
+  pop: boolean;
+  marked: boolean;
+  needsFirstRun: boolean;
+  redoing: boolean;
+}): 'ask' | 'cancel' | null {
+  if (!x.pop) return null;
+  if (x.marked && !x.needsFirstRun) return 'ask';
+  if (!x.marked && x.redoing) return 'cancel';
+  return null;
+}

@@ -4,7 +4,20 @@ import type { StopTiming } from '../contracts/problem';
 import { compile } from '../matching';
 import { client, DATE, makeData, staff, visit } from '../matching/fixtures.testkit';
 import { DAY_END, DAY_START, spansOf } from './spans';
-import { backgroundOf, boxOf, hourMarks, legsOf, shadowOf, subtractSpans, timeRange, toY } from './timeline';
+import {
+  backgroundOf,
+  boxOf,
+  hourMarks,
+  legsOf,
+  legWords,
+  markLegs,
+  shadowOf,
+  subtractSpans,
+  timeRange,
+  toY,
+  visitTravelKind,
+  withLegMeters,
+} from './timeline';
 
 describe('縦の範囲と位置', () => {
   it('07:00〜20:00 が基本で、はみ出せば1時間単位で広げる', () => {
@@ -82,17 +95,79 @@ describe('移動・待ちの区間', () => {
     { visitId: 'b', arrival: 610, start: 630, end: 690, wait: 20, travelIn: 10 },
     { visitId: 'c', arrival: 690, start: 690, end: 720, wait: 0, travelIn: 0 },
   ];
-  it('自宅から・移動・待ち・自宅まで（移動0分は出さない）', () => {
+  it('自宅から・待ち・移動・自宅まで（移動は次の訪問に接し、待ちはその前。移動0分は出さない）', () => {
     expect(legsOf(stops, 12)).toEqual([
       { kind: 'fromHome', visitId: 'a', start: 525, end: 540, minutes: 15 },
-      { kind: 'drive', visitId: 'b', start: 600, end: 610, minutes: 10 },
-      { kind: 'wait', visitId: 'b', start: 610, end: 630, minutes: 20 },
+      { kind: 'wait', visitId: 'b', start: 600, end: 620, minutes: 20 },
+      { kind: 'drive', visitId: 'b', start: 620, end: 630, minutes: 10 },
       { kind: 'toHome', visitId: 'c', start: 720, end: 732, minutes: 12 },
     ]);
   });
   it('自宅の位置が無ければ「自宅まで」を出さない', () => {
     expect(legsOf(stops, null).some((x) => x.kind === 'toHome')).toBe(false);
     expect(legsOf([], 10)).toEqual([]);
+  });
+});
+
+describe('移動の見込み・間に合わない・言葉', () => {
+  const stops: StopTiming[] = [
+    { visitId: 'a', arrival: 540, start: 540, end: 600, wait: 0, travelIn: 15 },
+    { visitId: 'b', arrival: 630, start: 630, end: 690, wait: 0, travelIn: 30 },
+  ];
+  const placed = { address: '', lat: 38.26, lng: 140.87, postalCode: '' };
+  const unplaced = { address: '', lat: null, lng: null, postalCode: '' };
+  const base = { order: ['a', 'b'], visitPlace: () => placed, homePlaced: true, latestOf: () => undefined };
+  it('位置が全部ある区間は見込みにしない', () => {
+    const legs = markLegs(legsOf(stops, 12), base);
+    expect(legs.every((l) => l.estimated === false && l.late === false)).toBe(true);
+  });
+  it('どちらかの位置が未登録の区間・自宅が未登録の区間は見込み', () => {
+    const legs = markLegs(legsOf(stops, 30), {
+      ...base,
+      visitPlace: (id) => (id === 'a' ? unplaced : placed),
+      homePlaced: false,
+    });
+    expect(legs.map((l) => [l.kind, l.estimated])).toEqual([
+      ['fromHome', true],
+      ['drive', true],
+      ['toHome', true],
+    ]);
+    const onlyHome = markLegs(legsOf(stops, 30), { ...base, homePlaced: false });
+    expect(onlyHome.map((l) => l.estimated)).toEqual([true, false, true]);
+  });
+  it('移動時間を手で決めた訪問先の区間は、位置・自宅が未登録でも見込みにしない（ADR-0096）', () => {
+    const fixedA = { ...unplaced, travelMinutes: 90 };
+    const legs = markLegs(legsOf(stops, 30), {
+      ...base,
+      visitPlace: (id) => (id === 'a' ? fixedA : unplaced),
+      homePlaced: false,
+    });
+    // 自宅から a（決めた分数）・a から b（a の分数）は見込みでない。b から自宅は見込み
+    expect(legs.map((l) => [l.kind, l.estimated])).toEqual([
+      ['fromHome', false],
+      ['drive', false],
+      ['toHome', true],
+    ]);
+  });
+  it('visitTravelKind：移動時間があれば位置に関わらず fixed、位置だけなら placed、どちらも無ければ none', () => {
+    expect(visitTravelKind({ ...unplaced, travelMinutes: 60 })).toBe('fixed');
+    expect(visitTravelKind({ ...placed, travelMinutes: 60 })).toBe('fixed');
+    expect(visitTravelKind(placed)).toBe('placed');
+    expect(visitTravelKind(unplaced)).toBe('none');
+    expect(visitTravelKind(undefined)).toBe('none');
+  });
+  it('着く時刻が「いつまでに始める」を過ぎる移動は間に合わない（帰りは見ない）', () => {
+    const legs = markLegs(legsOf(stops, 12), { ...base, latestOf: (id) => (id === 'b' ? 600 : undefined) });
+    expect(legs.map((l) => [l.kind, l.late])).toEqual([
+      ['fromHome', false],
+      ['drive', true],
+      ['toHome', false],
+    ]);
+  });
+  it('言葉：ふつうは「移動 15分」、見込み・間に合わないを添える、控えめは分だけ', () => {
+    const [leg] = markLegs(legsOf(stops, null), { ...base, visitPlace: () => unplaced });
+    expect(legWords({ ...leg!, kind: 'drive', late: true }, 15)).toBe('移動 15分（見込み）・着く時刻が間に合わない');
+    expect(legWords({ ...leg!, kind: 'toHome', estimated: false }, 8)).toBe('自宅まで 8分');
   });
 });
 
@@ -125,5 +200,42 @@ describe('ドラッグ中の影', () => {
     const off = makeData({ ...data, staff: [staff('s1', 38.26, 140.87, { workDays: [] })] });
     const q = compile(off, DATE);
     expect(shadowOf(q, {}, 'v1', 's1')).toMatchObject({ ok: false, allowed: false });
+  });
+});
+
+describe('区間の距離（ADR-0101）', () => {
+  it('距離の文：1km 未満は m（10 m 単位）、それ以上は km（小数1桁）', () => {
+    const leg = { kind: 'drive' as const, visitId: 'v', start: 0, end: 1, minutes: 1 };
+    expect(legWords({ ...leg, meters: 853 }, 1)).toBe('移動 1分・850m');
+    expect(legWords({ ...leg, meters: 3149 }, 1)).toBe('移動 1分・3.1km');
+    expect(legWords({ ...leg, meters: 12000 }, 1)).toBe('移動 1分・12.0km');
+  });
+
+  it('自宅から・移動・自宅までに問題の距離を付け、言葉に添える（待ちは付けない。0 m は出さない）', () => {
+    const d = makeData({
+      staff: [staff('s1', 38.26, 140.87)],
+      clients: [client('a', 38.27, 140.88), client('b', 38.28, 140.89)],
+      visits: [visit('v1', 'a', '09:00', '09:00'), visit('v2', 'b', '11:00', '11:00')],
+    });
+    const p = compile(d, DATE);
+    const [a, b] = [p.visits[0]!.point, p.visits[1]!.point];
+    const legs = withLegMeters(
+      [
+        { kind: 'fromHome', visitId: 'v1', start: 0, end: 10, minutes: 10 },
+        { kind: 'wait', visitId: 'v2', start: 70, end: 100, minutes: 30 },
+        { kind: 'drive', visitId: 'v2', start: 100, end: 110, minutes: 10 },
+        { kind: 'toHome', visitId: 'v2', start: 170, end: 180, minutes: 10 },
+      ],
+      p,
+      's1',
+      ['v1', 'v2'],
+    );
+    expect(legs[0]!.meters).toBe(p.meters[0]![a]);
+    expect(legs[1]!.meters).toBeUndefined();
+    expect(legs[2]!.meters).toBe(p.meters[a]![b]);
+    expect(legs[3]!.meters).toBe(p.meters[b]![0]);
+    expect(legWords({ ...legs[2]!, meters: 3149 }, 10)).toBe('移動 10分・3.1km');
+    expect(legWords({ ...legs[2]!, meters: 0 }, 10)).toBe('移動 10分');
+    expect(withLegMeters(legs, null, 's1', [])).toBe(legs);
   });
 });

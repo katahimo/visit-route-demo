@@ -8,11 +8,11 @@
 //   openDetails(page, testId)   … 「詳しく ▾」を開く（無い・もう開いているなら何もしない）
 //   closeMore(page)             … 開いている「その他 ▾」を閉じる
 //   toolCount(page, testId)     … 行と「その他 ▾」の中を合わせた、その testid の数（出る・出ないを位置によらず確かめる）
-//   undoState(page)             … 「元に戻す」の状態（押せるか・説明）を「その他 ▾」を開いて読む
+//   undoState(page)             … 「元に戻す」の状態（押せるか・手の名前）を操作の行のアイコンだけのボタンから読む
 //   openScreenDetails(page)     … 画面の「詳しく ▾」（月・週・日）を開く（開いて読む e2e が着いたあとに呼ぶ）
 //   accessibleInfo(page, locator) … AX ツリーでの名前と説明を読む（CDP。aria-describedby の textContent 集めでは見逃す文を確かめる）
 //   reveal(page, testId)        … 要素が見えるまで（「詳しく ▾」を開いてでも）待つ。中を読む前に呼ぶ
-// 入の操作の行は「定期の予定を入れる」＋「担当を組む」（月・週）／「訪問を1件足す」＋「確定（伝えた）」（日）の2つと「その他 ▾」。
+// 入の操作の行は「定期の予定を追加」＋「担当を組む」（月・週）／「訪問を1件追加」＋「確定（伝えた）」（日）の2つと「その他 ▾」。
 // 欠勤・キャンセル・元に戻す・表示の切り替え・使い方・メールで送る・印刷などは「その他 ▾」の中（where: 'more'）。
 // 畳んだ「詳しく ▾」は画面ごとに開け閉めを端末に覚える（開いて読み直すと開いたまま）。reveal・openDetails は開いてから読む
 // 行き先・操作の名前は下の表に足す（画面が変わったら表だけ直す）。
@@ -26,10 +26,10 @@ const SCREENS = {
   利用者さん: '/clients',
   スタッフ: '/staff',
   設定: '/settings',
-  基本情報: '/basics',
+  予定と相性: '/basics',
   組む: '/arrange',
   担当を組む: '/arrange',
-  組み方の標準: '/standard',
+  条件の重み: '/rules',
   空き状況: '/vacancy',
   欠勤: '/plan?do=absence',
 };
@@ -45,10 +45,9 @@ const MENU_KEYS = {
   利用者さん: ['clients'],
   スタッフ: ['staff'],
   設定: ['settings'],
-  基本情報: ['arrange:basics'],
   組む: ['arrange'],
+  条件の重み: ['arrange:rules'],
   担当を組む: ['arrange:assign'],
-  組み方の標準: ['arrange:standard'],
 };
 
 /**
@@ -127,13 +126,13 @@ async function closeMore(page) {
  * 表に無い名前は testid として扱う（行に出ていれば押す。なければ「その他 ▾」の中の同じ testid の項目）
  */
 const TOOLS = {
-  元に戻す: { id: 'undo-btn', menuId: 'more-undo' },
+  元に戻す: { id: 'undo-btn' },
   欠勤: { id: 'sudden-open', text: /欠勤・キャンセル/ },
   勤務の見込み: { id: 'month-workload', text: /勤務の見込み/ },
   印刷: { id: 'month-print', text: /印刷/ },
   表示を選ぶ: { text: /表示/ },
-  // 月・週の主ボタン（引き出し）。日の主ボタンは plan-visit-add（日は「訪問を1件足す」、月・週は繰り返しを使うなら「定期の予定を入れる」・使わないなら「予約を入れる」）
-  定期の予定を入れる: { id: 'toolbar-add-plan', text: /定期の予定を入れる|予約を入れる/ },
+  // 月・週の主ボタン（引き出し）。日の主ボタンは plan-visit-add（日は「訪問を1件追加」、月・週は繰り返しを使うなら「定期の予定を追加」・使わないなら「予約を追加」）
+  定期の予定を追加: { id: 'toolbar-add-plan', text: /定期の予定を追加|予約を追加/ },
   // 入の操作の行の2つ目：月・週は「担当を組む」（担当を組むの画面へ）、日は「確定（伝えた）」（段2。D402）
   担当を組む: { id: 'toolbar-assign', text: /担当を組む/ },
   確定: { id: 'adopt', text: /確定/ },
@@ -193,33 +192,13 @@ async function toolCount(page, testId) {
 }
 
 /**
- * 「元に戻す」の今の状態（操作の行の「その他 ▾」の項目。段2）：disabled＝戻せる手が無い、text＝項目の名前と説明（「「手の名前」を戻します」）。
- * 「その他 ▾」を開いて読み、閉じる（押さない）。人の予定表・担当を組むの画面は「元に戻す」のボタンの title を読む
+ * 「元に戻す」の今の状態（操作の行のアイコンだけのボタン。PRD D432）：disabled＝戻せる手が無い（aria-disabled）、
+ * text・title＝ボタンの title（「元に戻す（手の名前）　Ctrl+Z」）。押さずに読む
  */
 async function undoState(page) {
-  // 人の予定表・担当を組むの画面は「元に戻す」が操作の行のボタンのまま（title に手の名前）
   const btn = page.getByTestId('undo-btn');
-  if ((await btn.count()) > 0)
-    return {
-      disabled: (await btn.getAttribute('aria-disabled')) === 'true',
-      text: (await btn.getAttribute('title')) ?? '',
-      title: (await btn.getAttribute('title')) ?? '',
-    };
-  // 読むだけなので、いまフォーカスのある要素（札など）へフォーカスを戻す（このあとのキー操作・フォーカスの確かめを乱さない）
-  const prev = await page.evaluateHandle(() => document.activeElement);
-  const list = await openMore(page);
-  const item = list.getByTestId('more-undo');
-  const state = {
-    disabled: (await item.getAttribute('aria-disabled')) === 'true',
-    text: (await item.innerText()).replace(/\s+/g, ' ').trim(),
-    title: (await item.getAttribute('title')) ?? '',
-  };
-  await closeMore(page);
-  await prev.evaluate((el) => {
-    if (el && el !== document.body && el.isConnected) el.focus({ preventScroll: true });
-  });
-  await prev.dispose();
-  return state;
+  const title = (await btn.getAttribute('title')) ?? '';
+  return { disabled: (await btn.getAttribute('aria-disabled')) === 'true', text: title, title };
 }
 
 /** 「詳しく ▾」を開く（testId の無い・もう開いている場合は何もしない）。開いたら true */

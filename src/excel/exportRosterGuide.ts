@@ -2,15 +2,19 @@
 import type ExcelJS from 'exceljs';
 import type { DemoData, RosterKind } from '../contracts/data';
 import type { Item } from '../contracts/rules';
+import { timeText } from '../domain/availability';
+import { defaultStaffHours, workDaysText } from '../lib/staffDefaultHours';
 import { addTable, type CellIn, type TableSpec } from './exportTable';
 import {
   CLIENT_ALLOWED_COL,
   CLIENT_COLS,
   CLIENT_KANA_COL,
+  CLIENT_PLACE2_COLS,
   CLIENT_POSTAL_COL,
   CLIENT_RULE_COLS,
   CLIENT_STAGE_COLS,
   CLIENT_TENTATIVE_COL,
+  CLIENT_TRAVEL_COLS,
   prefHeader,
   reqHeader,
   STAFF_COLS,
@@ -46,19 +50,22 @@ const PLACES = [
   { address: '仙台市青葉区上杉1丁目5-1', postal: '9808701' },
 ];
 
-function staffDocs(t: DemoData['org']['terms']): [string, ColDoc][] {
+function staffDocs(data: DemoData): [string, ColDoc][] {
+  const t = data.org.terms;
   const S = STAFF_COLS;
+  // 勤務の既定は使い方で決まる（単発の予約は毎日 7:00〜22:00。lib/staffDefaultHours。PRD D428。ADR-0095）
+  const dflt = defaultStaffHours(data.org.features);
   return [
     [S.id, doc('いま名簿にいる人を直すときの番号です。新しい人は空にします', '（空）', '空なら新しい人として足します')],
     [S.name, doc(`${t.staff}の名前です。必ず書きます`, '記入例 はなこ', '空の行は読めません')],
     [S.travelMode, doc('車・自転車・徒歩・公共交通から選びます', '車', newBlank('車'))],
-    [S.workDays, doc('勤務する曜日を続けて書きます', '月火水木金', newBlank(' 月〜金'))],
-    [S.shiftStart, doc('勤務を始める時刻です', '9:00', newBlank(' 9:00'))],
-    [S.shiftEnd, doc('勤務を終える時刻です', '18:00', newBlank(' 18:00'))],
+    [S.workDays, doc('勤務する曜日を続けて書きます', '月火水木金', newBlank(` ${workDaysText(dflt.workDays)}`))],
+    [S.shiftStart, doc('勤務を始める時刻です', '9:00', newBlank(` ${timeText(dflt.shiftStart)}`))],
+    [S.shiftEnd, doc('勤務を終える時刻です', '18:00', newBlank(` ${timeText(dflt.shiftEnd)}`))],
     [S.active, doc('いま勤務している人に ○ を付けます', YES, newBlank('利用中'))],
     [S.address, doc('自宅の住所です', PLACES[0].address, '空のまま')],
-    [S.lat, doc('地図の位置（緯度）です。わからなければ空でかまいません', '38.2682', '空のまま')],
-    [S.lng, doc('地図の位置（経度）です。わからなければ空でかまいません', '140.8694', '空のまま')],
+    [S.lat, doc('緯度です。わからなければ空でかまいません', '38.2682', '空のまま')],
+    [S.lng, doc('経度です。わからなければ空でかまいません', '140.8694', '空のまま')],
     [STAFF_LAST_DAY_COL, doc('辞める人・担当を外れる人の最後の勤務日です', '2026-12-28', '空ならなし')],
     [STAFF_EMAIL_COL, doc('予定をメールで送るときの宛先です', 'hanako@example.com', '空のまま')],
     [STAFF_ICON_COL, doc('画面の印に出す1〜2文字です', '花', '空なら苗字の最初の1文字')],
@@ -78,8 +85,32 @@ function clientDocs(t: DemoData['org']['terms']): [string, ColDoc][] {
     [CLIENT_TENTATIVE_COL, doc('日程を仮に押さえている人に ○ を付けます', '', '空なら付けない')],
     [CLIENT_POSTAL_COL, doc('7桁の数字です（ハイフンは有っても無くてもかまいません）', PLACES[0].postal, '空のまま')],
     [C.address, doc('訪問先の住所です', PLACES[0].address, '空のまま')],
-    [C.lat, doc('地図の位置（緯度）です。わからなければ空でかまいません', '38.2682', '空のまま')],
-    [C.lng, doc('地図の位置（経度）です。わからなければ空でかまいません', '140.8694', '空のまま')],
+    [C.lat, doc('緯度です。わからなければ空でかまいません', '38.2682', '空のまま')],
+    [C.lng, doc('経度です。わからなければ空でかまいません', '140.8694', '空のまま')],
+    [
+      CLIENT_TRAVEL_COLS.minutes,
+      doc(
+        '新幹線・飛行機などで行き、距離で見積もれないときの片道の移動時間（分）です。どこから来ても同じ分数とみます',
+        '180',
+        '空なら距離から見積もる',
+      ),
+    ],
+    [
+      CLIENT_TRAVEL_COLS.farTrip,
+      doc(`遠方（出張）の人に ○ を付けます。その日の${t.staff}にはほかの訪問を入れません`, '', '空なら付けない'),
+    ],
+    [
+      CLIENT_PLACE2_COLS.address,
+      doc('契約者の住所と違う所へ、決まった期間だけ訪ねるときの訪問先の住所です', '', '空なら住所2 なし'),
+    ],
+    [CLIENT_PLACE2_COLS.postal, doc('住所2 の郵便番号（7桁の数字）です', '', '空のまま')],
+    [CLIENT_PLACE2_COLS.lat, doc('住所2 の緯度です。わからなければ空でかまいません', '', '空のまま')],
+    [CLIENT_PLACE2_COLS.lng, doc('住所2 の経度です。わからなければ空でかまいません', '', '空のまま')],
+    [
+      CLIENT_PLACE2_COLS.from,
+      doc('住所2 を訪問先にする最初の日です。この日から終了日までの訪問は住所2 へ行きます', '', '空なら限らない'),
+    ],
+    [CLIENT_PLACE2_COLS.to, doc('住所2 を訪問先にする最後の日です', '', '空なら限らない')],
     [
       CLIENT_ALLOWED_COL,
       doc(
@@ -209,7 +240,7 @@ function fixedSamples(kind: RosterKind): Sample[] {
 export function guideIntro(sheetName: string): string[] {
   return [
     `『${sheetName}』のシートに1行に1人ずつ書きます。`,
-    '保存して、アプリの［CSV・Excel を読み込む］で選びます。',
+    '保存して、アプリの名簿の欄の［ファイルを選ぶ］で選びます。',
     '名前だけでも読めます。空の列には決まった値が入ります。',
     `この『${GUIDE_SHEET}』『${SAMPLE_SHEET}』のシートは読み込みません。`,
   ];
@@ -225,7 +256,7 @@ export function rosterGuide(data: DemoData, kind: RosterKind, table: TableSpec) 
   const rows = 3;
   const own = kind === 'staff' ? staffItems : clientItems;
   const other = kind === 'staff' ? clientItems : staffItems;
-  const fixed = kind === 'staff' ? staffDocs(t) : clientDocs(t);
+  const fixed = kind === 'staff' ? staffDocs(data) : clientDocs(t);
   const items = itemDocs(own, other, rows, kind === 'staff' ? t.client : t.staff);
   const docOf = new Map([...fixed, ...items.docs]);
   const lines = table.headers.map((h) => {

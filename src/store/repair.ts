@@ -53,6 +53,7 @@ function repairPresets(presets: Preset[]): Preset[] {
 function repairClients(clients: DemoData['clients'], activeIds: Set<string>): DemoData['clients'] {
   return uniqueById(clients).map((c) => {
     const place = repairPlace(c.place);
+    const place2 = c.place2 === undefined ? undefined : repairPlace(c.place2);
     const allowed = [...new Set(c.allowedStaffIds)].filter((id) => activeIds.has(id));
     const allowedStaffIds =
       allowed.length === c.allowedStaffIds.length && allowed.every((x, i) => x === c.allowedStaffIds[i])
@@ -61,11 +62,12 @@ function repairClients(clients: DemoData['clients'], activeIds: Set<string>): De
     // 段階が正（ADR-0015）：active・tentative を段階に合わせる
     const flags = stageFlags(c.stage, c.tentative);
     return place === c.place &&
+      place2 === c.place2 &&
       allowedStaffIds === c.allowedStaffIds &&
       flags.active === c.active &&
       flags.tentative === c.tentative
       ? c
-      : { ...c, place, allowedStaffIds, ...flags };
+      : { ...c, place, ...(place2 === undefined ? {} : { place2 }), allowedStaffIds, ...flags };
   });
 }
 

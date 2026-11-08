@@ -185,11 +185,18 @@ export function applyPasteRows(
 
 /** 入れたあとの要対応の件数：欠勤・取り消しの日（今日以降）の、担当なし・間に合わない・重なり・休みの人の訪問（要対応の帯と同じ数え方） */
 export function pasteCareCount(d: DemoData, rows: readonly PasteRow[], today: string): number {
-  const dates = new Set<string>();
-  for (const r of rows) if (r.action && r.action.kind !== 'leave' && r.action.date >= today) dates.add(r.action.date);
+  const dates: string[] = [];
+  for (const r of rows) if (r.action && r.action.kind !== 'leave') dates.push(r.action.date);
+  return careCountOn(d, dates, today);
+}
+
+/** その日たち（今日以降。重なりは1回）の要対応の訪問の数（要対応の帯と同じ数え方。カレンダーの休みの取り込みでも使う） */
+export function careCountOn(d: DemoData, dates: Iterable<string>, today: string): number {
   let n = 0;
-  for (const date of dates)
+  for (const date of new Set(dates)) {
+    if (date < today) continue;
     for (const issues of dayStatus(d, date).issues.values()) if (visitBandKind(issues) !== undefined) n++;
+  }
   return n;
 }
 

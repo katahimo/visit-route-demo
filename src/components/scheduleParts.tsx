@@ -20,7 +20,6 @@ import { StaffMark } from './StaffMark';
 import { useToast } from './Toast';
 import { type AbsenceTool, type AddTool, ToolbarRow } from './toolbarRow';
 import { WithIcon } from './ui';
-import { saveAppliedBasis } from './useArrangeBasis';
 import { useExceptionsOnly } from './useFeature';
 import { useSelectionBar } from './useSelectionBar';
 import { useValueStore } from './valueStore';
@@ -64,7 +63,7 @@ export function ScheduleToolbar({
   /** その他 ▾ のあとに置くもの */
   after?: ReactNode;
   className?: string;
-  /** 日の「訪問を1件足す」（スマホ・出さないときは null） */
+  /** 日の「訪問を1件追加」（スマホ・出さないときは null） */
   add?: AddTool | null;
   /** 入の「担当を組む」の行き先（担当を組むの画面。切は無視する） */
   assignHref?: string | null;
@@ -234,8 +233,6 @@ export function RangeProposalBand() {
   const apply = () => {
     const r = monthBatch.apply();
     if (!r) return;
-    // 組み始めたときの基本情報を覚える（あとで変われば担当を組むで組み直しを知らせる。ADR-0067）
-    if (r.applied.length > 0) saveAppliedBasis(data);
     toast(r.applied.length === 0 ? words.staleOne : words.applied(proposal.label, r.applied.length, r.skipped.length));
   };
   const changed = proposal.days.filter((d) => (d.diff?.moved.length ?? 0) + (d.diff?.shifted.length ?? 0) > 0);

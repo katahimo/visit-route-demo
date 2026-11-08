@@ -11,9 +11,10 @@ import {
   pasteRowKeys,
   pasteRows,
 } from '../lib/pasteRows';
+import { arrangeAfterImport } from '../lib/placeRunner';
 import { useDemoData } from '../store';
 import { useToast } from './Toast';
-import { useUndoAction } from './undo';
+import { useUndoImportAction } from './undo';
 
 /** 打つ・貼るたびに読み直すまでの待ち（ミリ秒） */
 export const PASTE_READ_DELAY_MS = 250;
@@ -21,7 +22,7 @@ export const PASTE_READ_DELAY_MS = 250;
 export function usePasteNotices(onClose: () => void) {
   const { data, update } = useDemoData();
   const toast = useToast();
-  const undoAction = useUndoAction();
+  const undoAction = useUndoImportAction();
   const today = jstDate(Date.now());
   const [text, setText] = useState('');
   /** 読んだ文（入力のたびに読み直さず、少し待ってから） */
@@ -44,10 +45,13 @@ export function usePasteNotices(onClose: () => void) {
     // 待っている間に押したら、今の文で読み直してから入れる
     const list = pickedOf(readText === text ? rows : pasteRows(data, text, today));
     if (list.length === 0) return;
-    const care = pasteCareCount(applyPasteRows(data, list, today, newId), list, today);
-    update((d) => applyPasteRows(d, list, today, newId), '連絡を貼り付けて入れる');
+    const next = applyPasteRows(data, list, today, newId);
+    const care = pasteCareCount(next, list, today);
+    update((d) => (d === data ? next : applyPasteRows(d, list, today, newId)), '連絡を貼り付けて入れる');
     toast(pasteDoneText(list.length, care), { action: undoAction });
     onClose();
+    // 休みの人の訪問・担当なしを自動で組む（PRD D442）
+    arrangeAfterImport(data, next, today);
   };
 
   const toggle = (i: number) => {

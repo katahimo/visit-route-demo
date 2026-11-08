@@ -13,11 +13,13 @@ import {
   X,
 } from 'lucide-react';
 import type { Client, Staff, Visit, VisitType } from '../contracts/documents';
+import { hhmmToMinutes } from '../domain/time';
 import { dateText } from '../lib/dateText';
 import type { PrevStop } from '../lib/prevStop';
 import type { VisitInfo } from '../lib/visitDraft';
 import { windowShown } from '../lib/visitPanelText';
 import { hasVisitRules } from '../lib/visitRules';
+import { TravelFact } from './clientTravel';
 import { MAPS_TITLE, VisitRouteLinks } from './mapsLinks';
 import { PersonButton } from './PersonPopover';
 import { StaffMark } from './StaffMark';
@@ -178,6 +180,7 @@ export function VisitSummary({
           </>
         )}
       </dl>
+      <TravelFact place={client?.place} start={hhmmToMinutes(v.start ?? v.earliestStart)} />
       {!info.editable && <p className="sub">今日より前の訪問なので、見るだけです。</p>}
       {onOpenDay && (
         <button type="button" className="btn btn-small" onClick={onOpenDay} data-testid="vp-open-day">
@@ -210,7 +213,7 @@ function BigRoute({ routeHref, clientName }: { routeHref: string | null; clientN
       type="button"
       className="btn vp-big-btn"
       disabled
-      title="場所（住所・地図の位置）が未登録のため、道順はありません"
+      title="場所（住所・緯度・経度）が未登録のため、道順はありません"
       data-testid="vp-big-route"
     >
       <Navigation size={22} aria-hidden="true" />

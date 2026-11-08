@@ -4,8 +4,10 @@ import type { Condition, Item, Traits } from '../contracts/rules';
 import { STAGE_LABELS } from '../lib/clientStage';
 import { type CellIn, condList, type ListRule, nullable, type TableSpec, traitList, yes } from './exportTable';
 import {
+  CLIENT_PLACE2_COLS,
   CLIENT_POSTAL_COL,
   CLIENT_STAGE_COLS,
+  CLIENT_TRAVEL_COLS,
   clientExportCols,
   prefHeader,
   reqHeader,
@@ -15,6 +17,7 @@ import {
   STAFF_LAST_DAY_COL,
   traitCols,
 } from './layout';
+import { place2Cells } from './place2Cols';
 import { condsToCell, hhmmToCell, traitToCells, travelModeLabels, workDaysText, YES } from './text';
 
 /** 特性・必要条件・希望の列（見出し・値・プルダウン）。base は前に並ぶ固定の列の数 */
@@ -108,6 +111,11 @@ export function clientTable(data: DemoData, name: string): TableSpec {
       c.place.address,
       nullable(c.place.lat),
       nullable(c.place.lng),
+      // 移動時間（片道・分）・遠方（出張）（ADR-0096）
+      c.place.travelMinutes ?? null,
+      yes(c.place.farTrip === true),
+      // 期間つきの訪問先（住所2。ADR-0105）
+      ...place2Cells(c.place2),
       // 担当できる人（ADR-0014）：名前を「、」で区切る
       c.allowedStaffIds
         .flatMap((id) => staffName.get(id) ?? [])
@@ -125,11 +133,19 @@ export function clientTable(data: DemoData, name: string): TableSpec {
       c.referrer.email,
       ...cp.cells(c),
     ]),
-    textCols: [1, 3, clientBase.indexOf(CLIENT_POSTAL_COL) + 1],
+    textCols: [
+      1,
+      3,
+      clientBase.indexOf(CLIENT_POSTAL_COL) + 1,
+      clientBase.indexOf(CLIENT_PLACE2_COLS.postal) + 1,
+      clientBase.indexOf(CLIENT_PLACE2_COLS.from) + 1,
+      clientBase.indexOf(CLIENT_PLACE2_COLS.to) + 1,
+    ],
     lists: [
       { col: 4, values: ['1', '2', '3', '4', '5', '6', '7', '8'] },
       { col: 5, values: [YES] },
       { col: 6, values: [YES] },
+      { col: clientBase.indexOf(CLIENT_TRAVEL_COLS.farTrip) + 1, values: [YES] },
       { col: clientBase.indexOf(CLIENT_STAGE_COLS.stage) + 1, values: Object.values(STAGE_LABELS) },
       ...cp.lists,
     ],

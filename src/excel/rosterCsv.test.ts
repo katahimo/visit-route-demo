@@ -72,6 +72,23 @@ describe('名簿の CSV（ADR-0068）', () => {
     expect('code' in bad && bad.message).toContain('知らない項目');
   });
 
+  it('勤務する曜日・勤務開始・勤務終了のどれかが空の新しい人は、空の所だけ既定にし hoursDefaulted に入る（PRD D428）', async () => {
+    const d = base();
+    const csv = [
+      '名前,勤務する曜日,勤務開始,勤務終了',
+      '全部ある人,月火,10:00,15:00',
+      '曜日だけの人,土日,,',
+      '空の人,,,',
+    ].join('\r\n');
+    const r = rok(await importRoster(csvBuf(`${csv}\r\n`), d, 'staff', 'merge'));
+    expect(r.hoursDefaulted).toEqual(['曜日だけの人', '空の人']);
+    const by = (name: string) => r.data.staff.find((s) => s.name === name)!;
+    expect(by('全部ある人')).toMatchObject({ workDays: [1, 2], shiftStart: '10:00', shiftEnd: '15:00' });
+    // 書いた曜日はそのまま、空の時刻だけ既定
+    expect(by('曜日だけの人').workDays).toEqual([6, 0]);
+    expect(by('曜日だけの人').shiftStart).not.toBe('');
+  });
+
   it('壊れた .xlsx・空の CSV は読めないと返す（データは変えない）', async () => {
     const d = base();
     const zip = new Uint8Array([0x50, 0x4b, 0x03, 0x04, 1, 2, 3]).buffer;

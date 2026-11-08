@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Client, Staff } from '../contracts/documents';
-import { FEATURE_IDS, type FeatureId, type Features } from '../contracts/features';
+import { FEATURE_IDS, type FeatureId, type Features, featuresSchema } from '../contracts/features';
 import { createDemoData } from '../seed';
 import { attentionBand } from './attentionBand';
 import { paletteActions } from './commandPalette';
@@ -28,7 +28,6 @@ import {
 import { attentionTarget, dayHref, linkIfOn, suddenHref, unassignedHref, workloadHref } from './links';
 import type { Attention, DayStatus } from './month';
 import { bottomTabs, menuSections, screenSections, settingsTabs } from './nav';
-import { tourSteps } from './tour';
 
 const terms = { client: '利用者さん', staff: 'スタッフ' };
 const TODAY = '2026-10-21';
@@ -52,9 +51,9 @@ const pathOf = (href: string) => href.split('?')[0]!;
 /** 行き先が土台か表のどれかの機能に属するか */
 const belongs = (href: string) => featureOfHref(href) !== null || BASE_PATHS.has(pathOf(href));
 
-/** ADR-0028 の「ひな形」の表（入れる機能。基本に毎月の第N・決まりごとを足したのは ADR-0086、休み・退職・Excel を足したのは ADR-0091） */
+/** ADR-0028 の「ひな形」の表（入れる機能。基本に毎月の第N・決まりごとを足したのは ADR-0086、休み・退職を足したのは ADR-0091。メール・Excel はいつも入で表に無い。ADR-0106） */
 const TABLE: Record<TemplateId, FeatureId[]> = {
-  oneOff: ['clientLeave', 'sudden', 'vacancy', 'compat', 'offboard', 'mapsLink', 'geocode', 'excel'],
+  oneOff: ['clientLeave', 'sudden', 'vacancy', 'compat', 'offboard', 'mapsLink', 'geocode'],
   basic: [
     'patterns',
     'patternMonthly',
@@ -66,7 +65,6 @@ const TABLE: Record<TemplateId, FeatureId[]> = {
     'offboard',
     'mapsLink',
     'geocode',
-    'excel',
   ],
   laborContract: [
     'patterns',
@@ -82,7 +80,6 @@ const TABLE: Record<TemplateId, FeatureId[]> = {
     'fare',
     'mapsLink',
     'geocode',
-    'excel',
   ],
   monthlyField: [
     'patterns',
@@ -99,13 +96,12 @@ const TABLE: Record<TemplateId, FeatureId[]> = {
     'offboard',
     'mapsLink',
     'geocode',
-    'excel',
   ],
   all: [...FEATURE_IDS],
 };
 
 describe('機能の表（ADR-0028 の機能の一覧）', () => {
-  it('22の機能が契約の ID と同じ順に1つずつ。グループは決まった7つのどれか（管理者設定のスイッチの並び。ADR-0092）', () => {
+  it('20の機能が契約の ID と同じ順に1つずつ。グループは決まった7つのどれか（管理者設定のスイッチの並び。ADR-0092）', () => {
     expect(FEATURE_GROUPS).toEqual([
       '予定の入れ方',
       '当日・問い合わせ',
@@ -121,7 +117,7 @@ describe('機能の表（ADR-0028 の機能の一覧）', () => {
     expect(featureDef('compare').group).toBe(featureDef('expert').group);
     expect(featureDef('vacancy').group).toBe('当日・問い合わせ');
     expect(FEATURES.map((f) => f.id)).toEqual([...FEATURE_IDS]);
-    expect(FEATURES).toHaveLength(22);
+    expect(FEATURES).toHaveLength(20);
     for (const f of FEATURES) {
       expect(FEATURE_GROUPS).toContain(f.group);
       expect(f.label).not.toBe('');
@@ -147,14 +143,12 @@ describe('機能の表（ADR-0028 の機能の一覧）', () => {
 });
 
 describe('エキスパート機能（ADR-0072）', () => {
-  it('切ると 案を比べる・条件の重み・組み方の標準・特性の項目の URL へ移れない（担当を組むは土台のまま）', () => {
+  it('切ると 案を比べる・条件の重み・特性の項目の URL へ移れない（担当を組むは土台のまま）', () => {
     const off: Features = { expert: false };
-    for (const h of ['/standard', '/compare?date=2026-10-12', '/rules#presets', '/items'])
-      expect(isHrefOn(off, h)).toBe(false);
+    for (const h of ['/compare?date=2026-10-12', '/rules#presets', '/items']) expect(isHrefOn(off, h)).toBe(false);
     expect(isHrefOn(off, '/arrange?ym=2026-10')).toBe(true);
     expect(isOn({ expert: false, compare: true, rules: true }, 'compare')).toBe(false);
     expect(isOn({ expert: false, rules: true }, 'rules')).toBe(false);
-    expect(isHrefOn({}, '/standard')).toBe(true);
   });
   it('ひな形：すべてだけ入。基本・労務・月次は切（matchTemplate も見分ける）', () => {
     expect(isOn(applyTemplate('all'), 'expert')).toBe(true);
@@ -183,7 +177,7 @@ describe('isOn（依存を見る）', () => {
   });
   it('withFeature はその機能だけ明示して書く', () => {
     const f: Features = { compat: false };
-    expect(withFeature(f, 'mail', false)).toEqual({ compat: false, mail: false });
+    expect(withFeature(f, 'rules', false)).toEqual({ compat: false, rules: false });
     expect(withFeature(f, 'compat', true)).toEqual({ compat: true });
     expect(f).toEqual({ compat: false });
   });
@@ -268,17 +262,17 @@ describe('ひな形（ADR-0028 の表）', () => {
     expect([...groupsOf('laborContract')]).toEqual(['勤務・契約']);
     expect(groupsOf('monthlyField').size).toBeLessThanOrEqual(4);
   });
-  it.each(TEMPLATE_IDS)('%s を適用すると表どおりの入り切り（全22の ID を明示）で、matchTemplate がそれを返す', (id) => {
+  it.each(TEMPLATE_IDS)('%s を適用すると表どおりの入り切り（全20の ID を明示）で、matchTemplate がそれを返す', (id) => {
     const f = applyTemplate(id);
     expect(Object.keys(f).sort()).toEqual([...FEATURE_IDS].sort());
     const on = FEATURE_IDS.filter((x) => f[x]);
     expect(on.sort()).toEqual([...TABLE[id]].sort());
     expect(matchTemplate(f)).toBe(id);
   });
-  it('「条件の重みとプリセット」「案を比べる」「メール」は すべて 以外で切', () => {
+  it('「条件の重みとプリセット」「案を比べる」は すべて 以外で切', () => {
     for (const id of ['basic', 'laborContract', 'monthlyField'] as const) {
       const f = applyTemplate(id);
-      expect([f.rules, f.compare, f.mail]).toEqual([false, false, false]);
+      expect([f.rules, f.compare]).toEqual([false, false]);
     }
   });
   it('単発のみ：基本から繰り返し・第N曜日・決まりごとを外した入り切り（ADR-0086）。基本・労務・月次・すべては繰り返し・第N曜日・決まりごとが入', () => {
@@ -307,9 +301,14 @@ describe('ひな形（ADR-0028 の表）', () => {
     expect(matchTemplate({})).toBe('all');
     expect(matchTemplate({ compat: true })).toBe('all');
   });
+  it('前の版のデータに残る mail・excel は読むときに捨て、ひな形の一致を変えない（ADR-0106）', () => {
+    const old = featuresSchema.parse({ ...applyTemplate('basic'), mail: false, excel: true });
+    expect('mail' in old || 'excel' in old).toBe(false);
+    expect(matchTemplate(old)).toBe('basic');
+  });
   it('1つ直すと custom', () => {
     expect(matchTemplate({ compat: false })).toBe('custom');
-    expect(matchTemplate(withFeature(applyTemplate('basic'), 'mail', true))).toBe('custom');
+    expect(matchTemplate(withFeature(applyTemplate('basic'), 'workload', true))).toBe('custom');
     expect(matchTemplate(withFeature(applyTemplate('laborContract'), 'fare', false))).toBe('custom');
   });
   it('使えるか（依存を見る）で比べる：依存先が切なら、依存する機能のスイッチが入でもひな形と同じ', () => {
@@ -363,17 +362,17 @@ describe('menuSections（ひな形ごとの項目。PRD D213・D275）', () => {
     // 空き状況を切れば出さない（PRD D213）
     expect(labels({ expert: false, vacancy: false })).toEqual(['予定', '利用者さん', 'スタッフ', '設定']);
   });
-  it('「組む」の子は機能の入り切りで変わらない項目だけ（基本情報・組み方の標準・担当を組む）。欠勤・空き状況を切っても子は同じ', () => {
+  it('「組む」の子は 条件の重み・担当を組む。欠勤・空き状況を切っても子は同じ', () => {
     const kids = (f: Features) =>
       menuSections(terms, TODAY, f)
         .flatMap((g) => g.items)
         .find((i) => i.key === 'arrange')
         ?.children?.map((i) => i.key);
-    expect(kids({})).toEqual(['arrange:basics', 'arrange:standard', 'arrange:assign']);
-    expect(kids({ sudden: false, vacancy: false })).toEqual(['arrange:basics', 'arrange:standard', 'arrange:assign']);
+    expect(kids({})).toEqual(['arrange:rules', 'arrange:assign']);
+    expect(kids({ sudden: false, vacancy: false })).toEqual(['arrange:rules', 'arrange:assign']);
   });
   it('基本は5項目（エキスパート機能が切）。画面の一覧は勤務の見込み・条件の重み・特性の項目が無い（案を比べるはいつも無い）', () => {
-    // 基本はエキスパート機能が切：メニューは5つ・ホームは無い。組み方の標準は出ず、担当を組むだけ残る（パレットの空き状況は予定のグループ）
+    // 基本はエキスパート機能が切：メニューは5つ・ホームは無い。担当を組むは予定のグループ（パレットの空き状況も予定のグループ）
     expect(labels(applyTemplate('basic'))).toEqual(['予定', '空き状況', '利用者さん', 'スタッフ', '設定']);
     expect(screens(applyTemplate('basic'))).toEqual([
       '月の予定',
@@ -440,7 +439,7 @@ function st(date: string, x: Partial<DayStatus> = {}): DayStatus {
     ...x,
   };
 }
-describe('表の整合（メニュー・パレット・要対応の帯・ツアー・links の行き先が、土台か表のどれかに属する）', () => {
+describe('表の整合（メニュー・パレット・要対応の帯・links の行き先が、土台か表のどれかに属する）', () => {
   it('メニューの項目', () => {
     for (const g of menuSections(terms, TODAY, {})) for (const i of g.items) expect(belongs(i.to), i.to).toBe(true);
     for (const g of screenSections(terms, {})) for (const i of g.items) expect(belongs(i.to), i.to).toBe(true);
@@ -448,20 +447,14 @@ describe('表の整合（メニュー・パレット・要対応の帯・ツア�
   it('パレットの操作', () => {
     for (const a of paletteActions(TODAY)) expect(belongs(a.to), a.to).toBe(true);
   });
-  it('要対応の帯の移る先（訪問・未確定・組み直し・標準が無い）', () => {
+  it('要対応の帯の移る先（訪問・未確定）', () => {
     const visit = st(TODAY, { issues: new Map([['v1', [{ kind: 'unassigned' as const, label: '担当なし' }]]]) });
-    const open = { hasStandard: true, basisChanged: true, planYm: '2026-10', isOn: () => true };
     const gos = [
-      attentionBand([visit], TODAY, undefined, open)?.go,
-      attentionBand([st(TODAY, { state: 'none' }), st('2026-10-22', { state: 'none' })], TODAY, undefined, open)?.go,
-      attentionBand([], TODAY, undefined, open)?.go,
-      attentionBand([], TODAY, undefined, { ...open, hasStandard: false })?.go,
+      attentionBand([visit], TODAY, undefined, true)?.go,
+      attentionBand([st(TODAY, { state: 'none' }), st('2026-10-22', { state: 'none' })], TODAY, undefined, true)?.go,
     ];
     expect(gos.every((g) => g !== undefined)).toBe(true);
     for (const g of gos) expect(belongs(g!.to), g!.to).toBe(true);
-  });
-  it('ツアーの枚の機能は表のどれか（無ければ土台）', () => {
-    for (const s of tourSteps(terms)) if (s.feature) expect(FEATURE_IDS).toContain(s.feature);
   });
   it('links の行き先', () => {
     for (const h of [
@@ -483,11 +476,6 @@ describe('切った機能の入口を出さない（PRD D213）', () => {
     expect(ids({ vacancy: false })).not.toContain('action:vacancy');
     // expert 切（基本）は確定の段階の「確定していない日を見る」だけ出さない（ADR-0073）
     expect(ids(applyTemplate('basic'))).toEqual(ids({}).filter((id) => id !== 'action:unconfirmed'));
-  });
-  it('ツアー：欠勤・キャンセルの枚を出さず、枚数が減る（ホームの枚は無い。基本はすべてと同じ2枚）', () => {
-    expect(tourSteps(terms, {}).map((s) => s.key)).toEqual(['plan', 'absence']);
-    expect(tourSteps(terms, applyTemplate('basic')).map((s) => s.key)).toEqual(['plan', 'absence']);
-    expect(tourSteps(terms, { sudden: false }).map((s) => s.key)).toEqual(['plan']);
   });
   it('links：切った機能なら null、土台はそのまま', () => {
     expect(linkIfOn({}, suddenHref(TODAY))).toBe(suddenHref(TODAY));

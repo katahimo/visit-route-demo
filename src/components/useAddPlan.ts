@@ -1,4 +1,4 @@
-// 「定期の予定を入れる」の引き出し（AddPlanPanel）の状態と保存：〈利用者さん〉・入れ方（定期／単発）ごとの欄の値と、保存。
+// 「定期の予定を追加」の引き出し（AddPlanPanel）の状態と保存：〈利用者さん〉・入れ方（定期／単発）ごとの欄の値と、保存。
 // 保存は今ある仕組みを使う：定期は〈利用者さん〉の繰り返しを足す（usePatternAdd）、単発はその日の訪問を足す（lib/visitOps の applyVisitEdit）。
 // どちらも入れたあと、担当なしの分を自動で組む（ADR-0072）。データを書くのは store の update だけ
 import { useId, useState } from 'react';

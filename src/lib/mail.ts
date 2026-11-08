@@ -3,6 +3,7 @@
 // 呼び方は org.terms、事業所名は org.name から。データは書き換えない純粋関数
 import type { DemoData } from '../contracts/data';
 import type { Client, Org, Staff, Visit } from '../contracts/documents';
+import { clientOn } from '../domain/place2';
 import { weekday } from '../domain/time';
 import { visitsOn } from '../patterns';
 import { type BuiltMail, buildMail, MAILTO_LIMIT, uniqueRecipients } from './mailto';
@@ -45,7 +46,8 @@ export function dayByStaff(
 ): { day: PrintDay; byStaff: Map<string, MailVisit[]>; unassigned: MailVisit[] } {
   const day = printDay(data, date, null);
   const visitById = new Map(visitsOn(data, date).map((v) => [v.id, v]));
-  const clientById = new Map(data.clients.map((c) => [c.id, c]));
+  // その日の訪問先（住所2 の期間内なら住所2。ADR-0105）
+  const clientById = new Map(data.clients.map((c) => [c.id, clientOn(c, date)]));
   const byStaff = new Map<string, MailVisit[]>();
   const unassigned: MailVisit[] = [];
   for (const e of day.entries) {

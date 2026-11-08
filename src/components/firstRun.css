@@ -72,3 +72,29 @@
   justify-content: flex-end;
   gap: 8px;
 }
+/* デモの更新の知らせ（PRD D437）：変わったところ（畳んで始める） */
+.first-run-release {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 0.95rem;
+}
+.first-run-release summary {
+  font-weight: 600;
+  cursor: pointer;
+}
+.first-run-release-date {
+  margin: 4px 0 0;
+  color: var(--sub);
+  font-size: 0.85rem;
+}
+.first-run-release ul {
+  margin: 4px 0 0;
+  padding-left: 1.2em;
+  line-height: 1.6;
+}
+.first-run-warn {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.9rem;
+}

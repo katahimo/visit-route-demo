@@ -3,6 +3,7 @@ import type { DemoData } from '../contracts/data';
 import type { Client, Staff, Visit } from '../contracts/documents';
 import type { Problem, ScoreScale } from '../contracts/problem';
 import { isOnLeave } from '../domain/leaves';
+import { clientOn } from '../domain/place2';
 import { normalize } from '../evaluate';
 import { attempt, byDisplayName, byName } from '../lib/common';
 import { daySlotsOf } from '../lib/dayModel';
@@ -23,7 +24,11 @@ export function useDayModel(date: string) {
   const store = useDemoData();
   const { data } = store;
   const staff = useMemo(() => [...data.staff].sort(byName), [data.staff]);
-  const clients = useMemo(() => [...data.clients].sort(byDisplayName), [data.clients]);
+  // 場所はその日の訪問先（住所2 の期間内なら住所2。ADR-0105）。書き換えには使わない（書くのは store の data から）
+  const clients = useMemo(
+    () => [...data.clients].sort(byDisplayName).map((c) => clientOn(c, date)),
+    [data.clients, date],
+  );
   const staffById = useMemo(() => new Map<string, Staff>(staff.map((s) => [s.id, s])), [staff]);
   const clientById = useMemo(() => new Map<string, Client>(clients.map((c) => [c.id, c])), [clients]);
   /** 〈スタッフ〉の色（印 StaffMark・地図の線・時間軸の帯で同じ。lib/staffMark） */
@@ -112,6 +117,7 @@ export function useCompileInput(data: DemoData): CompileInput {
       data.visitTypes,
       data.patterns,
       data.clientLeaves,
+      data.roads,
     ],
   );
 }

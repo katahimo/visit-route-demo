@@ -49,19 +49,16 @@ export default function WeekPage() {
   const suddenOn = useFeature('sudden');
   /** 週の予定をメールで送る欄（PRD D93。ADR-0017） */
   const [mailOpen, setMailOpen] = useState(false);
-  const mailOn = useFeature('mail');
   /** メールで送るは「その他 ▾」へ、1行の状態・凡例は「詳しく」へ（入切とも。PRD D402・D393） */
-  const moreItems: MenuItem[] = mailOn
-    ? [
-        {
-          key: 'mail',
-          label: '予定をメールで送る',
-          icon: Mail,
-          onSelect: () => setMailOpen(true),
-          testId: 'week-mail',
-        },
-      ]
-    : [];
+  const moreItems: MenuItem[] = [
+    {
+      key: 'mail',
+      label: '予定をメールで送る',
+      icon: Mail,
+      onSelect: () => setMailOpen(true),
+      testId: 'week-mail',
+    },
+  ];
   const lead = useIntro('week', `この週の担当を見て、日時をドラッグでずらし、${terms.staff}に伝えたら確定します`);
   const { timelineRef, tableScrollRef, clientScrollRef } = useWeekTodayScroll(nav);
   // ---- この週の準備（PRD D328・D314。ADR-0046・ADR-0053）：担当なしを組む → 確定 → 済み の主ボタン1つ ----
@@ -162,7 +159,7 @@ export default function WeekPage() {
         )
       )}
 
-      {mailOpen && mailOn && <WeekMailPanel data={data} dates={dates} onClose={() => setMailOpen(false)} />}
+      {mailOpen && <WeekMailPanel data={data} dates={dates} onClose={() => setMailOpen(false)} />}
       {/* 複数選択の帯（PRD D330。画面の下に貼り付く） */}
       {/* 選んだ訪問をまとめて動かす帯は、確認のモードでは出さない（札を動かさない。PRD D355） */}
       <SelectionBar ids={visits.multi.ids} onClear={visits.multi.clear} dates={dates} />

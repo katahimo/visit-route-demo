@@ -17,20 +17,20 @@
 // 5e 人の画面は畳む・日の予定の地図はボタンで開く・月のマスの読み方（PRD D385・D384）：〈利用者さん〉の一覧は名前・住所・いつもの予定の3列、
 //    〈スタッフ〉は名前・勤務日・勤務時間の3列。詳細は〈利用者さん〉＝名前・住所・予定（繰り返し）／〈スタッフ〉＝名前・勤務日・勤務時間を出し、
 //    段階・特性・決まりごと（「基本」は決まりごとの機能が入。ADR-0086）・担当・相性（〈スタッフ〉は自宅・特性・求めること・日ごとの勤務ほか）は「詳しく ▾」の中（閉じていると見えない・開くと見える）。
-//    日の予定の地図はふだん閉じ、「地図」のボタンで開く（1366px・390px）。月のマスは例外だけで吹き出しを出さず、読み方は見出しの ⓘ（帯の4種類と「変更あり」。PRD D410）、
-// 5f 「定期の予定を入れる」（単発のみは「予約を入れる」）と〈スタッフ〉・〈利用者さん〉のタブ（PRD D402）：月・週の主ボタンは「定期の予定を入れる」（操作の行は2つまで。要対応を組むのは帯の［要対応を組む］）、
+//    日の予定の地図はふだん閉じ、「地図」のボタンで開く（1366px・390px）。月のマスは入と同じ表示（種類の帯・混み具合の棒・理由の札・マスの吹き出し・右の欄の要対応の一覧。確定の鍵と確定の言葉だけ出さない。PRD D433）、
+// 5f 「定期の予定を追加」（単発のみは「予約を追加」）と〈スタッフ〉・〈利用者さん〉のタブ（PRD D402）：月・週の主ボタンは「定期の予定を追加」（操作の行は2つまで。要対応を組むのは帯の［要対応を組む］）、
 //    押すと引き出し（定期＝〈利用者さん〉・曜日・くり返し・開始日（既定は今日・今日より前は誤り。PRD D416）・時刻・所要／単発＝〈利用者さん〉・日付・時刻・所要）で
-//    「入れる」→ 予定に出て開始日からの回に担当が自動で付く。くり返しは 毎週〜4週ごと・毎月（第N）（「基本」は毎月の第N の機能が入。ADR-0086）。
+//    「追加」→ 予定に出て開始日からの回に担当が自動で付く。くり返しは 毎週〜4週ごと・毎月（第N）（「基本」は毎月の第N の機能が入。ADR-0086）。
 //    5f3 最初の2問で定期を選んだデータ（「基本」）のままで、くり返しに「毎月（第N）」と第1〜第5 のチップ（選ばなければ誤り。入れた回に担当が自動で付き、組みの終わりまで待って次の段へ）、
-//    〈スタッフ〉の一覧の上のタブ（一覧・勤務・相性）と〈利用者さん〉のタブ（一覧・相性）で行き来でき、メニューの印は〈スタッフ〉／〈利用者さん〉に付き、
+//    〈スタッフ〉の一覧の上のタブ（一覧・勤務・相性）と〈利用者さん〉のタブ（一覧・予定と相性・相性。ADR-0100）で行き来でき、メニューの印は〈スタッフ〉／〈利用者さん〉に付き、
 //    相性・勤務の画面に禁句・点数が出ない。1366px・390px。幅は落ちても戻す、
-// 5f4 「CSV でまとめて入れる」（PRD D423）：Excel の入出力を切っても（単発のみで excel を切る）引き出しに畳んで出る。テンプレート・見ている月の書き出し・1件足したファイルの読み込み（確認のあと引き出しが閉じる）、
-// 6 エキスパート機能を入にすると帯に 組み方の標準が無い・未確定 N日 が足され［要対応を組む］は出ない（入のメニュー・ホームが無いことは e2e-nav・e2e-home）。
+// 5f4 「予約の CSV を読み込む」（PRD D423）：単発のみの「予約を追加」の引き出しのいちばん上に出る。テンプレート・見ている月の書き出し・1件足したファイルの読み込み（確認のあと引き出しが閉じる）、
+// 6 エキスパート機能を入にすると帯に 未確定 N日 が足され［要対応を組む］は出ない（入のメニュー・ホームが無いことは e2e-nav・e2e-home）。
 // 6b 入の操作の行（主ボタン＋1つ＋「その他 ▾」）・「詳しく ▾」の見出しの数と開け閉めの覚え・説明1行。
-// 6c 入の人の一覧（PRD D394）：〈スタッフ〉・〈利用者さん〉の一覧は見出しがメニューの名前で、切と同じ人のタブ（一覧・勤務・相性／一覧・相性）と3列で始まり、
+// 6c 入の人の一覧（PRD D394）：〈スタッフ〉・〈利用者さん〉の一覧は見出しがメニューの名前で、切と同じ人のタブ（一覧・勤務・相性／一覧・予定と相性・相性）と3列で始まり、
 //    表の上の「くわしい列」を入れると専門の列が足され、一覧ごとに端末に覚えて読み直しても同じ（外すと3列に戻る。切は切り替えが無い）。休止中は状態の列に重ねない。
-//    相性は来た側のタブ・メニューの印。1366px・390px（予定を組むの4段・基本情報のタブは e2e-nav）。
-// スクリーンショット：simple-band-go-day-1366（3）、simple-next-month-plan-1366・simple-next-month-390（3c）、simple-add-*（5f）・simple-clients-1366・simple-staff-1366・simple-plan-map-closed-1366 ほか（5e は simple-people-*・simple-plan-map-*）、simple-month-1366・simple-band-plan-1366・simple-menu-more-1366・simple-week-390・simple-tabs-390・simple-drawer-390
+//    相性は来た側のタブ・メニューの印。1366px・390px（入のメニューの子は e2e-nav）。
+// スクリーンショット：simple-band-go-day-1366（3）、simple-next-month-plan-1366・simple-next-month-390（3c）、simple-add-*（5f）・simple-clients-1366・simple-staff-1366・simple-plan-map-1366 ほか（5e は simple-people-*・simple-plan-map-*）、simple-month-1366・simple-band-plan-1366・simple-menu-more-1366・simple-week-390・simple-tabs-390・simple-drawer-390
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-simple-menu.cjs
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）
@@ -70,9 +70,9 @@ async function redirects(page) {
     await page.locator(NAV_READY).waitFor({ timeout: 60000 });
     check(/^#\/month/.test(hash(page)), `#${to} も予定（月）へ移る`, hash(page));
   }
-  // 切った機能の URL（担当を組むの後ろの組み方の標準は expert 切で開けない）も予定へ移して知らせる
+  // 切った機能の URL（条件の重みは expert 切で開けない）も予定へ移して知らせる
   await page.goto('about:blank');
-  await page.goto(`${BASE}#/standard`);
+  await page.goto(`${BASE}#/rules`);
   await page.locator(NAV_READY).waitFor({ timeout: 60000 });
   check(/^#\/month/.test(hash(page)), '切った機能の URL も予定（月）へ移る', hash(page));
   check((await page.getByTestId('feature-off-notice').count()) === 1, '移った先の予定の上で、切った機能の知らせを出す');
@@ -515,8 +515,9 @@ const TOOLBAR = '[data-testid="schedule-toolbar"]';
 const INTRO_KEY = 'visit-route-demo:nav-open';
 
 /** 操作の行のボタン（その他 ▾ のボタンは数えない）の名前 */
+// 「休みを取り込む」（cal-off-open。毎日使うので行に置く例外。PRD D440。ADR-0107）は数えない
 const toolbarButtons = (page) =>
-  page.locator(`${TOOLBAR} > button.btn, ${TOOLBAR} > a.btn`).evaluateAll((els) =>
+  page.locator(`${TOOLBAR} > button.btn:not([data-testid="cal-off-open"]), ${TOOLBAR} > a.btn`).evaluateAll((els) =>
     els.map((e) => ({
       text: e.textContent.trim().replace(/\s+/g, ' '),
       primary: e.classList.contains('btn-primary'),
@@ -550,7 +551,7 @@ async function open1(page, to) {
   await settle(page, 800);
 }
 
-/** 日の主ボタンを押すと新規の訪問の欄が開き、その見出しも主ボタンと同じ言葉（入切とも「訪問を1件足す」。PRD D402） */
+/** 日の主ボタンを押すと新規の訪問の欄が開き、その見出しも主ボタンと同じ言葉（入切とも「訪問を1件追加」。PRD D402） */
 async function dayAddOpens(page, label) {
   const btn = page.getByTestId('plan-visit-add');
   check((await btn.innerText()).trim() === label, `日の主ボタンの文字は「${label}」`);
@@ -577,12 +578,12 @@ async function exceptions(page) {
     [
       '/month',
       'month',
-      /^定期の予定を入れる$/,
+      /^定期の予定を追加$/,
       'month-details',
       ['band-next', 'band-plans', 'month-summary', 'month-legend-fold'],
     ],
-    ['/week', 'week', /^定期の予定を入れる$/, 'week-details', ['week-status']],
-    ['/plan', 'plan', /^訪問を1件足す$/, 'day-details', ['plan-summary', 'plan-score']],
+    ['/week', 'week', /^定期の予定を追加$/, 'week-details', ['week-status']],
+    ['/plan', 'plan', /^訪問を1件追加$/, 'day-details', ['plan-summary', 'plan-score']],
   ]) {
     await open1(page, to);
     const btns = await toolbarButtons(page);
@@ -590,7 +591,10 @@ async function exceptions(page) {
     check(btns.length >= 1 && btns[0].primary && primaryText.test(btns[0].text), `${to}：1つ目が主ボタン`, btns);
     check(btns.filter((b) => b.primary).length === 1, `${to}：操作の行の主ボタンは1つ`, btns);
     check((await page.locator('main .btn-primary, .content .btn-primary').count()) <= 1, `${to}：画面の主ボタンは1つ`);
-    check((await page.getByTestId('undo-btn').count()) === 0, `${to}：元に戻すは操作の行に出さない（その他 ▾ の中）`);
+    check(
+      (await page.getByTestId('undo-btn').count()) === 1 && (await page.getByTestId('redo-btn').count()) === 1,
+      `${to}：元に戻す・やり直すはアイコンだけのボタンで操作の行に出す（数えない補助。PRD D432）`,
+    );
     const fold = page.getByTestId(detailsId);
     check((await fold.count()) === 1, `${to}：「詳しく」がある`);
     check(!(await fold.evaluate((e) => e.open)), `${to}：「詳しく」は初め閉じている`);
@@ -604,11 +608,7 @@ async function exceptions(page) {
     // 「その他 ▾」に 元に戻す・表示の切り替えなど
     await page.getByTestId(`${zoom}-more`).click();
     const menu = await texts(page.getByRole('menuitem'));
-    check(
-      menu.some((t) => /^元に戻す/.test(t)),
-      `${to}：「その他 ▾」に元に戻す`,
-      menu,
-    );
+    check(!menu.some((t) => /^元に戻す/.test(t)), `${to}：「その他 ▾」に元に戻すを重ねて入れない`, menu);
     if (to !== '/week')
       check(
         menu.some((t) => /で見る/.test(t)),
@@ -617,7 +617,7 @@ async function exceptions(page) {
       );
     check(!BANNED.test(menu.join(' ')), `${to}：「その他 ▾」に禁句が出ない`, menu);
     if (to === '/month') await shot(page, 'simple-month-more-1366');
-    if (to === '/plan') await dayAddOpens(page, '訪問を1件足す');
+    if (to === '/plan') await dayAddOpens(page, '訪問を1件追加');
     await closeMore(page, zoom);
     // 禁句：開く前の画面全体
     const body = await page.locator('main, .content').first().innerText();
@@ -632,7 +632,10 @@ async function exceptions(page) {
     check(!BANNED.test(inner), `${to}：「詳しく」の中にも禁句が出ない`, inner.match(BANNED)?.[0]);
     if (to === '/plan') {
       check(/点数/.test(inner) && /移動/.test(inner), '日：「詳しく」の中に点数・移動の分数がある');
-      check((await page.locator('.tl-leg, .tl-wait').count()) === 0, '日：時間軸に移動・待ちの分数の線が出ない');
+      check(
+        (await page.locator('.tl-leg').count()) > 0 && (await page.locator('.tl-wait').count()) > 0,
+        '日：時間軸に移動・待ちの分数が入と同じく出る（PRD D431）',
+      );
       check((await page.getByTestId('unplaced-reason').count()) === 0, '日：担当なしの札に入れられない理由を出さない');
       check((await page.getByTestId('band-care').count()) === 0, '日：要対応の件数の内訳の帯を出さない');
       const marks = await page.locator('[data-testid="visit-marks"] [data-kind="pin"], [data-kind="unfit"]').count();
@@ -696,21 +699,21 @@ async function exceptions(page) {
       .evaluate((e) => e.open)),
     '日：札の詳細の理由は初め閉じている',
   );
-  // 月のマスは例外だけ（PRD D410）：理由の札・種類の積み上げ・混み具合の棒を出さない。右の欄は日を押す前は1行の案内だけ
+  // 月のマスは入と同じ表示（PRD D433）：種類の積み上げ・混み具合の棒・理由の札を出し、確定の鍵・確定の言葉だけ出さない。右の欄は要対応の一覧
   await open1(page, '/month');
   const cells = await page.locator('.month-cell').allInnerTexts();
-  check(!cells.some((t) => /条件に合わない|拘束超|担当なし|変更あり/.test(t)), '月：マスに理由の札を出さない');
+  check(!cells.some((t) => /未連絡|確定済み|まだ伝えていない/.test(t)), '月：マスに確定の言葉を出さない');
+  check((await page.locator('.month-cell .month-lock').count()) === 0, '月：マスに確定の鍵を出さない');
+  check((await page.locator('.month-cell .month-load').count()) > 0, '月：マスに混み具合の棒を出す');
   check(
-    (await page.locator('.month-cell .month-load, .month-cell [data-testid="month-unassigned"]').count()) === 0,
-    '月：マスに混み具合の棒・「担当なし N」を出さない',
+    (await page.getByTestId('month-aside-pick').count()) === 0,
+    '月：右の欄に「日を押すと〜」の1行の案内を出さない',
   );
-  const aside = await page.getByTestId('month-aside').innerText();
+  // 要対応が0件の日は一覧（ul）の代わりに「ありません」の文。見出し「要対応」があれば一覧の欄が出ている
   check(
-    aside.trim() === '日を押すとその日の訪問が出ます',
-    '月：右の欄は日を押す前は1行の案内だけ',
-    aside.slice(0, 120),
+    (await page.locator('.month-aside-title').filter({ hasText: '要対応' }).count()) === 1,
+    '月：右の欄に要対応の一覧を出す',
   );
-  check((await page.getByTestId('month-attention').count()) === 0, '月：右の欄に要対応の一覧を出さない');
   // 過去の週：要対応・印を出さず、1行の状態の無い「詳しく」は凡例だけ
   await page.goto('about:blank');
   await page.goto(`${BASE}#/week`);
@@ -813,9 +816,9 @@ async function expertSame(page) {
   }, STORAGE_KEY);
   await page.evaluate((k) => localStorage.removeItem(k), INTRO_KEY);
   for (const [to, zoom, want, detailsId, hidden] of [
-    ['/month', 'month', ['定期の予定を入れる', '担当を組む'], 'month-details', 'progress-band'],
-    ['/week', 'week', ['定期の予定を入れる', '担当を組む'], 'week-details', 'week-status'],
-    ['/plan', 'plan', ['訪問を1件足す', '確定（伝えた）'], 'day-details', 'plan-summary'],
+    ['/month', 'month', ['定期の予定を追加', '担当を組む'], 'month-details', 'progress-band'],
+    ['/week', 'week', ['定期の予定を追加', '担当を組む'], 'week-details', 'week-status'],
+    ['/plan', 'plan', ['訪問を1件追加', '確定（伝えた）'], 'day-details', 'plan-summary'],
   ]) {
     await open1(page, to);
     const btns = await toolbarButtons(page);
@@ -825,7 +828,10 @@ async function expertSame(page) {
       btns,
     );
     check(btns[0].primary, `入 ${to}：1つ目（${want[0]}）が主ボタン`, btns);
-    check((await page.getByTestId('undo-btn').count()) === 0, `入 ${to}：元に戻すは操作の行に出さない`);
+    check(
+      (await page.getByTestId('undo-btn').count()) === 1,
+      `入 ${to}：元に戻すはアイコンだけのボタンで操作の行に出す`,
+    );
     check(
       (await page.getByTestId('plan-help-btn').count()) === 0,
       `入 ${to}：使い方・表示の切り替えのボタンは行に無い`,
@@ -837,8 +843,8 @@ async function expertSame(page) {
       return t;
     })();
     check(
-      list.some((t) => /^欠勤・キャンセルを登録/.test(t)) && list.some((t) => /^元に戻す/.test(t)),
-      `入 ${to}：「その他 ▾」に 欠勤・キャンセルを登録 と 元に戻す`,
+      list.some((t) => /^欠勤・キャンセルを登録/.test(t)) && !list.some((t) => /^元に戻す/.test(t)),
+      `入 ${to}：「その他 ▾」に 欠勤・キャンセルを登録（元に戻すは行のアイコンだけで、メニューに重ねない。PRD D432）`,
       list,
     );
     const fold = page.getByTestId(detailsId);
@@ -898,7 +904,7 @@ async function expertSame(page) {
   );
   await shot(page, 'simple-day-expert-details-1366');
   await open1(page, '/plan');
-  await dayAddOpens(page, '訪問を1件足す');
+  await dayAddOpens(page, '訪問を1件追加');
   await page.evaluate((k) => localStorage.removeItem(k), INTRO_KEY);
   await open1(page, '/plan');
 }
@@ -937,11 +943,7 @@ async function expertList(page, w, { to, list, table, row, simple, extra, headin
     !/状態」の印/.test(await page.locator('main, .content').first().textContent()),
     `入 ${list}（${w}）：状態の列が無い間は「状態」の印の説明を出さない`,
   );
-  check(
-    (await texts(page.locator('[data-testid="people-tabs"] [data-tab]'))).every((t) => t !== '予定と相性') &&
-      (await page.getByTestId('arrange-steps').count()) === 0,
-    `入 ${list}（${w}）：基本情報のタブ・予定を組むの段は出さない`,
-  );
+  check((await page.getByTestId('arrange-steps').count()) === 0, `入 ${list}（${w}）：予定を組むの段は出さない`);
   if (postal) {
     // 住所の列に〒郵便番号を添える（データに郵便番号のある人がいるとき）
     const withPostal = await page.evaluate(
@@ -993,7 +995,7 @@ async function expertListOff(page, to, row, list) {
   await until(async () => (await columnsMemory(page, list)) === false, 5000, 100);
 }
 
-/** 6c 入：〈利用者さん〉・〈スタッフ〉の一覧は切と同じタブと3列、「くわしい列」で専門の列（覚える。一覧ごと。PRD D394。4段と基本情報のタブは e2e-nav） */
+/** 6c 入：〈利用者さん〉・〈スタッフ〉の一覧は切と同じタブと3列、「くわしい列」で専門の列（覚える。一覧ごと。PRD D394） */
 async function expertPeople(page) {
   const terms = (await data(page)).org.terms;
   const offName = await page.evaluate((k) => {
@@ -1012,7 +1014,7 @@ async function expertPeople(page) {
       row: '[data-testid="staff-row"]',
       heading: terms.staff,
       simple: ['名前', '勤務日', '勤務時間'],
-      extra: ['特性', `${terms.client}に求めること`, '自宅の位置', '状態'],
+      extra: ['特性', `${terms.client}に求めること`, '自宅の緯度・経度', '状態'],
     });
     // 一覧ごとに覚える：〈スタッフ〉を入れても〈利用者さん〉は入っていない
     check(
@@ -1034,16 +1036,17 @@ async function expertPeople(page) {
       heading: terms.client,
       simple: ['名前', '住所', 'いつもの予定'],
       postal: 'client-address',
-      extra: ['位置', '特性', `${terms.staff}に求めること`, 'いつもの担当', '状態'],
+      extra: ['緯度・経度', '特性', `${terms.staff}に求めること`, 'いつもの担当', '状態'],
     });
     check(
       /状態」の印/.test(await page.locator('main, .content').first().textContent()),
       `入 clients（${w}）：くわしい列を入れると「状態」の印の説明を出す（狭い画面は畳んだ絞り込みの中）`,
     );
-    // タブ：切と同じ（〈スタッフ〉＝一覧・勤務・相性、〈利用者さん〉＝一覧・相性）。移った先にも同じタブ・メニューの印
+    // タブ：切と同じ（〈スタッフ〉＝一覧・勤務・相性、〈利用者さん〉＝一覧・予定と相性・相性。ADR-0100）。移った先にも同じタブ・メニューの印
     for (const [to, names, side] of [
       ['/staff', ['一覧', '勤務', '相性'], terms.staff],
-      ['/clients', ['一覧', '相性'], terms.client],
+      ['/clients', ['一覧', '予定と相性', '相性'], terms.client],
+      ['/basics', ['一覧', '予定と相性', '相性'], terms.client],
     ]) {
       await openTo(page, to);
       const st = await peopleTabState(page);
@@ -1059,7 +1062,7 @@ async function expertPeople(page) {
     await settle(page, 500);
     const cst = await peopleTabState(page);
     check(
-      JSON.stringify(cst.names) === JSON.stringify(['一覧', '相性']) &&
+      JSON.stringify(cst.names) === JSON.stringify(['一覧', '予定と相性', '相性']) &&
         JSON.stringify(cst.on) === JSON.stringify(['相性']) &&
         JSON.stringify(cst.menu) === JSON.stringify([terms.client]),
       `入 相性（${w}）：来た側（${terms.client}）のタブと印`,
@@ -1078,7 +1081,7 @@ async function expertPeople(page) {
 }
 
 /**
- * 6 エキスパート機能を入にすると、帯に入だけの種類（組み方の標準が無い・未確定 N日）が足され［要対応を組む］は出ない（PRD D404）。
+ * 6 エキスパート機能を入にすると、帯に入だけの種類（未確定 N日）が足され［要対応を組む］は出ない（PRD D404。組み方の標準が無いは無い。ADR-0100）。
  * 入のメニュー（6つ・子は組むだけ）・ホームが無いこと・下のタブと引き出しは e2e-nav・e2e-home・e2e-mobile が見る
  */
 async function expertOn(page) {
@@ -1096,8 +1099,8 @@ async function expertOn(page) {
   await page.getByTestId('attention-band').waitFor({ timeout: 60000 });
   const bandText = await page.getByTestId('attention-band-text').innerText();
   check(
-    /担当なし \d+件/.test(bandText) && /組み方の標準が無い/.test(bandText) && /未確定 \d+日/.test(bandText),
-    'expert 入：要対応の帯に 担当なし・組み方の標準が無い・未確定 N日 が出る',
+    /担当なし \d+件/.test(bandText) && !/組み方の標準/.test(bandText) && /未確定 \d+日/.test(bandText),
+    'expert 入：要対応の帯に 担当なし・未確定 N日 が出る（組み方の標準が無いは出ない）',
     bandText,
   );
   check(
@@ -1169,8 +1172,6 @@ async function peopleList(page, { label, to, table, heads, row }) {
   check(cells === heads.length + 1, `${label}：行のセルは3列＋開く`, cells);
   const body = await page.locator('main, .content').first().innerText();
   check(!BANNED.test(body), `${label}：一覧に禁句が出ない`, body.match(BANNED)?.[0]);
-  const tabs = await texts(page.locator('[data-testid="people-tabs"] [data-tab]'));
-  check(!tabs.includes('予定と相性'), `${label}：基本情報のタブ（予定と相性）は出さない（小さいタブは 5f）`, tabs);
   check(
     (await columnsToggle(page).count()) === 0,
     `${label}：「くわしい列」の切り替えは入だけ（切は出さない。PRD D394）`,
@@ -1254,72 +1255,31 @@ async function people(page) {
   await monthTip(page);
 }
 
-/** 日の予定の地図：ふだん閉じ、「地図」のボタンで開く（PC もスマホと同じ形） */
+/** 日の予定の地図：切でも入と同じ全幅のカードを置く（ADR-0103） */
 async function planMap(page, w) {
   await open1(page, '/plan');
-  // 目印は地図のボタン（デモは組み終えて始め、要対応を組むで間に合わない・重なりも組み直すので、帯が出ないこともある。PRD D322・ADR-0089）
-  const fab = page.locator('.map-dock-fab');
-  await fab.waitFor({ timeout: 60000 });
-  check((await page.getByTestId('plan-map').count()) === 0, `日の予定（${w}）：地図は閉じている（ページに置かない）`);
-  check(/地図/.test(await fab.innerText()), `日の予定（${w}）：「地図」のボタンがある`);
-  check((await page.locator('section.map-dock').count()) === 0, `日の予定（${w}）：ボタンを押すまで地図は出ない`);
-  await shot(page, `simple-plan-map-closed-${page.viewportSize().width}`);
-  await fab.click();
-  const dock = page.locator('section.map-dock');
-  await dock.waitFor({ timeout: 10000 });
+  const card = page.getByTestId('plan-map');
+  await card.waitFor({ timeout: 60000 });
+  check(await card.isVisible(), `日の予定（${w}）：地図のカードがある`);
+  await card.scrollIntoViewIfNeeded();
   await settle(page, 1200);
-  check(await dock.isVisible(), `日の予定（${w}）：「地図」を押すと地図が開く`);
-  const focused = (name) => page.evaluate((n) => document.activeElement?.getAttribute('aria-label') === n, name);
-  check(await focused('地図を閉じる'), `日の予定（${w}）：開いたら閉じるボタンへフォーカス`);
-  check(
-    (await dock.getByLabel('地図を閉じる').getAttribute('aria-expanded')) === 'true',
-    `日の予定（${w}）：閉じるボタンに aria-expanded=true`,
-  );
-  check((await dock.getByLabel('ページの地図へ移る').count()) === 0, `日の予定（${w}）：ページの地図へ移る矢印は無い`);
-  await shot(page, `simple-plan-map-open-${page.viewportSize().width}`);
-  // 訪問の帯を選ぶと担当に絞られる：地図の見出しの「全員のルートを見る」で解ける（ページに地図が無いのでここに出す）
-  await dock.getByLabel('地図を閉じる').click();
-  await fab.waitFor({ timeout: 10000 });
-  check(await focused('地図を開く'), `日の予定（${w}）：閉じたら「地図」のボタンへフォーカス`);
-  check(
-    (await fab.getAttribute('aria-expanded')) === 'false',
-    `日の予定（${w}）：「地図」のボタンに aria-expanded=false`,
-  );
-  const band = page.locator('.tl-band-btn');
-  if ((await band.count()) === 0) return;
-  await band.first().click();
-  await settle(page, 600);
-  const clear = page.getByTestId('dock-clear-focus');
-  if (await clear.count()) {
-    await clear.click();
-    await settle(page, 300);
-    check((await clear.count()) === 0, `日の予定（${w}）：「全員のルートを見る」で絞りが解ける`);
-  } else check(true, `日の予定（${w}）：訪問の選びでは担当に絞らない（全員のルートのまま）`);
+  await shot(page, `simple-plan-map-${page.viewportSize().width}`);
 }
 
-/** 月のマスの読み方（PRD D410）：切はマスに吹き出しを出さず、見出しの ⓘ に出す。要対応は帯の3種類と「変更あり」 */
+/** 月のマスの読み方（PRD D433）：入と同じく、マスに吹き出しを出す（見出しの ⓘ は無い） */
 async function monthTip(page) {
   await open1(page, '/month');
   const cell = page.locator('[data-testid="month-day"]').first();
   await cell.waitFor({ timeout: 30000 });
-  check((await page.locator('.month-cell [data-tip]').count()) === 0, '月のマス：吹き出しの印（data-tip）を付けない');
+  check((await page.locator('.month-cell [data-tip]').count()) > 0, '月のマス：吹き出しの印（data-tip）を付ける');
   await cell.hover();
-  // 吹き出しが出ないことを確かめる（出るまでの 300ms より長く待つ。固定の待ち）
-  await page.waitForTimeout(600);
-  check((await page.getByTestId('month-cell-tip').count()) === 0, '月のマス：マウスを乗せても吹き出しを出さない');
+  await page.getByTestId('month-cell-tip').waitFor({ timeout: 10000 });
   const label = await cell.getAttribute('aria-label');
-  check(/訪問/.test(label ?? ''), '月のマス：読み上げの文は残す', label);
-  await page.locator('.page-head .hint summary').click();
-  const hint = page.getByTestId('month-cell-hint');
-  await hint.waitFor({ timeout: 10000 });
-  const t = await hint.innerText();
-  check(
-    /担当なし・間に合わない・重なり・休みの人/.test(t),
-    '月のマスの読み方（ⓘ）：要対応は 担当なし・間に合わない・重なり・休みの人',
-    t,
-  );
-  check(!/条件に合わない|拘束|棒/.test(t), '月のマスの読み方（ⓘ）：条件に合わない・拘束超・棒は言わない', t);
-  check(!BANNED.test(t), '月のマスの読み方（ⓘ）：禁句が出ない', t.match(BANNED)?.[0]);
+  check(/訪問/.test(label ?? ''), '月のマス：読み上げの文がある', label);
+  const t = await page.getByTestId('month-cell-tip').innerText();
+  check(!BANNED.test(t), '月のマスの吹き出し：禁句が出ない', t.match(BANNED)?.[0]);
+  check(!/確定|未連絡/.test(t), '月のマスの吹き出し：確定の言葉を出さない', t);
+  check((await page.getByTestId('month-cell-hint').count()) === 0, '月：見出しの ⓘ（マスの読み方）は無い');
   await shot(page, 'simple-month-tip-1366');
   await page.mouse.move(0, 0);
 }
@@ -1327,7 +1287,7 @@ async function monthTip(page) {
 const SCORE = /点数|\d+\s*点/;
 
 /** 操作の行を確かめる：1つ目が主ボタン（text）・2つ目が欠勤・キャンセル・合わせて2つまで・組むは帯の［要対応を組む］ */
-async function addToolbar(page, to, zoom, w, text = '定期の予定を入れる') {
+async function addToolbar(page, to, zoom, w, text = '定期の予定を追加') {
   await open1(page, to);
   const btns = await toolbarButtons(page);
   check(btns.length === 2, `${zoom}（${w}）：操作の行のボタンは2つ（その他 ▾ を除く）`, btns);
@@ -1356,7 +1316,7 @@ async function addToolbar(page, to, zoom, w, text = '定期の予定を入れる
   await shot(page, `simple-add-${zoom}-toolbar-${page.viewportSize().width}`);
 }
 
-/** 月・週の主ボタン（定期の予定を入れる／予約を入れる）を押して引き出しを開く（開いたら欄の中身を返す） */
+/** 月・週の主ボタン（定期の予定を追加／予約を追加）を押して引き出しを開く（開いたら欄の中身を返す） */
 async function openAdd(page, kind, label) {
   await page.getByTestId('toolbar-add-plan').click();
   const box = page.getByTestId('add-plan');
@@ -1378,6 +1338,7 @@ async function addRecurring(page, w) {
     labels,
   );
   check((await box.getByTestId('add-plan-date').count()) === 0, `定期（${w}）：日付の欄は無い`);
+  check((await box.getByTestId('plan-csv').count()) === 0, `定期（${w}）：CSV の欄は無い（CSV は単発の訪問だけ読む）`);
   // 開始日（PRD D416）：既定は今日・今日より前は選べない。くり返しは 毎週〜4週ごと・毎月（第N）（「基本」は毎月の第N の機能が入。ADR-0086）
   const from = box.getByTestId('add-plan-from');
   check(
@@ -1464,7 +1425,7 @@ async function addRecurring(page, w) {
   );
   check(
     await page.getByTestId('toolbar-add-plan').evaluate((e) => e === document.activeElement),
-    `定期（${w}）：閉じたら「定期の予定を入れる」へフォーカスが戻る`,
+    `定期（${w}）：閉じたら「定期の予定を追加」へフォーカスが戻る`,
   );
   // 予定に出る：今日から先の金曜で、その〈利用者さん〉の13:15の訪問に担当が付く（自動の組み。ピンは付けない）
   const d2 = await until(async () => {
@@ -1485,26 +1446,21 @@ async function addRecurring(page, w) {
 }
 
 /**
- * 5f4 「CSV でまとめて入れる」（PRD D423。ADR-0090）：Excel の入出力を切っても（単発のデモ。「単発のみ」は Excel の入出力が入なので
- * ADR-0091 から excel だけ切って読み直す）引き出しに畳んで出る。
+ * 5f4 「予約の CSV を読み込む」（PRD D408・D423。ADR-0090）：単発のデモの「予約を追加」の引き出しのいちばん上に出る。
  * テンプレートは列名の行だけ、書き出しは見ている月の単発の訪問（件数がボタンに出る）。書き出した列で1件足したファイルを読むと、
  * 確認のあと訪問が1件増え、引き出しが閉じる
  */
 async function addCsv(page) {
   await fresh(page, '/week', NAV_READY, { start: 'demo', use: 'oneOff' });
-  // 単発のみは Excel の入出力が入（ADR-0091）。切っても出ることを見るので excel だけ切って読み直す
-  await page.evaluate((k) => {
-    const d = JSON.parse(localStorage.getItem(k));
-    d.org.features.excel = false;
-    localStorage.setItem(k, JSON.stringify(d));
-  }, STORAGE_KEY);
-  await open1(page, '/week');
   const d0 = await data(page);
-  check(d0.org.features.excel === false, '前提：Excel の入出力が切', d0.org.features.excel);
   const box = await openAdd(page, 'oneOff', 'CSV');
   const csv = box.getByTestId('plan-csv');
-  check((await csv.getAttribute('open')) === null, 'CSV：ふだんは畳む');
-  await box.getByTestId('plan-csv-open').click();
+  // 単発（予約を追加）は毎日の予約の取り込みが主なので、引き出しのいちばん上に出す
+  check(await csv.evaluate((el) => el.parentElement.firstElementChild === el), 'CSV：単発は引き出しのいちばん上');
+  check(
+    (await csv.locator('h3').innerText()).includes('予約の CSV を読み込む'),
+    'CSV：見出しは「予約の CSV を読み込む」',
+  );
   const tpl = await Promise.all([page.waitForEvent('download'), box.getByTestId('plan-csv-template').click()]);
   const head = fs
     .readFileSync(await tpl[0].path(), 'utf8')
@@ -1628,7 +1584,7 @@ async function addOneOff(page, w) {
   await fresh(page, '/week', NAV_READY, { start: 'demo', use: 'oneOff' });
   const d0 = await data(page);
   check(d0.org.features.patterns === false, '前提：単発の答えは繰り返しを使わない');
-  await addToolbar(page, '/week', 'week', w, '予約を入れる');
+  await addToolbar(page, '/week', 'week', w, '予約を追加');
   const box = await openAdd(page, 'oneOff', `単発（${w}）`);
   const labels = await texts(box.locator('label'));
   check(
@@ -1674,11 +1630,11 @@ async function addOneOff(page, w) {
   await open1(page, `/plan?date=${date}`);
   const planText = await page.locator('main, .content').first().innerText();
   check(planText.includes(cname) && planText.includes('14:20'), `単発（${w}）：その日の予定に ${cname} 14:20 が出る`);
-  // 入れる前に閉じる：やめる
+  // 追加する前に閉じる
   await open1(page, '/week');
   await openAdd(page, 'oneOff', `単発（${w}）`);
   await page.getByTestId('add-plan-close').click();
-  check((await page.getByTestId('add-plan').count()) === 0, `単発（${w}）：「やめる」で閉じる`);
+  check((await page.getByTestId('add-plan').count()) === 0, `単発（${w}）：「閉じる」で閉じる`);
   check((await data(page)).visits.length === d1.visits.length, `単発（${w}）：やめたらデータは変わらない`);
 }
 
@@ -1759,25 +1715,23 @@ async function peopleTabs(page, w) {
   await tabGo(page, `${terms.staff}の`, '/compat', { ...s, tab: '相性' });
   await tabGo(page, `${terms.staff}の`, '/staff', { ...s, tab: '一覧' });
   // 勤務の見込み（#/workload。「基本」では機能が切）の印は、タブの match（lib/peopleTabs）と menu の match が同じ画面に当てる（単体テスト）
-  // 〈利用者さん〉：一覧・相性。相性の画面ではこちらから来た側のタブ・印
-  const c = { names: ['一覧', '相性'], menu: terms.client, side: 'clients' };
+  // 〈利用者さん〉：一覧・予定と相性・相性（ADR-0100）。相性の画面ではこちらから来た側のタブ・印
+  const c = { names: ['一覧', '予定と相性', '相性'], menu: terms.client, side: 'clients' };
   await openTo(page, '/clients');
   const cs = await peopleTabState(page);
   check(
     JSON.stringify(cs.names) === JSON.stringify(c.names),
-    `${terms.client}一覧（${w}）：タブは 一覧・相性`,
+    `${terms.client}一覧（${w}）：タブは 一覧・予定と相性・相性`,
     cs.names,
   );
   await shot(page, `simple-tabs-clients-list-${page.viewportSize().width}`);
+  await tabGo(page, `${terms.client}の`, '/basics', { ...c, tab: '予定と相性' });
   await tabGo(page, `${terms.client}の`, '/compat', { ...c, tab: '相性' });
   await tabGo(page, `${terms.client}の`, '/clients', { ...c, tab: '一覧' });
-  // 予定と相性（#/basics）など旧画面のタブは出さない
-  await openTo(page, '/basics');
-  check((await page.getByTestId('people-tabs').count()) === 0, `予定と相性（${w}）：旧画面のタブは出さない`);
 }
 
 /**
- * 5f 切：月・週の主ボタン（定期の予定を入れる・予約を入れる）と〈スタッフ〉・〈利用者さん〉のタブ（幅ごとに段を分ける。デモで始めるたびに最初の組みを待つので、
+ * 5f 切：月・週の主ボタン（定期の予定を追加・予約を追加）と〈スタッフ〉・〈利用者さん〉のタブ（幅ごとに段を分ける。デモで始めるたびに最初の組みを待つので、
  * 1つの段に入れると段の時間を超える。落ちても幅は restoreWidth が戻す）
  */
 const addAndTabs = (width) => async (page) => {
@@ -1823,11 +1777,11 @@ const steps = sharedPage({
       '5f2 切：月・週の主ボタン（定期・単発）・〈スタッフ〉〈利用者さん〉のタブ（390px）',
       restoreWidth(addAndTabs(390)),
     ],
-    ['5f3 切：「定期の予定を入れる」の毎月（第N）・誤りの欄（「基本」のまま）', addMonthly],
-    ['5f4 切：「予約を入れる」の CSV でまとめて入れる（単発のみ）', addCsv],
+    ['5f3 切：「定期の予定を追加」の毎月（第N）・誤りの欄（「基本」のまま）', addMonthly],
+    ['5f4 切：「予約を追加」のいちばん上の予約の CSV（単発のみ）', addCsv],
     ['6 入：メニュー6つ・ホームなし・帯の入の種類', expertOn],
     ['6b 入：操作の行（2つ＋その他）・「詳しく」の見出しの数と開け閉めの覚え・説明1行', expertSame],
-    ['6c 入：人の一覧は3列＋「くわしい列」（覚える）・人のタブ・4段は組む画面だけ', restoreWidth(expertPeople)],
+    ['6c 入：人の一覧は3列＋「くわしい列」（覚える）・人のタブ', restoreWidth(expertPeople)],
   ],
   call: (fn, s) => fn(s.page),
 });

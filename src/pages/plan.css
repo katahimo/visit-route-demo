@@ -1022,3 +1022,8 @@ fieldset.absence-fields {
   flex-wrap: nowrap;
   gap: 8px;
 }
+/* 担当なしの訪問の組めない理由の短い内訳（入切とも控えめに。PRD D430） */
+.unplaced-why {
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}

@@ -3,7 +3,7 @@
 // 単独の実行では `if (require.main === module) runSteps(steps)`、包み（e2e/legacy.spec.ts）では段ごとに test.step で回す。
 // 段の中身（guard の中）で投げたら、段の名前の確かめ（NG）とスクリーンショットにして続ける。
 // 準備（ブラウザ・文脈を開く）・段ごとの文脈を開く所・後始末で投げたら、そこで止める（test は落ちる。単独なら終了コード1）
-const { launch, NOW, check, failShot, watchErrors, withTimeout } = require('./env.cjs');
+const { launch, NOW, check, failShot, recentChecks, watchErrors, withTimeout } = require('./env.cjs');
 const { skipTour } = require('./tourSeen.cjs');
 const { answerConfirms, watchNative } = require('./confirmDialog.cjs');
 
@@ -35,9 +35,22 @@ function guard(fn, { label, info = message, page, shot = label }) {
       await withTimeout(run, STEP_LIMIT_MS, STEP_TIMEOUT_TEXT);
       return undefined;
     } catch (e) {
-      check(false, label, info(e));
       const timedOut = String(e?.message || e).includes(STEP_TIMEOUT_TEXT);
       const p = page?.();
+      // 時間切れは、直前に通った確かめと開いているページの URL を添える（CI の記録だけでどこで止まったか分かるように。
+      // url() はページの中を待たないので、固まったページでも読める）
+      const where = timedOut
+        ? `  直前の確かめ：${recentChecks.slice(0, 2).join(' ／ ') || 'なし'}  開いているページ：${
+            p
+              ? p
+                  .context()
+                  .pages()
+                  .map((x) => x.url())
+                  .join(' , ')
+              : '不明'
+          }`
+        : '';
+      check(false, label, `${info(e)}${where}`);
       if (p && !timedOut) await withTimeout(failShot(p, shot), 10 * 1000, 'スクリーンショット').catch(() => {});
       return timedOut ? TIMED_OUT : undefined;
     }
@@ -48,7 +61,7 @@ function guard(fn, { label, info = message, page, shot = label }) {
 const closeContext = (ctx) => (ctx ? withTimeout(ctx.close(), 30 * 1000, '文脈を閉じる').catch(() => {}) : undefined);
 
 /**
- * ブラウザ・文脈・ページを開く（多くのスクリプトの準備）：初回の案内ツアーを見た扱い（PRD D193。start は skipTour へ）・
+ * ブラウザ・文脈・ページを開く（多くのスクリプトの準備）：最初の2問を出さない扱い（PRD D379。start は skipTour へ）・
  * ページの時計を NOW に止める・ページのエラーを集める（env.cjs の pageErrors）
  */
 async function openPage({
@@ -94,7 +107,7 @@ const blockGeocode = (ctx) =>
   });
 
 /**
- * pagePerStep の段ごとの文脈とページを開く：案内ツアーを見た扱い・地図のタイルを取りに行かない・ページの時計を NOW に止める・
+ * pagePerStep の段ごとの文脈とページを開く：最初の2問を出さない扱い・地図のタイルを取りに行かない・ページの時計を NOW に止める・
  * ページのエラーを pageErrors に集める。確認は独自のダイアログで受け（dlg。answerConfirms）、confirms: false なら
  * 答えずにネイティブのダイアログだけ記録する（dlg.native）
  */

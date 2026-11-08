@@ -126,7 +126,7 @@ export const isRepeatChoice = (v: string): v is RepeatChoice =>
 export const toggleNumber = (list: readonly number[], n: number): number[] =>
   (list.includes(n) ? list.filter((x) => x !== n) : [...list, n]).sort((a, b) => a - b);
 
-/** 第N の誤りの文（毎月で第N を選んでいない。足す・直す欄と「定期の予定を入れる」で同じ） */
+/** 第N の誤りの文（毎月で第N を選んでいない。足す・直す欄と「定期の予定を追加」で同じ） */
 export const MONTH_WEEKS_ERROR = '第何週かを1つ以上選んでください';
 
 /** 選んだ曜日（日曜はじまりの順） */

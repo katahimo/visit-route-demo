@@ -10,9 +10,9 @@
 //     郵便番号で住所を差し替えてもピンは残る・仮押さえで postalCode が入る
 //   8 〈スタッフ〉の自宅：郵便番号を保存しない
 //   9 〈利用者さん〉の欄：data-testid がそろっている・保存で postalCode が入る
-//  10 名簿を読み込んだら自動で地図に置く（PRD D427。ADR-0094）：確認の本文に送ることの1文・［名簿を読み込む］の続きで
-//     始まる（もう押さない）・止める・［続きを探す］・見つからない人は結果に市区町村の1行・「位置なし」の絞り込みと行の操作
-//  11 〈スタッフ〉の自宅をまとめて置く（PRD D427）：一覧の欄・休止を除く・行の［住所から探す］（1人だけ）・［地図で置く］
+//  10 名簿を読み込んだら自動で緯度・経度を入れる（PRD D427。ADR-0094）：確認の本文に送ることの1文・［名簿を読み込む］の続きで
+//     始まる（もう押さない）・止める・［続きを探す］・見つからない人は結果に市区町村の1行・「緯度・経度なし」の絞り込みと行の操作
+//  11 〈スタッフ〉の自宅をまとめて置く（PRD D427）：一覧の欄・休止を除く・行の［住所から探す］（1人だけ）・［緯度・経度を編集］
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-address.cjs
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）
@@ -131,10 +131,7 @@ async function basics(page, fake) {
   ]) {
     check((await box.getByTestId(id).count()) === 1, `〈利用者さん〉：data-testid「${id}」がある`);
   }
-  check(
-    /名前などほかの項目は送りません/.test(await box.getByTestId('place-notice').textContent()),
-    '〈利用者さん〉：注記',
-  );
+  check(/郵便番号・住所のみ送信/.test(await box.getByTestId('place-notice').textContent()), '〈利用者さん〉：注記');
   const before = await page.getByTestId('client-address').inputValue();
   await page.getByTestId('client-postal').fill('  ９８０ －　０８１１  ');
   await page.getByTestId('client-address').fill(`${before}`);
@@ -186,8 +183,8 @@ async function basics(page, fake) {
   fake.zip.body = ZIP_ONE;
   await page.getByTestId('client-address').fill('東京都');
   await page.getByTestId('client-postal-search').click();
-  const s = await until(box.getByTestId('place-lookup-status'), /位置は前のまま/);
-  check(/『住所から置き直す』を押してください/.test(s), 'ピンがあれば置き直しを促す知らせ', s);
+  const s = await until(box.getByTestId('place-lookup-status'), /緯度・経度は前のまま/);
+  check(/『住所から入れ直す』を押してください/.test(s), 'ピンがあれば入れ直しを促す知らせ', s);
   check(/38\.27000/.test(await pinText(page, 'client')), 'ピンは消さずに残す');
   // 9 保存で postalCode が入る
   await page.getByRole('button', { name: '保存' }).click();
@@ -349,10 +346,7 @@ async function vacancy(page) {
   const calcs = () => page.evaluate(() => window.__calc);
   const title = () => page.getByTestId('vacancy-table-card').locator('.section-title, h2, h3').first().textContent();
   check(/目安/.test(await title()), '場所が空なら目安');
-  check(
-    /条件などほかの項目は送りません/.test(await page.getByTestId('vacancy-notice').textContent()),
-    '空き状況：注記',
-  );
+  check(/郵便番号・住所のみ送信/.test(await page.getByTestId('vacancy-notice').textContent()), '空き状況：注記');
   await page.getByTestId('vacancy-postal').fill('980-0811');
   await settle(page, 700);
   check((await calcs()) === 0, '郵便番号を打っても計算し直さない');
@@ -380,9 +374,9 @@ async function vacancy(page) {
   // 郵便番号から住所を差し替えてもピンは残り、知らせを出す
   await page.getByTestId('vacancy-address').fill('東京都');
   await page.getByTestId('vacancy-postal-search').click();
-  const s = await until(page.getByTestId('vacancy-status'), /位置は前のまま/);
+  const s = await until(page.getByTestId('vacancy-status'), /緯度・経度は前のまま/);
   check(
-    /『住所から置き直す』/.test(s) && /38\.26010/.test(await pinText(page, 'vacancy')),
+    /『住所から入れ直す』/.test(s) && /38\.26010/.test(await pinText(page, 'vacancy')),
     '空き状況：住所を差し替えてもピンは残る',
   );
   check(/一番町1-1への移動を含む/.test(await title()), '差し替えても見出しはピンを置いたときの住所');
@@ -408,14 +402,16 @@ async function holdNote(page) {
   await settle(page, 800);
   await page.getByTestId('hold-open').click();
   check(
-    /場所が空なので、住所・位置はあとで/.test(await page.locator('.side-panel, [role="dialog"]').last().textContent()),
+    /場所が空なので、住所・緯度・経度はあとで/.test(
+      await page.locator('.side-panel, [role="dialog"]').last().textContent(),
+    ),
     '仮押さえ：場所が空の注記',
   );
   await page.getByRole('button', { name: '閉じる' }).last().click();
   await page.getByTestId('vacancy-address').fill('宮城県仙台市青葉区一番町');
   await page.getByTestId('hold-open').click();
   const t = await page.locator('.side-panel, [role="dialog"]').last().textContent();
-  check(/位置はあとで入れてください/.test(t) && !/場所が空なので/.test(t), '仮押さえ：住所だけのときの注記');
+  check(/緯度・経度はあとで入れてください/.test(t) && !/場所が空なので/.test(t), '仮押さえ：住所だけのときの注記');
 }
 
 /** 8：〈スタッフ〉の自宅 */
@@ -463,7 +459,7 @@ const LEDGER_HEAD =
   );
 const ledgerTsv = (rows) =>
   [LEDGER_HEAD, ...rows.map((v) => LEDGER_HEAD.map((h) => v[h] ?? ''))].map((r) => r.join('\t')).join('\r\n');
-/** 10：名簿を読み込んだら自動で地図に置く（PRD D427。ADR-0094） */
+/** 10：名簿を読み込んだら自動で緯度・経度を入れる（PRD D427。ADR-0094） */
 async function rosterPlaceAll(page, fake, dlg) {
   await page.goto('about:blank');
   await page.goto(`${BASE}#/clients`);
@@ -474,6 +470,8 @@ async function rosterPlaceAll(page, fake, dlg) {
   fake.gsi = { mode: 'ok', body: GSI_ONE, delay: 700, notFoundIf: (u) => u.includes('架空区') };
   const sent = fake.calls.length;
   const asked = dlg.messages.length;
+  // 2人だけの名簿なので追加・更新で読む（既定の総入れ替えだとほかの人が終了になる。PRD D441）
+  await page.getByTestId('roster-mode-merge').check();
   await page.getByTestId('roster-file-input').setInputFiles({
     name: 'ledger.tsv',
     mimeType: 'text/tab-separated-values',
@@ -491,13 +489,13 @@ async function rosterPlaceAll(page, fake, dlg) {
       .slice(asked)
       .join('\n')
       .includes(
-        '読み込んだあと、住所から地図の位置を探します（住所を郵便番号の検索と国土地理院の地図の検索に使います）',
+        '読み込んだあと、住所から緯度・経度を探します（住所を郵便番号の検索と国土地理院の地図の検索に使います）',
       ),
-    '名簿のあと：確認の本文に、読み込んだあと住所から地図の位置を探すことを書く',
+    '名簿のあと：確認の本文に、読み込んだあと住所から緯度・経度を探すことを書く',
     dlg.messages.slice(asked),
   );
   const progress = page.getByTestId('place-all-progress');
-  await until(progress, /置いています/, 5000);
+  await until(progress, /探しています/, 5000);
   check(
     (await page.getByTestId('roster-card').isHidden()) &&
       (await page.evaluate(() => document.activeElement?.getAttribute('data-testid'))) === 'place-all' &&
@@ -505,6 +503,12 @@ async function rosterPlaceAll(page, fake, dlg) {
     '名簿のあと：［名簿を読み込む］の続きで自動で始まる（名簿の欄を閉じ、まとめて置く欄へフォーカス・「止める」）',
   );
   await page.screenshot({ path: path.join(OUT_DIR, 'roster-place-running.png') });
+  // 探しているあいだは上の帯にも進み具合と［止める］（画面を移っても続く。PRD D445）
+  check(
+    /緯度・経度を探しています \d+\/\d+人/.test(await page.getByTestId('place-band-text').innerText()) &&
+      (await page.getByTestId('place-band-stop').count()) === 1,
+    '名簿のあと：探しているあいだは上の帯に進み具合と［止める］を出す',
+  );
   // 止める → 「止めました」と［続きを探す］
   await page.getByTestId('place-all-stop').click();
   await until(progress, /止めました/, 5000);
@@ -525,18 +529,18 @@ async function rosterPlaceAll(page, fake, dlg) {
   const jiro = after.find((c) => c.displayName === '位置 二郎');
   check(
     ichiro?.place.lat !== null && jiro?.place.lat === null && fake.calls.length > before && fake.calls.length > sent,
-    '名簿のあと：続きを探すと残りを置く（見つからない人は位置なしのまま）',
+    '名簿のあと：続きを探すと残りを入れる（見つからない人は緯度・経度なしのまま）',
     { ichiro: ichiro?.place, jiro: jiro?.place },
   );
   const failed = page.getByTestId('place-all-failed');
   check(
     (await failed.innerText()).includes('位置 二郎') &&
       /市区町村の名前が無い住所/.test(await page.getByTestId('place-all-city-hint').innerText()) &&
-      /移動は30分/.test(await page.getByTestId('place-all-note').innerText()),
-    '名簿のあと：見つからない人は置けなかった人に出し、市区町村の1行と「担当は組めます」の補足',
+      /移動30分/.test(await page.getByTestId('place-all-note').innerText()),
+    '名簿のあと：見つからない人は見つからなかった人に出し、市区町村の1行と「移動30分で計算」の補足',
   );
   await page.screenshot({ path: path.join(OUT_DIR, 'roster-place-done.png') });
-  // 位置なしだけ見る：絞り込みのチップ「位置なし」が入り、行はすべて「位置なし」
+  // 緯度・経度なしだけ見る：絞り込みのチップ「緯度・経度なし」が入り、行はすべて「緯度・経度なし」
   await page.getByTestId('place-all-only').click();
   const chip = page.locator('[data-testid="clients-cf-chip"][data-chip="noPlace"]');
   await untilTrue(async () => (await chip.getAttribute('aria-pressed')) === 'true');
@@ -544,22 +548,22 @@ async function rosterPlaceAll(page, fake, dlg) {
   const n = await rows.count();
   check(
     n >= 1 && (await page.locator('[data-testid="client-row"] [data-testid="no-place"]').count()) === n,
-    '位置なしだけ見る：絞り込みのチップ「位置なし」が入り、位置の無い人だけになる',
+    '緯度・経度なしだけ見る：絞り込みのチップ「緯度・経度なし」が入り、緯度・経度の無い人だけになる',
     { n },
   );
   const jiroRow = rows.filter({ hasText: '位置 二郎' });
   check(
     (await jiroRow.getByTestId('no-place-search').count()) === 1 &&
       (await jiroRow.getByTestId('no-place-map').count()) === 1,
-    '行の「位置なし」に［住所から探す］［地図で置く］',
+    '行の「緯度・経度なし」に［住所から探す］［緯度・経度を編集］',
   );
   await page.screenshot({ path: path.join(OUT_DIR, 'clients-no-place.png') });
-  // 地図で置く → その人の画面の住所の節が開いた形
+  // 緯度・経度を編集 → その人の画面の住所の節が開いた形
   await jiroRow.getByTestId('no-place-map').click();
   await page.getByTestId('client-place').waitFor({ timeout: 5000 });
   check(
     /#\/clients\/[^?]+\?tab=basic$/.test(new URL(page.url()).hash),
-    '［地図で置く］：その人の画面の住所の節を開いて移る（URL の edit は消す）',
+    '［緯度・経度を編集］：その人の画面の住所の節を開いて移る（URL の edit は消す）',
     page.url(),
   );
 }
@@ -592,15 +596,21 @@ async function staffPlaceAll(page, fake) {
   const run = page.getByTestId('place-all-run');
   check(
     (await panel.getAttribute('data-kind')) === 'staff' &&
-      (await run.innerText()).trim() === '位置の無い2人を地図に置く' &&
-      /休止の人は数えません/.test(await page.getByTestId('place-all-count').innerText()),
-    '〈スタッフ〉：一覧に「位置の無い 2人を地図に置く」（休止の人は数えない）',
+      (await run.innerText()).trim() === '住所から緯度・経度を入れる（2人）',
+    '〈スタッフ〉：一覧に「住所から緯度・経度を入れる（2人）」（休止の人は数えない）',
     { text: await run.innerText() },
   );
   const chip = page.getByTestId('staff-filter-chip');
-  check((await chip.innerText()).includes('2'), '〈スタッフ〉：絞り込みのチップ「位置なし 2」', await chip.innerText());
+  check(
+    (await chip.innerText()).includes('2'),
+    '〈スタッフ〉：絞り込みのチップ「緯度・経度なし 2」',
+    await chip.innerText(),
+  );
   await chip.click();
-  check((await page.getByTestId('staff-row').count()) === 2, '〈スタッフ〉：「位置なし」で位置の無い人だけになる');
+  check(
+    (await page.getByTestId('staff-row').count()) === 2,
+    '〈スタッフ〉：「緯度・経度なし」で緯度・経度の無い人だけになる',
+  );
   // 行の［住所から探す］は、その人だけ送る
   const sent = fake.calls.length;
   const rowB = page.getByTestId('staff-row').filter({ hasText: b.name });
@@ -627,12 +637,12 @@ async function staffPlaceAll(page, fake) {
     fake.calls.slice(sent2),
   );
   await page.screenshot({ path: path.join(OUT_DIR, 'staff-place-all.png') });
-  // 地図で置く → その人の画面の自宅の節を開いた形
+  // 緯度・経度を編集 → その人の画面の自宅の節を開いた形
   await page.getByTestId('staff-row').filter({ hasText: a.name }).getByTestId('no-place-map').click();
   await page.getByTestId('staff-home-place').waitFor({ timeout: 5000 });
   check(
     /#\/staff\/[^?]+\?tab=basic$/.test(new URL(page.url()).hash),
-    '〈スタッフ〉：［地図で置く］でその人の画面の自宅の節を開いて移る（URL の edit は消す）',
+    '〈スタッフ〉：［緯度・経度を編集］でその人の画面の自宅の節を開いて移る（URL の edit は消す）',
     page.url(),
   );
 }

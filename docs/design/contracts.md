@@ -5,13 +5,13 @@
 
 ## データの1件ずつ（`src/contracts/documents.ts`。ADR-0002・ADR-0011〜ADR-0017・ADR-0028・ADR-0050）
 
-PoC本体の documents.ts からログイン・事業所の分離（email・uid・orgId）を除き、特性と条件を足した（`requiredGender` は性別＋必要条件、`ngStaffIds` は相性 × に）。共通：`hhmmSchema`・`hhmm30Schema`（30分単位）・`dateSchema`・`idSchema`（1〜100字）・`placeSchema`＝`{ address ≤200, lat, lng（null 可） }`・`termsSchema`＝`{ client ≤10, staff ≤10 }`。（　）の既定は無い古いデータの読み方。
+ログイン・事業所の分離（email・uid・orgId）は持たない。PoC本体の `requiredGender` は性別＋必要条件、`ngStaffIds` は相性 × で表す。共通：`hhmmSchema`・`hhmm30Schema`（30分単位）・`dateSchema`・`idSchema`（1〜100字）・`placeSchema`＝`{ address ≤200, lat, lng（null 可） }`・`termsSchema`＝`{ client ≤10, staff ≤10 }`。（　）の既定は無い古いデータの読み方。
 
 | 型 | フィールド |
 |---|---|
-| `Org` | `name` 1〜100・`industry`（`sitter`/`care`/`nursing`/`other`）・`terms`・`fareYenPerKm` 0〜1000（0＝交通費なし）・`spanLimitHours` 0〜24・0.5刻み（10。0＝注意しない）・`features`（`{}`） |
+| `Org` | `name` 1〜100・`industry`（`sitter`/`care`/`nursing`/`other`）・`terms`・`fareYenPerKm` 0〜1000（0＝交通費なし）・`spanLimitHours` 0〜24・0.5刻み（10。0＝注意しない）・`features`（`{}`）・`roadTravel`（`parkMinutes` 0〜60 の整数（5）・`trafficFactor` 1〜3（1.5）。道路の所要の補正。ADR-0101）・`lineTravel`（`detourFactor` 1〜3（1.3）・`driveKmh` 5〜80 の整数（25）。直線距離の見積もりの係数。ADR-0101） |
 | `Staff` | `id`・`name` 1〜50・`home`・`travelMode`（`DRIVE`/`BICYCLE`/`WALK`/`TRANSIT`）・`workDays`（0=日〜6=土）・`shiftStart`・`shiftEnd`・`active`・`traits`・`requirements`・`preferences`（訪問先の特性に対して。各20まで）・`lastDay`（最終勤務日。翌日から勤務なし。null）・`email`（''）・`icon`（印の中の1〜2文字。絵文字も可。''＝未設定で苗字の最初の1文字。無い古いデータは ''。版は上げない。schema は形だけ＝前後の空白なし・32コード単位まで。見た目で2文字まで（書記素）は画面の `staffIconError` と Excel の `readStaffIcon` で見る） |
-| `Client` | `id`・`displayName` 1〜50・`kana` ≤50（''）・`place`（＋`postalCode` 空か7桁。''）・`note` ≤500・`color` 0〜7・`active`・`traits`・`requirements`・`preferences`・`tentative`（仮押さえ。false）・`entryNote`・`keyNote`・`parkingNote`・`cautionNote`（各 ≤200。''）・`allowedStaffIds` ≤50（`[]`＝限らない）・`stage`・`referrer`（`name` ≤50・`contact` ≤100・`note` ≤200・`email`。空＝`EMPTY_REFERRER`） |
+| `Client` | `id`・`displayName` 1〜50・`kana` ≤50（''）・`place`（＋`postalCode` 空か7桁。''。任意の `travelMinutes` 1〜720 の整数（移動時間（片道・分））・`farTrip`（遠方（出張））。無し＝距離から見積もる・印なし。ADR-0096）・`note` ≤500・`color` 0〜7・`active`・`traits`・`requirements`・`preferences`・`tentative`（仮押さえ。false）・`entryNote`・`keyNote`・`parkingNote`・`cautionNote`（各 ≤200。''）・`allowedStaffIds` ≤50（`[]`＝限らない）・`stage`・`referrer`（`name` ≤50・`contact` ≤100・`note` ≤200・`email`。空＝`EMPTY_REFERRER`） |
 | `VisitType` | `id`・`name` 1〜20・`color` 0〜7・`durationMinutes` 5〜720（新しい訪問・パターンの初期値だけ）・`requirements` ≤20（常に必須）・`note` ≤200。20まで（`MAX_VISIT_TYPES`） |
 | `Pattern` | `id`・`clientId`・`typeId`（null＝問わない）・`weekdays` 1〜7個・`everyWeeks` 1〜4・`repeat`（`'weekly'`/`'monthly'`。`'weekly'`）・`monthWeeks` 1〜5（`[]`）・`dayTimes`（曜日・開始（早）・開始（遅）。7まで。`[]`）・`windowKind`・`earliestStart`・`latestStart`・`durationMinutes`・`from`・`to`（null＝続く）・`usualStaffId`（繰り返しの担当。null＝担当なし）・`usualStarts`（曜日ごとの標準の開始 `{ weekday, start: HH:mm }`。7まで・同じ曜日は1つ。`[]`）・`note` |
 | `Visit` | `id`・`date`・`clientId`・`windowKind`（`fixed`/`window`）・`earliestStart`・`latestStart`・`durationMinutes` 5〜720・`staffId`（担当。null＝担当なし）・`start`（組んだ開始。null＝開始（早）で並べる）・`pinned`（AI で組み直しても担当を変えない。false）・`cancelled`・`note` ≤200・`typeId`（null）・`pattern`＝`{ id, date: 元の日, edited }`（null＝単発）・`cancelKind`（`'sameDay'`＝当日キャンセル。null）。保存するのは単発と、繰り返しの変えた回だけ |
@@ -36,8 +36,8 @@ DemoData = { version: 2, baseDate /* seed の基準日 */, seed /* 乱数の種 
   visits /* 保存した訪問：単発と、繰り返しの変えた回 */, availability, absences /* ≤2000 */, visitTypes /* ≤20 */,
   patterns /* ≤2000 */, clientLeaves /* ≤2000 */,
   snapshots /* date → DaySnapshot＝伝えた内容（確定） */, reassigns /* date → ReassignInfo（反映した振り直しの日だけ） */,
-  presets /* 1〜6 */, scorePresetId?, standard? /* 組み方の標準を登録した記録。ADR-0062 */ }
-StandardInfo = { at /* 登録した時刻 ms */, presetId /* 登録したときの点数の基準 */, from /* いつから */, weeks /* 周期 1〜4 */ }
+  presets /* 1〜6 */, scorePresetId?,
+  roads? /* 道路の所要の表 { at, points: LatLng[]（500まで）, near: number[][]（地点ごとに近い順 50 件の行き先）, seconds, meters: number[][] }。ADR-0101 */ }
 DaySnapshot = { date, at /* 確定した時刻 ms */, visits: ToldVisit[] /* ≤500。取り消し・休みは入れない */ }
 ToldVisit = { id, clientId, staffId /* null＝担当なし */, start /* HH:mm。null 可 */ }
 ReassignInfo = { method: 'insert' | 'anneal', stayWeight? /* 案B 0〜5 */, insertRoutes? /* 案A の結果 */,
@@ -49,19 +49,19 @@ RosterImportResult = { data /* migrate 済み */, added /* 行の順。「名前
   lastDaySet, activeBefore /* 外せる人の数 */, source /* ADR-0068 */,
   otherForm /* ほかのソフトの形で読んだときだけ OtherFormRead。名簿の形・.xlsx は null */ }
 OtherFormRead = { label /* 形の名前。例「顧客台帳」「予約システムの顧客」 */, skippedColumns: string[] /* 読まなかった列 */ }
-BookingImportResult = { data /* migrate 済み */, added, updated, unchanged, cancelledSkipped /* まだ入れていない取り消し済みの予約 */: number,
+BookingImportResult = { data /* migrate 済み */, added, updated, removed /* 総入れ替えで消した単発の訪問。D441 */, keptMissing /* どの訪問か分からない行があり、ファイルに無い訪問を消さなかった */: boolean, unchanged, cancelledSkipped /* まだ入れていない取り消し済みの予約 */: number,
   unmatched /* 入れなかった予約「名前（N件）」 */, badRows /* 「N行目：理由」 */, source, otherForm: OtherFormRead /* ADR-0075 */ }
 ```
 
 - その日の割当は訪問から決まる（`lib/dayPlan` の `dayRoutes`：計算に入れる訪問を担当ごとに組んだ開始の順。担当なしは `unassignedOf`）。AI の提案・ドラッグ・担当の変更・振り直し・月や週の AI で組むは `writeRoutes` で担当と開始を訪問に書く
 - 日の状態（`toldStateOf`）：`snapshots` に無ければ `'none'`（まだ伝えていない）、伝えた内容と今の差（`toldChanges`。担当が変わる・開始が四捨五入で1分以上変わる訪問）が無ければ `'told'`（確定済み）、あれば `'changed'`（未連絡の変更あり）
 - 要対応は訪問ごとの検査（`visitIssues`）：担当なし・担当が休み・条件に合わない・時間に間に合わない（担当が休みの訪問には重ねない）。重みだけを変えても要対応にしない（「条件が変わった」の判定は無い）
-- 標準のピン（`lib/dayPlan` の `standardPinsOf`・`aiPinsOf`）：AI で組む（範囲・日・比べる）ときは、担当できる計算した回の担当をピンにする
+- いつもの担当のピン（`lib/dayPlan` の `standardPinsOf`・`aiPinsOf`。PRD D435）：AI で組む（範囲・日・比べる）ときは、繰り返しのいつもの担当（`usualStaffId`）がその日に担当できる計算した回の担当をピンにする
 - 提案・比較の提案は保存しない（画面の状態）。比較の画面は提案を点数の基準の物差し（`scoreRulesOf`）で採点する
 
 ### 版と移行
 
-今の版は2。版1（`version: 1`）のデータは移さない：`loadWithStatus` は版1を見つけたら初期データで始め（`outdated: true`）、画面が「データの形が変わったので初期データで始めます」（`OUTDATED_MESSAGE`）と知らせる。控えのファイル（JSON）の読み込みも版1なら同じ文で断る。版2の中で無いものは zod の既定値・`migrate` で読む：`absences`・`visitTypes`・`patterns`・`clientLeaves` は `[]`（null も）、`snapshots`・`reassigns` は `{}`、`presets` は `INITIAL_PRESETS`、`scorePresetId` は repair が先頭、`Visit.start` は null・`pinned` は false、`Pattern.usualStarts` は `[]`、`standard` は無し（登録していない）、〈利用者さん〉の `stage` は `stageOfLegacy`、`org.features` は知らない ID・真偽でない値を捨てオブジェクトでなければ `{}`。ほかは上の表の（　）。
+今の版は2。版1（`version: 1`）のデータは移さない：`loadWithStatus` は版1を見つけたら初期データで始め（`outdated: true`）、画面が「データの形が変わったので初期データで始めます」（`OUTDATED_MESSAGE`）と知らせる。控えのファイル（JSON）の読み込みも版1なら同じ文で断る。版2の中で無いものは zod の既定値・`migrate` で読む：`absences`・`visitTypes`・`patterns`・`clientLeaves` は `[]`（null も）、`snapshots`・`reassigns` は `{}`、`presets` は `INITIAL_PRESETS`、`scorePresetId` は repair が先頭、`Visit.start` は null・`pinned` は false、`Pattern.usualStarts` は `[]`、`standard` は無し（登録していない）、`roads` は無し（取っていない）・`org.roadTravel`・`org.lineTravel` は既定、〈利用者さん〉の `stage` は `stageOfLegacy`、`org.features` は知らない ID・真偽でない値を捨てオブジェクトでなければ `{}`。ほかは上の表の（　）。
 
 ## 項目・条件・プリセット（`src/contracts/rules.ts`。ADR-0002・ADR-0008・ADR-0010・ADR-0035・ADR-0070）
 
@@ -81,8 +81,8 @@ POINTS_PER_WEIGHT = 10; DROP_POINTS = 10000; KEEP_DROP_POINTS = DROP_POINTS * 10
 ```
 
 - プリセットはデータ。型ごとの重み・必須を条件の同じ型に上書きする（`applyPreset`）。プリセットの重み・必須は変えず、条件の重みの表で変えた重みは新しいプリセットとして足す（`saveDraftAsPreset`）。初期の3つと最後の1つは消せない
-- 点数の基準のプリセット（`scorePresetId`）＝ふだんの考え方（PRD D233）：点数はいつもこのプリセットを当てた物差し（`scoreRulesOf`）で付ける。担当を組む・訪問ごとの検査もこれで計算する。組み方の標準の案はすべてのプリセットで作り、案から作った表を登録するとそのプリセットを点数の基準にする。条件の重みの画面の表はこのプリセットの重み・必須から始め、変えた重みは新しいプリセットとして足して基準にする（`saveDraftAsPreset`）
-- `data.rules` の重み・必須はいつも点数の基準のプリセットと同じ。基準が替わる（基準を選ぶ・新しい考え方を保存する・基準のプリセットを消して基準が移る）と `withBasisRules` で基準にそろえ、store の repair も読み込みのたびにそろえる（`lib/presets` の `setScorePreset`・`saveDraftAsPreset`・`removePreset`）。ほかのプリセットは組み方の標準の案・案を比べるの提案を作るときだけ当てる（`applyPreset`）
+- 点数の基準のプリセット（`scorePresetId`）＝ふだんの考え方（PRD D233）：点数はいつもこのプリセットを当てた物差し（`scoreRulesOf`）で付ける。担当を組む・訪問ごとの検査もこれで計算する。条件の重みの画面の表はこのプリセットの重み・必須から始め、変えた重みは「調整した重み」（`id: tuned`。1つだけ。無ければ足し、あれば重みだけ上書き）に書いて基準にする（`saveTunedWeights`）
+- `data.rules` の重み・必須はいつも点数の基準のプリセットと同じ。基準が替わる（基準を選ぶ・重みを保存する・基準のプリセットを消して基準が移る）と `withBasisRules` で基準にそろえ、store の repair も読み込みのたびにそろえる（`lib/presets` の `setScorePreset`・`saveTunedWeights`・`removePreset`）。ほかのプリセットは案を比べるの提案を作るときだけ当てる（`applyPreset`）
 
 | 初期のプリセット | 必要条件 | 訪問先の希望 | スタッフの希望 | 相性 | いつもの担当 | 負担の均等 | 待ち |
 |---|---|---|---|---|---|---|---|
@@ -96,11 +96,12 @@ POINTS_PER_WEIGHT = 10; DROP_POINTS = 10000; KEEP_DROP_POINTS = DROP_POINTS * 10
 
 ```ts
 Problem = { date, staff: { id, name, point, slots /* 欠勤・最終勤務日を引いた時間帯。空＝休み */ }[],
-  visits: { id, clientId, point, earliest, latest, duration }[], travel, meters /* [from][to] 自宅と訪問先 */,
+  visits: { id, clientId, point, earliest, latest, duration, solo? /* 遠方（出張）。ADR-0096 */ }[], travel, meters /* [from][to] 自宅と訪問先 */,
   allowed, assignCost, reasons /* [visit][staff]。reasons は点の大きい順 */, waitPerMinute,
   balance: { perVisit, lo, hi, cap /* 必須なら hi+1、ほか null */ } | null, infeasible: { visit, reasons }[], stay? }
 Reason = { ruleId, label, points /* 可否の原因は Infinity */, level? /* 相性だけ 2|1|-1|-2 */ }
   // ruleId：Rule.id・'travel'・'wait'・'slot'・'time'・'noPlace'（位置が未登録の点。可否にはしない。ADR-0093）・'visitType'・'allowedStaff'・'pin'
+  //   担当なしの理由（explain）だけ：'travelTooFar'「移動が間に合わない（片道 約N分）」・'farTrip'「遠方（出張）の日はほかの訪問を入れません」（ADR-0096）
 ProblemStay = { staff /* [visit] 元の担当の添字 | null */, start /* [visit] 元の開始 | null */, keep: boolean[], movePoints, minutePoints }
 SolveOptions = { seed, iterations, initial?: Routes }
 SolveResult = { routes, unassigned, score /* evaluate.score と一致 */, seed, iterations, stopped }
@@ -115,7 +116,7 @@ HundredPart = { key: 'travel'|'wait'|'assign'|'balance'|'dropped', label, points
 RuleAchievement = { ruleId, unit: 'visit' | 'staff', total, met, compat: { great, good, poor, ng } | null }
 ```
 
-- `scheduleRoute`：自宅を出る時刻は自由（最初の稼働時間帯の開始以降）、最初の待ちは0。開始＝max(到着, earliest) から作業が時間帯の1つに収まる最も早い時刻。latest 超え・収まらない＝違反（strict は不可、lenient は記録して続ける）。帰りの移動も数える（帰着の超過は違反にしない）
+- `scheduleRoute`：自宅を出る時刻は自由（最初の稼働時間帯の開始以降。列の最初が遠方（`solo`）なら縛らない）、最初の待ちは0。遠方の訪問とほかの〈利用者さん〉の訪問が同じ列なら strict は不可（`routeCost` は Infinity。ADR-0096）。開始＝max(到着, earliest) から作業が時間帯の1つに収まる最も早い時刻。latest 超え・収まらない＝違反（strict は不可、lenient は記録して続ける）。帰りの移動も数える（帰着の超過は違反にしない）
 - 画面は `bestRoutes` を点数の基準で採点して「いまの最良 N点」を出す（無ければ前の点）
 
 ## 欠勤の振り直し（`src/contracts/reassign.ts`。PRD D26〜D35。ADR-0011）
@@ -189,7 +190,7 @@ vacancyNotice(result, input)
 
 ## 機能の入り切り（`src/contracts/features.ts`。PRD D210〜D216。ADR-0028）
 
-- `FEATURE_IDS`（22）：`patterns`・`patternMonthly`・`clientLeave`・`requestedOff`・`monthPrint`・`expert`・`compare`・`sudden`・`vacancy`・`vacancyNotice`・`compat`・`allowedStaff`・`clientStage`・`visitNotes`・`offboard`・`workload`・`fare`・`rules`・`mail`・`mapsLink`・`geocode`・`excel`
+- `FEATURE_IDS`（20。メールと Excel の入出力は入り切りせず、いつも入。ADR-0106）：`patterns`・`patternMonthly`・`clientLeave`・`requestedOff`・`monthPrint`・`expert`・`compare`・`sudden`・`vacancy`・`vacancyNotice`・`compat`・`allowedStaff`・`clientStage`・`visitNotes`・`offboard`・`workload`・`fare`・`rules`・`mapsLink`・`geocode`
 - `Features`＝ID → boolean の部分的な表（無い ID は入）。Excel には入れない
 - 切ってもデータの形・検査・repair は変えない。`clientStage` が切なら段階は「利用中／終了」で選ばせ、ほかの段階の人はそのまま
 - エラーは無い（検査で落ちない）
@@ -238,11 +239,11 @@ withFoundPlace(data, clientId, from, found); keepStorePlace(form, opened, stored
 postalBlockReason; addressBlockReason; applyFoundAddress(current, found, hasPin?); sameQuery(what, sent, now); pinnedAddressAfter; toPlace
 ```
 
-- 呼ぶのは部品 `AddressField`（〈利用者さん〉・空き状況の場所・〈スタッフ〉の自宅）と「まとめて地図に置く」だけ、押したときだけ。空き状況・自宅の郵便番号は保存しない
+- 呼ぶのは部品 `AddressField`（〈利用者さん〉・空き状況の場所・〈スタッフ〉の自宅）と「住所から緯度・経度を入れる」（まとめて）だけ、押したときだけ。空き状況・自宅の郵便番号は保存しない
 - 郵便番号：`https://zipcloud.ibsnet.co.jp/api/search?zipcode=1234567`（fetch が TypeError のときだけ `&callback=` で JSONP）。`results` が null・空→notFound、`status` 400→invalid、ほかの非200・形違い→badResponse
 - 住所：`https://msearch.gsi.go.jp/address-search/AddressSearch?q=住所`（fetch だけ）。Feature の `geometry.coordinates`＝[経度, 緯度]・`properties.title` を、範囲内のものから5件。空→notFound、配列でない→badResponse。HTTP エラー→network
 - 時間切れは8秒（郵便番号は fetch と JSONP を合わせて。JSONP に切り替えない）。`signal` で aborted。JSONP の名前は `__vrdJsonp_連番_時刻`、終われば script と関数を消し遅れた応答は捨てる。onerror→network、onload で呼ばれていなければ badResponse
-- まとめて置く：位置が無く・終了でなく・住所か郵便番号のある人（表示名の順）。住所が空なら先に郵便番号から。呼ぶごとに `intervalMs` あける。1人ずつ `withFoundPlace`（位置が無く住所・郵便番号が from のままの人だけ）。住所だけ見つかれば住所だけ書く
+- まとめて入れる：位置が無く・終了でなく・住所か郵便番号のある人（表示名の順）。住所が空なら先に郵便番号から。呼ぶごとに `intervalMs` あける。1人ずつ `withFoundPlace`（位置が無く住所・郵便番号が from のままの人だけ）。住所だけ見つかれば住所だけ書く
 - 文言は `lookupMessage`（「見つかりませんでした。…」「時間内に応答がありませんでした（8秒）。…」「つながりませんでした。…」「応答の形が想定と違います。…」）
 
 ## メール（`src/lib/mailto.ts`・`mail.ts`。PRD D91〜D96。ADR-0017）
@@ -304,7 +305,7 @@ BICYCLE_NOTE = '自転車の経路が出ないときは、Google マップで徒
 | 条件 | ID・名前・種類・重み・必須（重み・必須は読み込むとプリセットのシートの点数の基準の行にそろえる。重みは1組。使い方のシートにも書く） |
 | プリセット | ID・名前・一言・重み：〈型〉…（空は0）・必須（型の名前）・点数の基準（○ は1行。無印なら先頭。ふだんの重み＝条件の重みの画面の重み）。1〜6行（いまのまま） |
 | 〈スタッフ〉 | ID・名前・移動手段・勤務する曜日・勤務開始・勤務終了・利用中・住所・緯度・経度・最終勤務日・メールアドレス・アイコン（任意の1〜2文字・文字列の書式。列が無い古いブックは未設定・名簿の読み込みで列が無ければ今の値のまま。2文字・32コード単位を超えれば行付きで止める）・特性：…・必要条件：…・希望：… |
-| 〈利用者さん〉 | ID・表示名・よみ（50字）・色（1〜8）・利用中・仮押さえ・郵便番号（文字列）・住所・緯度・経度・いつもの担当・担当できる人（名前を「、」か改行で。限らない）・メモ・入り方・鍵・駐車場・注意・段階（空なら利用中・仮押さえから）・紹介元・紹介元の連絡先・紹介元のメモ・紹介元のメールアドレス・特性：…・必要条件：…・希望：… |
+| 〈利用者さん〉 | ID・表示名・よみ（50字）・色（1〜8）・利用中・仮押さえ・郵便番号（文字列）・住所・緯度・経度・移動時間（片道・分。1〜720。空＝距離から見積もる）・遠方（出張）（○）・いつもの担当・担当できる人（名前を「、」か改行で。限らない）・メモ・入り方・鍵・駐車場・注意・段階（空なら利用中・仮押さえから）・紹介元・紹介元の連絡先・紹介元のメモ・紹介元のメールアドレス・特性：…・必要条件：…・希望：… |
 | 相性 | 行＝〈利用者さん〉、列＝〈スタッフ〉。◎○△×・空 |
 | 稼働時間 | 〈スタッフ〉・日付・時間帯（例 9:00-12:00、13:00-18:00。「休み」） |
 | 欠勤 | ID・〈スタッフ〉・日付・開始・終了（空＝始業から／終業まで）・メモ（欠勤なし。`base` から引き継がない） |

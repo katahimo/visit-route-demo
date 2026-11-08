@@ -2,12 +2,13 @@
 // スタッフ・訪問先は、仙台市の公共施設を擬人化した架空の人物（位置は施設のおおよその場所）。
 // 実在の個人の情報は使わない。
 import type { Condition, Item, Rule, Traits } from '../contracts/rules';
-import { QUALIFICATION_OPTIONS, TRAINING_OPTIONS } from './qualifications';
+import { QUALIFICATION_OPTIONS } from './qualifications';
 
 /** 項目の ID（staff 側と client 側） */
 export const ITEM_ID = {
   gender: 'gender',
   qualification: 'qualification',
+  /** 研修（初期の項目には無い。職員台帳を読み込んで研修の列に値があれば足す。excel/staffLedgerItems） */
   training: 'training',
   experience: 'experience',
   specialty: 'specialty',
@@ -26,14 +27,6 @@ export const INITIAL_ITEMS: Item[] = [
     target: 'staff',
     kind: 'multi',
     options: [...QUALIFICATION_OPTIONS],
-  },
-  // 研修（資格の選択肢は30までなので分ける。PRD D422）
-  {
-    id: ITEM_ID.training,
-    name: '研修',
-    target: 'staff',
-    kind: 'multi',
-    options: [...TRAINING_OPTIONS],
   },
   // 始めた年を持ち、条件は年数で比べる（ADR-0070）
   { id: ITEM_ID.experience, name: '経験年数', target: 'staff', kind: 'startYear', options: [] },

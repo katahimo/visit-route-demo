@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DATA_VERSION, type DemoData, STORAGE_KEY } from '../contracts/data';
+import { LATEST_RELEASE } from '../lib/releaseNotes';
 import { createDemoData } from '../seed';
 import {
   BROKEN_KEY,
@@ -13,6 +14,7 @@ import {
   flushSave,
   importJson,
   isImportError,
+  keepAfterRelease,
   keepPrevious,
   load,
   loadWithStatus,
@@ -31,7 +33,7 @@ import {
   startWithAnswer,
   swapPrevious,
 } from './index';
-import { ARRANGE_PENDING_KEY, LAST_BOOKING_KEY } from './start';
+import { ARRANGE_PENDING_KEY, LAST_BOOKING_KEY, SEEN_RELEASE_KEY } from './start';
 
 /** 環境は node なので localStorage の簡単なモック */
 function mockStorage() {
@@ -508,5 +510,46 @@ describe('1世代の控え（PRD D227。ADR-0032）', () => {
   it('容量超過の文は、画面にある片づけの操作を指す', () => {
     expect(QUOTA_MESSAGE).toContain('古い訪問を片づける');
     expect(QUOTA_MESSAGE).not.toContain('古い日の予定を消して');
+  });
+});
+
+describe('デモの更新の知らせ（PRD D437。ADR-0102）', () => {
+  const saved = () => mem.set(STORAGE_KEY, JSON.stringify(createDemoData('2026-10-12')));
+  it('保存データがあり、見た更新の印が無い・古いなら知らせる（データはそのまま読む）', () => {
+    saved();
+    const r = loadWithStatus();
+    expect(r.releaseNotes.map((n) => n.id)).toEqual([LATEST_RELEASE]);
+    expect(r.firstRun).toBe(false);
+    expect(r.data.baseDate).toBe('2026-10-12');
+    mem.set(SEEN_RELEASE_KEY, '2000-01-01');
+    expect(loadWithStatus().releaseNotes[0]?.id).toBe(LATEST_RELEASE);
+  });
+  it('今の版を見ていれば知らせない', () => {
+    saved();
+    mem.set(SEEN_RELEASE_KEY, LATEST_RELEASE);
+    expect(loadWithStatus().releaseNotes).toEqual([]);
+  });
+  it('「今のデータを使い続ける」・2問の答え・印「all」・壊れたデータで、今の版を見たことにする', () => {
+    saved();
+    keepAfterRelease();
+    expect(mem.get(SEEN_RELEASE_KEY)).toBe(LATEST_RELEASE);
+    mem.delete(SEEN_RELEASE_KEY);
+    startWithAnswer({ start: 'demo', use: 'basic' });
+    expect(mem.get(SEEN_RELEASE_KEY)).toBe(LATEST_RELEASE);
+    mem.delete(SEEN_RELEASE_KEY);
+    mem.set(FEATURES_START_KEY, FEATURES_START_ALL);
+    expect(loadWithStatus().releaseNotes).toEqual([]);
+    expect(mem.get(SEEN_RELEASE_KEY)).toBe(LATEST_RELEASE);
+    mem.delete(FEATURES_START_KEY);
+    mem.delete(SEEN_RELEASE_KEY);
+    mem.set(STORAGE_KEY, '{こわれた');
+    expect(loadWithStatus().releaseNotes).toEqual([]);
+    expect(mem.get(SEEN_RELEASE_KEY)).toBe(LATEST_RELEASE);
+  });
+  it('初めて開いた（保存データが無い）ときは2問だけ（知らせない・答えるまで印を書かない）', () => {
+    const r = loadWithStatus();
+    expect(r.firstRun).toBe(true);
+    expect(r.releaseNotes).toEqual([]);
+    expect(mem.has(SEEN_RELEASE_KEY)).toBe(false);
   });
 });

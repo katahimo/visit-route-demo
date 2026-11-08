@@ -2,20 +2,24 @@
 import { type Client, type Staff, stageOfLegacy } from '../contracts/documents';
 import type { Compat } from '../contracts/rules';
 import { STAGE_LABELS } from '../lib/clientStage';
+import { withTravel } from '../lib/clientTravel';
 import type { BookCtx } from './bookContext';
 import {
   CLIENT_ALLOWED_COL,
   CLIENT_COLS,
   CLIENT_KANA_COL,
+  CLIENT_PLACE2_COLS,
   CLIENT_POSTAL_COL,
   CLIENT_RULE_COLS,
   CLIENT_STAGE_COLS,
   CLIENT_TENTATIVE_COL,
+  CLIENT_TRAVEL_COLS,
   STAFF_COLS,
   STAFF_EMAIL_COL,
   STAFF_ICON_COL,
   STAFF_LAST_DAY_COL,
 } from './layout';
+import { readPlace2 } from './place2Cols';
 import {
   idOf,
   personCols,
@@ -24,6 +28,7 @@ import {
   readPerson,
   readPostal,
   readStaffIcon,
+  readTravelMinutes,
   type Sheet,
   sheetMsg,
   textOf,
@@ -134,6 +139,8 @@ export function readClients(ctx: BookCtx, clientSheet: Sheet): Client[] {
     CLIENT_TENTATIVE_COL,
     CLIENT_KANA_COL,
     CLIENT_POSTAL_COL,
+    ...Object.values(CLIENT_TRAVEL_COLS),
+    ...Object.values(CLIENT_PLACE2_COLS),
     CLIENT_ALLOWED_COL,
     ...Object.values(CLIENT_RULE_COLS),
     ...Object.values(CLIENT_STAGE_COLS),
@@ -159,6 +166,11 @@ export function readClients(ctx: BookCtx, clientSheet: Sheet): Client[] {
     const address = r.optional(C.address, 200);
     const lat = r.num(C.lat, { min: -90, max: 90 });
     const lng = r.num(C.lng, { min: -180, max: 180 });
+    // 移動時間（片道・分）・遠方（出張）（ADR-0096）：列が無い古いブック・空は無し
+    const travelMinutes = readTravelMinutes(r);
+    const farTrip = r.yes(CLIENT_TRAVEL_COLS.farTrip);
+    // 期間つきの訪問先（住所2。ADR-0105）：列が無い古いブック・空は無し
+    const place2 = readPlace2(r);
     const allowed = readAllowedStaff(ctx, r);
     const note = r.optional(C.note, 500);
     // 訪問先の決まりごと（ADR-0013）：列が無い古いブックは空
@@ -187,13 +199,16 @@ export function readClients(ctx: BookCtx, clientSheet: Sheet): Client[] {
       typeof color === 'number' &&
       lat !== undefined &&
       lng !== undefined &&
+      travelMinutes !== undefined &&
+      place2 !== null &&
       allowed.ok
     ) {
       clients.push({
         id,
         displayName,
         kana,
-        place: { address, lat, lng, postalCode },
+        place: withTravel({ address, lat, lng, postalCode }, travelMinutes, farTrip),
+        ...(place2 ? { place2 } : {}),
         note,
         color: color - 1,
         active,

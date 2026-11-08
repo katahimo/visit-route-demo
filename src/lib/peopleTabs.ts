@@ -1,7 +1,7 @@
 // 〈利用者さん〉・〈スタッフ〉の小さいタブ（入切とも。PRD D394。ADR-0073 第4段・ADR-0074 段3）の決まり：
-// 〈スタッフ〉＝一覧・勤務（勤務時間・シフト／勤務の見込み）・相性、〈利用者さん〉＝一覧・相性。
+// 〈スタッフ〉＝一覧・勤務（勤務時間・シフト／勤務の見込み）・相性、〈利用者さん〉＝一覧・予定と相性・相性（ADR-0100）。
 // 相性は〈利用者さん〉×〈スタッフ〉の1つの表なので、どちらから来たかを覚えて（lib の外。components/peopleSide）タブとメニューの印を決める。
-// 予定と相性（#/basics）のタブは別（lib/nav の basicsTabs。予定を組むの段）。画面はここを読み、切／入の判定を画面ごとに持たない。データは書き換えない
+// 画面はここを読み、切／入の判定を画面ごとに持たない。データは書き換えない
 import type { Terms } from '../contracts/documents';
 import type { Features } from '../contracts/features';
 import { isHrefOn } from './features';
@@ -15,6 +15,7 @@ type PeopleTabDef = { to: string; label: string; match: readonly string[] };
 const TABS: Record<PeopleSide, readonly PeopleTabDef[]> = {
   clients: [
     { to: '/clients', label: '一覧', match: ['/clients'] },
+    { to: '/basics', label: '予定と相性', match: ['/basics'] },
     { to: '/compat', label: '相性', match: ['/compat'] },
   ],
   staff: [
@@ -34,7 +35,7 @@ export const peopleTabsLabel = (side: PeopleSide, terms: Pick<Terms, 'client' | 
 
 /** 相性は両方のタブに出る。どちらの画面かが決まるパスはそのまま、相性だけ覚えた側（まだ無ければ〈利用者さん〉） */
 export function peopleSideOf(pathname: string, remembered: PeopleSide | undefined): PeopleSide | null {
-  if (pathname === '/clients') return 'clients';
+  if (pathname === '/clients' || pathname === '/basics') return 'clients';
   if (pathname === '/staff' || pathname === '/availability' || pathname === '/workload') return 'staff';
   if (pathname === '/compat') return remembered ?? 'clients';
   return null;
@@ -47,11 +48,9 @@ export function rememberedSide(pathname: string, remembered: PeopleSide | undefi
 
 /**
  * メニューの〈利用者さん〉・〈スタッフ〉が受け持つ画面（今の画面の印。相性は覚えた側）。
- * 予定と相性（/basics）は、切では〈利用者さん〉（withBasics）、入では「組む」の基本情報（PRD D401・D394）
+ * 予定と相性（/basics）は入切とも〈利用者さん〉（PRD D401・D394。ADR-0100）
  */
-export function peopleMatch(side: PeopleSide, remembered: PeopleSide | undefined, withBasics: boolean): string[] {
+export function peopleMatch(side: PeopleSide, remembered: PeopleSide | undefined): string[] {
   const compat = (remembered ?? 'clients') === side ? ['/compat'] : [];
-  return side === 'clients'
-    ? ['/clients', ...(withBasics ? ['/basics'] : []), ...compat]
-    : ['/staff', '/availability', '/workload', ...compat];
+  return side === 'clients' ? ['/clients', '/basics', ...compat] : ['/staff', '/availability', '/workload', ...compat];
 }

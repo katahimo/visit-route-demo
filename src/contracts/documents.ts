@@ -68,6 +68,9 @@ export const staffIconSchema = z
   .max(STAFF_ICON_MAX_UNITS)
   .refine((s) => s === s.trim(), 'アイコンの前後に空白は入れられません');
 
+/** 移動時間（片道・分）の上限（PRD D429。ADR-0096）。新幹線・飛行機の片道でも収まる長さ */
+export const TRAVEL_MINUTES_MAX = 720;
+
 /**
  * 〈利用者さん〉の場所（PRD D86。ADR-0016）：場所に郵便番号を足したもの。郵便番号は空か7桁の数字（ハイフンなし）。
  * 入力のハイフン・全角数字は画面・Excel が lib/geocode の normalizePostalCode で直してから入れる。無い古いデータは ''
@@ -77,14 +80,124 @@ export const clientPlaceSchema = placeSchema.extend({
     .string()
     .regex(/^(\d{7})?$/, '郵便番号は7桁の数字で入れてください')
     .default(''),
+  /**
+   * 移動時間（片道・分。PRD D429。ADR-0096）：新幹線・飛行機など距離で見積もれないときに手で決める。
+   * 入っていれば、この〈利用者さん〉への・からの移動は、どこから来ても（どこへ行っても）この分数とみる（距離は 0 m＝交通費に入れない）。
+   * 無い＝距離から見積もる。無い古いデータも同じ
+   */
+  travelMinutes: z.number().int().min(1).max(TRAVEL_MINUTES_MAX).optional(),
+  /**
+   * 遠方（出張。PRD D429。ADR-0096）：true なら、この訪問の日は、その担当はこの〈利用者さん〉の訪問だけを回る
+   * （前後にほかの〈利用者さん〉の訪問をつながない）。家を出る時刻は勤務の開始に縛らない。無い＝false
+   */
+  farTrip: z.boolean().optional(),
 });
 export type ClientPlace = z.infer<typeof clientPlaceSchema>;
+
+/**
+ * 期間つきの訪問先（住所2。PRD D439。ADR-0105）：契約者の住所（place）と違う所へ、決まった期間だけ訪ねるとき。
+ * 訪問の日が from〜to（両端を含む。空は限らない）に入れば、その日の訪問先は住所2（domain/place2 の placeOn）。
+ * 移動時間・遠方（place の travelMinutes・farTrip）は place の住所のものなので、住所2 の日は使わない。
+ * 予約システムの顧客の CSV の「住所2」から読む（正本は予約システム。読み直すたびに置き換える）。無い＝住所2 なし
+ */
+export const clientPlace2Schema = placeSchema.extend({
+  postalCode: z
+    .string()
+    .regex(/^(\d{7})?$/, '郵便番号は7桁の数字で入れてください')
+    .default(''),
+  /** 適用開始日（YYYY-MM-DD。空＝限らない） */
+  from: z.union([dateSchema, z.literal('')]).default(''),
+  /** 適用終了日（YYYY-MM-DD。空＝限らない） */
+  to: z.union([dateSchema, z.literal('')]).default(''),
+});
+export type ClientPlace2 = z.infer<typeof clientPlace2Schema>;
 
 export const termsSchema = z.object({ client: z.string().max(10), staff: z.string().max(10) });
 export type Terms = z.infer<typeof termsSchema>;
 
 /** 拘束の上限の既定（時間。ADR-0015） */
 export const SPAN_LIMIT_DEFAULT_HOURS = 10;
+
+/** 小数1桁まで（係数の欄と同じ。浮動小数の誤差は許す） */
+const oneDecimal = (n: number): boolean => Math.abs(n * 10 - Math.round(n * 10)) < 1e-9;
+
+/** 直線距離からの見積もりの既定（ADR-0101）：道なり係数（直線距離に掛ける） */
+export const LINE_DETOUR_DEFAULT = 1.3;
+/** 直線距離からの見積もりの既定（ADR-0101）：車の平均速度（km/h） */
+export const LINE_DRIVE_KMH_DEFAULT = 25;
+/** 道なり係数の範囲 */
+export const LINE_DETOUR_MIN = 1;
+export const LINE_DETOUR_MAX = 3;
+/** 車の平均速度の範囲（km/h） */
+export const LINE_DRIVE_KMH_MIN = 5;
+export const LINE_DRIVE_KMH_MAX = 80;
+
+/**
+ * 直線距離からの見積もりの係数（PRD D436。ADR-0101）：移動（分）＝ 直線距離 × detourFactor ÷ 平均速度。
+ * 車の平均速度は driveKmh、自転車・徒歩・公共交通は domain/geo の決まった速さ。無い古いデータは既定（1.3・25km/h）
+ */
+export const lineTravelSchema = z.object({
+  detourFactor: z
+    .number()
+    .min(LINE_DETOUR_MIN)
+    .max(LINE_DETOUR_MAX)
+    .refine(oneDecimal, '道なり係数は小数1桁までです')
+    .default(LINE_DETOUR_DEFAULT),
+  driveKmh: z.number().int().min(LINE_DRIVE_KMH_MIN).max(LINE_DRIVE_KMH_MAX).default(LINE_DRIVE_KMH_DEFAULT),
+});
+export type LineTravel = z.infer<typeof lineTravelSchema>;
+export const LINE_TRAVEL_DEFAULT: LineTravel = { detourFactor: LINE_DETOUR_DEFAULT, driveKmh: LINE_DRIVE_KMH_DEFAULT };
+
+/** 道路の移動時間の補正の既定（ADR-0101）：駐車・玄関までの分。遅刻を避けるため安全側にとる */
+export const ROAD_PARK_MINUTES_DEFAULT = 5;
+/** 道路の移動時間の補正の既定（ADR-0101）：混雑係数（道路の所要は渋滞・信号待ちを含まない）。遅刻を避けるため安全側にとる */
+export const ROAD_TRAFFIC_FACTOR_DEFAULT = 1.5;
+/** 駐車・玄関までの分の上限 */
+export const ROAD_PARK_MINUTES_MAX = 60;
+/** 混雑係数の範囲 */
+export const ROAD_TRAFFIC_FACTOR_MIN = 1;
+export const ROAD_TRAFFIC_FACTOR_MAX = 3;
+
+/**
+ * 道路の移動時間の補正（PRD D436。ADR-0101）：車の区間の移動（分）＝ parkMinutes ＋ trafficFactor × 道路の所要（分）。
+ * 道路の所要は DemoData.roads にあるときだけ使う。無い古いデータは既定
+ */
+export const roadTravelSchema = z.object({
+  parkMinutes: z.number().int().min(0).max(ROAD_PARK_MINUTES_MAX).default(ROAD_PARK_MINUTES_DEFAULT),
+  trafficFactor: z
+    .number()
+    .min(ROAD_TRAFFIC_FACTOR_MIN)
+    .max(ROAD_TRAFFIC_FACTOR_MAX)
+    .refine(oneDecimal, '混雑係数は小数1桁までです')
+    .default(ROAD_TRAFFIC_FACTOR_DEFAULT),
+});
+export type RoadTravel = z.infer<typeof roadTravelSchema>;
+/** 道路の移動時間の補正の既定（初期データ・空のデータ・古いデータ） */
+export const ROAD_TRAVEL_DEFAULT: RoadTravel = {
+  parkMinutes: ROAD_PARK_MINUTES_DEFAULT,
+  trafficFactor: ROAD_TRAFFIC_FACTOR_DEFAULT,
+};
+
+/** 道路の所要の表に入れる地点の上限 */
+export const ROAD_POINTS_MAX = 500;
+/** 地点ごとに残す行き先の数（道路の所要の近い順。遠い組は直線距離から見積もる。ADR-0101） */
+export const ROAD_NEAR_K = 50;
+
+/**
+ * 道路の所要の表（PRD D436。ADR-0101）：OSRM（OpenStreetMap の道路・車）から押したときに取った、地点どうしの所要（秒）と道のり（m）。
+ * 全組を取り、地点ごとに所要の近い順に ROAD_NEAR_K 件だけ残す（保存を小さくする）。
+ * near[i][k] は行き先の地点の番号、seconds[i][k]・meters[i][k] は points[i] → points[near[i][k]]。道が見つからない組は残さない。
+ * 地点は緯度・経度（小数5桁）で重複なし
+ */
+export const roadTableSchema = z.object({
+  /** 取った時刻（ms） */
+  at: z.number(),
+  points: z.array(latLngSchema).max(ROAD_POINTS_MAX),
+  near: z.array(z.array(z.number().int().min(0)).max(ROAD_NEAR_K)),
+  seconds: z.array(z.array(z.number().min(0)).max(ROAD_NEAR_K)),
+  meters: z.array(z.array(z.number().min(0)).max(ROAD_NEAR_K)),
+});
+export type RoadTable = z.infer<typeof roadTableSchema>;
 
 export const orgSchema = z.object({
   name: z.string().min(1).max(100),
@@ -102,6 +215,10 @@ export const orgSchema = z.object({
    * 知らない ID は読むときに捨てる。Excel のブックには入れない
    */
   features: featuresSchema.default({}),
+  /** 道路の移動時間の補正（PRD D436。ADR-0101）。無い古いデータは既定（駐車 5分・混雑係数 1.5）。Excel のブックには入れない */
+  roadTravel: roadTravelSchema.default(ROAD_TRAVEL_DEFAULT),
+  /** 直線距離からの見積もりの係数（PRD D436。ADR-0101）。無い古いデータは既定（1.3・25km/h）。Excel のブックには入れない */
+  lineTravel: lineTravelSchema.default(LINE_TRAVEL_DEFAULT),
 });
 export type Org = z.infer<typeof orgSchema>;
 
@@ -166,8 +283,10 @@ const clientObject = z.object({
   displayName: z.string().min(1).max(50),
   /** よみ（ひらがな・任意。PRD D61）。検索に使う。無い古いデータは '' */
   kana: z.string().max(50).default(''),
-  /** 場所（住所・位置・郵便番号。ADR-0016） */
+  /** 場所（住所・位置・郵便番号。ADR-0016）。住所2 があれば契約者の住所 */
   place: clientPlaceSchema,
+  /** 期間つきの訪問先（住所2。ADR-0105）。無い＝住所2 なし */
+  place2: clientPlace2Schema.optional(),
   note: z.string().max(500),
   /** 色の丸の番号（0〜7） */
   color: z.number().int().min(0).max(7),
@@ -236,13 +355,12 @@ export const patternDayTimeSchema = z.object({
   latestStart: hhmmSchema,
 });
 
-/** 曜日ごとの標準の開始（組み方の標準。ADR-0062） */
+/** 曜日ごとのいつもの開始（繰り返しの欄で入れる。ADR-0062） */
 export const patternUsualStartSchema = z.object({
   /** 0=日〜6=土 */
   weekday: z.number().int().min(0).max(6),
   start: hhmmSchema,
 });
-export type PatternUsualStart = z.infer<typeof patternUsualStartSchema>;
 
 /** 定期パターン（ADR-0012。利用者さんごと。複数持てる） */
 export const patternSchema = z

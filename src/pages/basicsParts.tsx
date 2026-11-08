@@ -47,7 +47,7 @@ function BasicsCellView({ row, wd, props }: { row: BasicsRow; wd: number; props:
   const c = row.cells[wd];
   if (!c) {
     return (
-      <td className="standard-cell-none">
+      <td className="basics-cell-none">
         <span aria-hidden="true">—</span>
         <span className="sr-only">なし</span>
       </td>
@@ -109,8 +109,8 @@ function BasicsCellView({ row, wd, props }: { row: BasicsRow; wd: number; props:
 export function BasicsTable(props: BasicsTableProps) {
   const { rows, weekdays, clientName, staffName, compatOn, open, editor } = props;
   return (
-    <div className="standard-table-scroll">
-      <table className="standard-table basics-table" data-testid="basics-table">
+    <div className="basics-grid-scroll">
+      <table className="basics-grid basics-table" data-testid="basics-table">
         <thead>
           <tr>
             <th scope="col">繰り返し</th>
@@ -128,10 +128,10 @@ export function BasicsTable(props: BasicsTableProps) {
             const tr = (
               <tr key={p.id} data-testid="basics-row" data-pattern={p.id}>
                 <th scope="row">
-                  <Link to={`/clients/${p.clientId}`} className="standard-row-name" data-testid="basics-client-link">
+                  <Link to={`/clients/${p.clientId}`} className="basics-row-name" data-testid="basics-client-link">
                     {clientName(p.clientId)}
                   </Link>
-                  <span className="standard-row-when">
+                  <span className="basics-row-when">
                     {patternWhenText(p)}・{p.durationMinutes}分
                   </span>
                 </th>
@@ -159,7 +159,7 @@ export function BasicsTable(props: BasicsTableProps) {
             if (open?.patternId !== p.id) return [tr];
             return [
               tr,
-              <tr key={`${p.id}-edit`} className="standard-edit-row">
+              <tr key={`${p.id}-edit`} className="basics-edit-row">
                 <td colSpan={weekdays.length + 1 + (compatOn ? 1 : 0)}>{editor(p, open.weekday)}</td>
               </tr>,
             ];
@@ -204,7 +204,7 @@ export function BasicsTimeEditor({
   };
   return (
     <form
-      className="standard-editor"
+      className="basics-editor"
       data-testid="basics-editor"
       aria-label={title}
       onSubmit={submit}
@@ -216,7 +216,7 @@ export function BasicsTimeEditor({
         }
       }}
     >
-      <p className="standard-editor-title">{title}</p>
+      <p className="basics-editor-title">{title}</p>
       <label className="field">
         {fixed ? '開始' : '開始（早）'}
         <input
@@ -255,7 +255,7 @@ export function BasicsTimeEditor({
           決める
         </button>
         <button type="button" className="btn btn-small btn-text" onClick={onClose}>
-          やめる
+          閉じる
         </button>
       </div>
     </form>

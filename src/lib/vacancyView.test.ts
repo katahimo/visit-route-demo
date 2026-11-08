@@ -60,7 +60,7 @@ describe('placeLine（場所の段階の要約）', () => {
   });
   it('住所だけなら位置がまだ無いこと', () => {
     const l = placeLine({ address: ' 仙台市 ', pinnedAddress: '', hasPin: false }, 15);
-    expect(l).toEqual({ text: '仙台市（位置がまだありません。地図に置くと移動を含めて数えます）', set: false });
+    expect(l).toEqual({ text: '仙台市（緯度・経度がまだありません。入れると移動を含めて数えます）', set: false });
   });
   it('ピンがあれば置いたときの住所（無ければ「選んだ場所」）で移動を含む', () => {
     expect(placeLine({ address: '別の住所', pinnedAddress: '一番町1-1', hasPin: true }, 15)).toEqual({

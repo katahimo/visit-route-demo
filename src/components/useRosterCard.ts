@@ -1,14 +1,15 @@
 // 名簿の欄（ADR-0068。〈利用者さん〉一覧・〈スタッフ〉一覧）の状態と処理：読み込み方の選び、
 // Excel・CSV への書き出しと、Excel のブックか CSV の読み込み。ExcelJS は重いので、押したときだけ読み込む
-import { useState } from 'react';
+import { type Dispatch, type SetStateAction, useRef, useState } from 'react';
 import type { RosterKind, RosterMode, RosterSource } from '../contracts/data';
 import { jstDate } from '../domain/time';
 import { formError, isStaleBuild } from '../lib/common';
-import { EXCEL_STALE_TEXT, rosterFileName, rosterIsEmpty } from '../lib/dataScreen';
+import { EXCEL_RELOADING_TEXT, EXCEL_STALE_TEXT, rosterFileName, rosterIsEmpty } from '../lib/dataScreen';
 import { saveBlob } from '../lib/download';
 import { useDemoData } from '../store';
 import { useToast } from './Toast';
 import { useFeature } from './useFeature';
+import { reloadOnStale, useResumeAfterReload } from './useReloadResume';
 import { useRosterImport } from './useRosterImport';
 
 /** onPlace は名簿が入ったあと、位置の無い人を自動でまとめて置き始める（PRD D427。郵便番号・住所の検索が切なら undefined） */
@@ -17,13 +18,20 @@ export function useRosterCard(kind: RosterKind, onPlace?: () => void) {
   const toast = useToast();
   const offboardOn = useFeature('offboard');
   const [error, setError] = useState<string | null>(null);
+  /** 読み直したあとの続きの読み込み中か（名簿の欄は閉じて戻るので、誤りはトーストでも出す） */
+  const resuming = useRef(false);
+  const report: Dispatch<SetStateAction<string | null>> = (v) => {
+    setError(v);
+    if (resuming.current && typeof v === 'string') toast(v);
+  };
   const [busy, setBusy] = useState(false);
-  /** 名簿の読み込み方（PRD D104）：追加・更新（既定）か総入れ替え */
-  const [rosterMode, setRosterMode] = useState<RosterMode>('merge');
-  const loadRoster = useRosterImport({ rosterMode, offboardOn, setError, onPlace });
+  /** 名簿の読み込み方（PRD D104・D441）：総入れ替え（既定）か追加・更新 */
+  const [rosterMode, setRosterMode] = useState<RosterMode>('replace');
   const term = kind === 'staff' ? data.org.terms.staff : data.org.terms.client;
-  /** 一覧が0人か（書き出しは列名だけのテンプレートになる） */
+  /** 一覧が0人か（書き出しは列名だけのテンプレートになる。読み込み方は選ばせず追加・更新＝総入れ替えと同じ結果） */
   const empty = rosterIsEmpty(data, kind);
+  const mode = empty ? 'merge' : rosterMode;
+  const loadRoster = useRosterImport({ rosterMode: mode, offboardOn, setError: report, onPlace });
 
   /**
    * 名簿を Excel のブックか CSV（BOM 付きの UTF-8）で書き出す。名簿だけの書き出しは「最後に書き出した日」に数えない。
@@ -49,20 +57,32 @@ export function useRosterCard(kind: RosterKind, onPlace?: () => void) {
     }
   };
 
-  /** 先に読んで検査し、通ったら件数を見せて確かめる（取り消しならデータは変えない） */
-  const load = async (file: File) => {
+  /** 先に読んで検査し、通ったら件数を見せて確かめる（取り消しならデータは変えない）。resumed は読み直したあとの続き */
+  const load = async (file: File, use: RosterMode = mode, resumed = false) => {
     setError(null);
     setBusy(true);
+    resuming.current = resumed;
     try {
-      await loadRoster(file, kind);
+      await loadRoster(file, kind, use);
     } catch (e) {
-      setError(
+      // 古い版の部品で読めなければ、ファイルと読み込み方を控えて読み直し、続きを読み直した先でする
+      if (await reloadOnStale(e, { target: `roster-${kind}`, file, option: use, resumed })) {
+        toast(EXCEL_RELOADING_TEXT);
+        return;
+      }
+      report(
         isStaleBuild(e) ? EXCEL_STALE_TEXT : `読み込めませんでした：${formError(e)}（いまのデータはそのままです）`,
       );
     } finally {
+      resuming.current = false;
       setBusy(false);
     }
   };
+
+  useResumeAfterReload(
+    `roster-${kind}`,
+    (file, option) => void load(file, option === 'replace' ? 'replace' : 'merge', true),
+  );
 
   return { kind, term, empty, rosterMode, setRosterMode, busy, error, download, load };
 }

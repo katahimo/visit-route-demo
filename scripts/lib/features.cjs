@@ -25,10 +25,8 @@ const FEATURE_IDS = [
   'workload',
   'fare',
   'rules',
-  'mail',
   'mapsLink',
   'geocode',
-  'excel',
 ];
 /** ひな形で入れる機能（ADR-0028 の表。基本に毎月の第N・決まりごとを足したのは ADR-0086、休み・退職・Excel を足したのは ADR-0091） */
 const BASIC_ON = [
@@ -42,7 +40,6 @@ const BASIC_ON = [
   'offboard',
   'mapsLink',
   'geocode',
-  'excel',
 ];
 const TEMPLATE_ON = {
   oneOff: BASIC_ON.filter((id) => !['patterns', 'patternMonthly', 'visitNotes'].includes(id)),
@@ -69,26 +66,21 @@ const withoutVacancy = (labels) => labels.filter((l) => l !== '空き状況');
 /** エキスパート機能が切の下のタブ（予定・空き状況・〈利用者さん〉・〈スタッフ〉。空き状況が切なら空き状況の代わりに設定。PRD D400。ADR-0080） */
 const tabsNoExpert = (on) =>
   on.includes('vacancy') ? ['予定', '空き状況', '利用者さん', 'スタッフ'] : ['予定', '利用者さん', 'スタッフ', '設定'];
-/** 組むの子の項目の key（すべて入：基本情報・組み方の標準・担当を組む。作業の順。条件の重みは子に入れない。〈利用者さん〉・〈スタッフ〉は上の段。ADR-0067・ADR-0074） */
-const ARRANGE_KIDS = ['arrange:basics', 'arrange:standard', 'arrange:assign'];
-/** 組み方の標準を登録したあとの組むの子（基本情報・担当を組む。標準の組み直しは担当を組むの見出しの［標準の組み方を変える］から） */
-const ARRANGE_KIDS_WITH_STANDARD = ['arrange:basics', 'arrange:assign'];
-/** 基本情報（予定と相性）のタブ（入のとき。〈利用者さん〉・〈スタッフ〉は人のタブの画面なので入れない。相性はどのひな形でも入。ADR-0067・ADR-0074） */
-const BASICS_TABS = ['予定と相性', '相性', '勤務時間（シフト）'];
-/** エキスパート機能が入の画面の一覧（パレットの画面。ホームは無い。人の1グループ（〈利用者さん〉・〈スタッフ〉は呼び名そのまま・相性・勤務）と、組むの先頭に予定と相性。PRD D273・D275・D401・D394） */
+/** 組むの子の項目の key（すべて入：条件の重み・担当を組む。予定と相性は〈利用者さん〉のタブ。ADR-0100） */
+const ARRANGE_KIDS = ['arrange:rules', 'arrange:assign'];
+/** エキスパート機能が入の画面の一覧（パレットの画面。ホームは無い。人の1グループ（予定と相性・〈利用者さん〉・〈スタッフ〉は呼び名そのまま・相性・勤務）と、組む（条件の重み・担当を組む）。PRD D273・D275・D401・D394。ADR-0100） */
 const EXPERT_SCREENS = [
   '月の予定',
   '週の予定',
   '日の予定',
   '空き状況',
+  '予定と相性',
   '利用者さん',
   'スタッフ',
   '相性',
   '勤務時間（シフト）',
   '勤務の見込み',
-  '予定と相性',
   '条件の重み',
-  '組み方の標準',
   '担当を組む',
   '訪問の種類',
   '特性の項目',
@@ -101,7 +93,6 @@ const ALL_SCREENS = [
   '週の予定',
   '日の予定',
   '条件の重み',
-  '組み方の標準',
   '担当を組む',
   '空き状況',
   '予定と相性',
@@ -117,20 +108,19 @@ const ALL_SCREENS = [
 ];
 /** ひな形ごとの、パレットの画面に出ない画面 */
 const HIDDEN = {
-  basic: ['勤務の見込み', '条件の重み', '組み方の標準', '特性の項目'],
-  laborContract: ['条件の重み', '組み方の標準', '特性の項目'],
-  monthlyField: ['勤務の見込み', '条件の重み', '組み方の標準', '特性の項目'],
+  basic: ['勤務の見込み', '条件の重み', '特性の項目'],
+  laborContract: ['条件の重み', '特性の項目'],
+  monthlyField: ['勤務の見込み', '条件の重み', '特性の項目'],
   all: [],
 };
 /** パレットの画面（ホームは無い。ADR-0073・ADR-0074） */
 const screensFor = (t) =>
   (TEMPLATE_ON[t].includes('expert') ? EXPERT_SCREENS : ALL_SCREENS).filter((l) => !HIDDEN[t].includes(l));
-/** 組むの子の項目の key（子は機能の入り切りで変わらない。標準を登録したあとは担当を組むだけ。ADR-0066） */
-const arrangeKidsFor = (t, hasStandard = false) =>
-  TEMPLATE_ON[t].includes('expert') ? (hasStandard ? ARRANGE_KIDS_WITH_STANDARD : ARRANGE_KIDS) : [];
+/** 組むの子の項目の key（エキスパート機能が入のときだけ。ADR-0100） */
+const arrangeKidsFor = (t) => (TEMPLATE_ON[t].includes('expert') ? ARRANGE_KIDS : []);
 /** 「人」の子の項目（メニュー4つにしたので、入でも切でも無い。ADR-0073） */
 const peopleKidsFor = () => [];
-/** 設定のタブ（ひな形ごと。特性の項目は rules を切ると出さない。条件の重み・組み方の標準は予定を組む。ADR-0063・ADR-0066） */
+/** 設定のタブ（ひな形ごと。特性の項目は rules を切ると出さない。条件の重みは組む。ADR-0063・ADR-0100） */
 const SETTINGS_TABS = ['訪問の種類', '特性の項目', '管理者設定', 'データ'];
 const settingsTabsFor = (t) => SETTINGS_TABS.filter((l) => !HIDDEN[t].includes(l));
 /** メニューの最上位（入は6つ・切は5つ。空き状況の機能（vacancy）を切ると空き状況の項目が消える。欠勤の入り切りでは変わらない。ADR-0074・ADR-0078） */
@@ -153,7 +143,6 @@ const openHome = (page, on) => open(page, homeHashFor(on).slice(1), '[data-testi
 const ROUTES = [
   { hash: '/compare', feature: 'compare' },
   { hash: '/workload', feature: 'workload' },
-  { hash: '/standard', feature: 'expert' },
   { hash: '/rules', feature: 'rules' },
   { hash: '/items', feature: 'rules' },
   { hash: '/vacancy', feature: 'vacancy' },
@@ -196,18 +185,13 @@ async function menu(page, root = '.side-nav') {
     settings: (kids.settings ?? []).map((k) => k.label),
   };
 }
-/** 基本情報のタブ（#/basics を開いて読む。タブの名前の並び） */
-async function basicsTabs(page) {
-  await open(page, '/basics', '[data-testid="people-tabs"]');
-  return (await page.getByTestId('people-tabs').locator('a').allInnerTexts()).map((x) => x.trim());
-}
 /** 〈利用者さん〉・〈スタッフ〉の小さいタブ（入切とも。to の一覧を開いて読む。タブの名前の並び。PRD D394） */
 async function peopleTabs(page, to) {
   await open(page, to, '[data-testid="people-tabs"]');
   return (await page.getByTestId('people-tabs').locator('a').allInnerTexts()).map((x) => x.trim());
 }
-/** 小さいタブ（入切とも）：〈利用者さん〉＝一覧・相性、〈スタッフ〉＝一覧・勤務・相性（相性はどのひな形でも入。勤務時間（シフト）は土台） */
-const CLIENT_TABS = ['一覧', '相性'];
+/** 小さいタブ（入切とも）：〈利用者さん〉＝一覧・予定と相性・相性、〈スタッフ〉＝一覧・勤務・相性（相性はどのひな形でも入。勤務時間（シフト）は土台。ADR-0100） */
+const CLIENT_TABS = ['一覧', '予定と相性', '相性'];
 const STAFF_TABS = ['一覧', '勤務', '相性'];
 /** パレットの候補（打つ前＝操作と画面） */
 async function paletteItems(page) {
@@ -273,10 +257,8 @@ module.exports = {
   MENU,
   withoutVacancy,
   ARRANGE_KIDS,
-  ARRANGE_KIDS_WITH_STANDARD,
   arrangeKidsFor,
   peopleKidsFor,
-  BASICS_TABS,
   ALL_SCREENS,
   EXPERT_SCREENS,
   HIDDEN,
@@ -294,7 +276,6 @@ module.exports = {
   storedFeatures,
   TOP_LINKS,
   menu,
-  basicsTabs,
   peopleTabs,
   CLIENT_TABS,
   STAFF_TABS,

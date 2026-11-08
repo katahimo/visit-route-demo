@@ -3,8 +3,10 @@
 // 日ごとに変えた勤務。純粋関数（データは書き換えない）
 import type { DemoData } from '../contracts/data';
 import type { Availability, Client, Staff } from '../contracts/documents';
+import type { Features } from '../contracts/features';
 import { nameTaken, newId } from './common';
 import { normalizeEmail } from './mailto';
+import { defaultStaffHours } from './staffDefaultHours';
 import { staffIconError } from './staffMark';
 
 /** 節ごとに直す項目（基本情報・勤務時間のタブの節） */
@@ -18,15 +20,13 @@ export const STAFF_SECTIONS = {
 } as const satisfies Record<string, readonly (keyof Staff)[]>;
 export type StaffSecKey = keyof typeof STAFF_SECTIONS;
 
-/** 新しい人の既定（`#/staff/new`。id は新しく振る） */
-export const blankStaff = (): Staff => ({
+/** 新しい人の既定（`#/staff/new`。id は新しく振る）。勤務日・勤務時間は使い方で決まる（単発の予約は毎日 7:00〜22:00。PRD D428） */
+export const blankStaff = (features: Features = {}): Staff => ({
   id: newId('s'),
   name: '',
   home: { address: '', lat: null, lng: null },
   travelMode: 'DRIVE',
-  workDays: [1, 2, 3, 4, 5],
-  shiftStart: '09:00',
-  shiftEnd: '18:00',
+  ...defaultStaffHours(features),
   active: true,
   traits: {},
   requirements: [],

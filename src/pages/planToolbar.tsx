@@ -1,4 +1,4 @@
-// 日の予定の操作の行（日・週・月で同じ作り・同じ位置。PRD D327・D402）：訪問を1件足す（主）・確定（伝えた）（入）／
+// 日の予定の操作の行（日・週・月で同じ作り・同じ位置。PRD D327・D402）：訪問を1件追加（主）・確定（伝えた）（入）／
 // その他 ▾（欠勤・キャンセル（入）・元に戻す・表示の切り替え・使い方・書き出し（チャット用にコピー・メールで送る・印刷。PRD D419））と、
 // 計算中の進み具合（PRD D249）
 import { Info, Mail, MessageSquareText, Plus, Printer, Square } from 'lucide-react';
@@ -48,7 +48,7 @@ const viewItem = (k: string, text: string, i: number, current: boolean, onSelect
 
 /**
  * 書き出し（行き先ごとに1つずつ。PRD D419）：チャット用にコピー・印刷（文に出す訪問のある日。取り消し・休みの訪問だけの日は出さない）、
- * メールで送る（`mail` が入で、訪問のある日・未連絡の変更のある日）
+ * メールで送る（訪問のある日・未連絡の変更のある日）
  */
 function exportItemsOf(p: PlanCtx): MenuItem[] {
   const hasVisits = p.contact.hasShownVisits;
@@ -64,7 +64,7 @@ function exportItemsOf(p: PlanCtx): MenuItem[] {
           },
         ]
       : []),
-    ...(p.f.mailOn && (p.d.hasPlan || p.d.toldState === 'changed')
+    ...(p.d.hasPlan || p.d.toldState === 'changed'
       ? [{ key: 'mail', label: 'メールで送る', icon: Mail, onSelect: () => p.v.setPanel('mail'), testId: 'day-mail' }]
       : []),
     ...(hasVisits
@@ -75,13 +75,13 @@ function exportItemsOf(p: PlanCtx): MenuItem[] {
 }
 
 /**
- * 操作の行の「その他 ▾」の項目（入切とも。PRD D402）：スマホは 訪問を1件足す・日ごとのリスト／順番／一覧、パソコン・タブレットは 時間軸／順番／一覧
+ * 操作の行の「その他 ▾」の項目（入切とも。PRD D402）：スマホは 訪問を1件追加・日ごとのリスト／順番／一覧、パソコン・タブレットは 時間軸／順番／一覧
  * （訪問のある日だけ）、使い方、書き出し（exportItemsOf）
  */
 function moreItemsOf(p: PlanCtx, addWhy: string | false): MenuItem[] {
   const { compact, mView, setMView, shownView, setColView, helpOpen, setHelpOpen } = p.v;
   return [
-    // 訪問を1件足すは、スマホでは「その他 ▾」の中（パソコン・タブレットは操作の行の主ボタン）
+    // 訪問を1件追加は、スマホでは「その他 ▾」の中（パソコン・タブレットは操作の行の主ボタン）
     ...(compact
       ? [
           {
@@ -128,12 +128,12 @@ export function PlanToolbar({ p }: { p: PlanCtx }) {
   const { d, v, f, nav, flow, sudden, confirm } = p;
   const { compact } = v;
   const { running, runningFor, progressStore, stop } = flow.planRun;
-  /** 訪問を1件足すを押せない理由（〈利用者さん〉がいない・スマホの幅） */
+  /** 訪問を1件追加を押せない理由（〈利用者さん〉がいない・スマホの幅） */
   const addWhy =
     d.m.clients.length === 0
       ? `${d.terms.client}がいません`
       : compact
-        ? 'スマホの幅では訪問を足しません（パソコン・タブレットで）'
+        ? 'スマホの幅では訪問を追加しません（パソコン・タブレットで）'
         : false;
   /** 計算中の進み具合（操作の行） */
   const progressView = running && (

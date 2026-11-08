@@ -8,7 +8,9 @@ import type {
   RosterMode,
   RosterSource,
 } from '../contracts/data';
+import type { Features } from '../contracts/features';
 import { AUTO_PLACE_NOTE } from './placeAll';
+import { defaultStaffHours, hasWideDefaultHours, staffHoursText } from './staffDefaultHours';
 import type { TidyPreview } from './tidy';
 import { sizeText, tidyMonthLabel } from './tidy';
 
@@ -29,6 +31,10 @@ export const keptSuffix = (k: KeepState): string => (k.kept ? '' : `（${k.why ?
 /** 画面を開いたあとに新しい版が公開されて、Excel の部品を読めなかったとき */
 export const EXCEL_STALE_TEXT =
   'アプリが新しくなったため、Excel を開けませんでした。「画面を読み直す」を押してから、もう一度試してください（データはそのままです）';
+
+/** 古い版の部品で読めなかったので、選んだファイルを控えて画面を自動で読み直すとき */
+export const EXCEL_RELOADING_TEXT =
+  'アプリが新しくなったので、画面を読み直してから同じファイルを読み込みます（データはそのままです）';
 
 /** 呼び方の入力の判定：2つが同じだと項目の対象・Excel のシートを区別できない（PRD D250） */
 export function termsCheck(
@@ -101,16 +107,33 @@ export function rosterConfirmBody(x: {
   keep: KeepState;
   /** 読み込んだあと、位置の無い人を自動でまとめて置くか（PRD D427。ADR-0094。押す前に分かるように1文を足す） */
   autoPlace?: boolean;
+  /** 勤務の列が無く既定の勤務にした〈スタッフ〉の文（rosterDefaultHoursNote。PRD D428）。無ければ null */
+  hoursNote?: string | null;
 }): string {
   return [
     ...(x.warning ? [x.warning, ''] : []),
     `「${x.fileName}」の${x.term}の名簿を読み込みます（${x.how}）。${rosterSourceText(x.source, x.otherForm?.label ?? null)}`,
     ...(x.otherForm ? [otherFormSkippedText(x.otherForm)] : []),
+    ...(x.otherForm?.addedOptions?.length ? [`足す選択肢：${x.otherForm.addedOptions.join('・')}`] : []),
     x.summary,
     // 0人なら消えるもの・戻すものが無いので省く
     ...(x.empty ? [] : ['予定は消えません。', keepNote(x.keep, '読み込む前の状態に戻す')]),
     ...(x.autoPlace ? [AUTO_PLACE_NOTE] : []),
+    ...(x.hoursNote ? [x.hoursNote] : []),
   ].join('\n');
+}
+
+/**
+ * 名簿の読み込みの確認に添える、既定の勤務にした人の文（PRD D428。ADR-0095）。広い既定（単発の予約）で、
+ * 勤務する曜日・勤務開始・勤務終了のどれかの列が無い（か空の）新しい人がいるときだけ（空の所だけ既定にする）。無ければ null
+ */
+export function rosterDefaultHoursNote(x: {
+  names: readonly string[];
+  features: Features;
+  staffTerm: string;
+}): string | null {
+  if (x.names.length === 0 || !hasWideDefaultHours(x.features)) return null;
+  return `勤務する曜日・時間のどれかが空の${x.names.length}人は、空の所を既定（${staffHoursText(defaultStaffHours(x.features))}）にしました。${x.staffTerm}の画面の勤務時間で直せます`;
 }
 
 /** 名簿を読み込んだあとの知らせ（最終勤務日の入った人がいれば、一覧の「最終勤務日のある人」の欄で振り直せると添える。PRD D209） */
@@ -151,12 +174,11 @@ export function otherOrgOf(
 }
 
 /**
- * 読み込んだデータから、いまの事業所の運用の記録（伝えた内容・振り直し・組み方の標準の記録）を外す。
+ * 読み込んだデータから、いまの事業所の運用の記録（伝えた内容・振り直し）を外す。
  * Excel にはこれらのシートが無く、読み込みは今のものを残すため、別の事業所のブックではここで消す
  */
 export function withoutOrgState(d: DemoData): DemoData {
-  const { standard: _standard, ...rest } = d;
-  return { ...rest, snapshots: {}, reassigns: {} };
+  return { ...d, snapshots: {}, reassigns: {} };
 }
 
 /** Excel の全体のブックで置き換える確認の本文（PRD D227。ADR-0006） */

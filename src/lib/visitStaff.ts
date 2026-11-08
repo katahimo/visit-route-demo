@@ -1,13 +1,16 @@
 // 訪問の詳細の欄の担当：欄の日時での担当の候補（staffChoices・staffPickError）と、担当の割り当て（assignOnDays）。
 // どれも純粋関数で、DemoData を書き換えない（書いたデータは呼ぶ側が store の update(fn) で反映する）
+
 import type { DemoData } from '../contracts/data';
 import type { Visit } from '../contracts/documents';
+import { clientOn } from '../domain/place2';
 import { bestInsertion, compile } from '../matching';
 import { findVisit, putVisits, visitsOn } from '../patterns';
 import { attempt } from './common';
 import { dayProblemOf, pinsOf, routesOf, writeRoutes } from './dayPlan';
 import { isDate } from './isDate';
 import { type ReassignChoice, reassignChoices, workingStaff } from './reassignMenu';
+import { type UnassignedReason, unassignedReasonOf } from './unassignedReason';
 import { normalized, type VisitDraft } from './visitDraft';
 
 // ---- 担当の候補 ----
@@ -20,8 +23,13 @@ export type StaffChoices = {
   /** その日の今の担当（日付を変えたら別の日なので null） */
   currentStaffId: string | null;
   choices: StaffChoice[];
-  /** 候補を出せない理由（null＝出せた） */
+  /** 候補を出せない理由（null＝出せた）。ほかに選べる人が1人もいなければ、組めない理由の内訳 */
   why: string | null;
+  /**
+   * 組めない理由（PRD D430）：担当なしの訪問か、今の担当のほかに選べる人がいないとき（lib/unassignedReason。この訪問を除いた列で見る）。
+   * 担当がいてほかに選べる人もいれば null
+   */
+  blocked: UnassignedReason | null;
 };
 
 /** 新しい訪問を問題に入れるときの仮の ID */
@@ -44,7 +52,13 @@ function draftVisit(base: Visit | null, f: VisitDraft): Visit {
  * 出す人はその日に働く人（稼働時間帯がある・列に訪問がある。workingStaff）と今の担当。選べる人を先に、選べない人は理由つきで後ろ
  */
 export function staffChoices(d: DemoData, visitId: string | null, draft: VisitDraft): StaffChoices {
-  const empty = (why: string): StaffChoices => ({ date: draft.date, currentStaffId: null, choices: [], why });
+  const empty = (why: string): StaffChoices => ({
+    date: draft.date,
+    currentStaffId: null,
+    choices: [],
+    why,
+    blocked: null,
+  });
   if (!isDate(draft.date) || !/^\d{2}:\d{2}$/.test(draft.earliestStart) || !(draft.durationMinutes >= 5))
     return empty('日付・時刻・所要を入れると候補が出ます');
   if (!draft.clientId) return empty('〈利用者さん〉を選ぶと候補が出ます');
@@ -61,7 +75,21 @@ export function staffChoices(d: DemoData, visitId: string | null, draft: VisitDr
   const current = base && base.date === draft.date && !base.cancelled ? base.staffId : null;
   const working = workingStaff(problem, all);
   const choices = reassignChoices(problem, all, moved.id, current, (sid) => working.has(sid));
-  return { date: draft.date, currentStaffId: current, choices, why: null };
+  const selectable = choices.some((c) => !c.current && !c.disabled);
+  const blocked =
+    current === null || !selectable
+      ? unassignedReasonOf(
+          problem,
+          all,
+          moved.id,
+          d.org.terms,
+          // その日の訪問先（住所2。ADR-0105）の移動時間・遠方で案内の文を選ぶ
+          d.clients.map((c) => clientOn(c, draft.date)),
+        )
+      : null;
+  const others = choices.some((c) => !c.current);
+  const why = !others && blocked ? `ほかに担当できる${d.org.terms.staff}がいません（${blocked.summary}）` : null;
+  return { date: draft.date, currentStaffId: current, choices, why, blocked };
 }
 
 /**

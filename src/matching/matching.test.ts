@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest';
 import type { Pattern } from '../contracts/documents';
 import type { Problem } from '../contracts/problem';
 import { type Condition, type Item, isStartYear } from '../contracts/rules';
-import { UNPLACED_POINTS, UNPLACED_TRAVEL_MIN } from './compile';
+import { UNPLACED_POINTS } from './compile';
 import { client, DATE, ITEMS, makeData, randomData, rule, staff, visit } from './fixtures.testkit';
 import { compile, conditionText, matches, routeCost, scheduleRoute, yearsSince } from './index';
+import { UNPLACED_TRAVEL_MIN } from './travel';
 
 const [gender, license, years, pet] = ITEMS;
 

@@ -1,5 +1,5 @@
 // 自分のデータで始めたあとの、1画面1項目の3段の登録の案内（PRD D381。ADR-0073）の純粋な部分：
-// ①〈利用者さん〉②〈スタッフ〉③予定、上に「1/3」、①②は「CSV・Excel を読み込む」、③は予定の画面へ。
+// ①〈利用者さん〉②〈スタッフ〉③予定、上に「1/3」、①②は名簿の欄をそのまま出す、③は予定の画面へ。
 // 画面は pages/StartGuidePage。呼び名は org.terms から引く（直書きしない）
 import type { Terms } from '../contracts/documents';
 import type { Features } from '../contracts/features';
@@ -56,6 +56,19 @@ export function startGuideNeighbors(index: 1 | 2 | 3): { prev: 1 | 2 | null; nex
 /** 段の画面のパス（`/start?step=2`） */
 export const startGuideHref = (index: number): string =>
   index === 1 ? START_GUIDE_PATH : `${START_GUIDE_PATH}?step=${index}`;
+
+/** 登録の案内から人の画面へ移るときに付ける、戻り先の段の番号（`?guide=1`）。人の画面のタブを替えても残る */
+export const GUIDE_BACK_PARAM = 'guide';
+
+/** 登録の案内の index 段から開く人の画面のパス（戻り先を付ける） */
+export const withGuideBack = (path: string, index: number): string =>
+  `${path}${path.includes('?') ? '&' : '?'}${GUIDE_BACK_PARAM}=${index}`;
+
+/** 人の画面の URL の検索部から、戻る先の登録の案内（無ければ null） */
+export function guideBackHref(search: string): string | null {
+  const v = new URLSearchParams(search).get(GUIDE_BACK_PARAM);
+  return v === '1' || v === '2' || v === '3' ? startGuideHref(Number(v)) : null;
+}
 
 /** ③の「予定の画面へ」で開く予定の画面：繰り返しを使う（定期）なら月、使わない（単発）なら週（最初に開く画面と同じ。lib/firstRun） */
 export const startGuidePlanPath = (features: Features): '/month' | '/week' =>

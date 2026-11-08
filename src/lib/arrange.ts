@@ -6,12 +6,6 @@ import { planYm } from './scheduleMode';
 import { weekStart } from './week';
 import { isYm, ymOf } from './ym';
 
-/**
- * 「AI で組む」の前に組み方の標準を決めてもらうか（PRD D356・D406。ADR-0072）：エキスパート機能が入で、標準がまだ無いとき。
- * 切のときは標準が無くても点数の基準のプリセットで組む
- */
-export const needsStandard = (expert: boolean, standardExists: boolean): boolean => expert && !standardExists;
-
 /** 1日あたりの見込み（秒）：1日 約3〜5秒 */
 const SEC_MIN = 3;
 const SEC_MAX = 5;

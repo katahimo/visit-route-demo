@@ -4,6 +4,7 @@
 // データは書き換えない。切った機能の行き先を外すのは呼ぶ側（lib/links の linkIfOn）
 import type { PlanScore } from '../contracts/problem';
 import { ABSENCE_OVERLAP, ABSENT_ALL_DAY, ABSENT_NO_HOURS, AFTER_LAST_DAY } from '../matching';
+import { travelReasonOf } from './travelReasons';
 
 /** 関連の画面へのリンク（to は react-router の行き先、label はリンクの文字） */
 export type HardLink = { to: string; label: string };
@@ -17,6 +18,19 @@ const AVAILABILITY = '/availability';
 
 /** その〈利用者さん〉の画面（personDetail のリンクと同じ形） */
 export const clientPageHref = (clientId: string): string => `/clients/${encodeURIComponent(clientId)}`;
+/** 開いた画面でフォーカスする欄を渡す URL のクエリの名前と、移動時間（片道・分）の欄の値（PRD D430） */
+export const FOCUS_PARAM = 'focus';
+export const TRAVEL_FOCUS = 'travel';
+/** 移動時間・遠方（出張）を直すリンクの言葉（PRD D430） */
+export const TRAVEL_LINK_LABEL = '移動時間・遠方を設定';
+
+/**
+ * その〈利用者さん〉の基本情報タブの場所の節を開き、移動時間（片道・分）の欄へフォーカスする URL（PRD D430。
+ * 登録の案内・一覧の「場所を直す」と同じ `?tab=basic&edit=place` に `focus=travel` を足す。欄が開いたら components/clientTravel が拾って消す）
+ */
+export const clientTravelHref = (clientId: string): string =>
+  `${clientPageHref(clientId)}?tab=basic&edit=place&${FOCUS_PARAM}=${TRAVEL_FOCUS}`;
+
 /** その〈スタッフ〉の画面 */
 export const staffPageHref = (staffId: string): string => `/staff/${encodeURIComponent(staffId)}`;
 
@@ -27,6 +41,7 @@ export const staffPageHref = (staffId: string): string => `/staff/${encodeURICom
  * - notAllowed：label の中の言葉で決める
  *   - 「相性」→ 相性の表
  *   - 〈利用者さん〉の条件（「必要条件：」「希望✗」「担当を限る」「いつもの担当」「〈利用者さん〉の位置」）→ その〈利用者さん〉の画面
+ *   - 移動・遠方（出張）の理由（lib/travelReasons。ADR-0096）→ その〈利用者さん〉の場所の節の移動時間の欄（clientTravelHref。PRD D430）
  *   - 〈スタッフ〉の条件（「〈スタッフ〉の必要条件」「〈スタッフ〉の希望」「〈スタッフ〉の自宅の位置」「最終勤務日の後」）→ その人の画面
  *   - 「種類（…）」→ 訪問の種類
  *   - 休み・欠勤・働ける時間に収まらない → 勤務時間（シフト）
@@ -44,9 +59,12 @@ export function hardLinks(v: Violation, clientId: string | undefined, terms: Ter
   };
   if (label.includes('相性')) add({ to: '/compat', label: '相性の表' });
   // 〈スタッフ〉側の言葉を除いてから〈利用者さん〉側を見る（「〈スタッフ〉の必要条件」は「必要条件：」を含まない形だが念のため）
-  const staffWords = [`${terms.staff}の必要条件`, `${terms.staff}の希望`, `${terms.staff}の自宅の位置`];
+  const staffWords = [`${terms.staff}の必要条件`, `${terms.staff}の希望`, `${terms.staff}の自宅の緯度・経度`];
   const clientSide = staffWords.reduce((s, w) => s.split(w).join(''), label);
-  const clientWords = ['必要条件：', '希望✗', '担当を限る', 'いつもの担当', `${terms.client}の位置`];
+  const clientWords = ['必要条件：', '希望✗', '担当を限る', 'いつもの担当', `${terms.client}の緯度・経度`];
+  // 移動・遠方（出張）の理由（ADR-0096）は〈利用者さん〉の場所の節で直す
+  const travel = travelReasonOf({ label }, terms) !== null;
+  if (clientId && travel) add({ to: clientTravelHref(clientId), label: TRAVEL_LINK_LABEL });
   if (clientId && clientWords.some((w) => clientSide.includes(w)))
     add({ to: clientPageHref(clientId), label: `${terms.client}の画面` });
   if (staffWords.some((w) => label.includes(w)) || label.includes(AFTER_LAST_DAY))

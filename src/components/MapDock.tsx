@@ -8,8 +8,7 @@ import { IconButton } from './ui';
 
 /**
  * 画面の外にある地図を、右下に小さく浮かせて見せる。
- * 元の地図（target）が見えていないときだけ出す。スタッフ・区間・訪問を選ぶと自動で開き、閉じてもボタンで開き直せる。
- * target が null（ページに地図を置かない。エキスパート機能が切の日の予定。PRD D385）のときは、いつも「地図」のボタンを出し、押すと開く
+ * 元の地図（target）が見えていないときだけ出す。スタッフ・区間・訪問を選ぶと自動で開き、閉じてもボタンで開き直せる
  */
 export function MapDock({
   target,
@@ -17,17 +16,14 @@ export function MapDock({
   lines,
   title,
   focusKey,
-  onClearFocus,
 }: {
-  /** ページの中の地図のカード（見えているあいだは浮かせない）。null はページに地図が無い */
-  target: RefObject<HTMLElement | null> | null;
+  /** ページの中の地図のカード（見えているあいだは浮かせない） */
+  target: RefObject<HTMLElement | null>;
   points: MapPoint[];
   lines: MapLine[];
   title: string;
   /** 選んだもの（スタッフ・区間・訪問）。変わったら閉じていても開く。空文字は何も選んでいない */
   focusKey: string;
-  /** 選びを解いて全員のルートに戻す（切のとき、ページに地図が無いので地図の見出しに出す。無ければボタンは出さない） */
-  onClearFocus?: () => void;
 }) {
   const [inView, setInView] = useState(true);
   const [open, setOpen] = useState(false);
@@ -47,7 +43,7 @@ export function MapDock({
   const edgeRef = useFloatingEdge('map-dock');
 
   useEffect(() => {
-    const el = target?.current;
+    const el = target.current;
     if (!el) return;
     const io = new IntersectionObserver(([e]) => setInView(e?.isIntersecting ?? true), { threshold: 0.25 });
     io.observe(el);
@@ -61,7 +57,7 @@ export function MapDock({
     if (focusKey) setOpen(true);
   }, [focusKey]);
 
-  if ((target && inView) || lines.length === 0) return null;
+  if (inView || lines.length === 0) return null;
   if (!open)
     return (
       <button
@@ -85,13 +81,11 @@ export function MapDock({
       <div className="map-dock-head">
         <MapIcon size={15} aria-hidden="true" />
         <strong className="ellipsis">{title}</strong>
-        {target && (
-          <IconButton
-            icon={ArrowDownToLine}
-            label="ページの地図へ移る"
-            onClick={() => target.current?.scrollIntoView({ behavior: scrollBehavior(), block: 'center' })}
-          />
-        )}
+        <IconButton
+          icon={ArrowDownToLine}
+          label="ページの地図へ移る"
+          onClick={() => target.current?.scrollIntoView({ behavior: scrollBehavior(), block: 'center' })}
+        />
         <IconButton
           icon={X}
           label="地図を閉じる"
@@ -101,11 +95,6 @@ export function MapDock({
           aria-controls={panelId}
         />
       </div>
-      {onClearFocus && (
-        <button type="button" className="btn btn-small" onClick={onClearFocus} data-testid="dock-clear-focus">
-          全員のルートを見る
-        </button>
-      )}
       <RouteMap points={points} lines={lines} height={260} />
       <span className="map-dock-note sub">
         <Maximize2 size={12} aria-hidden="true" />

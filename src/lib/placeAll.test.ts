@@ -1,8 +1,8 @@
 // 位置の無い人をまとめて地図に置く（PRD D89・D427。ADR-0016・ADR-0094）。外部には出さず、検索の偽物で確かめる
 import { describe, expect, it } from 'vitest';
 import type { Client, Staff } from '../contracts/documents';
-import { UNPLACED_TRAVEL_MIN } from '../matching/compile';
 import { client, makeData, staff } from '../matching/fixtures.testkit';
+import { UNPLACED_TRAVEL_MIN } from '../matching/travel';
 import type { GeoHit, LookupResult, PostalHit } from './geocode';
 import {
   AUTO_PLACE_NOTE,
@@ -64,6 +64,44 @@ describe('placeAllTargets（まとめて置く対象）', () => {
   });
 });
 
+describe('住所2（期間つきの訪問先。ADR-0105）', () => {
+  const p2 = { address: '宮城県仙台市駅前', lat: null, lng: null, postalCode: '', from: '2026-08-01', to: '' };
+  it('位置の無い住所2 も1人分として置く。一覧の「位置なし」は〈利用者さん〉の ID', () => {
+    const c = client('か', 38, 140, { displayName: 'か', place2: p2 });
+    const { targets } = placeAllTargets({ clients: [c], staff: [] }, 'client');
+    expect(targets.map((t) => [t.id, t.name, t.place.address])).toEqual([
+      ['か#住所2', 'か（住所2）', '宮城県仙台市駅前'],
+    ]);
+    expect([...noPlaceIds({ clients: [c], staff: [] }, 'client')]).toEqual(['か']);
+  });
+  it('期間が今日より前に終わった住所2 は置かない', () => {
+    const c = client('か', 38, 140, { displayName: 'か', place2: { ...p2, from: '', to: '2026-08-30' } });
+    expect(placePeople({ clients: [c], staff: [] }, 'client', '2026-08-31').map((p) => p.id)).toEqual(['か']);
+    expect(placePeople({ clients: [c], staff: [] }, 'client', '2026-08-30').map((p) => p.id)).toEqual([
+      'か',
+      'か#住所2',
+    ]);
+  });
+  it('見つけた位置は住所2 に書く（住所・期間はそのまま）', () => {
+    const c = client('か', 38, 140, { displayName: 'か', place2: p2 });
+    const d = makeData({ clients: [c] });
+    const next = withFoundPlace(
+      d,
+      'client',
+      'か#住所2',
+      { address: p2.address, postalCode: '' },
+      {
+        lat: 38.26,
+        lng: 140.88,
+        address: '',
+      },
+    );
+    const got = next.clients.find((x) => x.id === 'か');
+    expect(got?.place2).toEqual({ ...p2, lat: 38.26, lng: 140.88 });
+    expect(got?.place).toEqual(c.place);
+  });
+});
+
 describe('noPlaceIds・canSearchOne（一覧の「位置なし」）', () => {
   it('数える人のうち位置の無い人（住所の有無は問わない）', () => {
     const d = {
@@ -84,21 +122,19 @@ describe('noPlaceIds・canSearchOne（一覧の「位置なし」）', () => {
 });
 
 describe('placeAllRunLabel・placeAllTexts（まとめて置く欄の文）', () => {
-  it('はじめは「位置の無い N人を地図に置く」、一度探したあとは「続きを探す（N人）」、0人は「まとめて地図に置く」', () => {
-    expect(placeAllRunLabel({ targets: 3, tried: false })).toBe('位置の無い3人を地図に置く');
+  it('はじめは「住所から緯度・経度を入れる（N人）」、一度探したあとは「続きを探す（N人）」、0人は人数なし', () => {
+    expect(placeAllRunLabel({ targets: 3, tried: false })).toBe('住所から緯度・経度を入れる（3人）');
     expect(placeAllRunLabel({ targets: 2, tried: true })).toBe('続きを探す（2人）');
-    expect(placeAllRunLabel({ targets: 0, tried: true })).toBe('まとめて地図に置く');
+    expect(placeAllRunLabel({ targets: 0, tried: true })).toBe('住所から緯度・経度を入れる');
   });
   it('種類ごとの見出しと数えない人の注記。担当は組める補足（ADR-0093）', () => {
     const terms = { client: '利用者さん', staff: 'スタッフ' };
-    expect(placeAllTexts('client', terms).heading).toBe('位置が未登録の利用者さん');
-    expect(placeAllTexts('client', terms).notCounted).toContain('終了');
-    expect(placeAllTexts('staff', terms).heading).toBe('自宅の位置が未登録のスタッフ');
-    expect(placeAllTexts('staff', terms).notCounted).toContain('休止');
+    expect(placeAllTexts('client', terms).heading).toBe('緯度・経度が未登録の利用者さん');
+    expect(placeAllTexts('staff', terms).heading).toBe('自宅の緯度・経度が未登録のスタッフ');
     expect(placeAllTexts('staff', terms).has).toBe('住所あり');
     // 分数は計算の見込み（UNPLACED_TRAVEL_MIN）から作る
-    expect(NO_PLACE_NOTE).toContain(`移動は${UNPLACED_TRAVEL_MIN}分`);
-    expect(NO_PLACE_NOTE).toContain('移動は30分');
+    expect(NO_PLACE_NOTE).toContain(`移動${UNPLACED_TRAVEL_MIN}分`);
+    expect(NO_PLACE_NOTE).toContain('移動30分');
   });
 });
 
@@ -110,7 +146,7 @@ describe('autoPlaceAfterRoster（名簿のあと自動で置くか。PRD D427）
     // 住所の無い〈スタッフ〉しかいない → 送るものが無い
     expect(autoPlaceAfterRoster({ geocodeOn: true, next, kind: 'staff' })).toBe(false);
     expect(AUTO_PLACE_NOTE).toBe(
-      '読み込んだあと、住所から地図の位置を探します（住所を郵便番号の検索と国土地理院の地図の検索に使います）',
+      '読み込んだあと、住所から緯度・経度を探します（住所を郵便番号の検索と国土地理院の地図の検索に使います）',
     );
   });
 });

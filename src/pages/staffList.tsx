@@ -70,7 +70,7 @@ const COL_LABEL: Record<StaffCol, (clientTerm: string) => string> = {
   hours: () => '勤務時間',
   traits: () => '特性',
   requires: (client) => `${client}に求めること`,
-  home: () => '自宅の位置',
+  home: () => '自宅の緯度・経度',
   state: () => '状態',
 };
 
@@ -146,7 +146,7 @@ function StaffCell({
       );
     case 'home':
       return (
-        <td {...narrowRole.cell} data-label="自宅の位置">
+        <td {...narrowRole.cell} data-label="自宅の緯度・経度">
           {hasLocation(s.home) ? (
             <span className="chip chip-ok">
               <WithIcon icon={MapPin} size={13}>
@@ -272,11 +272,11 @@ export function StaffNoPlaceChip({ only, count }: { only: { on: boolean; toggle:
         on={only.on}
         empty={false}
         blocked={false}
-        title="自宅の地図の位置が未登録の人（休止を除く）"
+        title="自宅の緯度・経度が未登録の人（休止を除く）"
         onClick={only.toggle}
         testId="staff-filter-chip"
         data={{ 'data-chip': 'noPlace' }}
-        label="位置なし"
+        label="緯度・経度なし"
         count={count}
       />
     </fieldset>

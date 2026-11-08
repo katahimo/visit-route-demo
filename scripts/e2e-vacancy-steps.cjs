@@ -598,7 +598,7 @@ let b = null;
 /** 段ごとに新しい文脈を開く（ブラウザの確認・知らせは出さない。PRD D146） */
 const fresh = (name, fn) => async () => {
   const ctx = await b.newContext({ viewport: { width: 1280, height: 900 } });
-  // 初回の案内ツアーを見た扱いにする（PRD D193）
+  // 最初の2問を出さない扱いにする（PRD D379）
   await skipTour(ctx);
   const page = await ctx.newPage();
   await page.clock.setFixedTime(NOW);

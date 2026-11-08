@@ -55,7 +55,7 @@ export function ClientLeavesSection({
               }}
             >
               <WithIcon icon={Plus} size={14}>
-                休みを入れる
+                休みを追加
               </WithIcon>
             </button>
           )

@@ -513,6 +513,8 @@ async function roster(page, dlg) {
     .map((r) => r.join('\t'))
     .join('\r\n');
   const askedLedger = dlg.messages.length;
+  // 2人だけの名簿なので追加・更新で読む（既定の総入れ替えだとほかの人が終了になる。PRD D441）
+  await page.getByTestId('roster-mode-merge').check();
   await page.getByTestId('roster-file-input').setInputFiles({
     name: 'ledger.tsv',
     mimeType: 'text/tab-separated-values',

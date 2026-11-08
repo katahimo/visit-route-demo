@@ -6,8 +6,7 @@ import type { VacancyResult } from '../contracts/vacancy';
 import { addDays, hhmmToMinutes, minutesToHhmm } from '../domain/time';
 import { visitsIn } from '../patterns';
 import { verdictOf } from '../vacancy';
-import { newId } from './common';
-import { WEEKDAY_ORDER } from './standard';
+import { newId, WEEKDAY_ORDER } from './common';
 import { insertAllIntoPlans } from './weekOps';
 
 /** 仮押さえで担当を入れる日数（今日から。それより後の回は繰り返しの担当で出る） */

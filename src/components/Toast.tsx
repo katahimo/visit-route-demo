@@ -3,7 +3,11 @@ import { createPortal } from 'react-dom';
 
 /** 知らせに添えるボタン（全体の「元に戻す」。PRD D329） */
 export type ToastAction = { label: string; onClick: () => void; testId?: string };
-export type ToastOptions = { action?: ToastAction };
+/**
+ * action は全体の「元に戻す」など、more はその前に置くもう1つのボタン（自動の組みの［理由を見る］。PRD D430）。
+ * long は読むものが多い知らせ（組めない理由の内訳）で、出しておく時間を長くする
+ */
+export type ToastOptions = { action?: ToastAction; more?: ToastAction; long?: boolean };
 
 /** 文だけの知らせを出しておく時間 */
 const TOAST_MS = 2500;
@@ -11,9 +15,12 @@ const TOAST_MS = 2500;
 const ACTION_TOAST_MS = 6000;
 /** ボタン付きの知らせの最長（長い文は1字 120ms で読む間を足し、ここで止める。PRD D268） */
 const ACTION_TOAST_MAX_MS = 10000;
+/** 長く出す知らせ（組めない理由の内訳と［理由を見る］。PRD D430） */
+const LONG_TOAST_MS = 10000;
 
-/** 知らせを出しておく時間（PRD D268）：文だけは短く、ボタン付きは読み上げと押す間を残す（長い文ほど長く、上限あり） */
-export function toastMs(msg: string, withAction: boolean): number {
+/** 知らせを出しておく時間（PRD D268）：文だけは短く、ボタン付きは読み上げと押す間を残す（長い文ほど長く、上限あり）。long は長く */
+export function toastMs(msg: string, withAction: boolean, long = false): number {
+  if (long) return LONG_TOAST_MS;
   if (!withAction) return TOAST_MS;
   return Math.min(ACTION_TOAST_MAX_MS, Math.max(ACTION_TOAST_MS, [...msg].length * 120));
 }
@@ -22,7 +29,7 @@ export function toastMs(msg: string, withAction: boolean): number {
 const Ctx = createContext<(msg: string, opts?: ToastOptions) => void>(() => {});
 
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const [toast, setToast] = useState<{ msg: string; action?: ToastAction } | null>(null);
+  const [toast, setToast] = useState<{ msg: string; action?: ToastAction; more?: ToastAction } | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stop = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
@@ -46,15 +53,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     (msg: string, opts?: ToastOptions) => {
       hovering.current = false;
       focused.current = false;
-      setToast({ msg, action: opts?.action });
-      hideAfter(toastMs(msg, !!opts?.action));
+      setToast({ msg, action: opts?.action, more: opts?.more });
+      hideAfter(toastMs(msg, !!(opts?.action || opts?.more), opts?.long));
     },
     [hideAfter],
   );
   useEffect(() => {
     return stop;
   }, [stop]);
-  const action = toast?.action;
+  const buttons = [toast?.more, toast?.action].filter((a): a is ToastAction => !!a);
   return (
     <Ctx.Provider value={show}>
       {children}
@@ -63,7 +70,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {createPortal(
         <div className="toast-layer" data-inert-keep>
           {toast &&
-            (action ? (
+            (buttons.length > 0 ? (
               // 読み上げは文だけ（ボタンの名前を知らせに混ぜない）。知らせの箱（文の幅だけ）はマウスを受ける（重ねて止めるため）
               // マウスを重ねている間・ボタンにフォーカスがある間は消さない（両方が外れたら文だけの時間で消す。PRD D268）
               // biome-ignore lint/a11y/noStaticElementInteractions: 重ねている間だけ時間を止める（操作ではない）
@@ -79,26 +86,29 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 }}
               >
                 <output className="toast-text">{toast.msg}</output>
-                <button
-                  type="button"
-                  className="toast-action"
-                  data-testid={action.testId}
-                  onFocus={() => {
-                    focused.current = true;
-                    stop();
-                  }}
-                  onBlur={() => {
-                    focused.current = false;
-                    release();
-                  }}
-                  onClick={() => {
-                    stop();
-                    setToast(null);
-                    action.onClick();
-                  }}
-                >
-                  {action.label}
-                </button>
+                {buttons.map((action) => (
+                  <button
+                    key={action.label}
+                    type="button"
+                    className="toast-action"
+                    data-testid={action.testId}
+                    onFocus={() => {
+                      focused.current = true;
+                      stop();
+                    }}
+                    onBlur={() => {
+                      focused.current = false;
+                      release();
+                    }}
+                    onClick={() => {
+                      stop();
+                      setToast(null);
+                      action.onClick();
+                    }}
+                  >
+                    {action.label}
+                  </button>
+                ))}
               </div>
             ) : (
               <output className="toast">{toast.msg}</output>

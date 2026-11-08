@@ -2,10 +2,10 @@
 // トーストに添える「元に戻す」。履歴は lib/history の appHistory（store が積む）
 import { Redo2, Undo2 } from 'lucide-react';
 import { type ReactNode, useEffect, useMemo } from 'react';
+import { AUTO_ARRANGE_LABEL } from '../lib/autoArrangeBatch';
 import { hashPathname, isMacPlatform } from '../lib/commandPalette';
 import { appHistory, historyKey, historyKeysOn, isTextTarget } from '../lib/history';
 import { useDemoData } from '../store';
-import type { MenuItem } from './MenuButton';
 import { type ToastAction, useToast } from './Toast';
 import { WithIcon } from './ui';
 import { useValueStore } from './valueStore';
@@ -42,6 +42,30 @@ export function useHistoryOps(): { undo(): void; redo(): void } {
   }, [undoStore, redoStore, toast]);
 }
 
+/**
+ * 取り込みの知らせに添える「元に戻す」（PRD D442）：取り込みのあとに自動の組み（「自動で組む」）が書いていれば、それも一緒に戻し、
+ * 取り込みの手まで戻す（組みだけ戻って取り込みが残らないように）
+ */
+export function useUndoImportAction(): ToastAction {
+  const { undo: undoStore, redo: redoStore } = useDemoData();
+  const toast = useToast();
+  return useMemo(() => {
+    const onClick = () => {
+      let label = undoStore();
+      // 自動の組みの手は続けて戻す（2回まで。組みは取り込みのあとに1回だけ）
+      for (let i = 0; i < 2 && label === AUTO_ARRANGE_LABEL; i++) label = undoStore();
+      if (label === null) {
+        toast('戻せる操作がありません');
+        return;
+      }
+      toast(`元に戻しました（${label}）`, {
+        action: { label: 'やり直す', onClick: () => void redoStore(), testId: 'toast-redo' },
+      });
+    };
+    return { label: '元に戻す', onClick, testId: 'toast-undo' };
+  }, [undoStore, redoStore, toast]);
+}
+
 /** トーストに添える「元に戻す」（全体の履歴を1手戻す） */
 export function useUndoAction(): ToastAction {
   const { undo } = useHistoryOps();
@@ -73,11 +97,13 @@ export function HistoryKeys(): ReactNode {
 }
 
 /**
- * 「元に戻す」へフォーカスを返す先：「元に戻す」のボタン（人の予定表・組むの画面）、無ければ予定の操作の行の「その他 ▾」
- * （予定の月・週・日は「元に戻す」を「その他 ▾」の項目にしたため。PRD D402）
+ * 「元に戻す」へフォーカスを返す先：「元に戻す」のボタン（予定の月・週・日・人の予定表・組むの画面。PRD D432）、無ければ予定の操作の行の「その他 ▾」
  */
 export const undoFocusTarget = (): HTMLElement | null =>
-  document.querySelector<HTMLElement>('[data-testid="undo-btn"]') ??
+  document.querySelector<HTMLElement>('[data-testid="undo-btn"]') ?? moreFocusTarget();
+
+/** 予定の操作の行の「その他 ▾」（欠勤・キャンセルなどの入口。フォーカスを返す先） */
+export const moreFocusTarget = (): HTMLElement | null =>
   document.querySelector<HTMLElement>('.schedule-toolbar [data-testid$="-more"]');
 
 /** 次の描画で undoFocusTarget にフォーカスする（移した・取り消したあと、フォーカスを body に落とさない） */
@@ -124,36 +150,42 @@ export function UndoButtons({ redoShown = true }: { redoShown?: boolean }) {
 }
 
 /**
- * 「元に戻す」「やり直す」を「その他 ▾」の項目で（エキスパート機能が切のとき。操作の行のボタンを2つまでにするため。PRD D384）。
- * 戻せない間は押せない項目（理由は title）。やり直すは戻した手があるときだけ。キー（Ctrl+Z）とトーストの「元に戻す」は今のまま
+ * 予定の画面（月・週・日）の操作の行の、アイコンだけの［元に戻す］［やり直す］（PRD D432。D402 の「ボタン2つまで」には数えない補助）。
+ * 常に出し（フォーカスを落とさない）、戻せない・やり直せないときは aria-disabled。aria-label・title に手の名前
+ * 「元に戻す（担当を替える）」とキー。キー（Ctrl+Z）とトーストの「元に戻す」は今のまま
  */
-export function useHistoryMenuItems(): MenuItem[] {
+export function UndoIconButtons() {
   const h = useValueStore(appHistory.state);
   const { undo, redo } = useHistoryOps();
-  return [
-    {
-      key: 'undo',
-      group: '操作',
-      label: '元に戻す',
-      icon: Undo2,
-      note: UNDO_KEY,
-      disabled: h.undo === null ? '戻せる操作がありません' : false,
-      description: h.undo === null ? undefined : `「${h.undo}」を戻します`,
-      onSelect: undo,
-      testId: 'more-undo',
-    },
-    ...(h.redo === null
-      ? []
-      : [
-          {
-            key: 'redo',
-            label: 'やり直す',
-            icon: Redo2,
-            note: REDO_KEY,
-            description: `「${h.redo}」をやり直します`,
-            onSelect: redo,
-            testId: 'more-redo',
-          },
-        ]),
-  ];
+  const undoLabel = h.undo === null ? '元に戻す（戻せる操作がありません）' : `元に戻す（${h.undo}）`;
+  const redoLabel = h.redo === null ? 'やり直す（やり直せる操作がありません）' : `やり直す（${h.redo}）`;
+  return (
+    // biome-ignore lint/a11y/useSemanticElements: 2つのボタンをまとめる印。fieldset は文書の見出しを持つので使わない
+    <span className="tb-undo" role="group" aria-label="元に戻す・やり直す" data-testid="undo-pair">
+      <button
+        type="button"
+        className="icon-btn"
+        aria-label={undoLabel}
+        aria-disabled={h.undo === null || undefined}
+        aria-keyshortcuts={IS_MAC ? 'Meta+Z' : 'Control+Z'}
+        title={`${undoLabel}　${UNDO_KEY}`}
+        onClick={() => h.undo !== null && undo()}
+        data-testid="undo-btn"
+      >
+        <Undo2 size={16} aria-hidden="true" />
+      </button>
+      <button
+        type="button"
+        className="icon-btn"
+        aria-label={redoLabel}
+        aria-disabled={h.redo === null || undefined}
+        aria-keyshortcuts={IS_MAC ? 'Meta+Shift+Z' : 'Control+Shift+Z'}
+        title={`${redoLabel}　${REDO_KEY}`}
+        onClick={() => h.redo !== null && redo()}
+        data-testid="redo-btn"
+      >
+        <Redo2 size={16} aria-hidden="true" />
+      </button>
+    </span>
+  );
 }

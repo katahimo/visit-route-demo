@@ -35,7 +35,7 @@ export function PastePanel({ onClose }: { onClose: () => void }) {
             <WithIcon icon={Check}>{pasteApplyLabel(p.count)}</WithIcon>
           </button>
           <button type="button" className="btn" onClick={onClose} data-testid="paste-close">
-            <WithIcon icon={X}>やめる</WithIcon>
+            <WithIcon icon={X}>閉じる</WithIcon>
           </button>
         </>
       }

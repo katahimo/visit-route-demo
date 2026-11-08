@@ -17,6 +17,11 @@ describe('bandNext（expert 切は確定していない日の段が無い。ADR-
       bandNext({ ...base, progress: pg({ unconfirmed: ['2026-10-20'], attention: 1 }), confirmStep: false }).kind,
     ).toBe('attention');
   });
+  it('担当なしの日が1日でも担当を AI で組む（その場で組むので。入は2日から）', () => {
+    const input = { ...base, emptyTargets: 1, urgent: 1, progress: pg({ attention: 1 }) };
+    expect(bandNext({ ...input, confirmStep: false }).kind).toBe('batch');
+    expect(bandNext(input).kind).toBe('attention');
+  });
 });
 
 describe('bandNext', () => {

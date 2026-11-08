@@ -1,6 +1,6 @@
 // 機能の入り切り（PRD D210〜D213・D216。ADR-0028。design.md §4 features）の表と、入り切りの判定・ひな形を決める純粋関数。
 // 機能の名前・説明・グループ・依存・その機能の URL・切ると隠れるもの・ひな形の入り切りはここの1か所。
-// メニュー（lib/nav）・ルート（app/App）・パレット（lib/commandPalette）・ツアー（lib/tour）・
+// メニュー（lib/nav）・ルート（app/App）・パレット（lib/commandPalette）・
 // 行き先（lib/links）はここから引く。データは書き換えない（入り切りを書くのは画面の update(fn)）
 import type { DemoData } from '../contracts/data';
 import type { Pattern, Terms } from '../contracts/documents';
@@ -44,7 +44,7 @@ export type FeatureDef = {
 };
 
 /**
- * 機能の表（22。ADR-0028 の「機能の一覧」）。土台（月の予定・週の予定・日の予定・〈利用者さん〉一覧・〈スタッフ〉一覧・
+ * 機能の表（20。ADR-0028 の「機能の一覧」）。土台（月の予定・週の予定・日の予定・〈利用者さん〉一覧・〈スタッフ〉一覧・
  * 勤務時間（シフト）・訪問の種類・データ・管理者設定）は表に入れず、切れない
  */
 export const FEATURES: readonly FeatureDef[] = [
@@ -79,7 +79,7 @@ export const FEATURES: readonly FeatureDef[] = [
     description: '月の予定で{staff}の希望休をまとめて入れられます',
     group: '予定の入れ方',
     paths: [],
-    hides: '月の「休みを入れる」（希望休は残り計算に効く。「休みの人に N」の印も出る）',
+    hides: '月の「休みを追加」（希望休は残り計算に効く。「休みの人に N」の印も出る）',
   },
   {
     id: 'monthPrint',
@@ -91,12 +91,12 @@ export const FEATURES: readonly FeatureDef[] = [
   },
   {
     id: 'expert',
-    label: 'エキスパート機能（組み方の標準・案を比べる・条件の重み）',
-    description: '「組む」（4段・担当を組む）・組み方の標準・案を比べる・条件の重みの入口を出します',
+    label: 'エキスパート機能（条件の重み・案を比べる）',
+    description: 'メニューの「組む」（条件の重み・担当を組む）と案を比べるの入口を出します',
     group: '上級（組み方の調整）',
-    paths: ['/standard'],
+    paths: [],
     hides:
-      'メニューの「組む」・組み方の標準・案を比べる・条件の重みの入口（切るとメニューは 予定・〈利用者さん〉・〈スタッフ〉・設定 の4つになり、予定の上の帯の未確定・組み直し・標準が無いも出ない。担当を組むは基準のプリセットで組む。入れた人・希望日時から組むふだんの道だけになる）',
+      'メニューの「組む」・条件の重み・案を比べるの入口（切るとメニューは 予定・空き状況・〈利用者さん〉・〈スタッフ〉・設定 になり、予定の上の帯の未確定・条件に合わない・拘束超も出ない。担当を組むは今の条件の重みで組む。入れた人・希望日時から組むふだんの道だけになる）',
   },
   {
     id: 'compare',
@@ -197,16 +197,7 @@ export const FEATURES: readonly FeatureDef[] = [
     description: 'AI の条件の重み・特性の項目・プリセットを変えられます',
     group: '上級（組み方の調整）',
     paths: ['/rules', '/items'],
-    hides:
-      '組み方の標準から開く「条件の重み」の画面と設定の「特性の項目」のタブ、点数の理由（切ると基準のプリセットだけで組む）',
-  },
-  {
-    id: 'mail',
-    label: 'メール',
-    description: '予定・連絡・案内文を、端末のメールアプリで開きます',
-    group: '現場との共有',
-    paths: [],
-    hides: 'メールのボタン・欄、メールアドレスの欄',
+    hides: 'メニューの「組む」の「条件の重み」と設定の「特性の項目」のタブ、点数の理由（切ると今の重みのまま組む）',
   },
   {
     id: 'mapsLink',
@@ -219,18 +210,10 @@ export const FEATURES: readonly FeatureDef[] = [
   {
     id: 'geocode',
     label: '郵便番号・住所の検索',
-    description: '郵便番号・住所から地図の位置を探します',
+    description: '郵便番号・住所から緯度・経度を探します',
     group: '入力の補助',
     paths: [],
-    hides: '検索のボタン・まとめて地図に置く（地図のクリックで置くのは残る）',
-  },
-  {
-    id: 'excel',
-    label: 'Excel の入出力',
-    description: 'データを Excel のブックで、名簿を Excel・CSV で書き出し・読み込みします',
-    group: '入力の補助',
-    paths: [],
-    hides: 'データの画面の Excel の欄・一覧の名簿の欄（Excel・CSV）。控えは残る',
+    hides: '検索のボタン・まとめて緯度・経度を入れる（地図のクリックで入れるのは残る）',
   },
 ];
 
@@ -321,7 +304,7 @@ export type TemplateDef = {
   on: readonly FeatureId[];
 };
 
-/** 基本のひな形で入れる機能（予定・繰り返し・毎月の第N・曜日ごとの時刻・〈利用者さん〉の休み・欠勤・キャンセル・空き状況・相性・決まりごと・退職・担当替え・道順のリンク・住所の検索・Excel の入出力。ADR-0086・ADR-0091） */
+/** 基本のひな形で入れる機能（予定・繰り返し・毎月の第N・曜日ごとの時刻・〈利用者さん〉の休み・欠勤・キャンセル・空き状況・相性・決まりごと・退職・担当替え・道順のリンク・住所の検索。ADR-0086・ADR-0091） */
 const BASIC_ON: readonly FeatureId[] = [
   'patterns',
   'patternMonthly',
@@ -333,7 +316,6 @@ const BASIC_ON: readonly FeatureId[] = [
   'offboard',
   'mapsLink',
   'geocode',
-  'excel',
 ];
 
 /** 単発の予約のひな形で入れる機能：基本から繰り返し（patterns・patternMonthly）と決まりごと（visitNotes）を外したもの（ADR-0072 第2段・ADR-0086・ADR-0091。PRD D378） */
@@ -379,7 +361,7 @@ export const TEMPLATES: readonly TemplateDef[] = [
     id: 'all',
     label: 'すべての機能',
     example: null,
-    description: '組み方の標準・案を比べる・条件の重みを含め、すべてを入れます。条件を試す・全機能を見せるとき',
+    description: '条件の重み・案を比べるを含め、すべてを入れます。条件を試す・全機能を見せるとき',
     on: FEATURE_IDS,
   },
 ];
@@ -401,7 +383,7 @@ export function templateBasicDelta(id: TemplateId): { add: FeatureId[]; drop: Fe
   };
 }
 
-/** ひな形を適用したときの入り切り（全22の ID を明示して書く。業種とは連動しない） */
+/** ひな形を適用したときの入り切り（全20の ID を明示して書く。業種とは連動しない） */
 export function applyTemplate(id: TemplateId): Features {
   const on = new Set(templateDef(id).on);
   return Object.fromEntries(FEATURE_IDS.map((f) => [f, on.has(f)])) as Features;
@@ -510,10 +492,6 @@ export function turnOffImpact(
         [c.entryNote, c.keyNote, c.parkingNote, c.cautionNote].some((x) => x.trim() !== ''),
       ).length;
       return one(n, `訪問先の決まりごと ${n}人（${client}）は残ります`);
-    }
-    case 'mail': {
-      const n = data.staff.filter((s) => s.email.trim() !== '').length;
-      return one(n, `メールアドレス ${n}人（${staff}）は残ります`);
     }
     default:
       return null;

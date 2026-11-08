@@ -1,6 +1,7 @@
 // 〈スタッフ〉の画面の節の編集と保存（PRD D299・D308〜D310。ADR-0014・ADR-0050）
 import { describe, expect, it } from 'vitest';
 import { client, makeData, staff } from '../matching/fixtures.testkit';
+import { applyTemplate } from './features';
 import {
   blankStaff,
   checkStaffFields,
@@ -26,6 +27,15 @@ describe('blankStaff（新しい人の既定）', () => {
     });
     expect(a.id).toMatch(/^s-/);
     expect(blankStaff().id).not.toBe(a.id);
+  });
+
+  it('単発の予約の使い方なら毎日 7:00〜22:00（PRD D428）', () => {
+    expect(blankStaff(applyTemplate('oneOff'))).toMatchObject({
+      workDays: [1, 2, 3, 4, 5, 6, 0],
+      shiftStart: '07:00',
+      shiftEnd: '22:00',
+    });
+    expect(blankStaff(applyTemplate('basic')).shiftStart).toBe('09:00');
   });
 });
 

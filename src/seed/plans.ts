@@ -1,5 +1,5 @@
 // 起動したときの初期データ（PRD D322。ADR-0053・ADR-0064）。
-// 初期データの今日からの日は AI で組まない（繰り返しの担当のまま。その日に担当できない回だけ「この回だけ担当なし」）。AI で組むのは「担当を組む」で（標準が無い間は組み方の標準を先に決める。ADR-0065）。
+// 初期データの今日からの日は AI で組まない（繰り返しの担当のまま。その日に担当できない回だけ「この回だけ担当なし」）。AI で組むのは自動の組みと「担当を組む」で。
 // AI で組んだ日のあるデータ（テスト用）は plans.testkit.ts の withSeedPlans
 import type { DemoData } from '../contracts/data';
 import type { Features } from '../contracts/features';

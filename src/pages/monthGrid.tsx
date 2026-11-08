@@ -1,12 +1,10 @@
 // 月の画面の本体の2つの見せ方（PRD D189）：カレンダー（7列の表。日のマスは monthCell.tsx）と日ごとの一覧（縦に1日1行）
 import { Lock, PencilLine } from 'lucide-react';
 import { type RefObject, useMemo, useRef } from 'react';
-import { useExceptionsOnly } from '../components/useFeature';
 import type { DropHover } from '../components/visitParts';
 import { weekday } from '../domain/time';
 import { WEEKDAY_LABELS } from '../lib/common';
 import { mdText, ymText } from '../lib/dateText';
-import { monthCellView } from '../lib/exceptionView';
 import { createTipStore } from '../lib/monthGuide';
 import type { MonthListEntry } from '../lib/monthView';
 import type { OffDayState } from '../lib/requestedOff';
@@ -40,7 +38,7 @@ export function MonthGrid({
   current: string | undefined;
   month: Pick<MonthDays, 'weeks' | 'statuses' | 'marks' | 'attentionByDate' | 'usualRest'>;
   focusDays: Pick<MonthFocusDays, 'loads' | 'staffDays' | 'clientDays'>;
-  cell: Omit<CellContext, 'tipStore' | 'view'>;
+  cell: Omit<CellContext, 'tipStore'>;
   offStateOf: (date: string) => OffDayState | undefined;
   selectedByDate: ReadonlyMap<string, number>;
   listDay: string | null;
@@ -49,16 +47,12 @@ export function MonthGrid({
 }) {
   /** 日のマスの表（読み方の吹き出し MonthCellTip が見る。PRD D177） */
   const gridRef = useRef<HTMLTableElement>(null);
-  /** マスに出すもの（切は例外だけ。PRD D410） */
-  const view = monthCellView(useExceptionsOnly());
-  /** マスの読み方の文の置き場（日付 → 文。PRD D177）。切は吹き出しを出さない（読み方は見出しの ⓘ） */
-  const allTips = useMemo(() => createTipStore(), []);
-  const tipStore = view.guide === 'tip' ? allTips : null;
+  /** マスの読み方の文の置き場（日付 → 文。PRD D177） */
+  const tipStore = useMemo(() => createTipStore(), []);
   const { today, focus, typeById, staffById, clientTerm, staffTerm, onOpen, onToggleOff, onKey, onMulti } = cell;
   const ctx = useMemo(
     (): CellContext => ({
       tipStore,
-      view,
       today,
       focus,
       typeById,
@@ -70,7 +64,7 @@ export function MonthGrid({
       onKey,
       onMulti,
     }),
-    [tipStore, view, today, focus, typeById, staffById, clientTerm, staffTerm, onOpen, onToggleOff, onKey, onMulti],
+    [tipStore, today, focus, typeById, staffById, clientTerm, staffTerm, onOpen, onToggleOff, onKey, onMulti],
   );
   const { statuses, marks } = month;
   return (
@@ -122,7 +116,7 @@ export function MonthGrid({
           ))}
         </tbody>
       </table>
-      {tipStore && <MonthCellTip gridRef={gridRef} tipStore={tipStore} />}
+      <MonthCellTip gridRef={gridRef} tipStore={tipStore} />
     </>
   );
 }
@@ -177,9 +171,9 @@ function MonthListItem({
           {r.isToday && <span className="month-today">今日</span>}
         </span>
         <span className="month-list-state">
-          {r.reasons && r.state === 'told' && <Lock size={12} aria-hidden="true" />}
-          {r.reasons && r.state === 'changed' && <PencilLine size={12} aria-hidden="true" />}
-          {r.reasons && r.stateText}
+          {r.state === 'told' && <Lock size={12} aria-hidden="true" />}
+          {r.state === 'changed' && <PencilLine size={12} aria-hidden="true" />}
+          {r.stateText}
         </span>
         <span className="month-list-count">{r.count > 0 ? `${r.count}件` : ''}</span>
         <span className="month-list-flags">

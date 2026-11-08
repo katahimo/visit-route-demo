@@ -218,7 +218,7 @@ export function PcalToolbar({
           data-testid="pcal-add"
         >
           <WithIcon icon={Plus} size={14}>
-            訪問を足す
+            訪問を追加
           </WithIcon>
         </button>
       )}

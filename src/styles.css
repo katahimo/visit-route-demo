@@ -398,6 +398,22 @@ tbody tr:hover td {
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
 }
+/* 横幅いっぱいの欄（選択肢の多い複数選択など） */
+.form-grid > .field-wide {
+  grid-column: 1 / -1;
+}
+/* 選択肢のチェックを幅のそろった列に並べる（長い名前は列の中で折り返す） */
+.option-checks {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10.5em, 1fr));
+  gap: 6px 12px;
+}
+.option-checks label.check {
+  align-items: flex-start;
+}
+.option-checks label.check input {
+  margin-top: 0.2em;
+}
 
 /* 予定：訪問の一覧と回る順番 */
 .nowrap {
@@ -1236,75 +1252,6 @@ tbody tr:hover td {
 @media (max-width: 600px) {
   .settings-tabs .view-switch-item {
     padding: 5px 10px;
-  }
-}
-/* 予定を組むの段（components/SettingsTabs.tsx の ArrangeSteps。ADR-0066）：欠勤・キャンセルの欄の段階と同じ形。
-   番号の丸と名前を「›」でつなぐ。今の段は aria-current="step" と塗った丸・太字（色だけに頼らない）。狭い画面は横に巻く */
-.arrange-steps {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin: 0 0 -1px;
-  padding: 0;
-  list-style: none;
-  overflow-x: auto;
-  scrollbar-width: thin;
-}
-.arrange-steps li {
-  display: inline-flex;
-  align-items: center;
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-.arrange-steps li + li::before {
-  content: '›';
-  margin-right: 4px;
-  color: var(--sub);
-}
-.arrange-step {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  border-bottom: 3px solid transparent;
-  color: var(--sub);
-  font-size: 0.95rem;
-  text-decoration: none;
-}
-a.arrange-step:hover {
-  color: var(--ink);
-  border-bottom-color: var(--line);
-}
-.arrange-step[aria-current='step'] {
-  color: var(--primary-dark);
-  font-weight: 700;
-  border-bottom-color: var(--primary);
-}
-.arrange-step-no {
-  display: inline-grid;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  border: 1.5px solid currentColor;
-  font-size: 0.75rem;
-}
-.arrange-step[aria-current='step'] .arrange-step-no {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
-}
-@media (max-width: 480px) {
-  .arrange-step {
-    padding: 5px 6px;
-  }
-  .arrange-steps li:not(.is-current) .arrange-step-name {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
   }
 }
 /* 予定の上のナビの行（components/ScheduleNav.tsx。PRD D347。ADR-0060）：日・週・月で同じ1行。
@@ -2623,6 +2570,26 @@ html[data-drawer-toast="side"] body:has(.drawer-wrap) .toast {
   from {
     transform: translateY(32px);
     opacity: 0;
+  }
+}
+/* 上の帯の左端の戻る・進む（HistoryNav）。印刷では出さない */
+.history-nav {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+/* 広い画面：戻る・進む（と組む進み具合の帯）を左に、「探す・移動」から右を右端に寄せる */
+@media (min-width: 861px) {
+  .app-header .batch-band {
+    margin-right: 0;
+  }
+  .app-header .cmdk-open {
+    margin-left: auto;
+  }
+}
+@media print {
+  .history-nav {
+    display: none !important;
   }
 }
 /* 全画面の切り替え（上の帯の右端）。印刷では出さない */

@@ -43,13 +43,13 @@ export function ContactPanel({
   terms: Terms;
   /**
    * 担当が変わった〈スタッフ〉あてのメール（PRD D94。ADR-0017）：スタッフの ID と連絡文から、メールアプリを開く URL を作る。
-   * メールアドレスが無ければ null（ボタンは押せず理由を出す）。渡さなければメールのボタンを出さない
+   * メールアドレスが無ければ null（ボタンは押せず理由を出す）
    */
-  staffMail?: (staffId: string, text: string) => BuiltMail | null;
+  staffMail: (staffId: string, text: string) => BuiltMail | null;
   /** コピーしたあと（ok：できたか） */
   onCopied: (ok: boolean, what: string) => void;
   /**
-   * 「連絡した」（expert 切の未連絡の変更の一覧だけ。メール機能の入り切りに関係なく出す。ADR-0073）：今の担当・時刻を伝えた記録にする。
+   * 「連絡した」（expert 切の未連絡の変更の一覧だけ。ADR-0073）：今の担当・時刻を伝えた記録にする。
    * 渡さなければボタンを出さない
    */
   onContacted?: () => void;
@@ -298,7 +298,7 @@ function StaffMessagesSection({
   staffMail,
   copy,
 }: SectionProps & {
-  staffMail?: (staffId: string, text: string) => BuiltMail | null;
+  staffMail: (staffId: string, text: string) => BuiltMail | null;
   copy: (text: string, what: string) => void;
 }) {
   return (
@@ -308,7 +308,7 @@ function StaffMessagesSection({
       </h3>
       {list.staff.map((c) => {
         const text = staffMessage(c, words);
-        const mail = staffMail?.(c.staffId, text) ?? null;
+        const mail = staffMail(c.staffId, text);
         return (
           <ContactMessage
             key={c.staffId}
@@ -316,18 +316,16 @@ function StaffMessagesSection({
             label={`${words.staffName(c.staffId)}さんへの連絡文`}
             onCopy={() => copy(text, `${words.staffName(c.staffId)}さんへの連絡文`)}
             extra={
-              staffMail && (
-                <>
-                  <MailButton
-                    mail={mail}
-                    label="メール"
-                    why={NO_EMAIL}
-                    srLabel={`${words.staffName(c.staffId)}さんへのメールを作る`}
-                    testId="contact-mail"
-                  />
-                  <MailLengthNote mail={mail} />
-                </>
-              )
+              <>
+                <MailButton
+                  mail={mail}
+                  label="メール"
+                  why={NO_EMAIL}
+                  srLabel={`${words.staffName(c.staffId)}さんへのメールを作る`}
+                  testId="contact-mail"
+                />
+                <MailLengthNote mail={mail} />
+              </>
             }
           />
         );

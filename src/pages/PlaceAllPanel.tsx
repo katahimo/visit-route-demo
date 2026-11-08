@@ -8,6 +8,7 @@ import { EXTERNAL_NOTICE, lookupMessage } from '../lib/geocode';
 import {
   hasAddressNotFound,
   NO_PLACE_NOTE,
+  ownerId,
   type PlaceAllResult,
   type PlaceAllTexts,
   type PlacePerson,
@@ -18,11 +19,8 @@ import {
 import { useDemoData } from '../store';
 import '../components/placeLookup.css';
 
-/** 送る先と中身の注記（PRD D90） */
-const PLACE_ALL_NOTICE = `${EXTERNAL_NOTICE}（押したときだけ。1人ずつ間をあけて順に送ります。名前などほかの項目は送りません）`;
-
 /** ほかの名簿の置く処理が終わるのを待っている間の文（外部の検索は同時に1本。ADR-0016） */
-const PLACE_WAITING = 'ほかの名簿の位置を探し終わるのを待っています';
+const PLACE_WAITING = 'ほかの名簿の緯度・経度を探し終わるのを待っています';
 
 /** 「位置なしだけ見る」の押している状態と切り替え（一覧の絞り込み） */
 export type NoPlaceOnly = { on: boolean; toggle: () => void };
@@ -58,7 +56,7 @@ export function PlaceAllPanel({
   const missing = targets.length + skipped.length;
   if (missing === 0 && results.length === 0) return null;
 
-  const why = running ? '置いています' : targets.length === 0 ? t.none : null;
+  const why = running ? '探しています' : targets.length === 0 ? t.none : null;
   const ok = results.filter((r) => r.ok).length;
   return (
     <div className="card stack place-all" data-testid="place-all" data-kind={kind} ref={ref} tabIndex={-1}>
@@ -69,7 +67,7 @@ export function PlaceAllPanel({
           </WithIcon>
         </strong>
         <span className="sub" data-testid="place-all-count">
-          {t.has} {targets.length}人{skipped.length > 0 ? `・${t.hasNot} ${skipped.length}人` : ''}（{t.notCounted}）
+          {t.has} {targets.length}人{skipped.length > 0 ? `・${t.hasNot} ${skipped.length}人` : ''}
         </span>
         {geocodeOn && (
           <button
@@ -101,15 +99,15 @@ export function PlaceAllPanel({
             data-testid="place-all-only"
           >
             <WithIcon icon={ListFilter} size={14}>
-              {only.on ? 'すべて見る' : '位置なしだけ見る'}
+              {only.on ? 'すべて見る' : '緯度・経度なしだけ見る'}
             </WithIcon>
           </button>
         )}
       </div>
       <span className="sub" data-testid="place-all-note">
-        {NO_PLACE_NOTE}。一覧の「位置なし」の行から1人ずつ探す・地図で置くこともできます
+        {NO_PLACE_NOTE}
       </span>
-      {geocodeOn && <span className="sub place-notice">{PLACE_ALL_NOTICE}</span>}
+      {geocodeOn && <span className="sub place-notice">{EXTERNAL_NOTICE}</span>}
       {(running || stopped || results.length > 0) && (
         <div className="row" style={{ flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
           <progress className="place-all-progress" max={Math.max(total, 1)} value={results.length} aria-hidden="true" />
@@ -117,9 +115,9 @@ export function PlaceAllPanel({
             {waiting
               ? `${PLACE_WAITING}${total > 0 ? `… ${results.length}／${total}人` : ''}`
               : running
-                ? `置いています… ${results.length}／${total}人`
+                ? `探しています… ${results.length}／${total}人`
                 : `${stopped ? '止めました' : '終わりました'}：${results.length}／${total}人`}
-            （置けた {ok}人・置けなかった {fails.length}人）
+            （入れた {ok}人・見つからない {fails.length}人）
           </output>
         </div>
       )}
@@ -147,7 +145,7 @@ export function PlaceAllBusyLine({ model }: { model: PlaceAllRun }) {
       data-kind={kind}
     >
       <output className="sub" data-testid="place-all-busy-progress">
-        {waiting ? `${t.term}：${PLACE_WAITING}` : `${t.term}の位置を探しています… ${results.length}／${total}人`}
+        {waiting ? `${t.term}：${PLACE_WAITING}` : `${t.term}の緯度・経度を探しています… ${results.length}／${total}人`}
       </output>
       <button type="button" className="btn btn-small" onClick={stop} data-testid="place-all-busy-stop">
         <WithIcon icon={CircleStop} size={14}>
@@ -172,7 +170,9 @@ function FailList({
 }) {
   return (
     <div className="stack" style={{ gap: 4 }} data-testid="place-all-failed">
-      <span className="sub">置けなかった{t.term}（編集の欄で直すか、地図をクリックして置いてください）</span>
+      <span className="sub">
+        見つからなかった{t.term}（編集の欄で住所を直すか、地図をクリックして緯度・経度を入れてください）
+      </span>
       {hasAddressNotFound(fails) && (
         <span className="sub" data-testid="place-all-city-hint">
           市区町村の名前が無い住所（「〇〇区〇〇」など）は見つからないことがあります。編集の欄で市区町村から書き足してください
@@ -185,11 +185,11 @@ function FailList({
             <li key={f.personId} data-testid="place-all-fail">
               <strong>{p?.name ?? '（消えた人）'}</strong>：
               {f.foundAddress !== null && (
-                <span data-testid="place-all-address-only">住所だけ入れました（{f.foundAddress}）。位置は </span>
+                <span data-testid="place-all-address-only">住所だけ入れました（{f.foundAddress}）。緯度・経度は </span>
               )}
               {lookupMessage(f.reason, f.step)}{' '}
               {p && (
-                <button type="button" className="btn btn-small" onClick={() => onEdit(p.id)}>
+                <button type="button" className="btn btn-small" onClick={() => onEdit(ownerId(p.id))}>
                   <WithIcon icon={Pencil} size={13}>
                     編集
                   </WithIcon>
@@ -218,7 +218,7 @@ function SkippedList({
       <span className="sub">{t.skipped}（編集の欄で入れてください）</span>
       <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
         {skipped.map((p) => (
-          <button key={p.id} type="button" className="btn btn-small" onClick={() => onEdit(p.id)}>
+          <button key={p.id} type="button" className="btn btn-small" onClick={() => onEdit(ownerId(p.id))}>
             <WithIcon icon={Pencil} size={13}>
               {p.name}
             </WithIcon>
@@ -235,7 +235,7 @@ function PlacedMap({
   byId,
   t,
 }: {
-  results: PlaceAllResult[];
+  results: readonly PlaceAllResult[];
   byId: Map<string, PlacePerson>;
   t: PlaceAllTexts;
 }) {
@@ -250,7 +250,9 @@ function PlacedMap({
   if (points.length === 0) return null;
   return (
     <div className="stack" style={{ gap: 4 }} data-testid="place-all-map">
-      <span className="sub">置いた{t.term}（ずれていれば、編集の欄で「位置を消す」→地図をクリックで直せます）</span>
+      <span className="sub">
+        入れた{t.term}（ずれていれば、編集の欄で「緯度・経度を消す」→地図をクリックで直せます）
+      </span>
       <RouteMap points={points} height={240} />
     </div>
   );

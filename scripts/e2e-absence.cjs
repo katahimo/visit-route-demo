@@ -512,7 +512,7 @@ async function toldContacts(page) {
     check(false, '差の欄に「連絡の一覧」がある');
   }
   // 欠勤の登録と振り直しは別の手（全体の元に戻す。PRD D329）：1回目で振り直す前（欠勤は残る）、2回目で欠勤も戻る
-  await pressTool(page, '元に戻す', { where: 'more' });
+  await pressTool(page, '元に戻す', { where: 'row' });
   const mid = await waitStored(page, (d) => !d.reassigns?.[TODAY] && d.absences.length === before.absences.length + 1);
   check(
     !mid.reassigns?.[TODAY] &&
@@ -521,7 +521,7 @@ async function toldContacts(page) {
     '［この案で決める］のあとの「元に戻す」1回で振り直す前の担当に戻る（欠勤は残る）',
     { absences: mid.absences.length, reassign: !!mid.reassigns?.[TODAY] },
   );
-  await pressTool(page, '元に戻す', { where: 'more' });
+  await pressTool(page, '元に戻す', { where: 'row' });
   const back = await waitStored(page, (d) => !d.reassigns?.[TODAY] && d.absences.length === before.absences.length);
   check(
     !back.reassigns?.[TODAY] &&

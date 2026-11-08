@@ -25,7 +25,7 @@
 |---|---|
 | [pages.md](design/pages.md) | 共通事項・ルート一覧・確認ダイアログ・機能の入り切り |
 | [pages-nav.md](design/pages-nav.md) | メニュー・下のタブ・引き出し・要対応の帯・設定のタブ・Ctrl+Z・パレット |
-| [pages-common.md](design/pages-common.md) | 右の欄・予定の共通の部品・訪問の札・訪問の詳細の欄・名前の吹き出し・用語・ツアー・メール・道順 |
+| [pages-common.md](design/pages-common.md) | 右の欄・予定の共通の部品・訪問の札・訪問の詳細の欄・名前の吹き出し・用語・メール・道順 |
 | [pages-bars.md](design/pages-bars.md) | 3段の時間帯のバー |
 | [pages-progress.md](design/pages-progress.md) | 月の進み具合の帯・日の状態の共通フック |
 | [pages-plan.md](design/pages-plan.md) | 日の予定 |
@@ -33,13 +33,12 @@
 | [pages-month.md](design/pages-month.md) | 月の予定・まとめて確定・希望休・印刷 |
 | [pages-week.md](design/pages-week.md) | 週の予定 |
 | [pages-vacancy.md](design/pages-vacancy.md) | 空き状況・問い合わせの試算・案内文 |
-| [pages-basics.md](design/pages-basics.md) | 基本情報の予定と相性の表 |
+| [pages-basics.md](design/pages-basics.md) | 予定と相性の表（〈利用者さん〉のタブ） |
 | [pages-clients.md](design/pages-clients.md) | 〈利用者さん〉・〈スタッフ〉の一覧と画面・住所・名簿・絞り込み |
 | [pages-compat.md](design/pages-compat.md) | 相性の表 |
 | [pages-staff.md](design/pages-staff.md) | 〈スタッフ〉・勤務時間・勤務の見込み |
-| [pages-rules.md](design/pages-rules.md) | 条件の重み・プリセット・訪問の種類・項目・案の比較 |
-| [pages-arrange.md](design/pages-arrange.md) | 担当を組む・組み直しの知らせ |
-| [pages-standard.md](design/pages-standard.md) | 組み方の標準 |
+| [pages-rules.md](design/pages-rules.md) | 条件の重み・プリセットの管理・訪問の種類・項目・案の比較 |
+| [pages-arrange.md](design/pages-arrange.md) | 担当を組む（範囲を選んで AI で組む・提案の帯） |
 | [pages-data.md](design/pages-data.md) | データ（控え・Excel・初期化・片づけ）・管理者設定 |
 | [mail-schedule.md](design/mail-schedule.md) | メールの予約送信（GAS との契約） |
 | [contracts.md](design/contracts.md) | 契約の詳細（データの形・条件・振り直し・繰り返し・Excel など） |
@@ -104,12 +103,12 @@
 | [0058](adr/0058-schedule-toolbar-same-place-more-month-only.md) | 操作の行の位置をそろえる |
 | [0059](adr/0059-mail-confirms-day-keep-leg-routes.md) | 日のメールで確定 |
 | [0060](adr/0060-schedule-nav-row-same-for-month-week-day.md) | 予定のナビの行 |
-| [0062](adr/0062-standard-week-and-two-modes.md) | 組み方の標準 |
+| [0062](adr/0062-standard-week-and-two-modes.md) | 組み方の標準（画面は廃止。0100） |
 | [0063](adr/0063-ai-only-in-standard-manual-schedule.md) | AI は「予定を組む」に、予定は手で |
 | [0064](adr/0064-day-three-choices-until-standard.md) | 日の考え方ごとの案（廃止） |
-| [0065](adr/0065-standard-flow-one-path-rules-under-arrange.md) | 標準を決める道を1本に |
-| [0066](adr/0066-arrange-steps-one-at-a-time-rules-behind-standard.md) | 予定を組むを1段ずつ |
-| [0067](adr/0067-arrange-basics-first-people-under-arrange.md) | 基本情報の段・組み直しの知らせ |
+| [0065](adr/0065-standard-flow-one-path-rules-under-arrange.md) | 標準を決める道を1本に（廃止。0100） |
+| [0066](adr/0066-arrange-steps-one-at-a-time-rules-behind-standard.md) | 予定を組むを1段ずつ（廃止。0100） |
+| [0067](adr/0067-arrange-basics-first-people-under-arrange.md) | 基本情報の段・組み直しの知らせ（廃止。0100） |
 | [0068](adr/0068-roster-io-on-lists-with-csv.md) | 名簿の入出力を一覧へ・CSV |
 | [0069](adr/0069-scheduled-mail-via-org-gas.md) | メールの予約送信（事業所の GAS） |
 | [0070](adr/0070-trait-columns-per-option-and-start-year.md) | 特性を選択肢ごとの列に・開始年 |
@@ -137,6 +136,20 @@
 | [0092](adr/0092-demo-entry-three-uses-template-names-settings-layout.md) | 最初の2問の問2を使い方4つに・ひな形の名前と並び・機能のグループ・やり直しはデータの画面へ |
 | [0093](adr/0093-arrange-without-locations.md) | 位置が未登録でも担当を組む（移動は30分とみる） |
 | [0094](adr/0094-auto-place-after-roster-import.md) | 名簿を読み込んだら住所から自動で地図に置き、位置の無い人を一覧で扱う |
+| [0095](adr/0095-oneoff-staff-default-hours.md) | 単発の予約では新しい〈スタッフ〉の既定の勤務を毎日 7:00〜22:00 にし、勤務に入らない予約を読み込み前に知らせる |
+| [0096](adr/0096-far-client-travel-minutes.md) | 遠方の〈利用者さん〉に手で決める移動時間（片道・分）と遠方（出張）の印 |
+| [0097](adr/0097-quiet-travel-in-day-timeline-and-undo-icons.md) | 日の時間軸に移動の分数を控えめに戻す・予定の操作の行にアイコンだけの［元に戻す］［やり直す］ |
+| [0098](adr/0098-unassigned-reason-guide.md) | 担当なしの訪問の組めない理由を型に分け、直し方と直す画面を案内する |
+| [0099](adr/0099-month-cells-same-for-expert-on-off.md) | 月のマスはエキスパート機能の入切で同じ表示（ADR-0079 の月のマスを置き換え） |
+| [0100](adr/0100-remove-standard-edit-rules-from-menu.md) | 組み方の標準を廃止し、条件の重みをメニューから直接直す |
+| [0101](adr/0101-osrm-road-travel-time.md) | 車の移動時間を OSRM の道路の所要から取る |
+| [0102](adr/0102-release-notice-keep-data-remove-tour.md) | デモの更新を最初の2問の画面で知らせ「今のデータを使い続ける」を上に・案内ツアーをなくす |
+| [0103](adr/0103-history-buttons-and-plan-map-always.md) | 上の帯に「戻る」「進む」・日の予定の地図を入切とも全幅のカードに・選択肢の多い特性を全幅の列に |
+| [0104](adr/0104-ci-e2e-on-label.md) | CI の e2e は PR に「e2e」のラベルを付けたときだけ・perf は手動と夜間・記録は失敗のときだけ3日 |
+| [0105](adr/0105-client-place2-term.md) | 〈利用者さん〉に期間つきの訪問先（住所2）を持ち、訪問の日で訪問先を選ぶ |
+| [0106](adr/0106-mail-excel-always-on.md) | メールと Excel の入出力を入り切りせず、いつも入にする |
+| [0107](adr/0107-staff-off-from-google-calendar.md) | 〈スタッフ〉の休みを Google カレンダーの書き出し（zip）から毎日取り込み、カレンダーから入れた欠勤を合わせる |
+| [0108](adr/0108-imports-mirror-source.md) | 予約・名簿・休みのファイルの読み込みは総入れ替え（予約システム・カレンダーを写す）と、読み込みのあとの自動の組み |
 
 ## 文書の保ち方
 

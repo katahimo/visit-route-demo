@@ -27,7 +27,7 @@ describe('押せない理由', () => {
     expect(postalBlockReason('980-081', null)).toBe('郵便番号は7桁の数字で入れてください');
     expect(postalBlockReason('〒９８０－０８１１', null)).toBeNull();
   });
-  it('「地図に置く」：探している・住所が空', () => {
+  it('「住所から緯度・経度を入れる」：探している・住所が空', () => {
     expect(addressBlockReason('仙台市', 'postal')).toBe('探しています');
     expect(addressBlockReason(' ', null)).toBe('住所を入れてください');
     expect(addressBlockReason('仙台市', null)).toBeNull();
@@ -61,10 +61,10 @@ describe('applyFoundAddress（見つけた住所の当て方）', () => {
     const r = applyFoundAddress('東京都', '宮城県仙台市', true);
     expect(r.replace).toBe(true);
     expect(r.status?.text).toBe(
-      '住所に「宮城県仙台市」を入れました。番地を続けて書いてください。位置は前のままです。『住所から置き直す』を押してください',
+      '住所に「宮城県仙台市」を入れました。番地を続けて書いてください。緯度・経度は前のままです。『住所から入れ直す』を押してください',
     );
     // そのままにしたときは足さない
-    expect(applyFoundAddress('宮城県仙台市1', '宮城県仙台市', true).status?.text).not.toContain('位置は前のまま');
+    expect(applyFoundAddress('宮城県仙台市1', '宮城県仙台市', true).status?.text).not.toContain('緯度・経度は前のまま');
   });
   it('「元に戻す」の先は最初の住所を残し、空なら出さない', () => {
     expect(nextUndoAddress(null, '東京都')).toBe('東京都');
@@ -79,15 +79,15 @@ describe('applyFoundAddress（見つけた住所の当て方）', () => {
 describe('状態の知らせ', () => {
   it('探している・失敗・ピン', () => {
     expect(busyStatus('postal')).toEqual({ kind: 'busy', text: '住所を探しています…' });
-    expect(busyStatus('address')).toEqual({ kind: 'busy', text: '位置を探しています…' });
+    expect(busyStatus('address')).toEqual({ kind: 'busy', text: '緯度・経度を探しています…' });
     expect(failStatus('notFound', 'postal')).toEqual({
       kind: 'error',
       text: '見つかりませんでした。郵便番号を確かめてください',
     });
     expect(pinStatus({ title: '一番町', lat: 38, lng: 140 })?.text).toBe(
-      '地図に置きました（一番町）。ずれていれば「位置を消す」を押してから地図をクリックしてください',
+      '緯度・経度を入れました（一番町）。ずれていれば「緯度・経度を消す」を押してから地図をクリックしてください',
     );
-    expect(pinStatus({ title: '', lat: 38, lng: 140 })?.text?.startsWith('地図に置きました。')).toBe(true);
+    expect(pinStatus({ title: '', lat: 38, lng: 140 })?.text?.startsWith('緯度・経度を入れました。')).toBe(true);
   });
   it('見た目の class', () => {
     expect(statusClass(null)).toBe('place-status');

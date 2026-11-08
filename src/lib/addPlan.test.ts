@@ -25,10 +25,10 @@ describe('addPlanKind（入れ方は繰り返しを使うかで決まる）', ()
 });
 
 describe('planAddLabel（月・週の主ボタンの言葉）', () => {
-  it('繰り返しを使う（定期）は「定期の予定を入れる」、使わない（単発）は「予約を入れる」', () => {
-    expect(planAddLabel(applyTemplate('basic'))).toBe('定期の予定を入れる');
-    expect(planAddLabel(applyTemplate('all'))).toBe('定期の予定を入れる');
-    expect(planAddLabel(applyTemplate('oneOff'))).toBe('予約を入れる');
+  it('繰り返しを使う（定期）は「定期の予定を追加」、使わない（単発）は「予約を追加」', () => {
+    expect(planAddLabel(applyTemplate('basic'))).toBe('定期の予定を追加');
+    expect(planAddLabel(applyTemplate('all'))).toBe('定期の予定を追加');
+    expect(planAddLabel(applyTemplate('oneOff'))).toBe('予約を追加');
   });
 });
 

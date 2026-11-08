@@ -8,9 +8,7 @@ import {
   introKey,
   introShown,
   introText,
-  MONTH_ASIDE_PICK_TEXT,
   mainTools,
-  monthCellView,
   proposalWords,
   reassignWords,
   showLegs,
@@ -27,19 +25,19 @@ describe('exceptionsOnly', () => {
 });
 
 describe('ADD_VISIT_LABEL（日の主ボタンと新規の欄の見出し）', () => {
-  it('入切とも「訪問を1件足す」', () => {
-    expect(ADD_VISIT_LABEL).toBe('訪問を1件足す');
+  it('入切とも「訪問を1件追加」', () => {
+    expect(ADD_VISIT_LABEL).toBe('訪問を1件追加');
   });
 });
 
 describe('mainTools（操作の行は主ボタン1つ＋最大1つ）', () => {
-  it('日は 訪問を1件足す（主）＋欠勤・キャンセル（要対応を組むは要対応の帯。PRD D403）', () => {
+  it('日は 訪問を1件追加（主）＋欠勤・キャンセル（要対応を組むは要対応の帯。PRD D403）', () => {
     expect(mainTools('day', all)).toEqual({ primary: 'add', second: 'absence' });
   });
   it('日でスマホ（追加できない）は主ボタン無し＋欠勤・キャンセル', () => {
     expect(mainTools('day', { ...all, add: false })).toEqual({ primary: null, second: 'absence' });
   });
-  it('週・月は 定期の予定を入れる・予約を入れる（主）＋欠勤・キャンセル', () => {
+  it('週・月は 定期の予定を追加・予約を追加（主）＋欠勤・キャンセル', () => {
     for (const z of ['week', 'month'] as const)
       expect(mainTools(z, all)).toEqual({ primary: 'plan', second: 'absence' });
   });
@@ -53,13 +51,13 @@ describe('mainTools（操作の行は主ボタン1つ＋最大1つ）', () => {
 });
 
 describe('mainTools（入）', () => {
-  it('月・週は 定期の予定を入れる・予約を入れる（主）＋担当を組む。欠勤・キャンセルは「その他 ▾」へ（行に出さない）', () => {
+  it('月・週は 定期の予定を追加・予約を追加（主）＋担当を組む。欠勤・キャンセルは「その他 ▾」へ（行に出さない）', () => {
     for (const z of ['week', 'month'] as const) {
       expect(mainTools(z, all, true)).toEqual({ primary: 'plan', second: 'assign' });
       expect(mainTools(z, { ...all, assign: false }, true)).toEqual({ primary: 'plan', second: null });
     }
   });
-  it('日は 訪問を1件足す（主）＋確定（伝えた）', () => {
+  it('日は 訪問を1件追加（主）＋確定（伝えた）', () => {
     expect(mainTools('day', all, true)).toEqual({ primary: 'add', second: 'confirm' });
     expect(mainTools('day', { ...all, confirm: false }, true)).toEqual({ primary: 'add', second: null });
   });
@@ -83,29 +81,8 @@ describe('foldedParts（詳しく：中身があるものだけ）', () => {
     expect(foldedParts('month', true, { progress: true, summary: true, legend: true })).toEqual([
       'progress',
       'summary',
+      'legend',
     ]);
-  });
-});
-
-describe('monthCellView（月のマス。PRD D410）', () => {
-  it('切は例外だけ：棒・ほかの印・理由の行・右の要対応の一覧を出さず、読み方は見出しの ⓘ', () => {
-    expect(monthCellView(true)).toEqual({
-      bars: false,
-      otherMarks: false,
-      reasons: false,
-      guide: 'hint',
-      attentionList: false,
-    });
-    expect(MONTH_ASIDE_PICK_TEXT).toBe('日を押すとその日の訪問が出ます');
-  });
-  it('入は今のまま（積み上げ・混み具合・理由・吹き出し・右の要対応の一覧）', () => {
-    expect(monthCellView(false)).toEqual({
-      bars: true,
-      otherMarks: true,
-      reasons: true,
-      guide: 'tip',
-      attentionList: true,
-    });
   });
 });
 
@@ -128,9 +105,9 @@ describe('詳しく・説明・言葉', () => {
     expect(detailItems('week', false)).toEqual(detailItems('week', true));
     expect(detailItems('day', false)).toEqual(['oneLine', 'dayLines', 'care']);
     expect(detailItems('day', true)).toEqual(['oneLine', 'dayLines']);
-    // 切の月は凡例を入れない（読み方は見出しの ⓘ。PRD D410）
+    // 月のマスは入切とも同じなので、凡例も入切とも入れる
     expect(detailItems('month', false)).toEqual(['progress', 'summary', 'legend']);
-    expect(detailItems('month', true)).toEqual(['progress', 'summary']);
+    expect(detailItems('month', true)).toEqual(['progress', 'summary', 'legend']);
     expect(detailItems('week', true)).toEqual(['status', 'legend']);
     expect(showLegs(true)).toBe(false);
     expect(showLegs(false)).toBe(true);
@@ -170,7 +147,7 @@ describe('arrangeWords（担当を組むの画面の言葉。ADR-0074 段1）', 
   it('入は今のまま（提案・反映・ピン）', () => {
     const w = arrangeWords(false);
     expect(w.lead).toContain('提案を見て反映します');
-    expect(w.note('組み方の標準の担当')).toContain('ピンの訪問（手で替えた訪問・組み方の標準の担当）');
+    expect(w.note('繰り返しのいつもの担当')).toContain('ピンの訪問（手で替えた訪問・繰り返しのいつもの担当）');
     expect(w.note('x')).toContain('「反映する」');
   });
 });

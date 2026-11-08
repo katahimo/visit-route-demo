@@ -13,14 +13,14 @@ export type ScheduleZoom = 'day' | 'week' | 'month';
 // ---- 操作の行 ----
 
 /**
- * 操作の行に出せるボタン：定期の予定を入れる・予約を入れる（週・月。引き出し）・訪問の欄を開く「訪問を1件足す」（日）・
+ * 操作の行に出せるボタン：定期の予定を追加・予約を追加（週・月。引き出し）・訪問の欄を開く「訪問を1件追加」（日）・
  * 欠勤・キャンセルを登録（切）・担当を組む（入。担当を組むの画面へ）・確定（伝えた）（入の日）
  */
 export type MainTool = 'add' | 'plan' | 'absence' | 'assign' | 'confirm';
 
 /**
- * 主ボタンにする候補（先に使えるもの）。日は「訪問を1件足す」（その日の訪問の欄を開く。スマホは出さないので、切は主ボタン無し・入は「確定（伝えた）」）、
- * 週・月は「定期の予定を入れる」（単発のみは「予約を入れる」。lib/addPlan の planAddLabel）（〈利用者さん〉・日時を選ぶ引き出し）。
+ * 主ボタンにする候補（先に使えるもの）。日は「訪問を1件追加」（その日の訪問の欄を開く。スマホは出さないので、切は主ボタン無し・入は「確定（伝えた）」）、
+ * 週・月は「定期の予定を追加」（単発のみは「予約を追加」。lib/addPlan の planAddLabel）（〈利用者さん〉・日時を選ぶ引き出し）。
  * 「担当なしの訪問を組む」は操作の行に置かず、上の要対応の帯の従のボタン「要対応を組む」（PRD D402・D403。ADR-0077・ADR-0089）
  */
 const PRIMARY: Record<ScheduleZoom, readonly MainTool[]> = {
@@ -29,7 +29,7 @@ const PRIMARY: Record<ScheduleZoom, readonly MainTool[]> = {
   month: ['plan'],
 };
 
-/** 入の主ボタン：日はスマホで「訪問を1件足す」を出さないとき「確定（伝えた）」が主ボタンになる（PRD D402） */
+/** 入の主ボタン：日はスマホで「訪問を1件追加」を出さないとき「確定（伝えた）」が主ボタンになる（PRD D402） */
 const PRIMARY_EXPERT: Record<ScheduleZoom, readonly MainTool[]> = {
   day: ['add', 'confirm'],
   week: ['plan'],
@@ -46,12 +46,12 @@ const SECOND_EXPERT: Record<ScheduleZoom, readonly MainTool[]> = {
   month: ['assign'],
 };
 
-/** 日の主ボタンの言葉と、開いた新規の訪問の欄の見出し（入切とも「訪問を1件足す」。中の欄は同じ。PRD D402） */
-export const ADD_VISIT_LABEL = '訪問を1件足す';
+/** 日の主ボタンの言葉と、開いた新規の訪問の欄の見出し（入切とも「訪問を1件追加」。中の欄は同じ。PRD D402） */
+export const ADD_VISIT_LABEL = '訪問を1件追加';
 
 /**
  * 操作の行に残すボタン：主ボタン1つ＋最大1つ。ほかの操作（元に戻す・やり直す・表示の切り替え・使い方・
- * メールで送る・印刷など、入はさらに欠勤・キャンセル）は「その他 ▾」へ。avail は今その画面で使えるか（スマホの日は訪問を1件足すを出さない、など）。
+ * メールで送る・印刷など、入はさらに欠勤・キャンセル）は「その他 ▾」へ。avail は今その画面で使えるか（スマホの日は訪問を1件追加を出さない、など）。
  * 入と切の差はここ1か所（expert＝エキスパート機能が入）
  */
 export function mainTools(
@@ -80,11 +80,10 @@ const DETAILS: Record<ScheduleZoom, readonly DetailItem[]> = {
 
 /**
  * 「詳しく」に入れるもの（入切とも畳む。PRD D393）。入はさらに日の要対応の訪問の帯を入れる。
- * 切の月は凡例を入れない（マスに出す印が少なく、読み方は見出しの ⓘ。PRD D410）
+ * 月のマスは入切とも同じ表示なので、月の凡例も入切とも入れる（PRD D433。ADR-0099）
  */
 export function detailItems(zoom: ScheduleZoom, only: boolean): readonly DetailItem[] {
   if (zoom === 'day' && !only) return [...DETAILS.day, 'care'];
-  if (zoom === 'month' && only) return DETAILS.month.filter((i) => i !== 'legend');
   return DETAILS[zoom];
 }
 
@@ -106,48 +105,14 @@ export const DETAILS_LABEL = '詳しく';
 /** 時間軸の凡例の項目のうち、資格✗・限✗（条件に合わない）は切では外す（札に出さないので凡例も要らない） */
 export const showUnfitLegend = (only: boolean): boolean => !only;
 
-/** 日の予定で、時間軸に移動・待ちの分数の区間を出すか（切は出さない：移動の分数は例外ではない） */
+/**
+ * 日の予定の順番の表示で、移動の分数の行を出すか（切は出さない：移動の分数は例外ではない）。
+ * 時間軸の移動・待ちは入切とも同じに出す（components/routeTimeline。PRD D431）
+ */
 export const showLegs = (only: boolean): boolean => !only;
 
 /** 担当なしの札の下の「入れられない理由」の札を出すか（切は出さない：理由は例外の知らせの外） */
 export const showUnplacedReasons = (only: boolean): boolean => !only;
-
-// ---- 月のマス・日ごとの一覧（PRD D410。ADR-0079） ----
-
-/** 月のマス・日ごとの一覧の行・右の欄に出すもの。切は例外だけ（日付・訪問の件数・要対応の札・休 N・今日の印）、入は今のまま */
-export type MonthCellView = {
-  /** 種類の積み上げの帯と混み具合の棒（全体のとき。PRD D53・D54） */
-  bars: boolean;
-  /** 「休 N」のほかの印（欠勤・始まる▶／終わる■・〈利用者さん〉の休み・最終勤務日） */
-  otherMarks: boolean;
-  /** 理由の行（担当なし N・担当が休み N・変更あり N・拘束超 N）と日の状態の印（確定の鍵・変更ありの印・状態の言葉） */
-  reasons: boolean;
-  /** マスの読み方：マスの吹き出し（入）か見出しの ⓘ（切）。読み上げの文はどちらも同じ */
-  guide: 'tip' | 'hint';
-  /** 右の欄の要対応の一覧（切は出さず、日を押す前は1行の案内。件数の正は上の要対応の帯。PRD D404） */
-  attentionList: boolean;
-};
-
-const MONTH_CELL_EXPERT: MonthCellView = {
-  bars: true,
-  otherMarks: true,
-  reasons: true,
-  guide: 'tip',
-  attentionList: true,
-};
-const MONTH_CELL_EXCEPTIONS: MonthCellView = {
-  bars: false,
-  otherMarks: false,
-  reasons: false,
-  guide: 'hint',
-  attentionList: false,
-};
-
-/** 月のマスの見せ方（入と切の差はここ1か所） */
-export const monthCellView = (only: boolean): MonthCellView => (only ? MONTH_CELL_EXCEPTIONS : MONTH_CELL_EXPERT);
-
-/** 切の右の欄で、日を押す前に出す1行 */
-export const MONTH_ASIDE_PICK_TEXT = '日を押すとその日の訪問が出ます';
 
 // ---- 画面の上の説明 ----
 
@@ -217,7 +182,7 @@ export function proposalWords(only: boolean): ProposalWords {
 export type ArrangeWords = {
   /** 見出しの下の1行 */
   lead: string;
-  /** 「AI で組む」の下の注記。pinned は手で替えた訪問などの言い方（入はピンの訪問・標準の担当、切は手で替えた訪問・繰り返しの担当） */
+  /** 「AI で組む」の下の注記。pinned は手で替えた訪問などの言い方（入切とも繰り返しのいつもの担当） */
   note: (pinned: string) => string;
 };
 

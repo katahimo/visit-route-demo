@@ -27,6 +27,7 @@ import {
 } from './autoArrange';
 import { type BatchHost, dayInputsOf } from './monthBatch';
 import { settleDates } from './settled';
+import { type ReasonTerms, reasonBreakdown, unassignedAcross } from './unassignedReason';
 import { createValueStore, type ReadableStore } from './valueStore';
 
 /** 全体の履歴（元に戻す）に出る手の名前 */
@@ -67,7 +68,44 @@ export type AutoDone = {
   error: string | null;
   /** 対象がすべて担当のある訪問（要対応の組み直しだけ）だったか。書けなかったときは知らせない（autoDoneText が null） */
   staffedOnly: boolean;
+  /** 組んだ日に担当なしのまま残った対象（件数・組めない理由の内訳・最初の1件。PRD D430） */
+  left: AutoLeft;
 };
+
+/** 担当なしのまま残った対象：件数・組めない理由の内訳（「勤務時間外 6・勤務日外 5」）・最初の1件（日付 → 開始の順） */
+export type AutoLeft = { count: number; why: string; first: { date: string; visitId: string } | null };
+
+/** 残りなし */
+export const NO_LEFT: AutoLeft = { count: 0, why: '', first: null };
+
+/**
+ * 書いたあとのデータで、組んだ日（applied）の対象のうち担当なしのまま残った訪問と、その組めない理由の内訳（lib/unassignedReason）。
+ * 理由はその日に解いた問題と、書いたあとの担当の列で見る
+ */
+export function autoLeftOf(
+  data: DemoData,
+  days: readonly AutoDay[],
+  applied: readonly string[],
+  terms: ReasonTerms,
+): AutoLeft {
+  const list = days
+    .filter((d) => d.problem && applied.includes(d.date))
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
+    .map((d) => {
+      const visits = visitsOn(data, d.date);
+      const target = new Set(d.targetIds);
+      const ids = visits.filter((v) => target.has(v.id) && v.staffId === null && !v.cancelled).map((v) => v.id);
+      return { date: d.date, problem: d.problem, visits, ids };
+    });
+  const count = list.reduce((n, d) => n + d.ids.length, 0);
+  if (count === 0) return NO_LEFT;
+  const firstDay = list.find((d) => d.ids.length > 0)!;
+  return {
+    count,
+    why: reasonBreakdown(unassignedAcross(list, terms).values()),
+    first: { date: firstDay.date, visitId: firstDay.ids[0]! },
+  };
+}
 
 type Solve = (
   problem: Problem,
@@ -97,8 +135,10 @@ export function autoDoneText(d: AutoDone, staffTerm: string): string | null {
   if (d.error)
     return `自動で組めませんでした（${d.error}）${d.written > 0 ? `。${d.written}件の担当は組みました` : ''}`;
   if (d.written === 0 && d.staffedOnly) return null;
-  if (d.written === 0) return `組める${staffTerm}がいませんでした。担当なしのまま${skipped}`;
-  return `${d.written}件の担当を組みました${skipped}`;
+  // 残った担当なしの件数と理由の内訳（PRD D430）
+  const left = d.left.count > 0 ? `担当なしのまま ${d.left.count}件${d.left.why ? `（${d.left.why}）` : ''}` : '';
+  if (d.written === 0) return `組める${staffTerm}がいませんでした。${left || '担当なしのまま'}${skipped}`;
+  return `${d.written}件の担当を組みました${skipped}${left ? `。${left}` : ''}`;
 }
 
 /** 進み具合の帯の文（「担当を自動で組んでいます 3/10日」。待っている依頼があれば添える） */
@@ -219,6 +259,7 @@ export function createAutoArrange(solve: Solve = runSolve): AutoArrange {
       skippedDays: r.skippedDays.length,
       error,
       staffedOnly,
+      left: autoLeftOf(r.data, days, r.appliedDays, now.org.terms),
     };
   };
 
@@ -279,6 +320,23 @@ export function createAutoArrange(solve: Solve = runSolve): AutoArrange {
 /** アプリで1つの入れ物 */
 export const autoArrange: AutoArrange = createAutoArrange();
 
+/** 自動の組みが終わる（待っている依頼も無い）まで待つ（住所からの位置の検索が、組んでいるあいだは書かない。PRD D445） */
+export function autoArrangeIdle(signal?: AbortSignal, a: Pick<AutoArrange, 'run'> = autoArrange): Promise<void> {
+  if (a.run.get() === null || signal?.aborted) return Promise.resolve();
+  return new Promise((resolve) => {
+    const finish = () => {
+      off();
+      signal?.removeEventListener('abort', finish);
+      resolve();
+    };
+    const off = a.run.subscribe(() => {
+      if (a.run.get() === null) finish();
+    });
+    // 止めたら待つのをやめる
+    signal?.addEventListener('abort', finish);
+  });
+}
+
 /**
  * 保存の前後で増えた・日時が変わった担当なしの訪問を自動で組む依頼を出す（欄の保存。PRD D407）。エキスパート機能が切なら、
  * その保存で変わった日（changedDays）の帯の種類（間に合わない・重なり・休みの人）の組み直してよい担当のある訪問も対象に足す
@@ -319,4 +377,16 @@ export function requestBandArrange(data: DemoData, today: string): boolean {
   const range = autoRange(today);
   const targets = bandTargets(data, today, range);
   return autoArrange.request({ targets, writeUsual: false, rangeTo: range.to, since: null, after: null, today });
+}
+
+/**
+ * 読み込み・取り込み（予約の CSV・名簿・休みのカレンダー・連絡の貼り付け）のあとに、要対応の帯の［要対応を組む］と同じ対象
+ * （今日〜翌月末の担当なしと、切なら間に合わない・重なり・休みの人の訪問）を自動で組む依頼を出す（PRD D442。ADR-0108）。
+ * before・after は入れる前と入れたあとのデータ（描き直される前は after を読む）。依頼を出したら true
+ */
+export function requestImportArrange(before: DemoData, after: DemoData, today: string): boolean {
+  const range = autoRange(today);
+  const targets = bandTargets(after, today, range);
+  if (targets.length === 0) return false;
+  return autoArrange.request({ targets, writeUsual: false, rangeTo: range.to, since: before, after, today });
 }

@@ -1,5 +1,5 @@
 // 予約システムの形（ADR-0075。PRD D396・D397）：予約システムから書き出したスタッフの CSV（ID・氏名・TEL・mail address・緯度・経度・入社日・退職日 …）と
-// 顧客の CSV（顧客ID・姓・名・姓（カナ）・住所・駐車場・緯度・経度 …）を、〈スタッフ〉・〈利用者さん〉の名簿の列の表に写す。
+// 顧客の CSV（顧客ID・姓・名・姓（カナ）・住所・駐車場・住所2・緯度・経度 …）を、〈スタッフ〉・〈利用者さん〉の名簿の列の表に写す。
 // 名簿のブックと同じ読み方（rosterRows）に渡すための純粋関数（顧客台帳の形 ledgerCsv と同じ作り）
 import { normalizeEmail } from '../lib/mailto';
 import { normalizePostalCode } from '../lib/postalCode';
@@ -19,6 +19,7 @@ import {
 import {
   CLIENT_COLS,
   CLIENT_KANA_COL,
+  CLIENT_PLACE2_COLS,
   CLIENT_POSTAL_COL,
   CLIENT_RULE_COLS,
   CLIENT_STAGE_COLS,
@@ -50,6 +51,10 @@ const CLIENT = {
   status: '会員状況（有効／無効）',
   memo: '顧客メモ',
   address: '住所',
+  /** 期間つきの訪問先（ADR-0105。契約者の住所と違う所へ、適用開始日〜終了日だけ訪ねる） */
+  address2: '住所2',
+  address2From: '住所2[適用開始日YYYY/MM/DD]',
+  address2To: '住所2[適用終了日YYYY/MM/DD]',
   parking: '駐車場',
   parkingDetail: '駐車場番号・指定場所の詳細など',
   latLng: '緯度・経度',
@@ -97,6 +102,12 @@ export const reserveClientErrorMessage = columnMessage({
   [CLIENT_COLS.name]: `${CLIENT.family}・${CLIENT.given}`,
   [CLIENT_POSTAL_COL]: CLIENT.address,
   [CLIENT_COLS.address]: CLIENT.address,
+  [CLIENT_PLACE2_COLS.address]: CLIENT.address2,
+  [CLIENT_PLACE2_COLS.postal]: CLIENT.address2,
+  [CLIENT_PLACE2_COLS.lat]: CLIENT.latLng,
+  [CLIENT_PLACE2_COLS.lng]: CLIENT.latLng,
+  [CLIENT_PLACE2_COLS.from]: CLIENT.address2From,
+  [CLIENT_PLACE2_COLS.to]: CLIENT.address2To,
   [CLIENT_COLS.lat]: CLIENT.latLng,
   [CLIENT_COLS.lng]: CLIENT.latLng,
   [CLIENT_COLS.note]: `${CLIENT.phone}・${CLIENT.memo}`,
@@ -179,22 +190,48 @@ function clientName(v: (h: string) => string): string {
   return kana !== '' ? kana : v(CLIENT.id);
 }
 
+/** 住所2 の期間の日付（YYYY-MM-DD）。空は ''、読めなければ null */
+const termDate = (text: string): string | null => (text === '' ? '' : parseDateText(text));
+
+/**
+ * 住所2 の列（名簿の CLIENT_PLACE2_COLS の並び）。住所2 が空なら全部空（名簿の読み込みで住所2 なし）。
+ * 緯度・経度の列は、住所2 があれば住所2 の位置。期間の日付が読めない・終了日が開始日より前なら、
+ * 期間を空にすると毎日が住所2 になってしまうので住所2 を入れず（全部空）、bad に数える
+ */
+function place2Row(v: (h: string) => string, bad: { n: number }): string[] {
+  const none = ['', '', '', '', '', ''];
+  const second = v(CLIENT.address2);
+  if (second === '') return none;
+  const [from, to] = [termDate(v(CLIENT.address2From)), termDate(v(CLIENT.address2To))];
+  if (from === null || to === null || (from !== '' && to !== '' && to < from)) {
+    bad.n++;
+    return none;
+  }
+  const { postal, address } = splitPostal(second);
+  const { lat, lng } = splitLatLng(v(CLIENT.latLng));
+  return [clip(address, MAX.address), postal, lat, lng, from, to];
+}
+
 /**
  * 顧客の CSV（1行目が列名）→〈利用者さん〉の名簿の列の表。形が違えば null。
  * - 表示名：姓＋名（空ならカナ、それも空なら顧客ID）。同じ名前の人は全員「名前（顧客ID）」にして分ける（ファイルの並びに左右されない）
  * - よみ：姓（カナ）＋名（カナ）をひらがなにし、空白を詰める（normalizeKana）
- * - 住所：先頭の郵便番号（〒 付きも）は郵便番号の列へ分ける
- * - 緯度・経度：「緯度, 経度」を2つの列に分ける
+ * - 住所：契約者の住所（いつもの訪問先）。先頭の郵便番号（〒 付きも）は郵便番号の列へ分ける
+ * - 住所2・適用開始日・適用終了日：期間つきの訪問先（ADR-0105）。期間内の訪問は住所2 へ行く（domain/place2）。
+ *   住所2 の列がある CSV では、住所2 が空の人は住所2 なしにする（正本は予約システム）。期間の日付が読めない・逆なら住所2 を入れず、skipped に件数
+ * - 緯度・経度：「緯度, 経度」を2つの列に分ける。住所2 があればその位置（無ければ住所の位置）
  * - 駐車場：駐車場＋詳細を決まりごとの「駐車場」へ
  * - 電話：メモの先頭に1行（顧客メモを続ける）
  * - 会員状況：無効＝終了、ほか（空を含む）＝利用中
- * - メールアドレス・会費・パスワード・性別・年代・緊急連絡先・避難場所・世帯の情報・住所2 などは読まず、skipped に名前を挙げる
+ * - メールアドレス・会費・パスワード・性別・年代・緊急連絡先・避難場所・世帯の情報などは読まず、skipped に名前を挙げる
  */
 export function reserveClientToRoster(table: readonly (readonly string[])[]): RosterTable | null {
   const header = table[0];
   if (!header || !isReserveClientHeader(header)) return null;
   const at = columnsOf(header);
   const body = table.slice(1);
+  /** 住所2 の列がある CSV か（無い古い書き出しなら、アプリの住所2 は今のまま） */
+  const withPlace2 = at.has(colKey(CLIENT.address2));
   const names = distinctNames(
     body.map((r) =>
       isBlankRow(r) ? { name: '', id: '' } : { name: clientName(cellOf(at, r)), id: cellOf(at, r)(CLIENT.id) },
@@ -212,16 +249,20 @@ export function reserveClientToRoster(table: readonly (readonly string[])[]): Ro
       CLIENT_RULE_COLS.parking,
       CLIENT_COLS.note,
       CLIENT_STAGE_COLS.stage,
+      ...(withPlace2 ? Object.values(CLIENT_PLACE2_COLS) : []),
     ],
   ];
+  const badTerms = { n: 0 };
   body.forEach((r, i) => {
     if (isBlankRow(r)) {
-      out.push(['', '', '', '', '', '', '', '', '']);
+      out.push(out[0]!.map(() => ''));
       return;
     }
     const v = cellOf(at, r);
     const { postal, address } = splitPostal(v(CLIENT.address));
-    const { lat, lng } = splitLatLng(v(CLIENT.latLng));
+    // 緯度・経度は住所2 があれば住所2 の位置なので、住所の位置には使わない（住所2 を入れなかった行も）
+    const second = withPlace2 && v(CLIENT.address2) !== '';
+    const { lat, lng } = second ? { lat: '', lng: '' } : splitLatLng(v(CLIENT.latLng));
     const parking = [v(CLIENT.parking), v(CLIENT.parkingDetail)].filter((x) => x !== '').join('　');
     const note = [phoneLine(v(CLIENT.phone), ''), v(CLIENT.memo)].filter((x) => x !== '').join('\n');
     out.push([
@@ -234,7 +275,10 @@ export function reserveClientToRoster(table: readonly (readonly string[])[]): Ro
       clip(parking, MAX.rule),
       clip(note, MAX.note),
       v(CLIENT.status) === '無効' ? '終了' : '利用中',
+      ...(withPlace2 ? place2Row(v, badTerms) : []),
     ]);
   });
-  return { rows: out, skipped: skippedColumns(header, body, Object.values(CLIENT)) };
+  const skipped = skippedColumns(header, body, Object.values(CLIENT));
+  if (badTerms.n > 0) skipped.push(`住所2（適用期間の日付が読めない・逆のため入れなかった ${badTerms.n}件）`);
+  return { rows: out, skipped };
 }

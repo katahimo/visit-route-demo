@@ -3,11 +3,13 @@ import { type DemoData, STORAGE_KEY } from '../contracts/data';
 import type { Features } from '../contracts/features';
 import type { FirstRunAnswer } from '../lib/firstRun';
 import { appHistory } from '../lib/history';
+import type { ReleaseNote } from '../lib/releaseNotes';
 import { settleUpdate } from '../lib/settled';
 import {
   flushSave,
   importJson,
   isImportError,
+  keepAfterRelease,
   keepPrevious as keepPreviousStore,
   loadWithStatus,
   PREV_INFO_KEY,
@@ -70,19 +72,21 @@ export type DemoStore = {
   dismissBroken(): void;
   /**
    * 最初の2問を出すか（PRD D379〜D381。ADR-0073）：保存データが無く初めて開いたとき（印「all」が無ければ）と、
-   * データの画面の「始め方を選び直す」（askFirstRun）のあと。答えるまでデータは書かない
+   * データの画面の「最初の設定をやり直す」（askFirstRun）・ブラウザの「戻る」で最初の設定へ戻ったあと、まだ見ていないデモの更新があるとき（PRD D437）。答えるまでデータは書かない
    */
   needsFirstRun: boolean;
-  /** 2問がデータの画面の「始め方を選び直す」のあとか（true なら画面は「やめる」を出せる。初めて開いたときは false） */
+  /** 2問がやり直し（「最初の設定をやり直す」・ブラウザの「戻る」）か（true なら画面は「閉じる」を出せる。初めて開いたときは false） */
   redoingFirstRun: boolean;
-  /** やり直しをやめて、今のデータのまま2問から戻る（やり直しでないときは何もしない） */
+  /** デモの更新の知らせなら、まだ見ていない更新（新しい順。画面は変わったところと「今のデータを使い続ける」を出す）。ほかは null（PRD D437） */
+  releaseNotice: readonly ReleaseNote[] | null;
+  /** 今のデータのまま2問から戻る（やり直しをやめる・更新の知らせで今のデータを使い続ける。初めて開いたときは何もしない） */
   cancelFirstRun(): void;
   /**
    * 最初の2問の答えでデータを作り直して書く（呼び名・ひな形・データが決まる。履歴は捨てる。元に戻す Ctrl+Z の対象外）。
    * やり直し（すでにデータがあったとき）は、先に1世代の控えに残す（「直前の状態に戻す」で戻せる）
    */
   startFirstRun(answer: FirstRunAnswer): void;
-  /** 最初の2問をもう一度出す（データの画面の「始め方を選び直す」。答えるまでは今のデータのまま） */
+  /** 最初の2問をもう一度出す（「最初の設定をやり直す」・ブラウザの「戻る」。答えるまでは今のデータのまま） */
   askFirstRun(): void;
   /** 別のタブの変更で読み直した回数（画面が知らせを出すきっかけ） */
   externalReloads: number;
@@ -116,8 +120,10 @@ function useStoreState() {
     [],
   );
   const [broken, setBroken] = useState(initial.broken);
-  /** 最初の2問：first＝初めて開いたとき、redo＝設定からのやり直し、null＝出さない */
-  const [firstRun, setFirstRun] = useState<'first' | 'redo' | null>(initial.firstRun ? 'first' : null);
+  /** 最初の2問：first＝初めて開いたとき、redo＝設定からのやり直し、release＝デモの更新の知らせ（PRD D437）、null＝出さない */
+  const [firstRun, setFirstRun] = useState<'first' | 'redo' | 'release' | null>(
+    initial.firstRun ? 'first' : initial.releaseNotes.length > 0 ? 'release' : null,
+  );
   const [externalReloads, setExternalReloads] = useState(0);
   const [replacedCount, setReplacedCount] = useState(0);
   const replaced = useCallback(() => setReplacedCount((n) => n + 1), []);
@@ -201,8 +207,9 @@ function useStorageSync(st: StoreState): void {
       // 別のタブの変更で読み直したら、履歴は捨てる（古いデータへ戻さない）
       appHistory.clear();
       setData(r);
-      // 別のタブで最初の2問に答えて保存されたら、このタブの2問は出さない（そのデータで開く）
-      setFirstRun(null);
+      // 別のタブで最初の2問に答えて保存されたら、このタブの2問は出さない（そのデータで開く）。
+      // 更新の知らせは閉じない（本人が選ぶまで出し、見たことにしないまま消さない。PRD D437）
+      setFirstRun((k) => (k === 'release' ? k : null));
       replaced();
       setExternalReloads((n) => n + 1);
     };
@@ -311,7 +318,9 @@ function useReplaceActions(st: StoreState) {
   /** 最初の2問の答えでデータを作り直す。やり直し（初めて開いたときでない）なら先にいまのデータを1世代の控えに残す */
   const startFirstRun = useCallback(
     (answer: FirstRunAnswer) => {
-      if (firstRun === 'redo') keepPrevious('始め方を選び直す');
+      // すでにデータがあるとき（やり直し・更新の知らせ）は、先に1世代の控えに残す
+      if (firstRun === 'redo') keepPrevious('最初の設定をやり直す');
+      if (firstRun === 'release') keepPrevious('デモの更新で始め直す');
       setSaveError(null);
       swapIn(startWithAnswer(answer));
       replaced();
@@ -321,7 +330,11 @@ function useReplaceActions(st: StoreState) {
     [firstRun, keepPrevious, replaced, swapIn, setSaveError, setFirstRun, setStartArrange],
   );
   const askFirstRun = useCallback(() => setFirstRun('redo'), [setFirstRun]);
-  const cancelFirstRun = useCallback(() => setFirstRun((k) => (k === 'redo' ? null : k)), [setFirstRun]);
+  const cancelFirstRun = useCallback(() => {
+    if (firstRun === 'first') return;
+    if (firstRun === 'release') keepAfterRelease();
+    setFirstRun(null);
+  }, [firstRun, setFirstRun]);
   const takeStartArrange = useCallback(
     (token: object) => {
       clearArrangePending();
@@ -382,6 +395,7 @@ export function DemoDataProvider({ children }: { children: ReactNode }): ReactNo
       dismissBroken,
       needsFirstRun: firstRun !== null,
       redoingFirstRun: firstRun === 'redo',
+      releaseNotice: firstRun === 'release' ? initial.releaseNotes : null,
       cancelFirstRun,
       startFirstRun,
       askFirstRun,
@@ -410,6 +424,7 @@ export function DemoDataProvider({ children }: { children: ReactNode }): ReactNo
       askFirstRun,
       cancelFirstRun,
       initial.outdated,
+      initial.releaseNotes,
       externalReloads,
       replacedCount,
       previousDrops,

@@ -2,6 +2,7 @@
 import ExcelJS from 'exceljs';
 import { describe, expect, it } from 'vitest';
 import type { DemoData, RosterKind } from '../contracts/data';
+import { applyTemplate } from '../lib/features';
 import { createBlankData, REGULAR_VISIT_TYPES } from '../seed/blank';
 import { base, sheet } from './excel.testkit';
 import { exportRosterWorkbook, importRoster } from './index';
@@ -38,7 +39,7 @@ describe('名簿のブックの書き方・記入例', () => {
       const name = personSheetNames(d.org.terms)[kind];
       const guide = sheet(wb, '書き方');
       expect(text(guide.getCell(1, 1).value)).toBe(`『${name}』のシートに1行に1人ずつ書きます。`);
-      expect(text(guide.getCell(2, 1).value)).toContain('［CSV・Excel を読み込む］');
+      expect(text(guide.getCell(2, 1).value)).toContain('［ファイルを選ぶ］');
       expect(text(guide.getCell(4, 1).value)).toContain('読み込みません');
       const headerRow = [1, 2, 3, 4].map((c) => text(guide.getCell(6, c).value));
       expect(headerRow).toEqual(['列の名前', '何を書くか', '例', '空のとき']);
@@ -54,6 +55,26 @@ describe('名簿のブックの書き方・記入例', () => {
       if (kind === 'client') expect(text(listed.get('段階')?.getCell(4).value)).toBe('新しい人で空なら利用中');
       expect(text(listed.get('住所')?.getCell(4).value)).toBe('空のまま');
     }
+  });
+
+  it('勤務の「空のとき」は使い方の既定（単発の予約は毎日 7:00〜22:00、ほかは月〜金 9:00〜18:00。PRD D428）', async () => {
+    const blankOf = async (d: DemoData) => {
+      const guide = sheet((await load(d, 'staff')).wb, '書き方');
+      const out = new Map<string, string>();
+      guide.eachRow((r) => out.set(text(r.getCell(1).value), text(r.getCell(4).value)));
+      return [out.get('勤務する曜日'), out.get('勤務開始'), out.get('勤務終了')];
+    };
+    const d = base();
+    expect(await blankOf({ ...d, org: { ...d.org, features: applyTemplate('oneOff') } })).toEqual([
+      '新しい人で空なら 毎日',
+      '新しい人で空なら 7:00',
+      '新しい人で空なら 22:00',
+    ]);
+    expect(await blankOf({ ...d, org: { ...d.org, features: applyTemplate('basic') } })).toEqual([
+      '新しい人で空なら 月火水木金',
+      '新しい人で空なら 9:00',
+      '新しい人で空なら 18:00',
+    ]);
   });
 
   it('項目の列は今のデータの項目から作る', async () => {

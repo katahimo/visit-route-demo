@@ -1,8 +1,7 @@
 // ホームは無い・要対応の帯（PRD D401・D404）を本物のブラウザで確かめる（エキスパート機能が入）：
 // 起動（#/・#/home・知らない URL）で予定の画面（繰り返しを使うなら月）へ移りホームの画面は出ない・ほかの画面の URL（人の画面など）はそのまま・
-// #/schedule は日の予定へ、予定の上の帯（担当なし・間に合わない・重なり・休みの人のほか 組み方の標準が無い・基本情報が変わった（組み直す）・
-// 未確定 N日。文の並び・数・押した先（並びの先頭の種類：標準が無い→組み方の標準、組み直し→担当を組む、未確定は1日だけならその日の日の予定・
-// 2日以上なら月の右の欄）・無ければ出さない）、
+// #/schedule は日の予定へ、予定の上の帯（担当なし・間に合わない・重なり・休みの人のほか 未確定 N日。組み方の標準が無い・
+// 基本情報が変わったは無い（ADR-0100）。文の並び・数・押した先（未確定は1日だけならその日の日の予定・2日以上なら月の右の欄）・無ければ出さない）、
 // 初期データ（保存した訪問は空で、今日からの日は繰り返しの担当のまま・まだ伝えていない）、月の画面の ?do=attention・?do=unconfirmed で右の欄、
 // 月の「問題の無い日をまとめて確定」（PRD D223。N日・確認に日付と残す日・確定済みになり帯の未確定が減る・担当が休みの訪問のある日は外れ確認に日付が出る・
 // 未連絡の変更のある日は外れる・0日なら押せず理由）、確定した日の「次の確定していない日へ」（PRD D224）、訪問の無い人の欠勤は要対応に数えない。
@@ -111,19 +110,17 @@ async function editInOtherTab(page, fn) {
   return out;
 }
 
-/** 訪問を持たず・標準も無い（帯は「組み方の標準が無い」だけ）データにする */
+/** 訪問を持たない（帯に出すものが無い）データにする */
 const emptyData = (data) => {
   data.visits = data.visits.map((v) => ({ ...v, cancelled: true }));
   data.patterns = [];
   data.snapshots = {};
   data.absences = [];
-  delete data.standard;
 };
 
 /**
  * 帯の種類と押した先（PRD D404）。初期データ：担当なし（訪問）が先頭で、そこから日の予定でその訪問へ。
- * 訪問を空にすると「組み方の標準が無い」だけになり、押すと組み方の標準へ。標準を登録すると帯は消える。
- * 組み直しの知らせ（基本情報が最後に組んだあとに変わった）は標準があるときだけで、押すと担当を組む。
+ * 訪問を空にすると帯は出ない（組み方の標準が無い・基本情報が変わったの種類は無い。ADR-0100）。
  * 未確定は日数で数え、1日だけならその日の日の予定、2日以上なら月の右の欄
  */
 async function band(page) {
@@ -134,23 +131,15 @@ async function band(page) {
   const text = (await bandText(page)) ?? '';
   check(!!first, '帯に「担当なし N件」（訪問の種類が先頭）', text);
   check(
-    /組み方の標準が無い/.test(text) && /未確定 \d+日/.test(text),
-    '標準が無い初期データ：「組み方の標準が無い」と「未確定 N日」も出る',
+    /未確定 \d+日/.test(text) && !/組み方の標準|基本情報が変わった/.test(text),
+    '初期データ：「未確定 N日」も出る（「組み方の標準が無い」「基本情報が変わった」は無い）',
     text,
   );
-  const order = [
-    '担当なし',
-    '間に合わない',
-    '重なり',
-    '休みの人',
-    '組み方の標準が無い',
-    '基本情報が変わった',
-    '未確定',
-  ];
+  const order = ['担当なし', '間に合わない', '重なり', '休みの人', '未確定'];
   const at = order.map((k) => text.indexOf(k)).filter((i) => i >= 0);
   check(
     at.every((i, n) => n === 0 || at[n - 1] < i),
-    '文の並び：訪問の種類 → 標準が無い／組み直し → 未確定',
+    '文の並び：訪問の種類 → 未確定',
     text,
   );
   check(
@@ -172,42 +161,11 @@ async function band(page) {
   await page.getByTestId('confirm-state').waitFor({ timeout: 60000 });
   check(/^#\/plan/.test(hashOf(page)), '帯の［見に行く ›］を押すと日の予定へ', hashOf(page));
 
-  // 訪問が無く標準も無い：「組み方の標準が無い」だけ → 組み方の標準へ
+  // 訪問が無ければ帯は出ない（組み方の標準が無くても出さない）
   await editInOtherTab(page, emptyData);
   await open(page, `/month?ym=${YM}`);
-  check(await bandShown(page, 30000), '訪問が無くても標準が無ければ帯が出る');
-  check((await bandText(page)) === '組み方の標準が無い', '帯は「組み方の標準が無い」だけ', await bandText(page));
-  await page.getByTestId('attention-band-go').click();
-  await page.waitForURL(/#\/standard/);
-  check(hashOf(page) === '#/standard', '「組み方の標準が無い」を押すと組み方の標準へ', hashOf(page));
-
-  // 標準を登録すると帯は消える（訪問も無い）
-  await editInOtherTab(page, (d) => {
-    emptyData(d);
-    d.standard = { at: 1, presetId: d.scorePresetId ?? 'balance', from: d.baseDate, weeks: 1 };
-  });
-  await open(page, `/month?ym=${YM}`);
   await settle(page, 1500);
-  check((await page.getByTestId('attention-band').count()) === 0, '標準があり何も無ければ帯は出ない');
-
-  // 組み直しの知らせ：標準があり、最後に組んだ基本情報の鍵が今と違う → 「基本情報が変わった（組み直す）」→ 担当を組む（組む月）
-  await page.evaluate(() => localStorage.setItem('vrdemo:arrange:basis', 'e2e-old-basis'));
-  await open(page, `/month?ym=${YM}`);
-  check(await bandShown(page, 30000), '組み直しの知らせで帯が出る');
-  check(
-    (await bandText(page)) === '基本情報が変わった（組み直す）',
-    '帯は「基本情報が変わった（組み直す）」だけ',
-    await bandText(page),
-  );
-  await page.getByTestId('attention-band-go').click();
-  await page.waitForURL(/#\/arrange/);
-  check(/^#\/arrange\?ym=\d{4}-\d{2}$/.test(hashOf(page)), '押すと担当を組む（組む月）へ', hashOf(page));
-  // 標準が無い間は組み直しを知らせない（PRD D363）
-  await editInOtherTab(page, (d) => emptyData(d));
-  await open(page, `/month?ym=${YM}`);
-  await bandShown(page, 30000);
-  check((await bandText(page)) === '組み方の標準が無い', '標準が無い間は組み直しを知らせない', await bandText(page));
-  await page.evaluate(() => localStorage.removeItem('vrdemo:arrange:basis'));
+  check((await page.getByTestId('attention-band').count()) === 0, '訪問が無ければ帯は出ない（標準の有無を知らせない）');
 }
 
 /** 初期データの未確定：帯の日数＝月の画面の今日以降の確定していない日（今月と翌月）。押すと月の右の欄 */
@@ -545,7 +503,7 @@ async function monthDo(page) {
     '月の予定 ?do=unconfirmed：全体の表示にして確定していない日へ',
     hashOf(page),
   );
-  // 帯の「未確定」：標準があり、担当の入った訪問が離れた2日にだけある（要対応は無い）→ 帯は「未確定 2日」だけ。押すと月の右の欄の確定していない日。
+  // 帯の「未確定」：担当の入った訪問が離れた2日にだけある（要対応は無い）→ 帯は「未確定 2日」だけ。押すと月の右の欄の確定していない日。
   // 1日だけなら日の予定のその日へ
   const days = await editInOtherTab(page, (d) => {
     const picked = [];
@@ -554,7 +512,6 @@ async function monthDo(page) {
       if (v && picked.length < 2) picked.push(v);
     }
     emptyData(d);
-    d.standard = { at: 1, presetId: d.scorePresetId ?? 'balance', from: d.baseDate, weeks: 1 };
     d.visits = picked.map((v) => ({ ...v, pattern: undefined }));
     return picked.map((v) => v.date);
   });

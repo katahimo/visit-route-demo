@@ -1,18 +1,18 @@
 # 〈スタッフ〉の一覧と画面・勤務時間（シフト）・勤務の見込み・スマホ画面
 
-> この画面のファイル：`src/pages/StaffPage.tsx`（行とカード `staffList.tsx`）・`StaffPersonPage.tsx`（見出しとタブ `staffPersonHeader.tsx`・タブ `staffSections.tsx`・`staffFields.tsx`・`staffScheduleTab.tsx`・節の編集と保存 `useStaffEdit.ts`・予定 `useStaffSchedule.ts`）・`OffboardPanel.tsx`（`offboardParts.tsx`・`useOffboardFlow.ts`）・`AvailabilityPage.tsx`（`availabilityParts.tsx`・`useAvailabilityEdit.ts`）・`WorkloadPage.tsx`（`workload.css`・`workloadHead.tsx`・`workloadTables.tsx`・`useWorkloadSettings.ts`）・`StaffViewPage.tsx`（`staffViewParts.tsx`）、`src/components/workBars.tsx`・`mapsLinks.tsx`・`personPage.tsx`・`PersonCalendar.tsx`・`personView.tsx`・`placeLookup.tsx`、`src/lib/offboard.ts`・`offboardView.ts`・`staffEdit.ts`・`workload.ts`・`workloadView.ts`・`links.ts`・`personPage.ts`・`peopleView.ts`・`visitLists.ts`・`visitOps.ts`・`viewMode.ts`。関連 ADR：0011・0014・0015・0016・0017・0018・0050・0052・0073・0083。関連 PRD：D16・D68・D75〜D77・D91〜D101・D118〜D121・D201〜D209・D220・D221・D230・D241・D272・D275・D298・D299・D308〜D312・D326・D385・D394・D417。
+> この画面のファイル：`src/pages/StaffPage.tsx`（行とカード `staffList.tsx`）・`StaffPersonPage.tsx`（見出しとタブ `staffPersonHeader.tsx`・タブ `staffSections.tsx`・`staffFields.tsx`・`staffScheduleTab.tsx`・節の編集と保存 `useStaffEdit.ts`・予定 `useStaffSchedule.ts`）・`OffboardPanel.tsx`（`offboardParts.tsx`・`useOffboardFlow.ts`）・`AvailabilityPage.tsx`（`availabilityParts.tsx`・`useAvailabilityEdit.ts`）・`WorkloadPage.tsx`（`workload.css`・`workloadHead.tsx`・`workloadTables.tsx`・`useWorkloadSettings.ts`）・`StaffViewPage.tsx`（`staffViewParts.tsx`）、`src/components/workBars.tsx`・`mapsLinks.tsx`・`personPage.tsx`・`PersonCalendar.tsx`・`personView.tsx`・`placeLookup.tsx`、`src/lib/offboard.ts`・`offboardView.ts`・`staffEdit.ts`・`workload.ts`・`workloadView.ts`・`links.ts`・`personPage.ts`・`peopleView.ts`・`visitLists.ts`・`visitOps.ts`・`viewMode.ts`。関連 ADR：0011・0014・0015・0016・0017・0018・0050・0052・0073・0083・0095。関連 PRD：D16・D68・D75〜D77・D91〜D101・D118〜D121・D201〜D209・D220・D221・D230・D241・D272・D275・D298・D299・D308〜D312・D326・D385・D394・D417・D428。
 > 画面の殻（ルート・見出し・タブ・節・変更の確認）と予定のカレンダーは [pages-clients.md](pages-clients.md) と共通。
 
 ### 〈スタッフ〉一覧（`#/staff`）
 
-- 題名「〈スタッフ〉」（「一覧」を付けない）。下に入切とも小さいタブ 一覧・勤務（勤務時間（シフト）・勤務の見込み）・相性（`PeopleTabs`。`lib/peopleTabs`。予定を組むの段・基本情報のタブは出さない）。右に主ボタン「〈スタッフ〉を追加」（`staff-add`。`#/staff/new`）。名前の前は〈スタッフ〉の印（`StaffMark` の md。[pages.md](pages.md) の「〈スタッフ〉の印」）
+- 題名「〈スタッフ〉」（「一覧」を付けない）。下に入切とも小さいタブ 一覧・勤務（勤務時間（シフト）・勤務の見込み）・相性（`PeopleTabs`。`lib/peopleTabs`）。右に主ボタン「〈スタッフ〉を追加」（`staff-add`。`#/staff/new`）。名前の前は〈スタッフ〉の印（`StaffMark` の md。[pages.md](pages.md) の「〈スタッフ〉の印」）
 - 行（`staff-row`）はどこを押してもその人の画面（`#/staff/:id`。行の中のボタン・リンク・文字の選択は除く）。右端に文字のボタン「詳しく」（その人の画面。`Eye` を文字の前に。`staff-open`）と「今日の画面」（今日のスマホ画面 `staffViewHref(id, 今日)`。`Smartphone`。`staff-view-open`）。読み上げの名前は文字から始める（「詳しく（〈名前〉）」「今日の画面（〈名前〉）」。PRD D417）。`?id=` はその人の画面へ移る
-- 列（`lib/peopleView` の `staffColumns(detailed)`）：名前・勤務日（`staff-days`）・勤務時間（`staff-hours`）と右端の「詳しく」「今日の画面」（状態の列が無い間は休止中だけ名前のそばに印＝`staffNameNote`）。**エキスパート機能が入のときだけ**表の上に「くわしい列」のチェック（`people-columns-toggle`。`components/DetailColumns`）。入れると 特性・求めること・自宅の位置・状態の列を足す。一覧ごとに端末に覚える（`store/navOpen` の鍵 `columns:staff`）。切は見出しの下の説明を初回だけ（`useIntro('staff')`。`peopleIntro`）
+- 列（`lib/peopleView` の `staffColumns(detailed)`）：名前・勤務日（`staff-days`）・勤務時間（`staff-hours`）と右端の「詳しく」「今日の画面」（状態の列が無い間は休止中だけ名前のそばに印＝`staffNameNote`）。**エキスパート機能が入のときだけ**表の上に「くわしい列」のチェック（`people-columns-toggle`。`components/DetailColumns`）。入れると 特性・求めること・自宅の緯度・経度・状態の列を足す。一覧ごとに端末に覚える（`store/navOpen` の鍵 `columns:staff`）。切は見出しの下の説明を初回だけ（`useIntro('staff')`。`peopleIntro`）
 - 見出しの右に「Excel・CSV」（`roster-toggle`）。押すと名簿の欄（[pages-clients.md](pages-clients.md)「名簿の欄」。`kind="staff"`）
 - 一覧の上に「最終勤務日のある〈スタッフ〉」のカード（`leaving-card`。振り直しが残っているか。「担当の振り直しを開く」`leaving-open`）。名簿の読み込みで最終勤務日が入った人も出る（トーストでこの欄を指す）
-- 一覧の上に「自宅の位置が未登録の〈スタッフ〉」のカード（[pages-clients.md](pages-clients.md)「まとめて地図に置く」。`usePlaceAllRun('staff')`。休止を除き、住所だけで探す）と、絞り込みのチップ「位置なし N」（`staff-filter-chip`。画面の状態）。名前のセルに、自宅の位置の無い人は「位置なし」と［住所から探す］［地図で置く］（`?edit=home` で自宅の節を開いた形で移る。PRD D427。ADR-0094）。名簿を読み込んだら、`geocode` が入なら自動でまとめて置き始める
+- 一覧の上に「自宅の緯度・経度が未登録の〈スタッフ〉」のカード（[pages-clients.md](pages-clients.md)「住所から緯度・経度をまとめて入れる」。`usePlaceAllRun('staff')`。休止を除き、住所だけで探す）と、絞り込みのチップ「緯度・経度なし N」（`staff-filter-chip`。画面の状態）。名前のセルに、自宅の位置の無い人は「緯度・経度なし」と［住所から探す］［緯度・経度を編集］（`?edit=home` で自宅の節を開いた形で移る。PRD D427。ADR-0094）。名簿を読み込んだら、`geocode` が入なら自動で緯度・経度をまとめて探し始める
 - 状態に「最終 M/D」（`staff-lastday`）
-- 狭い画面（600px 以下）：表（`narrow-staff`）は1人1枚のカード（[pages.md](pages.md) の「狭い画面の表」）。1行目に名前と状態、続けて「勤務日」・「勤務時間」（くわしい列なら「特性」・「〈利用者さん〉に求めること」・「自宅の位置」）、「詳しく」「今日の画面」は右下（文字のまま）
+- 狭い画面（600px 以下）：表（`narrow-staff`）は1人1枚のカード（[pages.md](pages.md) の「狭い画面の表」）。1行目に名前と状態、続けて「勤務日」・「勤務時間」（くわしい列なら「特性」・「〈利用者さん〉に求めること」・「自宅の緯度・経度」）、「詳しく」「今日の画面」は右下（文字のまま）
 
 ### 〈スタッフ〉の画面（`#/staff/:staffId`。`pages/StaffPersonPage`）
 
@@ -29,7 +29,7 @@
 
 #### 基本情報のタブ（節）
 
-- 基本（`basic`）：名前（`staff-name`）・アイコン（`staff-icon`。左にその場の見本（`StaffMark` の lg。色は保存後の名前の並びの色）、空なら `placeholder` に苗字の最初の1文字。保存で前後の空白を落とし、見た目で2文字を超えれば保存しない）・メールアドレス（`mail` が入のとき。`staff-email`。`normalizeEmail`）・移動手段・利用中（外すと休止）。読むときは印と「アイコン「…」」／「アイコンは未設定（苗字の最初の1文字）」（`view-staff-mark`）・状態・メール・移動手段
+- 基本（`basic`）：名前（`staff-name`）・アイコン（`staff-icon`。左にその場の見本（`StaffMark` の lg。色は保存後の名前の並びの色）、空なら `placeholder` に苗字の最初の1文字。保存で前後の空白を落とし、見た目で2文字を超えれば保存しない）・メールアドレス（`staff-email`。`normalizeEmail`）・移動手段・利用中（外すと休止）。読むときは印と「アイコン「…」」／「アイコンは未設定（苗字の最初の1文字）」（`view-staff-mark`）・状態・メール・移動手段
 - 自宅（`home`：`AddressField`（testId `staff-home`）。郵便番号は保存しない（「郵便番号（任意。住所を探すためだけで、保存しません）」））
 - 特性（`traits`）・〈利用者さん〉に求めること（`conds`）
 - 最終勤務日（`lastDay`。`offboard` が入のとき。`staff-lastday-input`・「最終勤務日を消す」・「M/D から勤務なし」）
@@ -38,6 +38,7 @@
 
 #### 勤務時間のタブ
 
+- 新しい〈スタッフ〉（`#/staff/new` の `blankStaff(features)`）の勤務日・勤務時間の初期値は使い方で決まる：単発の予約（`patterns` が切）は毎日 7:00〜22:00、ほかは月〜金 9:00〜18:00（`lib/staffDefaultHours` の `defaultStaffHours`。名簿で勤務の列が無い新しい人も同じ。PRD D428。ADR-0095）
 - ふだんの勤務（`hours`：勤務する曜日・勤務開始（`staff-shift-start`）・勤務終了（`staff-shift-end`）。読むときは `StaffHoursRow`）
 - 日ごとに変えた勤務（これから。読むだけ。`overrides`）と「勤務時間（シフト）で直す」（`to-availability`）
 

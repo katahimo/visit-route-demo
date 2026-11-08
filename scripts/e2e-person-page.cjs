@@ -237,6 +237,11 @@ async function slotNew(page) {
   const made = d.visits.find((v) => v.clientId === 'c1' && v.date === target && v.earliestStart === '18:00');
   check(!!made && made.durationMinutes === 90 && !made.pattern, '「追加」で単発の訪問が足され、カレンダーに出る');
   if (made) check((await visitBtn(page, made.id).count()) === 1, '足した訪問がカレンダーに出る');
+  // 足した 18:00 の訪問は担当なしのまま残り、自動の組みの知らせ（理由つき・10秒）がカレンダーの下の方に重なるので、消えるのを待つ
+  await page
+    .locator('.toast')
+    .waitFor({ state: 'detached', timeout: 15000 })
+    .catch(() => {});
   // 押しただけなら既定の所要（60分）。訪問の無い 16:15 を押す（閉じたあとフォーカスが足した回へ移って巻くことがあるので、列の位置は測り直す）
   await settle(page, 300);
   const box2 = await c.boundingBox();
@@ -283,10 +288,10 @@ async function slotNew(page) {
   );
   await page.keyboard.press('Escape');
   await closed(page);
-  // 道具の行の「訪問を足す」（キーボードでも足せる）
+  // 道具の行の「訪問を追加」（キーボードでも足せる）
   await page.getByTestId('pcal-add').click();
   await panel(page).waitFor();
-  check((await panel(page).getByTestId('vp-client').inputValue()) === 'c1', '「訪問を足す」もこの〈利用者さん〉入り');
+  check((await panel(page).getByTestId('vp-client').inputValue()) === 'c1', '「訪問を追加」もこの〈利用者さん〉入り');
   await page.keyboard.press('Escape');
   await closed(page);
 }
@@ -444,7 +449,7 @@ async function patterns(page, dlg) {
   await settle(page, 500);
   let d = await dataWhen(page, (x) => x.patterns.filter((p) => p.clientId === 'c1').length === p0 + 1);
   const added = d.patterns.find((p) => p.clientId === 'c1' && p.earliestStart === '17:00');
-  check(!!added && added.weekdays.join() === '4', '「繰り返しを足す」→ 保存で繰り返しが増える', added);
+  check(!!added && added.weekdays.join() === '4', '「繰り返しを追加」→ 保存で繰り返しが増える', added);
   // 繰り返しの回は保存せず、見るときに計算する（ADR-0053）。カレンダーに足した繰り返しの回が出る
   await page
     .locator(`[data-testid="pcal-visit"][data-visit$="_${added?.id}"]`)
@@ -554,7 +559,7 @@ async function leaves(page, dlg) {
   await page.getByTestId('leave-save').click();
   let d = await dataWhen(page, (x) => x.clientLeaves.filter((l) => l.clientId === 'c1').length === n0 + 1);
   const l = d.clientLeaves.find((x) => x.clientId === 'c1' && x.from === from);
-  check(!!l && l.note === 'ショートステイ', '「休みを入れる」→ 保存で休みが入る');
+  check(!!l && l.note === 'ショートステイ', '「休みを追加」→ 保存で休みが入る');
   // 予定のタブのカレンダーの日に「休み」
   await open(page, `/clients/c1?d=${from}`, '[data-testid="pcal"]');
   check(
@@ -713,7 +718,7 @@ async function print(page) {
     (await shown('[data-testid="person-tabs"]')) === 0 &&
       (await shown('.pcal-tools button, .pcal-tools fieldset')) === 0 &&
       (await shown('.pattern-row .actions, [data-testid="pattern-add"]')) === 0,
-    '印刷：タブ・カレンダーの道具のボタン・繰り返しの「直す」「終わらせる」「足す」を出さない',
+    '印刷：タブ・カレンダーの道具のボタン・繰り返しの「直す」「終わらせる」「追加」を出さない',
   );
   check(
     (await shown('[data-testid="pcal"]')) === 1 && (await page.getByTestId('pcal-title').isVisible()),

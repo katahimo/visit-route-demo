@@ -137,12 +137,15 @@ async function dragOver(page, src, target, shotName = null) {
   await page.mouse.down();
   await withTimeout(page.mouse.move(sx + 6, sy + 6, { steps: 3 }), 3000, 'つかみ');
   await settle(page, 150);
+  // 落とし先が画面の外だと dragover が起きない（遅い CI で巻き位置がずれる）。つかんだまま画面に入れる
+  await target.evaluate((el) => el.scrollIntoView({ block: 'center', inline: 'center' }));
   const tb = await target.boundingBox();
   const cx = tb.x + tb.width / 2;
   const cy = tb.y + tb.height / 2;
   await withTimeout(page.mouse.move(cx, cy, { steps: 12 }), 3000, '移動');
   // 影は落とし先に入れる人を数えてから出る。dragover はマウスが動くたびなので、少し動かしながら待つ
-  for (let i = 0; i < 20; i++) {
+  // 遅い CI では数えるのに時間がかかるので、最大 4秒待つ
+  for (let i = 0; i < 40; i++) {
     if (await page.evaluate(() => !!document.querySelector('.vdrop'))) break;
     await page.mouse.move(cx + (i % 2 ? 2 : -2), cy, { steps: 1 });
     await settle(page, 100);
@@ -896,8 +899,8 @@ async function monthMove(page, { confirms }) {
   check(moved, '月の移す：「移す」で2件の日付が移る（時刻はそのまま）', { to, two });
   await settle(page, 300);
   check(
-    await until(() => page.evaluate(() => document.activeElement?.dataset?.testid === 'month-more'), 3000),
-    '月の移す：移したあとフォーカスは操作の行の「その他 ▾」（元に戻すの入口）',
+    await until(() => page.evaluate(() => document.activeElement?.dataset?.testid === 'undo-btn'), 3000),
+    '月の移す：移したあとフォーカスは操作の行の［元に戻す］',
   );
   const title = (await undoState(page)).text;
   check(title.includes(`${dateText(to)}へ移しました`), '月の移す：手の名前は「M/D（曜）へ移しました」', title);

@@ -8,7 +8,7 @@ import { BrokenDataNotice, DataWatch } from '../components/DataNotices';
 import { DayProvider, useDay } from '../components/day';
 import { FeatureOffNotice } from '../components/FeatureOffNotice';
 import { PersonPopoverProvider } from '../components/PersonPopover';
-import { TourProvider } from '../components/Tour';
+import { PlaceRunHost } from '../components/placeRunHost';
 import { HistoryKeys } from '../components/undo';
 import { NARROW_QUERY } from '../components/useMedia';
 import { VisitPanelProvider } from '../components/VisitPanel';
@@ -28,7 +28,6 @@ import SettingsPage from '../pages/SettingsPage';
 import StaffPage from '../pages/StaffPage';
 import StaffPersonPage from '../pages/StaffPersonPage';
 import StaffViewPage from '../pages/StaffViewPage';
-import StandardPage from '../pages/StandardPage';
 import StartGuidePage from '../pages/StartGuidePage';
 import TypesPage from '../pages/TypesPage';
 import WeekPage from '../pages/WeekPage';
@@ -85,6 +84,8 @@ export default function App() {
         <MonthBatchHost />
         {/* 自動の組み（欄の保存・要対応の帯の［要対応を組む］。ADR-0072 第2段）：同じく画面の外で続け、終わったら知らせて［元に戻す］ */}
         <AutoArrangeHost />
+        {/* 住所から位置をまとめて探す処理（PRD D427・D445）：画面を移っても続け、探し終えたら位置のそろったデータで自動で組む */}
+        <PlaceRunHost />
         {/* 訪問の詳細の欄（PRD D301〜D304。ADR-0051）：どの画面・コマンドパレットからでも開ける。欄は画面全体で1つ */}
         <VisitPanelProvider>
           {blocked ? (
@@ -107,7 +108,6 @@ export default function App() {
                 {/* 担当を組む（AI で範囲の担当を組む・提案を比べる。ADR-0063） */}
                 <Route path="/arrange" element={<ArrangePage />} />
                 <Route path="/compare" element={<ComparePage />} />
-                <Route path="/standard" element={<StandardPage />} />
                 <Route path="/rules" element={<RulesPage />} />
                 <Route path="/items" element={<ItemsPage />} />
                 <Route path="/types" element={<TypesPage />} />
@@ -176,93 +176,90 @@ function AdminShell() {
   useHeaderHeight(headerRef);
   const { groups, screens } = useShellNav(data, pathname);
   return (
-    // 初回の案内ツアー（PRD D192・D193）：まだ見ていなければ起動したときに中央のカードで出す。データの画面からもう一度開ける
-    <TourProvider terms={terms}>
-      <div className="app-shell" data-date={pickedDate}>
-        <aside ref={sideNavRef} className="side-nav">
-          <Brand orgName={data.org.name} />
-          <NavGroups groups={groups} pathname={pathname} />
-        </aside>
-        <div className="app-body">
-          <AppHeader
-            headerRef={headerRef}
-            screenName={navTitleParts(screens, pathname)}
-            orgName={data.org.name}
-            pathname={pathname}
-            paletteOpen={paletteOpen}
-            openPalette={openPalette}
-          />
-          {saveError && (
-            <div className="save-error" role="alert">
-              <TriangleAlert size={16} aria-hidden="true" />
-              {saveError} <NavLink to="/data">データを書き出す</NavLink>
-            </div>
-          )}
-          <main className="app-main">
-            {/* 分けた画面（PRD D248）を読む間。画面を移るときは前の画面のまま待つ（移動は transition）ので、出るのは最初に開いたときだけ */}
-            <Suspense fallback={<PageLoading />}>
-              <Guarded
-                element={
-                  <>
-                    {/* 保存していたデータを読めず初期データで開いた知らせ（PRD D227）。閉じたらフォーカスは画面の見出しへ */}
-                    <BrokenDataNotice onClose={focusHeading} />
-                    {featureOff && (
-                      <FeatureOffNotice
-                        name={featureLabel(featureOff, terms)}
-                        onClose={() => {
-                          // 知らせを閉じる（URL はそのまま。state だけ消す）。フォーカスは画面の見出しへ
-                          navigate(home, { replace: true, state: null });
-                          focusHeading();
-                        }}
-                      />
-                    )}
-                    <Outlet />
-                    {/* 画面が出たあと（読み込み中の表示のあいだは数えない）に、分けた画面と地図を先に読む */}
-                    <PreloadWhenShown />
-                  </>
-                }
-              />
-            </Suspense>
-          </main>
-          <BottomTabs
-            groups={groups}
-            features={data.org.features}
-            pathname={pathname}
-            paletteOpen={paletteOpen}
-            openPalette={openPalette}
-            menuOpen={menuOpen}
-            drawerId={drawerId}
-            menuBtnRef={menuBtnRef}
-            openMenu={() => setMenuOpen(true)}
-          />
-        </div>
-        {paletteOpen && <CommandPalette sections={screens} terms={terms} onClose={closePalette} />}
-        {menuOpen && (
-          <NavDrawer
-            id={drawerId}
-            label="メニュー"
-            onClose={() => setMenuOpen(false)}
-            // 広い画面へ戻して閉じたときは「メニュー」ボタンが隠れているので、左のメニューの今の項目へ
-            returnFocus={() =>
-              window.matchMedia(NARROW_QUERY).matches
-                ? menuBtnRef.current
-                : (sideNavRef.current?.querySelector<HTMLElement>('[aria-current="page"]') ??
-                  sideNavRef.current?.querySelector<HTMLElement>('a[href]'))
-            }
-            head={<Brand orgName={data.org.name} />}
-          >
-            <NavGroups
-              groups={groups}
-              pathname={pathname}
-              onPick={(e, item) => {
-                // 今の画面の項目は閉じるだけ（移り直して URL のクエリ＝画面の状態を消さない）
-                if (tabClick(item, pathname) === 'stay') e.preventDefault();
-                setMenuOpen(false);
-              }}
-            />
-          </NavDrawer>
+    <div className="app-shell" data-date={pickedDate}>
+      <aside ref={sideNavRef} className="side-nav">
+        <Brand orgName={data.org.name} />
+        <NavGroups groups={groups} pathname={pathname} />
+      </aside>
+      <div className="app-body">
+        <AppHeader
+          headerRef={headerRef}
+          screenName={navTitleParts(screens, pathname)}
+          orgName={data.org.name}
+          pathname={pathname}
+          paletteOpen={paletteOpen}
+          openPalette={openPalette}
+        />
+        {saveError && (
+          <div className="save-error" role="alert">
+            <TriangleAlert size={16} aria-hidden="true" />
+            {saveError} <NavLink to="/data">データを書き出す</NavLink>
+          </div>
         )}
+        <main className="app-main">
+          {/* 分けた画面（PRD D248）を読む間。画面を移るときは前の画面のまま待つ（移動は transition）ので、出るのは最初に開いたときだけ */}
+          <Suspense fallback={<PageLoading />}>
+            <Guarded
+              element={
+                <>
+                  {/* 保存していたデータを読めず初期データで開いた知らせ（PRD D227）。閉じたらフォーカスは画面の見出しへ */}
+                  <BrokenDataNotice onClose={focusHeading} />
+                  {featureOff && (
+                    <FeatureOffNotice
+                      name={featureLabel(featureOff, terms)}
+                      onClose={() => {
+                        // 知らせを閉じる（URL はそのまま。state だけ消す）。フォーカスは画面の見出しへ
+                        navigate(home, { replace: true, state: null });
+                        focusHeading();
+                      }}
+                    />
+                  )}
+                  <Outlet />
+                  {/* 画面が出たあと（読み込み中の表示のあいだは数えない）に、分けた画面と地図を先に読む */}
+                  <PreloadWhenShown />
+                </>
+              }
+            />
+          </Suspense>
+        </main>
+        <BottomTabs
+          groups={groups}
+          features={data.org.features}
+          pathname={pathname}
+          paletteOpen={paletteOpen}
+          openPalette={openPalette}
+          menuOpen={menuOpen}
+          drawerId={drawerId}
+          menuBtnRef={menuBtnRef}
+          openMenu={() => setMenuOpen(true)}
+        />
       </div>
-    </TourProvider>
+      {paletteOpen && <CommandPalette sections={screens} terms={terms} onClose={closePalette} />}
+      {menuOpen && (
+        <NavDrawer
+          id={drawerId}
+          label="メニュー"
+          onClose={() => setMenuOpen(false)}
+          // 広い画面へ戻して閉じたときは「メニュー」ボタンが隠れているので、左のメニューの今の項目へ
+          returnFocus={() =>
+            window.matchMedia(NARROW_QUERY).matches
+              ? menuBtnRef.current
+              : (sideNavRef.current?.querySelector<HTMLElement>('[aria-current="page"]') ??
+                sideNavRef.current?.querySelector<HTMLElement>('a[href]'))
+          }
+          head={<Brand orgName={data.org.name} />}
+        >
+          <NavGroups
+            groups={groups}
+            pathname={pathname}
+            onPick={(e, item) => {
+              // 今の画面の項目は閉じるだけ（移り直して URL のクエリ＝画面の状態を消さない）
+              if (tabClick(item, pathname) === 'stay') e.preventDefault();
+              setMenuOpen(false);
+            }}
+          />
+        </NavDrawer>
+      )}
+    </div>
   );
 }

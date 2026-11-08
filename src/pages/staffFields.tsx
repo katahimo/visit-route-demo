@@ -19,7 +19,7 @@ import type { SetStaffForm, StaffBadAttrs } from './useStaffEdit';
 type FieldsProps = { form: Staff; setForm: SetStaffForm; bad: StaffBadAttrs };
 
 /** 基本の節の読む形（印・状態・メールアドレス・移動手段） */
-export function StaffBasicView({ s, mailOn }: { s: Staff; mailOn: boolean }) {
+export function StaffBasicView({ s }: { s: Staff }) {
   return (
     <>
       <div className="with-staff-mark" data-testid="view-staff-mark">
@@ -28,7 +28,7 @@ export function StaffBasicView({ s, mailOn }: { s: Staff; mailOn: boolean }) {
       </div>
       <dl>
         <DlRow term="状態" value={s.active ? '利用中' : '休止中'} />
-        {mailOn && <DlRow term="メールアドレス" value={orDash(s.email)} />}
+        <DlRow term="メールアドレス" value={orDash(s.email)} />
         <StaffTravelRow staff={s} />
       </dl>
     </>
@@ -41,8 +41,7 @@ export function StaffBasicFields({
   setForm,
   bad,
   previewColor,
-  mailOn,
-}: FieldsProps & { previewColor: string | undefined; mailOn: boolean }) {
+}: FieldsProps & { previewColor: string | undefined }) {
   return (
     <>
       <div className="form-grid">
@@ -77,22 +76,20 @@ export function StaffBasicFields({
           </span>
           <span className="sub">印の中に出す文字（絵文字も可）。空なら苗字の最初の1文字</span>
         </label>
-        {mailOn && (
-          <label>
-            メールアドレス（任意）
-            <input
-              type="email"
-              value={form.email}
-              maxLength={254}
-              autoComplete="off"
-              placeholder="name@example.com"
-              {...bad('email')}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              data-testid="staff-email"
-            />
-            <span className="sub">予定をメールアプリで開くときの宛先（送信は人が押します）</span>
-          </label>
-        )}
+        <label>
+          メールアドレス（任意）
+          <input
+            type="email"
+            value={form.email}
+            maxLength={254}
+            autoComplete="off"
+            placeholder="name@example.com"
+            {...bad('email')}
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
+            data-testid="staff-email"
+          />
+          <span className="sub">予定をメールアプリで開くときの宛先（送信は人が押します）</span>
+        </label>
         <label>
           移動手段
           <select

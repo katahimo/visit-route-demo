@@ -4,7 +4,7 @@ import { type ComponentProps, type RefObject, useEffect, useMemo, useRef, useSta
 import { useSearchParams } from 'react-router-dom';
 import { useConfirm } from '../components/ConfirmDialog';
 import { useToast } from '../components/Toast';
-import { undoFocusTarget } from '../components/undo';
+import { moreFocusTarget } from '../components/undo';
 import type { DemoData } from '../contracts/data';
 import type { Absence, Client, Staff, Terms, Visit } from '../contracts/documents';
 import type { Problem } from '../contracts/problem';
@@ -144,8 +144,8 @@ type SuddenArgs = {
   /** 訪問を取り消す（取り消しの欄と共通） */
   applyCancel: (visitId: string, sameDay: boolean) => void;
   adopt: () => Promise<boolean>;
-  /** 〈スタッフ〉あてのメール（メールを切っていれば undefined） */
-  staffMail?: (staffId: string, text: string) => BuiltMail | null;
+  /** 〈スタッフ〉あてのメール */
+  staffMail: (staffId: string, text: string) => BuiltMail | null;
   onCopied: (ok: boolean, what: string) => void;
   /** 列の見出し（欄を閉じたとき、フォーカスの戻り先が消えていたらここへ） */
   colHeadOf: (sid: string) => HTMLElement | null;
@@ -240,9 +240,9 @@ export function useSuddenFlow(x: SuddenArgs): {
       onRevert: flow.info ? flow.revertToBase : undefined,
       contacts: list ? contactRows(list, state.cancel ? [state.cancel.cancelled] : [], x.contactWords) : null,
       leftCount: flow.left.length,
-      contactMail: x.staffMail ? (row) => x.staffMail?.(row.id, row.text) ?? null : undefined,
+      contactMail: (row) => x.staffMail(row.id, row.text),
       onCopied: x.onCopied,
-      fallbackFocus: () => (sudden.staffId ? x.colHeadOf(sudden.staffId) : (state.btnRef.current ?? undoFocusTarget())),
+      fallbackFocus: () => (sudden.staffId ? x.colHeadOf(sudden.staffId) : (state.btnRef.current ?? moreFocusTarget())),
       returnFocus: () => (state.toBar.current ? document.getElementById(flow.barId) : null),
     },
   };

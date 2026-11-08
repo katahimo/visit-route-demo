@@ -1,9 +1,9 @@
 // 機能の入り切り その1（PRD D210〜D213・D216。ADR-0028）を本物のブラウザで確かめる：
 // すべて入（初期データ。e2e は初回もすべて入に固定。PRD D276）でメニューの最後に「設定」（タブに管理者設定・データ）、管理者設定の画面（見出し・説明・ひな形の5つ・
-// 「いまの設定」とカスタムの印・22のスイッチの role=switch・aria-checked・名前・説明）。
+// 「いまの設定」とカスタムの印・20のスイッチの role=switch・aria-checked・名前・説明）。
 // ひな形の5通り（基本・月次予定・現場共有・すべては管理者設定で適用する（独自の確認ダイアログに入る機能・切れる機能、取り消すと変わらない）、
 // 労務・契約管理は別のタブで localStorage を書き換えて作る）ごとに、メニューの項目（入は 予定・空き状況・〈利用者さん〉・〈スタッフ〉・組む・設定 の6項目で、空き状況の機能を切ると空き状況が消える（欠勤・キャンセルの入り切りでは変わらない）。
-// 子は組むだけ：基本情報・組み方の標準・担当を組む。ADR-0063・ADR-0067・ADR-0074）・設定のタブ・下のタブ・パレットの画面と操作・ホームのいつでもの入口・
+// 子は組むだけ：条件の重み・担当を組む。ADR-0063・ADR-0074・ADR-0100）・設定のタブ・下のタブ・パレットの画面と操作・ホームのいつでもの入口・
 // 切った機能の URL（`?do=` も）を開くと予定の画面へ移り（replace）、その上に閉じられる知らせと管理者設定へのリンク、
 // スイッチ（押すとすぐ保存・トースト・依存先が切なら押せず理由）、390px で横にはみ出さない、印刷で知らせ・メニューを出さない。
 // 末尾の /・大文字の URL（#/vacancy/・#/Vacancy・#/month/print/）も予定の画面へ移す、390px で空き状況を切っても下のタブ6つが全幅を等分、
@@ -20,7 +20,6 @@ const path = require('node:path');
 const { answerConfirms } = require('./lib/confirmDialog.cjs');
 const { BASE, OUT_DIR, TODAY, STORAGE_KEY, check, hashOf, runSteps, settle } = require('./lib/env.cjs');
 const { planDays } = require('./lib/plan.cjs');
-const { markStandard } = require('./lib/standard.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
 const {
   same,
@@ -33,7 +32,6 @@ const {
   ARRANGE_KIDS,
   arrangeKidsFor,
   peopleKidsFor,
-  BASICS_TABS,
   screensFor,
   settingsTabsFor,
   settingsKidsFor,
@@ -46,7 +44,6 @@ const {
   open,
   storedFeatures,
   menu,
-  basicsTabs,
   peopleTabs,
   CLIENT_TABS,
   STAFF_TABS,
@@ -72,7 +69,7 @@ async function allOn(page) {
     same(m.schedule, scheduleKidsFor(FEATURE_IDS)) &&
       same(m.arrange, ARRANGE_KIDS) &&
       same(m.settings, settingsKidsFor('all')),
-    'すべて入：子の項目は組む（基本情報・組み方の標準・担当を組む）だけ。予定・設定に子は無い',
+    'すべて入：子の項目は組む（条件の重み・担当を組む）だけ。予定・設定に子は無い',
     m,
   );
   check(
@@ -157,7 +154,11 @@ async function allOn(page) {
     .evaluateAll((els) =>
       els.map((el) => ({ checked: el.getAttribute('aria-checked'), disabled: el.getAttribute('aria-disabled') })),
     );
-  check(sw.length === 22 && sw.every((s) => s.checked === 'true' && s.disabled === null), 'スイッチは22・すべて入', sw);
+  check(
+    sw.length === 20 && sw.every((s) => s.checked === 'true' && s.disabled === null),
+    'スイッチは20・すべて入（メール・Excel はスイッチなし。ADR-0106）',
+    sw,
+  );
   // スイッチは1枚のカード（feature-switches）の中にグループ（ADR-0092）。各グループ見出しに「N / M 入」
   const groups = await page.getByTestId('feature-switches').getByTestId('feature-group').count();
   const counts = await page.getByTestId('feature-group-count').allInnerTexts();
@@ -272,7 +273,6 @@ async function switches(page) {
 async function checkTemplate(page, t) {
   const on = TEMPLATE_ON[t];
   const label = TEMPLATE_LABEL[t];
-  const expert = on.includes('expert');
   await openHome(page, on);
   // 起動の画面（予定）の入口：欠勤・キャンセルを登録は sudden、メニューの空き状況は vacancy に合う（ホームの入口の代わり。PRD D401）
   await settle(page, 300);
@@ -296,22 +296,17 @@ async function checkTemplate(page, t) {
       same(m.arrange, arrangeKidsFor(t)) &&
       same(m.people, peopleKidsFor(t)) &&
       same(m.settings, settingsKidsFor(t)),
-    `${label}：メニューの子の項目（組むだけ：基本情報・組み方の標準・担当を組む。予定・設定に子は無い）`,
+    `${label}：メニューの子の項目（組むだけ：条件の重み・担当を組む。予定・設定に子は無い）`,
     m,
   );
   const tabs = await page.getByTestId('bottom-tab').allInnerTexts();
   check(same(tabs, tabsFor(on)), `${label}：下のタブ`, tabs);
-  if (expert) {
-    // 基本情報（予定と相性）のタブ：予定と相性・相性・勤務時間（シフト）。〈利用者さん〉・〈スタッフ〉は人のタブの画面（PRD D394）
-    const bt = await basicsTabs(page);
-    check(same(bt, BASICS_TABS), `${label}：基本情報のタブ（予定と相性・相性・勤務時間（シフト））`, bt);
-  }
-  // 〈利用者さん〉・〈スタッフ〉の小さいタブは入切とも同じ（予定と相性は出さない。PRD D394）
+  // 〈利用者さん〉・〈スタッフ〉の小さいタブは入切とも同じ（予定と相性は〈利用者さん〉のタブ。PRD D394。ADR-0100）
   const ct = await peopleTabs(page, '/clients');
   const st = await peopleTabs(page, '/staff');
   check(
     same(ct, CLIENT_TABS) && same(st, STAFF_TABS),
-    `${label}：小さいタブ（利用者さん＝一覧・相性、スタッフ＝一覧・勤務・相性）`,
+    `${label}：小さいタブ（利用者さん＝一覧・予定と相性・相性、スタッフ＝一覧・勤務・相性）`,
     {
       ct,
       st,
@@ -387,7 +382,7 @@ async function checkTemplate(page, t) {
 }
 
 // ---- ひな形の5通り ----
-async function templates(page, dlg, ctx) {
+async function templates(page, dlg) {
   // すべて入から始める（スイッチの確かめで {vacancy: true} などが残っていても すべて と同じ）
   await open(page, '/settings', '[data-testid="feature-templates"]');
   const before = await storedFeatures(page);
@@ -411,15 +406,20 @@ async function templates(page, dlg, ctx) {
     .locator('.toast')
     .filter({ hasText: 'ひな形「定期の訪問（基本）」を適用しました' })
     .waitFor({ timeout: 5000 });
-  check(same(await storedFeatures(page), asFeatures(TEMPLATE_ON.basic)), '基本：全22の ID を明示して書く');
+  check(same(await storedFeatures(page), asFeatures(TEMPLATE_ON.basic)), '基本：全20の ID を明示して書く');
   await checkTemplate(page, 'basic');
   await page.screenshot({ path: path.join(OUT_DIR, 'settings-basic.png'), fullPage: true });
+}
 
-  // 労務・契約管理（別のタブで localStorage を書き換える）
+// ひな形の段は、ひな形ごとに分ける（1つの段に入れると遅い CI で段の上限を超える）。前の段のひな形のまま続ける
+/** 労務・契約管理（別のタブで localStorage を書き換える） */
+async function templatesLabor(page, _dlg, ctx) {
   await writeFeaturesInOtherTab(ctx, asFeatures(TEMPLATE_ON.laborContract));
   await checkTemplate(page, 'laborContract');
+}
 
-  // 月次予定・現場共有（管理者設定で適用する。確認に入る機能・切れる機能）
+/** 月次予定・現場共有（管理者設定で適用する。確認に入る機能・切れる機能） */
+async function templatesMonthly(page, dlg) {
   const msg = await applyTemplate(page, dlg, 'monthlyField');
   check(
     msg[0]?.includes('入る機能：') &&
@@ -430,8 +430,10 @@ async function templates(page, dlg, ctx) {
     msg,
   );
   await checkTemplate(page, 'monthlyField');
+}
 
-  // すべて
+/** すべて */
+async function templatesAll(page, dlg) {
   await applyTemplate(page, dlg, 'all');
   await checkTemplate(page, 'all');
 }
@@ -653,8 +655,7 @@ async function deadEnds(page, dlg, ctx) {
     (await page.getByTestId('plan-menu').count()) === 0,
     '日の予定：「AI で組む ▾」は無い（AI で組むのは担当を組む。ADR-0063）',
   );
-  // 担当を組む：提案を比べるを切ると「案を比べる」の欄を出さない（AI で組むは残る。標準が無い間は組めないので先に登録。ADR-0065）
-  await markStandard(page);
+  // 担当を組む：提案を比べるを切ると「案を比べる」の欄を出さない（AI で組むは残る）
   await open(page, `/arrange?date=${second}`, '[data-testid="arrange-start"]');
   check(
     (await page.getByTestId('arrange-compare').count()) === 0 &&
@@ -714,6 +715,9 @@ const steps = sharedPage({
     ['all-on', allOn],
     ['switches', switches],
     ['templates', templates],
+    ['templates-labor', templatesLabor],
+    ['templates-monthly', templatesMonthly],
+    ['templates-all', templatesAll],
     ['mobile', mobile],
     ['path-variants', pathVariants],
     ['dead-ends', deadEnds],

@@ -1,4 +1,4 @@
-// 提案の1日の変わる訪問の一覧（PRD D350・D356）：範囲の提案の帯と、組み方の標準の日で見る（ChoiceDayView）で使う
+// 提案の1日の変わる訪問の一覧（PRD D350・D356）：範囲の提案の帯で使う
 import { ArrowRight } from 'lucide-react';
 import type { DemoData } from '../contracts/data';
 import { minutesToHhmm } from '../domain/time';

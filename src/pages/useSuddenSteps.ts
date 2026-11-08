@@ -70,8 +70,8 @@ export type SuddenPanelProps = {
   contacts: ContactRow[] | null;
   /** 欠勤の人に残る訪問の数（振り直していない。2段目の上に注意を出す。連絡文には入らない） */
   leftCount?: number;
-  /** 〈スタッフ〉あてのメール（PRD D94）。メールアドレスが無ければ null。メールを切っていれば渡さない（ボタンを出さない） */
-  contactMail?: (row: ContactRow) => BuiltMail | null;
+  /** 〈スタッフ〉あてのメール（PRD D94）。メールアドレスが無ければ null */
+  contactMail: (row: ContactRow) => BuiltMail | null;
   /** 文をコピーしたあと（ok：できたか・what：何の文か） */
   onCopied: (ok: boolean, what: string) => void;
   /** 閉じる（toBar：日の画面の差の欄へ移る） */

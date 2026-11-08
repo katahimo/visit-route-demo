@@ -1,6 +1,6 @@
 # データの画面と管理者設定
 
-> この画面のファイル：`src/pages/DataPage.tsx`（組み立てだけ。状態と処理は `useDataBackup`（`useLastExport`・`useDataBackup`・`useDataRestore`）・`useDataExcel`・`useDataTidy`・`useDataTerms`、見た目は `dataParts.tsx`（保存の誤り・直前の状態に戻す・呼び方・控え（JSON）・古い訪問を片づける・使い方の案内・初期状態に戻す）・`dataExcel.tsx`（Excel の欄）・`dataBookings.tsx`（予約の CSV の欄）、文と判定は `src/lib/dataScreen.ts`・`bookingScreen.ts`）・`SettingsPage.tsx`（`settings.css`）・`RestartCard.tsx`・`mailScheduleSettings.tsx`、`src/components/FilePick.tsx`（`filePick.css`）・`Tour.tsx`・`DataNotices.tsx`（`dataNotices.css`）・`dirtyForms.ts`（`useDirtyMark`）、`src/lib/filePick.ts`・`features.ts`・`backupReminder.ts`・`tidy.ts`・`dirtyForms.ts`。関連 ADR：0006・0028・0032・0068・0069・0073・0075・0090。関連 PRD：D191〜D193・D210〜D216・D227・D260・D275・D322・D366・D379・D381・D395・D408。
+> この画面のファイル：`src/pages/DataPage.tsx`（組み立てだけ。状態と処理は `useDataBackup`（`useLastExport`・`useDataBackup`・`useDataRestore`）・`useDataExcel`・`useDataTidy`・`useDataTerms`、見た目は `dataParts.tsx`（保存の誤り・直前の状態に戻す・呼び方・控え（JSON）・古い訪問を片づける・初期状態に戻す）・`dataExcel.tsx`（Excel の欄）・`dataBookings.tsx`（予約の CSV の欄）、文と判定は `src/lib/dataScreen.ts`・`bookingScreen.ts`）・`SettingsPage.tsx`（`settings.css`）・`RestartCard.tsx`・`mailScheduleSettings.tsx`、`src/components/FilePick.tsx`（`filePick.css`）・`DataNotices.tsx`（`dataNotices.css`）・`dirtyForms.ts`（`useDirtyMark`）、`src/lib/filePick.ts`・`features.ts`・`backupReminder.ts`・`tidy.ts`・`dirtyForms.ts`。関連 ADR：0006・0028・0032・0068・0069・0073・0075・0090・0095。関連 PRD：D191・D210〜D216・D227・D260・D275・D322・D366・D379・D381・D395・D408・D428。
 > Excel の変換は design.md の「excel」、機能の表と判定は design.md の「features」。
 
 ### データ（`#/data`）
@@ -28,27 +28,27 @@
 
 #### 控え（バックアップ。JSON）
 
-- `Term` `backup`。「ファイルに書き出す」（データ一式（担当・伝えた内容・振り直し・組み方の標準の記録も）を1つの JSON に）。説明は「丸ごとの控え・別の端末へ移す用。中身を直すファイルではない」と、`excel` が入なら「人が見て直すなら Excel（確定などの記録は入らない）」。版1の控えは「データの形が変わったので初期データで始めます」で読み込まない
+- `Term` `backup`。「ファイルに書き出す」（データ一式（担当・伝えた内容・振り直しの記録も）を1つの JSON に）。説明は「丸ごとの控え・別の端末へ移す用。中身を直すファイルではない」と「人が見て直すなら Excel（確定などの記録は入らない）」。版1の控えは「データの形が変わったので初期データで始めます」で読み込まない
 - 読み込みは `FilePick`（`backup-file`・caption「読み込む控え（JSON）」）。置き換える前に確認する
 
 #### Excel
 
-- 欄 `section.data-excel`（`excel-card`・`aria-labelledby` は見出し）。`excel` が切なら欄ごと出さない（控えは残す）
-- 全体のブックだけ：〈スタッフ〉・〈利用者さん〉・項目・条件・相性・稼働時間・訪問のシート。読み込むといまのデータがその内容に置き換わる（担当もブックのとおり。伝えた内容・振り直し・組み方の標準の記録はブックに無いので残し、変わった所は「未連絡の変更」になる）。説明の最後に、丸ごとの控え・移すときは JSON と書く。書き方はブックの「使い方」のシート
-  - 別の事業所のブック：事業所名が違えば（`lib/dataScreen` の `otherOrgOf`。名前で見る）確認の題名を「別の事業所の…」にし、両方の名前と、いまの確定・振り直し・組み方の標準の記録を消すことを書く（`workbookConfirmBody`）。OK なら `withoutOrgState` で外してから置き換える
+- 欄 `section.data-excel`（`excel-card`・`aria-labelledby` は見出し）。いつも出す（入り切りしない。ADR-0106）
+- 全体のブックだけ：〈スタッフ〉・〈利用者さん〉・項目・条件・相性・稼働時間・訪問のシート。読み込むといまのデータがその内容に置き換わる（担当もブックのとおり。伝えた内容・振り直しの記録はブックに無いので残し、変わった所は「未連絡の変更」になる）。説明の最後に、丸ごとの控え・移すときは JSON と書く。書き方はブックの「使い方」のシート
+  - 別の事業所のブック：事業所名が違えば（`lib/dataScreen` の `otherOrgOf`。名前で見る）確認の題名を「別の事業所の…」にし、両方の名前と、いまの確定・振り直しの記録を消すことを書く（`workbookConfirmBody`）。OK なら `withoutOrgState` で外してから置き換える
 - 名簿（Excel・CSV）は各一覧の名簿の欄（[pages-clients.md](pages-clients.md)「名簿の欄」）。欄の中に一覧へのリンク（`excel-roster-note`）
 - 「Excel に書き出す」と読み込み `FilePick`（`excel-file`・caption「読み込む Excel（全体）」）
 
 #### 予約の CSV（`BookingCard`。`booking-card`）
 
-- Excel の欄の次。`excel` が切なら出さない。予約を1回ずつの訪問（担当なし）として入れる。読める形は `BOOKING_FORMS`（予約システムの予約・このアプリの予定）。同じ読み込みは「定期の予定を入れる」の引き出しにもある（テンプレート・書き出しつき。`excel` が切でも出す。PRD D423）
-- `FilePick`（`booking-file`・caption「読み込む予約の CSV」・.csv・.tsv・.txt）で選ぶと `useBookingImport` が `importBookings` で読み、確認（題「訪問を読み込みますか？」・本文 `lib/bookingScreen` の `bookingConfirmBody`：形と文字コード・件数・足さない取り消し済みの予約・入れなかった予約・読めなかった行・読まなかった列・担当なし（担当・ピン・アプリでの取り消しは残す）・控えの文。主ボタン「読み込む」）のあと、1世代の控えを残して入れる（`usePendingImport`）
+- Excel の欄の次。予約を1回ずつの訪問（担当なし）として入れる。読める形は `BOOKING_FORMS`（予約システムの予約・このアプリの予定）。同じ読み込みは単発の「予約を追加」の引き出しにもある（書き出しつき。PRD D423）。登録の案内③にも同じ欄を出す
+- 「テンプレートをダウンロード（CSV）」（`booking-template`。名簿の欄と同じ言葉。`components/useVisitCsvTemplate`：予定の CSV の列名の行だけ。引き出しのテンプレートと同じ）。説明に必ず入れる列（`VISIT_CSV_REQUIRED`）を出す
+- `FilePick`（`booking-file`・caption「読み込む予約の CSV」・.csv・.tsv・.txt）で選ぶと `useBookingImport` が `importBookings` で読み、確認（題「訪問を読み込みますか？」・本文 `lib/bookingScreen` の `bookingConfirmBody`：形と文字コード・件数（追加・更新・削除・変更なし）・総入れ替えの説明（ファイルの最初の日〜最後の日の単発の訪問をファイルに合わせ、ファイルに無い訪問と取り消しの予約の訪問を消す。PRD D441）（アプリで取り消した訪問も、ファイルで有効なら有効に戻す）・足さない取り消し済みの予約・入れなかった予約・読めなかった行・勤務日・時間に入らない予約の文（`lib/bookingFit` の `bookingsOutsideHours`・`outsideHoursNote`。足す・直す予約のうち、どの〈スタッフ〉の勤務（日ごとの上書きを含む。休止・最終勤務日後は除く）にも入らないもの。内訳は担当なしの組めない理由と同じ言葉で勤務日外（その日に勤務する人がいない）・勤務時間外、直すものも内訳に合わせて「勤務する曜日・勤務時間」。PRD D428・D430。ADR-0095）・読まなかった列・担当なし（担当・ピンは残す）・控えの文。主ボタン「読み込む」）のあと、1世代の控えを残して入れる（`usePendingImport`。入ったと見届けたら `requestImportArrange` で担当なし・要対応を自動で組む。名簿の読み込みも同じ。PRD D442）
 - 知らせは担当の組み方を案内する（エキスパート機能が入なら「担当を組む」、切なら予定の上の要対応の帯の「要対応を組む」）
 - 足す・直す訪問が無ければ確認を出さず、入れなかった予約・読めなかった行があれば欄の誤りに「入れる訪問はありませんでした」と一緒に、無ければ「変更はありませんでした」の知らせ。読み込みの部品を読めなかった（新しい版の公開）ときは Excel の欄と同じ「画面を読み直す」の文
 
-#### 使い方の案内・初期状態に戻す
+#### 初期状態に戻す
 
-- 「案内をもう一度見る」（`tour-again`。`useTour()`）：短い案内（3枚）を1枚目から開く。初回に自動では出さないので、ここだけが入口。見たかは覚えない
 - 「初期状態に戻す」：デモの架空の事業所のデータ（今日から7日分の担当を含む）に戻す（独自の確認。危険の色）。機能の入り切りはそのまま。最初の2問の問2の答え（単発／定期。`store/start.ts` の印 `vrdemo:booking:last`）が残っていれば「デモ×その答え」のデータ（単発＝単発のデモ・お客様／シッター、定期＝初期データ）、無ければ（印 `all` のときも）定期の初期データ。説明と確認の本文に「機能の入り切り（管理者設定）はそのまま」。取り消すと知らせなし、確定で知らせ。戻したあと、今日〜翌月末の要対応（担当なし・間に合わない・重なり・休みの人）を1回自動で組む（要対応の帯の［要対応を組む］と同じ処理・知らせ・［元に戻す］。印 `all` のときは組まない。PRD D409）
 - 「画面を読み直す」
 
@@ -83,12 +83,11 @@
 - 切るときデータがあれば `turnOffImpact` の件数と効き方の確認。データが無ければ確認なし。取り消すと変わらない
 - 切った機能の URL を開くと予定の画面（`homePath`）へ移り、閉じられる知らせと管理者設定へのリンク（`FeatureOffNotice`）
 - 390px で横にはみ出さない。印刷で知らせ・「適用」を出さない
-- 「メールの予約送信（Google）」のカード（`pages/mailScheduleSettings`・`mail-schedule-settings`。メールの機能が入のときだけ。[mail-schedule.md](mail-schedule.md)）：1行の説明（確定するときにまとめて Google に預け、前日の時刻に自動で送る）と ⓘ（aria-label「メールの予約送信の説明」。中は `mail-schedule-notes`：遅れる分数・Google のアカウントを通ること・使わないときは「メールを作る」で送れること）、手順の4行は「詳しく ▾」（`mail-schedule-steps-fold`。見出しの横に「手順 4つ」。ひな型のコピーのリンク `mail-schedule-template`。`GAS_TEMPLATE_URL` が空なら「まだ用意されていません」）、欄 `mail-schedule-url`・`mail-schedule-token`（password）・`mail-schedule-time`（time）、`mail-schedule-test`「接続を試す」・`mail-schedule-save`「保存」・`mail-schedule-clear`「この端末の設定を消す」（確認つき。設定があるときだけ）。誤りは押したあとに欄ごと（`settingsErrors`）。つないでいれば見出しに「つないでいます」
-- データの画面のいちばん下に「最初からやり直す」のカード（`pages/RestartCard`・`restart-first-run`。ADR-0092）：畳まない注意「いまのデータは消えます。」（`restart-first-run-warn`）と2行。［デモの初期状態に戻す］（`reset-demo-button`。今までの「初期状態に戻す」）と［始め方を選び直す］（`restart-first-run-button`。説明1行 `RESTART_HINT`）。始め方を選び直すは独自の確認（危険の色。本文は `lib/firstRun` の `restartConfirmBody`：元に戻す（Ctrl+Z）の対象外なので先に書き出す案内と、1世代の控えの文 `keepNote`）。OK で `askFirstRun()`（2問の画面 `components/FirstRunPage` へ。答えるまで今のデータのまま・読み直すと元のデータで開く）。答えると `startFirstRun(answer)` が1世代の控えを残してデータを作り直し、最初の画面（デモ＝週／月、自分のデータ＝登録の案内）へ移る
+- 「メールの予約送信（Google）」のカード（`pages/mailScheduleSettings`・`mail-schedule-settings`。いつも出す。[mail-schedule.md](mail-schedule.md)）：1行の説明（確定するときにまとめて Google に預け、前日の時刻に自動で送る）と ⓘ（aria-label「メールの予約送信の説明」。中は `mail-schedule-notes`：遅れる分数・Google のアカウントを通ること・使わないときは「メールを作る」で送れること）、手順の4行は「詳しく ▾」（`mail-schedule-steps-fold`。見出しの横に「手順 4つ」。ひな型のコピーのリンク `mail-schedule-template`。`GAS_TEMPLATE_URL` が空なら「まだ用意されていません」）、欄 `mail-schedule-url`・`mail-schedule-token`（password）・`mail-schedule-time`（time）、`mail-schedule-test`「接続を試す」・`mail-schedule-save`「保存」・`mail-schedule-clear`「この端末の設定を消す」（確認つき。設定があるときだけ）。誤りは押したあとに欄ごと（`settingsErrors`）。つないでいれば見出しに「つないでいます」
+- データの画面のいちばん下に「最初の設定をやり直す」のカード（`pages/RestartCard`・`restart-first-run`。ADR-0092）：畳まない注意「いまのデータは消えます。」（`restart-first-run-warn`）と［最初の設定をやり直す］（`restart-first-run-button`。説明1行 `RESTART_HINT`。デモのデータに戻すのもここで「デモで試す」を選ぶ）。「デモの初期状態に戻す」はデータの画面に置かない（画面が壊れたときの例外の画面の「初期状態に戻す」は残す）。最初の設定をやり直すは独自の確認（危険の色。本文は `lib/firstRun` の `restartConfirmBody`：元に戻す（Ctrl+Z）の対象外なので先に書き出す案内と、1世代の控えの文 `keepNote`）。OK で `askFirstRun()`（2問の画面 `components/FirstRunPage` へ。答えるまで今のデータのまま・読み直すと元のデータで開く）。答えると `startFirstRun(answer)` が1世代の控えを残してデータを作り直し、最初の画面（デモ＝週／月、自分のデータ＝登録の案内）へ移る
 
 ### 完了の条件
 
 - [ ] 控えと Excel が同じファイル選択の部品・「ファイルを選ぶ」と未選択の文・input は見えない形・名前・Tab と枠・Space・確認・同じファイルをもう一度・Excel の誤り・名簿は一覧へのリンク（`lib/filePick` のテスト・`scripts/e2e-tour.cjs`）
-- [ ] 「案内をもう一度見る」でツアーが出る・閉じるとフォーカスがボタンへ戻る（`scripts/e2e-tour.cjs`）
 - [ ] 初期状態に戻したあと「直前の状態に戻す」で戻る・書き出すと最後に書き出した日が今日になる・片づけで古い訪問と確定した内容が消え新しいものは残る・壊れたデータの知らせと書き出し（`store`・`lib/backupReminder`・`lib/tidy` のテスト・`scripts/e2e-tour.cjs`）
 - [ ] 管理者設定：ひな形の5通りごとにメニュー・下のタブ・パレット・画面の中の入口・ルートの移し先、相性を切るときの確認（`scripts/e2e-features.cjs`）

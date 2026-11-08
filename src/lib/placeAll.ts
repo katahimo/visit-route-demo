@@ -1,6 +1,8 @@
 import type { DemoData, RosterKind } from '../contracts/data';
 import type { ClientPlace, Place, Terms } from '../contracts/documents';
-import { UNPLACED_TRAVEL_MIN } from '../matching/compile';
+import { place2Ended } from '../domain/place2';
+import { jstDate } from '../domain/time';
+import { UNPLACED_TRAVEL_MIN } from '../matching/travel';
 import { colorOf, initialOf } from './colors';
 import { byName, hasLocation } from './common';
 import type { GeoHit, LookupFail, LookupOptions, LookupResult, PostalHit } from './geocode';
@@ -29,16 +31,20 @@ export type PlacePerson = {
   mark: { label: string; color: string };
 };
 
+/** 住所2（ADR-0105）をまとめて置くときの ID の後ろ（〈利用者さん〉の ID に付ける） */
+const PLACE2_SUFFIX = '#住所2';
+
+/** まとめて置く人の ID → 持ち主の ID（住所2 なら〈利用者さん〉の ID） */
+export const ownerId = (id: string): string => (id.endsWith(PLACE2_SUFFIX) ? id.slice(0, -PLACE2_SUFFIX.length) : id);
+
 /** 画面の文（種類ごと） */
 export type PlaceAllTexts = {
-  /** 欄の見出し（「位置が未登録の〈利用者さん〉」） */
+  /** 欄の見出し（「緯度・経度が未登録の〈利用者さん〉」） */
   heading: string;
-  /** 探す手がかりのある人（「住所か郵便番号あり」） */
+  /** 探す手がかりのある人（「住所・郵便番号あり」） */
   has: string;
   /** 手がかりの無い人（「どちらも無い」） */
   hasNot: string;
-  /** 数えない人の注記 */
-  notCounted: string;
   /** 置ける人がいないときの理由 */
   none: string;
   /** ボタンの説明 */
@@ -51,7 +57,8 @@ export type PlaceAllTexts = {
 
 /** 種類ごとの違い（分岐はここ1か所） */
 type PlaceAccess = {
-  people: (d: Pick<DemoData, 'clients' | 'staff'>) => PlacePerson[];
+  /** today は住所2 の期間が終わったかを見る日（終わった住所2 は置かない） */
+  people: (d: Pick<DemoData, 'clients' | 'staff'>, today: string) => PlacePerson[];
   /** id の人の場所（住所・位置）を書く。郵便番号はそのまま */
   write: (d: DemoData, id: string, p: Place) => DemoData;
   texts: (t: Terms) => PlaceAllTexts;
@@ -61,25 +68,33 @@ function placeAccess(kind: PlaceKind): PlaceAccess {
   switch (kind) {
     case 'client':
       return {
-        people: (d) =>
-          d.clients.map((c) => ({
-            id: c.id,
-            name: c.displayName,
-            place: c.place,
-            counted: c.stage !== 'ended',
-            mark: { label: initialOf(c.displayName), color: colorOf(c.color) },
-          })),
-        write: (d, id, p) => ({
-          ...d,
-          clients: d.clients.map((c) => (c.id === id ? { ...c, place: { ...c.place, ...p } } : c)),
-        }),
+        // 期間つきの訪問先（住所2。ADR-0105）も1人分として置く（ID は「〈利用者さん〉の ID＋PLACE2_SUFFIX」）
+        people: (d, today) =>
+          d.clients.flatMap((c) => {
+            const mark = { label: initialOf(c.displayName), color: colorOf(c.color) };
+            const counted = c.stage !== 'ended';
+            const main = { id: c.id, name: c.displayName, place: c.place, counted, mark };
+            if (!c.place2 || place2Ended(c.place2, today)) return [main];
+            const { from: _f, to: _t, ...place } = c.place2;
+            return [main, { id: `${c.id}${PLACE2_SUFFIX}`, name: `${c.displayName}（住所2）`, place, counted, mark }];
+          }),
+        write: (d, id, p) => {
+          const own = ownerId(id);
+          return {
+            ...d,
+            clients: d.clients.map((c) => {
+              if (c.id !== own) return c;
+              if (own === id) return { ...c, place: { ...c.place, ...p } };
+              return c.place2 ? { ...c, place2: { ...c.place2, ...p } } : c;
+            }),
+          };
+        },
         texts: (t) => ({
-          heading: `位置が未登録の${t.client}`,
-          has: '住所か郵便番号あり',
-          hasNot: 'どちらも無い',
-          notCounted: '段階が「終了」の人は数えません',
-          none: '住所か郵便番号のある、位置の無い人がいません',
-          how: '住所（無ければ郵便番号）から1人ずつ位置を探して、地図に置きます',
+          heading: `緯度・経度が未登録の${t.client}`,
+          has: '住所・郵便番号あり',
+          hasNot: '住所・郵便番号なし',
+          none: '住所か郵便番号のある未登録の人がいません',
+          how: '住所（無ければ郵便番号）から緯度・経度を探して入れます',
           skipped: `住所も郵便番号もない${t.client}`,
           term: t.client,
         }),
@@ -101,12 +116,11 @@ function placeAccess(kind: PlaceKind): PlaceAccess {
           staff: d.staff.map((s) => (s.id === id ? { ...s, home: { ...s.home, ...p } } : s)),
         }),
         texts: (t) => ({
-          heading: `自宅の位置が未登録の${t.staff}`,
+          heading: `自宅の緯度・経度が未登録の${t.staff}`,
           has: '住所あり',
-          hasNot: '住所の無い人',
-          notCounted: '休止の人は数えません',
-          none: '住所のある、自宅の位置の無い人がいません',
-          how: '自宅の住所から1人ずつ位置を探して、地図に置きます',
+          hasNot: '住所なし',
+          none: '住所のある未登録の人がいません',
+          how: '自宅の住所から緯度・経度を探して入れます',
           skipped: `自宅の住所が無い${t.staff}`,
           term: t.staff,
         }),
@@ -119,8 +133,11 @@ function placeAccess(kind: PlaceKind): PlaceAccess {
 }
 
 /** その種類の人すべて（数えない人も。名前・地図の点を引くのに使う） */
-export const placePeople = (d: Pick<DemoData, 'clients' | 'staff'>, kind: PlaceKind): PlacePerson[] =>
-  placeAccess(kind).people(d);
+export const placePeople = (
+  d: Pick<DemoData, 'clients' | 'staff'>,
+  kind: PlaceKind,
+  today: string = jstDate(Date.now()),
+): PlacePerson[] => placeAccess(kind).people(d, today);
 
 /** 画面の文 */
 export const placeAllTexts = (kind: PlaceKind, terms: Terms): PlaceAllTexts => placeAccess(kind).texts(terms);
@@ -145,7 +162,7 @@ export function noPlaceIds(d: Pick<DemoData, 'clients' | 'staff'>, kind: PlaceKi
   return new Set(
     placePeople(d, kind)
       .filter((p) => p.counted && !hasLocation(p.place))
-      .map((p) => p.id),
+      .map((p) => ownerId(p.id)),
   );
 }
 
@@ -153,7 +170,7 @@ export function noPlaceIds(d: Pick<DemoData, 'clients' | 'staff'>, kind: PlaceKi
 export const NO_PLACE_CHIP = 'noPlace';
 
 /** 位置が無くても担当は組めることの補足（ADR-0093） */
-export const NO_PLACE_NOTE = `位置が無くても担当は組めます（移動は${UNPLACED_TRAVEL_MIN}分とみます）`;
+export const NO_PLACE_NOTE = `緯度・経度が未登録の場合、移動${UNPLACED_TRAVEL_MIN}分で計算されます`;
 
 /** 1人だけ探せるか：郵便番号・住所の検索が入で、住所か郵便番号があり、まとめて置いている最中でない */
 export const canSearchOne = (p: Pick<PlacePerson, 'place'>, x: { geocodeOn: boolean; running: boolean }): boolean =>
@@ -161,16 +178,16 @@ export const canSearchOne = (p: Pick<PlacePerson, 'place'>, x: { geocodeOn: bool
 
 /**
  * まとめて置くボタンの文言（PRD D427）：一度探したあと（止めた・見つからない人が残った）は「続きを探す（N人）」、
- * はじめは「位置の無い N人を地図に置く」。対象が0人なら「まとめて地図に置く」
+ * はじめは「住所から緯度・経度を入れる（N人）」。対象が0人なら人数を付けない
  */
 export function placeAllRunLabel(x: { targets: number; tried: boolean }): string {
-  if (x.targets <= 0) return 'まとめて地図に置く';
-  return x.tried ? `続きを探す（${x.targets}人）` : `位置の無い${x.targets}人を地図に置く`;
+  if (x.targets <= 0) return '住所から緯度・経度を入れる';
+  return x.tried ? `続きを探す（${x.targets}人）` : `住所から緯度・経度を入れる（${x.targets}人）`;
 }
 
 /** 名簿の読み込みの確認に足す1文（PRD D427。ADR-0094。この文を見て［名簿を読み込む］を押すのが送る同意） */
 export const AUTO_PLACE_NOTE =
-  '読み込んだあと、住所から地図の位置を探します（住所を郵便番号の検索と国土地理院の地図の検索に使います）';
+  '読み込んだあと、住所から緯度・経度を探します（住所を郵便番号の検索と国土地理院の地図の検索に使います）';
 
 /**
  * 名簿を読み込んだあと、自動でまとめて置き始めるか（PRD D427）：郵便番号・住所の検索が入（geocodeOn）で、
@@ -223,7 +240,7 @@ export type PlaceAllOptions = {
 /**
  * 住所から位置が見つからなかった人がいるか（PRD D427）。いれば結果に「市区町村の名前が無い住所は見つからないことがある」の1行を足す
  */
-export function hasAddressNotFound(results: PlaceAllResult[]): boolean {
+export function hasAddressNotFound(results: readonly PlaceAllResult[]): boolean {
   return results.some((r) => !r.ok && r.step === 'address' && r.reason === 'notFound');
 }
 
@@ -300,7 +317,7 @@ export function withFoundPlace(
   found: { lat: number | null; lng: number | null; address: string },
 ): DemoData {
   const access = placeAccess(kind);
-  const now = access.people(data).find((x) => x.id === personId)?.place;
+  const now = access.people(data, jstDate(Date.now())).find((x) => x.id === personId)?.place;
   if (!now || hasLocation(now)) return data;
   if (now.address !== from.address || now.postalCode !== from.postalCode) return data;
   const fillAddress = now.address.trim() === '' && found.address.trim() !== '';

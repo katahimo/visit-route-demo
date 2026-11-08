@@ -40,7 +40,7 @@ export function CancelVisitPanel({
             <WithIcon icon={Ban}>取り消す</WithIcon>
           </button>
           <button type="button" className="btn" onClick={onClose}>
-            やめる
+            閉じる
           </button>
         </>
       }

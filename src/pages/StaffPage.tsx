@@ -37,8 +37,7 @@ export default function StaffPage() {
   const lead = useIntro('staff', `${terms.staff}の勤務・特性・条件を決めます`, peopleIntro('staff'));
   // 機能の入り切り（ADR-0028）：退職・担当替えを切れば振り直しの欄を出さない（最終勤務日の値は事実なので一覧の「最終」の印は残す）
   const offboardOn = useFeature('offboard');
-  // 名簿の欄（Excel・CSV。ADR-0068）。Excel の入出力を切っていれば出さない（ADR-0028 の excel）
-  const excelOn = useFeature('excel');
+  // 名簿の欄（Excel・CSV。ADR-0068）。いつも出す（ADR-0106）
   // 一覧の列は名前・勤務日・勤務時間の3列。入は表の上の「くわしい列」で専門の列を足せる（PRD D385・D394）
   const { detailed } = useDetailColumns('staff');
   const cols = staffColumns(detailed);
@@ -112,9 +111,7 @@ export default function StaffPage() {
         lead={lead}
         actions={
           <>
-            {excelOn && (
-              <RosterButton open={rosterOpen} onToggle={() => setRosterOpen((o) => !o)} controls={rosterId} />
-            )}
+            <RosterButton open={rosterOpen} onToggle={() => setRosterOpen((o) => !o)} controls={rosterId} />
             <Link to="/staff/new" className="btn btn-primary" data-testid="staff-add">
               <WithIcon icon={Plus}>{terms.staff}を追加</WithIcon>
             </Link>
@@ -122,15 +119,13 @@ export default function StaffPage() {
         }
       />
 
-      {excelOn && (
-        <RosterCard
-          kind="staff"
-          id={rosterId}
-          open={rosterOpen}
-          onClose={() => setRosterOpen(false)}
-          onPlace={autoPlace.onPlace}
-        />
-      )}
+      <RosterCard
+        kind="staff"
+        id={rosterId}
+        open={rosterOpen}
+        onClose={() => setRosterOpen(false)}
+        onPlace={autoPlace.onPlace}
+      />
 
       {offboardOn && leaving.length > 0 && <StaffLeavingCard leaving={leaving} terms={terms} onOpen={setOffboardFor} />}
 

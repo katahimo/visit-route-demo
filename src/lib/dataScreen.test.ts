@@ -7,6 +7,7 @@ import {
   otherFormSkippedText,
   otherOrgOf,
   rosterConfirmBody,
+  rosterDefaultHoursNote,
   rosterDoneText,
   rosterFileName,
   rosterHasChanges,
@@ -20,6 +21,7 @@ import {
   workbookConfirmBody,
   workbookCountsText,
 } from './dataScreen';
+import { applyTemplate } from './features';
 import { tidyMonthLabel } from './tidy';
 
 describe('keepNote・keptSuffix（1世代の控えの文）', () => {
@@ -132,9 +134,35 @@ describe('名簿の読み込みの文', () => {
       rosterConfirmBody({ ...base, autoPlace: true })
         .split('\n')
         .at(-1),
-    ).toBe('読み込んだあと、住所から地図の位置を探します（住所を郵便番号の検索と国土地理院の地図の検索に使います）');
-    expect(rosterConfirmBody({ ...base, autoPlace: false })).not.toContain('地図の位置を探します');
-    expect(rosterConfirmBody(base)).not.toContain('地図の位置を探します');
+    ).toBe('読み込んだあと、住所から緯度・経度を探します（住所を郵便番号の検索と国土地理院の地図の検索に使います）');
+    expect(rosterConfirmBody({ ...base, autoPlace: false })).not.toContain('緯度・経度を探します');
+    expect(rosterConfirmBody(base)).not.toContain('緯度・経度を探します');
+  });
+  it('勤務の列が無く既定にした人がいれば、単発の予約のときだけ1文を足す（PRD D428。ADR-0095）', () => {
+    const f = applyTemplate('oneOff');
+    const note = rosterDefaultHoursNote({ names: ['A', 'B'], features: f, staffTerm: 'スタッフ' });
+    expect(note).toBe(
+      '勤務する曜日・時間のどれかが空の2人は、空の所を既定（毎日 7:00〜22:00）にしました。スタッフの画面の勤務時間で直せます',
+    );
+    expect(rosterDefaultHoursNote({ names: [], features: f, staffTerm: 'スタッフ' })).toBeNull();
+    expect(
+      rosterDefaultHoursNote({ names: ['A'], features: applyTemplate('basic'), staffTerm: 'スタッフ' }),
+    ).toBeNull();
+    const base = {
+      warning: null,
+      fileName: 'a.csv',
+      term: 'スタッフ',
+      how: '追加・更新',
+      summary: '追加 2人',
+      source: { format: 'csv', encoding: 'UTF-8' } as const,
+      empty: true,
+      keep: { kept: true, why: null },
+    };
+    expect(
+      rosterConfirmBody({ ...base, hoursNote: note })
+        .split('\n')
+        .at(-1),
+    ).toBe(note);
   });
   it('rosterIsEmpty：その一覧が0人か', () => {
     const d = createDemoData('2026-10-13');
@@ -173,6 +201,27 @@ describe('名簿の読み込みの文', () => {
       '追加 1人',
     ]);
     expect(otherFormSkippedText({ label: '顧客台帳', skippedColumns: [] })).toBe('読まなかった列：なし');
+  });
+  it('職員台帳で選択肢を足すなら、読まなかった列の次に足す選択肢を出す（PRD D443）', () => {
+    const body = rosterConfirmBody({
+      warning: null,
+      fileName: 'a.csv',
+      term: 'スタッフ',
+      how: '追加・更新',
+      summary: '追加 1人',
+      source: { format: 'csv', encoding: 'Shift_JIS' },
+      otherForm: {
+        label: '職員台帳',
+        skippedColumns: [],
+        addedOptions: ['資格（准看護師）', '研修（ホームヘルパー2級）'],
+      },
+      empty: false,
+      keep: { kept: true, why: null },
+    });
+    expect(body.split('\n').slice(1, 3)).toEqual([
+      '読まなかった列：なし',
+      '足す選択肢：資格（准看護師）・研修（ホームヘルパー2級）',
+    ]);
   });
   it('読み込んだあとの知らせ：最終勤務日の入った人がいれば添え、控えを残せなければ理由', () => {
     const keep = { kept: true, why: null };
@@ -215,16 +264,11 @@ describe('別の事業所の Excel（ADR-0006）', () => {
     expect(otherOrgOf(org('みどり訪問'), org('あおば訪問'))).toEqual({ current: 'みどり訪問', read: 'あおば訪問' });
   });
 
-  it('withoutOrgState：伝えた内容・振り直し・組み方の標準の記録を外し、ほかは変えない', () => {
+  it('withoutOrgState：伝えた内容・振り直しを外し、ほかは変えない', () => {
     const d = createDemoData('2026-10-01');
-    const withState = {
-      ...d,
-      standard: { at: 1, presetId: d.presets[0]!.id, from: '2026-10-05', weeks: 1 },
-    };
-    const r = withoutOrgState(withState);
+    const r = withoutOrgState(d);
     expect(r.snapshots).toEqual({});
     expect(r.reassigns).toEqual({});
-    expect(r.standard).toBeUndefined();
     expect(r.visits).toBe(d.visits);
     expect(r.staff).toBe(d.staff);
   });

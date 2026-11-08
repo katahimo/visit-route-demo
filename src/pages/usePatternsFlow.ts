@@ -99,8 +99,8 @@ export function usePatternsFlow({
       const { pattern: p, auto } = r;
       toast(
         p.usualStaffId
-          ? `繰り返しを足しました（担当：${staffName(p.usualStaffId)}）`
-          : `繰り返しを足しました（${auto ? '担当を自動で組みます' : '担当なし'}）`,
+          ? `繰り返しを追加しました（担当：${staffName(p.usualStaffId)}）`
+          : `繰り返しを追加しました（${auto ? '担当を自動で組みます' : '担当なし'}）`,
       );
       return;
     }

@@ -282,7 +282,7 @@ async function empties(page) {
   await we.waitFor({ timeout: 10000 });
   const wt = await we.innerText();
   check(/この週には訪問がありません/.test(wt), '週：なぜ空か', wt);
-  // 空の画面のボタンは日の予定（訪問を足す）だけ。進み具合の帯の「担当を AI で組む」も出さない
+  // 空の画面のボタンは日の予定（訪問を追加）だけ。進み具合の帯の「担当を AI で組む」も出さない
   const weBtns = await we.locator('.btn').evaluateAll((els) => els.map((e) => e.dataset.testid));
   check(JSON.stringify(weBtns) === JSON.stringify(['empty-next-day']), '週：空の画面のボタンは日の予定だけ', {
     weBtns,
@@ -301,13 +301,13 @@ async function empties(page) {
   const dayLabel = await day.innerText();
   await day.click();
   await page.waitForURL(/#\/plan/, { timeout: 10000 });
-  check(hashOf(page).startsWith('#/plan'), '週の日の予定のボタンで日の予定（訪問を足す）', dayLabel);
+  check(hashOf(page).startsWith('#/plan'), '週の日の予定のボタンで日の予定（訪問を追加）', dayLabel);
   // 勤務の見込み：訪問の無い月
   await open(page, `/workload?ym=${YM}`, '[data-testid="work-empty"]');
   const wk = page.getByTestId('work-empty');
   const wkt = await wk.innerText();
   check(/この月には訪問がありません/.test(wkt), '勤務の見込み：なぜ空か', wkt);
-  check((await wk.getByTestId('empty-next-day').count()) === 1, '勤務の見込み：日の予定で訪問を足すへのボタン');
+  check((await wk.getByTestId('empty-next-day').count()) === 1, '勤務の見込み：日の予定で訪問を追加へのボタン');
   check((await wk.locator('.btn-primary').count()) === 1, '勤務の見込み：次の一手が主ボタン');
   await page.screenshot({ path: path.join(OUT_DIR, 'workload-empty.png') });
   // 比較：訪問の無い日（明日。週の ?d= で選んでいる日付を明日にし、読み直さずに比較の画面へ）
@@ -321,7 +321,7 @@ async function empties(page) {
   check(/この日には訪問がありません/.test(cet), '比較：なぜ空か', cet);
   await page.screenshot({ path: path.join(OUT_DIR, 'compare-empty.png') });
   const cday = page.getByTestId('compare-empty').getByTestId('empty-next-day');
-  check((await cday.count()) === 1, '比較：［日の予定で訪問を足す］');
+  check((await cday.count()) === 1, '比較：［日の予定で訪問を追加］');
   await cday.click();
   await page.waitForURL(/#\/plan/, { timeout: 10000 });
   check(hashOf(page).startsWith('#/plan'), '比較の空の画面のボタンで日の予定へ');
@@ -676,7 +676,7 @@ async function scoreColor(page) {
 // ---- タッチ・390px・印刷 ----
 async function mobile(browser) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
-  // 初回の案内ツアーを見た扱いにする（PRD D193）
+  // 最初の2問を出さない扱いにする（PRD D379）
   await skipTour(ctx);
   const page = await ctx.newPage();
   await page.clock.setFixedTime(NOW);

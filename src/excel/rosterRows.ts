@@ -5,20 +5,25 @@ import type { DemoData, ImportError, RosterKind } from '../contracts/data';
 import { type Client, type ClientStage, type Staff, stageOfLegacy, type Terms } from '../contracts/documents';
 import type { Condition, Traits } from '../contracts/rules';
 import { STAGE_LABELS, stageFlags } from '../lib/clientStage';
+import { withTravel } from '../lib/clientTravel';
 import { nameKey } from '../lib/common';
+import { defaultStaffHours } from '../lib/staffDefaultHours';
 import {
   CLIENT_ALLOWED_COL,
   CLIENT_COLS,
   CLIENT_KANA_COL,
+  CLIENT_PLACE2_COLS,
   CLIENT_POSTAL_COL,
   CLIENT_RULE_COLS,
   CLIENT_STAGE_COLS,
   CLIENT_TENTATIVE_COL,
+  CLIENT_TRAVEL_COLS,
   STAFF_COLS,
   STAFF_EMAIL_COL,
   STAFF_ICON_COL,
   STAFF_LAST_DAY_COL,
 } from './layout';
+import { readPlace2, sameAddress, withoutPlace2Pin } from './place2Cols';
 import {
   checkGivenId,
   Errors,
@@ -31,6 +36,7 @@ import {
   readPerson,
   readPostal,
   readStaffIcon,
+  readTravelMinutes,
   Sheet,
   sheetMsg,
   uniqueName,
@@ -99,6 +105,8 @@ export interface Read<P> {
   person: P;
   /** 今のデータの人（無ければ新しい人） */
   cur: P | undefined;
+  /** 新しい〈スタッフ〉で、勤務する曜日・勤務開始・勤務終了のどれかの列が無い（か空）ため、その所を使い方の既定にした（PRD D428） */
+  hoursDefaulted?: boolean;
 }
 
 /** 名簿の読み込みの状態（シート・エラーの蓄積・項目の列・いまある ID） */
@@ -135,6 +143,13 @@ function pick<T>(ctx: RosterCtx, r: Row, h: string, read: () => T, keep: T): T {
   if (!ctx.sheet.has(h)) return keep;
   return ctx.keepBlank.has(h) && r.text(h) === '' ? keep : read();
 }
+
+/**
+ * 〈利用者さん〉の住所が変わった人の、空のセルで今のままにする位置の値（緯度・経度・郵便番号）：今の値でなく空にする
+ * （古い住所の位置を新しい住所に付けない。住所から位置を入れ直す）。住所が同じ（空白・全角半角の違いは同じ）なら今の値
+ */
+const sameAddressOr = <T>(address: string, cur: { address: string } | undefined, keep: T, blank: T): T =>
+  cur === undefined || sameAddress(cur.address, address) ? keep : blank;
 
 /**
  * 新しい人の空のセルは、画面で足すときと同じ既定値（keep）にする（テンプレートに名前だけ書いて読めるように。ADR-0092）。
@@ -175,6 +190,8 @@ export function openRoster(
           CLIENT_TENTATIVE_COL,
           CLIENT_KANA_COL,
           CLIENT_POSTAL_COL,
+          ...Object.values(CLIENT_TRAVEL_COLS),
+          ...Object.values(CLIENT_PLACE2_COLS),
           CLIENT_ALLOWED_COL,
           ...Object.values(CLIENT_RULE_COLS),
           ...Object.values(CLIENT_STAGE_COLS),
@@ -251,6 +268,9 @@ export function readStaffRows(ctx: RosterCtx, rows: Row[], match: (r: Row) => Ma
       },
       cur?.travelMode ?? 'DRIVE',
     );
+    const dflt = defaultStaffHours(ctx.base.org.features);
+    const hoursDefaulted =
+      isNew && [C.workDays, C.shiftStart, C.shiftEnd].some((h) => !ctx.sheet.has(h) || r.text(h) === '');
     const workDays = pickNew(
       ctx,
       r,
@@ -261,17 +281,24 @@ export function readStaffRows(ctx: RosterCtx, rows: Row[], match: (r: Row) => Ma
         if (v === null) r.err(C.workDays, '曜日は「月火水木金」のように書いてください');
         return v ?? [];
       },
-      cur?.workDays ?? [1, 2, 3, 4, 5],
+      cur?.workDays ?? dflt.workDays,
     );
     const shiftStart = pickNew(
       ctx,
       r,
       C.shiftStart,
       isNew,
-      () => r.time(C.shiftStart) ?? '09:00',
-      cur?.shiftStart ?? '09:00',
+      () => r.time(C.shiftStart) ?? dflt.shiftStart,
+      cur?.shiftStart ?? dflt.shiftStart,
     );
-    const shiftEnd = pickNew(ctx, r, C.shiftEnd, isNew, () => r.time(C.shiftEnd) ?? '18:00', cur?.shiftEnd ?? '18:00');
+    const shiftEnd = pickNew(
+      ctx,
+      r,
+      C.shiftEnd,
+      isNew,
+      () => r.time(C.shiftEnd) ?? dflt.shiftEnd,
+      cur?.shiftEnd ?? dflt.shiftEnd,
+    );
     // 新しい人の「利用中」が空なら利用中にする（名簿だけ。全体の読み込みは空＝休止のまま）
     const active = pick(
       ctx,
@@ -311,7 +338,7 @@ export function readStaffRows(ctx: RosterCtx, rows: Row[], match: (r: Row) => Ma
       email,
       icon,
     };
-    out.push({ row: r, person, cur });
+    out.push({ row: r, person, cur, hoursDefaulted });
   }
   return out;
 }
@@ -377,12 +404,49 @@ export function readClientRows(ctx: RosterCtx, rows: Row[], match: (r: Row) => M
     const active = pickNew(ctx, r, C.active, cur === undefined, () => r.yes(C.active), cur?.active ?? true);
     const tentative = pick(ctx, r, CLIENT_TENTATIVE_COL, () => r.yes(CLIENT_TENTATIVE_COL), cur?.tentative ?? false);
     const stage = readStage(ctx, r, cur, { active, tentative });
+    const address = pick(ctx, r, C.address, () => r.optional(C.address, 200), cur?.place.address ?? '');
     const place = {
-      address: pick(ctx, r, C.address, () => r.optional(C.address, 200), cur?.place.address ?? ''),
-      lat: pick(ctx, r, C.lat, () => r.num(C.lat, { min: -90, max: 90 }) ?? null, cur?.place.lat ?? null),
-      lng: pick(ctx, r, C.lng, () => r.num(C.lng, { min: -180, max: 180 }) ?? null, cur?.place.lng ?? null),
-      postalCode: pick(ctx, r, CLIENT_POSTAL_COL, () => readPostal(r) ?? '', cur?.place.postalCode ?? ''),
+      address,
+      lat: pick(
+        ctx,
+        r,
+        C.lat,
+        () => r.num(C.lat, { min: -90, max: 90 }) ?? null,
+        sameAddressOr(address, cur?.place, cur?.place.lat ?? null, null),
+      ),
+      lng: pick(
+        ctx,
+        r,
+        C.lng,
+        () => r.num(C.lng, { min: -180, max: 180 }) ?? null,
+        sameAddressOr(address, cur?.place, cur?.place.lng ?? null, null),
+      ),
+      postalCode: pick(
+        ctx,
+        r,
+        CLIENT_POSTAL_COL,
+        () => readPostal(r) ?? '',
+        sameAddressOr(address, cur?.place, cur?.place.postalCode ?? '', ''),
+      ),
     };
+    // 移動時間（片道・分）・遠方（出張）（ADR-0096）：列が無ければ今のまま
+    const travelMinutes = pick(
+      ctx,
+      r,
+      CLIENT_TRAVEL_COLS.minutes,
+      () => readTravelMinutes(r) ?? null,
+      cur?.place.travelMinutes ?? null,
+    );
+    const farTrip = pick(
+      ctx,
+      r,
+      CLIENT_TRAVEL_COLS.farTrip,
+      () => r.yes(CLIENT_TRAVEL_COLS.farTrip),
+      cur?.place.farTrip === true,
+    );
+    // 期間つきの訪問先（住所2。ADR-0105）：列が無ければ今のまま。「住所2」が空なら無し（読めなければ誤りを残して今のまま）
+    const read2 = ctx.sheet.has(CLIENT_PLACE2_COLS.address) ? readPlace2(r, cur?.place2) : null;
+    const place2 = read2 === null ? cur?.place2 : read2;
     const allowedStaffIds = pick(
       ctx,
       r,
@@ -405,7 +469,8 @@ export function readClientRows(ctx: RosterCtx, rows: Row[], match: (r: Row) => M
       id: m.id,
       displayName: m.name,
       kana: text(CLIENT_KANA_COL, 50, cur?.kana),
-      place: { ...(cur?.place ?? {}), ...place },
+      // 以前の取り込みで住所に入った住所2 の位置は外す（withoutPlace2Pin）
+      place: withTravel({ ...(cur?.place ?? {}), ...withoutPlace2Pin(place, place2) }, travelMinutes, farTrip),
       note: text(C.note, 500, cur?.note),
       color,
       ...p,
@@ -425,6 +490,8 @@ export function readClientRows(ctx: RosterCtx, rows: Row[], match: (r: Row) => M
         email: referrerEmail,
       },
     };
+    if (place2 === undefined) delete person.place2;
+    else person.place2 = place2;
     out.push({ row: r, person, cur });
   }
   return out;
