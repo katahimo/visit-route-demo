@@ -1,11 +1,14 @@
 // 月の画面の「休みを入れる」（希望休のまとめ入力。PRD D69）：〈スタッフ〉を選んでいるときだけ。日のマスを押すと希望休を付け外し、
-// 結果の知らせ（読み上げ）を残す。担当は変えない（振り直しは日の画面で利用者が押す。ADR-0011）
+// 結果の知らせ（読み上げ）を残す。付けた日にその人の訪問があれば、エキスパート機能が切なら休みの人の訪問を自動で組み直す
+// （読み込みのあとの自動の組みと同じ。ADR-0111）。入なら担当は変えない（振り直しは日の画面で利用者が押す。ADR-0011）
 import { type RefObject, useCallback, useEffect, useRef, useState } from 'react';
 import type { DemoData } from '../contracts/data';
 import type { Staff } from '../contracts/documents';
+import { rearrangesOffDay } from '../lib/autoArrange';
 import { newId } from '../lib/common';
 import type { StaffDay } from '../lib/month';
 import { type MonthFocus, offNoteOf } from '../lib/monthView';
+import { arrangeAfterImport } from '../lib/placeRunner';
 import { offDayState, toggleRequestedOff } from '../lib/requestedOff';
 
 export type OffNote = { date: string; text: string; warn: boolean };
@@ -44,8 +47,8 @@ export function useMonthOff(x: {
   /** 「休みを入れる」で選んでいる〈スタッフ〉（休みを入れるモードでなければ null） */
   const offStaffId = x.requestedOn && offMode && focus.kind === 'staff' ? focus.id : null;
   /**
-   * 希望休を付け外しする（PRD D69）。担当は変えない（振り直しは日の画面で利用者が押す。ADR-0011）。
-   * その日のその人に訪問があれば、欄に注意を残す
+   * 希望休を付け外しする（PRD D69）。その日のその人に訪問があれば、切なら休みの人の訪問を自動で組み直し（ADR-0111）、
+   * 入なら担当は変えず欄に注意を残す
    */
   const toggleOff = useCallback(
     (d: string) => {
@@ -53,19 +56,25 @@ export function useMonthOff(x: {
       // 結果は直前のデータ（描画を待たずに続けて押しても、前の押した分を入れたデータ）から出す。
       // 同じ規則で update でも付け外しするので、文と実際の結果が食い違わない
       const id = newId('a');
-      const res = toggleRequestedOff(dataRef.current, offStaffId, d, today, id);
+      const before = dataRef.current;
+      const res = toggleRequestedOff(before, offStaffId, d, today, id);
       if (res.result === 'unchanged') return;
       dataRef.current = res.data;
       update((y) => toggleRequestedOff(y, offStaffId, d, today, id).data, '希望休');
+      const count = staffDaysRef.current.get(d)?.count ?? 0;
+      const rearrange = res.result === 'added' && count > 0 && rearrangesOffDay(res.data, d, today);
       setOffNote(
         offNoteOf({
           result: res.result,
           date: d,
           name: staffById.get(offStaffId)?.name ?? '',
-          count: staffDaysRef.current.get(d)?.count ?? 0,
+          count,
           suddenOn,
+          rearrange,
         }),
       );
+      // 休みの人の訪問・担当なしを自動で組む（伝えた日の休みの人も。ADR-0111）
+      if (rearrange) arrangeAfterImport(before, res.data, today);
     },
     [offStaffId, today, update, staffById, suddenOn, dataRef],
   );

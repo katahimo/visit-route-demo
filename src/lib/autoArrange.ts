@@ -1,6 +1,6 @@
 // 自動の組み（ADR-0072 第2段。PRD D372〜D376・D403・D405）の計算：欄の保存・要対応の帯の［要対応を組む］で、担当なしの訪問を自動で組む。
 // エキスパート機能が切なら、間に合わない・重なり・休みの人の訪問（帯の種類。lib/bandIssues）も担当・開始を組み直してよい対象にする（ADR-0089。
-// 伝えた日の訪問は除く。組み直しても要対応が減らない訪問は元の担当のまま）。
+// 伝えた日の訪問は除く。ただし休みの人の訪問は伝えた日でも組み直し、「変更あり」に出す。ADR-0111。組み直しても要対応が減らない訪問は元の担当のまま）。
 // DemoData を書き換えず、乱数と今の時刻を使わない（今日は引数、seed は data.seed。同じ入力なら同じ結果）。ただし帯の種類の訪問（bandIssueIds）は
 // アプリで1つの日ごとの覚え（lib/dayStatuses の dayStatusMemo）から引くので、覚えを書き足す（結果は覚えの有無で変わらない）。
 // 組む範囲は今日（繰り返しの開始日が先ならその日）から翌月末まで。ほかの訪問の担当は（手でも AI でも標準でも）ピンと同じに固定して動かさず、伝えた日は組まない（expert 切は伝えた日も担当なしだけ埋める。skipsToldDays）。
@@ -13,10 +13,10 @@ import { addDays, hhmmToMinutes } from '../domain/time';
 import { scheduleRoute } from '../matching';
 import { findVisit, putVisits, visitsOn } from '../patterns';
 import { defaultIterations } from '../solver';
-import { dayBandIssues } from './bandIssues';
+import { dayBandIssues, type VisitBandKind } from './bandIssues';
 import { own } from './common';
 import { activeDayVisits, clockOf, dayProblemOf } from './dayPlan';
-import { bandIssueIds } from './dayStatuses';
+import { bandIssueKinds } from './dayStatuses';
 import { type DayInputs, dayInputsOf, proposalDayFresh } from './monthBatch';
 import { showConfirmStep } from './settledView';
 import { monthDates, ymOf } from './ym';
@@ -57,27 +57,40 @@ export function isFree(data: Pick<DemoData, 'snapshots' | 'org'>, v: Visit, toda
 export const rearrangesIssues = (data: Pick<DemoData, 'org'>): boolean => !skipsToldDays(data);
 
 /**
- * 組み直してよい担当のある訪問か（帯の種類に当たるかは呼ぶ側が見る）：担当あり・ピンなし・取り消しでない・今日以降・その日に伝えた記録が無い
- * （伝えた日の訪問は、伝えた内容を黙って変えないので動かさない）。エキスパート機能が入なら常に偽
+ * 希望休を付けたあとに自動で組み直すか（PRD D69。ADR-0111）：エキスパート機能が切で、その日が自動の組みの範囲（今日〜翌月末）。
+ * 組み直すのは、その日にその人の訪問があるとき（呼ぶ側が見る）
  */
-export function isMovable(data: Pick<DemoData, 'snapshots' | 'org'>, v: Visit, today: string): boolean {
-  return (
-    rearrangesIssues(data) &&
-    v.staffId !== null &&
-    !v.pinned &&
-    !v.cancelled &&
-    v.date >= today &&
-    !own(data.snapshots, v.date)
-  );
+export const rearrangesOffDay = (data: Pick<DemoData, 'org'>, date: string, today: string): boolean =>
+  rearrangesIssues(data) && date >= today && date <= autoRange(today).to;
+
+/** 伝えた日を見る前の、組み直してよい担当のある訪問か：担当あり・ピンなし・取り消しでない・今日以降（エキスパート機能が入なら偽） */
+const movableAnyDay = (data: Pick<DemoData, 'org'>, v: Visit, today: string): boolean =>
+  rearrangesIssues(data) && v.staffId !== null && !v.pinned && !v.cancelled && v.date >= today;
+
+/**
+ * 組み直してよい担当のある訪問か（帯の種類に当たるかは呼ぶ側が見る。kind はその訪問の帯の種類）：担当あり・ピンなし・取り消しでない・
+ * 今日以降・その日に伝えた記録が無い（伝えた日の訪問は、伝えた内容を黙って変えないので動かさない）。ただし休みの人（kind が off）の
+ * 訪問は伝えた日でも組み直してよい（休む人は行けないので伝えた内容はもう守れない。自動で組んだ日は決まった扱いになるので、あとから
+ * 入れた休みを組み直せなくなる。結果は伝えた内容と違うので「変更あり」に出る。ADR-0111）。エキスパート機能が入なら常に偽
+ */
+export function isMovable(
+  data: Pick<DemoData, 'snapshots' | 'org'>,
+  v: Visit,
+  today: string,
+  kind?: VisitBandKind,
+): boolean {
+  return movableAnyDay(data, v, today) && (kind === 'off' || !own(data.snapshots, v.date));
 }
 
-/** 日付 → 帯の種類の訪問の ID（lib/dayStatuses の bandIssueIds）。無い日は空 */
-type IssueIds = ReadonlyMap<string, ReadonlySet<string>>;
-const NO_IDS: ReadonlySet<string> = new Set();
+/** 日付 → 帯の種類の訪問（訪問ID → 種類。lib/dayStatuses の bandIssueKinds）。無い日は空 */
+type IssueIds = ReadonlyMap<string, ReadonlyMap<string, VisitBandKind>>;
+const NO_IDS: ReadonlyMap<string, VisitBandKind> = new Map();
 
 /** 組む対象か：担当なし（isFree）か、帯の種類に当たる組み直してよい訪問（isMovable） */
-const isTarget = (data: TargetData, v: Visit, today: string, issues: ReadonlySet<string>): boolean =>
-  isFree(data, v, today) || (issues.has(v.id) && isMovable(data, v, today));
+const isTarget = (data: TargetData, v: Visit, today: string, issues: ReadonlyMap<string, VisitBandKind>): boolean => {
+  const kind = issues.get(v.id);
+  return isFree(data, v, today) || (kind !== undefined && isMovable(data, v, today, kind));
+};
 
 /** days の日ごとに、対象の訪問を集める（pick が真の訪問。対象が無い日は出さない） */
 function collect(
@@ -111,7 +124,7 @@ export function rangeDays(today: string, range: DateRange = autoRange(today)): s
 
 /** 要対応の訪問も組み直すなら days の日ごとの帯の種類の訪問、組み直さないなら空 */
 const issuesIn = (data: DemoData, days: readonly string[]): IssueIds =>
-  rearrangesIssues(data) ? bandIssueIds(data, days) : new Map();
+  rearrangesIssues(data) ? bandIssueKinds(data, days) : new Map();
 
 /**
  * 保存で変わった日：range の日（今日より前は除く）のうち、その日の訪問（visitsOn。保存した回と計算した回）か、その日の問題の入力
@@ -174,14 +187,14 @@ export function mergeTargets(a: readonly AutoTarget[], b: readonly AutoTarget[])
 
 /**
  * targets のうち、今のデータでも組める（担当なし・ピンなし・取り消しでない・伝えていない・今日以降。切なら組み直してよい担当のある訪問も）訪問だけに絞る。
- * 担当のある訪問が今も帯の種類に当たるかは、組むとき（autoDayPlan）に確かめる
+ * 担当のある訪問が今も帯の種類に当たるか（伝えた日なら休みの人か）は、組むとき（autoDayPlan）に確かめる
  */
 export function stillTargets(data: TargetData, targets: readonly AutoTarget[], today: string): AutoTarget[] {
   const out: AutoTarget[] = [];
   for (const t of targets) {
     const want = new Set(t.ids);
     const ids = activeDayVisits(data, t.date)
-      .filter((v) => want.has(v.id) && (isFree(data, v, today) || isMovable(data, v, today)))
+      .filter((v) => want.has(v.id) && (isFree(data, v, today) || movableAnyDay(data, v, today)))
       .map((v) => v.id);
     if (ids.length > 0) out.push({ date: t.date, ids });
   }

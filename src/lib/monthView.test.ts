@@ -193,8 +193,20 @@ describe('そのほか', () => {
     expect(batchProgressValue(r({ iteration: 300 }))).toBe(3);
     expect(batchProgressValue(r({ total: 0 }))).toBe(2);
   });
-  it('offNoteOf：付けた日に訪問があれば注意（欠勤の機能が入なら「欠勤を直す」へ）', () => {
-    const base = { date: D1, name: '消防', suddenOn: true };
+  it('offNoteOf：付けた日に訪問があれば、自動で組み直すならそう書く（ADR-0111）', () => {
+    const note = offNoteOf({ date: D1, name: '消防', suddenOn: true, rearrange: true, result: 'added', count: 2 });
+    expect(note).toEqual({
+      date: D1,
+      warn: false,
+      text: '11/2 を希望休にしました。消防さんにこの日の訪問が 2件あります。ほかの人に自動で組み直します',
+    });
+    expect(offNoteOf({ date: D1, name: '消防', suddenOn: true, rearrange: true, result: 'added', count: 0 }).text).toBe(
+      '11/2 を希望休にしました',
+    );
+  });
+
+  it('offNoteOf：付けた日に訪問があれば注意（組み直さないとき。欠勤の機能が入なら「欠勤を直す」へ）', () => {
+    const base = { date: D1, name: '消防', suddenOn: true, rearrange: false };
     expect(offNoteOf({ ...base, result: 'removed', count: 3 })).toEqual({
       date: D1,
       warn: false,

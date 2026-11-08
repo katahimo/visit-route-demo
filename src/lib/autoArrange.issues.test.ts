@@ -17,6 +17,7 @@ import {
   issueTargets,
   mergeTargets,
   rearrangesIssues,
+  rearrangesOffDay,
 } from './autoArrange';
 import { dayBandIssues } from './bandIssues';
 import { dayInputsOf } from './monthBatch';
@@ -149,6 +150,47 @@ describe('要対応の訪問の組み直し（ADR-0089）', () => {
     expect(rearrangesIssues(expert)).toBe(false);
     expect(bandTargets(expert, TODAY, { from: TODAY, to: TODAY })[0]?.ids ?? []).not.toContain(C1);
     expect(autoDayPlan(expert, TODAY, [C1])).toBeNull();
+  });
+
+  it('休みの人の訪問は伝えた日（自動で組んで決まった日）でも組み直す（ADR-0111）。ピン・エキスパート入は動かさない', () => {
+    // c1 は s3 の 9:00。s3 が終日休みで、その日は決まった（伝えた）扱い
+    const base = withC1({});
+    const owner = findVisit(base, C1)!.staffId!;
+    const absence = { id: 'ab-off', staffId: owner, date: TODAY, from: null, to: null, note: '希望休' };
+    const off: DemoData = {
+      ...base,
+      absences: [...base.absences, absence],
+      snapshots: { ...base.snapshots, [TODAY]: { date: TODAY, at: 0, visits: [] } },
+    };
+    expect(dayBandIssues(off, TODAY).get(C1)).toBe('off');
+    expect(isMovable(off, findVisit(off, C1)!, TODAY, 'off')).toBe(true);
+    expect(isMovable(off, findVisit(off, C1)!, TODAY)).toBe(false);
+    expect(bandTargets(off, TODAY, { from: TODAY, to: TODAY })[0]?.ids).toContain(C1);
+    const r = arrange(off, [C1])!;
+    expect(r.written).toBeGreaterThan(0);
+    const moved = findVisit(r.data, C1)!;
+    expect(moved.staffId).not.toBe(owner);
+    expect(moved.staffId).not.toBeNull();
+    expect(dayBandIssues(r.data, TODAY).has(C1)).toBe(false);
+    // 伝えた記録はそのまま（違いは「変更あり」に出る）
+    expect(r.data.snapshots).toBe(off.snapshots);
+    // 伝えた日の、休みの人でない要対応（間に合わない）は今までどおり動かさない
+    const lateTold = { ...late, snapshots: off.snapshots };
+    expect(bandTargets(lateTold, TODAY, { from: TODAY, to: TODAY })[0]?.ids ?? []).not.toContain(C1);
+    // ピン・エキスパート入は動かさない
+    const pinned = { ...off, visits: putVisits(off.visits, [{ ...findVisit(off, C1)!, pinned: true }]) };
+    expect(autoDayPlan(pinned, TODAY, [C1])).toBeNull();
+    const expert = { ...off, org: { ...off.org, features: { expert: true } } };
+    expect(bandTargets(expert, TODAY, { from: TODAY, to: TODAY })[0]?.ids ?? []).not.toContain(C1);
+  });
+
+  it('rearrangesOffDay：希望休のあとに組み直すのは切で、今日〜翌月末の日だけ（ADR-0111）', () => {
+    expect(rearrangesOffDay(late, TODAY, TODAY)).toBe(true);
+    expect(rearrangesOffDay(late, '2026-11-30', TODAY)).toBe(true);
+    expect(rearrangesOffDay(late, '2026-12-01', TODAY)).toBe(false);
+    expect(rearrangesOffDay(late, '2026-10-20', TODAY)).toBe(false);
+    const expert = { ...late, org: { ...late.org, features: { expert: true } } };
+    expect(rearrangesOffDay(expert, TODAY, TODAY)).toBe(false);
   });
 
   it('changedDays：保存で訪問か問題の入力が変わった日だけ（保存のあとに足す要対応はその日だけ）', () => {
