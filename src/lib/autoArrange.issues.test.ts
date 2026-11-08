@@ -16,7 +16,9 @@ import {
   isMovable,
   issueTargets,
   mergeTargets,
+  offDayTargets,
   rearrangesIssues,
+  stillTargets,
 } from './autoArrange';
 import { dayBandIssues } from './bandIssues';
 import { dayInputsOf } from './monthBatch';
@@ -149,6 +151,92 @@ describe('要対応の訪問の組み直し（ADR-0089）', () => {
     expect(rearrangesIssues(expert)).toBe(false);
     expect(bandTargets(expert, TODAY, { from: TODAY, to: TODAY })[0]?.ids ?? []).not.toContain(C1);
     expect(autoDayPlan(expert, TODAY, [C1])).toBeNull();
+  });
+
+  it('休みの人の訪問は伝えた日（自動で組んで決まった日）でも組み直す（ADR-0111）。ピン・エキスパート入は動かさない', () => {
+    // c1 は s3 の 9:00。s3 が終日休みで、その日は決まった（伝えた）扱い
+    const base = withC1({});
+    const owner = findVisit(base, C1)!.staffId!;
+    const absence = { id: 'ab-off', staffId: owner, date: TODAY, from: null, to: null, note: '希望休' };
+    const off: DemoData = {
+      ...base,
+      absences: [...base.absences, absence],
+      snapshots: { ...base.snapshots, [TODAY]: { date: TODAY, at: 0, visits: [] } },
+    };
+    expect(dayBandIssues(off, TODAY).get(C1)).toBe('off');
+    expect(isMovable(off, findVisit(off, C1)!, TODAY, 'off')).toBe(true);
+    expect(isMovable(off, findVisit(off, C1)!, TODAY)).toBe(false);
+    expect(bandTargets(off, TODAY, { from: TODAY, to: TODAY })[0]?.ids).toContain(C1);
+    const r = arrange(off, [C1])!;
+    expect(r.written).toBeGreaterThan(0);
+    const moved = findVisit(r.data, C1)!;
+    expect(moved.staffId).not.toBe(owner);
+    expect(moved.staffId).not.toBeNull();
+    expect(dayBandIssues(r.data, TODAY).has(C1)).toBe(false);
+    // 伝えた記録はそのまま（違いは「変更あり」に出る）
+    expect(r.data.snapshots).toBe(off.snapshots);
+    // 伝えた日の、休みの人でない要対応（間に合わない）は今までどおり動かさない
+    const lateTold = { ...late, snapshots: off.snapshots };
+    expect(bandTargets(lateTold, TODAY, { from: TODAY, to: TODAY })[0]?.ids ?? []).not.toContain(C1);
+    // ピン・エキスパート入は動かさない
+    const pinned = { ...off, visits: putVisits(off.visits, [{ ...findVisit(off, C1)!, pinned: true }]) };
+    expect(autoDayPlan(pinned, TODAY, [C1])).toBeNull();
+    const expert = { ...off, org: { ...off.org, features: { expert: true } } };
+    expect(bandTargets(expert, TODAY, { from: TODAY, to: TODAY })[0]?.ids ?? []).not.toContain(C1);
+  });
+
+  it('伝えた日の休み（時間の休み）：保存のあとの対象（issueTargets）・組む前の絞り込み（stillTargets）にも残る。伝えた日の重なりは動かさない（ADR-0111）', () => {
+    const base = withC1({});
+    const owner = findVisit(base, C1)!.staffId!;
+    const snaps = { ...base.snapshots, [TODAY]: { date: TODAY, at: 0, visits: [] } };
+    // 時間の欠勤（一部だけ休み）でも休みの人
+    const part: DemoData = {
+      ...base,
+      absences: [...base.absences, { id: 'ab-p', staffId: owner, date: TODAY, from: '08:00', to: '10:00', note: '' }],
+      snapshots: snaps,
+    };
+    // 時間の休みは「間に合わない」になるが、担当が欠勤を持つので伝えた日でも組み直す
+    expect(dayBandIssues(part, TODAY).get(C1)).toBe('late');
+    expect(isMovable(part, findVisit(part, C1)!, TODAY, 'late')).toBe(true);
+    expect(issueTargets(part, TODAY, [TODAY])[0]?.ids).toContain(C1);
+    expect(stillTargets(part, [{ date: TODAY, ids: [C1] }], TODAY)).toEqual([{ date: TODAY, ids: [C1] }]);
+    const overlap = { ...withC1({ staffId: 's1' }), snapshots: snaps };
+    const target = [...dayBandIssues(overlap, TODAY)].find(([, k]) => k === 'overlap')?.[0];
+    expect(target).toBeDefined();
+    expect(bandTargets(overlap, TODAY, { from: TODAY, to: TODAY })[0]?.ids ?? []).not.toContain(target);
+    expect(autoDayPlan(overlap, TODAY, [target!])).toBeNull();
+  });
+
+  it('offDayTargets：希望休を付けた日のその人の組み直せる休みの人の訪問だけ（切・今日〜翌月末。ピンは除く。ADR-0111）', () => {
+    const base = withC1({});
+    const owner = findVisit(base, C1)!.staffId!;
+    const offOn = (d: DemoData, date: string): DemoData => ({
+      ...d,
+      absences: [...d.absences, { id: `ab-${date}`, staffId: owner, date, from: null, to: null, note: '希望休' }],
+    });
+    const off = offOn(base, TODAY);
+    const t = offDayTargets(off, owner, TODAY, TODAY);
+    expect(t).toHaveLength(1);
+    expect(t[0]?.date).toBe(TODAY);
+    expect(t[0]?.ids).toContain(C1);
+    // ほかの人の訪問・ほかの要対応は入らない
+    for (const id of t[0]!.ids) expect(findVisit(off, id)?.staffId).toBe(owner);
+    // 付けていない人・ピンだけ・エキスパート入・範囲の外は空
+    expect(offDayTargets(off, 's99', TODAY, TODAY)).toEqual([]);
+    const pinnedAll = {
+      ...off,
+      visits: putVisits(
+        off.visits,
+        visitsOn(off, TODAY)
+          .filter((v) => v.staffId === owner)
+          .map((v) => ({ ...v, pinned: true })),
+      ),
+    };
+    expect(offDayTargets(pinnedAll, owner, TODAY, TODAY)).toEqual([]);
+    const expert = { ...off, org: { ...off.org, features: { expert: true } } };
+    expect(offDayTargets(expert, owner, TODAY, TODAY)).toEqual([]);
+    expect(offDayTargets(off, owner, TODAY, '2026-10-22')).toEqual([]);
+    expect(offDayTargets(offOn(base, '2026-12-02'), owner, '2026-12-02', TODAY)).toEqual([]);
   });
 
   it('changedDays：保存で訪問か問題の入力が変わった日だけ（保存のあとに足す要対応はその日だけ）', () => {

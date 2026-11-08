@@ -380,6 +380,28 @@ export function requestBandArrange(data: DemoData, today: string): boolean {
 }
 
 /**
+ * 希望休を付けたあとに、その日のその人の休みの人の訪問（lib/autoArrange の offDayTargets）を組む依頼を出す（PRD D446。ADR-0111）。
+ * before・after は付ける前と付けたあとのデータ。対象が無ければ出さない。依頼を出したら true
+ */
+export function requestOffArrange(
+  before: DemoData,
+  after: DemoData,
+  targets: readonly AutoTarget[],
+  today: string,
+): boolean {
+  if (targets.length === 0) return false;
+  const range = autoRange(today);
+  return autoArrange.request({
+    targets: [...targets],
+    writeUsual: false,
+    rangeTo: range.to,
+    since: before,
+    after,
+    today,
+  });
+}
+
+/**
  * 読み込み・取り込み（予約の CSV・名簿・休みのカレンダー・連絡の貼り付け）のあとに、要対応の帯の［要対応を組む］と同じ対象
  * （今日〜翌月末の担当なしと、切なら間に合わない・重なり・休みの人の訪問）を自動で組む依頼を出す（PRD D442。ADR-0108）。
  * before・after は入れる前と入れたあとのデータ（描き直される前は after を読む）。依頼を出したら true

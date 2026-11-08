@@ -240,8 +240,8 @@ export function batchProgressValue(batch: Pick<BatchRun, 'index' | 'iteration' |
 }
 
 /**
- * 希望休を付け外ししたときの知らせ（PRD D69）。付けた日にその人の訪問があれば注意（日の予定で振り直す。
- * 欠勤・キャンセルの機能が入なら「欠勤を直す」を案内する）
+ * 希望休を付け外ししたときの知らせ（PRD D69）。付けた日にその人の訪問があれば、自動で組み直す（rearrange。エキスパート機能が切。
+ * ADR-0111）ならそう書き、組み直さないなら注意（日の予定で振り直す。欠勤・キャンセルの機能が入なら「欠勤を直す」を案内する）
  */
 export function offNoteOf(x: {
   result: 'added' | 'removed';
@@ -249,17 +249,19 @@ export function offNoteOf(x: {
   name: string;
   count: number;
   suddenOn: boolean;
+  rearrange: boolean;
 }): { date: string; text: string; warn: boolean } {
   if (x.result === 'removed')
     return { date: x.date, warn: false, text: `${mdText(x.date)} の${REQUESTED_OFF_NOTE}を外しました` };
   const n = x.count;
+  const done = `${mdText(x.date)} を${REQUESTED_OFF_NOTE}にしました`;
+  if (n === 0) return { date: x.date, warn: false, text: done };
+  const has = `${done}。${x.name}さんにこの日の訪問が ${n}件あります。`;
+  if (x.rearrange) return { date: x.date, warn: false, text: `${has}ほかの人に自動で組み直します` };
   return {
     date: x.date,
-    warn: n > 0,
-    text:
-      n > 0
-        ? `${mdText(x.date)} を${REQUESTED_OFF_NOTE}にしました。${x.name}さんにこの日の訪問が ${n}件あります。${x.suddenOn ? '日の予定のその人の列の「欠勤を直す」から振り直してください' : '日の予定で担当を振り直してください'}`
-        : `${mdText(x.date)} を${REQUESTED_OFF_NOTE}にしました`,
+    warn: true,
+    text: `${has}${x.suddenOn ? '日の予定のその人の列の「欠勤を直す」から振り直してください' : '日の予定で担当を振り直してください'}`,
   };
 }
 

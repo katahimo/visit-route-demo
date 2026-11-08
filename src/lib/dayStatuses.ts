@@ -6,7 +6,7 @@ import type { Visit } from '../contracts/documents';
 import type { Problem } from '../contracts/problem';
 import type { CompileInput } from '../matching';
 import { visitsOn } from '../patterns';
-import { visitBandKind } from './bandIssues';
+import { type VisitBandKind, visitBandKind } from './bandIssues';
 import { own } from './common';
 import { dayProblemOf } from './dayPlan';
 import { type DayStatus, dayStatus } from './month';
@@ -100,18 +100,21 @@ export function compileInputOf(data: CompileInput): CompileInput {
 }
 
 /**
- * その日たちの問題と、帯の種類（担当なし・間に合わない・重なり・休みの人。lib/bandIssues）の訪問の ID（日付 → 問題・ID の集まり）。
+ * その日たちの問題と、帯の種類（担当なし・間に合わない・重なり・休みの人。lib/bandIssues）の訪問（日付 → 問題・ID の集まり・ID → 種類）。
  * 要対応の帯と同じ日ごとの状態（dayStatusMemo）から引く（自動の伝えた記録 lib/settled もこれで決める）。訪問が無い日の問題は null
  */
 export function dayBandOf(
   data: CompileInput & Pick<DemoData, 'snapshots'>,
   days: readonly string[],
-): Map<string, { problem: Problem | null; ids: Set<string> }> {
-  const out = new Map<string, { problem: Problem | null; ids: Set<string> }>();
+): Map<string, { problem: Problem | null; ids: Set<string>; kinds: Map<string, VisitBandKind> }> {
+  const out = new Map<string, { problem: Problem | null; ids: Set<string>; kinds: Map<string, VisitBandKind> }>();
   for (const [date, { status, problem }] of dayStatusMemo.statusesOf(data.snapshots, compileInputOf(data), days)) {
-    const ids = new Set<string>();
-    for (const [id, issues] of status.issues) if (visitBandKind(issues)) ids.add(id);
-    out.set(date, { problem, ids });
+    const kinds = new Map<string, VisitBandKind>();
+    for (const [id, issues] of status.issues) {
+      const kind = visitBandKind(issues);
+      if (kind) kinds.set(id, kind);
+    }
+    out.set(date, { problem, ids: new Set(kinds.keys()), kinds });
   }
   return out;
 }
@@ -122,4 +125,12 @@ export function bandIssueIds(
   days: readonly string[],
 ): Map<string, Set<string>> {
   return new Map([...dayBandOf(data, days)].map(([date, { ids }]) => [date, ids]));
+}
+
+/** その日たちの、帯の種類の訪問の種類（日付 → 訪問ID → 種類。dayBandOf の種類だけ。自動の組みの対象 lib/autoArrange） */
+export function bandIssueKinds(
+  data: CompileInput & Pick<DemoData, 'snapshots'>,
+  days: readonly string[],
+): Map<string, Map<string, VisitBandKind>> {
+  return new Map([...dayBandOf(data, days)].map(([date, { kinds }]) => [date, kinds]));
 }

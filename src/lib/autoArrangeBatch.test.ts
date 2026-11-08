@@ -259,6 +259,39 @@ describe('createAutoArrange（自動の組みの入れ物。ADR-0072）', () => 
     expect(Object.keys(h.data().snapshots).filter((d) => d >= TODAY)).toEqual(days(2));
   });
 
+  it('expert 切：伝えた日の休みの人の訪問も組み直して書き、伝えた記録は変えない（ADR-0111）', async () => {
+    const s = fakeSolve();
+    const a = createAutoArrange(s.fn);
+    const d0 = createDemoData(TODAY);
+    const id = `${TODAY}_c1`;
+    const owner = findVisit(d0, id)!.staffId!;
+    const snapshots = { ...d0.snapshots, [TODAY]: { date: TODAY, at: 0, visits: [] } };
+    const off: DemoData = {
+      ...d0,
+      absences: [...d0.absences, { id: 'ab-off', staffId: owner, date: TODAY, from: null, to: null, note: '希望休' }],
+      snapshots,
+    };
+    expect(dayBandIssues(off, TODAY).get(id)).toBe('off');
+    const h = hostOf(off);
+    a.connect(h.host);
+    const ok = a.request({
+      targets: [{ date: TODAY, ids: [id] }],
+      writeUsual: false,
+      rangeTo: TODAY,
+      today: TODAY,
+      since: { ...d0, snapshots },
+      after: off,
+    });
+    expect(ok).toBe(true);
+    await finish(s.calls, 0);
+    await tick();
+    expect(h.labels).toEqual([AUTO_ARRANGE_LABEL]);
+    const moved = findVisit(h.data(), id)!;
+    expect(moved.staffId).not.toBe(owner);
+    expect(moved.staffId).not.toBeNull();
+    expect(h.data().snapshots[TODAY]).toBe(snapshots[TODAY]);
+  });
+
   it('expert 切：組めずに担当なしが残る日は決まった扱いにしない（ADR-0089）', async () => {
     const s = fakeSolve();
     const a = createAutoArrange(s.fn);
