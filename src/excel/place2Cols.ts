@@ -14,13 +14,25 @@ function termDate(r: Row, h: string): string | null {
   return r.text(h) === '' ? '' : r.date(h);
 }
 
+/** 住所2 なしを表す書き方（NFKC・空白を詰め、末尾の句点を除いて比べる）。住所として位置を探すと別の地名に当たる（「なし」→高梨川） */
+const NO_PLACE2_TEXTS: readonly string[] = ['なし', '無し', 'ナシ', '無', '特になし', '特に無し', '同上'];
+
+/** 住所2 の欄の値が空か「なし」などの住所2 なしの書き方か（ー・- などの線1つも） */
+export function isNoPlace2Text(text: string): boolean {
+  const t = text
+    .normalize('NFKC')
+    .replace(/\s+/g, '')
+    .replace(/[。.]+$/, '');
+  return t === '' || NO_PLACE2_TEXTS.includes(t) || /^[-‐‑‒–—―−ー]+$/.test(t);
+}
+
 /**
- * 住所2 の列を読む。「住所2」が空なら undefined（住所2 なし）。誤りがあれば行付きで止めて null。
+ * 住所2 の列を読む。「住所2」が空・「なし」など（isNoPlace2Text）なら undefined（住所2 なし）。誤りがあれば行付きで止めて null。
  * cur（今の住所2）と住所が同じなら、空の緯度・経度・郵便番号は今の値のまま（違えば空。古い住所の位置を付けない）
  */
 export function readPlace2(r: Row, cur?: ClientPlace2): ClientPlace2 | undefined | null {
   const address = r.optional(P2.address, 200);
-  if (address === '') return undefined;
+  if (isNoPlace2Text(address)) return undefined;
   const same = cur !== undefined && sameAddress(cur.address, address);
   const postal = r.text(P2.postal) === '' ? (same ? cur.postalCode : '') : readPostal(r, P2.postal);
   const lat = r.num(P2.lat, { min: -90, max: 90 });
