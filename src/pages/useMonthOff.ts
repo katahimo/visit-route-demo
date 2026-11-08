@@ -1,14 +1,14 @@
 // 月の画面の「休みを入れる」（希望休のまとめ入力。PRD D69）：〈スタッフ〉を選んでいるときだけ。日のマスを押すと希望休を付け外し、
 // 結果の知らせ（読み上げ）を残す。付けた日にその人の訪問があれば、エキスパート機能が切なら休みの人の訪問を自動で組み直す
-// （読み込みのあとの自動の組みと同じ。ADR-0111）。入なら担当は変えない（振り直しは日の画面で利用者が押す。ADR-0011）
+// （その日のその人の訪問だけ。ADR-0111）。入なら担当は変えない（振り直しは日の画面で利用者が押す。ADR-0011）
 import { type RefObject, useCallback, useEffect, useRef, useState } from 'react';
 import type { DemoData } from '../contracts/data';
 import type { Staff } from '../contracts/documents';
-import { rearrangesOffDay } from '../lib/autoArrange';
+import { offDayTargets } from '../lib/autoArrange';
+import { requestOffArrange } from '../lib/autoArrangeBatch';
 import { newId } from '../lib/common';
 import type { StaffDay } from '../lib/month';
 import { type MonthFocus, offNoteOf } from '../lib/monthView';
-import { arrangeAfterImport } from '../lib/placeRunner';
 import { offDayState, toggleRequestedOff } from '../lib/requestedOff';
 
 export type OffNote = { date: string; text: string; warn: boolean };
@@ -62,7 +62,8 @@ export function useMonthOff(x: {
       dataRef.current = res.data;
       update((y) => toggleRequestedOff(y, offStaffId, d, today, id).data, '希望休');
       const count = staffDaysRef.current.get(d)?.count ?? 0;
-      const rearrange = res.result === 'added' && count > 0 && rearrangesOffDay(res.data, d, today);
+      const targets = res.result === 'added' ? offDayTargets(res.data, offStaffId, d, today) : [];
+      const rearrange = targets.length > 0;
       setOffNote(
         offNoteOf({
           result: res.result,
@@ -73,8 +74,8 @@ export function useMonthOff(x: {
           rearrange,
         }),
       );
-      // 休みの人の訪問・担当なしを自動で組む（伝えた日の休みの人も。ADR-0111）
-      if (rearrange) arrangeAfterImport(before, res.data, today);
+      // その日のその人の休みの人の訪問だけを自動で組む（伝えた日も。ADR-0111）
+      if (rearrange) requestOffArrange(before, res.data, targets, today);
     },
     [offStaffId, today, update, staffById, suddenOn, dataRef],
   );
