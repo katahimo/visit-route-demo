@@ -259,6 +259,19 @@ describe('顧客の CSV', () => {
     expect(out.skipped).toContain('住所2（適用期間の日付が読めない・逆のため入れなかった 1件）');
     expect(out.skipped).not.toContain('住所2');
   });
+  it('住所2 が「なし」などなら住所2 なし（住所として位置を探さない）。緯度・経度は住所の位置にも使わない', () => {
+    const out = reserveClientToRoster([
+      CLIENT_HEAD,
+      clientRow({ 顧客ID: 'A', 姓: '架空', 名: 'A', 住所: '架空市泉1丁目', 住所2: 'なし', 緯度・経度: '35.7, 139.7' }),
+      clientRow({ 顧客ID: 'B', 姓: '架空', 名: 'B', 住所: '架空市港3丁目', 住所2: ' 無し。' }),
+      clientRow({ 顧客ID: 'C', 姓: '架空', 名: 'C', 住所: '架空市港4丁目', 住所2: 'ー' }),
+    ])!;
+    const head = out.rows[0]!;
+    const row = (i: number) => Object.fromEntries(head.map((h, k) => [h, out.rows[i]?.[k]]));
+    expect(row(1)).toMatchObject({ 住所: '架空市泉1丁目', 緯度: '', 住所2: '', 住所2の緯度: '' });
+    expect(row(2)).toMatchObject({ 住所2: '', 住所2の開始日: '' });
+    expect(row(3)).toMatchObject({ 住所2: '' });
+  });
   it('住所2 の列が無い CSV は住所2 の列を出さない（アプリの住所2 は今のまま）', () => {
     const head = CLIENT_HEAD.filter((h) => !h.startsWith('住所2'));
     const out = reserveClientToRoster([head, head.map((h) => (h === '姓' ? '架空' : ''))])!;

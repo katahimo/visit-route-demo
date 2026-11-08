@@ -28,6 +28,7 @@ import {
   STAFF_LAST_DAY_COL,
 } from './layout';
 import { phoneLine } from './ledgerCsv';
+import { isNoPlace2Text } from './place2Cols';
 import { NO, parseDateText, YES } from './text';
 
 /** スタッフの CSV の列名（読む列） */
@@ -194,14 +195,14 @@ function clientName(v: (h: string) => string): string {
 const termDate = (text: string): string | null => (text === '' ? '' : parseDateText(text));
 
 /**
- * 住所2 の列（名簿の CLIENT_PLACE2_COLS の並び）。住所2 が空なら全部空（名簿の読み込みで住所2 なし）。
+ * 住所2 の列（名簿の CLIENT_PLACE2_COLS の並び）。住所2 が空・「なし」など（isNoPlace2Text）なら全部空（名簿の読み込みで住所2 なし）。
  * 緯度・経度の列は、住所2 があれば住所2 の位置。期間の日付が読めない・終了日が開始日より前なら、
  * 期間を空にすると毎日が住所2 になってしまうので住所2 を入れず（全部空）、bad に数える
  */
 function place2Row(v: (h: string) => string, bad: { n: number }): string[] {
   const none = ['', '', '', '', '', ''];
   const second = v(CLIENT.address2);
-  if (second === '') return none;
+  if (isNoPlace2Text(second)) return none;
   const [from, to] = [termDate(v(CLIENT.address2From)), termDate(v(CLIENT.address2To))];
   if (from === null || to === null || (from !== '' && to !== '' && to < from)) {
     bad.n++;
@@ -218,7 +219,7 @@ function place2Row(v: (h: string) => string, bad: { n: number }): string[] {
  * - よみ：姓（カナ）＋名（カナ）をひらがなにし、空白を詰める（normalizeKana）
  * - 住所：契約者の住所（いつもの訪問先）。先頭の郵便番号（〒 付きも）は郵便番号の列へ分ける
  * - 住所2・適用開始日・適用終了日：期間つきの訪問先（ADR-0105）。期間内の訪問は住所2 へ行く（domain/place2）。
- *   住所2 の列がある CSV では、住所2 が空の人は住所2 なしにする（正本は予約システム）。期間の日付が読めない・逆なら住所2 を入れず、skipped に件数
+ *   住所2 の列がある CSV では、住所2 が空・「なし」などの人は住所2 なしにする（正本は予約システム）。期間の日付が読めない・逆なら住所2 を入れず、skipped に件数
  * - 緯度・経度：「緯度, 経度」を2つの列に分ける。住所2 があればその位置（無ければ住所の位置）
  * - 駐車場：駐車場＋詳細を決まりごとの「駐車場」へ
  * - 電話：メモの先頭に1行（顧客メモを続ける）
@@ -260,7 +261,8 @@ export function reserveClientToRoster(table: readonly (readonly string[])[]): Ro
     }
     const v = cellOf(at, r);
     const { postal, address } = splitPostal(v(CLIENT.address));
-    // 緯度・経度は住所2 があれば住所2 の位置なので、住所の位置には使わない（住所2 を入れなかった行も）
+    // 緯度・経度は住所2 があれば住所2 の位置なので、住所の位置には使わない（住所2 を入れなかった行も。
+    // 「なし」などの行も、予約システムが「なし」から探した位置かもしれないので使わない）
     const second = withPlace2 && v(CLIENT.address2) !== '';
     const { lat, lng } = second ? { lat: '', lng: '' } : splitLatLng(v(CLIENT.latLng));
     const parking = [v(CLIENT.parking), v(CLIENT.parkingDetail)].filter((x) => x !== '').join('　');
