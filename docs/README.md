@@ -18,6 +18,7 @@
 | まだ決まっていないこと | [design.md](design.md) §8・[prd.md](prd.md) §8 |
 | e2e の走らせ方・書き方 | [e2e.md](e2e.md) |
 | 事業所向けの取扱説明書（型ごと。名簿・予約の CSV の取り込み・デモ例） | 訪問介護・移動支援 [manual/取扱説明書_訪問介護.md](manual/取扱説明書_訪問介護.md)・訪問看護 [manual/取扱説明書_訪問看護.md](manual/取扱説明書_訪問看護.md)・ベビーシッター [manual/取扱説明書_ベビーシッター.md](manual/取扱説明書_ベビーシッター.md)（Word 版は同じ名前の `.docx`。サンプル CSV は `manual/samples/`） |
+| 操作説明の Web スライド（訪問介護・移動支援。実アプリを iframe で動かす） | `../public/slides/`（公開先 `/slides/`。`?to=名前` で表紙に「〇〇様向け」。アプリは `?space=slides` の別の保存領域。ADR-0112） |
 
 ## 画面別の設計（design/）
 

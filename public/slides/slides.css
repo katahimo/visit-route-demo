@@ -1,0 +1,585 @@
+/* 操作説明のスライド（public/slides/）。アプリ（src/styles.css）の色に合わせる。依存なし */
+:root {
+  --bg: #f7f1ec;
+  --card: #ffffff;
+  --ink: #3b2f2a;
+  --sub: #6f6058;
+  --line: #eadfd6;
+  --line-strong: #968478;
+  --primary: #b8503e;
+  --primary-hover: #a64838;
+  --primary-dark: #9c4232;
+  --primary-soft: #fde7e1;
+  --accent: #e8735f;
+  --soft: #faf5f0;
+  --danger: #b8393a;
+  --outside: #e9dfd6;
+  font-family:
+    "Hiragino Maru Gothic ProN", "Hiragino Sans", "BIZ UDPGothic", "Yu Gothic Medium", "Yu Gothic", "Meiryo",
+    "Noto Sans JP", system-ui, sans-serif;
+  color: var(--ink);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--outside);
+}
+
+/* 1280×720 の舞台を、窓に合わせて拡大・縮小する（slides.js が --scale を入れる） */
+.stage {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1280px;
+  height: 720px;
+  transform: translate(-50%, -50%) scale(var(--scale, 1));
+  transform-origin: center center;
+  background: var(--bg);
+  box-shadow: 0 4px 30px rgba(80, 50, 30, 0.12);
+}
+
+.slide {
+  position: absolute;
+  inset: 0;
+  padding: 44px 56px 64px;
+  display: flex;
+  flex-direction: column;
+}
+
+.slide[hidden] {
+  display: none;
+}
+
+/* 見出し */
+.kicker {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--primary-dark);
+  letter-spacing: 0.04em;
+}
+
+.kicker .demo-mark {
+  display: inline-block;
+  margin-left: 10px;
+  padding: 1px 10px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+}
+
+h1,
+h2 {
+  margin: 0;
+  line-height: 1.3;
+}
+
+.slide > h2 {
+  font-size: 34px;
+  padding-bottom: 12px;
+  margin-bottom: 22px;
+  border-bottom: 3px solid var(--line);
+  position: relative;
+}
+
+.slide > h2::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -3px;
+  width: 96px;
+  height: 3px;
+  background: var(--accent);
+}
+
+p {
+  margin: 0 0 12px;
+  line-height: 1.6;
+}
+
+.lead {
+  font-size: 20px;
+}
+
+.sub {
+  color: var(--sub);
+}
+
+.btn-like {
+  font-weight: 700;
+}
+
+/* 表紙 */
+.cover {
+  justify-content: center;
+  padding-left: 96px;
+  padding-right: 96px;
+  background: linear-gradient(90deg, var(--primary) 0 14px, transparent 14px), var(--bg);
+}
+
+.cover-to {
+  margin: 0 0 18px;
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--primary-dark);
+}
+
+.cover-to[hidden] {
+  display: none;
+}
+
+.cover h1 {
+  font-size: 54px;
+  margin-bottom: 10px;
+}
+
+.cover-sub {
+  font-size: 26px;
+  margin: 0 0 30px;
+}
+
+.cover-lead {
+  font-size: 20px;
+  color: var(--sub);
+  margin-bottom: 48px;
+}
+
+.cover-meta {
+  font-size: 17px;
+  color: var(--sub);
+  line-height: 1.8;
+}
+
+.cover-meta strong {
+  color: var(--ink);
+}
+
+/* 表 */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  background: var(--card);
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+
+th,
+td {
+  text-align: left;
+  vertical-align: top;
+  padding: 9px 16px;
+  border-bottom: 1px solid var(--line);
+  line-height: 1.5;
+}
+
+th {
+  background: var(--soft);
+  color: var(--sub);
+  font-weight: 700;
+  font-size: 15px;
+}
+
+tr:last-child td {
+  border-bottom: none;
+}
+
+.table-trouble td {
+  font-size: 17px;
+}
+
+.table-trouble td:first-child {
+  width: 40%;
+  color: var(--sub);
+}
+
+.table-small td,
+.table-small th {
+  font-size: 15px;
+  padding: 6px 12px;
+}
+
+/* カード・並び */
+.cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  min-height: 0;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 18px 22px;
+}
+
+.card h3 {
+  margin: 0 0 10px;
+  font-size: 19px;
+  color: var(--primary-dark);
+}
+
+.card ul,
+.card ol {
+  margin: 0;
+  padding-left: 1.3em;
+  line-height: 1.65;
+  font-size: 17px;
+}
+
+.card li + li {
+  margin-top: 4px;
+}
+
+.note {
+  margin-top: auto;
+  padding: 12px 18px;
+  border-left: 4px solid var(--accent);
+  background: var(--card);
+  border-radius: 0 12px 12px 0;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+/* 流れ */
+.flow {
+  list-style: none;
+  margin: 0 0 22px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  counter-reset: flow;
+}
+
+.flow li {
+  counter-increment: flow;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px 12px 50px;
+  position: relative;
+  font-size: 17px;
+  line-height: 1.45;
+  min-height: 68px;
+}
+
+.flow li::before {
+  content: counter(flow);
+  position: absolute;
+  left: 14px;
+  top: 12px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  display: grid;
+  place-items: center;
+}
+
+.flow small {
+  display: block;
+  color: var(--sub);
+  font-size: 14px;
+}
+
+/* 実演のページ：左に手順、右にアプリ */
+.demo {
+  padding: 24px 40px 50px 48px;
+}
+
+.demo-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 816px;
+  gap: 24px;
+  min-height: 0;
+}
+
+.demo > h2 {
+  font-size: 28px;
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+}
+
+.demo-side {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  counter-reset: step;
+}
+
+.steps > li {
+  counter-increment: step;
+  position: relative;
+  padding-left: 34px;
+  font-size: 16px;
+  line-height: 1.55;
+  margin-bottom: 9px;
+}
+
+.steps > li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 1px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  display: grid;
+  place-items: center;
+}
+
+.side-note {
+  margin: 4px 0 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--sub);
+}
+
+.side-note + .side-note {
+  margin-top: 8px;
+}
+
+.downloads {
+  margin: 10px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.downloads a {
+  display: block;
+  padding: 7px 12px;
+  border-radius: 10px;
+  border: 1.5px solid var(--line-strong);
+  background: var(--card);
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.downloads a:hover {
+  border-color: var(--primary);
+  color: var(--primary-dark);
+}
+
+.demo-tools {
+  margin-top: auto;
+  padding-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+.tool {
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--line-strong);
+  background: var(--card);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.tool:hover {
+  border-color: var(--primary);
+  color: var(--primary-dark);
+}
+
+.tool-primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.tool-primary:hover {
+  background: var(--primary-hover);
+  color: #fff;
+}
+
+:focus-visible {
+  outline: 3px solid var(--primary-dark);
+  outline-offset: 2px;
+}
+
+/* アプリの枠：中の iframe は 1180×792 で開き、0.6915 倍で 816×548 に収める（アプリの広い画面の並びで見せる） */
+.demo-box {
+  position: relative;
+  width: 816px;
+  height: 548px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  background: var(--card);
+  box-shadow: 0 6px 20px rgba(80, 50, 30, 0.1);
+}
+
+.demo-box iframe {
+  display: block;
+  width: 1180px;
+  height: 792px;
+  border: 0;
+  transform: scale(0.69153);
+  transform-origin: 0 0;
+  background: var(--bg);
+}
+
+.demo-bar {
+  display: none;
+}
+
+/* ［大きく表示］：舞台の拡大を外し、アプリの枠を窓いっぱいにする（iframe は動かさないので読み直さない） */
+body.is-big .stage {
+  transform: none;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+}
+
+body.is-big .page-bar {
+  display: none;
+}
+
+.demo-box.is-big {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 100;
+  border: 0;
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.demo-box.is-big .demo-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 14px;
+}
+
+.demo-box.is-big .demo-bar .tool {
+  padding: 4px 12px;
+}
+
+.demo-box.is-big iframe {
+  flex: 1;
+  width: 100%;
+  height: auto;
+  transform: none;
+}
+
+/* 下の帯：ページ番号と送り */
+.page-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 44px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--sub);
+  z-index: 5;
+}
+
+.page-bar .title {
+  flex: 1;
+}
+
+.page-bar .num {
+  font-variant-numeric: tabular-nums;
+  min-width: 64px;
+  text-align: center;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.page-bar button {
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 3px 12px;
+  font-size: 14px;
+}
+
+.page-bar button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.keys {
+  font-size: 13px;
+}
+
+/* できないこと */
+.cannot {
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.cannot li {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 18px;
+  font-size: 17px;
+  line-height: 1.5;
+}
+
+.cannot strong {
+  display: block;
+  font-size: 18px;
+  margin-bottom: 2px;
+}
+
+.cannot span {
+  color: var(--sub);
+  font-size: 15px;
+}

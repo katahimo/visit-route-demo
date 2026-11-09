@@ -22,7 +22,7 @@ function prefixed(base: Storage, prefix: string): Storage {
     const keys: string[] = [];
     for (let i = 0; i < base.length; i++) {
       const k = base.key(i);
-      if (k !== null && k.startsWith(prefix)) keys.push(k);
+      if (k?.startsWith(prefix)) keys.push(k);
     }
     return keys;
   };
