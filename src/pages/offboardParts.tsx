@@ -7,7 +7,12 @@ import type { Client, Staff } from '../contracts/documents';
 import { addDays } from '../domain/time';
 import { dateText, mdText, monthLabel } from '../lib/dateText';
 import type { OffboardClient } from '../lib/offboard';
-import { offboardAddsAllowedText, offboardCandidateText, offboardRolesText } from '../lib/offboardView';
+import {
+  offboardAddsAllowedText,
+  offboardCandidateText,
+  offboardOutsideAllowedText,
+  offboardRolesText,
+} from '../lib/offboardView';
 import { NOBODY } from './useOffboardFlow';
 
 /** 〈利用者さん〉ごとの代わりの〈スタッフ〉を選ぶ表 */
@@ -45,8 +50,9 @@ export function OffboardClientsTable({
             const value = choices[c.clientId] ?? NOBODY;
             const client = clientById.get(c.clientId);
             const chosen = staffById.get(value);
-            const adds =
-              client && offboardAddsAllowedText(client, staffId, chosen ? { id: chosen.id, name: chosen.name } : null);
+            const to = chosen ? { id: chosen.id, name: chosen.name } : null;
+            const adds = client && offboardAddsAllowedText(client, staffId, to);
+            const outside = client && offboardOutsideAllowedText(client, staffId, to);
             return (
               <tr key={c.clientId} data-testid="offboard-client">
                 <th scope="row" className="person-name">
@@ -77,6 +83,11 @@ export function OffboardClientsTable({
                   {adds && (
                     <p className="sub" data-testid="offboard-adds-allowed">
                       {adds}
+                    </p>
+                  )}
+                  {outside && (
+                    <p className="sub" data-testid="offboard-outside-allowed">
+                      {outside}
                     </p>
                   )}
                 </td>

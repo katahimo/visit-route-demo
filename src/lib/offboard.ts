@@ -299,6 +299,19 @@ export function addsAllowed(c: Pick<Client, 'allowedStaffIds'>, staffId: string,
   return to !== null && c.allowedStaffIds.includes(staffId) && !c.allowedStaffIds.includes(to);
 }
 
+/**
+ * 代わりに選んだ人 to が、担当できる人の決まりの外のままになるか（担当できる人を限っていて、退職する人（staffId）は
+ * その中にいない。applyOffboardWith は担当できる人を変えないので、訪問は要対応に残る）
+ */
+export function staysOutsideAllowed(c: Pick<Client, 'allowedStaffIds'>, staffId: string, to: string | null): boolean {
+  return (
+    to !== null &&
+    c.allowedStaffIds.length > 0 &&
+    !c.allowedStaffIds.includes(staffId) &&
+    !c.allowedStaffIds.includes(to)
+  );
+}
+
 /** applyOffboardWith のデータだけ */
 export function applyOffboard(
   d: DemoData,

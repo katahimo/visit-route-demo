@@ -9,6 +9,7 @@ import {
   type OffboardClient,
   type OffboardRole,
   type OffboardVisit,
+  staysOutsideAllowed,
 } from './offboard';
 
 /** 持ち方の文 */
@@ -39,6 +40,17 @@ export function offboardAddsAllowedText(
   to: { id: string; name: string } | null,
 ): string | null {
   return to && addsAllowed(c, staffId, to.id) ? `${to.name}さんを担当できる人に足します` : null;
+}
+
+/** 代わりに選んだ人が担当できる人の外のままになるときの行の文（そうでないときは null） */
+export function offboardOutsideAllowedText(
+  c: Pick<Client, 'allowedStaffIds'>,
+  staffId: string,
+  to: { id: string; name: string } | null,
+): string | null {
+  return to && staysOutsideAllowed(c, staffId, to.id)
+    ? `${to.name}さんは担当できる人に入っていないため、訪問は要対応に残ります`
+    : null;
 }
 
 /** 訪問を日ごとにまとめる（出てきた順。件数と確定した件数） */

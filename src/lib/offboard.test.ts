@@ -6,7 +6,15 @@ import { afterLastDay, availabilityOf } from '../domain/availability';
 import { AFTER_LAST_DAY, compile } from '../matching';
 import { client, DATE, makeData, staff } from '../matching/fixtures.testkit';
 import { findVisit, putVisits, visitsOn } from '../patterns';
-import { addsAllowed, applyOffboard, applyOffboardWith, defaultChoice, offboardScope, unlimitedBy } from './offboard';
+import {
+  addsAllowed,
+  applyOffboard,
+  applyOffboardWith,
+  defaultChoice,
+  offboardScope,
+  staysOutsideAllowed,
+  unlimitedBy,
+} from './offboard';
 
 /** DATE（月曜）の翌日 */
 const TUE = '2026-10-13';
@@ -243,5 +251,17 @@ describe('addsAllowed', () => {
     expect(addsAllowed({ allowedStaffIds: ['s3'] }, 's1', 's2')).toBe(false);
     expect(addsAllowed({ allowedStaffIds: [] }, 's1', 's2')).toBe(false);
     expect(addsAllowed({ allowedStaffIds: ['s1'] }, 's1', null)).toBe(false);
+  });
+});
+
+describe('staysOutsideAllowed', () => {
+  it('適用で担当できる人が変わらず、選んだ人が外のままのときだけ true（addsAllowed と重ならない）', () => {
+    const c = { allowedStaffIds: ['s3'] };
+    expect(staysOutsideAllowed(c, 's1', 's2')).toBe(true);
+    expect(addsAllowed(c, 's1', 's2')).toBe(false);
+    expect(staysOutsideAllowed({ allowedStaffIds: ['s1'] }, 's1', 's2')).toBe(false);
+    expect(staysOutsideAllowed({ allowedStaffIds: ['s3', 's2'] }, 's1', 's2')).toBe(false);
+    expect(staysOutsideAllowed({ allowedStaffIds: [] }, 's1', 's2')).toBe(false);
+    expect(staysOutsideAllowed(c, 's1', null)).toBe(false);
   });
 });
