@@ -124,7 +124,9 @@ describe('振り直しの範囲と候補（offboardScope。版2）', () => {
     expect(sc.visits.some((x) => x.visitId === `${THU}_p3`)).toBe(true);
     const c3 = sc.clients.find((c) => c.clientId === 'c3')!;
     expect([c3.roles, c3.patternIds]).toEqual([['visit'], []]);
-    expect(c3.sample).toBeGreaterThan(0);
+    // 替わるのは s1 が担当の木曜の回だけなので、見本も入れる回もその1回だけで数える（s2 の火曜の回は数えない）
+    expect(c3.sample).toBe(1);
+    expect(c3.candidates.every((x) => x.fits <= 1)).toBe(true);
     expect(defaultChoice(c3)).not.toBeNull();
     // まとめて適用で、その回も代わりの人に替わり、範囲に訪問も〈利用者さん〉も残らない（繰り返しは変えない）
     const x = applyOffboard(d, 's1', { c1: 's2', c2: 's2', c3: 's3' }, sc.from, DATE, () => 'new1');

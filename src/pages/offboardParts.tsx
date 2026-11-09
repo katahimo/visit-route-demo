@@ -54,7 +54,7 @@ export function OffboardClientsTable({
             const client = clientById.get(c.clientId);
             const chosen = staffById.get(value);
             const to = chosen ? { id: chosen.id, name: chosen.name } : null;
-            const adds = client && offboardAddsAllowedText(client, staffId, to);
+            const adds = client && limitsOn && offboardAddsAllowedText(client, staffId, to);
             const outside = client && offboardOutsideAllowedText(client, staffId, to, limitsOn);
             return (
               <tr key={c.clientId} data-testid="offboard-client">

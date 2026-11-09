@@ -19,12 +19,13 @@
   let current = -1;
 
   // 表紙の宛名（?to=）。長すぎるものは切る
-  const to = (new URLSearchParams(location.search).get('to') ?? '').trim().slice(0, 40);
+  const to = (new URLSearchParams(location.search).get('to') ?? '').trim();
+  const toShort = Array.from(to).slice(0, 40).join('');
   if (to !== '') {
     const el = document.getElementById('cover-to');
-    el.textContent = `${to}様向け`;
+    el.textContent = `${toShort}様向け`;
     el.hidden = false;
-    document.title = `${to}様向け ${document.title}`;
+    document.title = `${toShort}様向け ${document.title}`;
   }
 
   function fitStage() {

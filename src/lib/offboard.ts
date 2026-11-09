@@ -104,8 +104,9 @@ const ROLE_ORDER: OffboardRole[] = ['pattern', 'allowed', 'visit'];
 
 /**
  * 最終勤務日のある〈スタッフ〉の振り直しの範囲と候補。最終勤務日が無い・いない人は null。
- * 候補は、見本の期間（from から OFFBOARD_SAMPLE_DAYS 日）のその〈利用者さん〉の訪問ごとに、
- * その日の問題（その〈利用者さん〉の担当できる人の決まりを外したもの。必須の条件・稼働時間・種類の条件は効く）と、
+ * 候補は、見本の期間（from から OFFBOARD_SAMPLE_DAYS 日）のその〈利用者さん〉の訪問（担当できる人で持っていなければ、その人が担当の回だけ）ごとに、
+ * その日の問題（その人が担当できる人に入っている〈利用者さん〉は担当できる人の決まりを外したもの。必須の条件・稼働時間・
+ * 種類の条件は効く）と、
  * その日の担当の並び（その人の列は除く）に fitsOf で入れられる人を数える。
  * withCandidates が false なら候補を数えない（candidates は空・sample は 0。件数だけ見たいとき）
  */
@@ -175,6 +176,8 @@ export function offboardScope(
     for (const [k, ids] of Object.entries(dayRoutes(data, date, p))) if (k !== staffId) routes[k] = [...ids];
     for (const v of dayVisits) {
       if (!targetIds.has(v.clientId) || !p.visits.some((x) => x.id === v.id)) continue;
+      // 担当できる人で持っていなければ、適用で替わるのはその人が担当の回だけ。ほかの人の回は数えない
+      if (!roles.get(v.clientId)?.roles.has('allowed') && v.staffId !== staffId) continue;
       sample.set(v.clientId, (sample.get(v.clientId) ?? 0) + 1);
       const m = fits.get(v.clientId) ?? new Map<string, number>();
       for (const f of fitsOf(p, routes, v.id)) m.set(f.staffId, (m.get(f.staffId) ?? 0) + 1);
