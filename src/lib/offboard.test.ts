@@ -101,6 +101,31 @@ describe('振り直しの範囲と候補（offboardScope。版2）', () => {
     expect(offboardScope(data({ staff: [staff('s1', 0, 0)] }), 's1', DATE)).toBeNull();
   });
 
+  it('繰り返しの担当・担当できる人でなくても、数え始める日からの訪問の担当がその人の〈利用者さん〉は「訪問の担当」で選べる', () => {
+    // c3 の繰り返しのいつもの担当は s2 だが、自動の組みが木曜の回だけ s1 に付けた（保存した回）
+    const THU = '2026-10-15';
+    const d0 = data({
+      patterns: [
+        pattern('p1', 'c1', { usualStaffId: 's1' }),
+        pattern('p3', 'c3', { weekdays: [2, 4], earliestStart: '14:00', latestStart: '14:00', usualStaffId: 's2' }),
+      ],
+    });
+    const v = findVisit(d0, `${THU}_p3`)!;
+    const d: DemoData = { ...d0, visits: putVisits(d0.visits, [{ ...v, staffId: 's1' }]) };
+    const sc = offboardScope(d, 's1', DATE)!;
+    expect(sc.visits.some((x) => x.visitId === `${THU}_p3`)).toBe(true);
+    const c3 = sc.clients.find((c) => c.clientId === 'c3')!;
+    expect([c3.roles, c3.patternIds]).toEqual([['visit'], []]);
+    expect(c3.sample).toBeGreaterThan(0);
+    expect(defaultChoice(c3)).not.toBeNull();
+    // まとめて適用で、その回も代わりの人に替わり、範囲に訪問も〈利用者さん〉も残らない（繰り返しは変えない）
+    const x = applyOffboard(d, 's1', { c1: 's2', c2: 's2', c3: 's3' }, sc.from, DATE, () => 'new1');
+    expect(findVisit(x, `${THU}_p3`)!.staffId).toBe('s3');
+    expect(x.patterns.find((p) => p.id === 'p3')!.usualStaffId).toBe('s2');
+    const after = offboardScope(x, 's1', DATE)!;
+    expect([after.visits, after.clients]).toEqual([[], []]);
+  });
+
   it('候補は最終勤務日の人を除き、入れる回の多い順。必須の条件で外れる人は入れる回が 0', () => {
     const d = data({
       rules: [{ id: 'req', type: 'clientRequirement', label: '必要条件', weight: 0, hard: true }],

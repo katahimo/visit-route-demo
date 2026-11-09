@@ -15,8 +15,11 @@ import { dayRoutes } from './dayPlan';
 /** 候補を数える見本の期間（日。最終勤務日の翌日（今日より前なら今日）から） */
 export const OFFBOARD_SAMPLE_DAYS = 28;
 
-/** 〈利用者さん〉がその人をどう持っているか：繰り返しの担当／担当できる人 */
-export type OffboardRole = 'pattern' | 'allowed';
+/**
+ * 〈利用者さん〉がその人をどう持っているか：繰り返しの担当／担当できる人／訪問の担当（繰り返しの担当・担当できる人ではないが、
+ * 数え始める日からの保存した回の担当がその人。例：繰り返しのいつもの担当は別の人で、自動の組みが木曜の回だけその人に付けた）
+ */
+export type OffboardRole = 'pattern' | 'allowed' | 'visit';
 
 /** 最終勤務日の後に、その人が担当している訪問 */
 export type OffboardVisit = {
@@ -97,7 +100,7 @@ function rolesOf(data: Pick<DemoData, 'clients' | 'patterns' | 'staff'>, staffId
   return out;
 }
 
-const ROLE_ORDER: OffboardRole[] = ['pattern', 'allowed'];
+const ROLE_ORDER: OffboardRole[] = ['pattern', 'allowed', 'visit'];
 
 /**
  * 最終勤務日のある〈スタッフ〉の振り直しの範囲と候補。最終勤務日が無い・いない人は null。
@@ -139,6 +142,11 @@ export function offboardScope(
 
   // ---- 〈利用者さん〉と候補 ----
   const roles = rolesOf(data, staffId, from);
+  // 繰り返しの担当・担当できる人で持っていなくても、数え始める日からの訪問の担当がその人なら選べるようにする
+  // （選べないと「まとめて適用」で替わらず、訪問が残る）
+  for (const v of visits) {
+    if (!roles.has(v.clientId)) roles.set(v.clientId, { roles: new Set(['visit']), patternIds: [] });
+  }
   const targetIds = new Set(roles.keys());
   // 見本の期間の訪問（繰り返しの計算した回も入る。データは書き換えない）
   const inRange = visitsIn(data, { from, to: sampleTo }).filter(

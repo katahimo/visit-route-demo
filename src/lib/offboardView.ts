@@ -13,6 +13,7 @@ import {
 const ROLE_TEXT: Record<OffboardRole, string> = {
   pattern: '繰り返しの担当',
   allowed: '担当できる人',
+  visit: '訪問の担当',
 };
 
 /** いまの持ち方（例「繰り返しの担当（2つ）・担当できる人」） */

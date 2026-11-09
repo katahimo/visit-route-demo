@@ -9,6 +9,7 @@ describe('offboardRolesText', () => {
       '繰り返しの担当（2つ）・担当できる人',
     );
     expect(offboardRolesText({ roles: ['allowed'], patternIds: [] })).toBe('担当できる人');
+    expect(offboardRolesText({ roles: ['visit'], patternIds: [] })).toBe('訪問の担当');
   });
 });
 
