@@ -9,4 +9,5 @@ export { DemoDataProvider, type UpdateOptions, useDemoData } from './react';
 export { type ReloadFile, stashReloadFile, takeReloadFile } from './reloadResume';
 export { repair } from './repair';
 export { FEATURES_START_ALL, FEATURES_START_KEY, startsWithAll } from './start';
+export { appLocalStorage, appSessionStorage, currentSpace } from './storageSpace';
 export { cancelTentative } from './tentative';

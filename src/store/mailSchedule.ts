@@ -2,6 +2,7 @@
 // この端末に残す。DemoData とは別のキー（データの版・書き出し・読み込み・初期状態に戻すに入れない。合言葉をファイルに出さない）。
 // localStorage を触るのは store の中だけ（AGENTS.md）。使えないブラウザでも、開いている間は覚える
 import { EMPTY_SETTINGS, type MailReservation, type MailScheduleSettings } from '../lib/mailSchedule';
+import { appLocalStorage } from './storageSpace';
 
 /** localStorage のキー（DemoData の STORAGE_KEY とは別） */
 export const MAIL_SCHEDULE_KEY = 'visit-route-demo:mail-schedule';
@@ -101,4 +102,4 @@ export function createMailScheduleMemory(getStorage: () => KeyStore | null) {
 }
 
 /** 画面全体で1つ（このブラウザの localStorage） */
-export const mailScheduleMemory = createMailScheduleMemory(() => globalThis.localStorage ?? null);
+export const mailScheduleMemory = createMailScheduleMemory(() => appLocalStorage());

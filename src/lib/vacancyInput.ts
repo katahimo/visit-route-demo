@@ -1,5 +1,5 @@
 // 空き状況の入力をタブの間だけ覚える（PRD D258。design.md §4 pages「空き状況と問い合わせの試算」）。
-// sessionStorage に置く：ほかの画面へ移って戻っても残り、タブ・ブラウザを閉じれば消える。データ（DemoData）・書き出しには入れない。
+// sessionStorage に置く（Storage は呼ぶ側が渡す。store/appSessionStorage）：ほかの画面へ移って戻っても残り、タブ・ブラウザを閉じれば消える。データ（DemoData）・書き出しには入れない。
 // 読めない値（壊れた・古い形）は項目ごとに既定に戻す（例外を投げない。時間帯のチップ（D411）を足す前の入力も読める。
 // 前の既定の開始の幅 9:00〜17:00 で覚えた入力もそのまま読む）
 import { z } from 'zod';
@@ -62,13 +62,6 @@ export function defaultVacancyInput(today: string): VacancyInput {
 }
 
 type SessionLike = Pick<Storage, 'getItem' | 'setItem'>;
-const session = (): SessionLike | null => {
-  try {
-    return typeof sessionStorage === 'undefined' ? null : sessionStorage;
-  } catch {
-    return null;
-  }
-};
 
 /**
  * 覚えた入力（無い・読めなければ既定）。項目ごとに確かめ、読めない項目だけ既定にする。
@@ -76,8 +69,8 @@ const session = (): SessionLike | null => {
  */
 export function loadVacancyInput(
   today: string,
-  typeIds: ReadonlySet<string> | null = null,
-  store: SessionLike | null = session(),
+  typeIds: ReadonlySet<string> | null,
+  store: SessionLike | null,
 ): VacancyInput {
   const base = defaultVacancyInput(today);
   let raw: unknown;
@@ -105,7 +98,7 @@ export function loadVacancyInput(
 }
 
 /** 入力を覚える（書けなければ何もしない：容量・プライベートブラウズ） */
-export function saveVacancyInput(input: VacancyInput, store: SessionLike | null = session()): void {
+export function saveVacancyInput(input: VacancyInput, store: SessionLike | null): void {
   try {
     store?.setItem(VACANCY_INPUT_KEY, JSON.stringify(input));
   } catch {

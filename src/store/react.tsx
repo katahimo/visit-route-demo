@@ -25,6 +25,7 @@ import {
   swapPrevious,
 } from './persist';
 import { arrangePending, clearArrangePending } from './start';
+import { isOwnStorageKey, ownKeyOf } from './storageSpace';
 
 /**
  * update の扱い：history が false なら履歴に積まず履歴を捨てる（戻せない操作）。group を渡すと、同じ group の続けての update を
@@ -196,11 +197,14 @@ function useStorageSync(st: StoreState): void {
 
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
-      if (e.key === PREV_KEY || e.key === PREV_INFO_KEY) {
+      // 領域（?space=）のときは接頭辞付きのキーだけ、普段は接頭辞付きのキーを無視する（ADR-0112）
+      if (!isOwnStorageKey(e.key)) return;
+      const key = ownKeyOf(e.key as string);
+      if (key === PREV_KEY || key === PREV_INFO_KEY) {
         setPrevious(previousInfo());
         return;
       }
-      if (e.key !== STORAGE_KEY || e.newValue === null) return;
+      if (key !== STORAGE_KEY || e.newValue === null) return;
       const r = importJson(e.newValue);
       if (isImportError(r)) return;
       skipSave.current = true;

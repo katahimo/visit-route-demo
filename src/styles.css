@@ -738,6 +738,13 @@ tbody tr:hover td {
   font-size: 0.68rem;
   color: var(--sub);
 }
+.space-badge {
+  margin-right: auto;
+  padding: 1px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+}
 .nav-groups {
   display: flex;
   flex-direction: column;

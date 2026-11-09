@@ -1,6 +1,7 @@
 // メニューの畳める項目の開け閉め（PRD D401）を覚える。この端末に残す（左のメニューと引き出しで1つ）。
 // DemoData とは別のキー（データの版・書き出し・読み込み・初期状態に戻すに入れない）。
 // localStorage を触るのは store の中だけ（AGENTS.md）。使えないブラウザでも、開いている間は覚える
+import { appLocalStorage } from './storageSpace';
 
 /** localStorage のキー（DemoData の STORAGE_KEY とは別） */
 export const NAV_OPEN_KEY = 'visit-route-demo:nav-open';
@@ -74,4 +75,4 @@ export const detailsOpenKey = (screen: DetailsScreen): string => `details:${scre
 export const columnsOpenKey = (list: 'clients' | 'staff'): string => `columns:${list}`;
 
 /** 画面全体で1つ（このブラウザの localStorage） */
-export const navOpenMemory = createNavOpenMemory(() => globalThis.localStorage ?? null);
+export const navOpenMemory = createNavOpenMemory(() => appLocalStorage());

@@ -150,6 +150,7 @@
 | [0106](adr/0106-mail-excel-always-on.md) | メールと Excel の入出力を入り切りせず、いつも入にする |
 | [0107](adr/0107-staff-off-from-google-calendar.md) | 〈スタッフ〉の休みを Google カレンダーの書き出し（zip）から毎日取り込み、カレンダーから入れた欠勤を合わせる |
 | [0108](adr/0108-imports-mirror-source.md) | 予約・名簿・休みのファイルの読み込みは総入れ替え（予約システム・カレンダーを写す）と、読み込みのあとの自動の組み |
+| [0112](adr/0112-storage-space-for-slides.md) | 説明用スライドの iframe は `?space=` の接頭辞で保存領域を分け、普段のデータを壊さない |
 
 ## 文書の保ち方
 
