@@ -75,6 +75,7 @@ export function OffboardPanel({ staffId, onClose }: { staffId: string; onClose: 
             </p>
           ) : (
             <OffboardClientsTable
+              staffId={staffId}
               clients={scope.clients}
               choices={flow.choices}
               onChoices={flow.setChoices}

@@ -9,7 +9,7 @@
 - 行（`staff-row`）はどこを押してもその人の画面（`#/staff/:id`。行の中のボタン・リンク・文字の選択は除く）。右端に文字のボタン「詳しく」（その人の画面。`Eye` を文字の前に。`staff-open`）と「今日の画面」（今日のスマホ画面 `staffViewHref(id, 今日)`。`Smartphone`。`staff-view-open`）。読み上げの名前は文字から始める（「詳しく（〈名前〉）」「今日の画面（〈名前〉）」。PRD D417）。`?id=` はその人の画面へ移る
 - 列（`lib/peopleView` の `staffColumns(detailed)`）：名前・勤務日（`staff-days`）・勤務時間（`staff-hours`）と右端の「詳しく」「今日の画面」（状態の列が無い間は休止中だけ名前のそばに印＝`staffNameNote`）。**エキスパート機能が入のときだけ**表の上に「くわしい列」のチェック（`people-columns-toggle`。`components/DetailColumns`）。入れると 特性・求めること・自宅の緯度・経度・状態の列を足す。一覧ごとに端末に覚える（`store/navOpen` の鍵 `columns:staff`）。切は見出しの下の説明を初回だけ（`useIntro('staff')`。`peopleIntro`）
 - 見出しの右に「Excel・CSV」（`roster-toggle`）。押すと名簿の欄（[pages-clients.md](pages-clients.md)「名簿の欄」。`kind="staff"`）
-- 一覧の上に「最終勤務日のある〈スタッフ〉」のカード（`leaving-card`。振り直しが残っているか。「担当の振り直しを開く」`leaving-open`）。名簿の読み込みで最終勤務日が入った人も出る（トーストでこの欄を指す）
+- 一覧の上に「最終勤務日のある〈スタッフ〉」のカード（`leaving-card`。振り直しが残っていれば件数、残っていなければ「振り直すものはありません」。最初から無かった場合と、振り直して0になった場合はデータから区別できないので同じ文にする。「担当の振り直しを開く」`leaving-open`）。名簿の読み込みで最終勤務日が入った人も出る（トーストでこの欄を指す）
 - 一覧の上に「自宅の緯度・経度が未登録の〈スタッフ〉」のカード（[pages-clients.md](pages-clients.md)「住所から緯度・経度をまとめて入れる」。`usePlaceAllRun('staff')`。休止を除き、住所だけで探す）と、絞り込みのチップ「緯度・経度なし N」（`staff-filter-chip`。画面の状態）。名前のセルに、自宅の位置の無い人は「緯度・経度なし」と［住所から探す］［緯度・経度を編集］（`?edit=home` で自宅の節を開いた形で移る。PRD D427。ADR-0094）。名簿を読み込んだら、`geocode` が入なら自動で緯度・経度をまとめて探し始める
 - 状態に「最終 M/D」（`staff-lastday`）
 - 狭い画面（600px 以下）：表（`narrow-staff`）は1人1枚のカード（[pages.md](pages.md) の「狭い画面の表」）。1行目に名前と状態、続けて「勤務日」・「勤務時間」（くわしい列なら「特性」・「〈利用者さん〉に求めること」・「自宅の緯度・経度」）、「詳しく」「今日の画面」は右下（文字のまま）
@@ -54,7 +54,7 @@
 ### 最終勤務日と担当の振り直し
 
 - 最終勤務日を保存して振り直すものがあれば、または一覧の「最終勤務日のある〈スタッフ〉」・予定のタブの「担当の振り直しを開く」で、「担当の振り直し」の欄（`pages/OffboardPanel.tsx`・`offboard-panel`）を開く（`lib/offboard` の `offboardScope`・`applyOffboard`）
-- 〈利用者さん〉ごと（`offboard-clients`・`offboard-client`）：いまの持ち方は 繰り返しの担当・担当できる人・訪問の担当（繰り返しの担当・担当できる人ではないが、数え始める日からの保存した回の担当がその人。自動の組みが一部の曜日だけその人に付けたときなど。選べないと適用で替わらず訪問が残る）。名前は `PersonButton`（`offboard-client-name`。select の option には置かない）。代わりの候補（入れる回・受け持ち。`offboard-choice`）。無ければ `offboard-no-clients`
+- 〈利用者さん〉ごと（`offboard-clients`・`offboard-client`）：いまの持ち方は 繰り返しの担当・担当できる人・訪問の担当（繰り返しの担当・担当できる人ではないが、数え始める日からの保存した回の担当がその人。自動の組みが一部の曜日だけその人に付けたときなど。選べないと適用で替わらず訪問が残る）。名前は `PersonButton`（`offboard-client-name`。select の option には置かない）。代わりの候補（入れる回・受け持ち。`offboard-choice`）。退職する人が担当できる人に入っている〈利用者さん〉で、選んだ人がまだ入っていないときは、選びの下に「〈名前〉さんを担当できる人に足します」（`offboard-adds-allowed`。判定は `lib/offboard` の `addsAllowed`で、適用と同じ決まり）。無ければ `offboard-no-clients`
 - 翌日以降にその人が担当している訪問（`offboard-visits`。日ごとの件数と日の予定へのボタン）。無ければ `offboard-no-visits`
 - 主ボタン「まとめて適用」（`offboard-apply`）：いつもの担当・パターンの担当・担当できる人を置き換える。訪問の案は作り直さない
 - 月の予定では最終勤務日に「最終」、後の日のその人の訪問は要対応の「担当が休み」（`lib/dayPlan` の訪問ごとの検査）、〈スタッフ〉を選ぶと後の日は「最終勤務日の後」

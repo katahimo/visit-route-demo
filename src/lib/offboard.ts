@@ -284,11 +284,19 @@ export function applyOffboardWith(
     let allowedStaffIds = c.allowedStaffIds;
     if (allowedStaffIds.includes(staffId)) {
       if (to === null) allowedStaffIds = allowedStaffIds.filter((id) => id !== staffId);
-      else if (!allowedStaffIds.includes(to)) allowedStaffIds = [...allowedStaffIds, to];
+      else if (addsAllowed(c, staffId, to)) allowedStaffIds = [...allowedStaffIds, to];
     }
     return allowedStaffIds === c.allowedStaffIds ? c : { ...c, allowedStaffIds };
   });
   return { data: { ...d, clients, patterns, visits }, renamed };
+}
+
+/**
+ * 代わりに選んだ人 to が、適用で〈利用者さん〉の担当できる人に足されるか（applyOffboardWith と同じ決まり）：
+ * その人（staffId）が担当できる人に入っていて、to がまだ入っていないとき
+ */
+export function addsAllowed(c: Pick<Client, 'allowedStaffIds'>, staffId: string, to: string | null): boolean {
+  return to !== null && c.allowedStaffIds.includes(staffId) && !c.allowedStaffIds.includes(to);
 }
 
 /** applyOffboardWith のデータだけ */

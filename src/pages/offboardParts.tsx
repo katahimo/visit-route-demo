@@ -7,11 +7,12 @@ import type { Client, Staff } from '../contracts/documents';
 import { addDays } from '../domain/time';
 import { dateText, mdText, monthLabel } from '../lib/dateText';
 import type { OffboardClient } from '../lib/offboard';
-import { offboardCandidateText, offboardRolesText } from '../lib/offboardView';
+import { offboardAddsAllowedText, offboardCandidateText, offboardRolesText } from '../lib/offboardView';
 import { NOBODY } from './useOffboardFlow';
 
 /** 〈利用者さん〉ごとの代わりの〈スタッフ〉を選ぶ表 */
 export function OffboardClientsTable({
+  staffId,
   clients,
   choices,
   onChoices,
@@ -19,6 +20,8 @@ export function OffboardClientsTable({
   clientById,
   terms,
 }: {
+  /** 退職する人 */
+  staffId: string;
   clients: readonly OffboardClient[];
   /** 〈利用者さん〉ID → 選んだ人（'' はだれにもしない） */
   choices: Record<string, string>;
@@ -40,6 +43,10 @@ export function OffboardClientsTable({
         <tbody>
           {clients.map((c) => {
             const value = choices[c.clientId] ?? NOBODY;
+            const client = clientById.get(c.clientId);
+            const chosen = staffById.get(value);
+            const adds =
+              client && offboardAddsAllowedText(client, staffId, chosen ? { id: chosen.id, name: chosen.name } : null);
             return (
               <tr key={c.clientId} data-testid="offboard-client">
                 <th scope="row" className="person-name">
@@ -67,6 +74,11 @@ export function OffboardClientsTable({
                     ))}
                     <option value={NOBODY}>（だれにもしない）</option>
                   </select>
+                  {adds && (
+                    <p className="sub" data-testid="offboard-adds-allowed">
+                      {adds}
+                    </p>
+                  )}
                 </td>
               </tr>
             );

@@ -1,6 +1,12 @@
 // 退職・担当替えの一括振り直しの欄の文と並び（PRD D71。ADR-0015）
 import { describe, expect, it } from 'vitest';
-import { offboardCandidateText, offboardConfirmBody, offboardDays, offboardRolesText } from './offboardView';
+import {
+  offboardAddsAllowedText,
+  offboardCandidateText,
+  offboardConfirmBody,
+  offboardDays,
+  offboardRolesText,
+} from './offboardView';
 
 describe('offboardRolesText', () => {
   it('繰り返しが2つ以上なら数を添える', () => {
@@ -61,5 +67,16 @@ describe('offboardConfirmBody', () => {
     expect(body).toContain(
       '繰り返しは10/13で分け、この回だけ変えた 2件は新しい繰り返しの回にします（時刻・メモはそのまま）。',
     );
+  });
+});
+
+describe('offboardAddsAllowedText', () => {
+  const to = { id: 's2', name: '佐藤' };
+  it('退職する人が担当できる人で、選んだ人が入っていないときだけ文を出す', () => {
+    expect(offboardAddsAllowedText({ allowedStaffIds: ['s1'] }, 's1', to)).toBe('佐藤さんを担当できる人に足します');
+    expect(offboardAddsAllowedText({ allowedStaffIds: ['s1', 's2'] }, 's1', to)).toBeNull();
+    expect(offboardAddsAllowedText({ allowedStaffIds: [] }, 's1', to)).toBeNull();
+    expect(offboardAddsAllowedText({ allowedStaffIds: ['s3'] }, 's1', to)).toBeNull();
+    expect(offboardAddsAllowedText({ allowedStaffIds: ['s1'] }, 's1', null)).toBeNull();
   });
 });

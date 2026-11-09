@@ -44,7 +44,7 @@ export function StaffLeavingCard({
             <span className="sub">
               {x.clients > 0 || x.visits > 0
                 ? `振り直しが残っています（${terms.client} ${x.clients}人・担当の訪問 ${x.visits}件）`
-                : '振り直しは済んでいます'}
+                : '振り直すものはありません'}
             </span>
             <button
               type="button"
