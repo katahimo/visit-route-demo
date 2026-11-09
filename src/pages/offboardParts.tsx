@@ -23,6 +23,7 @@ export function OffboardClientsTable({
   onChoices,
   staffById,
   clientById,
+  limitsOn,
   terms,
 }: {
   /** 退職する人 */
@@ -33,6 +34,8 @@ export function OffboardClientsTable({
   onChoices: (choices: Record<string, string>) => void;
   staffById: ReadonlyMap<string, Staff>;
   clientById: ReadonlyMap<string, Client>;
+  /** 機能「担当を限る」が入か */
+  limitsOn: boolean;
   terms: { client: string; staff: string };
 }) {
   return (
@@ -52,7 +55,7 @@ export function OffboardClientsTable({
             const chosen = staffById.get(value);
             const to = chosen ? { id: chosen.id, name: chosen.name } : null;
             const adds = client && offboardAddsAllowedText(client, staffId, to);
-            const outside = client && offboardOutsideAllowedText(client, staffId, to);
+            const outside = client && offboardOutsideAllowedText(client, staffId, to, limitsOn);
             return (
               <tr key={c.clientId} data-testid="offboard-client">
                 <th scope="row" className="person-name">

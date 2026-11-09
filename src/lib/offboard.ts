@@ -152,10 +152,14 @@ export function offboardScope(
   const inRange = visitsIn(data, { from, to: sampleTo }).filter(
     (v) => !v.cancelled && !isOnLeave(data.clientLeaves, v),
   );
-  // 担当できる人の決まりを外す（置き換えるので）。ほかの必須の条件はそのまま効く
+  // 担当できる人にその人が入っている〈利用者さん〉は、決まりを外す（適用で代わりの人を足すので）。
+  // その人が入っていない〈利用者さん〉は外さない（適用は担当できる人を変えないので、決まりの外の人は入れない）。
+  // ほかの必須の条件はそのまま効く
   const hypo: DemoData = {
     ...data,
-    clients: data.clients.map((c) => (targetIds.has(c.id) ? { ...c, allowedStaffIds: [] } : c)),
+    clients: data.clients.map((c) =>
+      targetIds.has(c.id) && c.allowedStaffIds.includes(staffId) ? { ...c, allowedStaffIds: [] } : c,
+    ),
   };
   const fits = new Map<string, Map<string, number>>();
   const sample = new Map<string, number>();
@@ -301,10 +305,17 @@ export function addsAllowed(c: Pick<Client, 'allowedStaffIds'>, staffId: string,
 
 /**
  * 代わりに選んだ人 to が、担当できる人の決まりの外のままになるか（担当できる人を限っていて、退職する人（staffId）は
- * その中にいない。applyOffboardWith は担当できる人を変えないので、訪問は要対応に残る）
+ * その中にいない。applyOffboardWith は担当できる人を変えないので、訪問は要対応に残る）。
+ * limitsOn は機能「担当を限る」の入り切り（切なら compile は決まりを見ないので、外にはならない）
  */
-export function staysOutsideAllowed(c: Pick<Client, 'allowedStaffIds'>, staffId: string, to: string | null): boolean {
+export function staysOutsideAllowed(
+  c: Pick<Client, 'allowedStaffIds'>,
+  staffId: string,
+  to: string | null,
+  limitsOn: boolean,
+): boolean {
   return (
+    limitsOn &&
     to !== null &&
     c.allowedStaffIds.length > 0 &&
     !c.allowedStaffIds.includes(staffId) &&

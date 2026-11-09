@@ -257,12 +257,14 @@ describe('addsAllowed', () => {
 describe('staysOutsideAllowed', () => {
   it('適用で担当できる人が変わらず、選んだ人が外のままのときだけ true（addsAllowed と重ならない）', () => {
     const c = { allowedStaffIds: ['s3'] };
-    expect(staysOutsideAllowed(c, 's1', 's2')).toBe(true);
+    expect(staysOutsideAllowed(c, 's1', 's2', true)).toBe(true);
     expect(addsAllowed(c, 's1', 's2')).toBe(false);
-    expect(staysOutsideAllowed({ allowedStaffIds: ['s1'] }, 's1', 's2')).toBe(false);
-    expect(staysOutsideAllowed({ allowedStaffIds: ['s3', 's2'] }, 's1', 's2')).toBe(false);
-    expect(staysOutsideAllowed({ allowedStaffIds: [] }, 's1', 's2')).toBe(false);
-    expect(staysOutsideAllowed(c, 's1', null)).toBe(false);
+    expect(staysOutsideAllowed({ allowedStaffIds: ['s1'] }, 's1', 's2', true)).toBe(false);
+    expect(staysOutsideAllowed({ allowedStaffIds: ['s3', 's2'] }, 's1', 's2', true)).toBe(false);
+    expect(staysOutsideAllowed({ allowedStaffIds: [] }, 's1', 's2', true)).toBe(false);
+    expect(staysOutsideAllowed(c, 's1', null, true)).toBe(false);
+    // 機能「担当を限る」が切なら決まりは効かない
+    expect(staysOutsideAllowed(c, 's1', 's2', false)).toBe(false);
   });
 
   it('true のとき、適用しても担当できる人は変わらず、代わりの人は決まりの外のまま（訪問は要対応に残る）', () => {
@@ -272,7 +274,7 @@ describe('staysOutsideAllowed', () => {
       clients: d0.clients.map((c) => (c.id === 'c1' ? { ...c, allowedStaffIds: ['s3'] } : c)),
     };
     const c1 = d.clients.find((c) => c.id === 'c1')!;
-    expect(staysOutsideAllowed(c1, 's1', 's2')).toBe(true);
+    expect(staysOutsideAllowed(c1, 's1', 's2', true)).toBe(true);
     let n = 0;
     const x = applyOffboard(d, 's1', { c1: 's2' }, TUE, DATE, () => `new${++n}`);
     expect(x.clients.find((c) => c.id === 'c1')!.allowedStaffIds).toEqual(['s3']);
@@ -280,5 +282,16 @@ describe('staysOutsideAllowed', () => {
     const v = p.visits.findIndex((y) => y.clientId === 'c1');
     expect(v).toBeGreaterThanOrEqual(0);
     expect(p.allowed[v]![p.staff.findIndex((s) => s.id === 's2')]).toBe(false);
+  });
+
+  it('退職する人が入っていない担当できる人の決まりは、入れる回でも外さない（決まりの外の人は 0 回で、既定に選ばない）', () => {
+    const d0 = data();
+    const d: DemoData = {
+      ...d0,
+      clients: d0.clients.map((c) => (c.id === 'c1' ? { ...c, allowedStaffIds: ['s3'] } : c)),
+    };
+    const c1 = offboardScope(d, 's1', DATE)!.clients.find((c) => c.clientId === 'c1')!;
+    expect(c1.candidates.find((x) => x.staffId === 's2')!.fits).toBe(0);
+    expect(defaultChoice(c1)).not.toBe('s2');
   });
 });

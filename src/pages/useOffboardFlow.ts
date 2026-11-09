@@ -88,6 +88,7 @@ export function useOffboardFlow(staffId: string, onClose: () => void) {
   return {
     terms,
     scope,
+    limitsOn: data.org.features.allowedStaff !== false,
     staffById,
     clientById,
     name,

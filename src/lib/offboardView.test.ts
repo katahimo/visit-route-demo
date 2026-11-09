@@ -85,12 +85,12 @@ describe('offboardAddsAllowedText', () => {
 describe('offboardOutsideAllowedText', () => {
   const to = { id: 's2', name: '佐藤' };
   it('担当できる人を限り、退職する人がその中にいなくて、選んだ人も外のときだけ文を出す', () => {
-    expect(offboardOutsideAllowedText({ allowedStaffIds: ['s3'] }, 's1', to)).toBe(
+    expect(offboardOutsideAllowedText({ allowedStaffIds: ['s3'] }, 's1', to, true)).toBe(
       '佐藤さんは担当できる人に入っていないため、訪問は要対応に残ります',
     );
-    expect(offboardOutsideAllowedText({ allowedStaffIds: ['s3', 's2'] }, 's1', to)).toBeNull();
-    expect(offboardOutsideAllowedText({ allowedStaffIds: ['s1'] }, 's1', to)).toBeNull();
-    expect(offboardOutsideAllowedText({ allowedStaffIds: [] }, 's1', to)).toBeNull();
-    expect(offboardOutsideAllowedText({ allowedStaffIds: ['s3'] }, 's1', null)).toBeNull();
+    expect(offboardOutsideAllowedText({ allowedStaffIds: ['s3', 's2'] }, 's1', to, true)).toBeNull();
+    expect(offboardOutsideAllowedText({ allowedStaffIds: ['s1'] }, 's1', to, true)).toBeNull();
+    expect(offboardOutsideAllowedText({ allowedStaffIds: [] }, 's1', to, true)).toBeNull();
+    expect(offboardOutsideAllowedText({ allowedStaffIds: ['s3'] }, 's1', null, true)).toBeNull();
   });
 });

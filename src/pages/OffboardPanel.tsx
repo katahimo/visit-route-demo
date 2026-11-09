@@ -81,6 +81,7 @@ export function OffboardPanel({ staffId, onClose }: { staffId: string; onClose: 
               onChoices={flow.setChoices}
               staffById={flow.staffById}
               clientById={flow.clientById}
+              limitsOn={flow.limitsOn}
               terms={terms}
             />
           )}

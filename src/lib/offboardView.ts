@@ -47,8 +47,9 @@ export function offboardOutsideAllowedText(
   c: Pick<Client, 'allowedStaffIds'>,
   staffId: string,
   to: { id: string; name: string } | null,
+  limitsOn: boolean,
 ): string | null {
-  return to && staysOutsideAllowed(c, staffId, to.id)
+  return to && staysOutsideAllowed(c, staffId, to.id, limitsOn)
     ? `${to.name}さんは担当できる人に入っていないため、訪問は要対応に残ります`
     : null;
 }
