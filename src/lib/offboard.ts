@@ -15,8 +15,11 @@ import { dayRoutes } from './dayPlan';
 /** 候補を数える見本の期間（日。最終勤務日の翌日（今日より前なら今日）から） */
 export const OFFBOARD_SAMPLE_DAYS = 28;
 
-/** 〈利用者さん〉がその人をどう持っているか：繰り返しの担当／担当できる人 */
-export type OffboardRole = 'pattern' | 'allowed';
+/**
+ * 〈利用者さん〉がその人をどう持っているか：繰り返しの担当／担当できる人／訪問の担当（繰り返しの担当・担当できる人ではないが、
+ * 数え始める日からの保存した回の担当がその人。例：繰り返しのいつもの担当は別の人で、自動の組みが木曜の回だけその人に付けた）
+ */
+export type OffboardRole = 'pattern' | 'allowed' | 'visit';
 
 /** 最終勤務日の後に、その人が担当している訪問 */
 export type OffboardVisit = {
@@ -97,12 +100,13 @@ function rolesOf(data: Pick<DemoData, 'clients' | 'patterns' | 'staff'>, staffId
   return out;
 }
 
-const ROLE_ORDER: OffboardRole[] = ['pattern', 'allowed'];
+const ROLE_ORDER: OffboardRole[] = ['pattern', 'allowed', 'visit'];
 
 /**
  * 最終勤務日のある〈スタッフ〉の振り直しの範囲と候補。最終勤務日が無い・いない人は null。
- * 候補は、見本の期間（from から OFFBOARD_SAMPLE_DAYS 日）のその〈利用者さん〉の訪問ごとに、
- * その日の問題（その〈利用者さん〉の担当できる人の決まりを外したもの。必須の条件・稼働時間・種類の条件は効く）と、
+ * 候補は、見本の期間（from から OFFBOARD_SAMPLE_DAYS 日）のその〈利用者さん〉の訪問（担当できる人で持っていなければ、その人が担当の回だけ）ごとに、
+ * その日の問題（その人が担当できる人に入っている〈利用者さん〉は担当できる人の決まりを外したもの。必須の条件・稼働時間・
+ * 種類の条件は効く）と、
  * その日の担当の並び（その人の列は除く）に fitsOf で入れられる人を数える。
  * withCandidates が false なら候補を数えない（candidates は空・sample は 0。件数だけ見たいとき）
  */
@@ -139,15 +143,24 @@ export function offboardScope(
 
   // ---- 〈利用者さん〉と候補 ----
   const roles = rolesOf(data, staffId, from);
+  // 繰り返しの担当・担当できる人で持っていなくても、数え始める日からの訪問の担当がその人なら選べるようにする
+  // （選べないと「まとめて適用」で替わらず、訪問が残る）
+  for (const v of visits) {
+    if (!roles.has(v.clientId)) roles.set(v.clientId, { roles: new Set(['visit']), patternIds: [] });
+  }
   const targetIds = new Set(roles.keys());
   // 見本の期間の訪問（繰り返しの計算した回も入る。データは書き換えない）
   const inRange = visitsIn(data, { from, to: sampleTo }).filter(
     (v) => !v.cancelled && !isOnLeave(data.clientLeaves, v),
   );
-  // 担当できる人の決まりを外す（置き換えるので）。ほかの必須の条件はそのまま効く
+  // 担当できる人にその人が入っている〈利用者さん〉は、決まりを外す（適用で代わりの人を足すので）。
+  // その人が入っていない〈利用者さん〉は外さない（適用は担当できる人を変えないので、決まりの外の人は入れない）。
+  // ほかの必須の条件はそのまま効く
   const hypo: DemoData = {
     ...data,
-    clients: data.clients.map((c) => (targetIds.has(c.id) ? { ...c, allowedStaffIds: [] } : c)),
+    clients: data.clients.map((c) =>
+      targetIds.has(c.id) && c.allowedStaffIds.includes(staffId) ? { ...c, allowedStaffIds: [] } : c,
+    ),
   };
   const fits = new Map<string, Map<string, number>>();
   const sample = new Map<string, number>();
@@ -163,6 +176,8 @@ export function offboardScope(
     for (const [k, ids] of Object.entries(dayRoutes(data, date, p))) if (k !== staffId) routes[k] = [...ids];
     for (const v of dayVisits) {
       if (!targetIds.has(v.clientId) || !p.visits.some((x) => x.id === v.id)) continue;
+      // 担当できる人で持っていなければ、適用で替わるのはその人が担当の回だけ。ほかの人の回は数えない
+      if (!roles.get(v.clientId)?.roles.has('allowed') && v.staffId !== staffId) continue;
       sample.set(v.clientId, (sample.get(v.clientId) ?? 0) + 1);
       const m = fits.get(v.clientId) ?? new Map<string, number>();
       for (const f of fitsOf(p, routes, v.id)) m.set(f.staffId, (m.get(f.staffId) ?? 0) + 1);
@@ -276,11 +291,39 @@ export function applyOffboardWith(
     let allowedStaffIds = c.allowedStaffIds;
     if (allowedStaffIds.includes(staffId)) {
       if (to === null) allowedStaffIds = allowedStaffIds.filter((id) => id !== staffId);
-      else if (!allowedStaffIds.includes(to)) allowedStaffIds = [...allowedStaffIds, to];
+      else if (addsAllowed(c, staffId, to)) allowedStaffIds = [...allowedStaffIds, to];
     }
     return allowedStaffIds === c.allowedStaffIds ? c : { ...c, allowedStaffIds };
   });
   return { data: { ...d, clients, patterns, visits }, renamed };
+}
+
+/**
+ * 代わりに選んだ人 to が、適用で〈利用者さん〉の担当できる人に足されるか（applyOffboardWith と同じ決まり）：
+ * その人（staffId）が担当できる人に入っていて、to がまだ入っていないとき
+ */
+export function addsAllowed(c: Pick<Client, 'allowedStaffIds'>, staffId: string, to: string | null): boolean {
+  return to !== null && c.allowedStaffIds.includes(staffId) && !c.allowedStaffIds.includes(to);
+}
+
+/**
+ * 代わりに選んだ人 to が、担当できる人の決まりの外のままになるか（担当できる人を限っていて、退職する人（staffId）は
+ * その中にいない。applyOffboardWith は担当できる人を変えないので、訪問は要対応に残る）。
+ * limitsOn は機能「担当を限る」の入り切り（切なら compile は決まりを見ないので、外にはならない）
+ */
+export function staysOutsideAllowed(
+  c: Pick<Client, 'allowedStaffIds'>,
+  staffId: string,
+  to: string | null,
+  limitsOn: boolean,
+): boolean {
+  return (
+    limitsOn &&
+    to !== null &&
+    c.allowedStaffIds.length > 0 &&
+    !c.allowedStaffIds.includes(staffId) &&
+    !c.allowedStaffIds.includes(to)
+  );
 }
 
 /** applyOffboardWith のデータだけ */

@@ -15,6 +15,7 @@ import {
   seenRelease,
   startsWithAll,
 } from './start';
+import { appLocalStorage } from './storageSpace';
 
 /** 壊れた JSON の退避先 */
 export const BROKEN_KEY = 'vrdemo:data:broken';
@@ -29,13 +30,7 @@ export const QUOTA_MESSAGE =
 
 const today = () => jstDate(Date.now());
 
-function storage(): Storage | null {
-  try {
-    return globalThis.localStorage ?? null;
-  } catch {
-    return null;
-  }
-}
+const storage = appLocalStorage;
 
 /** zod の最初の問題を日本語の1文にする。例「staff の 3件目の name：…」 */
 function describeIssue(issue: z.core.$ZodIssue): string {

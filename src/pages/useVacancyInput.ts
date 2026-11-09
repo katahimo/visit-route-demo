@@ -5,6 +5,7 @@ import { VACANCY_DURATION_MAX, VACANCY_DURATION_MIN, type VacancyQuery, type Vac
 import { rangeAfterDuration, type WishBand } from '../lib/vacancyBands';
 import { loadVacancyInput, saveVacancyInput } from '../lib/vacancyInput';
 import { type NoticePeriod, vacancyQuery } from '../lib/vacancyView';
+import { appSessionStorage } from '../store';
 
 /** 空き状況の場所の入力（ClientPlace に、ピンを置いたときの住所を足したもの） */
 export type VacancyPlace = ClientPlace & { pinnedAddress: string };
@@ -14,7 +15,7 @@ export type VacancyPlace = ClientPlace & { pinnedAddress: string };
  * 入力はタブの間だけ覚える（sessionStorage。ほかの画面へ移って戻っても残り、閉じれば消える。PRD D258）
  */
 export function useVacancyInput(today: string, visitTypes: readonly VisitType[]) {
-  const [saved] = useState(() => loadVacancyInput(today, new Set(visitTypes.map((t) => t.id))));
+  const [saved] = useState(() => loadVacancyInput(today, new Set(visitTypes.map((t) => t.id)), appSessionStorage()));
   // 条件の欄
   const [typeId, setTypeId] = useState(saved.typeId);
   const [duration, setDurationRaw] = useState(saved.duration);
@@ -51,21 +52,24 @@ export function useVacancyInput(today: string, visitTypes: readonly VisitType[])
   const [noticeTypeId, setNoticeTypeId] = useState(saved.noticeTypeId);
   // 入力を覚える（PRD D258）
   useEffect(() => {
-    saveVacancyInput({
-      typeId,
-      duration,
-      requirements,
-      place,
-      weeks,
-      from,
-      wishDays,
-      wishFrom,
-      wishTo,
-      wishBands,
-      perWeek,
-      noticePeriod,
-      noticeTypeId,
-    });
+    saveVacancyInput(
+      {
+        typeId,
+        duration,
+        requirements,
+        place,
+        weeks,
+        from,
+        wishDays,
+        wishFrom,
+        wishTo,
+        wishBands,
+        perWeek,
+        noticePeriod,
+        noticeTypeId,
+      },
+      appSessionStorage(),
+    );
   }, [
     typeId,
     duration,

@@ -20,6 +20,7 @@ import {
   tabClick,
   tabLabel,
 } from '../lib/nav';
+import { currentSpace } from '../store';
 import { NAV_ICONS } from './shellNav';
 
 /** 上の帯（戻る・進む・範囲の AI で組む（担当を組む）の進み具合・スマホの今の画面の名前・探す・日付の切り替え・全画面） */
@@ -66,6 +67,12 @@ export function AppHeader({
           )}
         </strong>
       </div>
+      {/* 別の保存領域（?space=。説明用のスライドの iframe。ADR-0112）で開いているときだけ、控えめに知らせる */}
+      {currentSpace !== null && (
+        <span className="demo-badge space-badge" data-testid="space-badge" title="普段のデータとは別の領域です">
+          説明用のデータ
+        </span>
+      )}
       {/* コマンドパレットを開く（PRD D181。広い画面は「探す・移動」とキーの印、狭い画面は「探す」） */}
       <button
         type="button"

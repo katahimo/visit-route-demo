@@ -6,6 +6,7 @@
 
 import type { FirstRunBooking, FirstRunStart } from '../lib/firstRun';
 import { compareRelease } from '../lib/releaseNotes';
+import { appLocalStorage, appSessionStorage } from './storageSpace';
 
 /** localStorage のキー（DemoData の STORAGE_KEY とは別。データの版・書き出し・初期状態に戻すに入れない） */
 export const FEATURES_START_KEY = 'vrdemo:features:start';
@@ -15,7 +16,7 @@ export const FEATURES_START_ALL = 'all';
 type KeyStore = Pick<Storage, 'getItem'>;
 
 /** 印「all」があるか（あれば初めて開いたときに2問を出さず、今の初期データ＋すべて入で始める） */
-export function startsWithAll(getStorage: () => KeyStore | null = () => globalThis.localStorage ?? null): boolean {
+export function startsWithAll(getStorage: () => KeyStore | null = () => appLocalStorage()): boolean {
   try {
     return getStorage()?.getItem(FEATURES_START_KEY) === FEATURES_START_ALL;
   } catch {
@@ -32,7 +33,7 @@ const BOOKINGS = ['oneOff', 'regular'] as const;
 /** 最後の問2の答えを残す（書けなくても続ける） */
 export function rememberBooking(
   booking: FirstRunBooking,
-  getStorage: () => BookingStore | null = () => globalThis.localStorage ?? null,
+  getStorage: () => BookingStore | null = () => appLocalStorage(),
 ): void {
   try {
     getStorage()?.setItem(LAST_BOOKING_KEY, booking);
@@ -42,9 +43,7 @@ export function rememberBooking(
 }
 
 /** 最後の問2の答え。印が無い・読めない・知らない値なら null（呼ぶ側は定期として扱う） */
-export function lastBooking(
-  getStorage: () => KeyStore | null = () => globalThis.localStorage ?? null,
-): FirstRunBooking | null {
+export function lastBooking(getStorage: () => KeyStore | null = () => appLocalStorage()): FirstRunBooking | null {
   try {
     const v = getStorage()?.getItem(LAST_BOOKING_KEY);
     return BOOKINGS.find((b) => b === v) ?? null;
@@ -82,7 +81,7 @@ export function arrangesAfterStart(s: DemoStart, all: boolean = startsWithAll())
 export const ARRANGE_PENDING_KEY = 'vrdemo:arrange:pending';
 
 type PendingStore = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
-const sessionStore = (): PendingStore | null => globalThis.sessionStorage ?? null;
+const sessionStore = (): PendingStore | null => appSessionStorage();
 
 /** デモを作ったら、組むときだけ組む印を書く（組まないときは消す。書けなくても続ける） */
 export function markArrangeAfterStart(
@@ -123,7 +122,7 @@ export function clearArrangePending(getStorage: () => PendingStore | null = sess
 export const SEEN_RELEASE_KEY = 'vrdemo:release:seen';
 
 /** 最後に見た更新の id。印が無い・読めないなら null */
-export function seenRelease(getStorage: () => KeyStore | null = () => globalThis.localStorage ?? null): string | null {
+export function seenRelease(getStorage: () => KeyStore | null = () => appLocalStorage()): string | null {
   try {
     return getStorage()?.getItem(SEEN_RELEASE_KEY) ?? null;
   } catch {
@@ -135,10 +134,7 @@ export function seenRelease(getStorage: () => KeyStore | null = () => globalThis
  * 見た更新の id を残す（書けなくても続ける。書けなければ次に開いたときもう一度知らせる）。
  * 今の印より新しいときだけ書く（古い版を開いたままのタブが、新しい版で見た印を古くしない）
  */
-export function rememberRelease(
-  id: string,
-  getStorage: () => BookingStore | null = () => globalThis.localStorage ?? null,
-): void {
+export function rememberRelease(id: string, getStorage: () => BookingStore | null = () => appLocalStorage()): void {
   try {
     const s = getStorage();
     const cur = s?.getItem(SEEN_RELEASE_KEY) ?? null;

@@ -18,6 +18,7 @@
 | まだ決まっていないこと | [design.md](design.md) §8・[prd.md](prd.md) §8 |
 | e2e の走らせ方・書き方 | [e2e.md](e2e.md) |
 | 事業所向けの取扱説明書（型ごと。名簿・予約の CSV の取り込み・デモ例） | 訪問介護・移動支援 [manual/取扱説明書_訪問介護.md](manual/取扱説明書_訪問介護.md)・訪問看護 [manual/取扱説明書_訪問看護.md](manual/取扱説明書_訪問看護.md)・ベビーシッター [manual/取扱説明書_ベビーシッター.md](manual/取扱説明書_ベビーシッター.md)（Word 版は同じ名前の `.docx`。サンプル CSV は `manual/samples/`） |
+| 操作説明の Web スライド（訪問介護・移動支援。実アプリを iframe で動かす） | `../public/slides/`（公開先 `/slides/`。`?to=名前` で表紙に「〇〇様向け」。アプリは `?space=slides` の別の保存領域。ADR-0112） |
 
 ## 画面別の設計（design/）
 
@@ -150,6 +151,7 @@
 | [0106](adr/0106-mail-excel-always-on.md) | メールと Excel の入出力を入り切りせず、いつも入にする |
 | [0107](adr/0107-staff-off-from-google-calendar.md) | 〈スタッフ〉の休みを Google カレンダーの書き出し（zip）から毎日取り込み、カレンダーから入れた欠勤を合わせる |
 | [0108](adr/0108-imports-mirror-source.md) | 予約・名簿・休みのファイルの読み込みは総入れ替え（予約システム・カレンダーを写す）と、読み込みのあとの自動の組み |
+| [0112](adr/0112-storage-space-for-slides.md) | 説明用スライドの iframe は `?space=` の接頭辞で保存領域を分け、普段のデータを壊さない |
 
 ## 文書の保ち方
 

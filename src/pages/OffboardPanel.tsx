@@ -70,15 +70,18 @@ export function OffboardPanel({ staffId, onClose }: { staffId: string; onClose: 
           </SectionTitle>
           {scope.clients.length === 0 ? (
             <p className="sub" data-testid="offboard-no-clients">
-              {name}さんをいつもの担当・定期パターンの担当・担当できる人にしている{terms.client}はいません。
+              {name}さんを繰り返しの担当・担当できる人・{mdText(scope.from)}からの訪問の担当にしている{terms.client}
+              はいません。
             </p>
           ) : (
             <OffboardClientsTable
+              staffId={staffId}
               clients={scope.clients}
               choices={flow.choices}
               onChoices={flow.setChoices}
               staffById={flow.staffById}
               clientById={flow.clientById}
+              limitsOn={flow.limitsOn}
               terms={terms}
             />
           )}

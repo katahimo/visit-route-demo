@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>訪問ルートAI（デモ版）操作説明 ― 訪問介護・移動支援</title>
+    <link rel="icon" href="../icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="slides.css" />
+  </head>
+  <body>
+    <main class="stage" id="stage">
+      <!-- 1 表紙 -->
+      <section class="slide cover" data-title="表紙">
+        <p class="cover-to" id="cover-to" hidden></p>
+        <h1>訪問ルートAI（デモ版）<br />操作説明</h1>
+        <p class="cover-sub">訪問介護・移動支援の事業所向け</p>
+        <p class="cover-lead">台帳 CSV の読み込みから、毎週の予定・当日の欠勤・空き状況・勤務の見込みまで</p>
+        <p class="cover-meta">
+          開くところ：<strong>https://staff-assign-demo.katahimo.com/</strong><br />
+          パソコンの Chrome か Edge で開きます。インストールとログインはありません。<br />
+          説明には架空のデータを使います。
+        </p>
+      </section>
+
+      <!-- 2 困りごと -->
+      <section class="slide" data-title="困りごとと、このアプリでできること">
+        <p class="kicker">はじめに</p>
+        <h2>困りごとと、このアプリでできること</h2>
+        <table class="table-trouble">
+          <thead>
+            <tr>
+              <th>困りごと（今のやり方）</th>
+              <th>このアプリでは</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>シフトを毎月、手で組んでいる</td>
+              <td>毎週の訪問（曜日・時刻・所要）を一度入れると、担当を自動で組みます</td>
+            </tr>
+            <tr>
+              <td>振り分けの決め手（距離・性別の希望・相性）が頭の中にしかない</td>
+              <td>住所から緯度・経度を入れ、移動の近さで組みます。性別の希望と相性も入れておけば、組むときに考えます</td>
+            </tr>
+            <tr>
+              <td>朝・夜の訪問に入れないスタッフがいる</td>
+              <td>スタッフごとの勤務する曜日・時間の外には組みません</td>
+            </tr>
+            <tr>
+              <td>どこに空きがあり、誰を振れるかが分からない</td>
+              <td>「空き状況」で曜日・時間帯・所要を選ぶと、受けられる時刻と人数が出ます</td>
+            </tr>
+            <tr>
+              <td>当日の欠勤・キャンセルのたびに、組み直しと連絡に追われる</td>
+              <td>休む人を選ぶと、代わりの案と連絡の文が出ます。当日キャンセルも登録できます</td>
+            </tr>
+            <tr>
+              <td>退職者が出たときの組み直しに時間がかかる</td>
+              <td>最終勤務日を入れると、翌日からの担当と代わりの候補が一覧になります</td>
+            </tr>
+            <tr>
+              <td>拘束の時間と交通費を手で計算している</td>
+              <td>「勤務の見込み」に、人ごと・日ごとの拘束の時間と交通費の見込みが出ます</td>
+            </tr>
+            <tr>
+              <td>介護ソフトと二重に入力したくない</td>
+              <td>利用者台帳・職員台帳の CSV を、列を直さずに読み込めます</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- 3 流れ -->
+      <section class="slide" data-title="説明の流れ">
+        <p class="kicker">はじめに</p>
+        <h2>説明の流れ</h2>
+        <ol class="flow">
+          <li>最初の設定<small>定期＋勤務・契約</small></li>
+          <li>台帳 CSV の読み込み<small>利用者台帳・職員台帳</small></li>
+          <li>読み込んだあとに足すこと<small>性別・勤務時間・相性</small></li>
+          <li>毎週の予定と自動の組み</li>
+          <li>当日の欠勤・当日キャンセル</li>
+          <li>退職</li>
+          <li>空き状況<small>新しい相談</small></li>
+          <li>勤務の見込み・交通費・契約の段階</li>
+        </ol>
+        <div class="cols">
+          <div class="card">
+            <h3>実演のページ</h3>
+            <ul>
+              <li>右の枠の中で、アプリをそのまま操作できます</li>
+              <li>［大きく表示］で枠を画面いっぱいにします。Esc で戻ります</li>
+              <li>前のページで入れたデータは、次のページに引き継がれます</li>
+              <li>［説明用データを最初に戻す］で、最初の設定から始め直せます</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>データの扱い</h3>
+            <ul>
+              <li>データは、このブラウザの中だけに残ります。外へ送るのは、探すボタンを押したときの住所などだけです</li>
+              <li>スライドの中のアプリは説明用の保存場所を使います。ふだんのデータとは別です</li>
+              <li>実在の利用者さん・職員の名前や住所は入れないでください</li>
+            </ul>
+          </div>
+        </div>
+        <p class="note">ページは ← → ・スペース・PageUp / PageDown で送ります。F で全画面になります。アプリの枠の中を操作している間は、キーでページは送りません（枠の外を押すと送れます）。</p>
+      </section>
+
+      <!-- 4 最初の設定【実演】 -->
+      <section class="slide demo" data-title="最初の設定">
+        <p class="kicker">1. 最初の設定<span class="demo-mark">実演</span></p>
+        <h2>最初の設定（定期＋勤務・契約）</h2>
+        <div class="demo-body">
+          <div class="demo-side">
+            <ol class="steps">
+              <li>「1. どちらで始めますか」で「自分のデータで始める」を選びます</li>
+              <li>「2. 使い方の近いものはどれですか」で「定期＋勤務・契約」を選びます（例：訪問介護・移動支援）</li>
+              <li><span class="btn-like">［はじめる］</span>を押します</li>
+              <li>「登録の案内」の「① 利用者さんの名簿を読み込む」（1/3）が開きます</li>
+            </ol>
+            <p class="side-note">人の呼び方は「利用者さん」「スタッフ」になります。左のメニューは 予定・空き状況・利用者さん・スタッフ・設定 です。</p>
+            <p class="side-note">「定期＋勤務・契約」では、勤務の見込み・交通費・段階と紹介元の機能が入った状態で始まります。</p>
+            <p class="side-note">「最初の設定」が出ないときは、［説明用データを最初に戻す］を押します。</p>
+            <div class="demo-tools">
+              <button type="button" class="tool" data-act="big">大きく表示</button>
+              <button type="button" class="tool" data-act="reset">説明用データを最初に戻す</button>
+            </div>
+          </div>
+          <div class="demo-box" data-route="/plan">
+            <div class="demo-bar">
+              <span>最初の設定</span>
+              <button type="button" class="tool" data-act="small">元の大きさに戻す（Esc）</button>
+            </div>
+            <iframe title="アプリ：最初の設定"></iframe>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5 台帳 CSV【実演】 -->
+      <section class="slide demo" data-title="台帳 CSV の読み込み">
+        <p class="kicker">2. 台帳 CSV の読み込み<span class="demo-mark">実演</span></p>
+        <h2>利用者台帳・職員台帳を読み込む</h2>
+        <div class="demo-body wide-side">
+          <div class="demo-side dense">
+            <ol class="steps">
+              <li>「① 利用者さんの名簿」で<span class="btn-like">［ファイルを選ぶ］</span>を押し、利用者台帳の CSV を選びます</li>
+              <li>確かめる画面で人数と読まない列を見て、<span class="btn-like">［名簿を読み込む］</span>を押します</li>
+              <li>続けて住所から緯度・経度を探します。「終わりました」と出たら<span class="btn-like">［次へ］</span></li>
+              <li>「② スタッフの名簿」で職員台帳の CSV を同じように読み込み、<span class="btn-like">［次へ］</span></li>
+              <li>「③ 予定を登録する」で「移動時間の見積もり方」を見て、<span class="btn-like">［予定の画面へ］</span>を押します</li>
+            </ol>
+            <div class="downloads">
+              <a href="samples/利用者台帳_サンプル.csv" download>利用者台帳_サンプル.csv をダウンロード</a>
+              <a href="samples/職員台帳_サンプル.csv" download>職員台帳_サンプル.csv をダウンロード</a>
+            </div>
+            <p class="side-note">サンプルは架空の名前で、住所は仙台市の公共施設です。緯度・経度を探している間は、ページを移らずに待ちます。探すときは郵便番号・住所だけを外部の検索に送ります。</p>
+            <p class="side-note">移動時間は、はじめ緯度・経度の直線距離から見積もります。車道の道のりに替えるときは、選んで［道のりを取得する］を押します。</p>
+            <div class="demo-tools">
+              <button type="button" class="tool" data-act="big">大きく表示</button>
+              <button type="button" class="tool" data-act="reset">説明用データを最初に戻す</button>
+            </div>
+          </div>
+          <div class="demo-box" data-route="/start">
+            <div class="demo-bar">
+              <span>台帳 CSV の読み込み</span>
+              <button type="button" class="tool" data-act="small">元の大きさに戻す（Esc）</button>
+            </div>
+            <iframe title="アプリ：登録の案内"></iframe>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6 台帳の列 -->
+      <section class="slide" data-title="台帳のどの列を読むか">
+        <p class="kicker">2. 台帳 CSV の読み込み</p>
+        <h2>台帳のどの列を読むか</h2>
+        <div class="cols">
+          <table class="table-small">
+            <thead>
+              <tr>
+                <th>利用者台帳の列</th>
+                <th>アプリでは</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>利用者名・利用者カナ</td><td>名前・よみ</td></tr>
+              <tr><td>郵便番号・都道府県〜建物名</td><td>住所（1行にまとめます）</td></tr>
+              <tr><td>電話番号・備考</td><td>メモ</td></tr>
+              <tr><td>利用者状態</td><td>「利用中」なら利用中、ほかは終了</td></tr>
+              <tr><td>生年月日・性別・請求・口座など</td><td>読みません</td></tr>
+            </tbody>
+          </table>
+          <table class="table-small">
+            <thead>
+              <tr>
+                <th>職員台帳の列</th>
+                <th>アプリでは</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>職員名</td><td>名前</td></tr>
+              <tr><td>都道府県〜建物名</td><td>自宅の住所（直行直帰の出発点）</td></tr>
+              <tr><td>職員Eメールアドレス</td><td>メールアドレス</td></tr>
+              <tr><td>退社年月日</td><td>最終勤務日</td></tr>
+              <tr><td>在職状況</td><td>「退社済」なら休止</td></tr>
+              <tr><td>資格・研修の列</td><td>資格・研修</td></tr>
+              <tr><td>カナ・入社年月日・電話など</td><td>読みません</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="cols" style="margin-top: 18px">
+          <div class="card">
+            <h3>サンプルで読み込むと</h3>
+            <ul>
+              <li>利用者さん 8人。「科学館 ひかる」さんは契約終了なので終了で入り、緯度・経度を探すのは 7人です</li>
+              <li>スタッフ 7人。「泉区役所 いずみ」さんは最終勤務日 11/30、「旧庁舎 むかし」さんは休止で入ります</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>読み直すとき</h3>
+            <ul>
+              <li>読み込み方は「総入れ替え」と「追加・更新」から選べます。どちらも人を消すことはありません（総入れ替えは、ファイルに無い人を休止・終了にします）</li>
+              <li>読み込む前の状態は、設定 › データの［直前の状態に戻す］で戻せます</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7 スタッフに足すこと【実演】 -->
+      <section class="slide demo" data-title="スタッフに足すこと">
+        <p class="kicker">3. 読み込んだあとに足すこと<span class="demo-mark">実演</span></p>
+        <h2>スタッフ：性別・勤務する曜日・勤務時間</h2>
+        <div class="demo-body">
+          <div class="demo-side">
+            <ol class="steps">
+              <li>一覧で人を押し、<span class="btn-like">［基本情報］</span>タブを開きます</li>
+              <li>「詳しく ▾」を押し、「特性」の<span class="btn-like">［直す］</span>で性別を選んで<span class="btn-like">［保存］</span></li>
+              <li><span class="btn-like">［勤務時間］</span>タブの「ふだんの勤務」で<span class="btn-like">［直す］</span>を押します</li>
+              <li>勤務開始・勤務終了・勤務する曜日を入れて<span class="btn-like">［保存］</span></li>
+            </ol>
+            <p class="side-note">台帳から入ったスタッフは、はじめ 月〜金・9:00〜18:00・車・性別は未確認 です。性別が未確認のままだと、「必要条件：女性」の利用者さんの担当になりません。</p>
+            <p class="side-note">例：子育て中で朝・夜に入れない人は 9:30〜15:00。日・月が休みの人は 火〜土 を選びます。朝 8:30 や夜 18:00 の訪問に入る人は、7:00〜21:00 のように広げます。</p>
+            <div class="demo-tools">
+              <button type="button" class="tool" data-act="big">大きく表示</button>
+              <button type="button" class="tool" data-act="reset">説明用データを最初に戻す</button>
+            </div>
+          </div>
+          <div class="demo-box" data-route="/staff">
+            <div class="demo-bar">
+              <span>スタッフ</span>
+              <button type="button" class="tool" data-act="small">元の大きさに戻す（Esc）</button>
+            </div>
+            <iframe title="アプリ：スタッフ"></iframe>
+          </div>
+        </div>
+      </section>
+
+      <!-- 8 利用者さんに足すこと・相性【実演】 -->
+      <section class="slide demo" data-title="利用者さんの希望と相性">
+        <p class="kicker">3. 読み込んだあとに足すこと<span class="demo-mark">実演</span></p>
+        <h2>利用者さん：性別の希望・相性</h2>
+        <div class="demo-body">
+          <div class="demo-side">
+            <ol class="steps">
+              <li>一覧で人を押し、<span class="btn-like">［基本情報］</span>タブの「詳しく ▾」を押します</li>
+              <li>「スタッフに求めること」の<span class="btn-like">［直す］</span>を押します</li>
+              <li>「女性のヘルパーを必ず」は必要条件の性別で女性、「できれば女性」は希望の性別で女性に印を付けて<span class="btn-like">［保存］</span></li>
+              <li>一覧の上の<span class="btn-like">［相性］</span>タブで、マスを押して印を選びます</li>
+            </ol>
+            <p class="side-note">必要条件に合わない人は担当にしません。希望は、合う人を先に考えます。資格・研修（同行援護など）が要る方も、必要条件で選びます。</p>
+            <p class="side-note">相性の印：× 担当にしない／△ 選ばれにくい／○ やや選ばれやすい／◎ 選ばれやすい。何も入れなければ ふつう です。</p>
+            <div class="demo-tools">
+              <button type="button" class="tool" data-act="big">大きく表示</button>
+              <button type="button" class="tool" data-act="reset">説明用データを最初に戻す</button>
+            </div>
+          </div>
+          <div class="demo-box" data-route="/clients">
+            <div class="demo-bar">
+              <span>利用者さん</span>
+              <button type="button" class="tool" data-act="small">元の大きさに戻す（Esc）</button>
+            </div>
+            <iframe title="アプリ：利用者さん"></iframe>
+          </div>
+        </div>
+      </section>
+
+      <!-- 9 毎週の予定【実演】 -->
+      <section class="slide demo" data-title="毎週の予定と自動の組み">
+        <p class="kicker">4. 毎週の予定と自動の組み<span class="demo-mark">実演</span></p>
+        <h2>毎週の予定を入れる</h2>
+        <div class="demo-body">
+          <div class="demo-side">
+            <ol class="steps">
+              <li>月の予定で<span class="btn-like">［定期の予定を追加］</span>を押します</li>
+              <li>利用者さん・曜日（いくつでも）・くり返し・開始日・時刻・所要（分）を入れます</li>
+              <li><span class="btn-like">［追加］</span>を押すと「予定を入れました」と出て、担当を自動で組みます。終わると「N件の担当を組みました」と出ます</li>
+              <li><span class="btn-like">［月］［週］［日］</span>で見方を替えます</li>
+            </ol>
+            <p class="side-note">曜日は、はじめ今日の曜日が選ばれています。要らなければ押して外します。</p>
+            <p class="side-note">くり返しは 毎週・隔週・3週ごと・4週ごと・毎月（第N）。今日から翌月の終わりまでの回に担当が付きます。組んでいる間は上に進み具合が出ます。終わる前にスライドを替えると、残りは担当なしのままです（日の予定の［要対応を組む］で組めます）。</p>
+            <p class="side-note">例：体育館 つよし　月〜金　8:30　30分</p>
+            <div class="demo-tools">
+              <button type="button" class="tool" data-act="big">大きく表示</button>
+              <button type="button" class="tool" data-act="reset">説明用データを最初に戻す</button>
+            </div>
+          </div>
+          <div class="demo-box" data-route="/month">
+            <div class="demo-bar">
+              <span>月の予定</span>
+              <button type="button" class="tool" data-act="small">元の大きさに戻す（Esc）</button>
+            </div>
+            <iframe title="アプリ：月の予定"></iframe>
+          </div>
+        </div>
+      </section>
+
+      <!-- 10 組み方 -->
+      <section class="slide" data-title="組むときに守ること">
+        <p class="kicker">4. 毎週の予定と自動の組み</p>
+        <h2>組むときに守ること・良くすること</h2>
+        <div class="cols">
+          <div class="card">
+            <h3>必ず守ること</h3>
+            <ul>
+              <li>スタッフの勤務する曜日・勤務時間・休み・最終勤務日</li>
+              <li>利用者さんの必要条件（性別・資格・研修）</li>
+              <li>相性の「× 担当にしない」</li>
+            </ul>
+            <h3 style="margin-top: 16px">できるだけ良くすること</h3>
+            <ul>
+              <li>移動が近いこと（自宅や前の訪問先から）。緯度・経度が無い所への移動は 30分とみます。見積もり方は直線距離か車道の道のりで、登録の案内③と管理者設定で選べます</li>
+              <li>希望・相性</li>
+              <li>受け持ちが人によってかたよらないこと</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>サンプルで組むと</h3>
+            <ul>
+              <li>体育館 つよしさんの朝 8:30・夜 18:00 には、9:30〜15:00 勤務の国際センター みどりさんは入りません</li>
+              <li>博物館 かわ子さん（必要条件：女性）には、女性のスタッフだけが入ります</li>
+              <li>天文台 ほしおさん（同行援護）には、研修を持つ図書館 つつじさんが入ります</li>
+              <li>動物公園 ももさん（相性 ×：図書館 つつじ）には、つつじさんは入りません</li>
+              <li>土曜のメディアテーク はるさんには、土曜に勤務する宮城野区役所 みやぎのさんが入ります</li>
+            </ul>
+          </div>
+        </div>
+        <p class="note">決まったあとに担当や時刻が変わった訪問には「変更あり」の印が付きます。予定の画面の矢印のボタンで、ひとつ前に戻す・やり直すができます。</p>
+      </section>
+
+      <!-- 11 当日の欠勤・キャンセル【実演】 -->
+      <section class="slide demo" data-title="当日の欠勤・当日キャンセル">
+        <p class="kicker">5. 当日の欠勤・当日キャンセル<span class="demo-mark">実演</span></p>
+        <h2>当日の欠勤・当日キャンセル</h2>
+        <div class="demo-body wide-side">
+          <div class="demo-side dense">
+            <ol class="steps">
+              <li><span class="btn-like">［欠勤・キャンセルを登録］</span>を押し、「スタッフが休む」を選びます</li>
+              <li>休む人と、休む時間（終日・午前だけ・午後だけ・時間帯）を選びます</li>
+              <li>「入らなくなる訪問」とおすすめの案（案A）が出ます。「〇〇さん から △△さん」の形で、替わる訪問が並びます。<span class="btn-like">［この案で決める］</span>を押します</li>
+              <li>「変更を伝えて確定する」で、人ごとの連絡の文を<span class="btn-like">［文をコピー］</span>して LINE などに貼ります。メールアドレスがあれば［メール］でメールアプリも開けます。送ったら［連絡した］、最後に［終わる］</li>
+              <li>当日キャンセルは「利用者さんがキャンセル」で訪問を選び、「当日キャンセル」→<span class="btn-like">［当日キャンセルとして取り消す］</span></li>
+            </ol>
+            <p class="side-note">案Aは、ほかの人の担当・順番・時刻を変えません。「ほかのやり方」で案Bも作れます。確定の画面の「振り直しの結果（案A・案B）」と［日の予定で差を見る］で比べられます。決めたあとも［振り直す前に戻す］で戻せます。</p>
+            <p class="side-note">休みを Google カレンダーに入れている場合は、［休みを取り込む］で書き出した zip を取り込めます。</p>
+            <div class="demo-tools">
+              <button type="button" class="tool" data-act="big">大きく表示</button>
+              <button type="button" class="tool" data-act="reset">説明用データを最初に戻す</button>
+            </div>
+          </div>
+          <div class="demo-box" data-route="/plan">
+            <div class="demo-bar">
+              <span>日の予定</span>
+              <button type="button" class="tool" data-act="small">元の大きさに戻す（Esc）</button>
+            </div>
+            <iframe title="アプリ：日の予定"></iframe>
+          </div>
+        </div>
+      </section>
+
+      <!-- 12 退職【実演】 -->
+      <section class="slide demo" data-title="退職">
+        <p class="kicker">6. 退職<span class="demo-mark">実演</span></p>
+        <h2>退職するスタッフの担当を振り直す</h2>
+        <div class="demo-body wide-side">
+          <div class="demo-side dense">
+            <ol class="steps">
+              <li>スタッフの画面の「最終勤務日（退職・担当替え）」に日付を入れて<span class="btn-like">［保存］</span>。職員台帳の退社年月日からも入ります</li>
+              <li>スタッフ一覧の上の「最終勤務日のあるスタッフ」で<span class="btn-like">［担当の振り直しを開く］</span>を押します</li>
+              <li>「利用者さんごとの代わり」で代わりのスタッフを選びます（入れる回数と4週の受け持ちが出ます）</li>
+              <li><span class="btn-like">［まとめて適用］</span>→<span class="btn-like">［担当を置き換える］</span>。最終勤務日の翌日からの担当が替わります</li>
+            </ol>
+            <p class="side-note">保存した回だけ退職する人が担当の利用者さんも、「いまの持ち方」に「訪問の担当」として出ます。適用すると訪問が残りません。</p>
+            <p class="side-note">機能「担当を限る」が入のとき、代わりの人が担当できる人に足されるときは、選びの下に「〇〇さんを担当できる人に足します」と出ます。退職する人が担当できる人にいない利用者さんは、決まりの外の人を選ぶと「訪問は要対応に残ります」と出ます。</p>
+            <p class="side-note">振り直すものが無いときは「振り直すものはありません」と出ます。試すには、担当のあるスタッフに数日先の最終勤務日を入れます。</p>
+            <div class="demo-tools">
+              <button type="button" class="tool" data-act="big">大きく表示</button>
+              <button type="button" class="tool" data-act="reset">説明用データを最初に戻す</button>
+            </div>
+          </div>
+          <div class="demo-box" data-route="/staff">
+            <div class="demo-bar">
+              <span>スタッフ</span>
+              <button type="button" class="tool" data-act="small">元の大きさに戻す（Esc）</button>
+            </div>
+            <iframe title="アプリ：スタッフ"></iframe>
+          </div>
+        </div>
+      </section>
+
+      <!-- 13 空き状況【実演】 -->
+      <section class="slide demo" data-title="空き状況">
+        <p class="kicker">7. 空き状況（新しい相談）<span class="demo-mark">実演</span></p>
+        <h2>新しい相談に答える</h2>
+        <div class="demo-body">
+          <div class="demo-side">
+            <ol class="steps">
+              <li>曜日（例：火・木）、時間帯（例：午前）、所要（例：60分）を選びます</li>
+              <li>「受けられます：火・木 8:00〜11:30 に 約1〜4人」のように出ます（時刻と人数はデータで変わります）</li>
+              <li><span class="btn-like">［要約をコピー］</span>で答えの文をコピーし、相談員さんへの返事に使えます</li>
+              <li>「2. 場所（任意）」の［開く］で住所を入れると、移動も入れて絞り込みます</li>
+              <li>受けるときは<span class="btn-like">［仮の利用者さんとして押さえる］</span>→ 表示名を入れて<span class="btn-like">［押さえる］</span></li>
+            </ol>
+            <p class="side-note">今日から 4週分の予定のすき間に入るかを見ます。ほかの人の予定は動かしません。</p>
+            <p class="side-note">押さえた人は「仮」の印の利用者さんになり、段階は「相談受付」です。</p>
+            <div class="demo-tools">
+              <button type="button" class="tool" data-act="big">大きく表示</button>
+              <button type="button" class="tool" data-act="reset">説明用データを最初に戻す</button>
+            </div>
+          </div>
+          <div class="demo-box" data-route="/vacancy">
+            <div class="demo-bar">
+              <span>空き状況</span>
+              <button type="button" class="tool" data-act="small">元の大きさに戻す（Esc）</button>
+            </div>
+            <iframe title="アプリ：空き状況"></iframe>
+          </div>
+        </div>
+      </section>
+
+      <!-- 14 勤務の見込み・交通費【実演】 -->
+      <section class="slide demo" data-title="勤務の見込み・交通費">
+        <p class="kicker">8. 勤務の見込み・交通費・契約の段階<span class="demo-mark">実演</span></p>
+        <h2>勤務の見込み（拘束の時間）と交通費</h2>
+        <div class="demo-body">
+          <div class="demo-side">
+            <ol class="steps">
+              <li>開き方：<span class="btn-like">［スタッフ］</span>→<span class="btn-like">［勤務］</span>タブ→<span class="btn-like">［勤務の見込み］</span>（月の予定の［その他］からも開けます）</li>
+              <li>「月の合計」に、人ごとの日数・訪問・出勤〜退勤（拘束）・一番長い日・訪問の時間・移動・空き時間（待ち）・距離・交通費が出ます</li>
+              <li>「日ごと」で名前を押すと、その人の日ごとの時間が出ます</li>
+              <li><span class="btn-like">［表をコピー］</span>で、Excel に貼り付けられます</li>
+            </ol>
+            <p class="side-note">拘束は、その日の最初の訪問の始まりから最後の訪問の終わりまでです。交通費の単価ははじめ 10円/km、拘束の上限ははじめ 10時間です。</p>
+            <p class="side-note">予定から出した見込みで、実際に働いた時間ではありません。</p>
+            <div class="demo-tools">
+              <button type="button" class="tool" data-act="big">大きく表示</button>
+              <button type="button" class="tool" data-act="reset">説明用データを最初に戻す</button>
+            </div>
+          </div>
+          <div class="demo-box" data-route="/workload">
+            <div class="demo-bar">
+              <span>勤務の見込み</span>
+              <button type="button" class="tool" data-act="small">元の大きさに戻す（Esc）</button>
+            </div>
+            <iframe title="アプリ：勤務の見込み"></iframe>
+          </div>
+        </div>
+      </section>
+
+      <!-- 15 契約の段階【実演】 -->
+      <section class="slide demo" data-title="契約の段階・紹介元">
+        <p class="kicker">8. 勤務の見込み・交通費・契約の段階<span class="demo-mark">実演</span></p>
+        <h2>相談から契約までの段階と紹介元</h2>
+        <div class="demo-body">
+          <div class="demo-side">
+            <ol class="steps">
+              <li>利用者さんの画面の<span class="btn-like">［基本情報］</span>タブで「詳しく ▾」を押します</li>
+              <li>「段階と紹介元」の<span class="btn-like">［直す］</span>で段階を選びます：相談受付・顔合わせ・契約・利用中・終了</li>
+              <li>紹介元・連絡先・メールアドレス・メモを入れて<span class="btn-like">［保存］</span></li>
+              <li>仮押さえの人は<span class="btn-like">［本登録にする］</span>で利用中に、<span class="btn-like">［仮押さえを取り消す］</span>で取り消します</li>
+            </ol>
+            <p class="side-note">利用中より前の段階では「枠を仮押さえする」に印を付けると、契約の前でも予定に入れて担当を組めます。</p>
+            <p class="side-note">台帳から読み込んだ人の段階は、「利用中」か「終了」です。</p>
+            <div class="demo-tools">
+              <button type="button" class="tool" data-act="big">大きく表示</button>
+              <button type="button" class="tool" data-act="reset">説明用データを最初に戻す</button>
+            </div>
+          </div>
+          <div class="demo-box" data-route="/clients">
+            <div class="demo-bar">
+              <span>利用者さん</span>
+              <button type="button" class="tool" data-act="small">元の大きさに戻す（Esc）</button>
+            </div>
+            <iframe title="アプリ：利用者さん"></iframe>
+          </div>
+        </div>
+      </section>
+
+      <!-- 16 できないこと -->
+      <section class="slide" data-title="このデモでできないこと">
+        <p class="kicker">おわりに</p>
+        <h2>このデモでできないこと</h2>
+        <ul class="cannot">
+          <li><strong>請求</strong><span>国保連・移動支援の市町村ごとの明細、利用者負担の集金、キャンセル料の請求</span></li>
+          <li><strong>勤怠・打刻</strong><span>入ります／終わりました の打刻、実際に働いた時間の記録。勤務の見込みは予定からの見込みです</span></li>
+          <li><strong>実績記録票</strong><span>実績記録票・利用者さんのサイン</span></li>
+          <li><strong>LINE とのつながり</strong><span>連絡の文はコピーするか、メールアプリで開いて、人が送ります。自動では送りません</span></li>
+          <li><strong>ログイン・共有</strong><span>ログイン、何台ものパソコンでの同時の入力、インターネット上への保存</span></li>
+          <li><strong>交通費の精算</strong><span>交通費は見込みです。精算は事業所の決まりで行います</span></li>
+        </ul>
+        <p class="note">データはブラウザの中だけにあります。残すときは、設定 › データの「控え（バックアップ）」で［ファイルに書き出す］を押します。</p>
+      </section>
+    </main>
+
+    <nav class="page-bar" aria-label="ページ送り">
+      <span class="title" id="page-title"></span>
+      <span class="keys">← → で送る・F で全画面</span>
+      <button type="button" id="prev" aria-label="前のページ">‹ 前</button>
+      <span class="num" id="page-num" aria-live="polite"></span>
+      <button type="button" id="next" aria-label="次のページ">次 ›</button>
+    </nav>
+
+    <script src="slides.js"></script>
+  </body>
+</html>

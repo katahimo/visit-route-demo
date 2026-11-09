@@ -12,6 +12,7 @@ import {
   saveHistoryMax,
 } from '../lib/historyNav';
 import { confirmLeave } from '../lib/leaveGuard';
+import { appSessionStorage } from '../store';
 import { IconButton } from './ui';
 
 const nowIdx = () => historyIdxOf(window.history.state);
@@ -26,14 +27,14 @@ export function HistoryNav() {
   const location = useLocation();
   const navType = useNavigationType();
   const [idx, setIdx] = useState(nowIdx);
-  const [maxIdx, setMaxIdx] = useState(() => initialMaxIdx(loadHistoryMax(), nowIdx(), RESTORED));
+  const [maxIdx, setMaxIdx] = useState(() => initialMaxIdx(loadHistoryMax(appSessionStorage()), nowIdx(), RESTORED));
   // biome-ignore lint/correctness/useExhaustiveDependencies: 画面が移るたび（location.key）に番号を読み直す
   useEffect(() => {
     const now = nowIdx();
     setIdx(now);
     setMaxIdx((m) => {
       const next = nextMaxIdx(m, now, navType);
-      saveHistoryMax(next);
+      saveHistoryMax(next, appSessionStorage());
       return next;
     });
   }, [location.key, navType]);

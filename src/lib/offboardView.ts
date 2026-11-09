@@ -1,18 +1,22 @@
 // 退職・担当替えの一括振り直し（PRD D71。ADR-0015）の欄の文と並び：持ち方の文・候補の文・訪問の日ごとのまとめ・適用前の確認の文。
 // 範囲と候補の計算は lib/offboard
+import type { Client } from '../contracts/documents';
 import { mdText } from './dateText';
 import {
+  addsAllowed,
   OFFBOARD_SAMPLE_DAYS,
   type OffboardCandidate,
   type OffboardClient,
   type OffboardRole,
   type OffboardVisit,
+  staysOutsideAllowed,
 } from './offboard';
 
 /** 持ち方の文 */
 const ROLE_TEXT: Record<OffboardRole, string> = {
   pattern: '繰り返しの担当',
   allowed: '担当できる人',
+  visit: '訪問の担当',
 };
 
 /** いまの持ち方（例「繰り返しの担当（2つ）・担当できる人」） */
@@ -27,6 +31,27 @@ export const offboardRolesText = (c: Pick<OffboardClient, 'roles' | 'patternIds'
 export function offboardCandidateText(c: Pick<OffboardClient, 'sample'>, x: OffboardCandidate): string {
   const fit = c.sample === 0 ? '見本の訪問なし' : x.fits === 0 ? '入れる回なし' : `入れる ${x.fits}/${c.sample}回`;
   return `（${fit}・${OFFBOARD_SAMPLE_DAYS / 7}週の受け持ち ${x.load}回）`;
+}
+
+/** 代わりに選んだ人が担当できる人に足されるときの行の文（足されないときは null） */
+export function offboardAddsAllowedText(
+  c: Pick<Client, 'allowedStaffIds'>,
+  staffId: string,
+  to: { id: string; name: string } | null,
+): string | null {
+  return to && addsAllowed(c, staffId, to.id) ? `${to.name}さんを担当できる人に足します` : null;
+}
+
+/** 代わりに選んだ人が担当できる人の外のままになるときの行の文（そうでないときは null） */
+export function offboardOutsideAllowedText(
+  c: Pick<Client, 'allowedStaffIds'>,
+  staffId: string,
+  to: { id: string; name: string } | null,
+  limitsOn: boolean,
+): string | null {
+  return to && staysOutsideAllowed(c, staffId, to.id, limitsOn)
+    ? `${to.name}さんは担当できる人に入っていないため、訪問は要対応に残ります`
+    : null;
 }
 
 /** 訪問を日ごとにまとめる（出てきた順。件数と確定した件数） */

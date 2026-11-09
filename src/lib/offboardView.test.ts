@@ -1,6 +1,13 @@
 // 退職・担当替えの一括振り直しの欄の文と並び（PRD D71。ADR-0015）
 import { describe, expect, it } from 'vitest';
-import { offboardCandidateText, offboardConfirmBody, offboardDays, offboardRolesText } from './offboardView';
+import {
+  offboardAddsAllowedText,
+  offboardCandidateText,
+  offboardConfirmBody,
+  offboardDays,
+  offboardOutsideAllowedText,
+  offboardRolesText,
+} from './offboardView';
 
 describe('offboardRolesText', () => {
   it('繰り返しが2つ以上なら数を添える', () => {
@@ -9,6 +16,7 @@ describe('offboardRolesText', () => {
       '繰り返しの担当（2つ）・担当できる人',
     );
     expect(offboardRolesText({ roles: ['allowed'], patternIds: [] })).toBe('担当できる人');
+    expect(offboardRolesText({ roles: ['visit'], patternIds: [] })).toBe('訪問の担当');
   });
 });
 
@@ -60,5 +68,29 @@ describe('offboardConfirmBody', () => {
     expect(body).toContain(
       '繰り返しは10/13で分け、この回だけ変えた 2件は新しい繰り返しの回にします（時刻・メモはそのまま）。',
     );
+  });
+});
+
+describe('offboardAddsAllowedText', () => {
+  const to = { id: 's2', name: '佐藤' };
+  it('退職する人が担当できる人で、選んだ人が入っていないときだけ文を出す', () => {
+    expect(offboardAddsAllowedText({ allowedStaffIds: ['s1'] }, 's1', to)).toBe('佐藤さんを担当できる人に足します');
+    expect(offboardAddsAllowedText({ allowedStaffIds: ['s1', 's2'] }, 's1', to)).toBeNull();
+    expect(offboardAddsAllowedText({ allowedStaffIds: [] }, 's1', to)).toBeNull();
+    expect(offboardAddsAllowedText({ allowedStaffIds: ['s3'] }, 's1', to)).toBeNull();
+    expect(offboardAddsAllowedText({ allowedStaffIds: ['s1'] }, 's1', null)).toBeNull();
+  });
+});
+
+describe('offboardOutsideAllowedText', () => {
+  const to = { id: 's2', name: '佐藤' };
+  it('担当できる人を限り、退職する人がその中にいなくて、選んだ人も外のときだけ文を出す', () => {
+    expect(offboardOutsideAllowedText({ allowedStaffIds: ['s3'] }, 's1', to, true)).toBe(
+      '佐藤さんは担当できる人に入っていないため、訪問は要対応に残ります',
+    );
+    expect(offboardOutsideAllowedText({ allowedStaffIds: ['s3', 's2'] }, 's1', to, true)).toBeNull();
+    expect(offboardOutsideAllowedText({ allowedStaffIds: ['s1'] }, 's1', to, true)).toBeNull();
+    expect(offboardOutsideAllowedText({ allowedStaffIds: [] }, 's1', to, true)).toBeNull();
+    expect(offboardOutsideAllowedText({ allowedStaffIds: ['s3'] }, 's1', null, true)).toBeNull();
   });
 });

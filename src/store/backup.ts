@@ -1,6 +1,7 @@
 // 最後に書き出した日と、控えの知らせを出した日（PRD D227。ADR-0032）。
 // ブラウザごとの記録なので DemoData とは別のキー（データの版・書き出し・読み込み・初期状態に戻すに入れない。start.ts と同じ扱い）。
 // localStorage を触るのは store の中だけ（AGENTS.md）。使えないブラウザでも、開いている間は覚える
+import { appLocalStorage } from './storageSpace';
 
 /** 最後に書き出した日（`{ date: 'YYYY-MM-DD', kind: 'json' | 'excel' }`） */
 export const BACKUP_LAST_KEY = 'vrdemo:backup:last';
@@ -73,4 +74,4 @@ export function createBackupMemory(getStorage: () => KeyStore | null) {
 }
 
 /** 画面全体で1つ（このブラウザの localStorage） */
-export const backupMemory = createBackupMemory(() => globalThis.localStorage ?? null);
+export const backupMemory = createBackupMemory(() => appLocalStorage());

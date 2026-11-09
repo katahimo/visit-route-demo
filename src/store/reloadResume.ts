@@ -1,6 +1,7 @@
 // 読み直しをまたいで、選んだファイルを1つだけ控える（sessionStorage。タブを閉じれば消える）。
 // 画面を開いたあとに新しい版が公開され、Excel の部品を読めなかったとき、画面が自動で読み直してから同じファイルで読み込みを続けるために使う。
 // 控えは読み直した先の画面が1回だけ取り出す（取り出したら消す）。DemoData とは別。データの版・書き出し・初期状態に戻すに入れない
+import { appSessionStorage } from './storageSpace';
 
 /** 控えのキー */
 export const RELOAD_FILE_KEY = 'vrdemo:reload:file';
@@ -26,7 +27,7 @@ export interface ReloadFile {
 }
 
 type FileStore = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
-const sessionStore = (): FileStore | null => globalThis.sessionStorage ?? null;
+const sessionStore = (): FileStore | null => appSessionStorage();
 
 /** バイト列 → base64（大きい配列でも引数の数の上限に当たらないよう、区切って文字にする） */
 function toBase64(bytes: Uint8Array): string {

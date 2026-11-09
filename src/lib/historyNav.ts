@@ -34,16 +34,9 @@ export function historyIdxOf(state: unknown): number {
 }
 
 type SessionLike = Pick<Storage, 'getItem' | 'setItem'>;
-const session = (): SessionLike | null => {
-  try {
-    return typeof sessionStorage === 'undefined' ? null : sessionStorage;
-  } catch {
-    return null;
-  }
-};
 
-/** 覚えたいちばん先の番号（無い・読めなければ 0） */
-export function loadHistoryMax(store: SessionLike | null = session()): number {
+/** 覚えたいちばん先の番号（無い・読めなければ 0）。store は呼ぶ側が渡す（store/appSessionStorage。lib は store を import しない） */
+export function loadHistoryMax(store: SessionLike | null): number {
   try {
     const n = Number(store?.getItem(HISTORY_MAX_KEY));
     return Number.isInteger(n) && n >= 0 ? n : 0;
@@ -53,7 +46,7 @@ export function loadHistoryMax(store: SessionLike | null = session()): number {
 }
 
 /** いちばん先の番号を覚える（書けなければ何もしない） */
-export function saveHistoryMax(n: number, store: SessionLike | null = session()): void {
+export function saveHistoryMax(n: number, store: SessionLike | null): void {
   try {
     store?.setItem(HISTORY_MAX_KEY, String(n));
   } catch {
