@@ -264,4 +264,21 @@ describe('staysOutsideAllowed', () => {
     expect(staysOutsideAllowed({ allowedStaffIds: [] }, 's1', 's2')).toBe(false);
     expect(staysOutsideAllowed(c, 's1', null)).toBe(false);
   });
+
+  it('true のとき、適用しても担当できる人は変わらず、代わりの人は決まりの外のまま（訪問は要対応に残る）', () => {
+    const d0 = data();
+    const d: DemoData = {
+      ...d0,
+      clients: d0.clients.map((c) => (c.id === 'c1' ? { ...c, allowedStaffIds: ['s3'] } : c)),
+    };
+    const c1 = d.clients.find((c) => c.id === 'c1')!;
+    expect(staysOutsideAllowed(c1, 's1', 's2')).toBe(true);
+    let n = 0;
+    const x = applyOffboard(d, 's1', { c1: 's2' }, TUE, DATE, () => `new${++n}`);
+    expect(x.clients.find((c) => c.id === 'c1')!.allowedStaffIds).toEqual(['s3']);
+    const p = compile(x, TUE);
+    const v = p.visits.findIndex((y) => y.clientId === 'c1');
+    expect(v).toBeGreaterThanOrEqual(0);
+    expect(p.allowed[v]![p.staff.findIndex((s) => s.id === 's2')]).toBe(false);
+  });
 });
