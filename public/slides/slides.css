@@ -315,6 +315,31 @@ tr:last-child td {
   padding-bottom: 8px;
 }
 
+.demo-body.wide-side {
+  grid-template-columns: 1fr 768px;
+}
+
+/* 枠を狭めて文の欄を広げる。アプリの幅は 1100px より上のまま（それ以下は画面の並びが変わる）。倍率は同じ */
+.demo-body.wide-side .demo-box {
+  width: 768px;
+}
+
+.demo-body.wide-side .demo-box iframe {
+  width: 1110px;
+}
+
+.demo-side.dense .steps > li {
+  font-size: 15px;
+  line-height: 1.5;
+  margin-bottom: 6px;
+}
+
+.demo-side.dense .side-note {
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 6px 10px;
+}
+
 .demo-side {
   display: flex;
   flex-direction: column;

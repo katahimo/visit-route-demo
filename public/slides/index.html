@@ -41,7 +41,7 @@
             </tr>
             <tr>
               <td>振り分けの決め手（距離・性別の希望・相性）が頭の中にしかない</td>
-              <td>住所から緯度・経度を入れ、移動の近さで組みます。性別の希望と相性も入れておけば守ります</td>
+              <td>住所から緯度・経度を入れ、移動の近さで組みます。性別の希望と相性も入れておけば、組むときに考えます</td>
             </tr>
             <tr>
               <td>朝・夜の訪問に入れないスタッフがいる</td>
@@ -98,7 +98,7 @@
           <div class="card">
             <h3>データの扱い</h3>
             <ul>
-              <li>データは、開いたパソコンのブラウザの中だけに残ります</li>
+              <li>データは、このブラウザの中だけに残ります。外へ送るのは、探すボタンを押したときの住所などだけです</li>
               <li>スライドの中のアプリは説明用の保存場所を使います。ふだんのデータとは別です</li>
               <li>実在の利用者さん・職員の名前や住所は入れないでください</li>
             </ul>
@@ -141,20 +141,21 @@
       <section class="slide demo" data-title="台帳 CSV の読み込み">
         <p class="kicker">2. 台帳 CSV の読み込み<span class="demo-mark">実演</span></p>
         <h2>利用者台帳・職員台帳を読み込む</h2>
-        <div class="demo-body">
-          <div class="demo-side">
+        <div class="demo-body wide-side">
+          <div class="demo-side dense">
             <ol class="steps">
               <li>「① 利用者さんの名簿」で<span class="btn-like">［ファイルを選ぶ］</span>を押し、利用者台帳の CSV を選びます</li>
               <li>確かめる画面で人数と読まない列を見て、<span class="btn-like">［名簿を読み込む］</span>を押します</li>
               <li>続けて住所から緯度・経度を探します。「終わりました」と出たら<span class="btn-like">［次へ］</span></li>
               <li>「② スタッフの名簿」で職員台帳の CSV を同じように読み込み、<span class="btn-like">［次へ］</span></li>
-              <li>「③ 予定を登録する」で<span class="btn-like">［予定の画面へ］</span>を押します</li>
+              <li>「③ 予定を登録する」で「移動時間の見積もり方」を見て、<span class="btn-like">［予定の画面へ］</span>を押します</li>
             </ol>
             <div class="downloads">
               <a href="samples/利用者台帳_サンプル.csv" download>利用者台帳_サンプル.csv をダウンロード</a>
               <a href="samples/職員台帳_サンプル.csv" download>職員台帳_サンプル.csv をダウンロード</a>
             </div>
-            <p class="side-note">サンプルは架空の名前で、住所は仙台市の公共施設です。緯度・経度を探している間は、ページを移らずに待ちます。</p>
+            <p class="side-note">サンプルは架空の名前で、住所は仙台市の公共施設です。緯度・経度を探している間は、ページを移らずに待ちます。探すときは郵便番号・住所だけを外部の検索に送ります。</p>
+            <p class="side-note">移動時間は、はじめ緯度・経度の直線距離から見積もります。車道の道のりに替えるときは、選んで［道のりを取得する］を押します。</p>
             <div class="demo-tools">
               <button type="button" class="tool" data-act="big">大きく表示</button>
               <button type="button" class="tool" data-act="reset">説明用データを最初に戻す</button>
@@ -239,7 +240,7 @@
               <li>勤務開始・勤務終了・勤務する曜日を入れて<span class="btn-like">［保存］</span></li>
             </ol>
             <p class="side-note">台帳から入ったスタッフは、はじめ 月〜金・9:00〜18:00・車・性別は未確認 です。性別が未確認のままだと、「必要条件：女性」の利用者さんの担当になりません。</p>
-            <p class="side-note">例：子育て中で朝・夜に入れない人は 9:30〜15:00。日・月が休みの人は 火〜土 を選びます。</p>
+            <p class="side-note">例：子育て中で朝・夜に入れない人は 9:30〜15:00。日・月が休みの人は 火〜土 を選びます。朝 8:30 や夜 18:00 の訪問に入る人は、7:00〜21:00 のように広げます。</p>
             <div class="demo-tools">
               <button type="button" class="tool" data-act="big">大きく表示</button>
               <button type="button" class="tool" data-act="reset">説明用データを最初に戻す</button>
@@ -293,11 +294,11 @@
             <ol class="steps">
               <li>月の予定で<span class="btn-like">［定期の予定を追加］</span>を押します</li>
               <li>利用者さん・曜日（いくつでも）・くり返し・開始日・時刻・所要（分）を入れます</li>
-              <li><span class="btn-like">［追加］</span>を押すと、「N件の担当を組みました」と出ます</li>
+              <li><span class="btn-like">［追加］</span>を押すと「予定を入れました」と出て、担当を自動で組みます。終わると「N件の担当を組みました」と出ます</li>
               <li><span class="btn-like">［月］［週］［日］</span>で見方を替えます</li>
             </ol>
             <p class="side-note">曜日は、はじめ今日の曜日が選ばれています。要らなければ押して外します。</p>
-            <p class="side-note">くり返しは 毎週・隔週・3週ごと・4週ごと・毎月（第N）。今日から翌月の終わりまでの回に担当が付きます。</p>
+            <p class="side-note">くり返しは 毎週・隔週・3週ごと・4週ごと・毎月（第N）。今日から翌月の終わりまでの回に担当が付きます。組んでいる間は上に進み具合が出ます。終わる前にスライドを替えると、残りは担当なしのままです（日の予定の［要対応を組む］で組めます）。</p>
             <p class="side-note">例：体育館 つよし　月〜金　8:30　30分</p>
             <div class="demo-tools">
               <button type="button" class="tool" data-act="big">大きく表示</button>
@@ -328,7 +329,7 @@
             </ul>
             <h3 style="margin-top: 16px">できるだけ良くすること</h3>
             <ul>
-              <li>移動が近いこと（自宅や前の訪問先から）。緯度・経度が無い所への移動は 30分とみます</li>
+              <li>移動が近いこと（自宅や前の訪問先から）。緯度・経度が無い所への移動は 30分とみます。見積もり方は直線距離か車道の道のりで、登録の案内③と管理者設定で選べます</li>
               <li>希望・相性</li>
               <li>受け持ちが人によってかたよらないこと</li>
             </ul>
@@ -351,16 +352,17 @@
       <section class="slide demo" data-title="当日の欠勤・当日キャンセル">
         <p class="kicker">5. 当日の欠勤・当日キャンセル<span class="demo-mark">実演</span></p>
         <h2>当日の欠勤・当日キャンセル</h2>
-        <div class="demo-body">
-          <div class="demo-side">
+        <div class="demo-body wide-side">
+          <div class="demo-side dense">
             <ol class="steps">
               <li><span class="btn-like">［欠勤・キャンセルを登録］</span>を押し、「スタッフが休む」を選びます</li>
               <li>休む人と、休む時間（終日・午前だけ・午後だけ・時間帯）を選びます</li>
-              <li>「入らなくなる訪問」とおすすめの案が出ます。<span class="btn-like">［この案で決める］</span>を押します</li>
-              <li>「変更を伝えて確定する」で<span class="btn-like">［文をコピー］</span>を押し、LINE などに貼ります。送ったら［連絡した］、最後に［終わる］</li>
+              <li>「入らなくなる訪問」とおすすめの案（案A）が出ます。「〇〇さん から △△さん」の形で、替わる訪問が並びます。<span class="btn-like">［この案で決める］</span>を押します</li>
+              <li>「変更を伝えて確定する」で、人ごとの連絡の文を<span class="btn-like">［文をコピー］</span>して LINE などに貼ります。メールアドレスがあれば［メール］でメールアプリも開けます。送ったら［連絡した］、最後に［終わる］</li>
               <li>当日キャンセルは「利用者さんがキャンセル」で訪問を選び、「当日キャンセル」→<span class="btn-like">［当日キャンセルとして取り消す］</span></li>
             </ol>
-            <p class="side-note">おすすめの案は、ほかの人の担当・順番・時刻を変えません。決めたあとも［振り直す前に戻す］で戻せます。</p>
+            <p class="side-note">案Aは、ほかの人の担当・順番・時刻を変えません。「ほかのやり方」で案Bも作れます。確定の画面の「振り直しの結果（案A・案B）」と［日の予定で差を見る］で比べられます。決めたあとも［振り直す前に戻す］で戻せます。</p>
+            <p class="side-note">休みを Google カレンダーに入れている場合は、［休みを取り込む］で書き出した zip を取り込めます。</p>
             <div class="demo-tools">
               <button type="button" class="tool" data-act="big">大きく表示</button>
               <button type="button" class="tool" data-act="reset">説明用データを最初に戻す</button>
@@ -380,15 +382,17 @@
       <section class="slide demo" data-title="退職">
         <p class="kicker">6. 退職<span class="demo-mark">実演</span></p>
         <h2>退職するスタッフの担当を振り直す</h2>
-        <div class="demo-body">
-          <div class="demo-side">
+        <div class="demo-body wide-side">
+          <div class="demo-side dense">
             <ol class="steps">
-              <li>スタッフの画面の「最終勤務日（退職・担当替え）」で日付を入れます。職員台帳の退社年月日からも入ります</li>
+              <li>スタッフの画面の「最終勤務日（退職・担当替え）」に日付を入れて<span class="btn-like">［保存］</span>。職員台帳の退社年月日からも入ります</li>
               <li>スタッフ一覧の上の「最終勤務日のあるスタッフ」で<span class="btn-like">［担当の振り直しを開く］</span>を押します</li>
-              <li>「利用者さんごとの代わり」で代わりのスタッフを選びます（入れる回数と、4週の受け持ちの回数が出ます）</li>
+              <li>「利用者さんごとの代わり」で代わりのスタッフを選びます（入れる回数と4週の受け持ちが出ます）</li>
               <li><span class="btn-like">［まとめて適用］</span>→<span class="btn-like">［担当を置き換える］</span>。最終勤務日の翌日からの担当が替わります</li>
             </ol>
-            <p class="side-note">振り直すものが無いときは「振り直しは済んでいます」と出ます。試すときは、担当のあるスタッフに数日先の最終勤務日を入れます。</p>
+            <p class="side-note">保存した回だけ退職する人が担当の利用者さんも、「いまの持ち方」に「訪問の担当」として出ます。適用すると訪問が残りません。</p>
+            <p class="side-note">代わりの人が担当できる人に足されるときは、選びの下に「〇〇さんを担当できる人に足します」と出ます。機能「担当を限る」が入で、退職する人が担当できる人にいない利用者さんは、決まりの外の人を選ぶと「訪問は要対応に残ります」と出ます。</p>
+            <p class="side-note">振り直すものが無いときは「振り直すものはありません」と出ます。試すには、担当のあるスタッフに数日先の最終勤務日を入れます。</p>
             <div class="demo-tools">
               <button type="button" class="tool" data-act="big">大きく表示</button>
               <button type="button" class="tool" data-act="reset">説明用データを最初に戻す</button>
@@ -412,9 +416,9 @@
           <div class="demo-side">
             <ol class="steps">
               <li>曜日（例：火・木）、時間帯（例：午前）、所要（例：60分）を選びます</li>
-              <li>「受けられます：火・木 8:30〜11:30 に 約2〜4人」のように出ます</li>
+              <li>「受けられます：火・木 8:00〜11:30 に 約1〜4人」のように出ます（時刻と人数はデータで変わります）</li>
               <li><span class="btn-like">［要約をコピー］</span>で答えの文をコピーし、相談員さんへの返事に使えます</li>
-              <li>「2. 場所」に住所を入れると、移動も入れて絞り込みます</li>
+              <li>「2. 場所（任意）」の［開く］で住所を入れると、移動も入れて絞り込みます</li>
               <li>受けるときは<span class="btn-like">［仮の利用者さんとして押さえる］</span>→ 表示名を入れて<span class="btn-like">［押さえる］</span></li>
             </ol>
             <p class="side-note">今日から 4週分の予定のすき間に入るかを見ます。ほかの人の予定は動かしません。</p>
@@ -442,7 +446,7 @@
           <div class="demo-side">
             <ol class="steps">
               <li>開き方：<span class="btn-like">［スタッフ］</span>→<span class="btn-like">［勤務］</span>タブ→<span class="btn-like">［勤務の見込み］</span>（月の予定の［その他］からも開けます）</li>
-              <li>「月の合計」に、人ごとの日数・訪問・出勤〜退勤（拘束）・一番長い日・移動・空き時間（待ち）・距離・交通費が出ます</li>
+              <li>「月の合計」に、人ごとの日数・訪問・出勤〜退勤（拘束）・一番長い日・訪問の時間・移動・空き時間（待ち）・距離・交通費が出ます</li>
               <li>「日ごと」で名前を押すと、その人の日ごとの時間が出ます</li>
               <li><span class="btn-like">［表をコピー］</span>で、Excel に貼り付けられます</li>
             </ol>
@@ -500,7 +504,7 @@
           <li><strong>請求</strong><span>国保連・移動支援の市町村ごとの明細、利用者負担の集金、キャンセル料の請求</span></li>
           <li><strong>勤怠・打刻</strong><span>入ります／終わりました の打刻、実際に働いた時間の記録。勤務の見込みは予定からの見込みです</span></li>
           <li><strong>実績記録票</strong><span>実績記録票・利用者さんのサイン</span></li>
-          <li><strong>LINE とのつながり</strong><span>連絡の文はコピーして、人が送ります。自動では送りません</span></li>
+          <li><strong>LINE とのつながり</strong><span>連絡の文はコピーするか、メールアプリで開いて、人が送ります。自動では送りません</span></li>
           <li><strong>ログイン・共有</strong><span>ログイン、何台ものパソコンでの同時の入力、インターネット上への保存</span></li>
           <li><strong>交通費の精算</strong><span>交通費は見込みです。精算は事業所の決まりで行います</span></li>
         </ul>
