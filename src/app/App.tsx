@@ -21,6 +21,7 @@ import BasicsPage from '../pages/BasicsPage';
 import ClientPage from '../pages/ClientPage';
 import ClientsPage from '../pages/ClientsPage';
 import DataPage from '../pages/DataPage';
+import FeedbackPage from '../pages/FeedbackPage';
 import ItemsPage from '../pages/ItemsPage';
 import MonthPrintPage from '../pages/MonthPrintPage';
 import RulesPage from '../pages/RulesPage';
@@ -122,6 +123,8 @@ export default function App() {
                 {/* 登録の案内（PRD D381。ADR-0073）：自分のデータで始めたあとの3段 */}
                 <Route path="/start" element={<StartGuidePage />} />
                 <Route path="/data" element={<DataPage />} />
+                {/* 意見（PRD D450。ADR-0114）：画面のボタンで残した意見の一覧と、まとめて送る欄 */}
+                <Route path="/feedback" element={<FeedbackPage />} />
                 {/* 管理者設定（PRD D210。ADR-0028）：機能の入り切り。だれでも開ける・切れない */}
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="*" element={<Navigate to={home} replace />} />

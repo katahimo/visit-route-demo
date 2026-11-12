@@ -5,6 +5,7 @@ import { HashRouter } from 'react-router-dom';
 import App from './app/App';
 import { ErrorBoundary } from './app/ErrorBoundary';
 import { ConfirmProvider } from './components/ConfirmDialog';
+import { FeedbackButton } from './components/FeedbackButton';
 import { FirstRunGate } from './components/FirstRunPage';
 import { ToastProvider } from './components/Toast';
 import { DemoDataProvider, reset } from './store';
@@ -32,6 +33,8 @@ createRoot(document.getElementById('root')!).render(
               <FirstRunGate>
                 <App />
               </FirstRunGate>
+              {/* 画面への意見のボタン（PRD D449。ADR-0114）：最初の2問の画面でも出す */}
+              <FeedbackButton />
             </ConfirmProvider>
           </ToastProvider>
         </HashRouter>
