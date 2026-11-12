@@ -1,6 +1,9 @@
+import { Download } from 'lucide-react';
 import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
+  FIRST_RUN_BACKUP_BUTTON,
+  FIRST_RUN_BACKUP_LEAD,
   FIRST_RUN_CANCEL,
   FIRST_RUN_ENTRY,
   FIRST_RUN_NOTE,
@@ -14,6 +17,8 @@ import {
   type FirstRunChoice,
   type FirstRunStart,
   type FirstRunUse,
+  firstRunBackupDone,
+  firstRunGuard,
   firstRunLanding,
   isFirstRunEntry,
 } from '../lib/firstRun';
@@ -29,6 +34,8 @@ import {
 } from '../lib/releaseNotes';
 import { useDemoData } from '../store';
 import './firstRun.css';
+import { WithIcon } from './ui';
+import { type BackupDownload, useBackupDownload } from './useBackupDownload';
 import { useFirstRunBack } from './useFirstRunBack';
 
 /**
@@ -66,6 +73,14 @@ function FirstRunPage() {
   const keep = start === 'keep';
   // 答えるとデータが消えるとき（やり直し・更新の知らせでデモ／自分のデータを選んだ）は注意を出す
   const warn = redoingFirstRun || (releaseNotice !== null && !keep);
+  // 今のデータがあるのに作り直すとき（warn と同じ条件）は、この画面で控えを書き出すまで主ボタンを押せない（PRD D448。ADR-0113）
+  const downloadBackup = useBackupDownload();
+  const [backup, setBackup] = useState<BackupDownload | null>(null);
+  const guard = firstRunGuard({
+    hasData: redoingFirstRun || releaseNotice !== null,
+    keep,
+    backedUp: backup !== null && 'name' in backup,
+  });
   const [kind, setKind] = useState<FirstRunUse>('basic');
   const headingRef = useRef<HTMLHeadingElement>(null);
   const titleId = useId();
@@ -91,6 +106,7 @@ function FirstRunPage() {
       close();
       return;
     }
+    if (!guard.canSubmit) return;
     const a: FirstRunAnswer = { start, use: kind };
     setAnswer(a);
     // 2問の画面の項目に印を付けてから先へ進む（ブラウザの「戻る」で最初の設定へ戻れる。PRD D381・D438）
@@ -133,6 +149,7 @@ function FirstRunPage() {
             {RELEASE_WARN}
           </p>
         )}
+        {guard.needsBackup && <BackupFirst result={backup} onDownload={() => setBackup(downloadBackup())} />}
         <p className="first-run-note">{FIRST_RUN_NOTE}</p>
         <div className="first-run-actions">
           {/* やり直しのときだけ：今のデータのまま戻る（従のボタン。主ボタンは「はじめる」1つ） */}
@@ -141,12 +158,27 @@ function FirstRunPage() {
               {FIRST_RUN_CANCEL}
             </button>
           )}
-          <button type="submit" className="btn btn-primary" data-testid="first-run-submit">
+          <button type="submit" className="btn btn-primary" disabled={!guard.canSubmit} data-testid="first-run-submit">
             {keep ? RELEASE_KEEP_SUBMIT : FIRST_RUN_SUBMIT}
           </button>
         </div>
       </form>
     </main>
+  );
+}
+
+/** 作り直す前の控え（PRD D448）：案内と［控えを書き出す］、書き出したあとはファイル名と戻し方（書き出せなければ理由） */
+function BackupFirst({ result, onDownload }: { result: BackupDownload | null; onDownload: () => void }) {
+  return (
+    <div className="first-run-backup" data-testid="first-run-backup">
+      <p>{FIRST_RUN_BACKUP_LEAD}</p>
+      <button type="button" className="btn" onClick={onDownload} data-testid="first-run-backup-button">
+        <WithIcon icon={Download}>{FIRST_RUN_BACKUP_BUTTON}</WithIcon>
+      </button>
+      <output className="first-run-backup-result" data-testid="first-run-backup-result">
+        {result === null ? '' : 'name' in result ? firstRunBackupDone(result.name) : result.error}
+      </output>
+    </div>
   );
 }
 

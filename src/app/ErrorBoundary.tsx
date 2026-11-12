@@ -9,7 +9,7 @@ import { backup, backupMemory, flushSave } from '../store';
 
 /**
  * 画面の例外で真っ白にしない。主ボタンは「控え（バックアップ）を書き出す」（いまのデータを JSON で残す）、
- * データが壊れていても戻れるよう「データを初期状態に戻す」を赤いボタンで後ろに出す。
+ * データが壊れていても戻れるよう「データを初期状態に戻す」を赤いボタンで後ろに出す（控えを書き出すまで押せない。PRD D448）。
  * 戻す前の確認は、Provider に頼らず ConfirmDialog をここで直に出す（React の木が壊れた後・Provider の外でも出せる。PRD D149）。
  * 分けた画面のチャンクを読めなかったときは別の表示（再読み込み・もう一度表示する。PRD D248）
  */
@@ -104,16 +104,24 @@ export class ErrorBoundary extends Component<{ children: ReactNode; onReset: () 
           <button type="button" className="btn" onClick={this.retry}>
             もう一度表示する
           </button>
-          <button type="button" className="btn btn-danger" onClick={() => this.setState({ asking: true })}>
+          {/* 控えを書き出すまで押せない（PRD D448。書き出せるデータが無いときも、書き出しを試したあとは押せる） */}
+          <button
+            type="button"
+            className="btn btn-danger"
+            disabled={this.state.backup === null}
+            onClick={() => this.setState({ asking: true })}
+          >
             データを初期状態に戻す
           </button>
         </div>
-        <output className="sub">{this.state.backup ?? ''}</output>
+        <output className="sub">
+          {this.state.backup ?? '「データを初期状態に戻す」は、控えを書き出すと押せます。'}
+        </output>
         {this.state.asking && (
           <ConfirmDialog
             request={{
               title: 'データを初期状態に戻しますか？',
-              body: 'データをデモの初期状態に戻します。いまのデータは消えます。残すときは、先に「控え（バックアップ）を書き出す」を押してください。',
+              body: 'データをデモの初期状態に戻します。いまのデータは消えます。戻すときは、書き出した控えをデータの画面で読み込みます。',
               confirmLabel: '消して初期状態に戻す',
               cancelLabel: '取り消す',
               tone: 'danger',

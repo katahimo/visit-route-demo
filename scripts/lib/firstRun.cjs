@@ -1,6 +1,6 @@
 // e2e の共通：最初の2問（PRD D379〜D381。ADR-0073）に答える。
 // 初めて開いたとき（保存データも印「all」も無い。scripts/lib/startFeatures.cjs）は2問の画面が出る。
-// 画面の data-testid：first-run（画面）・first-run-start-<demo|own>（問1）・first-run-use-<oneOff|basic|laborContract|monthlyField>（問2：使い方）・first-run-submit（はじめる）
+// 画面の data-testid：first-run（画面）・first-run-start-<demo|own>（問1）・first-run-use-<oneOff|basic|laborContract|monthlyField>（問2：使い方）・first-run-submit（はじめる）・first-run-backup-button（作り直す前の［控えを書き出す］。今のデータがあるときだけ）
 const { BASE, STORAGE_KEY, settle, until } = require('./env.cjs');
 const { openPage } = require('./steps.cjs');
 const { answerConfirms } = require('./confirmDialog.cjs');
@@ -35,6 +35,14 @@ async function waitStartArranged(page, ms = 180000) {
   return text && text !== 'idle' ? text : '';
 }
 
+/** 今のデータがあるのに作り直すときは、先に［控えを書き出す］を押す（押すまで「はじめる」を押せない。PRD D448） */
+async function backupIfAsked(page) {
+  const button = page.getByTestId('first-run-backup-button');
+  if ((await button.count()) === 0) return;
+  await button.click();
+  await page.getByTestId('first-run-backup-result').filter({ hasText: '控えを書き出しました' }).waitFor();
+}
+
 /**
  * 2問に答えて「はじめる」を押す（既定は 問1＝デモで試す・問2＝使い方の基本。今の初期データ＋「定期の訪問（基本）」のひな形）。
  * デモなら、作った直後の1回の組みが終わるまで待つ（waitStartArranged）。arranged が false なら、終わりの知らせの［元に戻す］で
@@ -44,6 +52,7 @@ async function answerFirstRun(page, { start = 'demo', use = 'basic', arranged = 
   await page.getByTestId('first-run').waitFor({ timeout: 30000 });
   await page.getByTestId(`first-run-start-${start}`).check();
   await page.getByTestId(`first-run-use-${use}`).check();
+  await backupIfAsked(page);
   await page.getByTestId('first-run-submit').click();
   await page.getByTestId('first-run').waitFor({ state: 'detached', timeout: 30000 });
   if (start !== 'demo') return;
@@ -98,4 +107,12 @@ async function openAsked({ viewport = { width: 1400, height: 1000 } } = {}) {
   return { ...s, dlg: await answerConfirms(s.page) };
 }
 
-module.exports = { ARRANGED_RE, answerFirstRun, answerIfAsked, freshAsked, openAsked, waitStartArranged };
+module.exports = {
+  ARRANGED_RE,
+  answerFirstRun,
+  backupIfAsked,
+  answerIfAsked,
+  freshAsked,
+  openAsked,
+  waitStartArranged,
+};

@@ -24,7 +24,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { startAll } = require('./lib/startFeatures.cjs');
 const { skipTour } = require('./lib/tourSeen.cjs');
-const { waitStartArranged } = require('./lib/firstRun.cjs');
+const { backupIfAsked, waitStartArranged } = require('./lib/firstRun.cjs');
 const {
   launch,
   BASE,
@@ -537,6 +537,24 @@ async function firstRunRestart(b) {
   await page.getByTestId('first-run').waitFor({ timeout: 30000 });
   await page.getByTestId('first-run-start-own').check();
   await page.getByTestId('first-run-use-oneOff').check();
+  // 作り直す前の控え（PRD D448）：書き出すまで「はじめる」は押せない
+  check(
+    (await visible(page.getByTestId('first-run-backup'))) && (await page.getByTestId('first-run-submit').isDisabled()),
+    'やり直しの2問：控えを書き出すまで「はじめる」を押せない',
+  );
+  const [saved] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByTestId('first-run-backup-button').click(),
+  ]);
+  check(
+    /^staff-assign-demo-.*\.json$/.test(saved.suggestedFilename()),
+    '控えのファイルを保存する',
+    saved.suggestedFilename(),
+  );
+  check(
+    (await page.getByTestId('first-run-submit').isEnabled()) && (await stored2(page)).clients.length === 20,
+    '控えを書き出すと「はじめる」を押せる（データはまだそのまま）',
+  );
   await page.getByTestId('first-run-submit').click();
   await page.getByTestId('start-guide').waitFor({ timeout: 30000 });
   await until(async () => (await stored2(page)).clients.length === 0, 10000);
@@ -910,6 +928,7 @@ async function dataProtect(b) {
   await page.getByTestId('confirm-ok').click();
   await page.getByTestId('first-run').waitFor({ timeout: 30000 });
   await page.getByTestId('first-run-start-demo').check();
+  await backupIfAsked(page);
   await page.getByTestId('first-run-submit').click();
   await page.waitForURL(/#\/month/);
   await settle(page, 800);
@@ -1150,7 +1169,16 @@ async function releaseNotice(b) {
   await page.getByTestId('first-run-start-demo').check();
   check(await visible(page.getByTestId('first-run-use')), '更新：デモを選ぶと問2を出す');
   check(await visible(page.getByTestId('first-run-warn')), '更新：デモを選ぶと「いまのデータは消えます」');
+  check(
+    (await visible(page.getByTestId('first-run-backup'))) && (await page.getByTestId('first-run-submit').isDisabled()),
+    '更新：デモを選ぶと、控えを書き出すまで「はじめる」を押せない',
+  );
   await page.getByTestId('first-run-start-keep').check();
+  check(
+    (await page.getByTestId('first-run-backup').count()) === 0 &&
+      (await page.getByTestId('first-run-submit').isEnabled()),
+    '更新：今のデータを使い続けるなら控えを求めない',
+  );
   await page.getByTestId('first-run-submit').click();
   await answered(page);
   check(/#\/data/.test(hashOf(page)), '更新：「開く」で今の画面のまま', hashOf(page));
@@ -1163,6 +1191,7 @@ async function releaseNotice(b) {
   await page.reload();
   await gate.waitFor({ timeout: 30000 });
   await page.getByTestId('first-run-start-demo').check();
+  await backupIfAsked(page);
   await page.getByTestId('first-run-submit').click();
   await answered(page);
   await waitStartArranged(page);
