@@ -25,9 +25,9 @@ const item = (patch: Partial<FeedbackItem> = {}): FeedbackItem => ({
   ...patch,
 });
 
-describe('意見の入力の確かめ', () => {
-  it('空白だけの意見は残せない', () => {
-    expect(feedbackProblem('  \n')).toBe('意見を入れてください');
+describe('ご意見の入力の確かめ', () => {
+  it('空白だけのご意見は残せない', () => {
+    expect(feedbackProblem('  \n')).toBe('ご意見を入れてください');
     expect(feedbackProblem('ここが分かりにくい')).toBeNull();
   });
   it('パスワードは8文字以上', () => {
@@ -36,7 +36,7 @@ describe('意見の入力の確かめ', () => {
   });
 });
 
-describe('意見の表示', () => {
+describe('ご意見の表示', () => {
   it('時刻は日本時間', () => {
     expect(feedbackAtText(item().at)).toBe('2026-11-12 14:03');
   });
@@ -48,13 +48,50 @@ describe('意見の表示', () => {
   });
 });
 
-describe('feedbackReportHtml（意見をまとめた報告）', () => {
+describe('feedbackReportHtml（調べる手がかり）', () => {
+  it('meta は details と、画像なしの JSON（< を逃がす）に入る', () => {
+    const meta = {
+      url: 'http://x/#/month',
+      title: 't</script>',
+      headings: [],
+      testIds: ['a'],
+      activeElement: null,
+      openDialogs: 0,
+      scroll: { x: 0, y: 0, docHeight: 1 },
+      env: {
+        language: 'ja',
+        timeZone: 'Asia/Tokyo',
+        devicePixelRatio: 1,
+        screen: { width: 1, height: 1 },
+        colorScheme: 'light' as const,
+        reducedMotion: false,
+        maxTouchPoints: 0,
+        online: true,
+        standalone: false,
+        mode: 'test',
+        space: null,
+      },
+      data: { version: 3, baseDate: '2026-11-01', counts: { staff: 2 } },
+      recentErrors: [],
+    };
+    const html = feedbackReportHtml([item({ meta })], { org: 'o', at: 0 });
+    expect(html).toContain('id="feedback-data"');
+    expect(html).toContain('"counts"');
+    const json = html.split('id="feedback-data">')[1]?.split('</script>')[0] ?? '';
+    expect(JSON.parse(json).items[0].meta.data.counts.staff).toBe(2);
+    expect(json).not.toContain('data:image');
+    expect(json).not.toContain('</script>');
+    expect(JSON.parse(json).items[0].meta.title).toBe('t</script>');
+  });
+});
+
+describe('feedbackReportHtml（ご意見をまとめた報告）', () => {
   const html = feedbackReportHtml([item(), item({ id: 'fb-2', image: null, screen: '' })], {
     org: '事業所<A>',
     at: item().at,
   });
   it('件数・画面の名前・時刻・版・画像が入る', () => {
-    expect(html).toContain('意見（2件）');
+    expect(html).toContain('ご意見（2件）');
     expect(html).toContain('<h2>1. 月の予定</h2>');
     expect(html).toContain('2026-11-12 14:03');
     expect(html).toContain('版 abc123');
@@ -80,7 +117,7 @@ describe('feedbackMail（送るメール）', () => {
   it('宛先は入れず、添付の案内を書き、パスワードは書かない', () => {
     const m = feedbackMail(3, 'staff-assign-feedback-2026-11-12.html');
     expect(m.to).toEqual([]);
-    expect(m.subject).toBe('アプリへの意見（3件）');
+    expect(m.subject).toBe('アプリへのご意見（3件）');
     expect(m.body).toContain('staff-assign-feedback-2026-11-12.html');
     expect(m.body).toContain('このメールには書かず');
     expect(mailtoHref(m).startsWith('mailto:?subject=')).toBe(true);

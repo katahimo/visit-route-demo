@@ -1,10 +1,16 @@
 /* 画面への意見（PRD D449・D450。ADR-0114）：左下のボタン・意見を書くダイアログ・意見の画面 */
-.feedback-fab {
+.feedback-fabs {
   position: fixed;
   left: max(12px, env(safe-area-inset-left, 0px));
   /* スマホでは下のタブ（--bottom-tabs-h）の上に出す */
   bottom: calc(12px + var(--bottom-tabs-h));
-  z-index: 940;
+  /* 地図（Leaflet）の拡大ボタン（z-index 1000）より手前に出す */
+  z-index: 1100;
+  display: flex;
+  gap: 8px;
+}
+.feedback-fab {
+  text-decoration: none;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -17,6 +23,10 @@
   font-weight: 700;
   box-shadow: 0 4px 14px rgba(40, 25, 15, 0.18);
   cursor: pointer;
+}
+/* 一覧は印だけ（横に伸びて地図の拡大ボタンにかぶらないように）。名前は aria-label・title */
+.feedback-fab-icon span {
+  display: none;
 }
 .feedback-fab:disabled {
   cursor: progress;

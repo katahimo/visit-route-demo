@@ -16,7 +16,7 @@ import './settings.css';
 import { type FeedbackSend, useFeedbackSend } from './useFeedbackSend';
 
 /**
- * 意見（PRD D450。ADR-0114）：画面のボタンで残した意見の一覧と、まとめて送る欄。
+ * ご意見（PRD D450。ADR-0114）：画面のボタンで残したご意見の一覧と、まとめて送る欄。
  * パスワードで閉じた1つのファイルを作り、端末の共有の画面（LINE・メールなど）で渡すか、保存してメールを開く
  */
 export default function FeedbackPage() {
@@ -24,7 +24,11 @@ export default function FeedbackPage() {
   const { items } = send;
   return (
     <div className="stack" style={{ maxWidth: 820 }}>
-      <PageHeader icon={MessageSquareText} title={FEEDBACK_TITLE} lead="画面のボタンで残した意見を、まとめて送ります" />
+      <PageHeader
+        icon={MessageSquareText}
+        title={FEEDBACK_TITLE}
+        lead="画面のボタンで残したご意見を、まとめて送ります"
+      />
       {send.volatile && (
         <div className="warn-box">
           <p>{FEEDBACK_VOLATILE}</p>
@@ -35,7 +39,7 @@ export default function FeedbackPage() {
         <>
           <SendCard send={send} count={items.length} />
           <section className="card stack" data-testid="feedback-list">
-            <SectionTitle icon={MessageSquareText}>残した意見（{items.length}件）</SectionTitle>
+            <SectionTitle icon={MessageSquareText}>残したご意見（{items.length}件）</SectionTitle>
             {items.map((item) => (
               <ItemRow key={item.id} item={item} onRemove={() => void send.removeOne(item)} />
             ))}
@@ -54,7 +58,7 @@ function SendCard({ send, count }: { send: FeedbackSend; count: number }) {
     <section className="card stack" data-testid="feedback-send">
       <SectionTitle icon={Lock}>まとめて送る</SectionTitle>
       <p className="sub">
-        意見{count}
+        ご意見{count}
         件を、パスワードで開く1つのファイルにします。受け取った人は、ファイルをブラウザで開いてパスワードを入れます。
         パスワードは、ファイルとは別の手段（電話など）で伝えてください。
       </p>
@@ -116,7 +120,7 @@ function SendCard({ send, count }: { send: FeedbackSend; count: number }) {
               onClick={() => void send.removeSent()}
               data-testid="feedback-remove-sent"
             >
-              <WithIcon icon={Trash2}>送った意見を消す</WithIcon>
+              <WithIcon icon={Trash2}>送ったご意見を消す</WithIcon>
             </button>
           )}
         </>
@@ -129,7 +133,7 @@ function ItemRow({ item, onRemove }: { item: FeedbackItem; onRemove: () => void 
   return (
     <div className="feedback-item" data-testid="feedback-item">
       {item.image ? (
-        <img src={item.image} alt="意見を残したときの画面" loading="lazy" />
+        <img src={item.image} alt="ご意見を残したときの画面" loading="lazy" />
       ) : (
         <p className="sub">（画像なし）</p>
       )}

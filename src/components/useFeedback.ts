@@ -1,8 +1,9 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import type { FeedbackItem } from '../contracts/feedback';
 import { newId } from '../lib/common';
-import { feedbackStore } from '../store';
+import { currentSpace, feedbackStore, useDemoData } from '../store';
 import { captureScreen } from './captureScreen';
+import { collectFeedbackMeta } from './collectFeedbackMeta';
 
 /** 残した意見の件数（変わると描き直す。開いたときに1回読む） */
 export function useFeedbackCount(): number {
@@ -20,6 +21,7 @@ export type FeedbackDraft = Omit<FeedbackItem, 'id' | 'comment'>;
  * 画面の名前は見出し（h1）、無ければ URL
  */
 export function useFeedbackDraft() {
+  const { data } = useDemoData();
   const [busy, setBusy] = useState(false);
   const [draft, setDraft] = useState<FeedbackDraft | null>(null);
   const start = async () => {
@@ -35,6 +37,7 @@ export function useFeedbackDraft() {
         height: window.innerHeight,
         version: __APP_VERSION__,
         userAgent: navigator.userAgent,
+        meta: collectFeedbackMeta(data, currentSpace),
       };
       setDraft({ ...base, image: await captureScreen() });
     } finally {

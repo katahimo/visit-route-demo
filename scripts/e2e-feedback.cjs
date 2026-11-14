@@ -1,8 +1,8 @@
-// 画面への意見（PRD D449・D450。ADR-0114）を本物のブラウザで確かめる：
-// 左下の「意見を書く」でその画面を撮り（見えている範囲・画面の大きさ）、意見を書いて残す。空の意見は残せない。画像を外して残せる。
-// 残した意見は読み直しても残る（IndexedDB）。意見の画面で一覧・パスワード（8文字以上）・ファイルを作る・保存してメールを開く。
-// 保存したファイルは中身が読めず、ブラウザで開いてパスワードを入れると意見と画像が出る（違うパスワードでは開かない）。
-// 送った意見を消すと一覧が空になる。390px でボタンが下のタブに重ならず、ダイアログが画面に収まる。
+// 画面へのご意見（PRD D449・D450。ADR-0114）を本物のブラウザで確かめる：
+// 左下の「ご意見を書く」でその画面を撮り（見えている範囲・画面の大きさ）、ご意見を書いて残す。空のご意見は残せない。画像を外して残せる。
+// 残したご意見は読み直しても残る（IndexedDB）。ご意見の画面で一覧・パスワード（8文字以上）・ファイルを作る・保存してメールを開く。
+// 保存したファイルは中身が読めず、ブラウザで開いてパスワードを入れるとご意見と画像が出る（違うパスワードでは開かない）。
+// 送ったご意見を消すと一覧が空になる。390px でボタンが下のタブに重ならず、ダイアログが画面に収まる。
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-feedback.cjs
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）
@@ -16,13 +16,13 @@ const { goTo } = require('./lib/ui.cjs');
 const open = (page, hash, ready) => goTo(page, hash, { ready, timeout: 30000, h1: false, settleMs: 400 });
 const PASSWORD = 'aikotoba-2026';
 
-/** 「意見を書く」を押して、撮り終わってダイアログが出るまで待つ */
+/** 「ご意見を書く」を押して、撮り終わってダイアログが出るまで待つ */
 async function startFeedback(page) {
   await page.getByTestId('feedback-button').click();
   await page.getByTestId('feedback-dialog').waitFor({ timeout: 30000 });
 }
 
-/** 意見を1件残す（withImage が偽なら画像を外す） */
+/** ご意見を1件残す（withImage が偽なら画像を外す） */
 async function leave(page, comment, withImage = true) {
   await startFeedback(page);
   if (!withImage) await page.getByTestId('feedback-with-image').uncheck();
@@ -46,8 +46,8 @@ async function capture(page) {
   await page.getByTestId('feedback-save').click();
   check(
     (await page.getByTestId('feedback-dialog').count()) === 1 &&
-      /意見を入れてください/.test(await page.getByTestId('feedback-dialog').innerText()),
-    '空の意見は残せない',
+      /ご意見を入れてください/.test(await page.getByTestId('feedback-dialog').innerText()),
+    '空のご意見は残せない',
   );
   await page.keyboard.press('Escape');
   check((await page.getByTestId('feedback-dialog').count()) === 0, 'Esc で捨てる');
@@ -56,20 +56,20 @@ async function capture(page) {
   check(
     await until(
       async () =>
-        (await page.locator('.toast-layer').allInnerTexts()).some((t) => t.includes('意見を残しました（1件）')),
+        (await page.locator('.toast-layer').allInnerTexts()).some((t) => t.includes('ご意見を残しました（1件）')),
       5000,
     ),
     '残したら知らせる',
   );
   check((await page.getByTestId('feedback-count').innerText()) === '1', '残したら件数の印 1');
   await open(page, '/data', '.app-main h1');
-  await leave(page, 'データ：画像なしの意見', false);
+  await leave(page, 'データ：画像なしのご意見', false);
   await page.reload();
   await page.getByTestId('feedback-count').waitFor({ timeout: 30000 });
   check((await page.getByTestId('feedback-count').innerText()) === '2', '読み直しても残っている（2件）');
 }
 
-// ---- 送る：意見の画面の一覧・パスワード・ファイルを作る・保存してメールを開く・ファイルを開く・送った意見を消す ----
+// ---- 送る：ご意見の画面の一覧・パスワード・ファイルを作る・保存してメールを開く・ファイルを開く・送ったご意見を消す ----
 async function send(page) {
   await open(page, '/staff', '.app-main h1');
   await leave(page, 'スタッフ：<b>並び順</b>を変えたい');
@@ -77,7 +77,7 @@ async function send(page) {
   await startFeedback(page);
   await page.getByTestId('feedback-list-link').click();
   await page.getByTestId('feedback-list').waitFor({ timeout: 30000 });
-  check((await page.getByTestId('feedback-button').count()) === 0, '意見の画面では「意見を書く」を出さない');
+  check((await page.getByTestId('feedback-button').count()) === 0, 'ご意見の画面では「ご意見を書く」を出さない');
   check((await page.getByTestId('feedback-item').count()) === 2, '一覧に2件');
   check((await page.locator('[data-testid="feedback-item"] img').count()) === 1, '画像つきは1件');
   await page.getByTestId('feedback-password').fill('short');
@@ -90,14 +90,17 @@ async function send(page) {
   await page.getByTestId('feedback-password').fill(PASSWORD);
   await page.getByTestId('feedback-make').click();
   await page.getByTestId('feedback-file').waitFor({ timeout: 30000 });
-  check((await page.getByTestId('feedback-remove-sent').count()) === 0, '送る前は「送った意見を消す」を出さない');
+  check((await page.getByTestId('feedback-remove-sent').count()) === 0, '送る前は「送ったご意見を消す」を出さない');
   const [download] = await Promise.all([page.waitForEvent('download'), page.getByTestId('feedback-save-mail').click()]);
   check(/^staff-assign-feedback-\d{4}-\d{2}-\d{2}\.html$/.test(download.suggestedFilename()), 'ファイルを保存する');
   const file = path.join(OUT_DIR, 'feedback-sealed.html');
   await download.saveAs(file);
   const sealed = fs.readFileSync(file, 'utf8');
-  check(!sealed.includes('並び順') && !sealed.includes(PASSWORD), '保存したファイルに意見もパスワードも素では入らない');
-  // 保存したファイルをブラウザで開く：違うパスワードでは開かず、合えば意見と画像が出る
+  check(
+    !sealed.includes('並び順') && !sealed.includes(PASSWORD),
+    '保存したファイルにご意見もパスワードも素では入らない',
+  );
+  // 保存したファイルをブラウザで開く：違うパスワードでは開かず、合えばご意見と画像が出る
   const viewer = await page.context().newPage();
   await viewer.goto(pathToFileURL(file).href);
   await viewer.locator('#pw').fill('chigau-password');
@@ -109,11 +112,11 @@ async function send(page) {
   const body = await viewer.locator('body').innerText();
   check(
     body.includes('スタッフ：<b>並び順</b>を変えたい') && body.includes('2件目：画像なし'),
-    '開くと意見が出る（タグにしない）',
+    '開くとご意見が出る（タグにしない）',
   );
   check((await viewer.locator('img').count()) === 1 && body.includes('（画像なし）'), '開くと画像が出る');
   await viewer.close();
-  // 送った意見を消す
+  // 送ったご意見を消す
   await page.getByTestId('feedback-remove-sent').click();
   await page.getByTestId('confirm-ok').click();
   await until(async () => (await page.getByTestId('feedback-item').count()) === 0, 10000);
@@ -128,7 +131,7 @@ async function narrow(page) {
   const tabs = await page.locator('.bottom-tabs').boundingBox();
   check(box && tabs && box.y + box.height <= tabs.y && box.x >= 0, '390px：ボタンは下のタブの上', { box, tabs });
   check(
-    (await page.getByTestId('feedback-button').getAttribute('aria-label')) === '意見を書く',
+    (await page.getByTestId('feedback-button').getAttribute('aria-label')) === 'ご意見を書く',
     '390px：名前は aria-label で読める',
   );
   await startFeedback(page);

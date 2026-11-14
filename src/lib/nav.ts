@@ -102,7 +102,7 @@ export const showsDateSwitch = (pathname: string): boolean => DATE_PAGES.include
 const EXTRA_TITLES: Record<string, string> = {
   '/compare': '提案を比べる',
   '/start': '登録の案内',
-  '/feedback': '意見',
+  '/feedback': 'ご意見',
 };
 
 /**

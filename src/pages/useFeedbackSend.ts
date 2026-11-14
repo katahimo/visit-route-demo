@@ -1,4 +1,4 @@
-// 意見の画面の状態と処理（PRD D450。ADR-0114）：残した意見を読む・消す、パスワードで閉じたファイルを作る、共有する・保存してメールを開く。
+// ご意見の画面の状態と処理（PRD D450。ADR-0114）：残したご意見を読む・消す、パスワードで閉じたファイルを作る、共有する・保存してメールを開く。
 // 送るのは押した人（共有の画面・メールアプリ）。アプリからは何も送らない
 import { useCallback, useEffect, useState } from 'react';
 import { useConfirm } from '../components/ConfirmDialog';
@@ -12,7 +12,7 @@ import { sealHtml } from '../lib/feedbackSeal';
 import { mailtoHref } from '../lib/mailto';
 import { feedbackStore, useDemoData } from '../store';
 
-/** 作ったファイルと、中に入れた意見 */
+/** 作ったファイルと、中に入れたご意見 */
 export type FeedbackBundle = { file: File; ids: readonly string[] };
 
 /** 端末の共有の画面（Web Share）でこのファイルを渡せるか */
@@ -24,7 +24,7 @@ const canShare = (file: File): boolean => {
   }
 };
 
-/** 残した意見の一覧（読み込み・1件消す） */
+/** 残したご意見の一覧（読み込み・1件消す） */
 function useFeedbackItems() {
   const [items, setItems] = useState<FeedbackItem[] | null>(null);
   const reload = useCallback(async () => setItems(await feedbackStore.list().catch(() => [])), []);
@@ -47,10 +47,10 @@ export function useFeedbackSend() {
   const [error, setError] = useState<string | null>(null);
   const [making, setMaking] = useState(false);
   const [bundle, setBundle] = useState<FeedbackBundle | null>(null);
-  /** 送る操作（共有・保存）を1回でもしたか（したら「送った意見を消す」を出す） */
+  /** 送る操作（共有・保存）を1回でもしたか（したら「送ったご意見を消す」を出す） */
   const [sent, setSent] = useState(false);
 
-  /** 作ったファイルを捨てる（意見・パスワードが変わったら作り直す） */
+  /** 作ったファイルを捨てる（ご意見・パスワードが変わったら作り直す） */
   const drop = () => {
     setBundle(null);
     setSent(false);
@@ -85,7 +85,7 @@ export function useFeedbackSend() {
   const share = async () => {
     if (!bundle) return;
     try {
-      await navigator.share({ files: [bundle.file], title: `アプリへの意見（${bundle.ids.length}件）` });
+      await navigator.share({ files: [bundle.file], title: `アプリへのご意見（${bundle.ids.length}件）` });
       setSent(true);
     } catch (e) {
       // 共有の画面を閉じただけ（AbortError）は何も出さない
@@ -103,7 +103,7 @@ export function useFeedbackSend() {
 
   const removeOne = async (item: FeedbackItem) => {
     const ok = await confirmDialog({
-      title: 'この意見を消しますか？',
+      title: 'このご意見を消しますか？',
       body: item.comment,
       confirmLabel: '消す',
       tone: 'danger',
@@ -116,7 +116,7 @@ export function useFeedbackSend() {
   const removeSent = async () => {
     if (!bundle) return;
     const ok = await confirmDialog({
-      title: `送った意見（${bundle.ids.length}件）を消しますか？`,
+      title: `送ったご意見（${bundle.ids.length}件）を消しますか？`,
       body: '相手に届いたことを確かめてから消してください。消すと元に戻せません。',
       confirmLabel: '消す',
       tone: 'danger',
@@ -125,7 +125,7 @@ export function useFeedbackSend() {
     await remove(bundle.ids);
     drop();
     setPassword('');
-    toast('送った意見を消しました');
+    toast('送ったご意見を消しました');
   };
 
   return {

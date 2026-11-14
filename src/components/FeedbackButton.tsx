@@ -1,4 +1,4 @@
-import { MessageSquarePlus } from 'lucide-react';
+import { MessageSquarePlus, MessageSquareText } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useLocation } from 'react-router-dom';
@@ -8,6 +8,7 @@ import {
   FEEDBACK_CAPTURING,
   FEEDBACK_COMMENT_LABEL,
   FEEDBACK_DIALOG_TITLE,
+  FEEDBACK_LIST_BUTTON,
   FEEDBACK_NO_IMAGE,
   FEEDBACK_NOTE,
   FEEDBACK_PATH,
@@ -28,8 +29,8 @@ import './feedback.css';
 const noCapture = { [NO_CAPTURE_ATTR]: '' };
 
 /**
- * 画面への意見のボタン（PRD D449。ADR-0114）：どの画面でも左下に出す。押すとその画面を撮り、意見を書くダイアログを出す。
- * 残した意見はこの端末に溜まり、「意見」の画面（pages/FeedbackPage）からまとめて送る。意見の画面では出さない
+ * 画面へのご意見のボタン（PRD D449。ADR-0114）：どの画面でも左下に出す。押すとその画面を撮り、ご意見を書くダイアログを出す。
+ * 残したご意見はこの端末に溜まり、「ご意見」の画面（pages/FeedbackPage）からまとめて送る。ご意見の画面では出さない
  */
 export function FeedbackButton() {
   const { pathname } = useLocation();
@@ -39,24 +40,37 @@ export function FeedbackButton() {
   if (pathname === FEEDBACK_PATH) return null;
   return (
     <>
-      <button
-        type="button"
-        className="feedback-fab"
-        onClick={() => void start()}
-        disabled={busy}
-        aria-busy={busy}
-        aria-label={busy ? FEEDBACK_CAPTURING : FEEDBACK_BUTTON}
-        data-testid="feedback-button"
-        {...noCapture}
-      >
-        <MessageSquarePlus size={18} aria-hidden="true" />
-        <span>{busy ? FEEDBACK_CAPTURING : FEEDBACK_BUTTON}</span>
-        {count > 0 && !busy && (
-          <span className="feedback-fab-count" data-testid="feedback-count">
-            {count}
-          </span>
-        )}
-      </button>
+      <div className="feedback-fabs" {...noCapture}>
+        <button
+          type="button"
+          className="feedback-fab"
+          onClick={() => void start()}
+          disabled={busy}
+          aria-busy={busy}
+          aria-label={busy ? FEEDBACK_CAPTURING : FEEDBACK_BUTTON}
+          data-testid="feedback-button"
+          {...noCapture}
+        >
+          <MessageSquarePlus size={18} aria-hidden="true" />
+          <span>{busy ? FEEDBACK_CAPTURING : FEEDBACK_BUTTON}</span>
+          {count > 0 && !busy && (
+            <span className="feedback-fab-count" data-testid="feedback-count">
+              {count}
+            </span>
+          )}
+        </button>
+        {/* 書かなくても、残したご意見をいつでも見られる */}
+        <Link
+          to={FEEDBACK_PATH}
+          className="feedback-fab feedback-fab-icon"
+          aria-label={FEEDBACK_LIST_BUTTON}
+          title={FEEDBACK_LIST_BUTTON}
+          data-testid="feedback-open-list"
+        >
+          <MessageSquareText size={18} aria-hidden="true" />
+          <span>{FEEDBACK_LIST_BUTTON}</span>
+        </Link>
+      </div>
       {draft && (
         <FeedbackDialog
           draft={draft}
@@ -69,7 +83,7 @@ export function FeedbackButton() {
   );
 }
 
-/** 意見を書くダイアログ：撮った画面・意見の欄・画像を付けるか・［残す］（主ボタン）。Esc・背景・取り消すで捨てる */
+/** ご意見を書くダイアログ：撮った画面・ご意見の欄・画像を付けるか・［残す］（主ボタン）。Esc・背景・取り消すで捨てる */
 function FeedbackDialog({
   draft,
   count,
@@ -113,7 +127,7 @@ function FeedbackDialog({
     try {
       await onSave(comment, withImage);
     } catch (e) {
-      setError(`残せませんでした（${formError(e)}）。画像を外すか、残した意見を送ってから消してください。`);
+      setError(`残せませんでした（${formError(e)}）。画像を外すか、残したご意見を送ってから消してください。`);
       setSaving(false);
     }
   };
