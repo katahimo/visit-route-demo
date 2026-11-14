@@ -31,7 +31,10 @@ export type FeedbackError = {
   stack?: string;
 };
 
-/** 残したときの画面の状態の記録（個人名・住所・ご意見の文は入れない。件数と構造だけ） */
+/**
+ * 残したときの画面の状態の記録。データの一覧は件数だけ、入力欄の中身は入れない。
+ * 見出し・操作中の部品の文字は画面の文をそのまま写すので、画面に出ている名前が入りうる（画像と同じ扱い）
+ */
 export type FeedbackMeta = {
   /** 完全な URL（origin・hash・query） */
   url: string;

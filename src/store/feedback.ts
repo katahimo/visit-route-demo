@@ -23,6 +23,14 @@ const done = <T>(req: IDBRequest<T>): Promise<T> =>
     req.onerror = () => reject(req.error ?? new Error('IndexedDB'));
   });
 
+/** 書き込みはトランザクションの確定で終わる（put が成功しても、確定の時点で容量不足などで取り消されることがある） */
+const committed = (t: IDBTransaction): Promise<void> =>
+  new Promise((resolve, reject) => {
+    t.oncomplete = () => resolve();
+    t.onabort = () => reject(t.error ?? new Error('IndexedDB の書き込みが取り消されました'));
+    t.onerror = () => reject(t.error ?? new Error('IndexedDB'));
+  });
+
 function openDb(factory: IDBFactory, name: string): Promise<IDBDatabase> {
   const req = factory.open(name, 1);
   req.onupgradeneeded = () => {
@@ -51,9 +59,19 @@ export function createFeedbackStore(getFactory: () => IDBFactory | null, dbName:
     })();
     return db;
   };
-  const tx = async <T>(mode: IDBTransactionMode, run: (s: IDBObjectStore) => IDBRequest<T>): Promise<T | null> => {
+  /** 読む（IndexedDB が使えなければ null） */
+  const read = async <T>(run: (s: IDBObjectStore) => IDBRequest<T>): Promise<T | null> => {
     const d = await open();
-    return d ? done(run(d.transaction(STORE, mode).objectStore(STORE))) : null;
+    return d ? done(run(d.transaction(STORE, 'readonly').objectStore(STORE))) : null;
+  };
+  /** 1つのトランザクションで書き、確定を待つ（IndexedDB が使えなければ偽） */
+  const write = async (run: (s: IDBObjectStore) => void): Promise<boolean> => {
+    const d = await open();
+    if (!d) return false;
+    const t = d.transaction(STORE, 'readwrite');
+    run(t.objectStore(STORE));
+    await committed(t);
+    return true;
   };
   const setCount = (n: number) => {
     if (n === count) return;
@@ -61,23 +79,34 @@ export function createFeedbackStore(getFactory: () => IDBFactory | null, dbName:
     for (const fn of listeners) fn();
   };
   const list = async (): Promise<FeedbackItem[]> => {
-    const all = (await tx('readonly', (s) => s.getAll())) ?? [...memory.values()];
+    const all = (await read((s) => s.getAll())) ?? [...memory.values()];
     const items = all.filter(isItem).sort((a, b) => a.at - b.at);
     setCount(items.length);
     return items;
   };
+  /** 件数だけ読み直す（画像は読まない） */
+  const refresh = async (): Promise<number> => {
+    const n = (await read((s) => s.count())) ?? memory.size;
+    setCount(n);
+    return n;
+  };
   return {
-    /** 残した意見（古い順） */
+    /** 残したご意見（古い順） */
     list,
-    /** 1件残す（置けなければ例外。容量不足など） */
+    /** 件数を読み直す（開いたとき） */
+    refresh,
+    /** 1件残す（置けなければ例外。確定の時点の容量不足も含む） */
     async add(item: FeedbackItem): Promise<void> {
-      if ((await tx('readwrite', (s) => s.put(item))) === null) memory.set(item.id, item);
-      await list();
+      if (!(await write((s) => s.put(item)))) memory.set(item.id, item);
+      await refresh();
     },
-    /** 選んだ意見を消す */
+    /** 選んだご意見を消す（1つのトランザクションで） */
     async remove(ids: readonly string[]): Promise<void> {
-      for (const id of ids) if ((await tx('readwrite', (s) => s.delete(id))) === null) memory.delete(id);
-      await list();
+      const stored = await write((s) => {
+        for (const id of ids) s.delete(id);
+      });
+      if (!stored) for (const id of ids) memory.delete(id);
+      await refresh();
     },
     /** 件数（最後に読んだとき。変わったら subscribe の関数を呼ぶ） */
     count: (): number => count,

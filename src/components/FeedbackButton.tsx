@@ -44,6 +44,8 @@ export function FeedbackButton() {
         <button
           type="button"
           className="feedback-fab"
+          // マウス・タッチで押しても操作中の部品から focus を奪わない（meta.activeElement に押す前の部品を残す）
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => void start()}
           disabled={busy}
           aria-busy={busy}

@@ -4,10 +4,20 @@
   left: max(12px, env(safe-area-inset-left, 0px));
   /* スマホでは下のタブ（--bottom-tabs-h）の上に出す */
   bottom: calc(12px + var(--bottom-tabs-h));
-  /* 地図（Leaflet）の拡大ボタン（z-index 1000）より手前に出す */
-  z-index: 1100;
+  /* 地図（Leaflet）の拡大ボタン（z-index 1000）より手前、吹き出し・メニュー（1050）・引き出し（1100）より後ろ */
+  z-index: 1010;
   display: flex;
   gap: 8px;
+}
+/* スマホの選択のシート（下のタブの上に全幅で出る）の操作ボタンを覆わない（選んでいるあいだは隠す） */
+body:has(.selection-bar.is-sheet) .feedback-fabs {
+  display: none;
+}
+/* スマホでは欠勤の振り直しの帯（全幅・下のタブの上）の上に出す（--reassign-dock-top は画面の下端から帯の上端まで） */
+@media (max-width: 860px) {
+  .feedback-fabs {
+    bottom: max(calc(12px + var(--bottom-tabs-h)), calc(var(--reassign-dock-top, 0px) + 8px));
+  }
 }
 .feedback-fab {
   text-decoration: none;

@@ -1,10 +1,11 @@
-// 意見を残す画面の状態を記録する（PRD D449。あとで AI・人が直す・再現するときの手がかり）。DOM と環境を読むだけで、書き換えない。
-// 〈利用者さん〉の名前・住所・意見の文は入れない（件数・構造だけ）
+// ご意見を残す画面の状態を記録する（PRD D449。あとで AI・人が直す・再現するときの手がかり）。DOM と環境を読むだけで、書き換えない。
+// データの中身（〈利用者さん〉・スタッフの一覧の行・住所）と入力欄の中身は入れず、一覧は件数だけ。
+// 見出し・操作中の部品の文字は画面に出ている文をそのまま写すので、名前が入りうる（画像と同じく、パスワードで閉じたファイルの中だけに入る）
 
 import type { DemoData } from '../contracts/data';
 import type { FeedbackMeta } from '../contracts/feedback';
-import { recentErrors } from '../lib/errorLog';
 import { NO_CAPTURE_ATTR } from './captureScreen';
+import { errorLog } from './errorLog';
 
 const clip = (s: string | null | undefined, n: number): string => (s ?? '').replace(/\s+/g, ' ').trim().slice(0, n);
 
@@ -79,6 +80,6 @@ export function collectFeedbackMeta(data: DemoData, space: string | null): Feedb
       space,
     },
     data: { version: data.version, baseDate: data.baseDate, counts: dataCounts(data) },
-    recentErrors: recentErrors(),
+    recentErrors: errorLog.recent(),
   };
 }

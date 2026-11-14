@@ -5,14 +5,14 @@ import { HashRouter } from 'react-router-dom';
 import App from './app/App';
 import { ErrorBoundary } from './app/ErrorBoundary';
 import { ConfirmProvider } from './components/ConfirmDialog';
+import { errorLog } from './components/errorLog';
 import { FeedbackButton } from './components/FeedbackButton';
 import { FirstRunGate } from './components/FirstRunPage';
 import { ToastProvider } from './components/Toast';
-import { installErrorLog } from './lib/errorLog';
 import { DemoDataProvider, reset } from './store';
 
 // 直前のエラーを控え、ご意見に付ける（PRD D449。外へは送らない）
-installErrorLog();
+errorLog.install();
 
 /** データの読み込みそのものが失敗したとき：初期状態に戻して読み直す（デモを組む印は store が sessionStorage に置き、読み直したあとの起動で読む。PRD D409） */
 function resetAndReload() {

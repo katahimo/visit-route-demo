@@ -8,7 +8,7 @@ import { collectFeedbackMeta } from './collectFeedbackMeta';
 /** 残した意見の件数（変わると描き直す。開いたときに1回読む） */
 export function useFeedbackCount(): number {
   useEffect(() => {
-    void feedbackStore.list().catch(() => {});
+    void feedbackStore.refresh().catch(() => {});
   }, []);
   return useSyncExternalStore(feedbackStore.subscribe, feedbackStore.count);
 }
