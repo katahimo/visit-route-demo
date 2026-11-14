@@ -10,6 +10,7 @@ import {
   FIRST_RUN_USE_CHOICES,
   type FirstRunAnswer,
   firstRunBackAction,
+  firstRunGuard,
   firstRunLanding,
   firstRunSetup,
   isFirstRunEntry,
@@ -166,5 +167,30 @@ describe('restartConfirmBody（最初の設定をやり直す）', () => {
     expect(body).toContain('「元に戻す」でも戻せません');
     expect(body).toContain('書き出して');
     expect(body.endsWith('控えの文。')).toBe(true);
+  });
+});
+
+describe('firstRunGuard（作り直す前の控え。PRD D448）', () => {
+  it('初めて開いたとき（データが無い）は控えを求めず、押せる', () => {
+    expect(firstRunGuard({ hasData: false, keep: false, backedUp: false })).toEqual({
+      needsBackup: false,
+      canSubmit: true,
+    });
+  });
+  it('今のデータを使い続けるときは控えを求めず、押せる', () => {
+    expect(firstRunGuard({ hasData: true, keep: true, backedUp: false })).toEqual({
+      needsBackup: false,
+      canSubmit: true,
+    });
+  });
+  it('今のデータがあって作り直すときは、控えを書き出すまで押せない', () => {
+    expect(firstRunGuard({ hasData: true, keep: false, backedUp: false })).toEqual({
+      needsBackup: true,
+      canSubmit: false,
+    });
+    expect(firstRunGuard({ hasData: true, keep: false, backedUp: true })).toEqual({
+      needsBackup: true,
+      canSubmit: true,
+    });
   });
 });

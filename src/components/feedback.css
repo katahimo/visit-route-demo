@@ -1,0 +1,121 @@
+/* 画面への意見（PRD D449・D450。ADR-0114）：左下のボタン・意見を書くダイアログ・意見の画面 */
+.feedback-fabs {
+  position: fixed;
+  left: max(12px, env(safe-area-inset-left, 0px));
+  /* スマホでは下のタブ（--bottom-tabs-h）の上に出す */
+  bottom: calc(12px + var(--bottom-tabs-h));
+  /* 地図（Leaflet）の拡大ボタン（z-index 1000）より手前、吹き出し・メニュー（1050）・引き出し（1100）より後ろ */
+  z-index: 1010;
+  display: flex;
+  gap: 8px;
+}
+/* スマホの選択のシート（下のタブの上に全幅で出る）の操作ボタンを覆わない（選んでいるあいだは隠す） */
+body:has(.selection-bar.is-sheet) .feedback-fabs {
+  display: none;
+}
+/* スマホでは欠勤の振り直しの帯（全幅・下のタブの上）の上に出す（--reassign-dock-top は画面の下端から帯の上端まで） */
+@media (max-width: 860px) {
+  .feedback-fabs {
+    bottom: max(calc(12px + var(--bottom-tabs-h)), calc(var(--reassign-dock-top, 0px) + 8px));
+  }
+}
+.feedback-fab {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--ink);
+  font-size: 0.85rem;
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(40, 25, 15, 0.18);
+  cursor: pointer;
+}
+/* 一覧は印だけ（横に伸びて地図の拡大ボタンにかぶらないように）。名前は aria-label・title */
+.feedback-fab-icon span {
+  display: none;
+}
+.feedback-fab:disabled {
+  cursor: progress;
+  color: var(--sub);
+}
+.feedback-fab-count {
+  min-width: 1.4em;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+  font-size: 0.78rem;
+  text-align: center;
+}
+.feedback-dialog {
+  width: min(520px, 100%);
+}
+.feedback-dialog h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+.feedback-dialog .sub {
+  margin: 0;
+}
+.feedback-dialog textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+.feedback-shot {
+  max-width: 100%;
+  max-height: 30vh;
+  align-self: flex-start;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.feedback-check {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+.feedback-check input {
+  width: auto;
+  margin: 0;
+}
+.feedback-item {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+.feedback-item img {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.feedback-item-comment {
+  margin: 4px 0 8px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.feedback-send-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+@media (max-width: 600px) {
+  .feedback-item {
+    grid-template-columns: 1fr;
+  }
+  .feedback-fab span:not(.feedback-fab-count) {
+    /* 狭い画面は印と件数だけ（名前は aria-label で読む） */
+    display: none;
+  }
+}
+@media print {
+  .feedback-fab {
+    display: none !important;
+  }
+}

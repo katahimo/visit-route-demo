@@ -165,3 +165,26 @@ export function firstRunBackAction(x: {
   if (!x.marked && x.redoing) return 'cancel';
   return null;
 }
+
+/**
+ * 作り直す前の控え（PRD D448。ADR-0113）：今のデータがあるとき（やり直し・更新の知らせでデモ／自分のデータを選んだ）は、
+ * この画面で控え（JSON）を書き出すまで主ボタン「はじめる」を押せない
+ */
+export const FIRST_RUN_BACKUP_LEAD =
+  '作り直す前に、今のデータの控え（バックアップ）を書き出してください。書き出すと「はじめる」を押せます。';
+export const FIRST_RUN_BACKUP_BUTTON = '控えを書き出す';
+/** 書き出したあとの文（name はファイル名。戻し方を添える） */
+export const firstRunBackupDone = (name: string): string =>
+  `控えを書き出しました（${name}）。戻すときは、データの画面の「読み込む控えのファイル」でこのファイルを選びます。`;
+
+/**
+ * 2問の画面で、控えの書き出しを求めるか（needsBackup）と、主ボタンを押せるか（canSubmit）。
+ * hasData＝今のデータがある（やり直し・更新の知らせ）、keep＝今のデータを使い続ける、backedUp＝この画面で控えを書き出した
+ */
+export function firstRunGuard(x: { hasData: boolean; keep: boolean; backedUp: boolean }): {
+  needsBackup: boolean;
+  canSubmit: boolean;
+} {
+  const needsBackup = x.hasData && !x.keep;
+  return { needsBackup, canSubmit: !needsBackup || x.backedUp };
+}

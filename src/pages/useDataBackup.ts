@@ -3,12 +3,12 @@
 import { useState } from 'react';
 import { useConfirm } from '../components/ConfirmDialog';
 import { useToast } from '../components/Toast';
+import { useBackupDownload } from '../components/useBackupDownload';
 import { jstDate } from '../domain/time';
 import { previousText } from '../lib/backupReminder';
-import { attempt, formError } from '../lib/common';
+import { formError } from '../lib/common';
 import { keepNote, keptSuffix } from '../lib/dataScreen';
-import { backupFileName, saveBlob } from '../lib/download';
-import { backupMemory, canKeepPrevious, type ExportKind, exportJson, importJson, useDemoData } from '../store';
+import { backupMemory, canKeepPrevious, type ExportKind, importJson, useDemoData } from '../store';
 
 /** 最後に書き出した日（PRD D227。このブラウザの記録で、データには入れない） */
 export function useLastExport() {
@@ -22,19 +22,19 @@ export function useLastExport() {
 
 /** 控え（JSON）の書き出し・読み込み */
 export function useDataBackup(x: { markExported: (kind: ExportKind) => void }) {
-  const { data, replace, keepPrevious } = useDemoData();
+  const { replace, keepPrevious } = useDemoData();
+  const downloadBackup = useBackupDownload();
   const toast = useToast();
   const confirmDialog = useConfirm();
   const [error, setError] = useState<string | null>(null);
 
   const download = () => {
     setError(null);
-    const r = attempt(() => exportJson(data));
-    if (!r.value) {
-      setError(`書き出せませんでした（${r.error}）`);
+    const r = downloadBackup();
+    if ('error' in r) {
+      setError(r.error);
       return;
     }
-    saveBlob(r.value, backupFileName(jstDate(Date.now())));
     x.markExported('json');
     toast('書き出しました');
   };

@@ -92,6 +92,14 @@
 - 「メールの予約送信（Google）」のカード（`pages/mailScheduleSettings`・`mail-schedule-settings`。いつも出す。[mail-schedule.md](mail-schedule.md)）：1行の説明（確定するときにまとめて Google に預け、前日の時刻に自動で送る）と ⓘ（aria-label「メールの予約送信の説明」。中は `mail-schedule-notes`：遅れる分数・Google のアカウントを通ること・使わないときは「メールを作る」で送れること）、手順の4行は「詳しく ▾」（`mail-schedule-steps-fold`。見出しの横に「手順 4つ」。ひな型のコピーのリンク `mail-schedule-template`。`GAS_TEMPLATE_URL` が空なら「まだ用意されていません」）、欄 `mail-schedule-url`・`mail-schedule-token`（password）・`mail-schedule-time`（time）、`mail-schedule-test`「接続を試す」・`mail-schedule-save`「保存」・`mail-schedule-clear`「この端末の設定を消す」（確認つき。設定があるときだけ）。誤りは押したあとに欄ごと（`settingsErrors`）。つないでいれば見出しに「つないでいます」
 - データの画面のいちばん下に「最初の設定をやり直す」のカード（`pages/RestartCard`・`restart-first-run`。ADR-0092）：畳まない注意「いまのデータは消えます。」（`restart-first-run-warn`）と［最初の設定をやり直す］（`restart-first-run-button`。説明1行 `RESTART_HINT`。デモのデータに戻すのもここで「デモで試す」を選ぶ）。「デモの初期状態に戻す」はデータの画面に置かない（画面が壊れたときの例外の画面の「初期状態に戻す」は残す）。最初の設定をやり直すは独自の確認（危険の色。本文は `lib/firstRun` の `restartConfirmBody`：元に戻す（Ctrl+Z）の対象外なので先に書き出す案内と、1世代の控えの文 `keepNote`）。OK で `askFirstRun()`（2問の画面 `components/FirstRunPage` へ。答えるまで今のデータのまま・読み直すと元のデータで開く）。答えると `startFirstRun(answer)` が1世代の控えを残してデータを作り直し、最初の画面（デモ＝週／月、自分のデータ＝登録の案内）へ移る
 
+### 意見（`#/feedback`。PRD D449・D450。ADR-0114）
+- 契約 `contracts/feedback.ts` の `FeedbackItem`（id・at・path・screen・comment・image（JPEG の data URL か null）・width・height・version・userAgent）。DemoData の外
+- `store/feedback.ts` の `feedbackStore`（IndexedDB `vrdemo-feedback`、領域があれば `vrdemo-feedback-<領域>`。`list`・`add`・`remove`・`count`・`subscribe`・`volatile`。IndexedDB が使えなければ開いている間だけ覚える）
+- `components/FeedbackButton`（`main.tsx` の `FirstRunGate` の隣。`feedback-button`・件数 `feedback-count`）：押すと `components/useFeedback` の `useFeedbackDraft().start()` が `components/captureScreen` の `captureScreen()` で撮り、ダイアログ（`feedback-dialog`。`feedback-shot`・`feedback-with-image`・`feedback-comment`・`feedback-save`・`feedback-cancel`・`feedback-list-link`）を出す。ボタンとダイアログは属性 `data-no-capture` で写さない
+- `captureScreen`：`modern-screenshot`（使うときに読む）で文書を写し、巻いた分ずらして画面の大きさで切る。固定・貼り付きの部品は印（`data-capture-shift`）を付けて写しの側でずらす。700px より狭い画面は2倍で撮る。地の色で塗ってから JPEG（0.7）にする。失敗は null
+- `pages/FeedbackPage`（`useFeedbackSend`）：一覧（`feedback-list`・`feedback-item`・`feedback-item-remove`）、送る欄（`feedback-send`・`feedback-password`・`feedback-make`・`feedback-file`・`feedback-share`・`feedback-save-mail`・`feedback-remove-sent`）。主ボタンは、作る前は［ファイルを作る］、作ったあとは［共有する］（`navigator.canShare` が真のとき）か［保存してメールを開く］
+- 報告は `lib/feedback` の `feedbackReportHtml`（入力した文字はタグにしない。画像は data URL の形だけ）、閉じるのは `lib/feedbackSeal` の `sealHtml`（PBKDF2-SHA256 31万回 → AES-GCM 256。salt 16バイト・iv 12バイトは画面が乱数で作る）。メールは `lib/feedback` の `feedbackMail` と `lib/mailto` の `mailtoHref`
+
 ### 完了の条件
 
 - [ ] 控えと Excel が同じファイル選択の部品・「ファイルを選ぶ」と未選択の文・input は見えない形・名前・Tab と枠・Space・確認・同じファイルをもう一度・Excel の誤り・名簿は一覧へのリンク（`lib/filePick` のテスト・`scripts/e2e-tour.cjs`）
