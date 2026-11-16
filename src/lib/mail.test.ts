@@ -5,6 +5,7 @@ import { clientSchema, staffSchema } from '../contracts/documents';
 import { addDays } from '../domain/time';
 import { client, DATE, makeData, staff, visit } from '../matching/fixtures.testkit';
 import {
+  BICYCLE_NOTE_SHORT,
   contactMailText,
   dayByStaff,
   dayMailText,
@@ -303,7 +304,8 @@ describe('日の予定の経路のリンク（PRD D97。ADR-0018）', () => {
     expect(urls(t.full).every((u) => u.searchParams.get('travelmode') === 'transit')).toBe(true);
     // 区間を残す段（要点1＋区間 → 要点2＋区間 → リンクだけ）のあとに、区間を外した 要点1 → 要点2
     expect(t.short.length).toBe(5);
-    expect(t.short[0]).toContain('（公共交通のため、道順は区間ごと（各訪問の下）です）');
+    // 区間の短い行の段は、区間が各訪問の下にあるので公共交通の一言を省く
+    expect(t.short[0]).not.toContain('公共交通のため');
     expect(t.short[0]).toContain('   道順：https:');
     expect(t.short[3]).not.toContain('https:');
     expect(t.short[3]).toContain('※長いため、入り方・駐車場・注意・区間ごとの道順は省きました。');
@@ -335,7 +337,49 @@ describe('日の予定の経路のリンク（PRD D97。ADR-0018）', () => {
     const { day, byStaff } = dayByStaff(d, DATE);
     const t = dayMailText(d.org, s1, DATE, day.source, byStaff.get('s1')!, false);
     expect(t.full).toContain('（自転車の経路が出ないときは、Google マップで徒歩に切り替えてください。）');
-    expect(t.short[1]).toContain('徒歩に切り替えて');
+    // 区間の短い行の段は見出し・長い一言を入れず、末尾に短い一言（PRD D101・D346）
+    for (const b of t.short.slice(0, 4)) {
+      expect(b).toContain(BICYCLE_NOTE_SHORT);
+      expect(b).not.toContain('Google マップで徒歩に');
+    }
+    expect(t.short[0]).toContain('■Google マップの道順\n全行程');
+    expect(t.short[1]).not.toContain('■Google マップの道順');
+  });
+  it('自転車・訪問4件・地名の長い〈利用者さん〉でも、目安 2000字に区間ごとの道順（4本）と自転車の一言が残る（PRD D346）', () => {
+    const names = ['出石 城下町の たびお', '城崎温泉の たびお', '竹野浜の たびお', '神鍋高原の たびお'];
+    const clients = names.map((name, i) =>
+      client(`b${i}`, 35.54 + i / 100, 134.82 + i / 100, {
+        displayName: name,
+        place: {
+          address: `兵庫県豊岡市${name}${i + 1}丁目2-3 架空ハイツ201`,
+          lat: 35.5412 + i / 100,
+          lng: 134.8234 + i / 100,
+          postalCode: '',
+        },
+        entryNote: 'インターホンを押してから玄関で一声かけてください',
+        keyNote: 'キーボックス 1234',
+      }),
+    );
+    const visits = clients.map((c, i) =>
+      visit(`y${i}`, c.id, `${String(9 + i * 2).padStart(2, '0')}:00`, `${String(9 + i * 2).padStart(2, '0')}:00`, {
+        windowKind: 'fixed',
+      }),
+    );
+    const d = data({
+      staff: [staff('s1', 35.5444, 134.8203, { name: '駅前 たびお', email: 'tabio@example.com' })],
+      clients,
+      visits,
+      routesByDate: { [DATE]: plan(DATE, { s1: visits.map((v) => v.id) }) },
+    });
+    const s1 = { ...d.staff[0]!, travelMode: 'BICYCLE' as const };
+    const { day, byStaff } = dayByStaff(d, DATE);
+    const t = dayMailText(d.org, s1, DATE, day.source, byStaff.get('s1')!, false);
+    const m = mailTo('tabio@example.com', t, 2000)!;
+    expect(m.mode).toBe('short');
+    expect(m.length).toBeLessThanOrEqual(2000);
+    expect(m.body).toContain('4. ');
+    expect(urls(m.body).filter((u) => u.searchParams.get('travelmode') === 'bicycling').length).toBe(4);
+    expect(m.body).toContain(BICYCLE_NOTE_SHORT);
   });
   it('自宅・移動手段を渡さなければリンクなし（要点は2段のまま）', () => {
     const d = data({ routesByDate: { [DATE]: plan(DATE, { s1: ['v2', 'v1'] }) } });

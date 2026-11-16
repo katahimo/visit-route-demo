@@ -70,6 +70,9 @@ function ruleLines(c: Client | undefined, includeKeys: boolean): string[] {
 /** 本文の〈利用者さん〉の名前（「青葉様」。見つからなければ「（不明）」） */
 export const nameOf = (c: Client | undefined) => (c ? `${c.displayName}様` : '（不明）');
 
+/** 区間の短い行の段に書く自転車の一言（BICYCLE_NOTE の短い形。長さの目安 2000字の端末で区間の道順を残すため。PRD D101・D346） */
+export const BICYCLE_NOTE_SHORT = '※自転車の経路が出なければ徒歩に切り替え';
+
 /** 経路のリンクを作れない場所（〈利用者さん〉が見つからない） */
 const NO_PLACE = { address: '', lat: null, lng: null };
 
@@ -136,6 +139,7 @@ export function dayRouteLinks(
  * 区間ごとがあるとき［要点1＋全行程＋区間（短い行）、要点1＋区間、要点2＋区間、要点2＋区間（リンクだけ・帰りなし）］のあとに、区間を外した
  * ［全行程だけの全文、要点1＋全行程、要点2＋全行程、要点2（リンクなし）］（全行程が無ければ全行程の段を除く）。
  * 要点1＝順番・時刻・〈利用者さん〉・住所（鍵は includeKeys のときだけ残す）、要点2＝順番・時刻・〈利用者さん〉だけ。
+ * 区間の短い行の段は見出し・移動手段の長い一言を入れず、自転車だけ短い一言（BICYCLE_NOTE_SHORT）を末尾に書く（公共交通の一言は省く）。
  * 「鍵の情報は…入れていません」は鍵のメモがある訪問があって鍵を入れないときだけ書く。「本文をコピー」は full（区間ごとのリンクも入る）
  */
 export function dayMailText(
@@ -210,14 +214,19 @@ export function dayMailText(
       ...(hasTrip && !withTrip ? ['1日の全行程の道順'] : []),
       ...(hasLegs && legs === 'none' ? ['区間ごとの道順'] : []),
     ];
+    // 区間の短い行の段は、見出し・移動手段の一言（長い文）を入れない（日本語は1字が9字になり、訪問4件の区間の道順が入らなくなる）。
+    // 全行程を入れるときだけ見出しと全行程。自転車は短い一言を末尾に、公共交通は区間が各訪問の下にあるので一言を省く
     const block =
       legs === 'none'
         ? withTrip && hasTrip
           ? routeBlock(true)
           : []
-        : compact && !withTrip && route.modeNotes.length === 0
-          ? []
+        : compact
+          ? withTrip && hasTrip
+            ? ['■Google マップの道順', ...route.trip, ...route.tripNotes, '']
+            : []
           : routeBlock(withTrip);
+    const compactModeNote = compact && staff.travelMode === 'BICYCLE' && hasLegs ? [BICYCLE_NOTE_SHORT] : [];
     return [
       ...head,
       compact ? shortLead : lead,
@@ -228,9 +237,10 @@ export function dayMailText(
         return [...visitLines(v, i, detail), ...(leg ? [`   ${leg}`] : [])];
       }),
       ...(back ? ['', back] : []),
+      ...(dropped.length > 0 || compactModeNote.length > 0 ? [''] : []),
+      ...compactModeNote,
       ...(dropped.length > 0
         ? [
-            '',
             compact
               ? `※${detail === 'none' ? '住所' : '入り方'}${legs === 'bare' && route.shortBack ? '・帰りの道順' : ''}などは省略`
               : `※長いため、${dropped.join('・')}は省きました。`,
