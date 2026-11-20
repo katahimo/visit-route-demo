@@ -1,0 +1,33 @@
+# ADR-0115：本番を変えずに確かめる確認用 URL と、本番を前の版に戻すジョブを deploy.yml に持つ
+
+- 日付：2026-11-20
+- 状態：採用
+- 関連：ADR-0071・0104・0053・0102
+
+## 背景
+事業所が公開 URL を実際に使い始めた。main への push はそのまま本番に出る（ADR-0071）。直した版を本番の前に確かめる場所と、出したあとに問題が出たときすぐ戻す手段が無い。データは端末の localStorage にだけあり、データの版（`DATA_VERSION`）を変えると読めなくなる（ADR-0053）。
+
+## 選択肢
+1. 案A：Workers の版ごとのプレビュー URL（`wrangler versions upload --preview-alias`）に出す。戻すのは `wrangler rollback` を手動のジョブで
+2. 案B：顧客・ブランチごとに別のサブドメイン（`env` を足して `wrangler deploy --env`）
+3. 案C：公開 URL の下の階層（`/preview/`）に出す
+
+## 決定
+- 案A。`deploy.yml` に3つのジョブを持つ
+  - 公開：main への push。版に `--tag <コミット>` を付け、戻す先を選べるようにする
+  - 確認用 URL：PR に「preview」のラベルを付けたとき（付いた PR への push も）と手動（action=preview・ブランチを選ぶ）。別名は `pr-<番号>` か、ブランチ名から作る。URL は PR のコメント（1件を書き換える）とジョブの要約に出す
+  - 戻す：手動（action=rollback）。版の ID を空にすると直前の版。理由を残す。本番を変える2つのジョブは同じ組（production）で1つずつ、途中で止めない
+- `wrangler.jsonc` に `preview_urls: true`（既定は切）
+- 確認用 URL は本番と origin が違うので localStorage も別。本番のデータで試すときは控えを書き出して読み込む
+
+## 理由とトレードオフ
+- 得るもの：本番のデータに触らずに直した版を開ける。顧客にも URL を渡せる。戻すのは1押しで、データの版を変えていなければデータは無事
+- 失うもの：確認用 URL は workers.dev の上にあり、だれでも開ける（同梱データは架空なので受け入れる。絞るなら Cloudflare Access）。確認用の版も lint・test・build を回すので Actions の分を使う（ラベルを付けたときだけにして抑える）
+- 捨てた案
+  - 案B：環境ごとに Worker が増え、DNS と設定が要る。PR ごとに作って消す手間がある
+  - 案C：同じ origin なので localStorage を本番と共有し、データの形の違う版で本番のデータを壊しうる。`base` も変わる
+
+## 影響
+- 戻したあとに main へ push すると最新が再び公開される。直すまで main へ入れない
+- 初めて `preview_urls: true` の入った版を本番に出したあとから確認用 URL が使える。アカウントの workers.dev サブドメインが要る
+- 見直す条件：顧客ごとに出し分けを長く保つ必要が出たら案B

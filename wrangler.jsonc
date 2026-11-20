@@ -2,6 +2,8 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "visit-route-demo",
   "compatibility_date": "2026-10-29",
+  // 確認用 URL（<別名>-visit-route-demo.<サブドメイン>.workers.dev）を使う。ADR-0115
+  "preview_urls": true,
   "assets": {
     "directory": "./dist"
   },

@@ -154,6 +154,7 @@
 | [0112](adr/0112-storage-space-for-slides.md) | 説明用スライドの iframe は `?space=` の接頭辞で保存領域を分け、普段のデータを壊さない |
 | [0114](adr/0114-screen-feedback.md) | 画面への意見をボタンで残し（その画面を撮る）、パスワードで閉じた1つのファイルにまとめて送ってもらう |
 | [0113](adr/0113-backup-before-rebuild.md) | 今のデータがあるときは、控えを書き出すまで作り直せない（最初の2問・例外の画面） |
+| [0115](adr/0115-preview-url-and-rollback.md) | 本番を変えずに確かめる確認用 URL（PR に「preview」のラベル）と、本番を前の版に戻す手動のジョブを deploy.yml に持つ |
 
 ## 文書の保ち方
 

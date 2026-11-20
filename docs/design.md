@@ -448,13 +448,15 @@ flowchart LR
   - [ ] `npm test`・`npm run typecheck`・`npm run lint`・`npm run e2e`・`npm run e2e:perf` が通る
 
 ### deploy（公開）
-- 責務：main への push で `npm ci → npm run lint（biome・競合の印）→ npm test → npm run build → Cloudflare Workers へ公開（`wrangler deploy`）`。e2e は別のワークフローで、速い検査は PR の push ごと、`npm run e2e` は PR に「e2e」のラベルを付けたとき（付いた PR への push も）・手動・週1回の夜間、`npm run e2e:perf` は手動・夜間だけ（夜間は `FAKE_NOW` を月末の日にも替えて3通り。ADR-0104）。失敗したときだけ報告と記録を3日残す。公開は e2e を待たない
+- 責務：main への push で `npm ci → npm run lint（biome・競合の印）→ npm test → npm run build → Cloudflare Workers へ公開（`wrangler deploy`）`。確認用 URL：PR に「preview」のラベル（付いた PR への push も）か手動で、同じ検査とビルドのあと `wrangler versions upload --preview-alias` で本番を変えずに workers.dev のプレビュー URL に出し、PR のコメントに URL を書く。戻す：手動で `wrangler rollback`（版の ID を空にすると直前の版）。本番を変える公開と戻すは1つずつ（ADR-0115）。e2e は別のワークフローで、速い検査は PR の push ごと、`npm run e2e` は PR に「e2e」のラベルを付けたとき（付いた PR への push も）・手動・週1回の夜間、`npm run e2e:perf` は手動・夜間だけ（夜間は `FAKE_NOW` を月末の日にも替えて3通り。ADR-0104）。失敗したときだけ報告と記録を3日残す。公開は e2e を待たない
 - 持つデータ（持ち主）：なし
 - 提供するAPI：なし
 - 依存するもの：GitHub Actions（`cloudflare/wrangler-action`。Secrets：`CLOUDFLARE_API_TOKEN`・`CLOUDFLARE_ACCOUNT_ID`）、e2e は `@playwright/test`（devDependency）と Chromium
 - 配置：`.github/workflows/deploy.yml`、`wrangler.jsonc`、`.github/workflows/e2e.yml`、`vite.config.ts`（`base: './'`・vitest の設定）、`playwright.config.ts`・`e2e/`、`scripts/lib/`（e2e の共通の部品・段の型）、`scripts/check-conflict-markers.cjs`
 - 完了の条件：
   - [ ] push から5分以内に Cloudflare Workers の公開URL に反映される
+  - [ ] 「preview」のラベルを付けた PR に確認用 URL のコメントが付き、本番の URL は変わらない
+  - [ ] 手動の rollback で本番が前の版に戻る
   - [ ] サブパスで再読込しても 404 にならない（HashRouter）。分けたチャンクもサブパスから読める（`base: './'`）
   - [ ] PR・夜間に e2e のワークフローが走り、報告（HTML）が残る。落ちたら test-results（trace・動画・スクリーンショット・記録）も残る
   - [ ] e2e の報告で段（test.step）ごと・確かめ（expect.soft）ごとに合否が見える。押したあとの待ちは画面の状態で待つ（`settle`。固定の待ちは速さの計測・外の遅れ・時間そのものを見る所だけ）
