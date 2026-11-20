@@ -1,12 +1,15 @@
 // 相性の記号（PRD D113・D177）
 import { describe, expect, it } from 'vitest';
+import type { Compat } from '../contracts/rules';
 import {
   COMPAT_CHOICES,
   COMPAT_LEGEND,
   COMPAT_MEANING,
   COMPAT_WORD,
+  clearUsualWhereNg,
   compatLevelClass,
   compatLevelOf,
+  countUsualWhereNg,
   setCompatLevel,
 } from './compatLevel';
 
@@ -54,5 +57,38 @@ describe('setCompatLevel', () => {
   it('未入力なら消し、行が無ければ作る', () => {
     expect(setCompatLevel({ c1: { s1: 1 } }, 'c1', 's1', 0)).toEqual({ c1: {} });
     expect(setCompatLevel({}, 'c1', 's1', 1)).toEqual({ c1: { s1: 1 } });
+  });
+});
+
+describe('clearUsualWhereNg', () => {
+  const compat: Compat = { c1: { s1: -2, s2: 1 }, c2: { s1: -1 } };
+  const pats = [
+    { id: 'p1', clientId: 'c1', usualStaffId: 's1', to: null },
+    { id: 'p2', clientId: 'c1', usualStaffId: 's2', to: null },
+    { id: 'p3', clientId: 'c1', usualStaffId: 's1', to: '2026-01-01' },
+    { id: 'p4', clientId: 'c2', usualStaffId: 's1', to: null },
+    { id: 'p5', clientId: 'c1', usualStaffId: null, to: null },
+  ];
+
+  it('× の人がいつもの担当の、続いている繰り返しだけ担当なしにする', () => {
+    const out = clearUsualWhereNg(pats, compat, '2026-11-20');
+    expect(out.map((p) => p.usualStaffId)).toEqual([null, 's2', 's1', 's1', null]);
+    expect(countUsualWhereNg(pats, compat, '2026-11-20')).toBe(1);
+  });
+
+  it('終わっていない（to が today 以降）は外し、元の配列は変えない', () => {
+    const out = clearUsualWhereNg([{ ...pats[2], to: '2026-11-20' }], compat, '2026-11-20');
+    expect(out[0].usualStaffId).toBeNull();
+    expect(pats[2].usualStaffId).toBe('s1');
+  });
+
+  it('scope の〈利用者さん〉・〈スタッフ〉に絞る', () => {
+    expect(clearUsualWhereNg(pats, compat, '2026-11-20', { clientId: 'c2' })).toBe(pats);
+    expect(clearUsualWhereNg(pats, compat, '2026-11-20', { staffId: 's2' })).toBe(pats);
+    expect(countUsualWhereNg(pats, compat, '2026-11-20', { clientId: 'c1', staffId: 's1' })).toBe(1);
+  });
+
+  it('外すものが無ければ同じ配列を返す', () => {
+    expect(clearUsualWhereNg(pats, {}, '2026-11-20')).toBe(pats);
   });
 });
