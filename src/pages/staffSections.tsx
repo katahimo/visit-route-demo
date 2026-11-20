@@ -24,6 +24,8 @@ import type { DemoData } from '../contracts/data';
 import type { Staff, Terms } from '../contracts/documents';
 import type { Item } from '../contracts/rules';
 import { slotsText } from '../domain/availability';
+import { jstDate } from '../domain/time';
+import { clearUsualWhereNg, countUsualWhereNg } from '../lib/compatLevel';
 import { encodeStaffFilter } from '../lib/compatView';
 import { dateText } from '../lib/dateText';
 import { type StaffPart, splitFolded } from '../lib/peopleView';
@@ -322,7 +324,15 @@ export function StaffHoursTab({
 
 /** 相性（担当）のタブ */
 export function StaffCompatTab({ saved, compatOn }: { saved: Staff; compatOn: boolean }) {
-  const { data } = useDemoData();
+  const { data, update } = useDemoData();
+  // 「× 担当にしない」の〈利用者さん〉がいつもの担当のままのもの（相性が切なら相性は効かないので数えない）
+  const today = jstDate(Date.now());
+  const conflicts = compatOn ? countUsualWhereNg(data.patterns, data.compat, today, { staffId: saved.id }) : 0;
+  const release = () =>
+    update(
+      (d) => ({ ...d, patterns: clearUsualWhereNg(d.patterns, d.compat, today, { staffId: saved.id }) }),
+      'いつもの担当を外す',
+    );
   return (
     <div className="person-sections">
       <section className="card stack person-sec" data-testid="person-sec" data-section="compat">
@@ -343,6 +353,14 @@ export function StaffCompatTab({ saved, compatOn }: { saved: Staff; compatOn: bo
             )}
           </div>
         </div>
+        {conflicts > 0 && (
+          <p className="sub" data-testid="usual-ng-conflict">
+            「× 担当にしない」の{data.org.terms.client}が、いつもの担当に残っています（{conflicts}件）。{' '}
+            <button type="button" className="btn btn-small" onClick={release} data-testid="usual-ng-release">
+              いつもの担当から外す
+            </button>
+          </p>
+        )}
         <dl>
           <StaffClientRows staff={saved} data={data} compatOn={compatOn} />
         </dl>

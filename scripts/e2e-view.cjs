@@ -929,6 +929,63 @@ async function staffIcon(page) {
   );
 }
 
+/** 「× 担当にしない」といつもの担当の矛盾：相性の表で × にするといつもの担当から外れ、残っている矛盾は〈スタッフ〉の画面から外せる */
+async function usualNg(page) {
+  await open(page, '/staff/s1?tab=compat', '[data-testid="view-usual-clients"]');
+  const seed = (fn) =>
+    page.evaluate(
+      ([k, src]) => {
+        const d = JSON.parse(localStorage.getItem(k));
+        new Function('d', src)(d);
+        localStorage.setItem(k, JSON.stringify(d));
+      },
+      [STORAGE_KEY, fn],
+    );
+  // c2 の繰り返しの担当を s1 にして相性は未入力に、c3 は × のまま s1 を担当に残す（矛盾したデータ）
+  await seed(
+    `const [c2, c3] = [d.clients[1].id, d.clients[2].id];
+     d.compat = d.compat ?? {};
+     for (const id of [c2, c3]) d.compat[id] = { ...(d.compat[id] ?? {}) };
+     delete d.compat[c2].s1; d.compat[c3].s1 = -2;
+     for (const p of d.patterns) if (p.clientId === c2 || p.clientId === c3) { p.usualStaffId = 's1'; p.to = null; }`,
+  );
+  const data0 = await stored(page);
+  const [c2, c3] = [data0.clients[1], data0.clients[2]];
+  // 相性の表で c2 × s1 を × にすると、c2 のいつもの担当から s1 が外れる（c3 はそのまま）
+  await open(page, '/compat', '[data-testid="compat-head-btn"]');
+  const s1Name = data0.staff.find((x) => x.id === 's1').name;
+  await page.locator(`[aria-label^="${c2.displayName}と${s1Name}の相性"]`).click();
+  const choice = page.getByTestId('compat-choice-pop');
+  await choice.waitFor();
+  await choice.locator('[data-level="-2"]').click();
+  await settle(page, 300);
+  const d1 = await stored(page);
+  const usualOfClient = (d, id) => d.patterns.filter((p) => p.clientId === id).map((p) => p.usualStaffId);
+  check(
+    usualOfClient(d1, c2.id).every((u) => u !== 's1'),
+    '相性を × にしたら、その人のいつもの担当から外れる',
+    usualOfClient(d1, c2.id),
+  );
+  check(
+    usualOfClient(d1, c3.id).some((u) => u === 's1'),
+    '× にしていない組のいつもの担当は変えない',
+    usualOfClient(d1, c3.id),
+  );
+  // 残っている矛盾は〈スタッフ〉の画面に知らせと外すボタン
+  await open(page, '/staff/s1?tab=compat', '[data-testid="view-usual-clients"]');
+  const note = page.getByTestId('usual-ng-conflict');
+  check((await note.count()) === 1, '矛盾が残っていれば〈スタッフ〉の画面に知らせを出す');
+  await page.getByTestId('usual-ng-release').click();
+  await settle(page, 300);
+  check((await note.count()) === 0, '「いつもの担当から外す」で知らせが消える');
+  const d2 = await stored(page);
+  check(
+    usualOfClient(d2, c3.id).every((u) => u !== 's1'),
+    '外すと c3 のいつもの担当から s1 が外れる',
+    usualOfClient(d2, c3.id),
+  );
+}
+
 const steps = pagePerStep({
   open: (browser) => openContext(browser),
   call: (fn, s) => fn(s.page, s.dlg),
@@ -941,6 +998,7 @@ const steps = pagePerStep({
     staffMore,
     links,
     names,
+    usualNg,
     rowClick,
     staffViewDays,
     staffIcon,

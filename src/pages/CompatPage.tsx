@@ -5,8 +5,9 @@ import { ClientDetail, StaffDetail } from '../components/personDetail';
 import { PeopleTabs } from '../components/SettingsTabs';
 import { PageHeader } from '../components/ui';
 import type { CompatLevel } from '../contracts/rules';
+import { jstDate } from '../domain/time';
 import { EMPTY_FILTER, sameFilter } from '../lib/clientFilter';
-import { compatLevelOf, setCompatLevel } from '../lib/compatLevel';
+import { clearUsualWhereNg, compatLevelOf, setCompatLevel } from '../lib/compatLevel';
 import { EMPTY_STAFF_FILTER, sameStaffFilter } from '../lib/compatView';
 import { useDemoData } from '../store';
 import { CompatChoice } from './compatChoice';
@@ -59,7 +60,13 @@ export default function CompatPage() {
     if (!openClient || !openStaff) return;
     const cid = openClient.id;
     const sid = openStaff.id;
-    update((d) => ({ ...d, compat: setCompatLevel(d.compat, cid, sid, level) }), '相性');
+    // × 担当にしない にしたら、その組のいつもの担当（繰り返しの担当）から外す（矛盾を残さない。PRD D8）
+    const today = jstDate(Date.now());
+    update((d) => {
+      const compat = setCompatLevel(d.compat, cid, sid, level);
+      const patterns = clearUsualWhereNg(d.patterns, compat, today, { clientId: cid, staffId: sid });
+      return { ...d, compat, patterns };
+    }, '相性');
     close();
   };
 
