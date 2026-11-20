@@ -9,6 +9,7 @@ import type { Pattern, Staff, VisitType } from '../contracts/documents';
 import { WEEKDAY_LABELS } from '../lib/common';
 import {
   isRepeatChoice,
+  NO_USUAL_STAFF,
   type PatternForm,
   repeatChoiceLabel,
   repeatChoiceOf,
@@ -191,7 +192,8 @@ function PatternTimeFields({ form, setForm, staff, today }: FieldsProps & { staf
           onChange={(e) => setForm({ ...form, usualStaffId: e.target.value })}
           data-testid="pattern-staff"
         >
-          <option value="">担当なし（AI で組む）</option>
+          <option value="">AI で組む（組んだ人をいつもの担当に）</option>
+          <option value={NO_USUAL_STAFF}>担当なし（決めない・組まない）</option>
           {staff.map((s) => (
             <option key={s.id} value={s.id}>
               {s.name}

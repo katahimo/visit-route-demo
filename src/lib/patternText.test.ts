@@ -1,7 +1,8 @@
 // 定期パターンの表示の文（ADR-0012・ADR-0013）
 import { describe, expect, it } from 'vitest';
 import type { Pattern } from '../contracts/documents';
-import { patternWhenText, repeatText, usualStartsLabel } from './patternText';
+import { removePattern } from '../patterns';
+import { patternWhenText, repeatText, splitEndedPatterns, usualStartsLabel } from './patternText';
 
 const p = (over: Partial<Pattern> = {}) => ({
   weekdays: [1, 4],
@@ -61,5 +62,41 @@ describe('usualStartsLabel（標準の開始の文。ADR-0062）', () => {
     ).toBe('標準の開始：月 10:00・水 11:00');
     expect(usualStartsLabel({ usualStarts: [] })).toBe('');
     expect(usualStartsLabel({})).toBe('');
+  });
+});
+
+describe('splitEndedPatterns', () => {
+  const at = (id: string, to: string | null) => ({ id, to });
+  it('最後の日が今日より前の繰り返しは「終わった」に分ける（今日まで・続くものは今の並び。順はそのまま）', () => {
+    const r = splitEndedPatterns(
+      [at('a', null), at('b', '2026-11-19'), at('c', '2026-11-20'), at('d', '2026-12-31')],
+      '2026-11-20',
+    );
+    expect(r.current.map((p) => p.id)).toEqual(['a', 'c', 'd']);
+    expect(r.ended.map((p) => p.id)).toEqual(['b']);
+  });
+  it('今日より前に始まった繰り返しを消すと（昨日で終わらせて残る）、今の並びから外れる（#4）', () => {
+    const p: Pattern = {
+      id: 'p1',
+      clientId: 'c1',
+      typeId: null,
+      weekdays: [1, 4],
+      everyWeeks: 1,
+      repeat: 'weekly',
+      monthWeeks: [],
+      dayTimes: [],
+      windowKind: 'fixed',
+      earliestStart: '08:30',
+      latestStart: '08:30',
+      durationMinutes: 30,
+      from: '2026-11-16',
+      to: '2026-11-30',
+      usualStaffId: null,
+      note: '',
+    };
+    const today = '2026-11-20';
+    const r = removePattern({ patterns: [p], visits: [], clients: [] }, 'p1', today);
+    expect(r.patterns).toHaveLength(1);
+    expect(splitEndedPatterns(r.patterns, today)).toEqual({ current: [], ended: [{ ...p, to: '2026-11-19' }] });
   });
 });

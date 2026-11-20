@@ -5,8 +5,10 @@ import type { Pattern } from '../contracts/documents';
 import {
   isRepeatChoice,
   MONTH_WEEKS_ERROR,
+  NO_USUAL_STAFF,
   type PatternForm,
   parsePatternForm,
+  patternAutoArranges,
   patternConfirmedDays,
   patternEndDefault,
   patternFormOf,
@@ -164,6 +166,30 @@ describe('parsePatternForm', () => {
     expect(p).toMatchObject({ clientId: 'c1', typeId: null, everyWeeks: 1, monthWeeks: [2, 4], from: TODAY });
     expect(p).toMatchObject({ to: null, usualStaffId: null });
     expect('usualStarts' in p).toBe(false);
+  });
+});
+
+describe('担当の欄（AI で組む・担当なし・〈スタッフ〉。PRD D376）', () => {
+  it('足す欄の既定は AI で組む。いつもの担当の無い繰り返しを直す欄は「担当なし」（直しただけで担当を決めない）', () => {
+    expect(patternFormOf(null, TODAY, 60).usualStaffId).toBe('');
+    expect(patternFormOf(pattern({ usualStaffId: null }), TODAY, 60).usualStaffId).toBe(NO_USUAL_STAFF);
+  });
+  it('担当なしはいつもの担当を書かず、自動で組まない', () => {
+    const p = parsePatternForm(addForm({ usualStaffId: NO_USUAL_STAFF }), TODAY, 'c1', TYPES);
+    if (typeof p === 'string') throw new Error(p);
+    expect(p.usualStaffId).toBeNull();
+    expect(patternAutoArranges({ usualStaffId: NO_USUAL_STAFF })).toBe(false);
+  });
+  it('AI で組む・〈スタッフ〉を選んだときは自動で組む（AI で組むはいつもの担当を組んだ人にする）', () => {
+    expect(patternAutoArranges({ usualStaffId: '' })).toBe(true);
+    expect(patternAutoArranges({ usualStaffId: 's1' })).toBe(true);
+    const p = parsePatternForm(addForm({ usualStaffId: 's1' }), TODAY, 'c1', TYPES);
+    expect(typeof p !== 'string' && p.usualStaffId).toBe('s1');
+  });
+  it('担当なしの繰り返しを直す欄をそのまま確かめると、担当なしのまま', () => {
+    const p = pattern({ usualStaffId: null });
+    const q = parsePatternForm(patternFormOf(p, TODAY, 60), p.from, 'c1', TYPES);
+    expect(typeof q !== 'string' && q.usualStaffId).toBeNull();
   });
 });
 

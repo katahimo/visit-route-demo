@@ -11,10 +11,16 @@ import { jstDate } from '../domain/time';
 import { requestAutoArrange } from '../lib/autoArrangeBatch';
 import { byName, newId } from '../lib/common';
 import { mdText } from '../lib/dateText';
-import { patternEndConfirm, patternRemoveConfirm, patternSplitConfirm } from '../lib/patternConfirm';
+import {
+  patternEndConfirm,
+  patternRemoveConfirm,
+  patternRemovedText,
+  patternSplitConfirm,
+} from '../lib/patternConfirm';
 import {
   type PatternForm,
   parsePatternForm,
+  patternAutoArranges,
   patternConfirmedDays,
   patternEndDefault,
   patternSinceError,
@@ -134,8 +140,8 @@ export function usePatternsFlow({
       return { ...d, patterns: x.patterns, visits: x.visits };
     }, '繰り返しを直す');
     open(null);
-    // 直した回の担当なし（日時が変わった・増えた回）を自動で組む
-    const auto = arrangeAfter(data, after, today);
+    // 直した回の担当なし（日時が変わった・増えた回）を自動で組む（担当の欄で「担当なし」を選んだら組まない）
+    const auto = patternAutoArranges(form) && arrangeAfter(data, after, today);
     toast(auto ? '繰り返しを直しました（担当を自動で組みます）' : '繰り返しを直しました');
   };
 
@@ -149,7 +155,7 @@ export function usePatternsFlow({
     }, '繰り返しを消す');
     if (form?.id === p.id) open(null);
     if (selected === p.id) onSelect?.(null);
-    toast('繰り返しを消しました');
+    toast(patternRemovedText(c.patterns.some((x) => x.id === p.id)));
   };
 
   /** 終わらせる：最後の日より後の回を消し、終了日を入れる（確認してから） */
