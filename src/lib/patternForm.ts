@@ -33,9 +33,19 @@ export type PatternForm = {
   /** いつから変えるか（直すとき） */
   since: string;
   to: string;
+  /** いつもの担当：〈スタッフ〉の id・''（AI で組み、組んだ人をいつもの担当にする。D376）・NO_USUAL_STAFF（担当なしのまま。組まない） */
   usualStaffId: string;
   note: string;
 };
+
+/** 担当の選択肢の「担当なし（決めない）」：いつもの担当を書かず、足す・直すときに自動で組まない（PRD D376） */
+export const NO_USUAL_STAFF = 'none';
+
+/** 足す・直したあとに担当なしの回を自動で組むか（ADR-0072）。担当の欄で「担当なし」を選んだら組まない */
+export const patternAutoArranges = (f: Pick<PatternForm, 'usualStaffId'>): boolean => f.usualStaffId !== NO_USUAL_STAFF;
+
+/** 欄の担当の値 → パターンのいつもの担当（AI で組む・担当なしは null） */
+const usualStaffOf = (v: string): string | null => (v === '' || v === NO_USUAL_STAFF ? null : v);
 
 /** 入力欄の初めの値（p が null なら足す欄） */
 export const patternFormOf = (p: Pattern | null, today: string, defaultDuration: number): PatternForm =>
@@ -59,7 +69,8 @@ export const patternFormOf = (p: Pattern | null, today: string, defaultDuration:
         from: p.from,
         since: today,
         to: p.to ?? '',
-        usualStaffId: p.usualStaffId ?? '',
+        // いつもの担当の無い繰り返しを直すときは「担当なし」（直しただけで担当を決めない）
+        usualStaffId: p.usualStaffId ?? NO_USUAL_STAFF,
         note: p.note,
       }
     : {
@@ -191,7 +202,7 @@ export function parsePatternForm(
     durationMinutes: Number(f.durationMinutes),
     from,
     to: f.to || null,
-    usualStaffId: f.usualStaffId || null,
+    usualStaffId: usualStaffOf(f.usualStaffId),
     ...(usualStarts.length > 0 ? { usualStarts } : {}),
     note: f.note,
   });

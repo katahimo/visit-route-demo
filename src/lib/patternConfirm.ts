@@ -27,6 +27,13 @@ export const patternRemoveConfirm = (confirmedDays: number): ConfirmOptions => (
   tone: 'danger',
 });
 
+/**
+ * 消したあとの知らせ。kept は今日より前に始まっていて、昨日で終わらせて残したか（removePattern）。
+ * 残したときは一覧の「終わった繰り返し」に移ったことを言う（一覧から消えないと思わせない）
+ */
+export const patternRemovedText = (kept: boolean): string =>
+  kept ? '繰り返しを消しました（今日より前の回は「終わった繰り返し」に残します）' : '繰り返しを消しました';
+
 /** 終わらせる前の確認（last は最後の日） */
 export const patternEndConfirm = (last: string, removed: number, confirmedDays: number): ConfirmOptions => ({
   title: `繰り返しを${mdText(last)}で終わらせますか？`,
