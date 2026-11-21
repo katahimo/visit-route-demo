@@ -35,6 +35,8 @@ describe('一覧の列', () => {
   });
   it('くわしい列を出すと3列に専門の列（位置・特性・求めること・いつもの担当・状態／特性・求めること・自宅の位置・状態）が足される', () => {
     expect(clientColumns(true)).toEqual(['name', 'address', 'plan', 'place', 'traits', 'requires', 'usual', 'state']);
+    // 特性の機能（clientTraits）が切なら特性の列を出さない（ADR-0117）
+    expect(clientColumns(true, false)).toEqual(['name', 'address', 'plan', 'place', 'requires', 'usual', 'state']);
     expect(staffColumns(true)).toEqual(['name', 'days', 'hours', 'traits', 'requires', 'home', 'state']);
   });
   it('くわしい列を出せるのは入だけ。出すのは入で切り替えを入れているときだけ（切は切り替えを入れていても出さない）', () => {

@@ -16,6 +16,7 @@ import {
   patternRemoveConfirm,
   patternRemovedText,
   patternSplitConfirm,
+  patternSplitText,
 } from '../lib/patternConfirm';
 import {
   type PatternForm,
@@ -86,6 +87,8 @@ export function usePatternsFlow({
    */
   const monthlyOn = useFeature('patternMonthly');
   const monthlyOffId = useId();
+  /** 時間の決め方（ちょうど・幅）を選べるか（ADR-0117 の timeWindow）。切ならちょうど（既定）で入れる */
+  const windowOn = useFeature('timeWindow');
   /** 曜日ごとの時刻のパターンで patternMonthly が切：曜日・曜日ごとの時刻は読むだけ（データを変えない） */
   const daysLocked = !monthlyOn && !!form?.perDay;
   const patterns = useMemo(() => data.patterns.filter((p) => p.clientId === clientId), [data.patterns, clientId]);
@@ -142,7 +145,7 @@ export function usePatternsFlow({
     open(null);
     // 直した回の担当なし（日時が変わった・増えた回）を自動で組む（担当の欄で「担当なし」を選んだら組まない）
     const auto = patternAutoArranges(form) && arrangeAfter(data, after, today);
-    toast(auto ? '繰り返しを直しました（担当を自動で組みます）' : '繰り返しを直しました');
+    toast(patternSplitText(original.from, form.since, today, auto));
   };
 
   const remove = async (p: Pattern) => {
@@ -200,6 +203,7 @@ export function usePatternsFlow({
     error,
     monthlyOn,
     monthlyOffId,
+    windowOn,
     daysLocked,
     save,
     remove,

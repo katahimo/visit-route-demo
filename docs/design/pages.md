@@ -180,6 +180,7 @@
 - URL は機能の表から引く：`menuSections`（下のタブもここから）・`screenSections`（上の帯の名前・パレットの画面）・`settingsTabs`（設定のタブ）、`app/App.tsx` のルート（切った機能の URL（`?do=` も）は予定の画面（`homePath`）へ移し（replace。`state.featureOff`）、知らせ（トースト）と `#/settings` へのリンク。管理者設定と土台の画面は開ける）、`lib/commandPalette.ts` の操作、`lib/attentionBand.ts` の帯の種類、`lib/links.ts`、画面の中の欄・ボタン（`useFeature`）。切った機能の URL を開いたときの知らせは `components/FeatureOffNotice`
 - `rules` が切なら、条件の重みの画面は開けず、担当を組むは点数の基準のプリセットの重み（`scoreRulesOf`）で作る
 - 切っても事実の表示（月の「休みの人に N」・すでに振り直した案の差の欄・帯・連絡の一覧）は残し、隠すのは入力・操作の入口だけ
+- `clientTraits`（〈利用者さん〉の特性）・`timeWindow`（時間の決め方）は見せ方の好み（ADR-0117）：切ると欄を隠すだけで、特性と幅の繰り返し・訪問は今どおり効く。`timeWindow` が切でも幅で入れてあるものを直すときは選ぶ欄を出す（黙ってちょうどにしない）
 - 切ったまま保存しても、データ（段階・担当できる人・メールアドレス・毎月のパターンの `repeat` と `monthWeeks`）は残す（毎月のパターンは読むだけと注記）。`clientStage` が切なら段階は「利用中／終了」の2つで選ばせる
 - 管理者設定の画面は [pages-data.md](pages-data.md)
 

@@ -134,6 +134,7 @@ export function ClientStageView({
         {stageOn && (
           <>
             <DlRow term="紹介元" value={orDash(c.referrer.name)} />
+            <DlRow term="相談員" value={orDash(c.referrer.person ?? '')} />
             <DlRow term="連絡先" value={orDash(c.referrer.contact)} />
             <DlRow term="メールアドレス" value={orDash(c.referrer.email)} />
             <DlRow term="紹介元のメモ" value={orDash(c.referrer.note)} />
@@ -209,6 +210,16 @@ export function ClientStageFields({ form, setForm, bad, terms, stageOn }: Client
                 placeholder="例：〇〇相談室"
                 onChange={(e) => setForm({ ...form, referrer: { ...form.referrer, name: e.target.value } })}
                 data-testid="client-referrer-name"
+              />
+            </label>
+            <label>
+              紹介元の相談員（任意）
+              <input
+                value={form.referrer.person ?? ''}
+                maxLength={50}
+                placeholder="担当者の名前"
+                onChange={(e) => setForm({ ...form, referrer: { ...form.referrer, person: e.target.value } })}
+                data-testid="client-referrer-person"
               />
             </label>
             <label>

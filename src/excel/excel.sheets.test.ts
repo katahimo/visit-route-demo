@@ -582,7 +582,7 @@ describe('最終勤務日・段階・紹介元・当日キャンセル・拘束�
               ...c,
               stage: 'ended' as const,
               active: false,
-              referrer: { name: '相談室（架空）', contact: '000', note: '返事待ち', email: '' },
+              referrer: { name: '相談室（架空）', contact: '000', note: '返事待ち', email: '', person: '青葉（架空）' },
             }
           : c,
     ),
@@ -607,7 +607,8 @@ describe('最終勤務日・段階・紹介元・当日キャンセル・拘束�
         const sws = sheet(wb, names.staff);
         sws.spliceColumns(col(sws, '最終勤務日'), 1);
         const cws = sheet(wb, names.client);
-        for (const h of ['段階', '紹介元', '紹介元の連絡先', '紹介元のメモ']) cws.spliceColumns(col(cws, h), 1);
+        for (const h of ['段階', '紹介元', '紹介元の相談員', '紹介元の連絡先', '紹介元のメモ'])
+          cws.spliceColumns(col(cws, h), 1);
         const vws = sheet(wb, '訪問');
         vws.spliceColumns(col(vws, '当日キャンセル'), 1);
         const ows = sheet(wb, '事業所');
@@ -620,6 +621,8 @@ describe('最終勤務日・段階・紹介元・当日キャンセル・拘束�
     expect([r.clients[0]!.stage, r.clients[0]!.tentative, r.clients[0]!.active]).toEqual(['inquiry', true, true]);
     expect(r.clients[1]!.stage).toBe('ended');
     expect(r.clients[1]!.referrer.name).toBe('');
+    // 紹介元の相談員の列が無い古いブックは省く（ADR-0117）
+    expect('person' in r.clients[1]!.referrer).toBe(false);
     expect(r.visits[0]!.cancelKind).toBeNull();
     expect(r.org.spanLimitHours).toBe(10);
   });

@@ -158,6 +158,7 @@
 | [0116](adr/0116-chain-visits-evening-home-fixed-start.md) | 続く訪問は同じ人（組み込みの条件）・夕方は自宅に近い人の条件と、開始時刻をずらさない機能のスイッチ |
 | [0113](adr/0113-backup-before-rebuild.md) | 今のデータがあるときは、控えを書き出すまで作り直せない（最初の2問・例外の画面） |
 | [0115](adr/0115-preview-url-and-rollback.md) | 本番を変えずに確かめる確認用 URL（PR に「preview」のラベル）と、本番を前の版に戻す手動のジョブを deploy.yml に持つ |
+| [0117](adr/0117-pattern-list-end-time-referrer-person-input-toggles.md) | 今の繰り返しが分かる一覧（前の中身は消さず畳む・いつから／いつまでの札）・所要と終わりの時刻を相互に入れる・紹介元の相談員・〈利用者さん〉の特性と時間の決め方の入り切り |
 
 ## 文書の保ち方
 

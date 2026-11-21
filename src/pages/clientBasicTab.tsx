@@ -12,6 +12,7 @@ import { placeText } from '../components/personView';
 import { ClientPlaceEditor } from '../components/placeLookup';
 import { RouteMap } from '../components/RouteMap';
 import { Hint, WithIcon } from '../components/ui';
+import { useFeature } from '../components/useFeature';
 import { VISIT_RULE_FIELDS } from '../components/VisitRules';
 import type { Client } from '../contracts/documents';
 import type { Item } from '../contracts/rules';
@@ -112,11 +113,14 @@ function ClientRulesFields({ form, setForm, terms }: ClientFormCtx) {
 type BasicSectionsArgs = Pick<
   Parameters<typeof ClientBasicTab>[0],
   'c' | 'saved' | 'sec' | 'clientItems' | 'stageOn' | 'notesOn' | 'onConfirmTentative' | 'onCancelTentative' | 'ctx'
->;
+> & {
+  /** 〈利用者さん〉の特性の節を出すか（機能 clientTraits。ADR-0117） */
+  traitsOn: boolean;
+};
 
 /** 基本情報のタブの節（欄の種類つき。切は畳む欄を分ける。lib/peopleView の splitFolded） */
 function basicSections(a: BasicSectionsArgs): { part: ClientPart; node: ReactNode }[] {
-  const { c, saved, sec, clientItems, stageOn, notesOn, onConfirmTentative, onCancelTentative, ctx } = a;
+  const { c, saved, sec, clientItems, stageOn, notesOn, traitsOn, onConfirmTentative, onCancelTentative, ctx } = a;
   const { form, setForm, bad, terms } = ctx;
   const f = form && { form, setForm, bad, terms };
   const basicFields = f && <ClientBasicFields {...f} />;
@@ -175,26 +179,35 @@ function basicSections(a: BasicSectionsArgs): { part: ClientPart; node: ReactNod
         )}
       </EditSection>,
     ),
-    section(
-      'traits',
-      <EditSection
-        key="traits"
-        {...sec('traits')}
-        icon={BadgeCheck}
-        title="特性"
-        view={
-          <dl>
-            {clientItems.map((it) => (
-              <DlRow key={it.id} term={it.name} value={traitText(it, c.traits[it.id], today)} />
-            ))}
-          </dl>
-        }
-      >
-        {form && (
-          <TraitsEditor items={clientItems} value={form.traits} onChange={(traits) => setForm({ ...form, traits })} />
-        )}
-      </EditSection>,
-    ),
+    // 特性（機能 clientTraits。切は節を出さない。入れた特性は残る。ADR-0117）
+    ...(traitsOn
+      ? [
+          section(
+            'traits',
+            <EditSection
+              key="traits"
+              {...sec('traits')}
+              icon={BadgeCheck}
+              title="特性"
+              view={
+                <dl>
+                  {clientItems.map((it) => (
+                    <DlRow key={it.id} term={it.name} value={traitText(it, c.traits[it.id], today)} />
+                  ))}
+                </dl>
+              }
+            >
+              {form && (
+                <TraitsEditor
+                  items={clientItems}
+                  value={form.traits}
+                  onChange={(traits) => setForm({ ...form, traits })}
+                />
+              )}
+            </EditSection>,
+          ),
+        ]
+      : []),
     ...(notesOn
       ? [
           section(
@@ -257,6 +270,8 @@ export function ClientBasicTab({
   onCancelTentative: (c: Client) => void;
 }) {
   const { form, setForm, bad, terms } = ctx;
+  // 〈利用者さん〉の特性の節を出すか（機能 clientTraits。ADR-0117）
+  const traitsOn = useFeature('clientTraits');
   const folded = clientFolded(only);
   const showStage = newClientShowsStage(only);
   if (newEdit) {
@@ -284,7 +299,18 @@ export function ClientBasicTab({
   }
   // 切は段階・特性・決まりごと（と担当・相性）を「詳しく ▾」へ畳み、名前（基本）・住所を出す（PRD D385）
   const parts = splitFolded(
-    basicSections({ c, saved, sec, clientItems, stageOn, notesOn, onConfirmTentative, onCancelTentative, ctx }),
+    basicSections({
+      c,
+      saved,
+      sec,
+      clientItems,
+      stageOn,
+      notesOn,
+      traitsOn,
+      onConfirmTentative,
+      onCancelTentative,
+      ctx,
+    }),
     folded,
   );
   return (

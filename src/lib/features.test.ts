@@ -64,6 +64,8 @@ const TABLE: Record<TemplateId, FeatureId[]> = {
     'clientContact',
     'contactAddress',
     'shiftStart',
+    'clientTraits',
+    'timeWindow',
   ],
   basic: [
     'patterns',
@@ -79,6 +81,9 @@ const TABLE: Record<TemplateId, FeatureId[]> = {
     'clientContact',
     'contactAddress',
     'shiftStart',
+    // 特性・時間の決め方は足す前と同じ見え方のまま、どのひな形でも入（ADR-0117）
+    'clientTraits',
+    'timeWindow',
   ],
   laborContract: [
     'patterns',
@@ -97,6 +102,9 @@ const TABLE: Record<TemplateId, FeatureId[]> = {
     'clientContact',
     'contactAddress',
     'shiftStart',
+    // 特性・時間の決め方は足す前と同じ見え方のまま、どのひな形でも入（ADR-0117）
+    'clientTraits',
+    'timeWindow',
   ],
   monthlyField: [
     'patterns',
@@ -116,12 +124,15 @@ const TABLE: Record<TemplateId, FeatureId[]> = {
     'clientContact',
     'contactAddress',
     'shiftStart',
+    // 特性・時間の決め方は足す前と同じ見え方のまま、どのひな形でも入（ADR-0117）
+    'clientTraits',
+    'timeWindow',
   ],
   all: [...FEATURE_IDS],
 };
 
 describe('機能の表（ADR-0028 の機能の一覧）', () => {
-  it('23の機能が契約の ID と同じ順に1つずつ。グループは決まった7つのどれか（管理者設定のスイッチの並び。ADR-0092）', () => {
+  it('25の機能が契約の ID と同じ順に1つずつ。グループは決まった7つのどれか（管理者設定のスイッチの並び。ADR-0092）', () => {
     expect(FEATURE_GROUPS).toEqual([
       '予定の入れ方',
       '当日・問い合わせ',
@@ -137,7 +148,7 @@ describe('機能の表（ADR-0028 の機能の一覧）', () => {
     expect(featureDef('compare').group).toBe(featureDef('expert').group);
     expect(featureDef('vacancy').group).toBe('当日・問い合わせ');
     expect(FEATURES.map((f) => f.id)).toEqual([...FEATURE_IDS]);
-    expect(FEATURES).toHaveLength(23);
+    expect(FEATURES).toHaveLength(25);
     for (const f of FEATURES) {
       expect(FEATURE_GROUPS).toContain(f.group);
       expect(f.label).not.toBe('');
@@ -282,7 +293,7 @@ describe('ひな形（ADR-0028 の表）', () => {
     expect([...groupsOf('laborContract')]).toEqual(['勤務・契約']);
     expect(groupsOf('monthlyField').size).toBeLessThanOrEqual(4);
   });
-  it.each(TEMPLATE_IDS)('%s を適用すると表どおりの入り切り（全23の ID を明示）で、matchTemplate がそれを返す', (id) => {
+  it.each(TEMPLATE_IDS)('%s を適用すると表どおりの入り切り（全25の ID を明示）で、matchTemplate がそれを返す', (id) => {
     const f = applyTemplate(id);
     expect(Object.keys(f).sort()).toEqual([...FEATURE_IDS].sort());
     const on = FEATURE_IDS.filter((x) => f[x]);
@@ -598,6 +609,24 @@ describe('turnOffImpact（切るときに残る・外れるデータ。PRD D215�
     expect(turnOffImpact(held, 'vacancy', TODAY_I)?.text).toBe('仮押さえ 1人（お客様）は残り、予定に入り続けます');
     const off = { ...renamed, staff: renamed.staff.map((x, i) => (i === 0 ? { ...x, lastDay: '2026-12-01' } : x)) };
     expect(turnOffImpact(off, 'offboard', TODAY_I)?.text).toBe('最終勤務日 1人（シッター）は残り、計算に効き続けます');
+  });
+  it('特性は入れた〈利用者さん〉の人数、時間の決め方は幅の繰り返しの数を出す（ADR-0117。無ければ null）', () => {
+    const item = d.items.find((i) => i.target === 'client')!;
+    const empty = { ...data, clients: data.clients.map((c) => ({ ...c, traits: {} })) };
+    expect(turnOffImpact(empty, 'clientTraits', TODAY_I)).toBeNull();
+    const one = {
+      ...empty,
+      clients: empty.clients.map((c, i) => (i === 0 ? { ...c, traits: { [item.id]: true } } : c)),
+    };
+    expect(turnOffImpact(one, 'clientTraits', TODAY_I)).toEqual({
+      count: 1,
+      text: `特性 1人（${d.org.terms.client}）は残り、AI で組むときに効き続けます`,
+    });
+    const p = d.patterns[0]!;
+    const fixed = { ...data, patterns: [{ ...p, id: 'p1', windowKind: 'fixed' as const }] };
+    expect(turnOffImpact(fixed, 'timeWindow', TODAY_I)).toBeNull();
+    const win = { ...data, patterns: [{ ...p, id: 'p1', windowKind: 'window' as const, latestStart: '23:00' }] };
+    expect(turnOffImpact(win, 'timeWindow', TODAY_I)?.count).toBe(1);
   });
   it('繰り返し：今ある定期パターンの数を「残り、予定に出続けます」で出す（無ければ null）', () => {
     const p = d.patterns[0]!;
