@@ -10,6 +10,7 @@ import { type Pattern, type Visit, visitSchema } from '../contracts/documents';
 import { addDays, hhmmToMinutes, weekday } from '../domain/time';
 import { findVisit, keepsOccurrence, putVisits, visitsOn } from '../patterns';
 import { formError, formErrorField } from './common';
+import { companionError } from './companion';
 import { settleDay } from './dayPlan';
 import { isDate } from './isDate';
 import {
@@ -116,6 +117,9 @@ export function applyVisitEdit(
   // 新しい訪問
   if (input.visitId === null) {
     if (input.staff === null) return fail('担当なしは選べません（「変えない」のままにしてください）');
+    // 同行（2人体制・研修同行。ADR-0120）は元の訪問と同じ日・同じ開始で、研修同行は同行する人を選ぶ
+    const ce = companionError(d, f, input.staff);
+    if (ce) return fail(ce.text, ce.field === 'earliestStart' ? 'earliestStart' : undefined);
     const nv: Visit = {
       ...f,
       id: ids.visit,

@@ -8,9 +8,9 @@ import { isFirstVisit, servedPairsBefore } from './firstVisit';
 import { dayByStaff, type MailVisit, mdw, nameOf } from './mail';
 import { visitRuleLines } from './visitRules';
 
-/** 訪問の行（「 9:00 青葉様（60分）」。時刻は5桁にそろえる） */
+/** 訪問の行（「 9:00 青葉様（60分）」。時刻は5桁にそろえる。同行の組なら「 2人体制（佐藤さんと）」を添える。ADR-0120） */
 const visitLine = (v: MailVisit) =>
-  `${clockTime(v.start).padStart(5, ' ')} ${nameOf(v.client)}（${v.visit?.durationMinutes ?? Math.round(v.end - v.start)}分）`;
+  `${clockTime(v.start).padStart(5, ' ')} ${nameOf(v.client)}（${v.visit?.durationMinutes ?? Math.round(v.end - v.start)}分）${v.companion ? ` ${v.companion}` : ''}`;
 
 /**
  * その日のチャット用の文。「11/3（火）の予定」の下に担当ごとに「■〈名前〉」（名前の順）と訪問の行、最後に「■担当なし」。

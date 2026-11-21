@@ -1,8 +1,9 @@
-import { ClipboardList, Plus } from 'lucide-react';
+import { ClipboardList, Copy, Plus } from 'lucide-react';
 import { createContext, type ReactNode, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import type { DemoData } from '../contracts/data';
 import { clientOn } from '../domain/place2';
 import { jstDate } from '../domain/time';
+import { COPY_VISIT_LABEL, copyRequest } from '../lib/companion';
 import { ADD_VISIT_LABEL } from '../lib/exceptionView';
 import { typeOf } from '../lib/patternText';
 import { scopeTexts, type VisitDraft, visitInfo } from '../lib/visitDraft';
@@ -20,12 +21,14 @@ import {
   useVisitSave,
   useVisitWriter,
 } from './useVisitPanel';
+import { CopyAccompanyFields, VisitCopyButton } from './visitCopy';
 import { VisitScopeFields, VisitStaffFields, VisitTimeFields } from './visitPanelForm';
 import {
   type VisitAct,
   VisitBigButtons,
   VisitCancelArea,
   VisitFooter,
+  VisitPanelNotes,
   VisitRulesSection,
   VisitSummary,
 } from './visitPanelParts';
@@ -63,6 +66,8 @@ export type VisitPanelRequest = {
   draft?: Partial<VisitDraft>;
   /** はじめに選んでおく担当（週の〈スタッフ〉×曜日の表へ落とした人。候補に無い・選べなければ「変えない」） */
   staff?: string;
+  /** コピーの元の訪問（［この訪問をコピー］で開いた新しい訪問。「同行」の欄を出す。ADR-0120） */
+  copyOf?: string;
   /** 保存・取り消しのあと（開いた画面の知らせ。週の「空き時間に入れる」など） */
   onSaved?: (r: VisitSaved) => void;
   /** 保存・閉じたあとのフォーカス先（開いた帯。無ければ開く前の要素） */
@@ -114,6 +119,7 @@ function VisitPanel({
   onClose: () => void;
 }) {
   const { data } = useDemoData();
+  const openVisit = useOpenVisit();
   const narrow = useMedia(COMPACT_QUERY);
   const today = jstDate(Date.now());
   const isNew = !req.visitId;
@@ -168,8 +174,8 @@ function VisitPanel({
 
   return (
     <SidePanel
-      icon={isNew ? Plus : ClipboardList}
-      title={isNew ? ADD_VISIT_LABEL : '訪問の詳細'}
+      icon={req.copyOf ? Copy : isNew ? Plus : ClipboardList}
+      title={req.copyOf ? COPY_VISIT_LABEL : isNew ? ADD_VISIT_LABEL : '訪問の詳細'}
       narrow
       onClose={onClose}
       onSubmit={save}
@@ -185,16 +191,7 @@ function VisitPanel({
         data-visit={visitId ?? ''}
         data-new={isNew || undefined}
       >
-        {!isNew && !v && (
-          <p className="warn-text" data-testid="vp-gone">
-            この訪問は見つかりません（消されたか、繰り返しを直して作り直されました）。
-          </p>
-        )}
-        {newBlocked && (
-          <p className="sub" data-testid="vp-narrow-new">
-            訪問の追加はパソコン・タブレットの幅で行います（スマホでは見る・取り消す・担当を替えるまで）。
-          </p>
-        )}
+        <VisitPanelNotes gone={!isNew && !v} newBlocked={newBlocked} />
         {v && info && (
           <VisitSummary
             v={v}
@@ -223,6 +220,7 @@ function VisitPanel({
         )}
 
         {!isNew && <VisitWhy choices={choices} onLeave={onClose} />}
+        {req.copyOf && !newBlocked && <CopyAccompanyFields data={data} copyOf={req.copyOf} draft={draft} set={set} />}
         {timeOn && !newBlocked && (
           <VisitTimeFields data={data} draft={draft} set={set} bad={bad} isNew={isNew} today={today} />
         )}
@@ -244,6 +242,8 @@ function VisitPanel({
         <FieldError id={errorId} token={error}>
           {error?.text}
         </FieldError>
+
+        {v && !narrow && !cancelled && <VisitCopyButton onCopy={() => openVisit(copyRequest(v, today))} />}
 
         {v && info?.editable && (!narrow || (act === 'cancel' && !cancelled)) && (
           <VisitCancelArea info={info} onCancel={doCancel} onUncancel={doUncancel} />

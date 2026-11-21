@@ -434,6 +434,15 @@ export const visitPatternRefSchema = z.object({ id: idSchema, date: dateSchema, 
 export const CANCEL_KINDS = ['sameDay'] as const;
 
 /**
+ * 同行の種類（ADR-0120）：'pair'＝2人体制（同じ時刻にもう1人入る）、'trainee'＝研修同行（新人が同行する）。
+ * 同行の訪問は元の訪問をコピーした単発の訪問で、同じ日・同じ〈利用者さん〉・同じ開始（早）の訪問と組になる（domain/companion）
+ */
+export const ACCOMPANY_KINDS = ['pair', 'trainee'] as const;
+export type AccompanyKind = (typeof ACCOMPANY_KINDS)[number];
+/** 同行の種類の呼び名（画面・連絡・Excel の「同行」の列で同じ言葉） */
+export const ACCOMPANY_LABELS: Record<AccompanyKind, string> = { pair: '2人体制', trainee: '研修同行' };
+
+/**
  * 1回の訪問（版2。ADR-0053）。担当・開始・ピンを訪問が持ち、その日の割当は「その日の訪問の担当と開始の並び」から決まる。
  * 繰り返しの回は見るときに計算し（patterns の visitsOn）、変えた回（担当・開始・ピン・時刻・取り消し・メモ）だけをここに保存する。
  * 保存した回の ID は計算した回と同じ（`${元の日}_${パターンID}`）で、保存した回があれば計算した回は出さない
@@ -466,6 +475,11 @@ export const visitSchema = z.object({
    * 回数を数えるだけで、請求はしない
    */
   cancelKind: z.enum(CANCEL_KINDS).nullable().default(null),
+  /**
+   * 同行（ADR-0120）：この訪問が2人体制の2人目か研修同行の分か。無い＝ふつうの訪問（今までのデータはそのまま読める。データの版は変えない）。
+   * 1訪問1人のまま、同じ時刻の訪問をもう1件持つ形で表す
+   */
+  accompany: z.enum(ACCOMPANY_KINDS).optional(),
 });
 export type Visit = z.infer<typeof visitSchema>;
 

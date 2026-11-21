@@ -1,6 +1,7 @@
 // 全体のブックのシートごとの書き出し（writeXxx）。シートの順は exportBook の exportWorkbook が決める
 import type ExcelJS from 'exceljs';
 import type { DemoData } from '../contracts/data';
+import { ACCOMPANY_LABELS } from '../contracts/documents';
 import { COMPAT_LABELS, type CompatLevel, HARDABLE, ITEM_KINDS, RULE_TYPES } from '../contracts/rules';
 import { hmText, kmOf, workDayOf } from '../lib/workload';
 import { scorePresetOf } from '../seed/presets';
@@ -20,6 +21,7 @@ import {
   RULE_COLS,
   reqHeader,
   TYPE_COLS,
+  VISIT_ACCOMPANY_COL,
   VISIT_PIN_COL,
   VISIT_SAME_DAY_COL,
   VISIT_START_COL,
@@ -337,7 +339,7 @@ export function writeVisits(ctx: SheetCtx): void {
   const vc = visitCols(data.org.terms);
   addTable(wb, {
     name: FIXED_SHEETS.visits,
-    headers: [...Object.values(vc), VISIT_SAME_DAY_COL, VISIT_START_COL, VISIT_PIN_COL],
+    headers: [...Object.values(vc), VISIT_SAME_DAY_COL, VISIT_START_COL, VISIT_PIN_COL, VISIT_ACCOMPANY_COL],
     rows: data.visits.map((v) => [
       v.id,
       v.date,
@@ -356,6 +358,7 @@ export function writeVisits(ctx: SheetCtx): void {
       yes(v.cancelled && v.cancelKind === 'sameDay'),
       v.start === null ? '' : hhmmToCell(v.start),
       yes(v.pinned),
+      v.accompany ? ACCOMPANY_LABELS[v.accompany] : '',
     ]),
     textCols: [1, 2, 6, 7, 11, 12, 16],
     lists: [
@@ -368,6 +371,7 @@ export function writeVisits(ctx: SheetCtx): void {
       { col: 13, values: [YES] },
       { col: 15, values: [YES] },
       { col: 17, values: [YES] },
+      { col: 18, values: Object.values(ACCOMPANY_LABELS) },
     ],
     freezeCols: 3,
   });

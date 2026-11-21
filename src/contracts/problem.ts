@@ -26,6 +26,12 @@ export type ProblemVisit = {
    * 並べた列は不可）。列の最初なら、家を出る時刻を勤務の開始に縛らない。無い＝false
    */
   solo?: boolean;
+  /**
+   * 同行の組の訪問（ADR-0120）：'trainee'＝研修同行の分、'group'＝組のほかの訪問（元の訪問・2人体制の2人目）。組の訪問は開始（早）にそろえて始める
+   * （latest＝earliest。同じ人は組の2件を回れない）。続く訪問（chain）の組にしない。'trainee' は人の条件（種類・担当を限る・条件の点）を見ない。
+   * 無い＝ふつうの訪問
+   */
+  companion?: 'group' | 'trainee';
 };
 
 export type Reason = {

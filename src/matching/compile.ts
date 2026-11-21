@@ -13,12 +13,14 @@ import {
 } from '../contracts/rules';
 import { INQUIRY_VISIT_ID } from '../contracts/vacancy';
 import { afterLastDay, availabilityOf, withoutAbsences } from '../domain/availability';
+import { companionsOf } from '../domain/companion';
 import { leaveOn } from '../domain/leaves';
 import { clientOn } from '../domain/place2';
 import { hhmmToMinutes } from '../domain/time';
 import { visitsOn } from '../patterns';
 import { chainOf } from './chain';
 import { conditionText, matches } from './conditions';
+import { infeasibleOf } from './infeasible';
 import { roadModelOf } from './roads';
 import { EPS, fitStart } from './timing';
 import { travelMatrices, UNPLACED_TRAVEL_MIN } from './travel';
@@ -26,8 +28,6 @@ import { travelMatrices, UNPLACED_TRAVEL_MIN } from './travel';
 const INF = Number.POSITIVE_INFINITY;
 /** 位置が未登録の組に足す点（位置のある人・訪問先を先に選ぶ。可否にはしない） */
 export const UNPLACED_POINTS = 30;
-/** infeasible に載せる原因の数 */
-const INFEASIBLE_REASONS = 3;
 
 function latLngOf(p: Place): LatLng | null {
   return p.lat === null || p.lng === null ? null : { lat: p.lat, lng: p.lng };
@@ -369,6 +369,8 @@ function pairReasons(ctx: PairContext, v: VisitSide, i: number): Reason[] {
   if (pin !== undefined && pin !== s.id && staffIds.has(pin)) {
     out.push({ ruleId: PIN_RULE_ID, label: PIN_LABEL, points: INF });
   }
+  // 研修同行の分（ADR-0120）は人の条件（種類の必要条件・担当を限る・条件の点）を見ない（決めた人が同行する。時刻・移動・相性×・ピンは見る）
+  if (pv.companion === 'trainee') return out;
   if (vType) {
     // 種類の必要条件は常に必須（条件の重み・必須・プリセットに関係しない。ADR-0012）
     condReasons(
@@ -395,36 +397,6 @@ function pairReasons(ctx: PairContext, v: VisitSide, i: number): Reason[] {
   const homeMinutes = pv.earliest >= HOME_NEAR_FROM ? ctx.travel[S + j]![i]! : null;
   for (const r of rules) pushRuleReasons(out, r, { s, client, look, terms, level, usualStaffId, working, homeMinutes });
   return out;
-}
-
-/** どの担当も可にならない訪問と、多い原因（INFEASIBLE_REASONS 件まで） */
-function infeasibleOf(
-  allowed: boolean[][],
-  reasons: Reason[][][],
-  S: number,
-  terms: CompileInput['org']['terms'],
-): Problem['infeasible'] {
-  const infeasible: Problem['infeasible'] = [];
-  for (let j = 0; j < allowed.length; j++) {
-    if (allowed[j]!.some(Boolean)) continue;
-    const count = new Map<string, { r: Reason; n: number }>();
-    for (let i = 0; i < S; i++) {
-      for (const r of reasons[j]![i]!) {
-        if (r.points !== INF) continue;
-        const key = `${r.ruleId}\u0000${r.label}`;
-        const e = count.get(key);
-        if (e) e.n++;
-        else count.set(key, { r, n: 1 });
-      }
-    }
-    const list = [...count.values()]
-      .sort((a, b) => b.n - a.n)
-      .slice(0, INFEASIBLE_REASONS)
-      .map(({ r, n }) => ({ ruleId: r.ruleId, label: `${r.label}（${n}人）`, points: INF }));
-    if (S === 0) list.push({ ruleId: 'slot', label: `この日に働ける${terms.staff}がいない`, points: INF });
-    infeasible.push({ visit: j, reasons: list });
-  }
-  return infeasible;
 }
 
 /** 負担の均等：可になる訪問の件数 n を稼働分に比例して配る（均等の条件が無効なら null） */
@@ -483,16 +455,22 @@ export function compile(data: CompileInput, date: string, pins?: Record<string, 
     point: i,
     slots: daySlots[i]!.slots,
   }));
+  // 同行の組（ADR-0120）：組の訪問は開始（早）にそろえて始める（同じ人は組の2件を回れない）
+  const companions = companionsOf(visitDocs);
   const visits: ProblemVisit[] = visitDocs.map((v, j) => {
     const earliest = hhmmToMinutes(v.earliestStart);
+    const comp = companions.get(v.id)?.role;
     const pv: ProblemVisit = {
       id: v.id,
       clientId: v.clientId,
       point: S + j,
       earliest,
       latest:
-        v.windowKind === 'fixed' || (fixedStart && v.id !== INQUIRY_VISIT_ID) ? earliest : hhmmToMinutes(v.latestStart),
+        v.windowKind === 'fixed' || comp || (fixedStart && v.id !== INQUIRY_VISIT_ID)
+          ? earliest
+          : hhmmToMinutes(v.latestStart),
       duration: v.durationMinutes,
+      ...(comp && { companion: comp }),
     };
     // 遠方（出張。ADR-0096）：その担当のその日はこの〈利用者さん〉の訪問だけ（matching/timing が見る）
     if (clients.get(v.clientId)!.place.farTrip === true) pv.solo = true;
