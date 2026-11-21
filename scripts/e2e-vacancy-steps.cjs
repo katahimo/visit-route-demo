@@ -6,7 +6,7 @@
 // 案の無い日の注意は1か所、案内文ははじめ畳み開くまで計算しない、仮押さえ、390px で収まる、ブラウザの確認を出さない。
 // 答えのカードが結果の1枚目・凡例は1か所・「指定なし」・入力はタブの間だけ残る・担当なしの日の注意から担当を組むの画面へ（PRD D258・D328。ADR-0063）。
 // 段階1は 曜日・時間帯・所要のチップで、ほかは「くわしい条件 ▾」（閉じて始める。開始の幅を変えると時間帯は指定なし）。答えのカードの中に主ボタン［要約をコピー］、
-// 週ごとのマス・凡例・表は「詳しく ▾」（閉じて始め、開け閉めを覚える）（PRD D411・D412。ADR-0080）。
+// 週の空きの帯は答えのカードの下に常に出す（PRD D472。ADR-0119）。週ごとのマス・凡例・表は「詳しく ▾」（閉じて始め、開け閉めを覚える）（PRD D411・D412。ADR-0080）。
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-vacancy-steps.cjs
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）。PERF_MS_VACANCY で結果が出るまでの上限（既定 5000ms。PRD §5。無ければ PERF_MS）
@@ -568,6 +568,47 @@ async function placeLater(page) {
   check(c && c.tentative === true && c.place.lat === 38.2601, '仮押さえで仮の利用者さんと場所が入る', c?.place);
 }
 
+/** 週の空きの帯（PRD D472。ADR-0119）：「詳しく ▾」を開かなくても見え、色だけでなく数字・印・文も出る */
+async function strip(page) {
+  await openVacancy(page);
+  await settle(page, 500);
+  const box = page.getByTestId('vacancy-strip');
+  check(await visible(box), '週の空きの帯が、詳しくを開かなくても見える');
+  check((await page.getByTestId('vacancy-details').getAttribute('open')) === null, '「詳しく ▾」は閉じたまま');
+  check((await page.getByTestId('vacancy-strip-row').count()) === 7, '帯は月〜日の7行');
+  const order = await page.evaluate(() => {
+    const t = document.querySelector('[data-testid="vacancy-table-card"]');
+    const a = t.querySelector('[data-testid="vacancy-answer"]');
+    const b = t.querySelector('[data-testid="vacancy-strip"]');
+    const d = t.querySelector('[data-testid="vacancy-details"]');
+    return (a.compareDocumentPosition(b) & 4) !== 0 && (b.compareDocumentPosition(d) & 4) !== 0;
+  });
+  check(order, '帯は答えのカードの下、「詳しく ▾」の上');
+  const texts = await page.getByTestId('vacancy-strip-text').allTextContents();
+  check(
+    texts.every((x) => /^(○|△|×|？|—)/.test(x.trim())),
+    '各行の右に印（○△×？）の文が付く',
+    texts,
+  );
+  const segs = await page.getByTestId('vacancy-strip-seg').evaluateAll((els) => ({
+    n: els.length,
+    digits: els.filter((e) => /^\d+$/.test(e.textContent)).length,
+  }));
+  check(segs.n > 0 && segs.digits > 0, '区画に人数の数字が出る（色だけにしない）', segs);
+  check(
+    (await page.getByTestId('vacancy-strip-seg').first().getAttribute('title')).includes('から：'),
+    '区画の title に読み方',
+  );
+  // 曜日を絞ると、希望でない曜日の行は薄くなる
+  await page.getByTestId('wish-days').getByRole('button', { name: '火' }).click();
+  await settle(page, 500);
+  const faded = await page.evaluate(() =>
+    [...document.querySelectorAll('[data-testid="vacancy-strip-row"]')].map((e) => e.classList.contains('is-unwished')),
+  );
+  check(faded.filter((x) => !x).length === 1 && faded[1] === false, '曜日を選ぶと、ほかの曜日の行は薄くなる', faded);
+  await page.screenshot({ path: path.join(OUT_DIR, 'vacancy-strip-1280.png'), fullPage: true });
+}
+
 async function narrow(page) {
   await page.setViewportSize({ width: 390, height: 844 });
   await openVacancy(page);
@@ -583,6 +624,8 @@ async function narrow(page) {
   check(boxes.length === 4 && boxes.every((b) => b.left >= 0 && b.right <= 390), '390px：4つの段階が幅に収まる', boxes);
   const sum = await page.getByTestId('vacancy-place-toggle').boundingBox();
   check(sum && sum.height <= 110, '390px：畳んだ場所は短い要約の行', sum);
+  const stripBox = await page.getByTestId('vacancy-strip').boundingBox();
+  check(stripBox && stripBox.x >= 0 && stripBox.x + stripBox.width <= 390, '390px：週の空きの帯が幅に収まる', stripBox);
   const copy = await page.getByTestId('copy-summary').boundingBox();
   check(copy && copy.x >= 0 && copy.x + copy.width <= 390, '390px：主ボタンが収まる', copy);
   await page.screenshot({ path: path.join(OUT_DIR, 'vacancy-steps-390.png'), fullPage: true });
@@ -624,6 +667,7 @@ const allSteps = [
     ['bands-fold', bandsAndFold],
     ['marks', marks],
     ['answer', answer],
+    ['strip', strip],
     ['place-later', placeLater],
     ['narrow', narrow],
   ].map(([name, fn]) => [name, fresh(name, fn)]),

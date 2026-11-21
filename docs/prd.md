@@ -115,7 +115,7 @@ PoC本体は「性別希望」と「NG」しか持たず、相性は登録のみ
 | 月・週の予定・訪問の札・時間帯のバー | [prd/schedule-views.md](prd/schedule-views.md) | D42 D49〜D51 D53〜D57 D60 D62 D69 D70 D75〜D78 D80〜D82 D85 D108 D136〜D140 D177 D188 D189 D201 D223 D228 D266 D295 D339〜D343 D413 D433 |
 | AI の提案・条件・点数 | [prd/ai.md](prd/ai.md) | D7 D9 D10 D12 D17 D20 D25 D173 D229 D233 D235 D271 D286 |
 | 欠勤・キャンセル | [prd/absence.md](prd/absence.md) | D26〜D29 D31 D32 D34 D35 D74 D167 D169〜D172 D203 D244〜D246 D264 D265 D296 D414 D418 D440 D446 |
-| 空き状況・問い合わせ | [prd/vacancy.md](prd/vacancy.md) | D45〜D47 D67 D79 D184 D187 D204 D258 D411 D412 |
+| 空き状況・問い合わせ | [prd/vacancy.md](prd/vacancy.md) | D45〜D47 D67 D79 D184 D187 D204 D258 D411 D412 D472 |
 | 人と決まり・人の画面・相性・退職 | [prd/people.md](prd/people.md) | D5 D6 D8 D36 D37 D61 D65 D66 D68 D71〜D73 D109〜D117 D122〜D126 D198〜D200 D202 D205〜D208 D285 D298 D299 D308〜D313 D370 D420 |
 | 住所・地図・メール・道順 | [prd/contact.md](prd/contact.md) | D86〜D101 D118〜D121 D366〜D369 D415 D419 D427 D429 D436 D439 D445 |
 | データ・Excel・フォーム・機能の入り切り | [prd/data.md](prd/data.md) | D1〜D3 D15 D23 D33 D44 D103〜D107 D191 D209〜D216 D227 D248〜D251 D253 D254 D276 D365 D371 D424 D441 D447〜D450 |

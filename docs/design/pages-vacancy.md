@@ -1,6 +1,6 @@
 # 空き状況と問い合わせの試算
 
-> この画面のファイル：`src/pages/VacancyPage.tsx`（`vacancy.css`。段階1 `vacancyWhen.tsx`・段階2〜4 `vacancyStages.tsx`・小さい部品と表 `vacancyParts.tsx`・案内文の欄 `vacancyNotice.tsx`・右の欄 `vacancyPanels.tsx`、入力 `useVacancyInput.ts`・計算 `useVacancyResult.ts`・案内文 `useVacancyNotice.ts`・仮押さえ `useVacancyHold.ts`）、`src/lib/vacancyView.ts`（`vacancyQuery`・`noticeRange` も）・`vacancyBands.ts`・`vacancyInput.ts`・`hold.ts`（`holdSlots`・`holdPatterns`・`holdData`）・`newClient.ts`・`dayPlan.ts`（`unassignedDays`）・`glance.ts`・`tentative.ts`・`mail.ts`、`src/components/placeLookup.tsx`（`AddressField`）・`glance.tsx`・`conditions.tsx`・`DetailsFold.tsx`。関連 ADR：0012・0013・0015・0016・0017・0063・0078・0080。関連 PRD：D45〜D47・D67・D78〜D81・D118〜D120・D184・D187・D201〜D204・D221・D228・D258・D259・D411・D412。
+> この画面のファイル：`src/pages/VacancyPage.tsx`（`vacancy.css`。段階1 `vacancyWhen.tsx`・段階2〜4 `vacancyStages.tsx`・小さい部品と表 `vacancyParts.tsx`・週の空きの帯 `vacancyStrip.tsx`・案内文の欄 `vacancyNotice.tsx`・右の欄 `vacancyPanels.tsx`、入力 `useVacancyInput.ts`・計算 `useVacancyResult.ts`・案内文 `useVacancyNotice.ts`・仮押さえ `useVacancyHold.ts`）、`src/lib/vacancyStrip.ts`（週の空きの帯）・`vacancyView.ts`（`vacancyQuery`・`noticeRange` も）・`vacancyBands.ts`・`vacancyInput.ts`・`hold.ts`（`holdSlots`・`holdPatterns`・`holdData`）・`newClient.ts`・`dayPlan.ts`（`unassignedDays`）・`glance.ts`・`tentative.ts`・`mail.ts`、`src/components/placeLookup.tsx`（`AddressField`）・`glance.tsx`・`conditions.tsx`・`DetailsFold.tsx`。関連 ADR：0012・0013・0015・0016・0017・0063・0078・0080・0119。関連 PRD：D45〜D47・D67・D78〜D81・D118〜D120・D184・D187・D201〜D204・D221・D228・D258・D259・D411・D412・D472。
 > 計算（`vacancyOf`・`verdictOf`・`inquirySummary`・`vacancyNotice`）は design.md の「vacancy」。
 
 ### 空き状況（`#/vacancy`）
@@ -15,7 +15,7 @@
 |---|---|---|
 | 1 いつ・何を | `vacancy-step-when` | チップ3行（`aria-pressed`）：曜日 `wish-days`（複数。選ばない＝どの曜日でも）・時間帯 `wish-bands`（指定なし／午前 8:00〜12:00／午後 12:00〜17:00／夕方 17:00〜20:00。複数可）・所要 `duration-chips`（30／45／60／90分）。その下に「くわしい条件 ▾」（`details` `vacancy-more`・開く `vacancy-more-toggle`。閉じて始め、開け閉めは覚えない。中の入力に誤りがあれば開く）：種類 `vacancy-type`（選ぶと所要の初期値。選ばないときは「指定なし」）・所要 `vacancy-duration`（ほかの分）・開始の幅（から `wish-from`／まで `wish-to`。30分刻み。変えると時間帯は指定なしに戻る）・週の回数・開始日（初期値：今日）・見る週の数（1〜8、初期値4）・〈スタッフ〉の条件（`components/conditions.tsx`）。入力の誤りの文はチップの下（閉じていても見える） |
 | 2 場所（任意） | `vacancy-step-place` | `details`。はじめ畳み、要約の行 `vacancy-place-line`（`placeLine`）・開く `vacancy-place-toggle`。summary の見出しは h2。`AddressField` は閉じても置いたまま |
-| 3 受けられる曜日・時間帯 | `vacancy-table-card` | 見出しに「目安（移動を前後15分で見込む）」か「〈場所〉への移動を含む」・答えのカード `vacancy-answer`（一番上。中に答える文 `inquiry-summary` と主ボタン「要約をコピー」`copy-summary`）・`vacancy-when-line`（`whenWhatLine`）・数えなかった日・担当なしの日の注意 `vacancy-noplan`・「詳しく ▾」（`DetailsFold`。testId `vacancy-details`・screen は `vacancy`＝開け閉めを `details:vacancy` で端末に覚える。閉じて始める）の中に 曜日×週のマス（`InquiryWeeks`）・小見出し「曜日・開始時刻ごとの表」・凡例（`vacancy-legend`：印 `vacancy-mark-legend`・色 `level-legend`（`VACANCY_LEGEND`。「0人（受けられない）」は薄い灰）・数字の読み方と `Term`（`vacancyCount`、場所が無いときだけ `vacancyEstimate`））・表 |
+| 3 受けられる曜日・時間帯 | `vacancy-table-card` | 見出しに「目安（移動を前後15分で見込む）」か「〈場所〉への移動を含む」・答えのカード `vacancy-answer`（一番上。中に答える文 `inquiry-summary` と主ボタン「要約をコピー」`copy-summary`）・週の空きの帯 `vacancy-strip`（下の「週の空きの帯」）・`vacancy-when-line`（`whenWhatLine`）・数えなかった日・担当なしの日の注意 `vacancy-noplan`・「詳しく ▾」（`DetailsFold`。testId `vacancy-details`・screen は `vacancy`＝開け閉めを `details:vacancy` で端末に覚える。閉じて始める）の中に 曜日×週のマス（`InquiryWeeks`）・小見出し「曜日・開始時刻ごとの表」・凡例（`vacancy-legend`：印 `vacancy-mark-legend`・色 `level-legend`（`VACANCY_LEGEND`。「0人（受けられない）」は薄い灰）・数字の読み方と `Term`（`vacancyCount`、場所が無いときだけ `vacancyEstimate`））・表 |
 | 4 次の一手 | `vacancy-step-next` | `inquiry-card`（「この問い合わせを押さえる」：「仮の〈利用者さん〉として押さえる」`hold-open`（従のボタン）・できないときの理由 `hold-why`）と `notice-card`（空き枠の案内文。`details`。見出しは h3） |
 
 「開く ▾」「畳む ▴」は `FoldMark`（`aria-hidden`）。
@@ -41,6 +41,14 @@
 
 - `vacancy-answer`（`data-tone`＝`ok`／`partial`／`ng`／`unknown`。答えの2行は `role="status"` の箱で、条件を変えると読み上げる（ボタンは入れない）。`answerCard`。結果は時間帯のチップの外のマスを除いたもの）：大きい文字で「受けられます：火・木 10:00〜12:00 に 3人」。時刻は ○ の開始時刻を曜日ごとに続いた範囲に（同じ時間の曜日はまとめる）、人数はその ○ のマスのどの週でも受けられる人数の幅（目安は「約」）。○ の曜日が週の回数より少なければ「週N回には足りません」、○ が無く △ があれば「受けられない週があります」、どちらも無ければ「受けられません」、始められる時刻が無ければ「受けられません：希望の時間帯に始められる時刻がありません」、案が無ければ「案が無く数えられません」。？ の曜日が混ざれば補いに「〈曜日〉は案が無く数えていません」。曜日は月曜はじめ。色は ok＝緑・partial＝黄・それ以外＝灰（赤にしない）。カードの中に答える文 `inquiry-summary`（白地。読み上げの欄にしない `p`。読み上げは答えの2行の `role="status"` だけ）と主ボタン「要約をコピー」
 - 凡例は「詳しく ▾」の中の表の上の1か所（`vacancy-legend`）：印（○△×？の見本と読み方）・色（人数の段階）・「○ の数字は受けられる人数」と、週ごとのマスも同じ印と色・行の頭は一番良い開始時刻・マスを押すと日付ごとの人
+
+#### 週の空きの帯（PRD D472。ADR-0119）
+
+- 答えのカードの下に常に出す（「詳しく ▾」の外）。`pages/vacancyStrip.tsx` の `VacancyStripBox`（`vacancy-strip`）。見出し「曜日ごとの空き（開始時刻）」・目盛り（3時間ごと）・7行（月〜日。`vacancy-strip-row`・`data-weekday`・`data-verdict`）・読み方の1行
+- 行：曜日・帯（`vacancy-strip-bar`。区画 `vacancy-strip-seg`＝開始時刻の30分。`data-start`・title に読み方）・右の文（`vacancy-strip-text`）。区画の色は `lv-*`（人数の段階）で、○ は人数の数字・△・？を載せ、× は無地の灰。帯は `aria-hidden`、読み上げは行の文
+- 行の文（`lib/vacancyStrip.ts` の `vacancyStrip`。純粋関数。テストあり）：希望の曜日・時間帯の中の区画の一番良い判定で「○ 10:00〜12:00・約3人」（○ の開始時刻を続いた範囲に・人数の幅。目安は「約」）・「△ 受けられない週がある」・「× 受けられない」・「？ 数えられない日」・範囲に区画が無ければ「— 範囲の外」
+- 時間帯のチップの外の区画は薄く（`is-out`）、希望でない曜日の行は灰で薄く（`is-unwished`）。区画は押せない（押す先は「詳しく ▾」の表）
+- 600px 以下は右の文を帯の下の行へ。印刷は色を残す（`print-color-adjust`）
 
 #### 担当なしの訪問がある日
 
@@ -94,5 +102,5 @@
 - [ ] 曜日・時間帯・所要のチップを押すと答えのカードが変わり、カードの中の「要約をコピー」でコピーできる。「詳しく ▾」に曜日×時刻の表が出て、場所を入れると「移動を含む」になる。マスを押すと日付ごとの人
 - [ ] 仮押さえで〈利用者さん〉（仮）と定期パターンができ、その回が日の予定に「仮」の印で出る。取り消すと消える
 - [ ] 期間・種類を選ぶと案内文が出てコピーできる
-- [ ] 答えのカードが一番上、凡例は「詳しく ▾」の中の1か所。入力は画面を移って戻っても残る。担当なしの日の注意から担当を組む・日の予定の担当なしへ移れる
-- [ ] `lib/vacancyView`・`lib/vacancyBands`・`lib/vacancyInput`・`lib/dayPlan`（`unassignedDays`）・`lib/glance` のテストが通る
+- [ ] 答えのカードの下に週の空きの帯（7行・数字と印の文つき）が「詳しく ▾」を開かずに見える。答えのカードが一番上、凡例は「詳しく ▾」の中の1か所。入力は画面を移って戻っても残る。担当なしの日の注意から担当を組む・日の予定の担当なしへ移れる
+- [ ] `lib/vacancyView`・`lib/vacancyBands`・`lib/vacancyInput`・`lib/dayPlan`（`unassignedDays`）・`lib/glance`・`lib/vacancyStrip` のテストが通る
