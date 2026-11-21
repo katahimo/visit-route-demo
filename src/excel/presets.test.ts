@@ -2,6 +2,7 @@
 import type ExcelJS from 'exceljs';
 import { describe, expect, it } from 'vitest';
 import type { DemoData } from '../contracts/data';
+import { HOME_NEAR_WEIGHT_DEFAULT, SAME_CLIENT_WEIGHT_DEFAULT } from '../contracts/rules';
 import { saveTunedWeights, TUNED_PRESET_NAME } from '../lib/presets';
 import { createDemoData, presetOf, scorePresetOf } from '../seed';
 import { isImportError } from '../store/persist';
@@ -60,6 +61,27 @@ describe('Excel のプリセットのシート', () => {
     expect(added.weights.compatibility).toEqual({ weight: 5, hard: true });
     expect(added.weights.continuity).toEqual({ weight: 0, hard: true });
     expect(added.weights.clientPreference).toEqual({ weight: 0, hard: false });
+  });
+
+  it('続く訪問・夕方は自宅に近い人の重みの列が無い古いブックも読め、重みは既定。条件のシートに続く訪問が無くても足す（ADR-0116）', async () => {
+    const d = base();
+    let removed = 0;
+    const r = await editAndImport(d, (wb) => {
+      const ws = wb.getWorksheet('プリセット')!;
+      ws.spliceColumns(col(ws, '重み：夕方は自宅に近い人'), 1);
+      ws.spliceColumns(col(ws, '重み：続く訪問は同じ人'), 1);
+      const rules = wb.getWorksheet('条件')!;
+      for (let n = rules.rowCount; n >= 2; n--)
+        if (rules.getRow(n).getCell(col(rules, '種類')).value === '続く訪問は同じ人') {
+          rules.spliceRows(n, 1);
+          removed++;
+        }
+    });
+    expect(removed).toBe(1);
+    if (isImportError(r)) throw new Error(r.message);
+    expect(r.presets[0]!.weights.sameClient).toEqual({ weight: SAME_CLIENT_WEIGHT_DEFAULT, hard: false });
+    expect(r.presets[0]!.weights.homeNear).toEqual({ weight: HOME_NEAR_WEIGHT_DEFAULT, hard: false });
+    expect(r.rules.filter((x) => x.type === 'sameClient')).toHaveLength(1);
   });
 
   it('6つを超える行・0.5刻みでない重み・必須にできない型は場所付きで止める', async () => {

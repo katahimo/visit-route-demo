@@ -1,6 +1,6 @@
 # 日の予定：欠勤・キャンセルと振り直し
 
-> この画面のファイル：`src/pages/SuddenPanel.tsx`・`absenceParts.tsx`（`AbsenceFields`・`ReassignBar`・`ReassignResultBox`・`ReassignSummary`・`ReassignMoves`・`CandidateBox`）・`useSuddenSteps.ts`・`suddenSteps.tsx`・`suddenContactStep.tsx`・`reassignParts.tsx`（`AnnealBox`・`StayWeight`・`ContactButton`・`ReassignDock`）・`contactPanel.tsx`（`ContactPanel`）・`useReassignFlow.ts`・`useSuddenFlow.tsx`・`usePlanRun.ts`・`PlanPage.tsx`・`plan.css`、`src/lib/sudden.ts`・`absences.ts`・`planReassign.ts`・`contacts.ts`・`firstVisit.ts`・`clipboard.ts`、貼り付けは `src/components/PastePanel.tsx`・`usePasteNotices.ts`・`pastePanel.css`・`src/lib/pasteNotices.ts`・`pasteRows.ts`、休みのカレンダーの取り込みは `src/components/CalendarOffPanel.tsx`・`useCalendarOff.ts`・`src/lib/calendarOff.ts`・`calendarFile.ts`・`icsRead.ts`・`zipRead.ts`。関連 ADR：0011・0015・0036・0038・0044・0053・0054・0073・0082・0084・0107。関連 PRD：D26〜D29・D31・D32・D34・D35・D167・D169〜D172・D238・D244〜D246・D264・D265・D296・D325・D329・D382・D414・D415・D418・D440。
+> この画面のファイル：`src/pages/SuddenPanel.tsx`・`absenceParts.tsx`（`AbsenceFields`・`ReassignBar`・`ReassignResultBox`・`ReassignSummary`・`ReassignMoves`・`CandidateBox`）・`useSuddenSteps.ts`・`suddenSteps.tsx`・`suddenContactStep.tsx`・`reassignParts.tsx`（`AnnealBox`・`StayWeight`・`ContactButton`・`ReassignDock`）・`contactPanel.tsx`（`ContactPanel`）・`useReassignFlow.ts`・`useSuddenFlow.tsx`・`usePlanRun.ts`・`PlanPage.tsx`・`plan.css`、`src/lib/sudden.ts`・`absences.ts`・`planReassign.ts`・`contacts.ts`・`firstVisit.ts`・`clipboard.ts`、貼り付けは `src/components/PastePanel.tsx`・`usePasteNotices.ts`・`pastePanel.css`・`src/lib/pasteNotices.ts`・`pasteRows.ts`、休みのカレンダーの取り込みは `src/components/CalendarOffPanel.tsx`・`useCalendarOff.ts`・`src/lib/calendarOff.ts`・`calendarFile.ts`・`icsRead.ts`・`zipRead.ts`。関連 ADR：0011・0015・0036・0038・0044・0053・0054・0073・0082・0084・0107・0118。関連 PRD：D26〜D29・D31・D32・D34・D35・D167・D169〜D172・D238・D244〜D246・D264・D265・D296・D325・D329・D382・D414・D415・D418・D440・D467・D468。
 > 日の予定の全体は [pages-plan.md](pages-plan.md)。計算（`reassign`・`targetsOf`・`prepareAnneal`・`settleAnneal`）は design.md の「reassign」。
 > 振り直しは `writeRoutes` で訪問に書き（今の担当になる）、振り直す前の担当は `reassigns[date]`。確定は2段目の「連絡したので確定」（伝えた内容 `snapshots`）。
 
@@ -196,6 +196,7 @@
   1. 担当が変わる〈利用者さん〉（時刻・前の担当 → 新しい担当、入らないは「入らない（調整中）」）
   2. 時刻だけ変わる〈利用者さん〉（〈利用者さん〉あての文にも「開始が〜に変わります（担当は〜さんのままです）」）
   3. 仕事が増える・減る〈スタッフ〉（増える・外れる・時刻が変わるの件数と、時刻・行き先（住所））
+- 機能「〈利用者さん〉への訪問連絡」（`clientContact`。PRD D467。ADR-0118）が切なら、上の 1・2 の表と〈利用者さん〉あての連絡文は出さず、〈スタッフ〉あてだけになる（`ContactWords.clientContact`。`clientMessages` が空を返し、すべての連絡文・欄の2段目の行も〈スタッフ〉あてだけ）。機能「〈スタッフ〉あての変更の連絡に住所」（`contactAddress`。PRD D468）が切なら、`dayContactWords` の `staffAddress: false` で `clientAddress` が空になり、3 の行・〈スタッフ〉あての「お願いします」の行から住所を外す（所要の分は残る）
 - 連絡文（〈スタッフ〉あて・N人／〈利用者さん〉あて・N件）：1件ずつ「コピー」、主ボタン「すべての連絡文をコピー」、「印刷」。〈スタッフ〉あての「コピー」の横に `MailButton`（`staffMail(staffId, text)`）
 - 呼び方は `org.terms`（敬称「様」「さん」は固定）。日付は `dateWordOf`、所要は `durationMinutes`、名乗りは `org.name`
 - コピーは `lib/clipboard` の `copyText`：`navigator.clipboard`（使えなければ textarea を選んで `execCommand('copy')`）、結果をトースト

@@ -126,6 +126,7 @@ function clientDocs(t: DemoData['org']['terms']): [string, ColDoc][] {
     [R.caution, doc('気を付けることです（200文字まで）', '玄関に段差あり', '空のまま')],
     [G.stage, doc('相談受付・顔合わせ・契約・利用中・終了から選びます', '利用中', newBlank('利用中'))],
     [G.referrer, doc('紹介してくれた所です', '記入例 相談センター', '空のまま')],
+    [G.referrerPerson, doc('紹介元の相談員（担当者）の名前です', '記入例 青葉 花子', '空のまま')],
     [G.referrerContact, doc('紹介元の連絡先です', '022-000-0000', '空のまま')],
     [G.referrerNote, doc('紹介元のメモです', '月に1回報告', '空のまま')],
     [G.referrerEmail, doc('紹介元のメールアドレスです', 'center@example.com', '空のまま')],

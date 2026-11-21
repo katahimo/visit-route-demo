@@ -41,9 +41,5 @@ export function useRouteSelection(date: string, ownerOf: (set: string, visitId: 
     follow: (visitId: string, to: string | null) => act({ type: 'follow', visitId, to }),
     isPicked: (x: RouteSel) => sameRouteSel(picked, x),
     isLeg: (x: RouteSel) => sameRouteSel(focusLeg, x),
-    /** MapDock の focusKey（選んだものが変わったら開く） */
-    focusKey: [focusStaff, focusLeg && `${focusLeg.set}:${focusLeg.id}`, picked && `${picked.set}:${picked.id}`]
-      .filter(Boolean)
-      .join('|'),
   };
 }

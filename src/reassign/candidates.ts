@@ -98,9 +98,10 @@ export const candidatesFor: CandidatesFor = (problem, routes, visitId) => {
     const routeBroken = known.length > 0 && scheduleRoute(problem, s, known, 'strict') === null;
     const fit = problem.allowed[v]![s]! && !over && !routeBroken ? bestFit(problem, s, known, v) : null;
     let shiftMinutes: number | null = null;
-    // ずらせば入るか：時刻に関わらない必須の原因が無く、件数の上限を超えず、列に元から違反の無い人だけ
+    // ずらせば入るか：時刻に関わらない必須の原因が無く、件数の上限を超えず、列に元から違反の無い人だけ。
+    // 開始時刻をずらさない（機能 shiftStart が切。ADR-0116）なら探さない
     const timeOnly = reasons.every((r) => r.points !== INF || TIME_RULES.has(r.ruleId));
-    if (!fit && !over && !routeBroken && timeOnly) {
+    if (!fit && !over && !routeBroken && timeOnly && problem.fixedStart !== true) {
       for (let a = SHIFT_STEP; a <= SHIFT_MAX && shiftMinutes === null; a += SHIFT_STEP) {
         for (const d of [a, -a]) {
           if (bestFit(shifted(problem, v, d), s, known, v)) {

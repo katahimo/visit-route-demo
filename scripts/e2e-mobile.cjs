@@ -340,6 +340,9 @@ async function floating(page) {
   const rb = await dockReal.boundingBox();
   check(!overlaps(rb, tb) && rb.y >= 0, '本物の開いた地図（MapDock）が下のタブに重ならない', rb);
   await page.screenshot({ path: path.join(OUT_DIR, 'mobile-mapdock.png') });
+  // 開け閉めは端末に覚えるので、あとの段のために閉じておく（PRD D466）
+  await page.getByRole('button', { name: '地図を閉じる' }).click();
+  await fabReal.waitFor();
 }
 
 /**
@@ -844,7 +847,7 @@ async function narrowWide(page) {
     '1400px：一覧は表のまま・絞り込みは開いたまま・週の既定は時間軸',
     { ...st, timeline },
   );
-  // 日の予定の地図（PRD D300）：本体の下に全幅で大きく。画面の外のあいだに〈スタッフ〉の列を押すと浮かせた地図が開く
+  // 日の予定の地図（PRD D300）：本体の下に全幅で大きく。画面の外のあいだは右下の「地図」のボタンだけ（勝手に開かない）。開けた・閉じたは覚える（PRD D466。ADR-0118）
   await open(page, '/plan', '[data-testid="plan-map"]');
   const geo = await page.evaluate(() => {
     const body = document.querySelector('.plan-body').getBoundingClientRect();
@@ -860,8 +863,32 @@ async function narrowWide(page) {
   await page.evaluate(() => window.scrollTo(0, 0));
   await settle(page, 400);
   await page.locator('.tl-head .col-focus').first().click();
-  await page.locator('.map-dock').waitFor({ timeout: 5000 });
-  check(true, '1400px：地図が画面の外のとき〈スタッフ〉の列を押すと浮かせた地図が開く');
+  await page.locator('.map-dock-fab').waitFor({ timeout: 5000 });
+  check(
+    (await page.locator('section.map-dock').count()) === 0,
+    '1400px：地図が画面の外のとき〈スタッフ〉の列を押しても浮かせた地図は勝手に開かない（ボタンだけ）',
+  );
+  await page.locator('.map-dock-fab').click();
+  await page.locator('section.map-dock').waitFor({ timeout: 5000 });
+  await page.reload();
+  await page.locator('[data-testid="plan-map"]').waitFor({ timeout: 20000 });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await settle(page, 400);
+  await page.locator('section.map-dock').waitFor({ timeout: 5000 });
+  check(true, '1400px：開けた浮かせた地図は読み直しても開いたまま');
+  await page.getByRole('button', { name: '地図を閉じる' }).click();
+  await page.locator('.map-dock-fab').waitFor({ timeout: 5000 });
+  await page.reload();
+  await page.locator('[data-testid="plan-map"]').waitFor({ timeout: 20000 });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await settle(page, 400);
+  await page.locator('.map-dock-fab').waitFor({ timeout: 5000 });
+  await page.locator('.tl-head .col-focus').first().click();
+  await settle(page, 400);
+  check(
+    (await page.locator('section.map-dock').count()) === 0,
+    '1400px：閉じた浮かせた地図は読み直しても、列を押しても閉じたまま',
+  );
   await page.setViewportSize({ width: 390, height: 844 });
 }
 

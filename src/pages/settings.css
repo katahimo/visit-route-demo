@@ -463,6 +463,13 @@
   border-radius: 12px;
   background: var(--soft);
 }
+/* 終わった繰り返し（消した・終わらせた。読むだけで畳む） */
+.pattern-ended > summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--sub);
+  padding: 4px 0;
+}
 .pattern-row .actions {
   display: inline-flex;
   gap: 4px;

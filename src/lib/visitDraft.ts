@@ -18,10 +18,18 @@ export const SCOPE_LABELS: Record<VisitScope, string> = { once: 'この回だけ
 
 // ---- 欄の入力 ----
 
-/** 欄で決める訪問の中身（日時・所要・種類・メモ。新しい訪問は〈利用者さん〉も） */
+/** 欄で決める訪問の中身（日時・所要・種類・メモ。新しい訪問は〈利用者さん〉と同行（コピーで足すときだけ。ADR-0120）も） */
 export type VisitDraft = Pick<
   Visit,
-  'clientId' | 'date' | 'windowKind' | 'earliestStart' | 'latestStart' | 'durationMinutes' | 'typeId' | 'note'
+  | 'clientId'
+  | 'date'
+  | 'windowKind'
+  | 'earliestStart'
+  | 'latestStart'
+  | 'durationMinutes'
+  | 'typeId'
+  | 'note'
+  | 'accompany'
 >;
 
 /** 今の訪問の中身 */

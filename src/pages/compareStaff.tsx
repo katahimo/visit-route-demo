@@ -257,7 +257,6 @@ export function CompareMapCard(p: CompareStaffProps) {
         points={points}
         lines={lines}
         title={`地図${rs.focusStaff ? `：${staffName(rs.focusStaff)}` : ''}（A 点線・B 実線）`}
-        focusKey={rs.focusKey}
       />
     </>
   );

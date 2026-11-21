@@ -16,6 +16,24 @@ export const patternSplitConfirm = (since: string, removed: number, confirmedDay
   confirmLabel: '変える',
 });
 
+/**
+ * 直した（「いつから」で分けた）あとの知らせ（PRD D459。ADR-0117）。from は直す前の開始日、since は「いつから」（今日より前なら今日）。
+ * 分けたときは前の中身がどこに残るか（今日から変えた＝「終わった繰り返し」、後の日から＝その前の日まで今の一覧）を言う。
+ * auto は担当なしの回を自動で組むか
+ */
+export function patternSplitText(from: string, sinceIn: string, today: string, auto: boolean): string {
+  const since = sinceIn < today ? today : sinceIn;
+  const tail = auto ? '担当を自動で組みます' : '';
+  const note =
+    since <= from
+      ? ''
+      : since === today
+        ? '前の中身は今日より前の回の記録として「終わった繰り返し」に残します'
+        : `${mdText(since)}から変わります。それまでは前の中身のままです`;
+  const parts = [note, tail].filter((x) => x !== '');
+  return parts.length === 0 ? '繰り返しを直しました' : `繰り返しを直しました（${parts.join('。')}）`;
+}
+
 /** 消す前の確認 */
 export const patternRemoveConfirm = (confirmedDays: number): ConfirmOptions => ({
   title: 'この繰り返しを消しますか？',
@@ -26,6 +44,13 @@ export const patternRemoveConfirm = (confirmedDays: number): ConfirmOptions => (
   confirmLabel: '訪問ごと消す',
   tone: 'danger',
 });
+
+/**
+ * 消したあとの知らせ。kept は今日より前に始まっていて、昨日で終わらせて残したか（removePattern）。
+ * 残したときは一覧の「終わった繰り返し」に移ったことを言う（一覧から消えないと思わせない）
+ */
+export const patternRemovedText = (kept: boolean): string =>
+  kept ? '繰り返しを消しました（今日より前の回は「終わった繰り返し」に残します）' : '繰り返しを消しました';
 
 /** 終わらせる前の確認（last は最後の日） */
 export const patternEndConfirm = (last: string, removed: number, confirmedDays: number): ConfirmOptions => ({

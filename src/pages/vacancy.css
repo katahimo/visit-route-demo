@@ -399,3 +399,98 @@ details[open] > summary .vacancy-fold-mark .when-open {
     gap: 10px;
   }
 }
+
+/* 週の空きの帯（PRD D472。ADR-0119）：曜日ごとに1本。塗りは lv-*（components/glance.css）。数字・△・？と右の文も出し、色だけにしない */
+.vacancy-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.vacancy-strip-title {
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+.vacancy-strip-axis,
+.vacancy-strip-row {
+  display: grid;
+  grid-template-columns: 2.4em minmax(0, 1fr) minmax(9em, 16em);
+  align-items: center;
+  gap: 6px;
+}
+.vacancy-strip-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.vacancy-strip-ticks {
+  display: grid;
+  font-size: 0.7rem;
+  color: var(--sub);
+}
+.vacancy-strip-day {
+  font-weight: 700;
+  text-align: center;
+}
+.vacancy-strip-bar {
+  display: grid;
+  gap: 1px;
+  height: 26px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--line);
+}
+.vacancy-strip-seg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.vacancy-strip-seg.is-none {
+  background: var(--soft);
+}
+/* 希望の曜日・時間帯の外は薄く（答えに入らない時刻） */
+.vacancy-strip-seg.is-out {
+  opacity: 0.35;
+}
+.vacancy-strip-row.is-unwished .vacancy-strip-day,
+.vacancy-strip-row.is-unwished .vacancy-strip-text {
+  color: var(--sub);
+  font-weight: 400;
+}
+.vacancy-strip-row.is-unwished .vacancy-strip-bar {
+  opacity: 0.55;
+}
+.vacancy-strip-text {
+  font-size: 0.82rem;
+  line-height: 1.3;
+}
+.vacancy-strip-note {
+  margin: 0;
+}
+/* 390px：右の文は帯の下の行（曜日の列の下は空ける） */
+@media (max-width: 600px) {
+  .vacancy-strip-axis,
+  .vacancy-strip-row {
+    grid-template-columns: 2em minmax(0, 1fr);
+    gap: 2px 6px;
+  }
+  .vacancy-strip-axis > :last-child {
+    display: none;
+  }
+  .vacancy-strip-text {
+    grid-column: 2;
+    font-size: 0.78rem;
+    padding-bottom: 2px;
+  }
+}

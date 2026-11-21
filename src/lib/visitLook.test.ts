@@ -281,6 +281,19 @@ describe('その日の訪問の見た目 dayLooks', () => {
     const m = dayLooks({ ...src, told: null }, [visit('v1')], opts());
     expect(m.get('v1')!.kinds).toBe('unfit');
   });
+  it('同行の組（ADR-0120）：「2人」「同行」の印を例外だけ見せるときも出す。取り消しには出さない', () => {
+    const at = { date: '2026-10-12', earliestStart: '09:00', clientId: 'c1' };
+    const vs = [visit('a', at), visit('b', { ...at, staffId: 's2', accompany: 'pair' })];
+    const m = dayLooks({ ...src, told: null, problem: null }, vs, opts({ exceptionsOnly: true }));
+    expect(m.get('a')!.kinds).toBe('companion');
+    expect(m.get('a')!.marks[0]).toMatchObject({ short: '2人', title: `2人体制（${nm('s2')}さんと）` });
+    const t = dayLooks(
+      { ...src, told: null, problem: null },
+      [visit('a', at), visit('t', { ...at, accompany: 'trainee', cancelled: true })],
+      opts(),
+    );
+    expect(t.get('a')!.kinds).toBe('');
+  });
 });
 
 describe('決まった予定の「変更あり」の印（expert 切。ADR-0073）', () => {

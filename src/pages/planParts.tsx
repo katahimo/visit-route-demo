@@ -309,7 +309,7 @@ function achievementText(a: RuleAchievement): string {
   return `${a.met}/${a.total}${a.unit === 'staff' ? '人' : '件'}`;
 }
 
-/** 条件の名前（ID → 条件の名前。負担の均等のキーは「負担の均等」） */
+/** 条件の名前（ID → 条件の名前。負担の均等のキーは型の名前。続く訪問のキーは条件の ID） */
 function achievementLabel(ruleId: string, rules: Rule[], terms: Terms): string {
   const r = rules.find((x) => x.id === ruleId);
   if (r) return r.label;

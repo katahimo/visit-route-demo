@@ -9,6 +9,7 @@ import {
   toggleNumber,
   withRepeatChoice,
 } from '../lib/patternForm';
+import { DurationEndFields } from './DurationEndFields';
 import { FieldError, RequiredMark } from './FieldError';
 import { MonthWeekChips } from './MonthWeekChips';
 import { PlanCsvSection } from './PlanCsvSection';
@@ -146,22 +147,20 @@ function AddPlanFields({ a }: { a: ReturnType<typeof useAddPlan> }) {
           data-testid="add-plan-start"
         />
       </label>
-      <label>
-        <span>
-          所要（分）
-          <RequiredMark />
-        </span>
-        <input
-          type="number"
-          required
-          {...a.bad('duration')}
-          min={5}
-          max={720}
-          value={Number.isFinite(a.draft.durationMinutes) ? a.draft.durationMinutes : ''}
-          onChange={(e) => a.setDuration(e.target.value)}
-          data-testid="add-plan-duration"
-        />
-      </label>
+      <DurationEndFields
+        start={a.draft.earliestStart}
+        minutes={Number.isFinite(a.draft.durationMinutes) ? String(a.draft.durationMinutes) : ''}
+        onMinutes={a.setDuration}
+        durationLabel={
+          <span>
+            所要（分）
+            <RequiredMark />
+          </span>
+        }
+        durationAttrs={a.bad('duration')}
+        required
+        testIdPrefix="add-plan"
+      />
     </div>
   );
 }

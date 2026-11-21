@@ -1,5 +1,6 @@
 // 定期パターン・訪問の種類の表示の文（ADR-0012。画面の純粋関数）
 import type { Pattern, VisitType } from '../contracts/documents';
+import { addDays } from '../domain/time';
 import { timesOn } from '../patterns';
 import { WEEKDAY_LABELS } from './common';
 import { mdText } from './dateText';
@@ -69,3 +70,34 @@ export const usualStartsLabel = (p: Pick<Pattern, 'usualStarts'>): string => {
   const us = [...(p.usualStarts ?? [])].sort((a, b) => a.weekday - b.weekday);
   return us.length === 0 ? '' : `標準の開始：${us.map((u) => `${WEEKDAY_LABELS[u.weekday]} ${u.start}`).join('・')}`;
 };
+
+/** 終わった繰り返し（最後の日が今日より前）。消した・終わらせた繰り返しは今日より前の回のために残る（removePattern・ADR-0053） */
+const patternEnded = (p: Pick<Pattern, 'to'>, today: string): boolean => p.to !== null && p.to < today;
+
+/** 一覧の並び：今日からも続く繰り返し（直す・終わらせるを出す）と、終わった繰り返し（畳んで読むだけ）に分ける。順は渡した順 */
+export function splitEndedPatterns<P extends Pick<Pattern, 'to'>>(
+  patterns: readonly P[],
+  today: string,
+): { current: P[]; ended: P[] } {
+  const current: P[] = [];
+  const ended: P[] = [];
+  for (const p of patterns) (patternEnded(p, today) ? ended : current).push(p);
+  return { current, ended };
+}
+
+/**
+ * 今の繰り返しの一覧の行に添える札（PRD D459。ADR-0117）：まだ始まっていない繰り返しは「11/23から」、
+ * 終わりの決まった繰り返しは「11/22まで」。終わりの翌日に始まる同じ〈利用者さん〉の繰り返し（「いつから」で直して分けた後ろ）が
+ * あれば「11/23から変わります」。始まっていて終わりの無い繰り返し・終わった繰り返しは null（札なし）
+ */
+export function patternPhaseText(
+  p: Pick<Pattern, 'id' | 'clientId' | 'from' | 'to'>,
+  all: readonly Pick<Pattern, 'id' | 'clientId' | 'from'>[],
+  today: string,
+): string | null {
+  if (p.from > today) return `${mdText(p.from)}から`;
+  if (p.to === null || p.to < today) return null;
+  const next = addDays(p.to, 1);
+  const changes = all.some((x) => x.id !== p.id && x.clientId === p.clientId && x.from === next);
+  return changes ? `${mdText(p.to)}まで（${mdText(next)}から変わります）` : `${mdText(p.to)}まで`;
+}

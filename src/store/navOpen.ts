@@ -74,5 +74,11 @@ export const detailsOpenKey = (screen: DetailsScreen): string => `details:${scre
  */
 export const columnsOpenKey = (list: 'clients' | 'staff'): string => `columns:${list}`;
 
+/**
+ * 右下の浮かせた地図（MapDock）を開いているか（PRD D466。ADR-0118）。値が true なら開く（無ければ閉じて、「地図」のボタンだけ出す）。
+ * 日の予定と比べるの画面で1つ。ほかの鍵と重ならない
+ */
+export const mapDockOpenKey = 'map-dock';
+
 /** 画面全体で1つ（このブラウザの localStorage） */
 export const navOpenMemory = createNavOpenMemory(() => appLocalStorage());

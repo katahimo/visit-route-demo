@@ -1,6 +1,7 @@
 // 独自の確認ダイアログ（PRD D146〜D150。ADR-0026）を本物のブラウザで確かめる：
 // 代表の数か所（条件を消す・項目を消す・データを初期状態に戻す・日の画面の「確定（伝えた）」・〈スタッフ〉の変更を捨てる・
 // 条件の重みの「保存」（調整した重みに書く。ADR-0100））で、
+// （条件の重みの画面では、組み込みの条件（続く訪問は同じ人）に消すボタンが無く、足す種類にも出ないことも見る。ADR-0116）
 // 画面の中央に独自のダイアログが出て、ブラウザのネイティブのダイアログは出ない（page.on('dialog') が呼ばれたら失敗）。
 // role=alertdialog・aria-modal・見出しと本文の aria-labelledby/describedby、最初のフォーカスは取り消し、Tab・Shift+Tab は中で回る、
 // 裏（#root）は inert・巻かない。Esc・取り消す・背景を押すでは何も変わらず、確定で処理が進む。閉じたら押したボタンへフォーカスが戻る。
@@ -129,6 +130,19 @@ async function ruleNames(page) {
 // ---- 条件を消す（#/rules）：Esc・取り消す・背景は何もしない、確定で消える、フォーカスの戻り、Tab が中で回る ----
 async function rules(page) {
   await open(page, '/rules', '[data-testid="narrow-rules"]');
+  // 組み込みの条件（続く訪問は同じ人。ADR-0116）：行はあるが消すボタンは無く、［条件を追加］の種類にも出ない。夕方は自宅に近い人は足せる
+  const builtin = (await stored(page)).rules.find((r) => r.type === 'sameClient');
+  check(!!builtin, '組み込みの条件：初期データに続く訪問は同じ人がある');
+  check(
+    (await page.getByRole('button', { name: `条件「${builtin?.label}」を消す` }).count()) === 0,
+    '組み込みの条件：消すボタンが無い',
+  );
+  const addTypes = await page.locator('select option').allInnerTexts();
+  check(
+    !addTypes.includes('続く訪問は同じ人') && addTypes.includes('夕方は自宅に近い人'),
+    '組み込みの条件：足す種類に出さない（夕方は自宅に近い人は出す）',
+    addTypes,
+  );
   const before = (await stored(page)).rules;
   const r0 = before[0];
   const btn = page.getByRole('button', { name: `条件「${r0.label}」を消す` });

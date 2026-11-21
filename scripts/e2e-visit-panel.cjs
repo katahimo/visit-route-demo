@@ -3,7 +3,7 @@
 // 担当は今の担当で固定・フォーカスは開いた帯・トーストの「元に戻す」で戻る）、繰り返しの回の範囲（この回だけ／これ以降／すべて）、
 // 取り消しと取り消しをやめる（当日キャンセル）、週の予定の帯・月の予定で〈利用者さん〉を選んだときのリンクの先の回・日の予定の一覧の行から開いても
 // 同じ欄、新しい訪問（日の予定の「その他 ▾」・コマンドパレットの操作）、要対応の帯から日の予定へ移って訪問の欄を開く、
-// コマンドパレットで「名前 日付」から開く（画面は移らない）、390px（日ごとのリストの行から開く・この回の変更は見えるが戻すは出さない・追加は出さない・
+// 訪問のコピー（2人体制・研修同行。ADR-0120）、コマンドパレットで「名前 日付」から開く（画面は移らない）、390px（日ごとのリストの行から開く・この回の変更は見えるが戻すは出さない・追加は出さない・
 // 横にはみ出さない）、印刷で出さない。
 // スクリーンショット（OUT_DIR）：plan-band・scope・week・new（1400px）、narrow（390px）。
 //
@@ -351,6 +351,61 @@ async function addNew(page) {
   );
 }
 
+/**
+ * 訪問のコピー（PRD D473〜D476。ADR-0120）：帯の欄の［この訪問をコピー］→ コピーの欄（同行の選び方）→ 2人体制で担当を選んで追加
+ * → 同じ開始の単発の訪問（accompany pair・ピン）が増え、両方の帯に「2人」の印。研修同行は人を選ばないと誤り
+ */
+async function copyVisit(page) {
+  await freshPlan(page);
+  const id = await openFromBand(page);
+  const src = await visitOf(page, id);
+  const n0 = (await data(page)).visits.length;
+  // 欄で直して保存していない所要も、コピーに持ち越す（黙って捨てない）
+  const edited = String(src.durationMinutes === 30 ? 45 : 30);
+  await panel(page).getByTestId('vp-duration').fill(edited);
+  await panel(page).getByTestId('vp-copy').click();
+  await panel(page).getByTestId('vp-accompany').waitFor();
+  const p = panel(page);
+  check((await p.getAttribute('data-new')) === 'true', '［この訪問をコピー］で新規の形の欄（コピーの使い方つき）');
+  check((await p.getByTestId('vp-start').inputValue()) === src.earliestStart, 'コピーの欄は元の訪問の開始で開く');
+  check(
+    (await p.getByTestId('vp-duration').inputValue()) === edited,
+    'コピーの欄は今の欄の入力（保存していない所要）で開く',
+    await p.getByTestId('vp-duration').inputValue(),
+  );
+  await p.getByTestId('vp-accompany-trainee').check();
+  await page.getByTestId('vp-save').click();
+  await settle(page, 300);
+  check(/研修同行は、同行する/.test(await p.innerText()), '研修同行は人を選ばないと追加しない');
+  await p.getByTestId('vp-accompany-pair').check();
+  await settle(page, 400);
+  const choice = p.locator('[data-testid="vp-staff-choice"]:not(.is-off)').first();
+  await choice.waitFor();
+  const sid = await choice.getAttribute('data-staff');
+  await choice.locator('input').check();
+  await shot(page, 'copy');
+  await page.getByTestId('vp-save').click();
+  await closed(page);
+  const d = await dataWhen(page, (x) => x.visits.some((v) => v.accompany === 'pair'));
+  const nv = d.visits.find((v) => v.accompany === 'pair') ?? {};
+  check(d.visits.length >= n0 + 1, '訪問が増える', { n0, n: d.visits.length });
+  check(
+    nv.accompany === 'pair' && nv.earliestStart === src.earliestStart && nv.clientId === src.clientId,
+    '2人体制で同じ〈利用者さん〉・同じ開始の訪問が1件増える',
+    nv,
+  );
+  check(nv.staffId === sid && nv.pinned && sid !== src.staffId, '選んだ人（元の担当と別の人）にピンで入る', {
+    sid,
+    nv,
+  });
+  await until(async () => (await page.locator(`.tl-band[data-visit="${nv.id}"]`).count()) === 1);
+  for (const vid of [id, nv.id]) {
+    const marks = await page.locator(`.tl-band[data-visit="${vid}"] .tl-band-btn`).getAttribute('data-marks');
+    check(/companion/.test(marks ?? ''), '組の両方の帯に同行の印', { vid, marks });
+  }
+  await shot(page, 'copy-band');
+}
+
 /** 予定の上の要対応の帯から日の予定へ移り、選ばれた訪問の欄を開く（ホームの今日の訪問から開く入口の代わり。PRD D404。帯の［見に行く ›］は attention-band-go） */
 async function band(page) {
   await freshPlan(page);
@@ -563,6 +618,7 @@ const steps = sharedPage({
     ['取り消しと取り消しをやめる', cancelAndBack],
     ['週・月・一覧から開いても同じ欄', sameEverywhere],
     ['新しい訪問', addNew],
+    ['訪問のコピー（2人体制・研修同行）', copyVisit],
     ['要対応の帯から開く', band],
     ['コマンドパレットから開く', palette],
     ['日付を変えると選んでいた担当を戻す', pickReset],

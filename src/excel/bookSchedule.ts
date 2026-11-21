@@ -1,6 +1,7 @@
 // 全体のブックの、稼働時間・欠勤・種類・定期パターン・訪問・〈利用者さん〉の休みのシートを読む（importWorkbook から。ADR-0006）
 import {
   type Absence,
+  ACCOMPANY_LABELS,
   type Availability,
   type ClientLeave,
   MAX_VISIT_TYPES,
@@ -17,6 +18,7 @@ import {
   PATTERN_EXTRA_COLS,
   patternCols,
   TYPE_COLS,
+  VISIT_ACCOMPANY_COL,
   VISIT_PIN_COL,
   VISIT_SAME_DAY_COL,
   VISIT_START_COL,
@@ -353,6 +355,11 @@ function readVisitRow(ctx: BookCtx, r: Row, vc: VisitColumns, id: string): Visit
   // 組んだ開始・ピン（版2。ADR-0053）：列が無いブックは開始（早）の順・ピンなし
   const start = r.text(VISIT_START_COL) === '' ? null : r.time(VISIT_START_COL);
   const pinned = r.yes(VISIT_PIN_COL);
+  // 同行（ADR-0120）：列が無い・空のブックはふつうの訪問
+  const accompanyText = r.text(VISIT_ACCOMPANY_COL);
+  const accompany = accompanyText === '' ? undefined : lookup(ACCOMPANY_LABELS, accompanyText);
+  if (accompany === null)
+    r.err(VISIT_ACCOMPANY_COL, `「${Object.values(ACCOMPANY_LABELS).join('」か「')}」で書くか、空にしてください`);
   // 種類・定期パターン（ADR-0012）。シートが無い古いブックは空
   const tid = ctx.hasTypes ? typeId(ctx, r, vc.type) : null;
   const pattern = ctx.hasPatterns ? visitPattern(ctx, r, vc) : null;
@@ -370,7 +377,8 @@ function readVisitRow(ctx: BookCtx, r: Row, vc: VisitColumns, id: string): Visit
       sid !== undefined &&
       start !== undefined &&
       tid !== undefined &&
-      pattern !== undefined
+      pattern !== undefined &&
+      accompany !== null
     )
   )
     return null;
@@ -390,6 +398,7 @@ function readVisitRow(ctx: BookCtx, r: Row, vc: VisitColumns, id: string): Visit
     typeId: tid,
     pattern,
     cancelKind: cancelled && sameDay ? 'sameDay' : null,
+    ...(accompany && { accompany }),
   };
 }
 

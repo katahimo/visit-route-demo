@@ -256,6 +256,7 @@ flowchart LR
   - 種類と担当を限るは常に必須で、条件の重み・プリセット・達成の件数に関係しない
 - 期間つきの訪問先（住所2。ADR-0105）：その日の訪問先は `domain/place2` の `placeOn`・`clientOn` だけで決める（`Client.place2` の期間内なら住所2、ほかは `place`）。`compile` は〈利用者さん〉をその日の訪問先に置き換えてから移動の行列・遠方の印を作る。日の画面（`useDayModel`）・日のメール・訪問の詳細と道順も同じ置き換えを使い、置き換えた〈利用者さん〉でデータを書き換えない
 - 移動の行列（`matching/travel` の `travelMatrices`）：〈利用者さん〉に移動時間（片道・分。`place.travelMinutes`）があれば、その地点への・からの移動はその分数（両側にあれば長いほう）・0 m（ADR-0096）。それ以外で位置が未登録の地点への移動は `UNPLACED_TRAVEL_MIN`（30分）・0 m とみる（ADR-0093。移動時間がある〈利用者さん〉には `noPlace` の点を足さない）。地点の鍵（訪問は `'c:'+clientId`、自宅は `'s:'+staffId`）が同じ地点どうしは位置が無くても 0 分（同じ〈利用者さん〉の続けた訪問を同じ担当が持てる）。車の区間で道路の所要の表（`DemoData.roads`。地点ごとに近い順 50 件。`matching/roads` の `roadModelOf` が緯度・経度の小数5桁で引き、索引は表ごとに1回だけ作る）に組があれば、移動＝`org.roadTravel.parkMinutes` ＋ `trafficFactor` × 所要（分）・距離＝道のり（ADR-0101）。無ければ `estimateLeg`（直線距離 × `org.lineTravel.detourFactor` ÷ 車は `driveKmh`・ほかは決まった速さ）
+- 同行の組（2人体制・研修同行。ADR-0120）：組の判定は `domain/companion` の `companionsOf`（同じ日・同じ〈利用者さん〉・同じ開始（早）・取り消していない訪問が2件以上で、うち1件以上に `accompany` があるもの）。組の訪問は `ProblemVisit.companion` を持ち、latest＝earliest（同じ人は組の2件を回れない）。`'trainee'` は人の条件（種類の必要条件・担当を限る・条件の点）を見ない。続く訪問（`chain`）の組にしない。1訪問1人のまま
 - 遠方（出張。ADR-0096）：`place.farTrip` の〈利用者さん〉の訪問は `ProblemVisit.solo`。`scheduleRoute`（strict）・`routeCost` は遠方の訪問とほかの〈利用者さん〉の訪問が同じ列なら不可（`soloBroken`）、列の最初の遠方の訪問は家を出る時刻を勤務の開始に縛らない。可否（`allowed`）には入れない。理由のキー・文（`FAR_TRIP_RULE_ID`「遠方（出張）の日はほかの訪問を入れません」・`TRAVEL_TOO_FAR_RULE_ID`「移動が間に合わない（片道 約N分）」）は `matching/travel` に置き、evaluate の explain（担当なしの理由）と採点（守れない条件）が使う。見分けと案内は `lib/travelReasons`
 - 問題に入れない訪問：取り消し、休み（`leaveOn`）の〈利用者さん〉の訪問。AI で組む（担当を組む・比較）・空き状況・振り直しはどれも compile を通る
 - いつもの担当（`continuity`）：訪問の `pattern` の繰り返しの `usualStaffId`（単発の訪問は無し）
@@ -448,13 +449,15 @@ flowchart LR
   - [ ] `npm test`・`npm run typecheck`・`npm run lint`・`npm run e2e`・`npm run e2e:perf` が通る
 
 ### deploy（公開）
-- 責務：main への push で `npm ci → npm run lint（biome・競合の印）→ npm test → npm run build → Cloudflare Workers へ公開（`wrangler deploy`）`。e2e は別のワークフローで、速い検査は PR の push ごと、`npm run e2e` は PR に「e2e」のラベルを付けたとき（付いた PR への push も）・手動・週1回の夜間、`npm run e2e:perf` は手動・夜間だけ（夜間は `FAKE_NOW` を月末の日にも替えて3通り。ADR-0104）。失敗したときだけ報告と記録を3日残す。公開は e2e を待たない
+- 責務：main への push で `npm ci → npm run lint（biome・競合の印）→ npm test → npm run build → Cloudflare Workers へ公開（`wrangler deploy`）`。確認用 URL：PR に「preview」のラベル（付いた PR への push も）か手動で、同じ検査とビルドのあと `wrangler versions upload --preview-alias` で本番を変えずに workers.dev のプレビュー URL に出し、PR のコメントに URL を書く。戻す：手動で `wrangler rollback`（版の ID を空にすると直前の版）。本番を変える公開と戻すは1つずつ（ADR-0115）。e2e は別のワークフローで、速い検査は PR の push ごと、`npm run e2e` は PR に「e2e」のラベルを付けたとき（付いた PR への push も）・手動・週1回の夜間、`npm run e2e:perf` は手動・夜間だけ（夜間は `FAKE_NOW` を月末の日にも替えて3通り。ADR-0104）。失敗したときだけ報告と記録を3日残す。公開は e2e を待たない
 - 持つデータ（持ち主）：なし
 - 提供するAPI：なし
 - 依存するもの：GitHub Actions（`cloudflare/wrangler-action`。Secrets：`CLOUDFLARE_API_TOKEN`・`CLOUDFLARE_ACCOUNT_ID`）、e2e は `@playwright/test`（devDependency）と Chromium
 - 配置：`.github/workflows/deploy.yml`、`wrangler.jsonc`、`.github/workflows/e2e.yml`、`vite.config.ts`（`base: './'`・vitest の設定）、`playwright.config.ts`・`e2e/`、`scripts/lib/`（e2e の共通の部品・段の型）、`scripts/check-conflict-markers.cjs`
 - 完了の条件：
   - [ ] push から5分以内に Cloudflare Workers の公開URL に反映される
+  - [ ] 「preview」のラベルを付けた PR に確認用 URL のコメントが付き、本番の URL は変わらない
+  - [ ] 手動の rollback で本番が前の版に戻る
   - [ ] サブパスで再読込しても 404 にならない（HashRouter）。分けたチャンクもサブパスから読める（`base: './'`）
   - [ ] PR・夜間に e2e のワークフローが走り、報告（HTML）が残る。落ちたら test-results（trace・動画・スクリーンショット・記録）も残る
   - [ ] e2e の報告で段（test.step）ごと・確かめ（expect.soft）ごとに合否が見える。押したあとの待ちは画面の状態で待つ（`settle`。固定の待ちは速さの計測・外の遅れ・時間そのものを見る所だけ）

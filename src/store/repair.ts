@@ -1,8 +1,17 @@
 // 読み込んだデータの中身の食い違いを直す（store がデータの持ち主。design.md §4）
 import type { DaySnapshot, DemoData, ReassignInfo } from '../contracts/data';
 import { MAX_VISIT_TYPES, type Pattern, type Place } from '../contracts/documents';
-import { type Compat, HARDABLE, MAX_PRESETS, type Preset, RULE_TYPES } from '../contracts/rules';
+import {
+  BUILTIN_RULE_TYPES,
+  type Compat,
+  HARDABLE,
+  MAX_PRESETS,
+  type Preset,
+  RULE_TYPES,
+  type Rule,
+} from '../contracts/rules';
 import { stageFlags } from '../lib/clientStage';
+import { INITIAL_RULES } from '../seed/people';
 import { applyPreset, initialPresets, scorePresetOf } from '../seed/presets';
 
 /** 同じ ID が2件以上あれば、最初の1件だけ残す */
@@ -47,6 +56,23 @@ function repairPresets(presets: Preset[]): Preset[] {
       return JSON.stringify(weights) === JSON.stringify(p.weights) ? p : { ...p, weights };
     });
   return out.length > 0 ? out : initialPresets();
+}
+
+/**
+ * 組み込みの条件（続く訪問。ADR-0116）が無ければ、初期の条件のものを最後に足す（ID が使われていれば後ろに番号）。
+ * 重み・必須は呼ぶ側が点数の基準のプリセットにそろえる
+ */
+function withBuiltinRules(rules: Rule[]): Rule[] {
+  const missing = INITIAL_RULES.filter((b) => BUILTIN_RULE_TYPES.has(b.type) && !rules.some((r) => r.type === b.type));
+  if (missing.length === 0) return rules;
+  const ids = new Set(rules.map((r) => r.id));
+  const added = missing.map((b) => {
+    let id = b.id;
+    for (let n = 2; ids.has(id); n++) id = `${b.id}${n}`;
+    ids.add(id);
+    return { ...b, id };
+  });
+  return [...rules, ...added];
 }
 
 /** 〈利用者さん〉：位置・担当できる人（ADR-0014）・段階（ADR-0015）を直す。activeIds はいる・利用中の〈スタッフ〉 */
@@ -195,6 +221,7 @@ function repairSnapshots(snapshots: DemoData['snapshots'], staffIds: Set<string>
  *   重みは 0〜5 に収めて 0.5 刻みに丸め（数でなければ 0）、必須にできない型の必須は外す
  * - 点数の基準（scorePresetId。ADR-0010）：無い・どのプリセットでもない id なら先頭のプリセット
  * - 条件の重み・必須（版2。ADR-0053）：いつも点数の基準のプリセットにそろえる（重みは1組）
+ * - 組み込みの条件（続く訪問。ADR-0116）：無ければ最後に足す（古いデータ・消したブック。重みはプリセットから）
  * - 欠勤（ADR-0011）：いない人の欠勤は消す。ID の重複は最初の1件、同じ人・同じ日は最後の1件（上書きと同じ）
  * - 振り直しの情報（reassigns）：いない人の列は消し、その日にない訪問・重複を除く。ピンはいる人だけ
  * - 伝えた内容（snapshots）：日付をキーにそろえ、いない人の担当は null
@@ -255,7 +282,7 @@ export function repair(d: DemoData): DemoData {
   const scorePresetId = presets.some((p) => p.id === d.scorePresetId) ? d.scorePresetId : presets[0]?.id;
   // 条件の重み・必須は点数の基準にそろえる（版2：重みは1組。ADR-0053）
   const basis = scorePresetOf(presets, scorePresetId);
-  const uniqueRules = uniqueById(d.rules);
+  const uniqueRules = withBuiltinRules(uniqueById(d.rules));
   const rules = basis ? applyPreset(uniqueRules, basis) : uniqueRules;
 
   return {

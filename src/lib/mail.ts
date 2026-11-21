@@ -6,6 +6,7 @@ import type { Client, Org, Staff, Visit } from '../contracts/documents';
 import { clientOn } from '../domain/place2';
 import { weekday } from '../domain/time';
 import { visitsOn } from '../patterns';
+import { companionTexts } from './companion';
 import { type BuiltMail, buildMail, MAILTO_LIMIT, uniqueRecipients } from './mailto';
 import { BICYCLE_NOTE, dayStops, HOME_LABEL, legLinks, type RouteStop, tripLinks } from './mapsLink';
 import { type PrintDay, printDay } from './monthPrint';
@@ -36,8 +37,14 @@ export function sourceWord(source: PrintDay['source']): string {
   return source === 'confirmed' ? '確定した担当' : source === 'plan' ? '今の担当（まだ確定していません）' : '';
 }
 
-/** 1人あての1日の訪問（開始の順） */
-export type MailVisit = { start: number; end: number; client: Client | undefined; visit: Visit | undefined };
+/** 1人あての1日の訪問（開始の順）。companion は同行の組の一言（「2人体制（佐藤さんと）」。ADR-0120。組でなければ無し） */
+export type MailVisit = {
+  start: number;
+  end: number;
+  client: Client | undefined;
+  visit: Visit | undefined;
+  companion?: string;
+};
 
 /** その日の担当ごとの訪問（訪問の担当。printDay と同じ）と、担当の決まっていない訪問（unassigned。開始の順） */
 export function dayByStaff(
@@ -45,7 +52,16 @@ export function dayByStaff(
   date: string,
 ): { day: PrintDay; byStaff: Map<string, MailVisit[]>; unassigned: MailVisit[] } {
   const day = printDay(data, date, null);
-  const visitById = new Map(visitsOn(data, date).map((v) => [v.id, v]));
+  const dayVisits = visitsOn(data, date);
+  const visitById = new Map(dayVisits.map((v) => [v.id, v]));
+  // 同行の組の一言（相手の名前は本文と同じ担当＝伝えた内容か今の担当。ADR-0120）
+  const staffOfEntry = new Map(day.entries.map((e) => [e.visitId, e.staffId]));
+  const staffName = new Map(data.staff.map((s) => [s.id, s.name]));
+  const companions = companionTexts(
+    dayVisits,
+    (id) => staffOfEntry.get(id) ?? null,
+    (id) => staffName.get(id) ?? '（不明）',
+  );
   // その日の訪問先（住所2 の期間内なら住所2。ADR-0105）
   const clientById = new Map(data.clients.map((c) => [c.id, clientOn(c, date)]));
   const byStaff = new Map<string, MailVisit[]>();
@@ -53,7 +69,14 @@ export function dayByStaff(
   for (const e of day.entries) {
     const visit = visitById.get(e.visitId);
     const client = visit ? clientById.get(visit.clientId) : undefined;
-    const item = { start: e.start, end: e.start + (visit?.durationMinutes ?? 0), client, visit };
+    const companion = companions.get(e.visitId)?.text;
+    const item: MailVisit = {
+      start: e.start,
+      end: e.start + (visit?.durationMinutes ?? 0),
+      client,
+      visit,
+      ...(companion && { companion }),
+    };
     if (e.staffId === null) unassigned.push(item);
     else byStaff.set(e.staffId, [...(byStaff.get(e.staffId) ?? []), item]);
   }
@@ -154,7 +177,8 @@ export function dayMailText(
     return { subject, full: body, short: [] };
   }
   const lead = `${mdw(date)}の訪問予定です（${sourceWord(source)}。${visits.length}件）。`;
-  const line = (v: MailVisit, i: number) => `${i + 1}. ${clockText(v.start)}〜${clockText(v.end)} ${nameOf(v.client)}`;
+  const line = (v: MailVisit, i: number) =>
+    `${i + 1}. ${clockText(v.start)}〜${clockText(v.end)} ${nameOf(v.client)}${v.companion ? ` ${v.companion}` : ''}`;
   const hasKeys = visits.some((v) => (v.client?.keyNote ?? '').trim() !== '');
   /** 鍵を入れないときの一言（鍵のメモがある訪問があるときだけ） */
   const keyNote = (keysIn: boolean) =>

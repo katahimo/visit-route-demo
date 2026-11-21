@@ -202,7 +202,7 @@ export function noneCol(p: PlanCtx) {
       {/* 日の予定では AI で組まない（ADR-0063）ので、入れ方を書き、この日の担当を組むへ案内する */}
       {unassigned.length > 0 && (
         <span className="sub" data-testid="unassigned-help">
-          カードを担当の列へドラッグすると入れられます。まとめて入れるなら
+          カードを担当の列へドラッグすると入れられます（画面の上下の端へ寄せると巻きます）。カードを押して「担当を変える」でも入れられます。まとめて入れるなら
           <Link to={`/arrange?date=${date}`} data-testid="unassigned-arrange">
             この日の担当を組む
           </Link>

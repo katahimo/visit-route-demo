@@ -10,6 +10,7 @@ import { inquiryRows } from '../lib/glance';
 import { type AnswerCard, placeLine } from '../lib/vacancyView';
 import type { VacancyInputState } from './useVacancyInput';
 import { AnswerBox, FoldMark, InquiryWeeks, NoPlanNote, StepNo, VacancyGrid, VacancyLegendBox } from './vacancyParts';
+import { VacancyStripBox } from './vacancyStrip';
 
 // 空き状況の画面（VacancyPage）の段階（PRD D184）：2 場所、3 受けられる曜日・時間帯、4 次の一手（1 いつ・何を は vacancyWhen）
 
@@ -65,7 +66,7 @@ export function PlaceStage({
 
 /**
  * 3 受けられる曜日・時間帯（PRD D184・D187・D412）：一番上に答えのカード（中に主ボタン［要約をコピー］）。
- * 希望の曜日×週のマス（D79）・凡例・曜日×開始時刻の表（D45）は「詳しく ▾」（閉じて始め、開け閉めは details:vacancy で覚える）
+ * 週の空きの帯（D472）は答えのカードの下に常に出し、希望の曜日×週のマス（D79）・凡例・曜日×開始時刻の表（D45）は「詳しく ▾」（閉じて始め、開け閉めは details:vacancy で覚える）
  */
 export function TableStage({
   view,
@@ -130,6 +131,7 @@ export function TableStage({
           )}
         </AnswerBox>
       )}
+      {result && <VacancyStripBox result={result} answerResult={answerResult} weekdays={wish.weekdays} />}
       <p className="sub vacancy-when-line" data-testid="vacancy-when-line">
         {whenLine}
       </p>

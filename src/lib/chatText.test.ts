@@ -87,3 +87,13 @@ describe('dayChatText', () => {
     );
   });
 });
+
+describe('同行の組（ADR-0120）', () => {
+  it('2人体制の訪問は、両方の人の行に相手の名前を添える（メールも同じ dayByStaff）', () => {
+    const d = data();
+    const pair = visit('v5', 'c3', '11:00', '11:00', { windowKind: 'fixed', staffId: 's1', accompany: 'pair' });
+    const text = dayChatText({ ...d, visits: [...d.visits, pair] }, DATE, { notesOn: false, includeKeys: false });
+    expect(text).toContain('11:00 宮城野様（60分） 2人体制（山田 花さんと）');
+    expect(text).toContain('11:00 宮城野様（60分） 2人体制（佐藤 一さんと）');
+  });
+});

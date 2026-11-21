@@ -1,5 +1,6 @@
 // 日の予定のドラッグ（PRD D58・D217）：訪問のカード・帯を別の担当の列へ落とすと移す、「担当なしの訪問」の列へ落とすと担当なし
 import { type DragEvent, useRef, useState } from 'react';
+import { useDragAutoScroll } from '../components/useDragAutoScroll';
 import { NONE } from '../domain/scheduleModel';
 import { deferredDragStart } from '../lib/dragStart';
 
@@ -14,6 +15,8 @@ export function usePlanDrag(x: {
   /** ドラッグの始まりの更新を dragstart の外へ出す（未割当の列が足されて Chrome がドラッグをやめるため） */
   const dragStart = useRef(deferredDragStart()).current;
   const [dropTo, setDropTo] = useState<string | null>(null);
+  // 担当なしの訪問が多いと落とす先の列が画面の外に出るので、ドラッグ中は上下の端で画面を巻く
+  useDragAutoScroll(dragging !== null);
   const dropProps = (to: string) => ({
     onDragOver: (e: DragEvent) => {
       if (!dragging) return;

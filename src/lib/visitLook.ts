@@ -5,13 +5,14 @@ import type { Visit } from '../contracts/documents';
 import type { Problem } from '../contracts/problem';
 import type { ContactList } from '../contracts/reassign';
 import { isBandIssue } from './bandIssues';
+import { companionTexts } from './companion';
 import { clockTime } from './dateText';
 import type { IssueKind } from './dayPlan';
 import { CHANGED_WORD } from './settledView';
 import { type UnfitMark, unfitMarks } from './week';
 
 /** 印の種類（並びはこの順） */
-export type LookMarkKind = 'issue' | 'unfit' | 'told' | 'pin' | 'edited' | 'tentative';
+export type LookMarkKind = 'issue' | 'unfit' | 'told' | 'pin' | 'edited' | 'tentative' | 'companion';
 
 /** 印1つ（short は帯に出す短い文字、title は説明と読み上げ） */
 export type LookMark = {
@@ -47,6 +48,8 @@ export type LookFacts = {
   unfit: readonly UnfitMark[];
   /** 〈利用者さん〉が仮押さえ */
   tentative: boolean;
+  /** 同行の組（2人体制・研修同行。ADR-0120）の短い文字と一言（lib/companion の companionTexts。組でなければ無し） */
+  companion?: { short: string; text: string } | null;
   /** 確定（伝えた）の段階を出すか（lib/settledView の showConfirmStep。省略は出す）。切なら未連絡の変更は「変更あり」の印（押せる） */
   confirmStep?: boolean;
   /**
@@ -87,6 +90,9 @@ export function visitLook(f: LookFacts): VisitLook {
     if (f.visit.pattern?.edited) marks.push({ kind: 'edited', short: '変', title: 'この回だけ変更', tone: 'plain' });
     if (f.tentative) marks.push({ kind: 'tentative', short: '仮', title: '仮押さえ（本登録の前）', tone: 'plain' });
   }
+  // 同行（ADR-0120）は例外だけ見せるときも出す（人数の事実で、要対応ではない）
+  if (!off && f.companion)
+    marks.push({ kind: 'companion', short: f.companion.short, title: f.companion.text, tone: 'plain' });
   const bad = marks.some((m) => m.tone === 'red');
   // 例外だけ：要対応の中身（f.issues）は帯と同じ分け方で絞ってあるので、無ければ目立たせない
   const tone = off ? 'off' : bad || f.issues.length > 0 ? (f.visit.staffId ? 'issue' : 'unassigned') : null;
@@ -131,7 +137,7 @@ export type DayLookSource = {
 export function dayLooks(
   src: DayLookSource,
   visits: readonly (Pick<Visit, 'id' | 'staffId' | 'pinned' | 'cancelled' | 'pattern' | 'clientId'> &
-    Partial<Pick<Visit, 'date'>>)[],
+    Partial<Pick<Visit, 'date' | 'earliestStart' | 'accompany'>>)[],
   opts: {
     staffName: (id: string) => string;
     leaveOf: (v: { id: string; clientId: string }) => boolean;
@@ -144,6 +150,7 @@ export function dayLooks(
   },
 ): Map<string, VisitLook> {
   const told = toldTexts(src.told, opts.staffName);
+  const companions = companionsOfLooks(visits, opts.staffName);
   const out = new Map<string, VisitLook>();
   for (const v of visits) {
     const off = v.cancelled || opts.leaveOf(v);
@@ -158,12 +165,29 @@ export function dayLooks(
         told: told.get(v.id) ?? null,
         unfit: quiet ? [] : unfitMarks(src.problem, v.id, v.staffId),
         tentative: opts.tentativeOf(v.clientId),
+        companion: companions.get(v.id) ?? null,
         confirmStep: opts.confirmStep,
         exceptionsOnly: opts.exceptionsOnly,
       }),
     );
   }
   return out;
+}
+
+/** 帯に渡した訪問の同行の組の一言（日付・開始（早）の無い訪問は組にしない） */
+function companionsOfLooks(
+  visits: readonly (Pick<Visit, 'id' | 'staffId' | 'cancelled' | 'clientId'> &
+    Partial<Pick<Visit, 'date' | 'earliestStart' | 'accompany'>>)[],
+  staffName: (id: string) => string,
+): Map<string, { short: string; text: string }> {
+  const full = visits.flatMap((v) =>
+    v.date !== undefined && v.earliestStart !== undefined
+      ? [{ ...v, date: v.date, earliestStart: v.earliestStart }]
+      : [],
+  );
+  if (!full.some((v) => v.accompany !== undefined)) return new Map();
+  const staffOf = new Map(full.map((v) => [v.id, v.staffId]));
+  return companionTexts(full, (id) => staffOf.get(id) ?? null, staffName);
 }
 
 /** 日の順番のカード・時間軸の帯の色：red＝要対応、pinned＝ピン、null＝ふつう */

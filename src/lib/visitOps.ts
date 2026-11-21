@@ -10,6 +10,7 @@ import { type Pattern, type Visit, visitSchema } from '../contracts/documents';
 import { addDays, hhmmToMinutes, weekday } from '../domain/time';
 import { findVisit, keepsOccurrence, putVisits, visitsOn } from '../patterns';
 import { formError, formErrorField } from './common';
+import { companionError, companionsToCancel } from './companion';
 import { settleDay } from './dayPlan';
 import { isDate } from './isDate';
 import {
@@ -116,6 +117,9 @@ export function applyVisitEdit(
   // 新しい訪問
   if (input.visitId === null) {
     if (input.staff === null) return fail('担当なしは選べません（「変えない」のままにしてください）');
+    // 同行（2人体制・研修同行。ADR-0120）は元の訪問と同じ日・同じ開始で、研修同行は同行する人を選ぶ
+    const ce = companionError(d, f, input.staff);
+    if (ce) return fail(ce.text, ce.field === 'earliestStart' ? 'earliestStart' : undefined);
     const nv: Visit = {
       ...f,
       id: ids.visit,
@@ -133,6 +137,9 @@ export function applyVisitEdit(
       data = r.data;
       failed = r.failed;
     }
+    // 同行を足すと組の訪問は開始（早）にそろう（問題で latest＝earliest）ので、元の訪問の組んだ開始（幅の中の 9:30 など）も
+    // その日の担当の並びのまま書き直す（組み直すまで「間に合わない」にしない。ADR-0120）。ピン・担当は変えない
+    if (nv.accompany) data = settleDates(data, [nv.date], today);
     return { ok: true, data, visitId: nv.id, dates: [nv.date], unchanged: false, failed };
   }
 
@@ -226,18 +233,22 @@ function firstPlainOccurrence(d: DemoData, v: Visit, p: Pattern, today: string):
   return undefined;
 }
 
-/** 取り消す（PRD D74。当日キャンセルなら cancelKind 'sameDay'）。繰り返しの回は「この回だけ変えた」。ピンは外す */
+/**
+ * 取り消す（PRD D74。当日キャンセルなら cancelKind 'sameDay'）。繰り返しの回は「この回だけ変えた」。ピンは外す。
+ * 元の訪問を取り消すと組に印の無い訪問が残らないなら、同じ組の同行の訪問（2人体制・研修同行）も一緒に取り消す（ADR-0120）
+ */
 export function cancelVisitOp(d: DemoData, visitId: string, sameDay: boolean): DemoData {
   const v = findVisit(d, visitId);
   if (!v || v.cancelled) return d;
-  const next: Visit = {
-    ...v,
+  const cancelled = (x: Visit): Visit => ({
+    ...x,
     cancelled: true,
     cancelKind: sameDay ? 'sameDay' : null,
     pinned: false,
-    pattern: v.pattern ? { ...v.pattern, edited: true } : null,
-  };
-  return { ...d, visits: putVisits(d.visits, [next]) };
+    pattern: x.pattern ? { ...x.pattern, edited: true } : null,
+  });
+  const partners = companionsToCancel(d, v).flatMap((id) => findVisit(d, id) ?? []);
+  return { ...d, visits: putVisits(d.visits, [v, ...partners].map(cancelled)) };
 }
 
 /** 取り消しをやめる。繰り返しの回は、ほかに変えた所が無ければ「この回だけ変えた」も外す。担当はそのまま（その日の並びに戻る） */

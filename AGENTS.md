@@ -39,7 +39,7 @@ src/
   components/  … 画面の部品と React のフック（use*）
   pages/       … 画面（components と lib を組み合わせる）
   app/         … 殻（App・ErrorBoundary・ルートと分けた画面 lazyPages）
-.github/workflows/deploy.yml … test → build → Cloudflare Workers（wrangler。ADR-0071）
+.github/workflows/deploy.yml … main は test → build → Cloudflare Workers（wrangler。ADR-0071）。PR に「preview」のラベルで確認用 URL、手動で本番を前の版に戻す（ADR-0115）
 .github/workflows/e2e.yml … 速い検査（lint・型・check:code・check:prd・vitest）は PR の push ごと。e2e（4つに分けて並列）は PR に「e2e」のラベルを付けたとき・手動・週1回の夜間、perf は手動・夜間だけ（ADR-0029・ADR-0104）。Playwright の版を上げるときはイメージの版も上げる
 e2e/ … @playwright/test の spec（scripts/e2e-*.cjs の段を test.step で回す。ADR-0041）
 scripts/ … e2e のスクリプト（e2e-*.cjs）と共通の部品（lib/）

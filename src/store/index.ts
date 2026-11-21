@@ -4,7 +4,7 @@
 export { BACKUP_LAST_KEY, BACKUP_REMINDED_KEY, backupMemory, type ExportKind, type LastExport } from './backup';
 export { feedbackStore } from './feedback';
 export { MAIL_SCHEDULE_KEY, type MailScheduleState, mailScheduleMemory } from './mailSchedule';
-export { columnsOpenKey, type DetailsScreen, detailsOpenKey, navOpenMemory } from './navOpen';
+export { columnsOpenKey, type DetailsScreen, detailsOpenKey, mapDockOpenKey, navOpenMemory } from './navOpen';
 export * from './persist';
 export { DemoDataProvider, type UpdateOptions, useDemoData } from './react';
 export { type ReloadFile, stashReloadFile, takeReloadFile } from './reloadResume';

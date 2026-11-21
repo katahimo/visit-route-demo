@@ -56,6 +56,24 @@ export function VisitFooter({
   );
 }
 
+/** 欄の上の知らせ：訪問が見つからない・狭い画面では新しい訪問を足さない */
+export function VisitPanelNotes({ gone, newBlocked }: { gone: boolean; newBlocked: boolean }) {
+  return (
+    <>
+      {gone && (
+        <p className="warn-text" data-testid="vp-gone">
+          この訪問は見つかりません（消されたか、繰り返しを直して作り直されました）。
+        </p>
+      )}
+      {newBlocked && (
+        <p className="sub" data-testid="vp-narrow-new">
+          訪問の追加はパソコン・タブレットの幅で行います（スマホでは見る・取り消す・担当を替えるまで）。
+        </p>
+      )}
+    </>
+  );
+}
+
 /** 担当の欄の中身（印・名前・ピン・いつもの担当。無ければ「担当なし」） */
 function OwnerFact({ info, ownerStaff }: { info: VisitInfo; ownerStaff: Staff | undefined }) {
   if (!ownerStaff) return <span className="sub">担当なし</span>;

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { Rule } from '../contracts/rules';
 import { createDemoData } from '../seed';
 import {
+  addableTypes,
+  isRemovableRule,
   isSavedHard,
   parseSeed,
   RULE_NAME_MAX,
@@ -37,6 +39,13 @@ describe('条件の名前・削除', () => {
     const d = removeRule(d0, r0.id);
     expect(d.rules).toHaveLength(d0.rules.length - 1);
     expect(d.rules.some((r) => r.id === r0.id)).toBe(false);
+  });
+  it('組み込みの条件（続く訪問）は消さず、足す型にも出さない（ADR-0116）', () => {
+    const d0 = base();
+    const builtin = d0.rules.find((r) => r.type === 'sameClient')!;
+    expect(isRemovableRule(builtin)).toBe(false);
+    expect(removeRule(d0, builtin.id).rules).toEqual(d0.rules);
+    expect(addableTypes(['wait', 'sameClient', 'homeNear'])).toEqual(['wait', 'homeNear']);
   });
   it('打った名前は前後の空白を落として上限まで。空なら型の名前に戻す', () => {
     expect(ruleNameOf('  希望 ', '型')).toBe('希望');
