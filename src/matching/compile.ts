@@ -2,12 +2,22 @@
 import type { DemoData } from '../contracts/data';
 import type { Client, LatLng, Pattern, Place, Staff, VisitType } from '../contracts/documents';
 import type { Problem, ProblemStaff, ProblemVisit, Reason } from '../contracts/problem';
-import { type Condition, type Item, POINTS_PER_WEIGHT, type Rule, type Traits } from '../contracts/rules';
+import {
+  type Condition,
+  HOME_NEAR_FROM,
+  HOME_NEAR_PER_MINUTE,
+  type Item,
+  POINTS_PER_WEIGHT,
+  type Rule,
+  type Traits,
+} from '../contracts/rules';
+import { INQUIRY_VISIT_ID } from '../contracts/vacancy';
 import { afterLastDay, availabilityOf, withoutAbsences } from '../domain/availability';
 import { leaveOn } from '../domain/leaves';
 import { clientOn } from '../domain/place2';
 import { hhmmToMinutes } from '../domain/time';
 import { visitsOn } from '../patterns';
+import { chainOf } from './chain';
 import { conditionText, matches } from './conditions';
 import { roadModelOf } from './roads';
 import { EPS, fitStart } from './timing';
@@ -191,9 +201,11 @@ function pushRuleReasons(
     usualStaffId: string | null;
     /** その日に働く担当の ID */
     working: Set<string>;
+    /** 夕方（開始（早）が HOME_NEAR_FROM 以降）の訪問なら、訪問から担当の自宅までの移動（分）。夕方でなければ null */
+    homeMinutes: number | null;
   },
 ): void {
-  const { s, client, look, terms, level, usualStaffId, working } = a;
+  const { s, client, look, terms, level, usualStaffId, working, homeMinutes } = a;
   const w = r.weight * POINTS_PER_WEIGHT;
   const ng = r.hard ? INF : w;
   switch (r.type) {
@@ -262,9 +274,19 @@ function pushRuleReasons(
       else out.push({ ruleId: r.id, label: 'いつもの担当でない', points: r.hard ? INF : w });
       break;
     }
+    case 'homeNear':
+      // 夕方は自宅に近い人（ADR-0116）：訪問から自宅までの移動1分＝重み×HOME_NEAR_PER_MINUTE点
+      if (homeMinutes !== null)
+        out.push({
+          ruleId: r.id,
+          label: `夕方：自宅まで${Math.round(homeMinutes)}分`,
+          points: r.weight * HOME_NEAR_PER_MINUTE * homeMinutes,
+        });
+      break;
     case 'balance':
     case 'wait':
-      break; // 割当費用に入らない
+    case 'sameClient':
+      break; // 割当費用に入らない（続く訪問は Problem.chain。ADR-0116）
     default: {
       // 条件の種類を足したら、ここが型の誤りになる（割当費用に入れるか、上の case に足す）
       const _exhaustive: never = r.type;
@@ -284,6 +306,8 @@ type PairContext = {
   staff: ProblemStaff[];
   daySlots: ReturnType<typeof slotsOf>[];
   places: (LatLng | null)[];
+  /** 地点どうしの移動（分）。夕方は自宅に近い人（homeNear）に使う */
+  travel: number[][];
   /** その日の問題にいる担当の ID */
   staffIds: Set<string>;
   /** その日に働く（稼働時間帯がある）担当の ID（自宅の位置が未登録でも働く。ADR-0093） */
@@ -368,7 +392,8 @@ function pairReasons(ctx: PairContext, v: VisitSide, i: number): Reason[] {
         : { ruleId: ALLOWED_STAFF_RULE_ID, label: `担当を限る：${limit.names} ✗`, points: INF },
     );
   }
-  for (const r of rules) pushRuleReasons(out, r, { s, client, look, terms, level, usualStaffId, working });
+  const homeMinutes = pv.earliest >= HOME_NEAR_FROM ? ctx.travel[S + j]![i]! : null;
+  for (const r of rules) pushRuleReasons(out, r, { s, client, look, terms, level, usualStaffId, working, homeMinutes });
   return out;
 }
 
@@ -447,6 +472,8 @@ export function compile(data: CompileInput, date: string, pins?: Record<string, 
   const features = data.org.features;
   const compatOn = features.compat !== false;
   const limitOf = staffLimitsOf(clients, staffDocs, features.allowedStaff !== false);
+  // 開始時刻をずらさない（機能 shiftStart が切。ADR-0116）：時間に幅のある訪問も開始（早）だけ。空き状況の仮の訪問は時刻を探すので除く
+  const fixedStart = features.shiftStart === false;
 
   const S = staffDocs.length;
   const daySlots = staffDocs.map((s) => slotsOf(data, s, date));
@@ -463,7 +490,8 @@ export function compile(data: CompileInput, date: string, pins?: Record<string, 
       clientId: v.clientId,
       point: S + j,
       earliest,
-      latest: v.windowKind === 'fixed' ? earliest : hhmmToMinutes(v.latestStart),
+      latest:
+        v.windowKind === 'fixed' || (fixedStart && v.id !== INQUIRY_VISIT_ID) ? earliest : hhmmToMinutes(v.latestStart),
       duration: v.durationMinutes,
     };
     // 遠方（出張。ADR-0096）：その担当のその日はこの〈利用者さん〉の訪問だけ（matching/timing が見る）
@@ -499,6 +527,7 @@ export function compile(data: CompileInput, date: string, pins?: Record<string, 
     staff,
     daySlots,
     places,
+    travel,
     staffIds: new Set(staff.map((s) => s.id)),
     working,
     firstCompat: rules.find((r) => r.type === 'compatibility')?.id ?? 'compatibility',
@@ -548,6 +577,7 @@ export function compile(data: CompileInput, date: string, pins?: Record<string, 
   // --- 負担の均等：可になる訪問の件数を稼働分に比例して配る ---
   const balance = balanceOf(rules, staff, working, visits.length - infeasible.length);
   const wWait = rules.filter((r) => r.type === 'wait').reduce((a, r) => a + r.weight, 0);
+  const chain = chainOf(visits, rules);
 
   return {
     date,
@@ -561,5 +591,7 @@ export function compile(data: CompileInput, date: string, pins?: Record<string, 
     waitPerMinute: wWait * 0.1,
     balance,
     infeasible,
+    ...(chain && { chain }),
+    ...(fixedStart && { fixedStart }),
   };
 }

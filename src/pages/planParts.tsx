@@ -12,7 +12,7 @@ import type { Terms } from '../contracts/documents';
 import type { HundredPart, PlanScore, Problem, RuleAchievement, ScoreScale, VisitExplain } from '../contracts/problem';
 import type { Rule } from '../contracts/rules';
 import { jstDate, minutesToHhmm } from '../domain/time';
-import { BALANCE_RULE_KEY, explain, toHundred } from '../evaluate';
+import { BALANCE_RULE_KEY, CHAIN_RULE_KEY, explain, toHundred } from '../evaluate';
 import { attempt, deltaText, pointsText, r0, r1, ruleTypeLabel } from '../lib/common';
 import { nextUnconfirmed } from '../lib/confirmDay';
 import { mdText } from '../lib/dateText';
@@ -309,11 +309,12 @@ function achievementText(a: RuleAchievement): string {
   return `${a.met}/${a.total}${a.unit === 'staff' ? '人' : '件'}`;
 }
 
-/** 条件の名前（ID → 条件の名前。負担の均等のキーは「負担の均等」） */
+/** 条件の名前（ID → 条件の名前。負担の均等・続く訪問のキーは型の名前） */
 function achievementLabel(ruleId: string, rules: Rule[], terms: Terms): string {
   const r = rules.find((x) => x.id === ruleId);
   if (r) return r.label;
   if (ruleId === BALANCE_RULE_KEY) return ruleTypeLabel('balance', terms);
+  if (ruleId === CHAIN_RULE_KEY) return ruleTypeLabel('sameClient', terms);
   if (ruleId === 'compatibility') return ruleTypeLabel('compatibility', terms);
   return ruleId;
 }

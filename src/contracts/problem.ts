@@ -66,6 +66,29 @@ export type Problem = {
    * 無ければ今までと同じ。solver の費用（matching.routeCost）にだけ足し、evaluate の採点（score・点数）には入れない
    */
   stay?: ProblemStay;
+  /**
+   * 続く訪問（同じ〈利用者さん〉の同じ日の続く訪問を同じ人に。条件 sameClient。ADR-0116）。無い・null は無効。
+   * 費用は「同じ人が続けて回らない組」1つに perPair。solver（matching.routeCost・dropPointsOf）と evaluate（score）で同じ点
+   */
+  chain?: ProblemChain | null;
+  /**
+   * 開始時刻をずらさない（機能 shiftStart を切った。ADR-0116）：時間に幅のある訪問も latest＝earliest にしてある。
+   * 欠勤の振り直しの候補（reassign.candidatesFor）は「N分ずらせば入る」を探さない。無い＝false
+   */
+  fixedStart?: boolean;
+};
+
+/**
+ * 続く訪問の組（ADR-0116）。next[v]＝訪問 v に続く同じ〈利用者さん〉の訪問の添字（無ければ -1。v の終わり（earliest＋duration）から
+ * 次の earliest まで 0〜SAME_CLIENT_GAP_MAX 分で、いちばん早く始まるもの）。組は (v, next[v])。
+ * 同じ人の列で v のすぐあとに next[v] があれば「続けて回る」（点0）、そうでなければ perPair 点。
+ * 列ごとに足せるよう、組の点を半分ずつ両方の訪問に持たせる（列にいる訪問は、続けて回らない組ごとに半分。担当なしの訪問は組ごとに半分）
+ */
+export type ProblemChain = {
+  next: number[];
+  /** 組の数ごとの訪問の重なり（v が組に入っている数。next と前から指される数の和） */
+  degree: number[];
+  perPair: number;
 };
 
 /**
@@ -173,6 +196,8 @@ export type PlanScore = {
   /** 割当費用の合計（条件の点） */
   assignPoints: number;
   balancePoints: number;
+  /** 続く訪問を同じ人が続けて回らない組の点（ADR-0116。無効なら0） */
+  chainPoints: number;
   dropped: number;
   /** Rule.id → 達成（points<0 または条件を満たした件数）・違反（points>0 の件数）・点 */
   perRule: Record<string, { hits: number; misses: number; points: number }>;
@@ -217,7 +242,7 @@ export type ScoreScale = {
 
 /** 点数の減点の内訳（費用の成分ごと。points は減点の大きさ＝成分の超過 ÷ 訪問の件数、合計はおおむね 100−点数） */
 export type HundredPart = {
-  key: 'travel' | 'wait' | 'assign' | 'balance' | 'dropped';
+  key: 'travel' | 'wait' | 'assign' | 'balance' | 'chain' | 'dropped';
   label: string;
   points: number;
 };

@@ -53,7 +53,7 @@ const belongs = (href: string) => featureOfHref(href) !== null || BASE_PATHS.has
 
 /** ADR-0028 の「ひな形」の表（入れる機能。基本に毎月の第N・決まりごとを足したのは ADR-0086、休み・退職を足したのは ADR-0091。メール・Excel はいつも入で表に無い。ADR-0106） */
 const TABLE: Record<TemplateId, FeatureId[]> = {
-  oneOff: ['clientLeave', 'sudden', 'vacancy', 'compat', 'offboard', 'mapsLink', 'geocode'],
+  oneOff: ['clientLeave', 'sudden', 'vacancy', 'compat', 'offboard', 'mapsLink', 'geocode', 'shiftStart'],
   basic: [
     'patterns',
     'patternMonthly',
@@ -65,6 +65,7 @@ const TABLE: Record<TemplateId, FeatureId[]> = {
     'offboard',
     'mapsLink',
     'geocode',
+    'shiftStart',
   ],
   laborContract: [
     'patterns',
@@ -80,6 +81,7 @@ const TABLE: Record<TemplateId, FeatureId[]> = {
     'fare',
     'mapsLink',
     'geocode',
+    'shiftStart',
   ],
   monthlyField: [
     'patterns',
@@ -96,12 +98,13 @@ const TABLE: Record<TemplateId, FeatureId[]> = {
     'offboard',
     'mapsLink',
     'geocode',
+    'shiftStart',
   ],
   all: [...FEATURE_IDS],
 };
 
 describe('機能の表（ADR-0028 の機能の一覧）', () => {
-  it('20の機能が契約の ID と同じ順に1つずつ。グループは決まった7つのどれか（管理者設定のスイッチの並び。ADR-0092）', () => {
+  it('21の機能が契約の ID と同じ順に1つずつ。グループは決まった7つのどれか（管理者設定のスイッチの並び。ADR-0092）', () => {
     expect(FEATURE_GROUPS).toEqual([
       '予定の入れ方',
       '当日・問い合わせ',
@@ -117,7 +120,7 @@ describe('機能の表（ADR-0028 の機能の一覧）', () => {
     expect(featureDef('compare').group).toBe(featureDef('expert').group);
     expect(featureDef('vacancy').group).toBe('当日・問い合わせ');
     expect(FEATURES.map((f) => f.id)).toEqual([...FEATURE_IDS]);
-    expect(FEATURES).toHaveLength(20);
+    expect(FEATURES).toHaveLength(21);
     for (const f of FEATURES) {
       expect(FEATURE_GROUPS).toContain(f.group);
       expect(f.label).not.toBe('');
@@ -262,7 +265,7 @@ describe('ひな形（ADR-0028 の表）', () => {
     expect([...groupsOf('laborContract')]).toEqual(['勤務・契約']);
     expect(groupsOf('monthlyField').size).toBeLessThanOrEqual(4);
   });
-  it.each(TEMPLATE_IDS)('%s を適用すると表どおりの入り切り（全20の ID を明示）で、matchTemplate がそれを返す', (id) => {
+  it.each(TEMPLATE_IDS)('%s を適用すると表どおりの入り切り（全21の ID を明示）で、matchTemplate がそれを返す', (id) => {
     const f = applyTemplate(id);
     expect(Object.keys(f).sort()).toEqual([...FEATURE_IDS].sort());
     const on = FEATURE_IDS.filter((x) => f[x]);

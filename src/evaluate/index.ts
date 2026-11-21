@@ -17,6 +17,7 @@ import {
   ALLOWED_STAFF_RULE_ID,
   balanceOff,
   balancePoints,
+  chainScore,
   EPS,
   FAR_TRIP_LABEL,
   FAR_TRIP_RULE_ID,
@@ -69,6 +70,8 @@ function notAllowedLabel(reasons: Reason[]): string {
 
 /** perRule の負担の均等のキー（Problem に条件のIDがないので型の名前。初期データの条件のIDと同じ） */
 export const BALANCE_RULE_KEY = 'balance';
+/** perRule・達成の続く訪問のキー（型の名前。組み込みの条件のIDと同じ。ADR-0116） */
+export const CHAIN_RULE_KEY = 'sameClient';
 
 const TIME_LABEL = { time: '時間の約束に間に合わない', slot: '働ける時間に収まらない' } as const;
 
@@ -140,13 +143,18 @@ function scorePlaced(problem: Problem, p: Placed): PlanScore {
     }
     perRule[BALANCE_RULE_KEY] = e;
   }
+  // 続く訪問（ADR-0116）：達成＝同じ人が続けて回る組、違反＝そうでない組
+  const chain = chainScore(problem, p.seqs);
+  if (chain.pairs > 0)
+    perRule[CHAIN_RULE_KEY] = { hits: chain.kept, misses: chain.pairs - chain.kept, points: chain.points };
   return {
-    total: totalPoints(problem, { travel, wait, assign, balance, dropped }),
+    total: totalPoints(problem, { travel, wait, assign, balance, chain: chain.points, dropped }),
     travelMinutes: travel,
     waitMinutes: wait,
     meters,
     assignPoints: assign,
     balancePoints: balance,
+    chainPoints: chain.points,
     dropped,
     perRule,
     hardViolations,
@@ -335,7 +343,7 @@ function canPrecede(problem: Problem, u: number, v: number): boolean {
  * - 移動：ルートの移動＝各訪問に来る移動の和＋帰り＝各訪問から出る移動の和＋行き。よって
  *   max(Σ 来る移動の最小, Σ 出る移動の最小) 以上。来る元＝担当できる人の自宅か前に置けうる訪問、出る先＝担当できる人の自宅か後に置けうる訪問
  * - 1件ごとに（割当＋移動）の下限が落とした訪問の点を超えるなら、落とした訪問の点にする（落とす案もあるので）
- * - 待ち・負担の均等は0。担当の候補がいない訪問は落とした訪問の点
+ * - 待ち・負担の均等・続く訪問（ADR-0116）は0。担当の候補がいない訪問は落とした訪問の点
  * visits＝訪問の件数（点数は 1件あたりの超過で減点する）
  */
 export function normalize(problem: Problem): ScoreScale {
@@ -378,6 +386,7 @@ export function normalize(problem: Problem): ScoreScale {
       wait: 0,
       assign: lowerAssign,
       balance: 0,
+      chain: 0,
       dropped: lowerDropped,
     }),
     visits: nV,
@@ -435,6 +444,7 @@ export function hundredBreakdown(sc: PlanScore, scale: ScoreScale, problem: Prob
     { key: 'wait', label: '空き時間（待ち）', points: sc.waitMinutes * problem.waitPerMinute * k },
     { key: 'assign', label: '担当の条件', points: (sc.assignPoints - scale.lowerAssign) * k },
     { key: 'balance', label: '負担の均等', points: sc.balancePoints * k },
+    { key: 'chain', label: '続く訪問が別の人', points: sc.chainPoints * k },
     { key: 'dropped', label: '入らない訪問', points: (sc.dropped - scale.lowerDropped) * DROP_POINTS * k },
   ];
   return parts.sort((a, b) => b.points - a.points);
@@ -446,7 +456,8 @@ export function hundredBreakdown(sc: PlanScore, scale: ScoreScale, problem: Prob
  * 条件（Rule.id）ごとの達成の件数。割当済みの訪問のうち、その条件の判定（理由）がある訪問を total、
  * その条件の理由がすべて点0以下（満たした・加点）の訪問を met にする。相性は ◎・○・△・× の件数も数える。
  * 負担の均等（BALANCE_RULE_KEY）は、稼働のある人か訪問のある人のうち、目安の帯に収まった人数（unit 'staff'）。
- * 並びは理由に初めて出た順（problem の訪問・担当の順。決定的）、負担の均等は最後
+ * 続く訪問（CHAIN_RULE_KEY。ADR-0116）は組の数のうち、同じ人が続けて回る組の数。
+ * 並びは理由に初めて出た順（problem の訪問・担当の順。決定的）、負担の均等・続く訪問は最後
  */
 /** 条件ごとの達成に数えない理由の ruleId（可否・固定・訪問の種類・担当を限る（ADR-0014）。条件 rules の ID ではない） */
 const INTERNAL_RULE_IDS = new Set(['noPlace', 'slot', 'time', PIN_RULE_ID, VISIT_TYPE_RULE_ID, ALLOWED_STAFF_RULE_ID]);
@@ -490,6 +501,10 @@ export function achievements(problem: Problem, routes: Record<string, string[]>)
     }
     out.push(e);
   }
+  // 続く訪問（ADR-0116）：組の数と、同じ人が続けて回る組の数
+  const chain = chainScore(problem, p.seqs);
+  if (chain.pairs > 0)
+    out.push({ ruleId: CHAIN_RULE_KEY, unit: 'visit', total: chain.pairs, met: chain.kept, compat: null });
   return out;
 }
 

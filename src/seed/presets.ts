@@ -23,6 +23,8 @@ export const INITIAL_PRESETS: readonly Preset[] = [
       continuity: { weight: 2, hard: false },
       balance: { weight: 3, hard: false },
       wait: { weight: 3, hard: false },
+      sameClient: { weight: 2, hard: false },
+      homeNear: { weight: 2, hard: false },
     },
   },
   {
@@ -38,6 +40,8 @@ export const INITIAL_PRESETS: readonly Preset[] = [
       continuity: { weight: 0.5, hard: false },
       balance: { weight: 1, hard: false },
       wait: { weight: 3, hard: false },
+      sameClient: { weight: 2, hard: false },
+      homeNear: { weight: 2, hard: false },
     },
   },
   {
@@ -53,6 +57,8 @@ export const INITIAL_PRESETS: readonly Preset[] = [
       continuity: { weight: 4, hard: false },
       balance: { weight: 3, hard: false },
       wait: { weight: 2, hard: false },
+      sameClient: { weight: 3, hard: false },
+      homeNear: { weight: 2, hard: false },
     },
   },
 ];

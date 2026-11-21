@@ -44,7 +44,7 @@ export type ReassignCandidate = {
   addedTravel: number | null;
   /** fits のときの増える費用 */
   addedCost: number | null;
-  /** fits でないとき、時間の約束を何分ずらせば strict で入るか（正＝遅く。5分刻み・前後120分まで。無ければ null） */
+  /** fits でないとき、時間の約束を何分ずらせば strict で入るか（正＝遅く。5分刻み・前後120分まで。無ければ null。Problem.fixedStart（開始時刻をずらさない。ADR-0116）なら探さず null） */
   shiftMinutes: number | null;
   /** 件数の上限（必須の負担の均等）を超える */
   overCap: boolean;

@@ -45,6 +45,8 @@ export type ScoreReasonOptions = {
 
 /** 負担の均等の achievements のキー（evaluate の BALANCE_RULE_KEY と同じ値。evaluate を読み込まずに済むよう写す） */
 const BALANCE_KEY = 'balance';
+/** 続く訪問の perRule のキー（evaluate の CHAIN_RULE_KEY と同じ値。ADR-0116） */
+const CHAIN_KEY = 'sameClient';
 
 /**
  * 「担当の条件」の減点のうち、いちばん効いている条件を一言にする：
@@ -96,7 +98,7 @@ function assignText(
  * 3. 減点の合計（0 より大きい成分の和）が REASON_MIN_POINTS 未満なら null（ほぼ理想）
  * 4. それ以外は減点の内訳 parts（hundredBreakdown）のいちばん大きい成分：移動＝「移動が長め（N分）」、
  *    空き時間（待ち）＝「空き時間（待ち）が長め（N分）」、担当の条件＝assignText（分からなければ「担当の条件に合わない訪問がある」）、
- *    負担の均等＝「件数の偏り（目安から外れた人 N人）」
+ *    負担の均等＝「件数の偏り（目安から外れた人 N人）」、続く訪問（ADR-0116）＝「続く訪問が別の人（N組）」
  * 次の一手（nextStep。PRD D229）：移動＝「移動を短く」で組む、入らない訪問＝受けられる人を見る、相性＝相性の表を開く
  */
 export function scoreReason(
@@ -142,6 +144,10 @@ export function scoreReason(
       const b = (opts.achievements ?? []).find((a) => a.ruleId === BALANCE_KEY);
       const out = b ? b.total - b.met : 0;
       return at(out > 0 ? `件数の偏り（目安から外れた人 ${out}人）` : '件数の偏り');
+    }
+    case 'chain': {
+      const c = sc.perRule[CHAIN_KEY];
+      return at(c && c.misses > 0 ? `続く訪問が別の人（${c.misses}組）` : '続く訪問が別の人');
     }
   }
 }
