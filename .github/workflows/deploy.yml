@@ -117,12 +117,20 @@ jobs:
           alias_url=$(printf '%s\n' "$OUT" | grep -i 'alias' | grep -oE 'https://[^ ]+\.workers\.dev' | head -n1)
           version_url=$(printf '%s\n' "$OUT" | grep -oE 'https://[^ ]+\.workers\.dev' | head -n1)
           url=${alias_url:-$version_url}
-          if [ -z "$url" ]; then
-            echo "::error::確認用 URL が出力に見つからない。wrangler.jsonc の preview_urls と、アカウントの workers.dev サブドメインを確かめる"
-            printf '%s\n' "$OUT"
-            exit 1
-          fi
+          version_id=$(printf '%s\n' "$OUT" | grep -oE 'Version ID: [0-9a-f-]+' | head -n1 | cut -d' ' -f3)
+          echo "version=$version_id" >> "$GITHUB_OUTPUT"
           echo "url=$url" >> "$GITHUB_OUTPUT"
+          if [ -z "$url" ]; then
+            # 版は上がったが URL が出ない：preview_urls の入った版がまだ本番に出ていない・workers.dev サブドメインが無いとき。
+            # 本番は変わっていないので失敗にせず、知らせだけ出す（ADR-0115）
+            echo "::warning::確認用 URL が出力に無い。preview_urls: true の入った版を一度本番に出すと使える（アカウントの workers.dev サブドメインも要る）"
+            {
+              echo "### 確認用 URL は出なかった"
+              echo ""
+              echo "版（${version_id:-不明}）は上げたが、本番には出していない。preview_urls: true の入った版を一度本番に出したあとから URL が出る。"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
           {
             echo "### 確認用 URL"
             echo ""
@@ -135,16 +143,25 @@ jobs:
         uses: actions/github-script@v7
         env:
           URL: ${{ steps.url.outputs.url }}
+          VERSION: ${{ steps.url.outputs.version }}
           SHA: ${{ github.event.pull_request.head.sha }}
         with:
           script: |
             const marker = '<!-- preview-url -->';
-            const body = [
-              marker,
-              `確認用 URL：${process.env.URL}`,
-              '',
-              `版：${process.env.SHA.slice(0, 7)}。本番とはデータ（ブラウザの localStorage）が別。本番のデータで試すときは、本番で控えを書き出してここで読み込む。`,
-            ].join('\n');
+            const sha = process.env.SHA.slice(0, 7);
+            const body = process.env.URL
+              ? [
+                  marker,
+                  `確認用 URL：${process.env.URL}`,
+                  '',
+                  `版：${sha}。本番とはデータ（ブラウザの localStorage）が別。本番のデータで試すときは、本番で控えを書き出してここで読み込む。`,
+                ].join('\n')
+              : [
+                  marker,
+                  `確認用 URL は出なかった（版 ${sha}・Worker の版 ${process.env.VERSION || '不明'} は上げたが本番には出していない）。`,
+                  '',
+                  '`preview_urls: true` の入った版を一度本番に出したあとから URL が出る（ADR-0115）。',
+                ].join('\n');
             const { owner, repo } = context.repo;
             const issue_number = context.payload.pull_request.number;
             const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number });
