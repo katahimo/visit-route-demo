@@ -1117,10 +1117,27 @@ async function expertOn(page) {
       const anc = [];
       for (let e = el; e; e = e.parentElement) {
         const c = getComputedStyle(e);
-        if (c.display === 'none' || c.visibility !== 'visible' || c.opacity === '0' || c.transform !== 'none' || c.animationName !== 'none')
-          anc.push(`${e.tagName}.${e.className}:${c.display}/${c.visibility}/${c.opacity}/${c.transform}/${c.animationName}`);
+        if (
+          c.display === 'none' ||
+          c.visibility !== 'visible' ||
+          c.opacity === '0' ||
+          c.transform !== 'none' ||
+          c.animationName !== 'none'
+        )
+          anc.push(
+            `${e.tagName}.${e.className}:${c.display}/${c.visibility}/${c.opacity}/${c.transform}/${c.animationName}`,
+          );
       }
-      return JSON.stringify({ r: [r.x, r.y, r.width, r.height], vw: innerWidth, vh: innerHeight, sy: scrollY, d: cs.display, v: cs.visibility, top: top ? top.outerHTML.slice(0, 200) : null, anc });
+      return JSON.stringify({
+        r: [r.x, r.y, r.width, r.height],
+        vw: innerWidth,
+        vh: innerHeight,
+        sy: scrollY,
+        d: cs.display,
+        v: cs.visibility,
+        top: top ? top.outerHTML.slice(0, 200) : null,
+        anc,
+      });
     });
     console.log(`[month-more] ${why}`);
     check(true, 'month-more の様子', why);
