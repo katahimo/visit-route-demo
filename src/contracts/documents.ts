@@ -257,13 +257,15 @@ export type Staff = z.infer<typeof staffSchema>;
 export const CLIENT_STAGES = ['inquiry', 'meeting', 'contract', 'active', 'ended'] as const;
 export type ClientStage = (typeof CLIENT_STAGES)[number];
 
-/** 紹介元（PRD D73）：名前・連絡先・メモ。呼び方は中立の「紹介元」（役割の名前を直書きしない） */
+/** 紹介元（PRD D73）：名前・相談員・連絡先・メモ。呼び方は中立の「紹介元」（役割の名前を直書きしない） */
 export const referrerSchema = z.object({
   name: z.string().max(50),
   contact: z.string().max(100),
   note: z.string().max(200),
   /** メールアドレス（任意。PRD D91。ADR-0017）。空き枠の案内文を BCC で送る宛先。無い古いデータは '' */
   email: emailSchema.default(''),
+  /** 紹介元の相談員（担当者の名前。任意。PRD D461。ADR-0117）。無い（古いデータ・空）は省く */
+  person: z.string().max(50).optional(),
 });
 export type Referrer = z.infer<typeof referrerSchema>;
 export const EMPTY_REFERRER: Referrer = { name: '', contact: '', note: '', email: '' };

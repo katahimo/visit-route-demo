@@ -190,6 +190,8 @@ export function readClients(ctx: BookCtx, clientSheet: Sheet): Client[] {
     };
     // 紹介元のメールアドレス（ADR-0017）：列が無い古いブック・空は ''
     const referrerEmail = readEmail(r, CLIENT_STAGE_COLS.referrerEmail);
+    // 紹介元の相談員（ADR-0117）：列が無い古いブック・空は省く
+    const referrerPerson = r.optional(CLIENT_STAGE_COLS.referrerPerson, 50);
     const p = readPerson(r, cols);
     if (
       referrerEmail !== null &&
@@ -220,7 +222,7 @@ export function readClients(ctx: BookCtx, clientSheet: Sheet): Client[] {
         cautionNote,
         allowedStaffIds: allowed.ids,
         stage,
-        referrer: { ...referrer, email: referrerEmail ?? '' },
+        referrer: { ...referrer, email: referrerEmail ?? '', ...(referrerPerson ? { person: referrerPerson } : {}) },
       });
     }
   }

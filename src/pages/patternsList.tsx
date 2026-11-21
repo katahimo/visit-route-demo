@@ -6,7 +6,14 @@ import { WithIcon } from '../components/ui';
 import { TypeDot } from '../components/visitType';
 import type { Pattern, VisitType } from '../contracts/documents';
 import { mdText } from '../lib/dateText';
-import { patternWhenText, periodText, splitEndedPatterns, typeOf, usualStartsLabel } from '../lib/patternText';
+import {
+  patternPhaseText,
+  patternWhenText,
+  periodText,
+  splitEndedPatterns,
+  typeOf,
+  usualStartsLabel,
+} from '../lib/patternText';
 import type { PatternEnding } from './usePatternsFlow';
 
 /** 終わらせる欄の値と押したとき（errorState・error は FieldError の token と文） */
@@ -72,12 +79,15 @@ function PatternPick({
   pattern: p,
   type: t,
   usual,
+  phase,
   selected,
   onSelect,
 }: {
   pattern: Pattern;
   type: VisitType | null;
   usual: string | null;
+  /** 今の一覧の札（「11/23から」「11/22まで」。patternPhaseText） */
+  phase: string | null;
   selected: boolean;
   onSelect?: (id: string | null) => void;
 }) {
@@ -99,6 +109,11 @@ function PatternPick({
         <span className="chip">種類なし</span>
       )}
       <strong>{patternWhenText(p)}</strong>
+      {phase && (
+        <span className="chip pattern-phase" data-testid="pattern-phase">
+          {phase}
+        </span>
+      )}
       <span className="sub">
         {p.durationMinutes}分・{periodText(p)}
         {usual ? `・いつもの担当 ${usual}` : ''}
@@ -145,6 +160,7 @@ export function PatternsList({
       pattern={p}
       type={typeOf(visitTypes, p.typeId)}
       usual={staffName(p.usualStaffId)}
+      phase={patternPhaseText(p, patterns, today)}
       selected={selected === p.id}
       onSelect={onSelect}
     />
@@ -194,6 +210,9 @@ export function PatternsList({
       {ended.length > 0 && (
         <details className="pattern-ended" data-testid="pattern-ended">
           <summary>終わった繰り返し（{ended.length}件）</summary>
+          <p className="sub">
+            直す前の中身・終わらせた繰り返しです。今日より前の回の記録（予定・伝えた内容）として残し、今日からの予定には出ません。
+          </p>
           <ul className="pattern-list">
             {ended.map((p) => (
               <li

@@ -100,6 +100,8 @@ export const CLIENT_PLACE2_COLS = {
 export const CLIENT_STAGE_COLS = {
   stage: '段階',
   referrer: '紹介元',
+  /** 紹介元の相談員（PRD D461。ADR-0117）。古いブックには無い（無ければ空） */
+  referrerPerson: '紹介元の相談員',
   referrerContact: '紹介元の連絡先',
   referrerNote: '紹介元のメモ',
   /** 紹介元のメールアドレス（PRD D91。ADR-0017）。古いブックには無い（無ければ空） */

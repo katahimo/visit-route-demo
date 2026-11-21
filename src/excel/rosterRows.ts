@@ -2,7 +2,14 @@
 // シートを開いて列を確かめ、行を今のデータの人と突き合わせ、ブックにある列だけ読んだ値に替えた人を作る
 import type ExcelJS from 'exceljs';
 import type { DemoData, ImportError, RosterKind } from '../contracts/data';
-import { type Client, type ClientStage, type Staff, stageOfLegacy, type Terms } from '../contracts/documents';
+import {
+  type Client,
+  type ClientStage,
+  EMPTY_REFERRER,
+  type Staff,
+  stageOfLegacy,
+  type Terms,
+} from '../contracts/documents';
 import type { Condition, Traits } from '../contracts/rules';
 import { STAGE_LABELS, stageFlags } from '../lib/clientStage';
 import { withTravel } from '../lib/clientTravel';
@@ -463,6 +470,9 @@ export function readClientRows(ctx: RosterCtx, rows: Row[], match: (r: Row) => M
       () => readEmail(r, CLIENT_STAGE_COLS.referrerEmail) ?? '',
       cur?.referrer.email ?? '',
     );
+    // 紹介元の相談員（ADR-0117）：列が無ければ今のまま。空は省く（古いデータと同じ形にし、変更とみなさない）
+    const { person: _curPerson, ...curReferrer } = cur?.referrer ?? EMPTY_REFERRER;
+    const referrerPerson = text(CLIENT_STAGE_COLS.referrerPerson, 50, cur?.referrer.person);
     const p = mergePerson(r, ctx.cols, cur);
     const person: Client = {
       ...(cur ?? {}),
@@ -483,11 +493,12 @@ export function readClientRows(ctx: RosterCtx, rows: Row[], match: (r: Row) => M
       // active・tentative は段階に合わせる（store の repair と同じ。比べるときに食い違いを変更とみなさない）
       ...stageFlags(stage, tentative),
       referrer: {
-        ...(cur?.referrer ?? {}),
+        ...curReferrer,
         name: text(CLIENT_STAGE_COLS.referrer, 50, cur?.referrer.name),
         contact: text(CLIENT_STAGE_COLS.referrerContact, 100, cur?.referrer.contact),
         note: text(CLIENT_STAGE_COLS.referrerNote, 200, cur?.referrer.note),
         email: referrerEmail,
+        ...(referrerPerson ? { person: referrerPerson } : {}),
       },
     };
     if (place2 === undefined) delete person.place2;

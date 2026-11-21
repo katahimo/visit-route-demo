@@ -152,7 +152,7 @@ export const FEATURES: readonly FeatureDef[] = [
   {
     id: 'clientStage',
     label: '段階・紹介元',
-    description: '相談受付 → 契約 → 利用中の段階と、紹介元を記録します',
+    description: '相談受付 → 契約 → 利用中の段階と、紹介元（相談員）を記録します',
     group: '勤務・契約',
     paths: [],
     hides: '段階の5つの選択・紹介元の欄（切ると「利用中／終了」の2つだけ選べる。段階のデータは残す）',
@@ -214,6 +214,23 @@ export const FEATURES: readonly FeatureDef[] = [
     group: '入力の補助',
     paths: [],
     hides: '検索のボタン・まとめて緯度・経度を入れる（地図のクリックで入れるのは残る）',
+  },
+  {
+    id: 'clientTraits',
+    label: '{client}の特性',
+    description: '{client}の画面で、ペットあり・喫煙環境などの特性を入れて見られます',
+    group: '入力の補助',
+    paths: [],
+    hides: '{client}の画面の「特性」の節と、一覧のくわしい列の特性（入れた特性は残り、AI で組むときに効き続ける）',
+  },
+  {
+    id: 'timeWindow',
+    label: '時間の決め方（ちょうど・幅）',
+    description: '繰り返しと訪問で、開始が決まっているか、幅（この間に開始）かを選べます',
+    group: '入力の補助',
+    paths: [],
+    hides:
+      '繰り返し・訪問の欄の「時間の決め方」（切ると開始の時刻ちょうどで入れる。幅で入れてある繰り返し・訪問は今どおりで、その欄では選べる）',
   },
 ];
 
@@ -304,7 +321,10 @@ export type TemplateDef = {
   on: readonly FeatureId[];
 };
 
-/** 基本のひな形で入れる機能（予定・繰り返し・毎月の第N・曜日ごとの時刻・〈利用者さん〉の休み・欠勤・キャンセル・空き状況・相性・決まりごと・退職・担当替え・道順のリンク・住所の検索。ADR-0086・ADR-0091） */
+/**
+ * 基本のひな形で入れる機能（予定・繰り返し・毎月の第N・曜日ごとの時刻・〈利用者さん〉の休み・欠勤・キャンセル・空き状況・相性・決まりごと・退職・担当替え・道順のリンク・住所の検索。ADR-0086・ADR-0091）。
+ * 〈利用者さん〉の特性・時間の決め方は、足す前と同じ見え方のまま、どのひな形でも入（ADR-0117。切るのは事業所ごとの好み）
+ */
 const BASIC_ON: readonly FeatureId[] = [
   'patterns',
   'patternMonthly',
@@ -316,6 +336,8 @@ const BASIC_ON: readonly FeatureId[] = [
   'offboard',
   'mapsLink',
   'geocode',
+  'clientTraits',
+  'timeWindow',
 ];
 
 /** 単発の予約のひな形で入れる機能：基本から繰り返し（patterns・patternMonthly）と決まりごと（visitNotes）を外したもの（ADR-0072 第2段・ADR-0086・ADR-0091。PRD D378） */
@@ -383,7 +405,7 @@ export function templateBasicDelta(id: TemplateId): { add: FeatureId[]; drop: Fe
   };
 }
 
-/** ひな形を適用したときの入り切り（全20の ID を明示して書く。業種とは連動しない） */
+/** ひな形を適用したときの入り切り（全22の ID を明示して書く。業種とは連動しない） */
 export function applyTemplate(id: TemplateId): Features {
   const on = new Set(templateDef(id).on);
   return Object.fromEntries(FEATURE_IDS.map((f) => [f, on.has(f)])) as Features;
@@ -429,7 +451,7 @@ const usesMonthly = (p: Pattern): boolean => p.repeat === 'monthly' || p.dayTime
  * 件数の数え方の決まった機能でデータが無い・数えない機能は null（確認を出さない）。Date.now は使わない（今日は引数）
  */
 export function turnOffImpact(
-  data: Pick<DemoData, 'org' | 'compat' | 'clients' | 'staff' | 'clientLeaves' | 'absences' | 'patterns'>,
+  data: Pick<DemoData, 'org' | 'compat' | 'clients' | 'staff' | 'clientLeaves' | 'absences' | 'patterns' | 'items'>,
   id: FeatureId,
   today: string,
 ): TurnOffImpact | null {
@@ -483,9 +505,25 @@ export function turnOffImpact(
     }
     case 'clientStage': {
       const n = data.clients.filter(
-        (c) => (c.stage !== 'active' && c.stage !== 'ended') || c.referrer.name.trim() !== '',
+        (c) =>
+          (c.stage !== 'active' && c.stage !== 'ended') ||
+          c.referrer.name.trim() !== '' ||
+          (c.referrer.person ?? '').trim() !== '',
       ).length;
       return one(n, `段階・紹介元 ${n}人（${client}）は残ります（段階は今の名前で出ます）`);
+    }
+    case 'clientTraits': {
+      const ids = new Set(data.items.filter((i) => i.target === 'client').map((i) => i.id));
+      const n = data.clients.filter((c) =>
+        Object.entries(c.traits).some(
+          ([k, v]) => ids.has(k) && v !== null && v !== '' && !(Array.isArray(v) && v.length === 0),
+        ),
+      ).length;
+      return one(n, `特性 ${n}人（${client}）は残り、AI で組むときに効き続けます`);
+    }
+    case 'timeWindow': {
+      const n = data.patterns.filter((p) => p.windowKind === 'window').length;
+      return one(n, `幅（この間に開始）の繰り返し ${n}件は残り、訪問は今どおり作られます`);
     }
     case 'visitNotes': {
       const n = data.clients.filter((c) =>

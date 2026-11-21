@@ -16,6 +16,24 @@ export const patternSplitConfirm = (since: string, removed: number, confirmedDay
   confirmLabel: '変える',
 });
 
+/**
+ * 直した（「いつから」で分けた）あとの知らせ（PRD D459。ADR-0117）。from は直す前の開始日、since は「いつから」（今日より前なら今日）。
+ * 分けたときは前の中身がどこに残るか（今日から変えた＝「終わった繰り返し」、後の日から＝その前の日まで今の一覧）を言う。
+ * auto は担当なしの回を自動で組むか
+ */
+export function patternSplitText(from: string, sinceIn: string, today: string, auto: boolean): string {
+  const since = sinceIn < today ? today : sinceIn;
+  const tail = auto ? '担当を自動で組みます' : '';
+  const note =
+    since <= from
+      ? ''
+      : since === today
+        ? '前の中身は今日より前の回の記録として「終わった繰り返し」に残します'
+        : `${mdText(since)}から変わります。それまでは前の中身のままです`;
+  const parts = [note, tail].filter((x) => x !== '');
+  return parts.length === 0 ? '繰り返しを直しました' : `繰り返しを直しました（${parts.join('。')}）`;
+}
+
 /** 消す前の確認 */
 export const patternRemoveConfirm = (confirmedDays: number): ConfirmOptions => ({
   title: 'この繰り返しを消しますか？',

@@ -28,7 +28,9 @@ export type ClientCol = 'name' | 'address' | 'plan' | 'place' | 'traits' | 'requ
 const CLIENT_COLS: readonly ClientCol[] = ['name', 'address', 'plan'];
 const CLIENT_COLS_DETAIL: readonly ClientCol[] = [...CLIENT_COLS, 'place', 'traits', 'requires', 'usual', 'state'];
 
-export const clientColumns = (detailed: boolean): readonly ClientCol[] => (detailed ? CLIENT_COLS_DETAIL : CLIENT_COLS);
+/** 〈利用者さん〉一覧の列。traitsOn が false（機能 clientTraits が切。ADR-0117）なら特性の列を出さない */
+export const clientColumns = (detailed: boolean, traitsOn = true): readonly ClientCol[] =>
+  detailed ? (traitsOn ? CLIENT_COLS_DETAIL : CLIENT_COLS_DETAIL.filter((c) => c !== 'traits')) : CLIENT_COLS;
 
 /** 〈スタッフ〉一覧の列：名前・勤務日・勤務時間の3列／くわしい列を出すと、さらに 特性・求めること・自宅の位置・状態 */
 export type StaffCol = 'name' | 'days' | 'hours' | 'traits' | 'requires' | 'home' | 'state';
