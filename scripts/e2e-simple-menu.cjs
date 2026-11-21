@@ -1109,6 +1109,21 @@ async function expertOn(page) {
     'expert 入：帯に［要対応を組む］は出ない（「担当を組む」の画面で組む）。［見に行く ›］はある',
   );
   if ((await page.getByTestId('month-more').count()) > 0) {
+    // 一時的な調べ：CI だけで押せない理由を記録に出す
+    const why = await page.getByTestId('month-more').evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+      const cs = getComputedStyle(el);
+      const anc = [];
+      for (let e = el; e; e = e.parentElement) {
+        const c = getComputedStyle(e);
+        if (c.display === 'none' || c.visibility !== 'visible' || c.opacity === '0' || c.transform !== 'none' || c.animationName !== 'none')
+          anc.push(`${e.tagName}.${e.className}:${c.display}/${c.visibility}/${c.opacity}/${c.transform}/${c.animationName}`);
+      }
+      return JSON.stringify({ r: [r.x, r.y, r.width, r.height], vw: innerWidth, vh: innerHeight, sy: scrollY, d: cs.display, v: cs.visibility, top: top ? top.outerHTML.slice(0, 200) : null, anc });
+    });
+    console.log(`[month-more] ${why}`);
+    check(true, 'month-more の様子', why);
     await page.getByTestId('month-more').click();
     check(
       (await page.getByTestId('more-vacancy').count()) === 0 &&
