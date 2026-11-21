@@ -39,6 +39,8 @@ function usePlanFeatures() {
     confirmStep: useConfirmStep(),
     /** 訪問先の決まりごと（初めての訪問先の連絡文に添える。PRD D415） */
     notesOn: useFeature('visitNotes'),
+    clientContactOn: useFeature('clientContact'),
+    contactAddressOn: useFeature('contactAddress'),
   };
 }
 
@@ -109,6 +111,8 @@ export function usePlanPage() {
       staffName: d.staffName,
       clientById: d.clientById,
       visits: d.m.allVisits,
+      clientContact: f.clientContactOn,
+      staffAddress: f.contactAddressOn,
     }),
     /** 〈スタッフ〉あての連絡のメール（PRD D94） */
     staffMail: (staffId: string, text: string) =>

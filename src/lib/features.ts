@@ -44,7 +44,7 @@ export type FeatureDef = {
 };
 
 /**
- * 機能の表（20。ADR-0028 の「機能の一覧」）。土台（月の予定・週の予定・日の予定・〈利用者さん〉一覧・〈スタッフ〉一覧・
+ * 機能の表（22。ADR-0028 の「機能の一覧」）。土台（月の予定・週の予定・日の予定・〈利用者さん〉一覧・〈スタッフ〉一覧・
  * 勤務時間（シフト）・訪問の種類・データ・管理者設定）は表に入れず、切れない
  */
 export const FEATURES: readonly FeatureDef[] = [
@@ -215,6 +215,24 @@ export const FEATURES: readonly FeatureDef[] = [
     paths: [],
     hides: '検索のボタン・まとめて緯度・経度を入れる（地図のクリックで入れるのは残る）',
   },
+  {
+    id: 'clientContact',
+    label: '{client}への訪問連絡',
+    description: '担当や時刻が変わったとき、{client}あての連絡文を作ります',
+    group: '現場との共有',
+    paths: [],
+    hides:
+      '連絡の一覧と欠勤・キャンセルの欄の{client}あての連絡文・担当が変わる{client}・時刻だけ変わる{client}の表（{staff}あての連絡は残る）',
+  },
+  {
+    id: 'contactAddress',
+    label: '{staff}あての変更の連絡に住所',
+    description: '{staff}に新しく入る訪問の連絡文に、{client}の住所を入れます',
+    group: '現場との共有',
+    paths: [],
+    hides:
+      '{staff}あての連絡文・連絡の一覧の「お願いします」の行の{client}の住所（所要の分・初めての訪問先の印は残る）',
+  },
 ];
 
 const BY_ID = new Map<FeatureId, FeatureDef>(FEATURES.map((f) => [f.id, f]));
@@ -316,6 +334,8 @@ const BASIC_ON: readonly FeatureId[] = [
   'offboard',
   'mapsLink',
   'geocode',
+  'clientContact',
+  'contactAddress',
 ];
 
 /** 単発の予約のひな形で入れる機能：基本から繰り返し（patterns・patternMonthly）と決まりごと（visitNotes）を外したもの（ADR-0072 第2段・ADR-0086・ADR-0091。PRD D378） */
@@ -383,7 +403,7 @@ export function templateBasicDelta(id: TemplateId): { add: FeatureId[]; drop: Fe
   };
 }
 
-/** ひな形を適用したときの入り切り（全20の ID を明示して書く。業種とは連動しない） */
+/** ひな形を適用したときの入り切り（全22の ID を明示して書く。業種とは連動しない） */
 export function applyTemplate(id: TemplateId): Features {
   const on = new Set(templateDef(id).on);
   return Object.fromEntries(FEATURE_IDS.map((f) => [f, on.has(f)])) as Features;
