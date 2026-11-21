@@ -13,6 +13,7 @@ import {
 } from 'react';
 import { isMultiClick, isMultiKey, toggleGroup, toggleId } from '../lib/visitSelect';
 import { toldDateOf, useOpenTold } from './openTold';
+import { useEscRelease } from './useSelectRelease';
 
 /**
  * 帯・行・札の button に重ねる props（useVisitItem の押し方・useVisitDrag の source・呼ぶ側の data-*）
@@ -33,18 +34,7 @@ export function useVisitSelection(key: string) {
   const toggle = useCallback((id: string) => setIds((xs) => toggleId(xs, id)), []);
   const toggleMany = useCallback((group: readonly string[]) => setIds((xs) => toggleGroup(xs, group)), []);
   const clear = useCallback(() => setIds([]), []);
-  useEffect(() => {
-    if (ids.length === 0) return;
-    const onKey = (e: globalThis.KeyboardEvent) => {
-      if (e.key !== 'Escape' || e.defaultPrevented) return;
-      if (document.querySelector('[aria-modal="true"], .side-panel')) return;
-      const t = e.target as HTMLElement | null;
-      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return;
-      setIds([]);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [ids.length]);
+  useEscRelease(ids.length > 0, clear);
   const set = useMemo(() => new Set(ids), [ids]);
   return { ids, has: (id: string) => set.has(id), toggle, toggleMany, clear, set: setIds };
 }
