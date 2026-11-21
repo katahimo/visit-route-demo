@@ -1135,13 +1135,25 @@ async function expertOn(page) {
         sy: scrollY,
         d: cs.display,
         v: cs.visibility,
-        top: top ? top.outerHTML.slice(0, 200) : null,
+        top: top ? top.outerHTML.slice(0, 100) : null,
         anc,
       });
     });
-    console.log(`[month-more] ${why}`);
-    check(true, 'month-more の様子', why);
-    await page.getByTestId('month-more').click();
+    const pressed = await page
+      .getByTestId('month-more')
+      .click({ timeout: 8000 })
+      .then(() => true)
+      .catch((e) =>
+        [
+          ...new Set(
+            String(e.message)
+              .split('\n')
+              .filter((l) => /element |intercepts|retrying/.test(l))
+              .map((l) => l.trim()),
+          ),
+        ].join(' | '),
+      );
+    check(pressed === true, 'month-more を押せる', `${pressed} || ${why}`);
     check(
       (await page.getByTestId('more-vacancy').count()) === 0 &&
         (await page.getByTestId('more-auto-arrange').count()) === 0,
