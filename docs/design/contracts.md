@@ -73,10 +73,13 @@ Condition = { itemId, op: 'is' | 'not' | 'in' | 'hasAny' | 'hasAll' | 'gte' | 'l
   // not は未入力も満たす。未入力はほかの op を満たさない
   // startYear の項目の value は年数で、その日の年 − 開始年（0 未満は 0）と比べる（matches の date。年単位）
 RuleType = 'clientRequirement' | 'clientPreference' | 'staffRequirement' | 'staffPreference'
-         | 'compatibility' | 'continuity' | 'balance' | 'wait'          // wait 以外は hard にできる（HARDABLE）
+         | 'compatibility' | 'continuity' | 'balance' | 'wait'          // wait・sameClient・homeNear 以外は hard にできる（HARDABLE）
+         | 'sameClient' /* 続く訪問は同じ人。組み込み（いつも1つ・消せない。BUILTIN_RULE_TYPES）。ADR-0116 */
+         | 'homeNear'   /* 夕方（開始（早）≥ HOME_NEAR_FROM 17:00）は自宅に近い人。訪問→自宅の移動1分＝重み×0.2点（割当費用）。ADR-0116 */
 Rule = { id ≤50, type, label 1〜40, weight /* 0..5・0.5刻み */, hard }  // 同じ型は複数可（重みは足す）。0 かつ hard でなければ無効
 compat[clientId][staffId] = 2 ◎ | 1 ○ | 0 未入力 | -1 △ | -2 ×
-Preset = { id ≤50, name 1〜20, note ≤60, weights: RuleType → { weight, hard } }   // 無い型は 0・必須でない
+Preset = { id ≤50, name 1〜20, note ≤60, weights: RuleType → { weight, hard } }   // 無い型は 0・必須でない（sameClient・homeNear は 2。ADR-0116）
+SAME_CLIENT_GAP_MAX = 30 /* 続く訪問とみる間（分） */; HOME_NEAR_FROM = 17 * 60; HOME_NEAR_PER_MINUTE = 0.2
 POINTS_PER_WEIGHT = 10; DROP_POINTS = 10000; KEEP_DROP_POINTS = DROP_POINTS * 10; MAX_PRESETS = 6
 ```
 
@@ -84,11 +87,13 @@ POINTS_PER_WEIGHT = 10; DROP_POINTS = 10000; KEEP_DROP_POINTS = DROP_POINTS * 10
 - 点数の基準のプリセット（`scorePresetId`）＝ふだんの考え方（PRD D233）：点数はいつもこのプリセットを当てた物差し（`scoreRulesOf`）で付ける。担当を組む・訪問ごとの検査もこれで計算する。条件の重みの画面の表はこのプリセットの重み・必須から始め、変えた重みは「調整した重み」（`id: tuned`。1つだけ。無ければ足し、あれば重みだけ上書き）に書いて基準にする（`saveTunedWeights`）
 - `data.rules` の重み・必須はいつも点数の基準のプリセットと同じ。基準が替わる（基準を選ぶ・重みを保存する・基準のプリセットを消して基準が移る）と `withBasisRules` で基準にそろえ、store の repair も読み込みのたびにそろえる（`lib/presets` の `setScorePreset`・`saveTunedWeights`・`removePreset`）。ほかのプリセットは案を比べるの提案を作るときだけ当てる（`applyPreset`）
 
-| 初期のプリセット | 必要条件 | 訪問先の希望 | スタッフの希望 | 相性 | いつもの担当 | 負担の均等 | 待ち |
-|---|---|---|---|---|---|---|---|
-| `balance` バランス（初期の条件と同じ） | 必須 | 3 | 2 | 3 | 2 | 3 | 3 |
-| `travel` 移動を短く | 必須 | 1 | 1 | 1 | 0.5 | 1 | 3 |
-| `people` 人の組み合わせ重視 | 必須 | 5 | 4 | 5 | 4 | 3 | 2 |
+| 初期のプリセット | 必要条件 | 訪問先の希望 | スタッフの希望 | 相性 | いつもの担当 | 負担の均等 | 待ち | 続く訪問 | 夕方は自宅に近い人 |
+|---|---|---|---|---|---|---|---|---|---|
+| `balance` バランス（初期の条件と同じ） | 必須 | 3 | 2 | 3 | 2 | 3 | 3 | 2 | 2 |
+| `travel` 移動を短く | 必須 | 1 | 1 | 1 | 0.5 | 1 | 3 | 2 | 2 |
+| `people` 人の組み合わせ重視 | 必須 | 5 | 4 | 5 | 4 | 3 | 2 | 3 | 2 |
+
+- 組み込みの条件（続く訪問 `sameClient`。ADR-0116）：初期の条件に入れ（id `sameClient`）、無い古いデータ・ブックは store の repair が最後に足す（id が使われていれば後ろに番号）。条件の重みの画面では消すボタンを出さず、足す種類にも出さない（`lib/ruleEdit` の `isRemovableRule`・`addableTypes`）。Excel のプリセットのシートの「重み：続く訪問は同じ人」「重み：夕方は自宅に近い人」の列は無くてもよい（無ければプリセットの既定）
 
 ## 問題・結果・Worker（`src/contracts/problem.ts`。ADR-0003・ADR-0007・ADR-0010）
 
@@ -98,7 +103,11 @@ POINTS_PER_WEIGHT = 10; DROP_POINTS = 10000; KEEP_DROP_POINTS = DROP_POINTS * 10
 Problem = { date, staff: { id, name, point, slots /* 欠勤・最終勤務日を引いた時間帯。空＝休み */ }[],
   visits: { id, clientId, point, earliest, latest, duration, solo? /* 遠方（出張）。ADR-0096 */ }[], travel, meters /* [from][to] 自宅と訪問先 */,
   allowed, assignCost, reasons /* [visit][staff]。reasons は点の大きい順 */, waitPerMinute,
-  balance: { perVisit, lo, hi, cap /* 必須なら hi+1、ほか null */ } | null, infeasible: { visit, reasons }[], stay? }
+  balance: { perVisit, lo, hi, cap /* 必須なら hi+1、ほか null */ } | null, infeasible: { visit, reasons }[], stay?,
+  chain? /* 続く訪問。ADR-0116 */, fixedStart? /* 開始時刻をずらさない（機能 shiftStart が切）。ADR-0116 */ }
+ProblemChain = { next /* [visit] 続く訪問の添字 | -1 */, degree /* [visit] 組に入っている数 */, perPair /* 重み×10 */ }
+  // 同じ人の列で v のすぐあとに next[v] が無い組ごとに perPair。solver は列の点（matching/chain の chainRoutePoints）と担当なしの点
+  //   （dropPointsOf に組ごとの半分）で、evaluate は chainScore で同じ値を数える（totalPoints の chain）
 Reason = { ruleId, label, points /* 可否の原因は Infinity */, level? /* 相性だけ 2|1|-1|-2 */ }
   // ruleId：Rule.id・'travel'・'wait'・'slot'・'time'・'noPlace'（位置が未登録の点。可否にはしない。ADR-0093）・'visitType'・'allowedStaff'・'pin'
   //   担当なしの理由（explain）だけ：'travelTooFar'「移動が間に合わない（片道 約N分）」・'farTrip'「遠方（出張）の日はほかの訪問を入れません」（ADR-0096）
@@ -108,11 +117,11 @@ SolveResult = { routes, unassigned, score /* evaluate.score と一致 */, seed, 
 WorkerRequest = { type: 'solve', requestId, problem, options } | { type: 'stop', requestId }
 WorkerResponse = { type: 'progress', requestId, iteration, total, bestScore, bestRoutes? /* 最良が変わったときだけ */ }
   | { type: 'done', requestId, result } | { type: 'error', requestId, message }
-PlanScore = { total, travelMinutes, waitMinutes, meters, assignPoints, balancePoints, dropped,
+PlanScore = { total, travelMinutes, waitMinutes, meters, assignPoints, balancePoints, chainPoints, dropped,
   perRule: ruleId → { hits, misses, points }, hardViolations: { visitId, staffId, kind: 'time'|'slot'|'notAllowed', label }[] }
 VisitExplain = { visitId, staffId, reasons /* 3つまで */, timing }; PlanDiff = { changedVisits, travelDelta, scoreDelta }
 ScoreScale = { lowerBound, visits, lowerAssign, lowerTravel, lowerDropped }; SCORE_MAX = 100
-HundredPart = { key: 'travel'|'wait'|'assign'|'balance'|'dropped', label, points }
+HundredPart = { key: 'travel'|'wait'|'assign'|'balance'|'chain'|'dropped', label, points }   // chain＝「続く訪問が別の人」
 RuleAchievement = { ruleId, unit: 'visit' | 'staff', total, met, compat: { great, good, poor, ng } | null }
 ```
 
@@ -190,7 +199,7 @@ vacancyNotice(result, input)
 
 ## 機能の入り切り（`src/contracts/features.ts`。PRD D210〜D216。ADR-0028）
 
-- `FEATURE_IDS`（22。メールと Excel の入出力は入り切りせず、いつも入。ADR-0106）：`patterns`・`patternMonthly`・`clientLeave`・`requestedOff`・`monthPrint`・`expert`・`compare`・`sudden`・`vacancy`・`vacancyNotice`・`compat`・`allowedStaff`・`clientStage`・`visitNotes`・`offboard`・`workload`・`fare`・`rules`・`mapsLink`・`geocode`・`clientContact`・`contactAddress`
+- `FEATURE_IDS`（23。メールと Excel の入出力は入り切りせず、いつも入。ADR-0106）：`patterns`・`patternMonthly`・`clientLeave`・`requestedOff`・`monthPrint`・`expert`・`compare`・`sudden`・`vacancy`・`vacancyNotice`・`compat`・`allowedStaff`・`clientStage`・`visitNotes`・`offboard`・`workload`・`fare`・`rules`・`mapsLink`・`geocode`・`clientContact`・`contactAddress`・`shiftStart`
 - `Features`＝ID → boolean の部分的な表（無い ID は入）。Excel には入れない
 - 切ってもデータの形・検査・repair は変えない。`clientStage` が切なら段階は「利用中／終了」で選ばせ、ほかの段階の人はそのまま
 - エラーは無い（検査で落ちない）

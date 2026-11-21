@@ -63,6 +63,7 @@ const TABLE: Record<TemplateId, FeatureId[]> = {
     'geocode',
     'clientContact',
     'contactAddress',
+    'shiftStart',
   ],
   basic: [
     'patterns',
@@ -77,6 +78,7 @@ const TABLE: Record<TemplateId, FeatureId[]> = {
     'geocode',
     'clientContact',
     'contactAddress',
+    'shiftStart',
   ],
   laborContract: [
     'patterns',
@@ -94,6 +96,7 @@ const TABLE: Record<TemplateId, FeatureId[]> = {
     'geocode',
     'clientContact',
     'contactAddress',
+    'shiftStart',
   ],
   monthlyField: [
     'patterns',
@@ -112,12 +115,13 @@ const TABLE: Record<TemplateId, FeatureId[]> = {
     'geocode',
     'clientContact',
     'contactAddress',
+    'shiftStart',
   ],
   all: [...FEATURE_IDS],
 };
 
 describe('機能の表（ADR-0028 の機能の一覧）', () => {
-  it('22の機能が契約の ID と同じ順に1つずつ。グループは決まった7つのどれか（管理者設定のスイッチの並び。ADR-0092）', () => {
+  it('23の機能が契約の ID と同じ順に1つずつ。グループは決まった7つのどれか（管理者設定のスイッチの並び。ADR-0092）', () => {
     expect(FEATURE_GROUPS).toEqual([
       '予定の入れ方',
       '当日・問い合わせ',
@@ -133,7 +137,7 @@ describe('機能の表（ADR-0028 の機能の一覧）', () => {
     expect(featureDef('compare').group).toBe(featureDef('expert').group);
     expect(featureDef('vacancy').group).toBe('当日・問い合わせ');
     expect(FEATURES.map((f) => f.id)).toEqual([...FEATURE_IDS]);
-    expect(FEATURES).toHaveLength(22);
+    expect(FEATURES).toHaveLength(23);
     for (const f of FEATURES) {
       expect(FEATURE_GROUPS).toContain(f.group);
       expect(f.label).not.toBe('');
@@ -278,7 +282,7 @@ describe('ひな形（ADR-0028 の表）', () => {
     expect([...groupsOf('laborContract')]).toEqual(['勤務・契約']);
     expect(groupsOf('monthlyField').size).toBeLessThanOrEqual(4);
   });
-  it.each(TEMPLATE_IDS)('%s を適用すると表どおりの入り切り（全22の ID を明示）で、matchTemplate がそれを返す', (id) => {
+  it.each(TEMPLATE_IDS)('%s を適用すると表どおりの入り切り（全23の ID を明示）で、matchTemplate がそれを返す', (id) => {
     const f = applyTemplate(id);
     expect(Object.keys(f).sort()).toEqual([...FEATURE_IDS].sort());
     const on = FEATURE_IDS.filter((x) => f[x]);

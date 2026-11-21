@@ -1,7 +1,7 @@
 // プリセット（DemoData.presets。ADR-0008）の移行と repair
 import { describe, expect, it } from 'vitest';
 import type { DemoData } from '../contracts/data';
-import { MAX_PRESETS } from '../contracts/rules';
+import { HOME_NEAR_WEIGHT_DEFAULT, MAX_PRESETS, SAME_CLIENT_WEIGHT_DEFAULT } from '../contracts/rules';
 import { createDemoData, INITIAL_PRESETS } from '../seed';
 import { importJson, isImportError, migrate } from './index';
 import { repair } from './repair';
@@ -15,6 +15,36 @@ describe('プリセットの読み込み', () => {
     const r = migrate({ ...d, presets: [{ ...d.presets[0]!, weights }] });
     if (isImportError(r)) throw new Error(r.message);
     expect(r.presets[0]!.weights.wait).toEqual({ weight: 0, hard: false });
+  });
+
+  it('あとから足した型（続く訪問・夕方は自宅に近い人）が無い古いプリセットは既定の重み（ADR-0116）', () => {
+    const d = base();
+    const { sameClient: _a, homeNear: _b, ...weights } = d.presets[0]!.weights;
+    const r = migrate({ ...d, presets: [{ ...d.presets[0]!, weights }] });
+    if (isImportError(r)) throw new Error(r.message);
+    expect(r.presets[0]!.weights.sameClient).toEqual({ weight: SAME_CLIENT_WEIGHT_DEFAULT, hard: false });
+    expect(r.presets[0]!.weights.homeNear).toEqual({ weight: HOME_NEAR_WEIGHT_DEFAULT, hard: false });
+  });
+
+  it('組み込みの条件（続く訪問）が無い古いデータは、最後に足して重みは点数の基準のプリセットから（ADR-0116）', () => {
+    const d = base();
+    const old = { ...d, rules: d.rules.filter((r) => r.type !== 'sameClient') };
+    const r = migrate(old);
+    if (isImportError(r)) throw new Error(r.message);
+    expect(r.rules.slice(0, -1)).toEqual(old.rules);
+    expect(r.rules.at(-1)).toEqual({
+      id: 'sameClient',
+      type: 'sameClient',
+      label: '続く訪問は同じ人',
+      weight: 2,
+      hard: false,
+    });
+    // ID が使われていれば後ろに番号
+    const taken = migrate({ ...old, rules: [...old.rules, { ...old.rules[0]!, id: 'sameClient' }] });
+    if (isImportError(taken)) throw new Error(taken.message);
+    expect(taken.rules.filter((x) => x.type === 'sameClient').map((x) => x.id)).toEqual(['sameClient2']);
+    // あれば足さない（初期データはそのまま）
+    expect(repair(d).rules).toBe(d.rules);
   });
 
   it('名前が空のプリセットは日本語のエラー（元のデータは残す）', () => {

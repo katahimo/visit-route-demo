@@ -5,6 +5,8 @@ import {
   Heart,
   HeartHandshake,
   Hourglass,
+  House,
+  Link2,
   type LucideIcon,
   Pencil,
   Plus,
@@ -20,9 +22,17 @@ import { Term } from '../components/Term';
 import { Hint, IconButton, WithIcon } from '../components/ui';
 import type { Terms } from '../contracts/documents';
 import { HARDABLE, MAX_PRESETS, type Preset, type Rule, type RuleType } from '../contracts/rules';
-import { ruleTypeHelp, ruleTypeLabel, weightLocked } from '../lib/common';
+import { ruleTypeHelp, ruleTypeLabel, weightHint, weightLocked } from '../lib/common';
 import { narrowRole } from '../lib/narrowRoles';
-import { parseSeed, RULE_NAME_MAX, ruleNameOf, ruleRowClass, setSeed } from '../lib/ruleEdit';
+import {
+  addableTypes,
+  isRemovableRule,
+  parseSeed,
+  RULE_NAME_MAX,
+  ruleNameOf,
+  ruleRowClass,
+  setSeed,
+} from '../lib/ruleEdit';
 import { changeText, type WeightChange } from '../lib/weightDraft';
 import { useDemoData } from '../store';
 import { SCORE_TEXT } from './planParts';
@@ -37,6 +47,8 @@ export const RULE_ICONS: Record<RuleType, LucideIcon> = {
   continuity: Repeat,
   balance: Scale,
   wait: Hourglass,
+  sameClient: Link2,
+  homeNear: House,
 };
 
 /** 点のしくみの説明と、今の重み（点数の基準のプリセット）の名前 */
@@ -179,7 +191,7 @@ function RuleRow({
           disabled={locked}
           onChange={(w) => onWeight(r.type, { weight: w })}
         />
-        {!locked && <span className="sub">{r.weight === 0 ? '無効' : `移動${r.weight * 10}分ぶん`}</span>}
+        {!locked && <span className="sub">{weightHint(r)}</span>}
         {/* 保存済みと違う行は色だけでなく文字でも（PRD D286） */}
         {change && (
           <span className="chip chip-warn draft-mark" data-testid="rules-draft-mark">
@@ -200,7 +212,10 @@ function RuleRow({
         )}
       </td>
       <td {...narrowRole.cell} className="narrow-act">
-        <IconButton icon={Trash2} label={`条件「${r.label}」を消す`} tone="danger" onClick={() => onRemove(r)} />
+        {/* 組み込みの条件（続く訪問）は消せない（切るのは重み0。ADR-0116） */}
+        {isRemovableRule(r) && (
+          <IconButton icon={Trash2} label={`条件「${r.label}」を消す`} tone="danger" onClick={() => onRemove(r)} />
+        )}
       </td>
     </tr>
   );
@@ -286,7 +301,7 @@ export function RulesAdd({
   primary,
   onAdd,
 }: {
-  /** 選べる型（相性を切っているときは相性を除く） */
+  /** 選べる型（相性を切っているときは相性を除く。組み込みの条件はここで除く） */
   types: readonly RuleType[];
   terms: Terms;
   /** 主ボタンにするか（重みの下書きがある間は「新しい考え方として保存」が主） */
@@ -300,7 +315,7 @@ export function RulesAdd({
         <label style={{ maxWidth: 260 }}>
           足す条件の種類
           <select value={addType} onChange={(e) => setAddType(e.target.value as RuleType)}>
-            {types.map((t) => (
+            {addableTypes(types).map((t) => (
               <option key={t} value={t}>
                 {ruleTypeLabel(t, terms)}
               </option>

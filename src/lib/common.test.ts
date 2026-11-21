@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Rule } from '../contracts/rules';
-import { isStaleBuild, nameTaken, optionNameError, own, paramOf, ruleWeightText } from './common';
+import { isStaleBuild, nameTaken, optionNameError, own, paramOf, ruleWeightText, weightHint } from './common';
 
 describe('own（自分のキーだけを引く）', () => {
   it('constructor・toString などの組み込みの名前は、記録に無ければ undefined（#/staff-view/constructor で落ちない）', () => {
@@ -60,6 +60,14 @@ describe('paramOf（URL のクエリの値）', () => {
     expect(paramOf(p, 'staff')).toBe('s1,s2');
     expect(paramOf(p, 'cf')).toBe('');
     expect(paramOf(p, 'client')).toBeNull();
+  });
+});
+
+describe('weightHint（重みのスライダーの下の目安）', () => {
+  it('重み0は無効、夕方は自宅に近い人は1分あたりの点、ほかは移動N分ぶん', () => {
+    expect(weightHint({ type: 'wait', weight: 0 })).toBe('無効');
+    expect(weightHint({ type: 'homeNear', weight: 3 })).toBe('自宅まで1分×0.6点');
+    expect(weightHint({ type: 'sameClient', weight: 2 })).toBe('移動20分ぶん');
   });
 });
 

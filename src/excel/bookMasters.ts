@@ -58,6 +58,9 @@ export function readRules(ctx: BookCtx, ruleSheet: Sheet): Rule[] {
   return rules;
 }
 
+/** プリセットのシートで、無くてもよい重みの列の型（あとから足した条件。無い古いブックはプリセットの契約の既定。ADR-0116） */
+const OPTIONAL_WEIGHT_TYPES: ReadonlySet<string> = new Set(['sameClient', 'homeNear']);
+
 /**
  * プリセットのシート（ADR-0008）。シートが無い古いブックは、いまのプリセット・点数の基準のまま。
  * 列が足りない・読めない行があれば null（エラーは ctx.errors に積む。呼ぶ側が止める）
@@ -68,13 +71,15 @@ export function readPresets(ctx: BookCtx): { presets: Preset[]; scorePresetId: s
   if (!presetWs) return { presets: base.presets, scorePresetId: base.scorePresetId };
   const sheet = new Sheet(FIXED_SHEETS.presets, presetWs, errors);
   const labels = ruleTypeLabels(ctx.terms);
-  const weightCols = RULE_TYPES.map((t) => ({ t, h: presetWeightHeader(labels[t]) }));
+  const weightCols = RULE_TYPES.map((t) => ({ t, h: presetWeightHeader(labels[t]) })).filter(
+    (c) => !OPTIONAL_WEIGHT_TYPES.has(c.t) || sheet.has(c.h),
+  );
   if (
     !sheet.require([
       PRESET_COLS.id,
       PRESET_COLS.name,
       PRESET_COLS.note,
-      ...weightCols.map((c) => c.h),
+      ...weightCols.filter((c) => !OPTIONAL_WEIGHT_TYPES.has(c.t)).map((c) => c.h),
       PRESET_COLS.hard,
     ])
   )

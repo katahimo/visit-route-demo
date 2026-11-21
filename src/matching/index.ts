@@ -1,4 +1,6 @@
 // 入口（matching：項目・条件 → Problem と理由）
+
+export { chainScore } from './chain';
 export {
   ABSENCE_OVERLAP,
   ABSENT_ALL_DAY,
