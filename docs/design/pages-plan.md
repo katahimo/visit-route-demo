@@ -181,7 +181,7 @@
 
 - `DayLines`：1人1行（名前・横棒・件数）。横棒は `components/workBars` の `PartsBar`（塗りは [pages-bars.md](pages-bars.md)）
 - 計算は `lib/dayLine.ts`：`dayLines(problem, routes, staffIds)`（勤務の時間帯（欠勤を差し引く）・件数・区間（`spanParts` に自宅からの移動を足す）・訪問・移動・待ち・空きの分）、`dayLineRange(lines)`（8〜20時。はみ出せば1時間単位で広げる）、`dayLineText(line)`（title・読み上げ）
-- 行のボタンを押すとその人を選び（`focusOn`。列を強調・地図を絞る）、その人の列（`.route-col` の data-staff）へ巻いて列の見出しにフォーカス（一覧なら時間軸に切り替えてから）
+- 行のボタンを押すとその人を選び（`focusOn`。列を強調・地図を絞る）、その人の列（`.route-col` の data-staff）へ巻いて列の見出しにフォーカス（一覧なら時間軸に切り替えてから）。選んでいる人の行をもう一度押すと外す（巻かない。列の見出し・凡例と同じ。PRD D451）
 - 横棒の訪問の所をマウス・タッチで押すと（`PartsBar` が data-visit-id に書く）その訪問を選び（`togglePick`。選んだままなら `focusOn` で絞り直す）、列の中のカード（data-visit）へ巻く。キーボード・訪問の外を押したときは人を選ぶ
 - `detailName` で行のボタンの外の右に名前の i
 - 訪問のある日だけ（600px 以下は出さない）。900px 以下・印刷は details で畳む（`collapsed`）。`--header-h` は触らない
@@ -193,6 +193,8 @@
 - `homeTravel`・`MapPoint`・`MapLine`（`components/RouteMap` が描く）
 - `routeSelect`（テストあり）と `useRouteSelection`：地図で見る担当・強調する区間・選んだ訪問。担当を変える・訪問や区間を押すとその人のものでない選択を外し、担当を移した訪問を選んでいたら絞り込みを新しい担当に合わせ、案が入れ替わった・比べる案を変えた・日付が変わったら外す
 - 画面の外の地図は `components/MapDock.tsx`
+- 選んだものを外す（PRD D451）：もう一度押す・「全員のルートを見る」のほか、Esc（`components/useSelectRelease` の `useEscRelease`。判定は `lib/selectRelease` の `escReleases`＝入力欄の中・IME の変換中・右の欄やダイアログが開いている間は外さない。複数選択の Esc も同じ判定）と、時間軸・順番（`.plan-view`）の空いた所を押す（`useBlankClickRelease`。帯・カード・ボタン・開いた詳細 `.route-detail`・地図の上は除く。文字をなぞって選んだときは外さない）で `reset`（〈スタッフ〉・訪問・区間をすべて外す）。呼ぶのは `usePlanNav`
+- ドラッグ中の自動の巻き（PRD D452）：`usePlanDrag` が `components/useDragAutoScroll` を呼び、最後の dragover の高さが上下の端（上は `--header-h` の下から 72px・下は窓の下端から 72px）にある間はコマごとに画面を巻く（量は `lib/dragScroll` の `dragScrollStep`。端に近いほど速く最大 22px）。落とす・やめる・窓の外へ出ると止める。Safari は端で巻かないことがあり、担当なしの訪問が多いと落とす先の列が画面の外に出るため。担当なしの列の案内（`unassigned-help`）は、端へ寄せると巻くことと、カードを押して「担当を変える」でも入れられること（ADR-0030）を書く
 
 #### 帯：休み・拘束超え
 

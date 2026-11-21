@@ -6,7 +6,7 @@
 // タブの並び・上の帯に「探す」が無いことは e2e-mobile）。
 // 1400×1000：日の予定の時間軸の帯のキーボード（↑↓ 15分・Shift+→ 隣の担当の列・→ 次の日（その日へ移る）・Enter で欄・Esc で帯へ・
 // Delete で取り消し（確認）・どれも全体の元に戻すの1手で手の名前・Ctrl+Z で全部戻る）、繰り返しの回の範囲の小さな帯（これ以降も）、
-// 週の時間軸の帯の ↓、パレットで担当の名前＋日付・「担当なし」で訪問を引く（範囲の提案が画面を移っても残ることは e2e-schedule-tools）。
+// 選んだ〈スタッフ〉を外す（Esc・時間軸の空いた所・担当ごとの1日の行をもう一度。PRD D451）、週の時間軸の帯の ↓、パレットで担当の名前＋日付・「担当なし」で訪問を引く（範囲の提案が画面を移っても残ることは e2e-schedule-tools）。
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-day-ops.cjs
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）
@@ -26,7 +26,7 @@ const {
 } = require('./lib/env.cjs');
 const { watchNative } = require('./lib/confirmDialog.cjs');
 const { sharedPage, openPage } = require('./lib/steps.cjs');
-const { pressTool, toolCount, undoState } = require('./lib/ui.cjs');
+const { pressTool, reveal, toolCount, undoState } = require('./lib/ui.cjs');
 
 const visitsKey = (d) => JSON.stringify(d?.visits ?? null);
 const visitOf = (d, id) => d?.visits?.find((v) => v.id === id) ?? null;
@@ -37,6 +37,43 @@ const addDays = (d, n) => {
   return t.toISOString().slice(0, 10);
 };
 const toMin = (hm) => Number(hm.slice(0, 2)) * 60 + Number(hm.slice(3, 5));
+
+/**
+ * 日の予定（1400×1000）で選んだ〈スタッフ〉を外す（PRD D451）：列の見出しで選ぶ → Esc・時間軸の空いた所を押す・
+ * 担当ごとの1日の行をもう一度押す、で外れる。時間軸の外（上の帯）を押しても外れない
+ */
+async function selectRelease(page) {
+  await page.setViewportSize({ width: 1400, height: 1000 });
+  await freshPlan(page);
+  const heads = page.locator('.tl-col[data-staff] .col-focus');
+  await heads.first().waitFor({ timeout: 30000 });
+  const head = heads.nth(1);
+  const sid = await head.evaluate((el) => el.closest('[data-staff]').dataset.staff);
+  const focused = () =>
+    page.evaluate(() => document.querySelector('.route-col.is-focus')?.getAttribute('data-staff') ?? null);
+  await head.click();
+  await settle(page, 200);
+  check((await focused()) === sid, '列の見出しで〈スタッフ〉を選ぶ', await focused());
+  await page.getByTestId('schedule-toolbar').click({ position: { x: 2, y: 2 } });
+  await settle(page, 200);
+  check((await focused()) === sid, '時間軸の外（操作の行の端）を押しても外れない', await focused());
+  await page.keyboard.press('Escape');
+  await settle(page, 200);
+  check((await focused()) === null, 'Esc で外れる', await focused());
+  await head.click();
+  await settle(page, 200);
+  const body = await page.locator('.tl-col[data-staff] .tl-body').first().boundingBox();
+  await page.mouse.click(body.x + body.width / 2, body.y + 4);
+  await settle(page, 200);
+  check((await focused()) === null, '時間軸の空いた所を押すと外れる', await focused());
+  const line = (await reveal(page, 'daylines')).locator(`[data-testid="dayline"][data-staff="${sid}"]`);
+  await line.click({ position: { x: 12, y: 6 } });
+  await settle(page, 300);
+  check((await focused()) === sid, '担当ごとの1日の行で選ぶ', await focused());
+  await line.click({ position: { x: 12, y: 6 } });
+  await settle(page, 300);
+  check((await focused()) === null, '選んでいる人の行をもう一度押すと外れる', await focused());
+}
 
 /** 初期データで日の予定（今日）を開く */
 async function freshPlan(page, hash = '/plan') {
@@ -675,6 +712,7 @@ const steps = sharedPage({
     ['multi', multi],
     ['tabs', tabs],
     ['maps-off', mapsOff],
+    ['select-release', selectRelease],
     ['keyboard', keyboard],
     ['rescope-confirm', rescopeConfirm],
     ['palette', palette],
