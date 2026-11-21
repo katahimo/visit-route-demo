@@ -1,6 +1,6 @@
 # 日の予定（予定と手直し）
 
-> この画面のファイル：`src/pages/PlanPage.tsx`（区画を並べるだけ）・フック `usePlanPage.ts`（まとめ）・`usePlanData.ts`（計算）・`usePlanView.ts`（表示の状態）・`usePlanNav.ts`（移動・フォーカス・URL の入口）・`usePlanEdits.ts`（手直し・取り消し・確定）・`usePlanDrag.ts`（ドラッグ）・`usePlanShown.ts`（地図・日ごとのリスト・担当ごとの1日・一覧の行）・区画 `planLayout.tsx`・`planToolbar.tsx`（`PlanProgressText`）・`planColumns.tsx`（列・`PlanBoard`）・`planCards.tsx`（カード・帯・印）・`planReassignMenu.tsx`（`ReassignMenu`）・`visitList.tsx`（`VisitList`）・`planParts.tsx`・`planHeader.tsx`（`PlanConfirmActions`・`PlanOneLine`・`PlanHelp`）・`planBands.tsx`（`PlanBands`）・`planDetail.tsx`（`PlanDetailPanel`・`PlanSummary`・`BalanceChips`）・`cancelVisitPanel.tsx`・`mailPanels.tsx`（`DayMailPanel`）・`plan.css`、`src/components/routeView.tsx`・`routeTimeline.tsx`・`MapDock.tsx`・`MenuButton.tsx`・`dayLines.tsx`・`visitType.tsx`・`VisitRules.tsx`・`mapsLinks.tsx`・`useDayModel.ts`・`useRouteSelection.ts`・`PlanIssueCount.tsx`・`openTold.ts`、`src/lib/dayModel.ts`・`dayPlan.ts`・`planView.ts`（`planColumns`・`hardLabelsOf`・`toldMarksOf`・`unplacedReasons`・`droppedRowsOf`・`hardRowsOf`）・`dayMail.ts`（`dayMailRows`・`dayMailProgress`）・`chatText.ts`（`dayChatText`）・`clipboard.ts`・`reassignMenu.ts`・`unassignedReason.ts`・`scoreReason.ts`・`routeView.ts`・`timeline.ts`・`dayLine.ts`・`confirmDay.ts`・`settled.ts`・`settledView.ts`・`detailsHeading.ts`・`exceptionView.ts`、`src/components/Toast.tsx`。関連 ADR：0004・0007〜0010・0012・0013・0015・0017・0018・0030・0031・0051・0053・0054・0055・0058〜0060・0063・0073・0074・0098。関連 PRD：D12・D16〜D18・D25・D58・D63・D84・D91〜D101・D173〜D174・D201〜D209・D217・D219・D224・D229・D237・D266・D269・D300・D307・D314〜D319・D323・D329・D330・D333・D334・D339〜D347・D382・D384・D385・D402・D403・D419・D430。
+> この画面のファイル：`src/pages/PlanPage.tsx`（区画を並べるだけ）・フック `usePlanPage.ts`（まとめ）・`usePlanData.ts`（計算）・`usePlanView.ts`（表示の状態）・`usePlanNav.ts`（移動・フォーカス・URL の入口）・`usePlanEdits.ts`（手直し・取り消し・確定）・`usePlanDrag.ts`（ドラッグ）・`usePlanShown.ts`（地図・日ごとのリスト・担当ごとの1日・一覧の行）・区画 `planLayout.tsx`・`planToolbar.tsx`（`PlanProgressText`）・`planColumns.tsx`（列・`PlanBoard`）・`planCards.tsx`（カード・帯・印）・`planReassignMenu.tsx`（`ReassignMenu`）・`visitList.tsx`（`VisitList`）・`planParts.tsx`・`planHeader.tsx`（`PlanConfirmActions`・`PlanOneLine`・`PlanHelp`）・`planBands.tsx`（`PlanBands`）・`planDetail.tsx`（`PlanDetailPanel`・`PlanSummary`・`BalanceChips`）・`cancelVisitPanel.tsx`・`mailPanels.tsx`（`DayMailPanel`）・`plan.css`、`src/components/routeView.tsx`・`routeTimeline.tsx`・`MapDock.tsx`・`MenuButton.tsx`・`dayLines.tsx`・`visitType.tsx`・`VisitRules.tsx`・`mapsLinks.tsx`・`useDayModel.ts`・`useRouteSelection.ts`・`PlanIssueCount.tsx`・`openTold.ts`、`src/lib/dayModel.ts`・`dayPlan.ts`・`planView.ts`（`planColumns`・`hardLabelsOf`・`toldMarksOf`・`unplacedReasons`・`droppedRowsOf`・`hardRowsOf`）・`dayMail.ts`（`dayMailRows`・`dayMailProgress`）・`chatText.ts`（`dayChatText`）・`clipboard.ts`・`reassignMenu.ts`・`unassignedReason.ts`・`scoreReason.ts`・`routeView.ts`・`timeline.ts`・`dayLine.ts`・`confirmDay.ts`・`settled.ts`・`settledView.ts`・`detailsHeading.ts`・`exceptionView.ts`、`src/components/Toast.tsx`。関連 ADR：0004・0007〜0010・0012・0013・0015・0017・0018・0030・0031・0051・0053・0054・0055・0058〜0060・0063・0073・0074・0098・0118。関連 PRD：D12・D16〜D18・D25・D58・D63・D84・D91〜D101・D173〜D174・D201〜D209・D217・D219・D224・D229・D237・D266・D269・D300・D307・D314〜D319・D323・D329・D330・D333・D334・D339〜D347・D382・D384・D385・D402・D403・D419・D430・D466。
 > 担当は訪問に持ち（`Visit` の `staffId`・`start`・`pinned`）、その日の担当の並び（今の担当）は `lib/dayPlan` の `dayRoutes`。
 > 欠勤・キャンセルの欄と振り直しは [pages-plan-absence.md](pages-plan-absence.md)、バーの塗りは [pages-bars.md](pages-bars.md)、操作の行・範囲の提案の帯・訪問の札・訪問の詳細の欄は [pages-common.md](pages-common.md)。
 
@@ -26,7 +26,7 @@
 3. 「詳しく ▾」（`day-details`。閉じて始まる）：1行のまとめと担当ごとの1日（`DayLines`）
 4. あるときだけの帯（ドラッグ中には増減しない）：問題を作れない・採点できない・範囲の提案の帯（`RangeProposalBand`。`data-kind="range"`）・入らない訪問（`band-unassigned`・「見る」）・欠勤の振り直し（`band-reassign`・「差の欄へ」）・休み（`band-leave`）・拘束超え（`band-over-span`）
 5. 欠勤の差の欄（本体のすぐ上。[pages-plan-absence.md](pages-plan-absence.md)）
-6. 本体（時間軸か順番か一覧。600px 以下は日ごとのリストが既定）と、その下に全幅の地図（`plan-map`。1280px 以上は高さ 600px、狭い画面は 420px。比較の画面と同じ形）。画面の外にあるあいだは `MapDock` で右下に浮かせ、〈スタッフ〉・区間・訪問を選ぶと開く
+6. 本体（時間軸か順番か一覧。600px 以下は日ごとのリストが既定）と、その下に全幅の地図（`plan-map`。1280px 以上は高さ 600px、狭い画面は 420px。比較の画面と同じ形）。画面の外にあるあいだは `MapDock` のボタンを右下に出し、押したときだけ浮かせた地図を開く（選んでも開かない。開け閉めは端末に覚える。PRD D466。ADR-0118）
 
 #### 「詳しく ▾」と操作の行
 
@@ -39,7 +39,7 @@
 
 - 札は時刻・名前（担当は列）の1行。時間軸の移動・待ちは入と同じに出し（PRD D431）、担当なしの札に入れられない理由の札も出さない。ピン・条件に合わないの印は出さない（目立たせるのは担当なし・間に合わない・重なり・休みの人と「変更あり」）。使い方の文にピン・移動の説明を書かない
 - 説明は入切とも1行で初回だけ（閉じたら端末に覚える）。入は担当なしの札の入れられない理由を札ごとに「理由 N ▾」（`unplaced-reasons-fold`。閉じて始める）
-- 地図は入と同じ全幅のカード（`plan-map`）・〈スタッフ〉ごとの凡例。画面の外のときだけ右下に浮かせる（`MapDock`。ADR-0103）
+- 地図は入と同じ全幅のカード（`plan-map`）・〈スタッフ〉ごとの凡例。画面の外のときだけ右下に浮かせる（`MapDock`。開け閉めは覚える。ADR-0103・0118）
 - 「一覧で見る」の表にもピン・条件に合わないの札を出さない。欠勤・キャンセルのあとの振り直しは 反映・ピン・点数の言葉を使わず（`reassignWords`。「今の案」「〜にする」「決めた振り直し」）、点数は「詳しく」の中
 
 #### 状態の印と確定
