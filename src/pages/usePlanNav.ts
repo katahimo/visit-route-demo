@@ -204,7 +204,7 @@ export function usePlanNav(x: { date: string; setDate: (d: string) => void; d: P
     });
   useUrlEntry(date, setDate, d, go.goToNone);
   // 選んだ〈スタッフ〉・訪問・区間を外す：Esc と、時間軸・順番の空いた所を押す（もう一度押す・凡例・「全員のルートを見る」のほか）
-  const selected = sel.focusKey !== '';
+  const selected = sel.focusStaff !== null || sel.focusLeg !== null || sel.picked !== null;
   useEscRelease(selected, sel.reset);
   useBlankClickRelease(selected, '.plan-view', sel.reset);
   /** 週間の帯・要対応の帯から開いたときに選ぶ訪問（並びが出たら1回だけ選んで見える所へ） */
