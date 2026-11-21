@@ -92,13 +92,15 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REF_NAME: ${{ github.head_ref || github.ref_name }}
         run: |
-          # PR は pr-<番号>、手動はブランチ名から。英小文字・数字・ハイフンだけ、30文字まで
+          # PR は pr-<番号>、手動は br-<ブランチ名（英小文字・数字・ハイフン、30文字まで）>-<ハッシュ4桁>。
+          # 別名は英字で始まる・Worker 名と合わせて 63 文字まで（wrangler の決まり）。ハッシュで長い名前どうしがぶつからない
           if [ -n "$PR_NUMBER" ]; then
             alias="pr-$PR_NUMBER"
           else
-            alias=$(printf '%s' "$REF_NAME" | tr 'A-Z' 'a-z' | sed -e 's/[^a-z0-9]\{1,\}/-/g' -e 's/^-*//' | cut -c1-30 | sed -e 's/-*$//')
+            slug=$(printf '%s' "$REF_NAME" | tr 'A-Z' 'a-z' | sed -e 's/[^a-z0-9]\{1,\}/-/g' -e 's/^-*//' | cut -c1-30 | sed -e 's/-*$//')
+            hash=$(printf '%s' "$REF_NAME" | sha1sum | cut -c1-4)
+            alias="br-${slug:+$slug-}$hash"
           fi
-          [ -n "$alias" ] || alias=preview
           echo "name=$alias" >> "$GITHUB_OUTPUT"
       - name: 版を上げる（本番には出さない）
         id: upload
@@ -107,7 +109,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: '4'
-          command: versions upload --preview-alias ${{ steps.alias.outputs.name }} --tag ${{ github.event.pull_request.head.sha || github.sha }} --message "preview ${{ steps.alias.outputs.name }}"
+          command: versions upload --preview-alias ${{ steps.alias.outputs.name }} --tag ${{ github.sha }} --message "preview ${{ steps.alias.outputs.name }}"
       - name: URL を書き出す
         id: url
         env:
@@ -165,13 +167,14 @@ jobs:
             const { owner, repo } = context.repo;
             const issue_number = context.payload.pull_request.number;
             const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number });
-            const mine = comments.find((c) => c.body?.includes(marker));
+            const mine = comments.find((c) => c.user?.type === 'Bot' && c.body?.includes(marker));
             if (mine) await github.rest.issues.updateComment({ owner, repo, comment_id: mine.id, body });
             else await github.rest.issues.createComment({ owner, repo, issue_number, body });
 
   rollback:
     name: 本番を前の版に戻す
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.action == 'rollback' }}
+    # main から起動したときだけ（ほかのブランチの wrangler.jsonc の名前で別の Worker を戻さない）
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.action == 'rollback' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     concurrency:
       group: production
@@ -185,7 +188,7 @@ jobs:
           REASON: ${{ inputs.reason }}
         run: |
           # 版の ID は UUID だけ受け付ける（コマンドに入れるため）
-          if [ -n "$VERSION_ID" ] && ! printf '%s' "$VERSION_ID" | grep -Eq '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'; then
+          if [ -n "$VERSION_ID" ] && ! printf '%s' "$VERSION_ID" | grep -Eiq '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'; then
             echo "::error::版の ID の形が違う（例：0a1b2c3d-…）"
             exit 1
           fi
