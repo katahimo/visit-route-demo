@@ -11,8 +11,7 @@ const TIP_HIDE_MS = 120;
 /**
  * 月のマスの読み方の吹き出し（PRD D177）。マスにマウスを重ねる（少し止まったら）・キーボードでフォーカスする（:focus-visible）と、
  * そのマスの日付・状態の文と、出ている印の読み方（lib/monthGuide。マスの data-guide）を、マスの下（入らなければ上）に出す。
- * Esc・離れる・フォーカスが外れると消す。吹き出しは画面に収まる高さで止め、はみ出す分は中を巻いて読める（吹き出しの上へマウスを移しても消えない）。
- * タッチでは出さない（押すと日の画面）
+ * Esc・離れる・フォーカスが外れると消す。吹き出しはマウスを受けない（下のマスを隠して押せなくしない）。タッチでは出さない（押すと日の画面）
  */
 export function MonthCellTip({ gridRef, tipStore }: { gridRef: RefObject<HTMLElement | null>; tipStore: TipStore }) {
   const tipId = `month-cell-tip-${useId().replace(/:/g, '')}`;
@@ -97,15 +96,6 @@ export function MonthCellTip({ gridRef, tipStore }: { gridRef: RefObject<HTMLEle
   // 文は日付で引く（描画中に DOM の data-* を読まない。休みを切り替えたら新しい文）
   const date = at?.date ?? null;
   const tip = useSyncExternalStore(tipStore.subscribe, () => (date ? tipStore.get(date) : null));
-  // 吹き出しにマウスを移した間は消さない（長い文は中を巻いて読む）。離れたら消す
-  const holdTip = () => {
-    clear();
-    setAt((cur) => (cur?.by === 'focus' ? cur : cur && { ...cur, by: 'pointer' }));
-  };
-  const leaveTip = () => {
-    clear();
-    timer.current = window.setTimeout(() => setAt((cur) => (cur?.by === 'focus' ? cur : null)), TIP_HIDE_MS);
-  };
   // 置く先は日付でいまのマスを引く（描き直しで要素が替わっても同じ日のマス）
   const cellAt = () =>
     date ? (gridRef.current?.querySelector<HTMLElement>(`[data-tip][data-date="${date}"]`) ?? null) : null;
@@ -114,9 +104,7 @@ export function MonthCellTip({ gridRef, tipStore }: { gridRef: RefObject<HTMLEle
       id={tipId}
       anchor={cellAt}
       open={!!tip && !!cellAt()}
-      className="month-cell-tip"
-      onPointerEnter={holdTip}
-      onPointerLeave={leaveTip}
+      className="is-passive month-cell-tip"
       testId="month-cell-tip"
     >
       {tip && (

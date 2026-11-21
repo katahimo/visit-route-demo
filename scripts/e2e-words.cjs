@@ -421,7 +421,7 @@ async function legend(page) {
   await page.locator('h1').click();
   await settle(page, 150);
   check(!(await tip.isVisible()), 'フォーカスが外れると消える');
-  // 縦の低い窓（1440x681）でも、読み方は画面に収まり、はみ出す分は吹き出しの上で巻いて最後まで読める
+  // 縦の低い窓（1440x681）でも、読み方は画面に収まり、巻かずに最後まで読める。吹き出しはマウスを受けない（下を隠さない）
   const vp = page.viewportSize();
   await page.setViewportSize({ width: 1440, height: 681 });
   await settle(page, 300);
@@ -432,13 +432,10 @@ async function legend(page) {
   await tip.waitFor({ state: 'visible', timeout: 3000 });
   const lb = await tip.boundingBox();
   check(lb && lb.y >= 0 && lb.y + lb.height <= 681, '低い窓：読み方が画面に収まる', lb);
-  await page.mouse.move(lb.x + lb.width / 2, lb.y + 12, { steps: 6 });
-  await settle(page, 400);
-  check(await tip.isVisible(), '低い窓：吹き出しの上へマウスを移しても消えない');
-  await page.mouse.wheel(0, 3000);
-  await settle(page, 200);
-  const sc = await tip.evaluate((e) => e.scrollHeight - e.clientHeight - e.scrollTop);
-  check(sc <= 1, '低い窓：吹き出しの中を巻くと最後まで読める', sc);
+  const rest = await tip.evaluate((e) => e.scrollHeight - e.clientHeight);
+  check(rest <= 1, '低い窓：巻かずに最後まで読める（はみ出し 0）', rest);
+  const pe = await tip.evaluate((e) => getComputedStyle(e).pointerEvents);
+  check(pe === 'none', '吹き出しはマウスを受けない（下のマス・ボタンを押せる）', pe);
   await page.mouse.move(5, 5);
   await settle(page, 300);
   await page.setViewportSize(vp);

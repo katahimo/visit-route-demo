@@ -692,14 +692,16 @@
 .month-legend-fold[open] .month-legend {
   margin-top: 6px;
 }
-/* マスの読み方の吹き出し（MonthCellTip）。高さは TipBubble が画面に収まる最大にし、超える分は巻く。
-   横を広げて行数を減らす。巻いても背面（月の表）を動かさない */
+/* マスの読み方の吹き出し（MonthCellTip）。マウスを受けない（下のマスやボタンを隠して押せなくしない）。
+   縦の低い窓でも最後まで読めるよう、横を広げ、読み方の行は幅があれば2列にして高さを抑える */
+.term-tip.is-passive {
+  pointer-events: none;
+}
 .month-cell-tip {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  max-width: min(440px, calc(100vw - 16px));
-  overscroll-behavior: contain;
+  max-width: min(560px, calc(100vw - 16px));
 }
 .month-cell-tip[hidden] {
   display: none;
@@ -711,6 +713,15 @@
 }
 .month-cell-tip ul {
   margin: 0;
+}
+@media (min-width: 600px) {
+  .month-cell-tip ul {
+    columns: 2;
+    column-gap: 20px;
+  }
+  .month-cell-tip li {
+    break-inside: avoid;
+  }
 }
 @media print {
   .month-legend-open,
