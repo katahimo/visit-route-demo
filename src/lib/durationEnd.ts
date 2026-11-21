@@ -34,3 +34,16 @@ export function endTimeError(start: string, end: string): string | null {
   if (end === '' || !HHMM.test(start)) return null;
   return minutesBetween(start, end) === null ? '終わりは開始より後の時刻にしてください' : null;
 }
+
+/**
+ * 開始が変わったときの、打った途中の終わり（開始より前で所要に映せなかった値）の扱い：新しい開始で所要にできるなら
+ * その所要（分の文字）を返して途中の値を捨て（endDraft null）、まだ開始より前なら途中の値を残す（打った値を黙って消さない）
+ */
+export function endDraftOnStart(
+  start: string,
+  endDraft: string | null,
+): { endDraft: string | null; minutes: string | null } {
+  if (endDraft === null) return { endDraft: null, minutes: null };
+  const m = minutesBetween(start, endDraft);
+  return m === null ? { endDraft, minutes: null } : { endDraft: null, minutes: String(m) };
+}

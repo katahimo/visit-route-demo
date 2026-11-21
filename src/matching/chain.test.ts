@@ -1,7 +1,7 @@
 // 続く訪問（条件 sameClient。ADR-0116。PRD D453）：組の作り方・点・solver と evaluate の一致
 import { describe, expect, it } from 'vitest';
 import type { Problem } from '../contracts/problem';
-import { score } from '../evaluate';
+import { achievements, score } from '../evaluate';
 import { solve } from '../solver';
 import { chainOf, chainRoutePoints, chainScore } from './chain';
 import { compile } from './compile';
@@ -39,6 +39,16 @@ describe('chainOf（続く訪問の組）', () => {
     const c = chainOf([pv('a1', 'a', 540), pv('a3', 'a', 620), pv('a2', 'a', 610)], [rule('sc', 'sameClient', 1)])!;
     expect(c.next[0]).toBe(2);
   });
+  it('同じ時刻の印の無い2件 A・B のあとに C があっても、C へ続く組は1つだけ（最良の案で点が残らない）', () => {
+    const visits = [pv('A', 'a', 540), pv('B', 'a', 540), pv('C', 'a', 600)];
+    const c = chainOf(visits, [rule('sc', 'sameClient', 2)])!;
+    expect(c.next).toEqual([2, -1, -1]);
+    const problem = { chain: c } as unknown as Problem;
+    expect(chainScore(problem, [[0, 2], [1]])).toEqual({ points: 0, pairs: 1, kept: 1 });
+    // 2人が続けて入る（A・B のあとに C・D）なら A→C・B→D
+    const two = chainOf([...visits, pv('D', 'a', 600)], [rule('sc', 'sameClient', 2)])!;
+    expect(two.next).toEqual([2, 3, -1, -1]);
+  });
   it('重み0・条件が無ければ null（今までと同じ問題）', () => {
     const visits = [pv('a1', 'a', 540), pv('a2', 'a', 600)];
     expect(chainOf(visits, [rule('sc', 'sameClient', 0)])).toBeNull();
@@ -47,7 +57,7 @@ describe('chainOf（続く訪問の組）', () => {
 });
 
 describe('続く訪問の点', () => {
-  const chain = { next: [1, 2, -1, -1], degree: [1, 2, 1, 0], perPair: 20 };
+  const chain = { next: [1, 2, -1, -1], degree: [1, 2, 1, 0], perPair: 20, ruleId: 'sc' };
   it('列で続けて回る組は0、続けて回らない組は perPair（半分ずつ両方の訪問に持たせる）', () => {
     expect(chainRoutePoints(chain, [0, 1, 2])).toBe(0);
     expect(chainRoutePoints(chain, [0, 3, 1, 2])).toBe(20);
@@ -100,7 +110,24 @@ describe('solver と evaluate（続く訪問）', () => {
     // 分けた案は 1組×20点が採点に入り、perRule にも出る
     const split = score(on, { s1: ['v1'], s2: ['v2'] });
     expect(split.chainPoints).toBe(20);
-    expect(split.perRule.sameClient).toEqual({ hits: 0, misses: 1, points: 20 });
+    expect(split.perRule.sc).toEqual({ hits: 0, misses: 1, points: 20 });
+  });
+
+  it('続く訪問の条件の ID が衝突で sameClient2 でも、perRule・達成はその ID に入り、ID が sameClient のほかの条件を上書きしない', () => {
+    const d = splitDay(2);
+    d.rules = [
+      rule('sameClient', 'staffPreference', 1),
+      rule('bal', 'balance', 1),
+      rule('sameClient2', 'sameClient', 2),
+    ];
+    d.compat = {};
+    const p = compile(d, DATE);
+    expect(p.chain?.ruleId).toBe('sameClient2');
+    const split = score(p, { s1: ['v1'], s2: ['v2'] });
+    expect(split.perRule.sameClient2).toEqual({ hits: 0, misses: 1, points: 20 });
+    expect(split.perRule.sameClient?.points ?? 0).not.toBe(20);
+    const ach = achievements(p, { s1: ['v1'], s2: ['v2'] });
+    expect(ach.find((a) => a.ruleId === 'sameClient2')).toMatchObject({ total: 1, met: 0 });
   });
 
   it('同じ〈利用者さん〉の続く訪問が多い乱数のデータで、solver の score は evaluate の total と一致する', () => {

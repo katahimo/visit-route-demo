@@ -86,12 +86,13 @@ function TypeField({ data, draft, set, isNew }: DraftProps) {
 
 /**
  * 時間の約束・開始時刻（幅を保ってずらす）・最も遅い開始時刻。
- * 時間の約束は機能 timeWindow が切なら出さず、開始時刻ちょうど（既定）で入れる。幅の訪問を直すときは出す（ADR-0117）
+ * 時間の約束は機能 timeWindow が切なら出さず、開始時刻ちょうど（既定）で入れる。幅の訪問を直すときは出す（ADR-0117）。
+ * 出すかは開いたときの値（openedWindow）で決める（「ちょうど」に変えた途端に欄が消えて戻せなくならないように）
  */
-function StartFields({ data, draft, set, bad }: DraftProps) {
+function StartFields({ data, draft, set, bad, openedWindow }: DraftProps & { openedWindow: boolean }) {
   return (
     <>
-      {(isOn(data.org.features, 'timeWindow') || draft.windowKind === 'window') && (
+      {(isOn(data.org.features, 'timeWindow') || openedWindow) && (
         <label>
           時間の約束
           <select
@@ -139,7 +140,7 @@ function StartFields({ data, draft, set, bad }: DraftProps) {
 }
 
 /** 何を・いつ（新しい訪問）／日時を変える */
-export function VisitTimeFields(p: DraftProps & { today: string }) {
+export function VisitTimeFields(p: DraftProps & { today: string; openedWindow: boolean }) {
   const { draft, set, bad, isNew, today } = p;
   return (
     <fieldset className="vp-section" data-testid="vp-time">

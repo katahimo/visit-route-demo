@@ -6,15 +6,20 @@ import { POINTS_PER_WEIGHT, type Rule, SAME_CLIENT_GAP_MAX } from '../contracts/
 /**
  * 続く訪問の組（ADR-0116）。訪問 v ごとに、同じ〈利用者さん〉の訪問のうち、v の終わり（earliest＋duration）から
  * 0〜SAME_CLIENT_GAP_MAX 分あとに始まる（earliest）いちばん早いもの（同じなら先の添字）を next[v] にする。
+ * 続く先は1つの訪問につき1組だけ（先の添字の v が取り、ほかの v はまだ取られていない先から選ぶ）。同じ時刻の2件（印の無い2人体制の
+ * 入れ方）A・B のあとに C があると、A→C・B→C の2組では1人の列にどちらかしか続けられず、点が必ず残るため。
  * 重なる訪問（2人で入るなど）は組にしない。同行の組の訪問（companion。ADR-0120）も組にしない（2人のどちらが続けても同じなので、
- * 片方だけ数えると点が残る）。条件の重みの和が0・組が1つも無ければ null（今までと同じ問題）
+ * 片方だけ数えると点が残る）。条件の重みの和が0・組が1つも無ければ null（今までと同じ問題）。
+ * ruleId は sameClient の型の条件（組み込みで1つ）の ID（perRule・達成のキー。ID ではなく型で引く）
  */
 export function chainOf(visits: readonly ProblemVisit[], rules: readonly Rule[]): ProblemChain | null {
-  const weight = rules.filter((r) => r.type === 'sameClient').reduce((a, r) => a + r.weight, 0);
+  const own = rules.filter((r) => r.type === 'sameClient');
+  const weight = own.reduce((a, r) => a + r.weight, 0);
   if (!(weight > 0)) return null;
   const V = visits.length;
   const next = new Array<number>(V).fill(-1);
   const degree = new Array<number>(V).fill(0);
+  const taken = new Array<boolean>(V).fill(false);
   let pairs = 0;
   for (let v = 0; v < V; v++) {
     const a = visits[v]!;
@@ -23,18 +28,19 @@ export function chainOf(visits: readonly ProblemVisit[], rules: readonly Rule[])
     let best = -1;
     for (let u = 0; u < V; u++) {
       const b = visits[u]!;
-      if (u === v || b.clientId !== a.clientId || b.companion) continue;
+      if (u === v || taken[u] || b.clientId !== a.clientId || b.companion) continue;
       const gap = b.earliest - end;
       if (gap < 0 || gap > SAME_CLIENT_GAP_MAX) continue;
       if (best < 0 || b.earliest < visits[best]!.earliest) best = u;
     }
     if (best < 0) continue;
     next[v] = best;
+    taken[best] = true;
     degree[v]!++;
     degree[best]!++;
     pairs++;
   }
-  return pairs > 0 ? { next, degree, perPair: weight * POINTS_PER_WEIGHT } : null;
+  return pairs > 0 ? { next, degree, perPair: weight * POINTS_PER_WEIGHT, ruleId: own[0]!.id } : null;
 }
 
 /**

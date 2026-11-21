@@ -117,6 +117,8 @@ export const BUILTIN_RULE_TYPES: ReadonlySet<RuleType> = new Set(['sameClient'])
 export const HOME_NEAR_FROM = 17 * 60;
 /** 夕方は自宅に近い人（homeNear）：訪問から自宅までの移動1分・重み1あたりの点 */
 export const HOME_NEAR_PER_MINUTE = 0.2;
+/** 夕方は自宅に近い人（homeNear）を達成とみる、訪問から自宅までの移動の上限（分。条件ごとの達成の件数。ADR-0116） */
+export const HOME_NEAR_MET_MINUTES = 15;
 /**
  * 夕方は自宅に近い人（homeNear）の重みが無い古いプリセットの重み（ADR-0116）。条件は初期データに無く、
  * 利用者が足したときだけ効くので、足してすぐ効くよう0にしない

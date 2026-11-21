@@ -70,8 +70,6 @@ function notAllowedLabel(reasons: Reason[]): string {
 
 /** perRule の負担の均等のキー（Problem に条件のIDがないので型の名前。初期データの条件のIDと同じ） */
 export const BALANCE_RULE_KEY = 'balance';
-/** perRule・達成の続く訪問のキー（型の名前。組み込みの条件のIDと同じ。ADR-0116） */
-export const CHAIN_RULE_KEY = 'sameClient';
 
 const TIME_LABEL = { time: '時間の約束に間に合わない', slot: '働ける時間に収まらない' } as const;
 
@@ -145,8 +143,8 @@ function scorePlaced(problem: Problem, p: Placed): PlanScore {
   }
   // 続く訪問（ADR-0116）：達成＝同じ人が続けて回る組、違反＝そうでない組
   const chain = chainScore(problem, p.seqs);
-  if (chain.pairs > 0)
-    perRule[CHAIN_RULE_KEY] = { hits: chain.kept, misses: chain.pairs - chain.kept, points: chain.points };
+  if (chain.pairs > 0 && problem.chain)
+    perRule[problem.chain.ruleId] = { hits: chain.kept, misses: chain.pairs - chain.kept, points: chain.points };
   return {
     total: totalPoints(problem, { travel, wait, assign, balance, chain: chain.points, dropped }),
     travelMinutes: travel,
@@ -456,7 +454,7 @@ export function hundredBreakdown(sc: PlanScore, scale: ScoreScale, problem: Prob
  * 条件（Rule.id）ごとの達成の件数。割当済みの訪問のうち、その条件の判定（理由）がある訪問を total、
  * その条件の理由がすべて点0以下（満たした・加点）の訪問を met にする。相性は ◎・○・△・× の件数も数える。
  * 負担の均等（BALANCE_RULE_KEY）は、稼働のある人か訪問のある人のうち、目安の帯に収まった人数（unit 'staff'）。
- * 続く訪問（CHAIN_RULE_KEY。ADR-0116）は組の数のうち、同じ人が続けて回る組の数。
+ * 続く訪問（キーは Problem.chain.ruleId＝sameClient の型の条件の ID。ADR-0116）は組の数のうち、同じ人が続けて回る組の数。
  * 並びは理由に初めて出た順（problem の訪問・担当の順。決定的）、負担の均等・続く訪問は最後
  */
 /** 条件ごとの達成に数えない理由の ruleId（可否・固定・訪問の種類・担当を限る（ADR-0014）。条件 rules の ID ではない） */
@@ -473,7 +471,7 @@ export function achievements(problem: Problem, routes: Record<string, string[]>)
       // 可否・固定などの内部の原因は数えない（条件の ID だけ）。訪問の種類の判定（'visitType'）も条件ではないので
       // 数えない（design.md §5。ADR-0012）
       if (INTERNAL_RULE_IDS.has(r.ruleId)) continue;
-      ok.set(r.ruleId, (ok.get(r.ruleId) ?? true) && r.points <= 0);
+      ok.set(r.ruleId, (ok.get(r.ruleId) ?? true) && (r.met ?? r.points <= 0));
       if (r.level !== undefined) {
         const e = entry(by, r.ruleId);
         e.compat ??= { great: 0, good: 0, poor: 0, ng: 0 };
@@ -503,8 +501,8 @@ export function achievements(problem: Problem, routes: Record<string, string[]>)
   }
   // 続く訪問（ADR-0116）：組の数と、同じ人が続けて回る組の数
   const chain = chainScore(problem, p.seqs);
-  if (chain.pairs > 0)
-    out.push({ ruleId: CHAIN_RULE_KEY, unit: 'visit', total: chain.pairs, met: chain.kept, compat: null });
+  if (chain.pairs > 0 && problem.chain)
+    out.push({ ruleId: problem.chain.ruleId, unit: 'visit', total: chain.pairs, met: chain.kept, compat: null });
   return out;
 }
 

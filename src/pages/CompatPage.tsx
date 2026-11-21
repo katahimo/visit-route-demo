@@ -7,6 +7,7 @@ import { PageHeader } from '../components/ui';
 import type { CompatLevel } from '../contracts/rules';
 import { jstDate } from '../domain/time';
 import { EMPTY_FILTER, sameFilter } from '../lib/clientFilter';
+import { newId } from '../lib/common';
 import { clearUsualWhereNg, compatLevelOf, setCompatLevel } from '../lib/compatLevel';
 import { EMPTY_STAFF_FILTER, sameStaffFilter } from '../lib/compatView';
 import { useDemoData } from '../store';
@@ -64,8 +65,10 @@ export default function CompatPage() {
     const today = jstDate(Date.now());
     update((d) => {
       const compat = setCompatLevel(d.compat, cid, sid, level);
-      const patterns = clearUsualWhereNg(d.patterns, compat, today, { clientId: cid, staffId: sid });
-      return { ...d, compat, patterns };
+      const { patterns, visits } = clearUsualWhereNg(d, compat, today, { clientId: cid, staffId: sid }, () =>
+        newId('pt'),
+      );
+      return { ...d, compat, patterns, visits };
     }, '相性');
     close();
   };

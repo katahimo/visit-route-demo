@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { endTimeError, endTimeOf, minutesBetween, minutesOfText } from './durationEnd';
+import { endDraftOnStart, endTimeError, endTimeOf, minutesBetween, minutesOfText } from './durationEnd';
 
 describe('所要（分）と終わりの時刻（PRD D462）', () => {
   it('開始と所要から終わりの時刻を作る（7:00＋90分＝8:30）', () => {
@@ -28,5 +28,15 @@ describe('所要（分）と終わりの時刻（PRD D462）', () => {
     expect(endTimeError('07:00', '06:00')).toBe('終わりは開始より後の時刻にしてください');
     expect(endTimeError('07:00', '')).toBeNull();
     expect(endTimeError('07:00', '08:30')).toBeNull();
+  });
+});
+
+describe('開始を直したときの途中の終わり（endDraftOnStart）', () => {
+  it('開始 9:00・終わり 7:00 を打ったあと開始を 6:00 にすると、打った 7:00 で所要 60分にする', () => {
+    expect(endDraftOnStart('06:00', '07:00')).toEqual({ endDraft: null, minutes: '60' });
+  });
+  it('まだ開始より前なら途中の値を残す。途中の値が無ければ何もしない', () => {
+    expect(endDraftOnStart('08:00', '07:00')).toEqual({ endDraft: '07:00', minutes: null });
+    expect(endDraftOnStart('06:00', null)).toEqual({ endDraft: null, minutes: null });
   });
 });

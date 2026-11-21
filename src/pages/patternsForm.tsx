@@ -124,7 +124,7 @@ function PatternRepeatFields({
 
 /**
  * 時間の決め方・開始・所要と終わり・いつから（開始日）・終了日・担当・メモ。
- * 時間の決め方は機能 timeWindow が切なら出さず、ちょうど（既定）で入れる。幅の繰り返しを直すときは出す（ADR-0117）
+ * 時間の決め方は windowOn（機能 timeWindow が入か、開いたときの値が幅）のときだけ出す。切ならちょうど（既定）で入れる（ADR-0117）
  */
 function PatternTimeFields({
   form,
@@ -135,7 +135,7 @@ function PatternTimeFields({
 }: FieldsProps & { staff: readonly Staff[]; today: string; windowOn: boolean }) {
   return (
     <div className="form-grid">
-      {(windowOn || form.windowKind === 'window') && (
+      {windowOn && (
         <label>
           時間の決め方
           <select
@@ -345,7 +345,7 @@ export function PatternEditForm({
   monthlyOn: boolean;
   monthlyOffId: string;
   daysLocked: boolean;
-  /** 時間の決め方を選べるか（機能 timeWindow。ADR-0117） */
+  /** 時間の決め方を出すか（機能 timeWindow が入か、開いたときの値が幅。ADR-0117） */
   windowOn: boolean;
   /** FieldError の token と文 */
   errorState: { text: string } | null;

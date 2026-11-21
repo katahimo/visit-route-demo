@@ -1,8 +1,8 @@
 // 夕方は自宅に近い人（条件 homeNear。PRD D455）と、開始時刻をずらさない（機能 shiftStart を切る。PRD D456）。ADR-0116
 import { describe, expect, it } from 'vitest';
-import { HOME_NEAR_PER_MINUTE } from '../contracts/rules';
+import { HOME_NEAR_MET_MINUTES, HOME_NEAR_PER_MINUTE } from '../contracts/rules';
 import { INQUIRY_VISIT_ID } from '../contracts/vacancy';
-import { score } from '../evaluate';
+import { achievements, score } from '../evaluate';
 import { candidatesFor } from '../reassign';
 import { solve } from '../solver';
 import { compile } from './compile';
@@ -39,6 +39,19 @@ describe('夕方は自宅に近い人（homeNear）', () => {
     }
     // 自宅が遠い s2 のほうが重い
     expect(p.assignCost[late]![1]!).toBeGreaterThan(p.assignCost[late]![0]!);
+  });
+  it('達成：自宅までの移動が15分以内なら達成に数える（点は正でも、いつも0件にならない）', () => {
+    const p = compile(evening(3), DATE);
+    const late = p.visits.findIndex((v) => v.id === 'late');
+    const am = p.visits.findIndex((v) => v.id === 'am');
+    const minutes = (s: number) => p.travel[p.visits[late]!.point]![p.staff[s]!.point]!;
+    expect(minutes(0)).toBeGreaterThan(0);
+    expect(minutes(0)).toBeLessThanOrEqual(HOME_NEAR_MET_MINUTES);
+    expect(minutes(1)).toBeGreaterThan(HOME_NEAR_MET_MINUTES);
+    const near = achievements(p, { s1: [p.visits[late]!.id, p.visits[am]!.id], s2: [] }).find((a) => a.ruleId === 'hn');
+    expect(near).toMatchObject({ total: 1, met: 1 });
+    const far = achievements(p, { s1: [p.visits[am]!.id], s2: [p.visits[late]!.id] }).find((a) => a.ruleId === 'hn');
+    expect(far).toMatchObject({ total: 1, met: 0 });
   });
   it('重み0なら効かない（今までと同じ問題）', () => {
     const p = compile(evening(0), DATE);

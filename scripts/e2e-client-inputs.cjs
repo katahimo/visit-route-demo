@@ -236,6 +236,51 @@ async function toggles(page, dlg) {
     );
     await page.keyboard.press('Escape');
   }
+  // 幅の繰り返し・訪問を直す欄：「ちょうど」に変えても時間の決め方の欄は消えない（開いたときの値で出す）
+  // 初期データに幅の繰り返しが無いので、c1 の続いている繰り返しを1つ幅（開始（早）から30分）にして読み直す
+  const base = d2.patterns.find((p) => p.clientId === 'c1' && p.to === null && p.dayTimes.length === 0);
+  check(!!base, 'c1 に続いている繰り返しがある');
+  if (!base) return;
+  const [h, m] = base.earliestStart.split(':').map(Number);
+  const late = `${String(h + (m + 30 >= 60 ? 1 : 0)).padStart(2, '0')}:${String((m + 30) % 60).padStart(2, '0')}`;
+  const winPattern = { ...base, windowKind: 'window', latestStart: late };
+  const withWindow = { ...d2, patterns: d2.patterns.map((p) => (p.id === base.id ? winPattern : p)) };
+  await page.evaluate(([k, v]) => localStorage.setItem(k, v), [STORAGE_KEY, JSON.stringify(withWindow)]);
+  await page.reload();
+  await open(page, `/clients/${winPattern.clientId}`, '[data-testid="patterns-section"]');
+  await page
+    .locator(`[data-testid="pattern-row"][data-pattern="${winPattern.id}"]`)
+    .getByTestId('pattern-edit')
+    .click();
+  const wform = page.getByTestId('pattern-form');
+  await wform.waitFor();
+  await wform.getByTestId('pattern-window').selectOption('fixed');
+  check(
+    (await wform.getByTestId('pattern-window').count()) === 1,
+    '時間の決め方を切っても、幅の繰り返しをちょうどに変えた途端に欄が消えない（戻せる）',
+  );
+  await wform.getByTestId('pattern-window').selectOption('window');
+  await wform.getByTestId('pattern-cancel').click();
+  // 今日以降の回（今日より前の回は日時を直せない）
+  const ids = await page
+    .locator(`[data-testid="pcal-visit"][data-visit$="_${winPattern.id}"]`)
+    .evaluateAll((els) => els.map((e) => e.getAttribute('data-visit')));
+  const futureId = ids.find((id) => id && id.slice(0, 10) >= TODAY);
+  const winVisit = page.locator(`[data-testid="pcal-visit"][data-visit="${futureId}"]`).first();
+  check(!!futureId, '幅にした繰り返しの今日以降の回が〈利用者さん〉の予定に出る', ids);
+  if (futureId) {
+    await winVisit.click();
+    const panel = page.getByTestId('visit-panel');
+    await panel.waitFor();
+    check((await panel.getByTestId('vp-window').count()) === 1, '幅の訪問の詳細の欄には時間の約束が出る');
+    await panel.getByTestId('vp-window').selectOption('fixed');
+    check(
+      (await panel.getByTestId('vp-window').count()) === 1,
+      '時間の決め方を切っても、幅の訪問をちょうどに変えた途端に時間の約束の欄が消えない',
+    );
+    await panel.getByTestId('vp-window').selectOption('window');
+    await page.keyboard.press('Escape');
+  }
 }
 
 const steps = pagePerStep({

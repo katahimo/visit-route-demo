@@ -45,8 +45,12 @@ export type ScoreReasonOptions = {
 
 /** 負担の均等の achievements のキー（evaluate の BALANCE_RULE_KEY と同じ値。evaluate を読み込まずに済むよう写す） */
 const BALANCE_KEY = 'balance';
-/** 続く訪問の perRule のキー（evaluate の CHAIN_RULE_KEY と同じ値。ADR-0116） */
-const CHAIN_KEY = 'sameClient';
+/**
+ * 続く訪問の perRule のキー：sameClient の型の条件の ID（evaluate は Problem.chain.ruleId をキーにする。ID の衝突で
+ * 'sameClient2' などになっても型で引くのでずれない。ADR-0116）。条件が渡らなければ初期の ID
+ */
+const chainKeyOf = (rules: readonly Rule[] | undefined): string =>
+  rules?.find((r) => r.type === 'sameClient')?.id ?? 'sameClient';
 
 /**
  * 「担当の条件」の減点のうち、いちばん効いている条件を一言にする：
@@ -63,7 +67,7 @@ function assignText(
   let best: { id: string; rule: Rule; excess: number } | null = null;
   for (const [id, e] of Object.entries(sc.perRule)) {
     const rule = ruleById.get(id);
-    if (!rule || rule.hard || id === BALANCE_KEY || rule.type === 'balance') continue;
+    if (!rule || rule.hard || id === BALANCE_KEY || rule.type === 'balance' || rule.type === 'sameClient') continue;
     const excess = e.points - (opts.ruleLower?.[id] ?? 0);
     if (excess <= 0) continue;
     if (!best || excess > best.excess) best = { id, rule, excess };
@@ -146,7 +150,7 @@ export function scoreReason(
       return at(out > 0 ? `件数の偏り（目安から外れた人 ${out}人）` : '件数の偏り');
     }
     case 'chain': {
-      const c = sc.perRule[CHAIN_KEY];
+      const c = sc.perRule[chainKeyOf(opts.rules)];
       return at(c && c.misses > 0 ? `続く訪問が別の人（${c.misses}組）` : '続く訪問が別の人');
     }
   }

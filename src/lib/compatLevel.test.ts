@@ -1,6 +1,8 @@
 // 相性の記号（PRD D113・D177）
 import { describe, expect, it } from 'vitest';
 import type { Compat } from '../contracts/rules';
+import { visitsIn } from '../patterns';
+import { createDemoData } from '../seed';
 import {
   COMPAT_CHOICES,
   COMPAT_LEGEND,
@@ -61,34 +63,64 @@ describe('setCompatLevel', () => {
 });
 
 describe('clearUsualWhereNg', () => {
+  const T = '2026-11-21';
   const compat: Compat = { c1: { s1: -2, s2: 1 }, c2: { s1: -1 } };
+  const base = createDemoData(T);
+  const pat = (id: string, clientId: string, usualStaffId: string | null, from: string, to: string | null) => ({
+    ...base.patterns[0],
+    id,
+    clientId,
+    usualStaffId,
+    from,
+    to,
+  });
   const pats = [
-    { id: 'p1', clientId: 'c1', usualStaffId: 's1', to: null },
-    { id: 'p2', clientId: 'c1', usualStaffId: 's2', to: null },
-    { id: 'p3', clientId: 'c1', usualStaffId: 's1', to: '2026-01-01' },
-    { id: 'p4', clientId: 'c2', usualStaffId: 's1', to: null },
-    { id: 'p5', clientId: 'c1', usualStaffId: null, to: null },
+    pat('p1', 'c1', 's1', T, null),
+    pat('p2', 'c1', 's2', T, null),
+    pat('p3', 'c1', 's1', '2025-01-01', '2026-01-01'),
+    pat('p4', 'c2', 's1', T, null),
+    pat('p5', 'c1', null, T, null),
   ];
+  const data = { patterns: pats, visits: [], clients: base.clients };
+  let n = 0;
+  const nid = () => `new${++n}`;
 
-  it('× の人がいつもの担当の、続いている繰り返しだけ担当なしにする', () => {
-    const out = clearUsualWhereNg(pats, compat, '2026-11-20');
-    expect(out.map((p) => p.usualStaffId)).toEqual([null, 's2', 's1', 's1', null]);
-    expect(countUsualWhereNg(pats, compat, '2026-11-20')).toBe(1);
+  it('× の人がいつもの担当の、today 以降に始まる続いている繰り返しはその場で担当なしにする', () => {
+    const out = clearUsualWhereNg(data, compat, T, {}, nid);
+    expect(out.patterns.map((p) => p.usualStaffId)).toEqual([null, 's2', 's1', 's1', null]);
+    expect(countUsualWhereNg(pats, compat, T)).toBe(1);
+    expect(pats[0].usualStaffId).toBe('s1');
   });
 
-  it('終わっていない（to が today 以降）は外し、元の配列は変えない', () => {
-    const out = clearUsualWhereNg([{ ...pats[2], to: '2026-11-20' }], compat, '2026-11-20');
-    expect(out[0].usualStaffId).toBeNull();
-    expect(pats[2].usualStaffId).toBe('s1');
+  it('始まりが today より前なら today で分け、過去の回の担当は残す（デモの 10/01 開始・担当 s3 の繰り返し）', () => {
+    const d = createDemoData(T);
+    const target = d.patterns.find((p) => p.clientId === 'c13' && p.usualStaffId === 's3');
+    expect(target?.from).toBe('2026-10-01');
+    if (!target) return;
+    const ng: Compat = { ...d.compat, c13: { ...d.compat.c13, s3: -2 } };
+    const before = visitsIn(d, { from: '2026-10-01', to: '2026-10-31' }).filter((v) => v.clientId === 'c13');
+    expect(before.length).toBeGreaterThan(0);
+    expect(before.every((v) => v.staffId === 's3')).toBe(true);
+    expect(countUsualWhereNg(d.patterns, ng, T, { clientId: 'c13', staffId: 's3' })).toBe(1);
+    const out = clearUsualWhereNg(d, ng, T, { clientId: 'c13', staffId: 's3' }, () => 'pt-new');
+    const after = { ...d, ...out };
+    // 過去の回は s3 のまま
+    const past = visitsIn(after, { from: '2026-10-01', to: '2026-10-31' }).filter((v) => v.clientId === 'c13');
+    expect(past.map((v) => v.staffId)).toEqual(before.map((v) => v.staffId));
+    // 元の繰り返しは昨日で終わり、today からは担当なしの新しい繰り返し
+    expect(out.patterns.find((p) => p.id === target.id)?.to).toBe('2026-11-20');
+    expect(out.patterns.find((p) => p.id === 'pt-new')).toMatchObject({ from: T, usualStaffId: null, clientId: 'c13' });
   });
 
   it('scope の〈利用者さん〉・〈スタッフ〉に絞る', () => {
-    expect(clearUsualWhereNg(pats, compat, '2026-11-20', { clientId: 'c2' })).toBe(pats);
-    expect(clearUsualWhereNg(pats, compat, '2026-11-20', { staffId: 's2' })).toBe(pats);
-    expect(countUsualWhereNg(pats, compat, '2026-11-20', { clientId: 'c1', staffId: 's1' })).toBe(1);
+    expect(clearUsualWhereNg(data, compat, T, { clientId: 'c2' }, nid).patterns).toBe(pats);
+    expect(clearUsualWhereNg(data, compat, T, { staffId: 's2' }, nid).patterns).toBe(pats);
+    expect(countUsualWhereNg(pats, compat, T, { clientId: 'c1', staffId: 's1' })).toBe(1);
   });
 
-  it('外すものが無ければ同じ配列を返す', () => {
-    expect(clearUsualWhereNg(pats, {}, '2026-11-20')).toBe(pats);
+  it('外すものが無ければ同じデータを返す', () => {
+    const out = clearUsualWhereNg(data, {}, T, {}, nid);
+    expect(out.patterns).toBe(pats);
+    expect(out.visits).toBe(data.visits);
   });
 });

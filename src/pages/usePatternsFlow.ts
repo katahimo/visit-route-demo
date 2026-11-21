@@ -61,7 +61,7 @@ function usePatternsDraft(onDirty?: (dirty: boolean) => void) {
   const [errorState, setErrorState] = useState<{ text: string } | null>(null);
   const error = errorState?.text ?? null;
   const setError = (text: string | null) => setErrorState(text === null ? null : { text });
-  return { form, setForm, ending, setEnding, open, errorState, error, setError };
+  return { form, opened, setForm, ending, setEnding, open, errorState, error, setError };
 }
 
 export function usePatternsFlow({
@@ -80,15 +80,15 @@ export function usePatternsFlow({
   const confirmDialog = useConfirm();
   const today = jstDate(Date.now());
   const addPattern = usePatternAdd();
-  const { form, setForm, ending, setEnding, open, errorState, error, setError } = usePatternsDraft(onDirty);
+  const { form, opened, setForm, ending, setEnding, open, errorState, error, setError } = usePatternsDraft(onDirty);
   /**
    * 毎月の第N週・曜日ごとの時刻（ADR-0028 の patternMonthly）。切なら選べない。今の値がそれなら欄は読むだけで出す
    * （パターンは事実なので、訪問は今どおり作られる）
    */
   const monthlyOn = useFeature('patternMonthly');
   const monthlyOffId = useId();
-  /** 時間の決め方（ちょうど・幅）を選べるか（ADR-0117 の timeWindow）。切ならちょうど（既定）で入れる */
-  const windowOn = useFeature('timeWindow');
+  /** 時間の決め方を出すか（ADR-0117 の timeWindow が入か、開いたときの値が幅。ちょうどに変えても欄を消さない） */
+  const windowOn = useFeature('timeWindow') || opened?.windowKind === 'window';
   /** 曜日ごとの時刻のパターンで patternMonthly が切：曜日・曜日ごとの時刻は読むだけ（データを変えない） */
   const daysLocked = !monthlyOn && !!form?.perDay;
   const patterns = useMemo(() => data.patterns.filter((p) => p.clientId === clientId), [data.patterns, clientId]);

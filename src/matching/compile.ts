@@ -5,6 +5,7 @@ import type { Problem, ProblemStaff, ProblemVisit, Reason } from '../contracts/p
 import {
   type Condition,
   HOME_NEAR_FROM,
+  HOME_NEAR_MET_MINUTES,
   HOME_NEAR_PER_MINUTE,
   type Item,
   POINTS_PER_WEIGHT,
@@ -281,6 +282,7 @@ function pushRuleReasons(
           ruleId: r.id,
           label: `夕方：自宅まで${Math.round(homeMinutes)}分`,
           points: r.weight * HOME_NEAR_PER_MINUTE * homeMinutes,
+          met: homeMinutes <= HOME_NEAR_MET_MINUTES,
         });
       break;
     case 'balance':

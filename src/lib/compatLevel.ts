@@ -1,6 +1,8 @@
 // 相性の記号（◎○△×。PRD D113・D177・D420）：意味の文・凡例・マスの色の印・選ぶ欄の並び・選んだ相性を入れる
 import type { Pattern } from '../contracts/documents';
+import type { PatternInput } from '../contracts/patterns';
 import { COMPAT_LEVELS, type Compat, type CompatLevel } from '../contracts/rules';
+import { splitPattern } from '../patterns';
 
 /** 凡例（◎○△×の意味。色は表のセルと同じ） */
 export const COMPAT_LEGEND: { mark: string; cls: string; text: string }[] = [
@@ -49,34 +51,67 @@ export function setCompatLevel(compat: Compat, clientId: string, staffId: string
 /** いつもの担当を外す範囲（どちらも省くと全員。両方指定ならその組だけ） */
 export type UsualNgScope = { clientId?: string; staffId?: string };
 
-/**
- * 相性が「× 担当にしない」の人がいつもの担当（繰り返しの担当）になっている繰り返しを、担当なし（null）にする。
- * 対象は today に続いている（終わっていない）繰り返しだけ。終わった繰り返しの担当は履歴なのでそのまま。
- * 外すものが無ければ同じ配列（参照）を返す。scope で〈利用者さん〉・〈スタッフ〉を絞る（PRD D8・D68。ADR-0100）
- */
-export function clearUsualWhereNg<P extends Pick<Pattern, 'clientId' | 'usualStaffId' | 'to'>>(
-  patterns: P[],
+/** clearUsualWhereNg が担当なしにする繰り返しか（続いている・scope に入る・いつもの担当が × の人） */
+function isUsualNg(
+  p: Pick<Pattern, 'clientId' | 'usualStaffId' | 'to'>,
   compat: Compat,
   today: string,
-  scope: UsualNgScope = {},
-): P[] {
-  const hit = (p: P): boolean =>
+  scope: UsualNgScope,
+): boolean {
+  return (
     p.usualStaffId !== null &&
     (p.to === null || p.to >= today) &&
     (scope.clientId === undefined || p.clientId === scope.clientId) &&
     (scope.staffId === undefined || p.usualStaffId === scope.staffId) &&
-    compatLevelOf(compat[p.clientId], p.usualStaffId) === -2;
-  if (!patterns.some(hit)) return patterns;
-  return patterns.map((p) => (hit(p) ? { ...p, usualStaffId: null } : p));
+    compatLevelOf(compat[p.clientId], p.usualStaffId) === -2
+  );
 }
 
-/** いつもの担当が「× 担当にしない」と重なっている繰り返しの数（clearUsualWhereNg で外れる数。画面の知らせ用） */
+/**
+ * 相性が「× 担当にしない」の人がいつもの担当（繰り返しの担当）になっている繰り返しを、today から担当なし（null）にする。
+ * 対象は today に続いている（終わっていない）繰り返しだけ。終わった繰り返しの担当は履歴なのでそのまま。
+ * 始まりが today より前の繰り返しは、ほかの直し方の「いつから」と同じく patterns の splitPattern で today から分け
+ * （前はその人のまま＝過去の回の担当を消さない。後ろは担当なし）、today 以降に始まる繰り返しはその場で担当なしにする。
+ * 外すものが無ければ同じデータ（参照）を返す。scope で〈利用者さん〉・〈スタッフ〉を絞る（PRD D8・D68。ADR-0100）。
+ * newId は分けたときの新しい繰り返しの id
+ */
+export function clearUsualWhereNg(
+  data: PatternInput,
+  compat: Compat,
+  today: string,
+  scope: UsualNgScope,
+  newId: () => string,
+): Pick<PatternInput, 'patterns' | 'visits'> {
+  const hits = data.patterns.filter((p) => isUsualNg(p, compat, today, scope));
+  if (hits.length === 0) return { patterns: data.patterns, visits: data.visits };
+  let patterns = data.patterns;
+  let visits = data.visits;
+  for (const p of hits) {
+    if (p.from >= today) {
+      patterns = patterns.map((y) => (y.id === p.id ? { ...y, usualStaffId: null } : y));
+      continue;
+    }
+    const { id: _id, from: _from, ...rest } = p;
+    const r = splitPattern(
+      { patterns, visits, clients: data.clients },
+      p.id,
+      { ...rest, usualStaffId: null },
+      today,
+      today,
+      newId(),
+    );
+    patterns = r.patterns;
+    visits = r.visits;
+  }
+  return { patterns, visits };
+}
+
+/** いつもの担当が「× 担当にしない」と重なっている繰り返しの数（clearUsualWhereNg で today から外れる数。画面の知らせ用） */
 export function countUsualWhereNg(
   patterns: Pick<Pattern, 'clientId' | 'usualStaffId' | 'to'>[],
   compat: Compat,
   today: string,
   scope: UsualNgScope = {},
 ): number {
-  const after = clearUsualWhereNg(patterns, compat, today, scope);
-  return after === patterns ? 0 : after.filter((p, i) => p !== patterns[i]).length;
+  return patterns.filter((p) => isUsualNg(p, compat, today, scope)).length;
 }

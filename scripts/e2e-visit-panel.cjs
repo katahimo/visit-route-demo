@@ -360,11 +360,19 @@ async function copyVisit(page) {
   const id = await openFromBand(page);
   const src = await visitOf(page, id);
   const n0 = (await data(page)).visits.length;
+  // 欄で直して保存していない所要も、コピーに持ち越す（黙って捨てない）
+  const edited = String(src.durationMinutes === 30 ? 45 : 30);
+  await panel(page).getByTestId('vp-duration').fill(edited);
   await panel(page).getByTestId('vp-copy').click();
   await panel(page).getByTestId('vp-accompany').waitFor();
   const p = panel(page);
   check((await p.getAttribute('data-new')) === 'true', '［この訪問をコピー］で新規の形の欄（コピーの使い方つき）');
   check((await p.getByTestId('vp-start').inputValue()) === src.earliestStart, 'コピーの欄は元の訪問の開始で開く');
+  check(
+    (await p.getByTestId('vp-duration').inputValue()) === edited,
+    'コピーの欄は今の欄の入力（保存していない所要）で開く',
+    await p.getByTestId('vp-duration').inputValue(),
+  );
   await p.getByTestId('vp-accompany-trainee').check();
   await page.getByTestId('vp-save').click();
   await settle(page, 300);

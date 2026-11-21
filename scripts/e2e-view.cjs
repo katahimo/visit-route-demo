@@ -961,10 +961,18 @@ async function usualNg(page) {
   await settle(page, 300);
   const d1 = await stored(page);
   const usualOfClient = (d, id) => d.patterns.filter((p) => p.clientId === id).map((p) => p.usualStaffId);
+  // 今日に続いている繰り返しのいつもの担当（今日より前に始まった繰り返しは今日で分け、昨日までの分は s1 のまま残す）
+  const liveUsual = (d, id) =>
+    d.patterns.filter((p) => p.clientId === id && (p.to === null || p.to >= TODAY)).map((p) => p.usualStaffId);
   check(
-    usualOfClient(d1, c2.id).every((u) => u !== 's1'),
-    '相性を × にしたら、その人のいつもの担当から外れる',
-    usualOfClient(d1, c2.id),
+    liveUsual(d1, c2.id).length > 0 && liveUsual(d1, c2.id).every((u) => u !== 's1'),
+    '相性を × にしたら、今日からのいつもの担当から外れる',
+    liveUsual(d1, c2.id),
+  );
+  check(
+    d1.patterns.filter((p) => p.clientId === c2.id && p.from < TODAY).every((p) => p.to !== null && p.to < TODAY),
+    '今日より前に始まった繰り返しは昨日で終わり、過去の回の担当は残る',
+    d1.patterns.filter((p) => p.clientId === c2.id),
   );
   check(
     usualOfClient(d1, c3.id).some((u) => u === 's1'),
@@ -980,9 +988,9 @@ async function usualNg(page) {
   check((await note.count()) === 0, '「いつもの担当から外す」で知らせが消える');
   const d2 = await stored(page);
   check(
-    usualOfClient(d2, c3.id).every((u) => u !== 's1'),
-    '外すと c3 のいつもの担当から s1 が外れる',
-    usualOfClient(d2, c3.id),
+    liveUsual(d2, c3.id).length > 0 && liveUsual(d2, c3.id).every((u) => u !== 's1'),
+    '外すと c3 の今日からのいつもの担当から s1 が外れる',
+    liveUsual(d2, c3.id),
   );
 }
 

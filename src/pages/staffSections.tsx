@@ -25,6 +25,7 @@ import type { Staff, Terms } from '../contracts/documents';
 import type { Item } from '../contracts/rules';
 import { slotsText } from '../domain/availability';
 import { jstDate } from '../domain/time';
+import { newId } from '../lib/common';
 import { clearUsualWhereNg, countUsualWhereNg } from '../lib/compatLevel';
 import { encodeStaffFilter } from '../lib/compatView';
 import { dateText } from '../lib/dateText';
@@ -330,7 +331,7 @@ export function StaffCompatTab({ saved, compatOn }: { saved: Staff; compatOn: bo
   const conflicts = compatOn ? countUsualWhereNg(data.patterns, data.compat, today, { staffId: saved.id }) : 0;
   const release = () =>
     update(
-      (d) => ({ ...d, patterns: clearUsualWhereNg(d.patterns, d.compat, today, { staffId: saved.id }) }),
+      (d) => ({ ...d, ...clearUsualWhereNg(d, d.compat, today, { staffId: saved.id }, () => newId('pt')) }),
       'いつもの担当を外す',
     );
   return (

@@ -220,9 +220,11 @@ function VisitPanel({
         )}
 
         {!isNew && <VisitWhy choices={choices} onLeave={onClose} />}
-        {req.copyOf && !newBlocked && <CopyAccompanyFields data={data} copyOf={req.copyOf} draft={draft} set={set} />}
+        {req.copyOf && !newBlocked && (
+          <CopyAccompanyFields data={data} copyOf={req.copyOf} draft={draft} set={set} today={today} />
+        )}
         {timeOn && !newBlocked && (
-          <VisitTimeFields data={data} draft={draft} set={set} bad={bad} isNew={isNew} today={today} />
+          <VisitTimeFields {...{ data, draft, set, bad, isNew, today }} openedWindow={form.openedWindow} />
         )}
 
         {editable && !newBlocked && choices && (!narrow || act === 'staff') && (
@@ -243,7 +245,9 @@ function VisitPanel({
           {error?.text}
         </FieldError>
 
-        {v && !narrow && !cancelled && <VisitCopyButton onCopy={() => openVisit(copyRequest(v, today))} />}
+        {v && !narrow && !cancelled && (
+          <VisitCopyButton onCopy={() => openVisit(copyRequest(v, today, editable ? draft : undefined))} />
+        )}
 
         {v && info?.editable && (!narrow || (act === 'cancel' && !cancelled)) && (
           <VisitCancelArea info={info} onCancel={doCancel} onUncancel={doUncancel} />

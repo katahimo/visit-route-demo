@@ -1,7 +1,7 @@
 // 所要（分）と終わりの時刻の2つの欄（PRD D462。ADR-0117）：どちらで入れても、もう一方に映す。データは所要（分）で持つ。
 // 繰り返しの欄・訪問の詳細の欄・「定期の予定を追加」で使う。読み替えは lib/durationEnd
 import { type ReactNode, useEffect, useId, useState } from 'react';
-import { endTimeError, endTimeOf, minutesBetween, minutesOfText } from '../lib/durationEnd';
+import { endDraftOnStart, endTimeError, endTimeOf, minutesBetween, minutesOfText } from '../lib/durationEnd';
 import { FieldError, invalidAttrs } from './FieldError';
 
 export function DurationEndFields({
@@ -33,10 +33,14 @@ export function DurationEndFields({
   /** 開始より前の終わりを打った途中の値（所要に映せないので欄に残し、誤りを出す）。null は所要から作った値を出す */
   const [endDraft, setEndDraft] = useState<string | null>(null);
   const errorId = useId();
-  // 開始が変わったら、所要を保って終わりを作り直す
-  // biome-ignore lint/correctness/useExhaustiveDependencies: 開始が変わったときだけ途中の値を捨てる
+  // 開始が変わったら、打った途中の終わりが新しい開始で所要にできればその所要にし（打った終わりを保つ）、
+  // 途中の値が無ければ所要を保って終わりを作り直す。まだ開始より前なら途中の値を残す（lib/durationEnd の endDraftOnStart）
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 開始が変わったときだけ途中の値を見直す
   useEffect(() => {
-    setEndDraft(null);
+    if (endDraft === null) return;
+    const next = endDraftOnStart(start, endDraft);
+    setEndDraft(next.endDraft);
+    if (next.minutes !== null) onMinutes(next.minutes);
   }, [start]);
   const end = endDraft ?? endTimeOf(start, minutesOfText(minutes));
   const error = endDraft === null ? null : endTimeError(start, endDraft);

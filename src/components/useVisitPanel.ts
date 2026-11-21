@@ -35,7 +35,7 @@ export type VisitError = { text: string; field?: keyof VisitDraft };
 
 /** 欄の入力（下書き・担当の選択・範囲・誤りとその欄の印）。はじめの入力は開いた訪問か新しい訪問の既定に頼みの draft を重ねる */
 export function useVisitForm(req: VisitPanelRequest, data: DemoData, today: string) {
-  const [draft, setDraft] = useState<VisitDraft>(() => {
+  const [opened] = useState<VisitDraft>(() => {
     const base = req.visitId
       ? (() => {
           const x = req.visitId ? findVisit(data, req.visitId) : null;
@@ -44,6 +44,7 @@ export function useVisitForm(req: VisitPanelRequest, data: DemoData, today: stri
       : newDraft(data, req.newVisit?.date ?? today, req.newVisit?.clientId, req.newVisit?.start);
     return { ...base, ...req.draft };
   });
+  const [draft, setDraft] = useState<VisitDraft>(opened);
   const [pick, setPick] = useState<string>(req.staff ?? KEEP);
   const [scope, setScope] = useState<VisitScope>('once');
   const [error, setError] = useState<VisitError | null>(null);
@@ -54,7 +55,9 @@ export function useVisitForm(req: VisitPanelRequest, data: DemoData, today: stri
     setDraft((f) => ({ ...f, ...patch }));
     setError(null);
   };
-  return { draft, setDraft, set, pick, setPick, scope, setScope, error, setError, errorId, bad };
+  /** 開いたときの時間の約束が幅か（機能 timeWindow が切でも、時間の約束の欄を出し続ける。ADR-0117） */
+  const openedWindow = opened.windowKind === 'window';
+  return { draft, setDraft, set, pick, setPick, scope, setScope, error, setError, errorId, bad, openedWindow };
 }
 
 /**

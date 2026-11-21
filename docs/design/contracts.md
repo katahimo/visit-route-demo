@@ -105,10 +105,10 @@ Problem = { date, staff: { id, name, point, slots /* 欠勤・最終勤務日を
   allowed, assignCost, reasons /* [visit][staff]。reasons は点の大きい順 */, waitPerMinute,
   balance: { perVisit, lo, hi, cap /* 必須なら hi+1、ほか null */ } | null, infeasible: { visit, reasons }[], stay?,
   chain? /* 続く訪問。ADR-0116 */, fixedStart? /* 開始時刻をずらさない（機能 shiftStart が切）。ADR-0116 */ }
-ProblemChain = { next /* [visit] 続く訪問の添字 | -1 */, degree /* [visit] 組に入っている数 */, perPair /* 重み×10 */ }
+ProblemChain = { next /* [visit] 続く訪問の添字 | -1 */, degree /* [visit] 組に入っている数 */, perPair /* 重み×10 */, ruleId /* 続く訪問の条件の ID（perRule・達成のキー） */ }
   // 同じ人の列で v のすぐあとに next[v] が無い組ごとに perPair。solver は列の点（matching/chain の chainRoutePoints）と担当なしの点
   //   （dropPointsOf に組ごとの半分）で、evaluate は chainScore で同じ値を数える（totalPoints の chain）
-Reason = { ruleId, label, points /* 可否の原因は Infinity */, level? /* 相性だけ 2|1|-1|-2 */ }
+Reason = { ruleId, label, points /* 可否の原因は Infinity */, level? /* 相性だけ 2|1|-1|-2 */, met? /* 達成に数えるか。無ければ points ≤ 0。夕方は自宅に近い人は自宅まで15分以内 */ }
   // ruleId：Rule.id・'travel'・'wait'・'slot'・'time'・'noPlace'（位置が未登録の点。可否にはしない。ADR-0093）・'visitType'・'allowedStaff'・'pin'
   //   担当なしの理由（explain）だけ：'travelTooFar'「移動が間に合わない（片道 約N分）」・'farTrip'「遠方（出張）の日はほかの訪問を入れません」（ADR-0096）
 ProblemStay = { staff /* [visit] 元の担当の添字 | null */, start /* [visit] 元の開始 | null */, keep: boolean[], movePoints, minutePoints }

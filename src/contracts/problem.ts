@@ -42,6 +42,11 @@ export type Reason = {
   points: number;
   /** 相性の理由にだけ付ける（2=◎ 1=○ -1=△ -2=×）。達成の件数（evaluate.achievements）に使う */
   level?: 2 | 1 | -1 | -2;
+  /**
+   * 達成に数えるか（evaluate.achievements）。無ければ点が0以下なら達成。夕方は自宅に近い人（homeNear）は移動0分以外いつも正の点なので、
+   * 自宅までの移動が HOME_NEAR_MET_MINUTES 分以内なら true（ADR-0116）
+   */
+  met?: boolean;
 };
 
 export type Problem = {
@@ -95,6 +100,11 @@ export type ProblemChain = {
   /** 組の数ごとの訪問の重なり（v が組に入っている数。next と前から指される数の和） */
   degree: number[];
   perPair: number;
+  /**
+   * 続く訪問の条件（sameClient の型の条件）の ID。perRule・条件ごとの達成のキー（ID の衝突で 'sameClient2' などになっても
+   * 条件の ID とずれない。ADR-0116）
+   */
+  ruleId: string;
 };
 
 /**
