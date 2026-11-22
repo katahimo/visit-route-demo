@@ -156,6 +156,8 @@
 
 #### `components/ConfirmDialog.tsx`（`confirmDialog.css`）
 
+- 殻（body の直下・inert・フォーカス・Tab・Esc・背景・裏を巻かない）は `components/DialogShell.tsx` に分け、設定のひな形の手順の画面（`SettingSetSteps`。[pages-data.md](pages-data.md)）と共用する。最初のフォーカスは巻かずに置く（長い中身でも見出しから読める）
+
 - `ConfirmDialog`：body の直下。`role="alertdialog"`・`aria-modal`・`aria-labelledby`（見出し）・`aria-describedby`（本文があるとき）。画面の中央
 - 開いたら取り消しへフォーカス、閉じたら開く前の要素へ（消えていれば戻さない）
 - body のほかの子を inert（`lib/inertLock` の要素ごとに数えるロック。`components/useBodyScrollLock` の `inertLock` を引き出し・パレットと共通に使い、閉じる順が逆でも最後の1つが閉じるまで戻さない。テストあり）、`useBodyScrollLock`

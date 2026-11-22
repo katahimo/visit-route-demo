@@ -198,7 +198,9 @@ function keepBroken(ls: Storage, text: string): boolean {
  * firstRun：保存データが無く、初めて開いた（印「all」が無いとき。画面は最初の2問を出し、答えが決まるまでデータを書かない。PRD D379）。
  * 印「all」（start.ts）があれば2問を出さず、今の初期データ＋すべて入（{}）で書いて始める（e2e の前準備）。
  * releaseNotes：保存データが読め、まだ見ていないデモの更新（新しい順。空なら知らせない。PRD D437。画面は変わったところと「今のデータを使い続ける」を出す）。
- * 印「all」のとき・読めなかったときは知らせず、見たことにする
+ * 印「all」のとき・読めなかったときは知らせず、見たことにする。
+ * releaseBackup：まだ見ていない更新があるとき、画面を出す前に今のデータを「更新前の控え」として1世代の控えに残した結果（PRD D483。ADR-0122）。
+ * 知らせない開き方では null
  */
 export function loadWithStatus(): {
   data: DemoData;
@@ -207,6 +209,7 @@ export function loadWithStatus(): {
   brokenKept: boolean;
   firstRun: boolean;
   releaseNotes: ReleaseNote[];
+  releaseBackup: ReleaseBackup | null;
 } {
   const ls = storage();
   const todayDate = today();
@@ -217,12 +220,28 @@ export function loadWithStatus(): {
       writeNow(d);
       current = d;
       rememberRelease(LATEST_RELEASE);
-      return { data: d, broken: false, outdated: false, brokenKept: false, firstRun: false, releaseNotes: [] };
+      return {
+        data: d,
+        broken: false,
+        outdated: false,
+        brokenKept: false,
+        firstRun: false,
+        releaseNotes: [],
+        releaseBackup: null,
+      };
     }
     // 最初の2問に答えるまでは書かない（読み直すとまた2問）。それまでの仮のデータは空（画面は2問の画面だけを出す）
     const d = createFirstRunData({ start: 'own', use: 'basic' }, todayDate);
     current = d;
-    return { data: d, broken: false, outdated: false, brokenKept: false, firstRun: true, releaseNotes: [] };
+    return {
+      data: d,
+      broken: false,
+      outdated: false,
+      brokenKept: false,
+      firstRun: true,
+      releaseNotes: [],
+      releaseBackup: null,
+    };
   }
   const r = importJson(text);
   if (isImportError(r)) {
@@ -247,13 +266,15 @@ export function loadWithStatus(): {
     if (brokenKept) writeNow(d);
     current = d;
     rememberRelease(LATEST_RELEASE);
-    return { data: d, broken: true, outdated, brokenKept, firstRun: false, releaseNotes: [] };
+    return { data: d, broken: true, outdated, brokenKept, firstRun: false, releaseNotes: [], releaseBackup: null };
   }
   current = r;
   const all = startsWithAll();
   if (all) rememberRelease(LATEST_RELEASE);
   const releaseNotes = all ? [] : notesSince(seenRelease());
-  return { data: r, broken: false, outdated: false, brokenKept: false, firstRun: false, releaseNotes };
+  // 知らせる更新があれば、画面を出す前に今のデータを更新前の控えに残す（リンクから開いても同じ。PRD D483）
+  const releaseBackup = releaseNotes.length > 0 ? keepBeforeRelease(r, LATEST_RELEASE) : null;
+  return { data: r, broken: false, outdated: false, brokenKept: false, firstRun: false, releaseNotes, releaseBackup };
 }
 
 export function load(): DemoData {
@@ -351,8 +372,11 @@ export function backup(): Backup {
 
 // ---- 1世代の控え（PRD D227。ADR-0032）----
 
-/** 控えの時刻（ms）と、控えを残した操作の名前（「初期状態に戻す」など） */
-export type PreviousInfo = { at: number; reason: string };
+/**
+ * 控えの時刻（ms）と、控えを残した操作の名前（「初期状態に戻す」など）。
+ * release：デモの更新の前に自動で残した控え（更新前の控え。PRD D483。ADR-0122）なら、その更新の id（lib/releaseNotes）
+ */
+export type PreviousInfo = { at: number; reason: string; release?: string };
 
 /**
  * 控えを残した結果。kept：残せた、why：残せなかった理由（確認の本文に出す）。
@@ -367,7 +391,7 @@ const KEEP_NO_STORAGE = '控えを残せません：このブラウザでは保�
  * 置き換える前のデータを1世代だけ控える（PREV_KEY・PREV_INFO_KEY。次に控えると上書き）。
  * 書けなければ（容量超過）前の世代も消して1回だけ試し直し、それでも書けなければ控えなしで kept=false（操作は止めない）
  */
-export function keepPrevious(data: DemoData, reason: string, at: number = Date.now()): PreviousKeep {
+export function keepPrevious(data: DemoData, reason: string, at: number = Date.now(), release?: string): PreviousKeep {
   const ls = storage();
   if (!ls) return { kept: false, why: KEEP_NO_STORAGE, cancel: () => {} };
   let oldText: string | null = null;
@@ -379,7 +403,7 @@ export function keepPrevious(data: DemoData, reason: string, at: number = Date.n
     return { kept: false, why: KEEP_NO_STORAGE, cancel: () => {} };
   }
   const text = JSON.stringify(data);
-  const info = JSON.stringify({ at, reason } satisfies PreviousInfo);
+  const info = JSON.stringify({ at, reason, ...(release !== undefined && { release }) } satisfies PreviousInfo);
   const write = () => {
     ls.setItem(PREV_KEY, text);
     ls.setItem(PREV_INFO_KEY, info);
@@ -447,7 +471,7 @@ export function swapPrevious(now: DemoData, at: number = Date.now()): { data: De
 
 /** 控えの時刻と操作の名前が同じか（画面の state を無駄に替えない） */
 export const samePreviousInfo = (a: PreviousInfo | null, b: PreviousInfo | null): boolean =>
-  a === b || (!!a && !!b && a.at === b.at && a.reason === b.reason);
+  a === b || (!!a && !!b && a.at === b.at && a.reason === b.reason && a.release === b.release);
 
 /** 控えの時刻と操作の名前。控えが無い・読めなければ null */
 export function previousInfo(): PreviousInfo | null {
@@ -460,7 +484,7 @@ export function previousInfo(): PreviousInfo | null {
     if (isOutdatedText(prev)) return null;
     const raw = JSON.parse(ls.getItem(PREV_INFO_KEY) ?? 'null') as Partial<PreviousInfo> | null;
     if (!raw || typeof raw.at !== 'number' || !Number.isFinite(raw.at) || typeof raw.reason !== 'string') return null;
-    return { at: raw.at, reason: raw.reason };
+    return { at: raw.at, reason: raw.reason, ...(typeof raw.release === 'string' && { release: raw.release }) };
   } catch {
     return null;
   }
@@ -474,6 +498,35 @@ function isOutdatedText(text: string): boolean {
     return false;
   }
 }
+
+/** 控えのファイル（書き出す JSON。データの画面の「ファイルに書き出す」と同じ形）。無ければ null、読めなければ ImportError */
+export function exportPrevious(): Blob | ImportError | null {
+  const r = readPrevious();
+  return r === null || isImportError(r) ? r : exportJson(r);
+}
+
+// ---- 更新前の控え（PRD D483。ADR-0122）----
+
+/** 更新前の控えの操作の名前（1世代の控えの reason） */
+export const RELEASE_BACKUP_REASON = 'デモの更新';
+
+/** 更新前の控えを残した結果：残せた（時刻と更新の id）か、残せなかった理由（データには触らない） */
+export type ReleaseBackup = { kept: true; at: number; release: string } | { kept: false; why: string };
+
+/**
+ * まだ見ていない更新があるとき、今のデータを更新前の控えとして1世代の控え（PREV_KEY）に残す。
+ * 同じ更新の前の控えがもうあれば（読み直し・2つ目のタブ）、残した時刻を変えずにそれを返す。
+ * 容量が足りなければ残さず理由を返す（keepPrevious と同じく前の世代を消して1回だけ試し直す。今のデータは書き換えない）
+ */
+export function keepBeforeRelease(data: DemoData, release: string, at: number = Date.now()): ReleaseBackup {
+  const cur = previousInfo();
+  if (cur?.release === release) return { kept: true, at: cur.at, release };
+  const k = keepPrevious(data, RELEASE_BACKUP_REASON, at, release);
+  return k.kept ? { kept: true, at, release } : { kept: false, why: k.why ?? KEEP_FULL };
+}
+
+/** 1世代の控えが、その更新の前に自動で残した控えか（その控えを別の控えで上書きしない） */
+export const isReleaseBackup = (release: string): boolean => previousInfo()?.release === release;
 
 /** 控えのデータ（移行・repair 済み）。無ければ null、読めなければ ImportError */
 export function readPrevious(): DemoData | ImportError | null {

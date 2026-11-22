@@ -1,16 +1,23 @@
-// 設定のひな形をリンクで適用する（PRD D480〜D482。ADR-0121）と、帰りの前は自宅に近い人の「勤務の終わりの◯分前から」（PRD D479）。
-// ・`#/settings?apply=standard-start-no-shift` を開く → 独自の確認に変わる項目の一覧（今 → 適用後）→［適用］で機能5つが切・条件
-//   「帰りの前は自宅に近い人」が足される・車の速さが 30km/h。〈利用者さん〉・〈スタッフ〉・予定は変わらない。URL から apply が消える
-// ・Ctrl+Z と知らせの［元に戻す］で適用の前に戻る。全部同じなら「すでにこの設定です」で確認を出さない
-// ・キャンセルでは何も変えず、URL から apply が消える（読み直しても確認を出さない）
-// ・知らない ID は「見つかりません」を出して何もしない（確認を出さない）
+// 設定のひな形をリンクで適用する（PRD D480〜D482・D484〜D487。ADR-0121・ADR-0122）と、更新前の控え（PRD D483・D485）と、
+// 帰りの前は自宅に近い人の「勤務の終わりの◯分前から」（PRD D479）。
+// ・`#/settings?apply=standard-start-no-shift` を開く → 3ステップの手順の画面（①データの控え ②変わる設定（今 → 適用後）③［適用］）。
+//   控えをファイルに書き出すまで［適用］を押せない（理由を添える）。書き出すと押せ、機能5つが切・条件「帰りの前は自宅に近い人」が足される・
+//   車の速さが 30km/h。〈利用者さん〉・〈スタッフ〉・予定は変わらない。URL から apply が消える
+// ・Ctrl+Z と知らせの［元に戻す］で適用の前に戻る。全部同じなら「すでにこの設定です」で手順の画面を出さない
+// ・［取り消す］では何も変えず、URL から apply が消える（読み直しても出さない）
+// ・知らない ID は「見つかりません」を出して何もしない
+// ・まだ見ていない更新があるとき：普通に開くと「デモを更新しました」の前に更新前の控えを自動で残す。リンクで開くと更新の画面を出さず
+//   （見たことにする）、手順の①に自動の控えの時刻と［変わったことを見る］。データの画面に「更新前の控え（◯月◯日の更新の前・◯時◯分）」、
+//   ［ファイルに書き出す］・［この控えに戻す］で戻せる
+// ・保存データが無い人がリンクを開くと、最初の2問のあとに手順の画面（作ったばかりなので書き出しは求めない）
 // ・条件の重みの画面の帰りの前は自宅に近い人の行で「勤務の終わりの◯分前から」を直すとすぐ保存
 //
 // 使い方：npm run build && npx vite preview --port 4183 のあとで node scripts/e2e-settings-apply.cjs
 // 環境変数は scripts/lib/env.cjs（PLAYWRIGHT・CHROMIUM・BASE・OUT_DIR・FAKE_NOW）
 // 終了コード：全部通れば 0、通らないものがあれば 1。ページのエラー（pageerror）も失敗に数える
 const { answerConfirms } = require('./lib/confirmDialog.cjs');
-const { MOD, STORAGE_KEY, check, hashOf, runSteps, settle, stored, waitStored } = require('./lib/env.cjs');
+const { BASE, MOD, STORAGE_KEY, check, hashOf, runSteps, settle, stored, until, waitStored } = require('./lib/env.cjs');
+const { answerFirstRun } = require('./lib/firstRun.cjs');
 const { openPage, sharedPage } = require('./lib/steps.cjs');
 const { goTo } = require('./lib/ui.cjs');
 
@@ -18,6 +25,9 @@ const SET_ID = 'standard-start-no-shift';
 const SET_LABEL = 'ちょうどの時刻で組む・連絡を短く';
 const OFF = ['shiftStart', 'clientTraits', 'timeWindow', 'clientContact', 'contactAddress'];
 const HOME = '帰りの前は自宅に近い人';
+/** store/start.ts の SEEN_RELEASE_KEY・store/persist.ts の PREV_INFO_KEY と同じ */
+const SEEN_RELEASE_KEY = 'vrdemo:release:seen';
+const PREV_INFO_KEY = 'vrdemo:data:prev:info';
 
 /** 設定が適用された形か */
 const applied = (d) =>
@@ -43,17 +53,37 @@ async function fresh(page) {
 /** 知らせ（文の一部）が出るまで待つ */
 const toastOf = (page, text) => page.locator('.toast').filter({ hasText: text });
 
+/** リンクを開いて手順の画面が出るまで待つ */
+async function openLink(page) {
+  await goTo(page, `/settings?apply=${SET_ID}`, { ready: '[data-testid="setting-steps"]', h1: false });
+  return page.getByTestId('setting-steps');
+}
+
+/** ①で控えを書き出す（書き出したファイル名を返す） */
+async function exportBackup(page) {
+  const [dl] = await Promise.all([page.waitForEvent('download'), page.getByTestId('setting-steps-export').click()]);
+  await page.getByTestId('setting-steps-export-result').filter({ hasText: '控えを書き出しました' }).waitFor();
+  return dl.suggestedFilename();
+}
+
+/** 手順の画面で書き出してから［適用］を押す */
+async function exportAndApply(page) {
+  await openLink(page);
+  await exportBackup(page);
+  await page.getByTestId('setting-steps-apply').click();
+}
+
 async function applyAndUndo({ page, dlg }) {
   await fresh(page);
   const d0 = await stored(page);
   check(before(d0), '初期データは適用の前の形', JSON.stringify(d0?.org.features));
-  dlg.answer = true;
   dlg.messages.length = 0;
-  await goTo(page, `/settings?apply=${SET_ID}`);
-  await toastOf(page, `設定のひな形「${SET_LABEL}」を適用しました`).waitFor({ timeout: 10000 });
-  const msg = dlg.messages[0] ?? '';
-  check(dlg.messages.length === 1, '確認は1回だけ', dlg.messages);
-  check(msg.startsWith(`設定のひな形「${SET_LABEL}」を適用しますか？`), '確認の見出し', msg);
+  const steps = await openLink(page);
+  check(
+    (await page.getByTestId('setting-steps-title').innerText()) === `設定のひな形「${SET_LABEL}」を適用します`,
+    '手順の見出し',
+  );
+  const body = await page.getByTestId('setting-steps-body').innerText();
   for (const line of [
     '変わる項目（今 → 適用後）：',
     '・機能「開始時刻をずらして組む」：入 → 切',
@@ -62,7 +92,24 @@ async function applyAndUndo({ page, dlg }) {
     '・移動時間の見積もり方の車の速さ：25km/h → 30km/h',
     '予定は変えません。切った機能のデータは消えません。',
   ])
-    check(msg.includes(line), `確認の一覧：${line}`, msg);
+    check(body.includes(line), `②の一覧：${line}`, body);
+  const text = await steps.innerText();
+  for (const h of ['① データの控え', '② 変わる設定', '③ 適用する']) check(text.includes(h), `手順の段：${h}`, text);
+  check(
+    (await page.getByTestId('setting-steps-backup-lead').innerText()).includes('控えをファイルに書き出してください'),
+    '①：控えの書き出しを求める',
+  );
+  check(await page.getByTestId('setting-steps-apply').isDisabled(), '書き出すまで［適用］を押せない');
+  check(
+    (await page.getByTestId('setting-steps-blocked').innerText()).includes('書き出すと［適用］を押せます'),
+    '押せない理由を添える',
+  );
+  check((await page.getByTestId('first-run').count()) === 0, '更新の画面は出さない');
+  const name = await exportBackup(page);
+  check(/^staff-assign-demo-\d{4}-\d{2}-\d{2}\.json$/.test(name), '①の書き出しはデータの画面と同じファイル', name);
+  check(await page.getByTestId('setting-steps-apply').isEnabled(), '書き出したら［適用］を押せる');
+  await page.getByTestId('setting-steps-apply').click();
+  await toastOf(page, `設定のひな形「${SET_LABEL}」を適用しました`).waitFor({ timeout: 10000 });
   const d1 = await waitStored(page, applied).then(() => stored(page));
   check(applied(d1), '［適用］で機能5つが切・条件を足す・車の速さ 30km/h', JSON.stringify(d1.org.features));
   check(d1.rules.find((r) => r.type === 'homeNear')?.label === HOME, `足した条件の名前は「${HOME}」`);
@@ -73,12 +120,14 @@ async function applyAndUndo({ page, dlg }) {
     '〈利用者さん〉・〈スタッフ〉・予定は変わらない',
   );
   check(!(await hashOf(page)).includes('apply='), 'URL から apply が消える', await hashOf(page));
+  check((await page.getByTestId('setting-steps').count()) === 0, '適用したら手順の画面を閉じる');
+  check(dlg.messages.length === 0, '確認ダイアログは別に出さない', dlg.messages);
   // Ctrl+Z で適用の前に戻る
   await page.locator('h1').click();
   await page.keyboard.press(`${MOD}+z`);
   check(await waitStored(page, before), 'Ctrl+Z で適用の前に戻る');
   // もう一度適用して、知らせの［元に戻す］で戻す
-  await goTo(page, `/settings?apply=${SET_ID}`);
+  await exportAndApply(page);
   const t = toastOf(page, '適用しました');
   await t.waitFor({ timeout: 10000 });
   check(await waitStored(page, applied), '2回目の適用');
@@ -86,53 +135,50 @@ async function applyAndUndo({ page, dlg }) {
   check(await waitStored(page, before), '知らせの［元に戻す］で適用の前に戻る');
 }
 
-async function alreadySame({ page, dlg }) {
+async function alreadySame({ page }) {
   await fresh(page);
-  dlg.answer = true;
-  await goTo(page, `/settings?apply=${SET_ID}`);
+  await exportAndApply(page);
   await waitStored(page, applied);
   await settle(page, 300);
-  dlg.messages.length = 0;
   await goTo(page, `/settings?apply=${SET_ID}`);
   await toastOf(page, 'すでにこの設定です').waitFor({ timeout: 10000 });
-  check(dlg.messages.length === 0, '全部同じなら確認を出さない', dlg.messages);
+  check(
+    (await page.getByTestId('setting-steps').count()) === 0,
+    '全部同じなら手順の画面を出さない（書き出しも求めない）',
+  );
   check(!(await hashOf(page)).includes('apply='), 'URL から apply が消える（すでに同じ）');
 }
 
-async function cancelKeeps({ page, dlg }) {
+async function cancelKeeps({ page }) {
   await fresh(page);
   const d0 = await stored(page);
-  dlg.answer = false;
-  dlg.messages.length = 0;
-  await goTo(page, `/settings?apply=${SET_ID}`);
+  await openLink(page);
+  await page.getByTestId('setting-steps-cancel').click();
   await page.waitForFunction(() => !location.hash.includes('apply='), null, { timeout: 10000 });
-  check(dlg.messages.length === 1, 'キャンセル：確認は出る', dlg.messages);
   await settle(page, 300);
-  check(JSON.stringify(await stored(page)) === JSON.stringify(d0), 'キャンセルでは何も変えない');
-  // 読み直しても確認を出さない（URL から消えた）
+  check((await page.getByTestId('setting-steps').count()) === 0, '［取り消す］で閉じる');
+  check(JSON.stringify(await stored(page)) === JSON.stringify(d0), '［取り消す］では何も変えない');
+  // 読み直しても出さない（URL から消えた）
   await page.reload();
   await page.locator('h1').first().waitFor();
   await settle(page, 300);
-  check(dlg.messages.length === 1, 'キャンセルのあと読み直しても確認は出ない', dlg.messages);
-  dlg.answer = true;
+  check((await page.getByTestId('setting-steps').count()) === 0, '取り消したあと読み直しても出さない');
 }
 
-async function unknownId({ page, dlg }) {
+async function unknownId({ page }) {
   await fresh(page);
   const d0 = await stored(page);
-  dlg.messages.length = 0;
   await goTo(page, '/settings?apply=no-such-set');
   await toastOf(page, '設定のひな形「no-such-set」が見つかりません').waitFor({ timeout: 10000 });
   await settle(page, 300);
-  check(dlg.messages.length === 0, '知らない ID：確認を出さない', dlg.messages);
+  check((await page.getByTestId('setting-steps').count()) === 0, '知らない ID：手順の画面を出さない');
   check(JSON.stringify(await stored(page)) === JSON.stringify(d0), '知らない ID：何も変えない');
   check(!(await hashOf(page)).includes('apply='), '知らない ID：URL から apply が消える');
 }
 
-async function beforeEndField({ page, dlg }) {
+async function beforeEndField({ page }) {
   await fresh(page);
-  dlg.answer = true;
-  await goTo(page, `/settings?apply=${SET_ID}`);
+  await exportAndApply(page);
   await waitStored(page, applied);
   await goTo(page, '/rules', { ready: '[data-testid="rule-before-end-input"]' });
   const input = page.getByTestId('rule-before-end-input');
@@ -157,6 +203,129 @@ async function beforeEndField({ page, dlg }) {
   check((await stored(page)).rules.find((r) => r.type === 'homeNear')?.beforeEndMin === 90, '整数でなければ書かない');
 }
 
+/** 2問を出す文脈（印「all」なし）で開く。確認には答える */
+async function askingPage() {
+  const s = await openPage({ start: 'ask' });
+  s.dlg = await answerConfirms(s.page);
+  return s;
+}
+
+/** 目印の事業所名を入れ、設定を適用の前の形にして、見た更新の印を古くする（次に開くと更新を知らせる） */
+const markOld = (page) =>
+  page.evaluate(
+    ([k, sk]) => {
+      const d = JSON.parse(localStorage.getItem(k));
+      d.org.name = '更新前の事業所';
+      d.org.features = {};
+      d.rules = d.rules.filter((r) => r.type !== 'homeNear');
+      d.org.lineTravel.driveKmh = 25;
+      localStorage.setItem(k, JSON.stringify(d));
+      localStorage.setItem(sk, '2000-01-01');
+    },
+    [STORAGE_KEY, SEEN_RELEASE_KEY],
+  );
+const prevInfo = (page) => page.evaluate((k) => JSON.parse(localStorage.getItem(k) ?? 'null'), PREV_INFO_KEY);
+
+async function releaseBackup() {
+  const { b, page } = await askingPage();
+  try {
+    await page.goto(`${BASE}#/`);
+    await answerFirstRun(page, { start: 'own' });
+    await settle(page, 600);
+    await markOld(page);
+    // 普通に開く：「デモを更新しました」の前に更新前の控えを残す
+    await page.goto('about:blank');
+    await page.goto(`${BASE}#/data`);
+    await page.getByTestId('first-run').waitFor({ timeout: 30000 });
+    const info = await prevInfo(page);
+    check(!!info?.release && info.release !== '2000-01-01', '普通に開いても更新前の控えを残す（更新の id つき）', info);
+    check(
+      /更新前の控えを自動で残しました（\d+時\d{2}分）/.test(
+        await page.getByTestId('first-run-release-backup').innerText(),
+      ),
+      '「デモを更新しました」に自動の控えの時刻',
+    );
+    await page.getByTestId('first-run-submit').click();
+    await page.getByTestId('first-run').waitFor({ state: 'detached', timeout: 30000 });
+    const card = page.getByTestId('data-prev-card');
+    await card.waitFor({ timeout: 10000 });
+    check(
+      /更新前の控え（\d+月\d+日の更新の前・\d+時\d{2}分）/.test(await card.innerText()),
+      'データの画面に更新前の控え',
+    );
+    // もう一度古くして、リンクで開く：更新の画面は出さず手順の画面だけ
+    await markOld(page);
+    await page.goto('about:blank');
+    await page.goto(`${BASE}#/settings?apply=${SET_ID}`);
+    await page.getByTestId('setting-steps').waitFor({ timeout: 30000 });
+    check((await page.getByTestId('first-run').count()) === 0, 'リンク：「デモを更新しました」は出さない');
+    check(
+      await until(
+        async () => (await page.evaluate((k) => localStorage.getItem(k), SEEN_RELEASE_KEY)) !== '2000-01-01',
+        5000,
+      ),
+      'リンク：更新は見たことにする',
+    );
+    check(
+      /更新前の控えを自動で残しました（\d+時\d{2}分）/.test(
+        await page.getByTestId('setting-steps-backup-lead').innerText(),
+      ),
+      'リンク：①に自動の控えの時刻',
+    );
+    const rel = page.getByTestId('setting-steps-release');
+    check(
+      (await rel.isVisible()) && !(await rel.evaluate((e) => e.open)),
+      'リンク：［変わったことを見る］は畳んで出す',
+    );
+    await page.getByTestId('setting-steps-release-summary').click();
+    check(await rel.evaluate((e) => e.open), 'リンク：［変わったことを見る］で更新の一覧を開ける');
+    check(await page.getByTestId('setting-steps-apply').isDisabled(), 'リンク：書き出すまで［適用］を押せない');
+    await exportBackup(page);
+    await page.getByTestId('setting-steps-apply').click();
+    check(await waitStored(page, applied), 'リンク：書き出したら適用できる');
+    check((await stored(page)).org.name === '更新前の事業所', 'リンク：データはそのまま（設定だけ変わる）');
+    // データの画面：書き出し・この控えに戻す
+    await goTo(page, '/data', { ready: '[data-testid="data-prev-card"]' });
+    const [dl] = await Promise.all([page.waitForEvent('download'), page.getByTestId('data-prev-export').click()]);
+    check(
+      /-previous\.json$/.test(dl.suggestedFilename()),
+      '更新前の控えをファイルに書き出せる',
+      dl.suggestedFilename(),
+    );
+    await page.getByTestId('data-prev-restore').click();
+    await toastOf(page, '更新前の控えに戻しました').waitFor({ timeout: 10000 });
+    check(await waitStored(page, before), '［この控えに戻す］で更新の前（適用の前）のデータに戻る');
+    check(
+      (await page.getByTestId('data-prev-card').innerText()).includes('直前の状態に戻す'),
+      '戻す前のデータは控えに回る（もう一度戻せる）',
+    );
+  } finally {
+    await b.close();
+  }
+}
+
+async function noDataLink() {
+  const { b, page } = await askingPage();
+  try {
+    await page.goto(`${BASE}#/settings?apply=${SET_ID}`);
+    await page.getByTestId('first-run').waitFor({ timeout: 30000 });
+    check((await page.getByTestId('setting-steps').count()) === 0, 'データの無い人：先に最初の2問');
+    await page.getByTestId('first-run-start-own').check();
+    await page.getByTestId('first-run-use-basic').check();
+    await page.getByTestId('first-run-submit').click();
+    await page.getByTestId('setting-steps').waitFor({ timeout: 30000 });
+    check(
+      (await page.getByTestId('setting-steps-backup-lead').innerText()).includes('作ったばかり'),
+      'データの無い人：作ったばかりなので控えは求めない',
+    );
+    check(await page.getByTestId('setting-steps-apply').isEnabled(), 'データの無い人：すぐ［適用］を押せる');
+    await page.getByTestId('setting-steps-apply').click();
+    check(await waitStored(page, applied), 'データの無い人：2問のあとに適用できる');
+  } finally {
+    await b.close();
+  }
+}
+
 const steps = sharedPage({
   open: async () => {
     const s = await openPage();
@@ -167,9 +336,11 @@ const steps = sharedPage({
   steps: [
     ['リンクで適用して元に戻す', applyAndUndo],
     ['全部同じならすでにこの設定', alreadySame],
-    ['キャンセルでは何も変えない', cancelKeeps],
+    ['取り消しでは何も変えない', cancelKeeps],
     ['知らない ID は見つかりません', unknownId],
     ['勤務の終わりの何分前から', beforeEndField],
+    ['更新前の控えとリンク', () => releaseBackup()],
+    ['データの無い人のリンク', () => noDataLink()],
   ],
   after: async (s) => {
     check(s.dlg.native.length === 0, 'ネイティブのダイアログを出さない', s.dlg.native);

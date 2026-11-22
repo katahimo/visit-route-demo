@@ -7,6 +7,7 @@ import type { DemoData } from '../contracts/data';
 import type { FeatureId } from '../contracts/features';
 import { HOME_NEAR_BEFORE_END_DEFAULT } from '../contracts/rules';
 import { scorePresetOf } from '../seed';
+import { releaseBackupFailedText, releaseBackupKeptText } from './backupReminder';
 import { ruleTypeLabel } from './common';
 import { featureLabel, isSwitchOn, turnOffImpact } from './features';
 import { addRule } from './presets';
@@ -156,4 +157,56 @@ export function applySettingSet(d: DemoData, set: SettingSetDef, ruleId: string)
       RULE_DEFAULTS.homeNear,
     );
   return next;
+}
+
+// ---- リンクを開いたときの3ステップの手順（PRD D484〜D487。ADR-0122）----
+
+/** 設定のひな形のリンク（`#/settings?apply=<ID>`）で開いたか（更新の知らせの画面を出さず、手順の画面だけを出す。PRD D486） */
+export const isSettingSetLink = (pathname: string, search: string): boolean =>
+  pathname === '/settings' && new URLSearchParams(search).has('apply');
+
+/** 手順の見出し */
+export const settingSetStepsTitle = (label: string): string => `設定のひな形「${label}」を適用します`;
+export const SETTING_STEP_BACKUP = '① データの控え';
+export const SETTING_STEP_CHANGES = '② 変わる設定';
+export const SETTING_STEP_APPLY = '③ 適用する';
+export const SETTING_BACKUP_BUTTON = '控えをファイルに書き出す';
+/** 更新の知らせを出さずに開いたときの1行と、更新の知らせの一覧を開く見出し */
+export const SETTING_RELEASE_LINE = 'デモを更新しました。';
+export const SETTING_RELEASE_OPEN = '変わったことを見る';
+
+/** 開いたときに自動で残した更新前の控え（store の ReleaseBackup と同じ形。無ければ null） */
+type AutoBackup = { kept: true; at: number } | { kept: false; why: string } | null;
+
+/**
+ * ① データの控えの文と、［適用］を押せるか。控えをファイルに書き出すまで押せない（ADR-0113 と同じ考え）。
+ * 保存データが無く最初の2問で作ったばかりのデータ（fresh）は書き出しを求めない。
+ * blocked は押せない理由（押せるなら null）
+ */
+export function settingSetBackupStep(x: { auto: AutoBackup; fresh: boolean; exported: boolean }): {
+  lead: string;
+  needsExport: boolean;
+  canApply: boolean;
+  blocked: string | null;
+} {
+  if (x.fresh && x.auto === null)
+    return {
+      lead: 'データは最初の設定で作ったばかりなので、控えは要りません。',
+      needsExport: false,
+      canApply: true,
+      blocked: null,
+    };
+  const ask = '適用の前に、今のデータの控えをファイルに書き出してください。';
+  const head =
+    x.auto === null
+      ? ''
+      : x.auto.kept
+        ? `${releaseBackupKeptText(x.auto.at)}。`
+        : `${releaseBackupFailedText(x.auto.why)}。`;
+  return {
+    lead: `${head}${ask}`,
+    needsExport: true,
+    canApply: x.exported,
+    blocked: x.exported ? null : '① で控えをファイルに書き出すと［適用］を押せます',
+  };
 }

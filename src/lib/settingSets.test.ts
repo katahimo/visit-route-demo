@@ -5,8 +5,10 @@ import { HOME_NEAR_WEIGHT_DEFAULT } from '../contracts/rules';
 import { createDemoData } from '../seed';
 import {
   applySettingSet,
+  isSettingSetLink,
   SETTING_SETS,
   settingChangeLines,
+  settingSetBackupStep,
   settingSetChanges,
   settingSetConfirmBody,
   settingSetOf,
@@ -99,5 +101,45 @@ describe('設定のひな形', () => {
       roads: { at: 0, points: [], near: [], seconds: [], meters: [] },
     };
     expect(settingSetConfirmBody(withRoads, settingSetChanges(withRoads, set), '2026-10-12')).toContain('道路の所要');
+  });
+});
+
+describe('リンクの手順（PRD D484〜D487。ADR-0122）', () => {
+  it('管理者設定で apply があるときだけリンク', () => {
+    expect(isSettingSetLink('/settings', '?apply=standard-start-no-shift')).toBe(true);
+    expect(isSettingSetLink('/settings', '')).toBe(false);
+    expect(isSettingSetLink('/data', '?apply=x')).toBe(false);
+  });
+  const at = Date.parse('2026-11-22T09:05:00+09:00');
+  it('自動の控えがあれば時刻を出し、書き出すまで［適用］を押せない（理由を添える）', () => {
+    const s = settingSetBackupStep({ auto: { kept: true, at }, fresh: false, exported: false });
+    expect(s.lead).toBe(
+      '更新前の控えを自動で残しました（9時05分）。適用の前に、今のデータの控えをファイルに書き出してください。',
+    );
+    expect(s).toMatchObject({ needsExport: true, canApply: false });
+    expect(s.blocked).toContain('書き出すと');
+    expect(settingSetBackupStep({ auto: { kept: true, at }, fresh: false, exported: true })).toMatchObject({
+      canApply: true,
+      blocked: null,
+    });
+  });
+  it('自動の控えを残せなかった・更新が無かったときも書き出しを求める', () => {
+    const failed = settingSetBackupStep({
+      auto: { kept: false, why: '控えを残せません：容量不足' },
+      fresh: false,
+      exported: false,
+    });
+    expect(failed.lead).toContain('自動で残せませんでした（容量不足）');
+    expect(failed.canApply).toBe(false);
+    const none = settingSetBackupStep({ auto: null, fresh: false, exported: false });
+    expect(none.lead).toBe('適用の前に、今のデータの控えをファイルに書き出してください。');
+    expect(none.canApply).toBe(false);
+  });
+  it('最初の2問で作ったばかりのデータは書き出しを求めない', () => {
+    expect(settingSetBackupStep({ auto: null, fresh: true, exported: false })).toMatchObject({
+      needsExport: false,
+      canApply: true,
+      blocked: null,
+    });
   });
 });

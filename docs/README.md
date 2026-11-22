@@ -161,6 +161,7 @@
 | [0117](adr/0117-pattern-list-end-time-referrer-person-input-toggles.md) | 今の繰り返しが分かる一覧（前の中身は消さず畳む・いつから／いつまでの札）・所要と終わりの時刻を相互に入れる・紹介元の相談員・〈利用者さん〉の特性と時間の決め方の入り切り |
 | [0121](adr/0121-home-near-before-end-and-setting-set-link.md) | 帰りの前は自宅に近い人（勤務の終わりの N分前から。条件の行で決める）と、設定のひな形を `#/settings?apply=<ID>` のリンクで確認して適用する |
 | [0120](adr/0120-companion-visits-and-copy.md) | 2人体制・研修同行は同じ時刻の訪問をもう1件（省略可の印 `accompany`）で表し、訪問の詳細の欄の［この訪問をコピー］から足す |
+| [0122](adr/0122-release-backup-and-setting-set-steps.md) | 更新のときに前のデータを1世代の控えへ自動で残し（データの画面から戻せる）、設定のひな形のリンクを ①控え ②変わる設定 ③適用 の手順の画面にする（更新の知らせは出さない） |
 
 ## 文書の保ち方
 

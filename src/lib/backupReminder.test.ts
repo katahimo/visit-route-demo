@@ -5,6 +5,9 @@ import {
   confirmedDayCount,
   exportAgoText,
   previousText,
+  releaseBackupFailedText,
+  releaseBackupKeptText,
+  releaseBackupTitle,
   shouldRemindBackup,
 } from './backupReminder';
 import { daysBetween } from './ym';
@@ -84,5 +87,21 @@ describe('直前の状態の文（PRD D227）', () => {
         },
       }),
     ).toBe(1);
+  });
+});
+
+describe('更新前の控えの文（PRD D483〜D485）', () => {
+  const at = Date.parse('2026-11-22T09:05:00+09:00');
+  it('見出しは更新の日と残した時刻', () => {
+    expect(releaseBackupTitle({ at, release: '2026-11-21' })).toBe('更新前の控え（11月21日の更新の前・9時05分）');
+    expect(releaseBackupTitle({ at, release: '2026-11-12-2' })).toBe('更新前の控え（11月12日の更新の前・9時05分）');
+  });
+  it('手順の①の文', () => {
+    expect(releaseBackupKeptText(at)).toBe('更新前の控えを自動で残しました（9時05分）');
+  });
+  it('残せなかったときは理由（接頭辞を落とす）', () => {
+    expect(releaseBackupFailedText('控えを残せません：容量不足')).toBe(
+      '更新前の控えを自動で残せませんでした（容量不足）。データはそのままです',
+    );
   });
 });

@@ -7,10 +7,10 @@ import { FilePick } from '../components/FilePick';
 import { Term } from '../components/Term';
 import { Hint, SectionTitle, WithIcon } from '../components/ui';
 import { jstDate } from '../domain/time';
-import { exportAgoText, previousText } from '../lib/backupReminder';
+import { exportAgoText, previousText, releaseBackupTitle } from '../lib/backupReminder';
 import { tidyHasAny, tidyPreviewText } from '../lib/dataScreen';
 import { tidyMonthLabel } from '../lib/tidy';
-import { type LastExport, QUOTA_MESSAGE } from '../store';
+import { type LastExport, type PreviousInfo, QUOTA_MESSAGE } from '../store';
 import { useDataTerms } from './useDataTerms';
 import type { DataTidy } from './useDataTidy';
 
@@ -35,24 +35,38 @@ export function SaveErrorCard({ saveError, onTidy }: { saveError: string; onTidy
   );
 }
 
-/** 直前の状態に戻す（PRD D227。1世代の控えがあるときだけ出す） */
-export function PrevCard({ previous, onRestore }: { previous: { at: number; reason: string }; onRestore: () => void }) {
+/**
+ * 直前の状態に戻す（PRD D227。1世代の控えがあるときだけ出す）。デモの更新の前に自動で残した控え（previous.release あり。PRD D485）は
+ * 見出しを「更新前の控え（11月21日の更新の前・14時03分）」にし、［この控えに戻す］と書く。どちらも［この控えを書き出す］（ファイル）を添える
+ */
+export function PrevCard({
+  previous,
+  onRestore,
+  onExport,
+}: {
+  previous: PreviousInfo;
+  onRestore: () => void;
+  onExport: () => void;
+}) {
+  const release = previous.release;
+  const title = release === undefined ? '直前の状態に戻す' : releaseBackupTitle({ at: previous.at, release });
   return (
-    <section className="card stack" aria-label="直前の状態に戻す" data-testid="data-prev-card">
-      <SectionTitle icon={ArchiveRestore}>直前の状態に戻す</SectionTitle>
+    <section className="card stack" aria-label={title} data-testid="data-prev-card">
+      <SectionTitle icon={ArchiveRestore}>{title}</SectionTitle>
       <p className="data-prev-text" data-testid="data-prev-text">
-        {previousText(previous)}
+        {release === undefined ? previousText(previous) : 'デモを更新したときに、更新の前のデータを自動で残しました。'}
       </p>
-      <Hint>置き換える前のデータを1つだけ残しています。戻すと、いまのデータと入れ替わります。</Hint>
-      <button
-        type="button"
-        className="btn"
-        style={{ alignSelf: 'flex-start' }}
-        onClick={onRestore}
-        data-testid="data-prev-restore"
-      >
-        <WithIcon icon={ArchiveRestore}>直前の状態に戻す</WithIcon>
-      </button>
+      <Hint>
+        置き換える前のデータを1つだけ残しています。戻すと、いまのデータと入れ替わります（いまのデータは控えに回ります）。
+      </Hint>
+      <div className="row" style={{ flexWrap: 'wrap' }}>
+        <button type="button" className="btn" onClick={onRestore} data-testid="data-prev-restore">
+          <WithIcon icon={ArchiveRestore}>{release === undefined ? '直前の状態に戻す' : 'この控えに戻す'}</WithIcon>
+        </button>
+        <button type="button" className="btn" onClick={onExport} data-testid="data-prev-export">
+          <WithIcon icon={Download}>この控えを書き出す</WithIcon>
+        </button>
+      </div>
     </section>
   );
 }

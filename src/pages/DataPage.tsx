@@ -41,8 +41,10 @@ export default function DataPage() {
       </div>
       {saveError && <SaveErrorCard saveError={saveError} onTidy={tidy.goToCard} />}
 
-      {/* 直前の状態に戻す（PRD D227。1世代の控えがあるときだけ） */}
-      {previous && <PrevCard previous={previous} onRestore={() => void restore.doRestore()} />}
+      {/* 直前の状態に戻す・更新前の控え（PRD D227・D485。1世代の控えがあるときだけ） */}
+      {previous && (
+        <PrevCard previous={previous} onRestore={() => void restore.doRestore()} onExport={restore.exportPrev} />
+      )}
 
       <TermsCard />
 

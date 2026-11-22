@@ -1,6 +1,7 @@
 import { Settings } from 'lucide-react';
 import { flushSync } from 'react-dom';
 import { useConfirm } from '../components/ConfirmDialog';
+import { SettingSetSteps } from '../components/SettingSetSteps';
 import { useToast } from '../components/Toast';
 import { PageHeader } from '../components/ui';
 import { useSettingSetLink } from '../components/useSettingSetLink';
@@ -32,7 +33,8 @@ import { TemplatesCard } from './TemplatesCard';
  * 隠れるものは ⓘ。押すとすぐ保存。主ボタンは置かない）。メールの予約送信の手順も畳む（PRD D395）。
  * データを作り直す操作（最初の設定をやり直す）はデータの画面に置き、ここには置かない（ADR-0092）。
  * 移動時間の見積もり方（直線距離・車道の道のり）と係数もここに置く（PRD D436。pages/roadTravelSettings）。
- * `#/settings?apply=<ID>` で開くと、設定のひな形（lib/settingSets）を確認のあと適用する（components/useSettingSetLink。ADR-0121）。
+ * `#/settings?apply=<ID>` で開くと、設定のひな形（lib/settingSets）を3ステップの手順の画面（①控え ②変わる設定 ③適用）のあと適用する
+ * （components/useSettingSetLink・SettingSetSteps。ADR-0121・ADR-0122）。
  * 書くのは store の update(fn) だけ。切った機能のデータは消さない。呼び方は org.terms
  */
 export default function SettingsPage() {
@@ -45,7 +47,7 @@ export default function SettingsPage() {
   const toast = useToast();
   const confirmDialog = useConfirm();
   // 設定のひな形のリンク（`?apply=<ID>`。PRD D480。ADR-0121）
-  useSettingSetLink();
+  const link = useSettingSetLink();
 
   const names = (ids: readonly FeatureId[]) => ids.map((id) => featureLabel(id, terms)).join('、');
 
@@ -128,6 +130,9 @@ export default function SettingsPage() {
 
       {/* メールの予約送信（PRD D366。ADR-0069） */}
       <MailScheduleSettingsCard />
+
+      {/* 設定のひな形のリンクの手順の画面（PRD D484〜D487。ADR-0122） */}
+      {link.pending && <SettingSetSteps pending={link.pending} onApply={link.apply} onCancel={link.cancel} />}
     </div>
   );
 }

@@ -1,6 +1,5 @@
 import { CircleQuestionMark, TriangleAlert } from 'lucide-react';
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useId, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
 import {
   type ConfirmField,
@@ -9,20 +8,13 @@ import {
   enqueue,
   settle,
   toRequest,
-  trapTarget,
 } from '../lib/confirmDialog';
-import { FOCUSABLE } from './ui';
-import { inertLock, useBodyScrollLock } from './useBodyScrollLock';
-import './confirmDialog.css';
-
-/** 開いてから背景のクリックを無視する時間（ミリ秒） */
-const BACKDROP_GUARD_MS = 300;
+import { DialogShell } from './DialogShell';
 
 /**
  * 独自の確認ダイアログ（PRD D146〜D150。ADR-0026）。ブラウザの confirm の代わりに、画面の中央にアプリの見た目で出す。
- * body の直下に出し、開いているあいだ body のほかの子（#root・右の欄・メニューの引き出し）を inert にする。
- * 最初のフォーカスは取り消し（安全な側）。Tab は中で回す。Esc・背景を押すは取り消し。閉じたら開く前の要素へ戻す。
- * 裏の画面は巻かない（useBodyScrollLock）。Provider の外（ErrorBoundary）でもこの部品だけで出せる
+ * 殻（inert・フォーカス・Tab・Esc・背景・裏を巻かない）は DialogShell。最初のフォーカスは取り消し（安全な側）。
+ * Provider の外（ErrorBoundary）でもこの部品だけで出せる
  */
 export function ConfirmDialog({
   request,
@@ -32,49 +24,9 @@ export function ConfirmDialog({
   /** 答え（true＝確定。取り消し・Esc・背景は false） */
   onClose: (ok: boolean) => void;
 }) {
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const boxRef = useRef<HTMLDivElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
-  const closeRef = useRef(onClose);
-  closeRef.current = onClose;
   const titleId = useId();
   const bodyId = useId();
-  /** 開いた時刻（背景のクリックを少しのあいだ無視する） */
-  const openedAt = useRef(performance.now());
-  useBodyScrollLock();
-  useEffect(() => {
-    const back = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    // 裏（body のほかの子）を操作できなくする。要素ごとに数えるロックで、引き出しと閉じる順が逆でも残さない
-    const releaseInert = inertLock.lock(
-      Array.from(document.body.children).filter(
-        (el): el is HTMLElement => el instanceof HTMLElement && el !== wrapRef.current,
-      ),
-    );
-    cancelRef.current?.focus();
-    // 捕捉の段で受け、右の欄・引き出しの Esc（document で受けている）に渡さない
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !e.isComposing) {
-        e.preventDefault();
-        e.stopPropagation();
-        closeRef.current(false);
-        return;
-      }
-      if (e.key !== 'Tab' || !boxRef.current) return;
-      e.stopPropagation();
-      const list = [...boxRef.current.querySelectorAll<HTMLElement>(FOCUSABLE)];
-      const at = document.activeElement;
-      const to = trapTarget(list.length, at instanceof HTMLElement ? list.indexOf(at) : -1, e.shiftKey);
-      if (to === null) return;
-      e.preventDefault();
-      list[to]?.focus();
-    };
-    window.addEventListener('keydown', onKey, true);
-    return () => {
-      window.removeEventListener('keydown', onKey, true);
-      releaseInert();
-      if (back?.isConnected) back.focus({ preventScroll: true });
-    };
-  }, []);
   const danger = request.tone === 'danger';
   const Icon = danger ? TriangleAlert : CircleQuestionMark;
   const [value, setValue] = useState(request.field?.initial ?? '');
@@ -85,67 +37,52 @@ export function ConfirmDialog({
     request.field?.onValue(value.trim());
     onClose(true);
   };
-  return createPortal(
-    <div ref={wrapRef} className="confirm-wrap" data-testid="confirm-wrap">
-      {/* 背景を押すと取り消し（キーボードは Esc・取り消しのボタン） */}
-      <div
-        className="confirm-backdrop"
-        aria-hidden="true"
-        onClick={(e) => {
-          // 開くボタンのダブルクリックの2回目が背景に当たって取り消しにならないよう、開いてすぐ・連続のクリックは無視する
-          if (e.detail > 1 || performance.now() - openedAt.current < BACKDROP_GUARD_MS) return;
-          onClose(false);
-        }}
-        data-testid="confirm-backdrop"
-      />
-      <div
-        ref={boxRef}
-        className={`confirm-dialog ${danger ? 'is-danger' : ''}`}
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        aria-describedby={request.body ? bodyId : undefined}
-        data-testid="confirm-dialog"
-      >
-        <div className="confirm-head">
-          <span className="confirm-icon" aria-hidden="true">
-            <Icon size={20} strokeWidth={2.2} />
-          </span>
-          <h2 id={titleId} data-testid="confirm-title">
-            {request.title}
-          </h2>
-        </div>
-        {request.field && (
-          <ConfirmInput field={request.field} value={value} error={fieldError} onChange={setValue} onEnter={ok} />
-        )}
-        {request.body && (
-          <p id={bodyId} className="confirm-body" data-testid="confirm-body">
-            {request.body}
-          </p>
-        )}
-        <div className="confirm-actions">
-          <button
-            ref={cancelRef}
-            type="button"
-            className="btn"
-            onClick={() => onClose(false)}
-            data-testid="confirm-cancel"
-          >
-            {request.cancelLabel}
-          </button>
-          <button
-            type="button"
-            className={danger ? 'btn btn-danger-solid' : 'btn btn-primary'}
-            onClick={ok}
-            aria-disabled={fieldError ? true : undefined}
-            data-testid="confirm-ok"
-          >
-            {request.confirmLabel}
-          </button>
-        </div>
+  return (
+    <DialogShell
+      onCancel={() => onClose(false)}
+      initialFocus={cancelRef}
+      className={danger ? 'is-danger' : undefined}
+      labelledBy={titleId}
+      describedBy={request.body ? bodyId : undefined}
+      testId="confirm-dialog"
+    >
+      <div className="confirm-head">
+        <span className="confirm-icon" aria-hidden="true">
+          <Icon size={20} strokeWidth={2.2} />
+        </span>
+        <h2 id={titleId} data-testid="confirm-title">
+          {request.title}
+        </h2>
       </div>
-    </div>,
-    document.body,
+      {request.field && (
+        <ConfirmInput field={request.field} value={value} error={fieldError} onChange={setValue} onEnter={ok} />
+      )}
+      {request.body && (
+        <p id={bodyId} className="confirm-body" data-testid="confirm-body">
+          {request.body}
+        </p>
+      )}
+      <div className="confirm-actions">
+        <button
+          ref={cancelRef}
+          type="button"
+          className="btn"
+          onClick={() => onClose(false)}
+          data-testid="confirm-cancel"
+        >
+          {request.cancelLabel}
+        </button>
+        <button
+          type="button"
+          className={danger ? 'btn btn-danger-solid' : 'btn btn-primary'}
+          onClick={ok}
+          aria-disabled={fieldError ? true : undefined}
+          data-testid="confirm-ok"
+        >
+          {request.confirmLabel}
+        </button>
+      </div>
+    </DialogShell>
   );
 }
 

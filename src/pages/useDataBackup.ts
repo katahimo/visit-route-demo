@@ -5,10 +5,11 @@ import { useConfirm } from '../components/ConfirmDialog';
 import { useToast } from '../components/Toast';
 import { useBackupDownload } from '../components/useBackupDownload';
 import { jstDate } from '../domain/time';
-import { previousText } from '../lib/backupReminder';
-import { formError } from '../lib/common';
+import { previousText, releaseBackupTitle } from '../lib/backupReminder';
+import { attempt, formError } from '../lib/common';
 import { keepNote, keptSuffix } from '../lib/dataScreen';
-import { backupMemory, canKeepPrevious, type ExportKind, importJson, useDemoData } from '../store';
+import { backupFileName, saveBlob } from '../lib/download';
+import { backupMemory, canKeepPrevious, type ExportKind, exportPrevious, importJson, useDemoData } from '../store';
 
 /** 最後に書き出した日（PRD D227。このブラウザの記録で、データには入れない） */
 export function useLastExport() {
@@ -66,29 +67,56 @@ export function useDataBackup(x: { markExported: (kind: ExportKind) => void }) {
   return { error, download, load };
 }
 
-/** 直前の状態に戻す（確認つき） */
+/** 直前の状態に戻す・更新前の控えに戻す（確認つき）と、控えのファイルへの書き出し */
 export function useDataRestore() {
   const { restorePrevious, previous } = useDemoData();
   const toast = useToast();
   const confirmDialog = useConfirm();
 
-  /** 直前の状態に戻す（PRD D227）：控えと入れ替える */
+  /**
+   * 直前の状態に戻す（PRD D227）・更新前の控えに戻す（PRD D485）：控えと入れ替える（いまのデータは控えに回り、もう一度戻せる。
+   * いまのデータを控えに残せなければ戻さない。store の swapPrevious）
+   */
   const doRestore = async () => {
     if (!previous) return;
-    const ok = await confirmDialog({
-      title: '直前の状態に戻しますか？',
-      body: `${previousText(previous)}。いまのデータは控えと入れ替わり、もう一度「直前の状態に戻す」で戻せます。`,
-      confirmLabel: '直前の状態に戻す',
-      tone: 'danger',
-    });
+    const release = previous.release;
+    const ok = await confirmDialog(
+      release === undefined
+        ? {
+            title: '直前の状態に戻しますか？',
+            body: `${previousText(previous)}。いまのデータは控えと入れ替わり、もう一度「直前の状態に戻す」で戻せます。`,
+            confirmLabel: '直前の状態に戻す',
+            tone: 'danger',
+          }
+        : {
+            title: '更新前の控えに戻しますか？',
+            body: `${releaseBackupTitle({ at: previous.at, release })}のデータに戻します。いまのデータは控えと入れ替わり、もう一度戻せます。`,
+            confirmLabel: 'この控えに戻す',
+            tone: 'danger',
+          },
+    );
     if (!ok) return;
     const err = restorePrevious();
     if (err) {
       toast(err);
       return;
     }
-    toast('直前の状態に戻しました');
+    toast(release === undefined ? '直前の状態に戻しました' : '更新前の控えに戻しました');
   };
 
-  return { doRestore };
+  /** 1世代の控えをファイルに書き出す（控えの JSON と同じ形。ファイル名は控えを残した日と -previous） */
+  const exportPrev = () => {
+    if (!previous) return;
+    const r = attempt(() => exportPrevious());
+    const blob = r.value;
+    if (!(blob instanceof Blob)) {
+      toast(`書き出せませんでした（${blob ? blob.message : (r.error ?? '控えがありません')}）`);
+      return;
+    }
+    const name = backupFileName(jstDate(previous.at), 'previous');
+    saveBlob(blob, name);
+    toast(`控えを書き出しました（${name}）`);
+  };
+
+  return { doRestore, exportPrev };
 }

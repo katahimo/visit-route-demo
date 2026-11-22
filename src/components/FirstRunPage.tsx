@@ -1,6 +1,7 @@
 import { Download } from 'lucide-react';
 import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { releaseBackupFailedText, releaseBackupKeptText } from '../lib/backupReminder';
 import {
   FIRST_RUN_BACKUP_BUTTON,
   FIRST_RUN_BACKUP_LEAD,
@@ -32,6 +33,7 @@ import {
   type ReleaseNote,
   releaseQ1,
 } from '../lib/releaseNotes';
+import { isSettingSetLink } from '../lib/settingSets';
 import { useDemoData } from '../store';
 import './firstRun.css';
 import { WithIcon } from './ui';
@@ -46,9 +48,16 @@ import { useFirstRunBack } from './useFirstRunBack';
  * 自分のデータ＝登録の案内）へ移る。ルーターの中で使う
  */
 export function FirstRunGate({ children }: { children: ReactNode }) {
-  const { needsFirstRun } = useDemoData();
+  const { needsFirstRun, releaseNotice, cancelFirstRun } = useDemoData();
+  const { pathname, search } = useLocation();
+  // 設定のひな形のリンクで開いたときは、更新の知らせを出さず見たことにする（手順の画面だけを出す。PRD D486。ADR-0122）。
+  // 更新前の控えは store が開いたときに残している（PRD D483）
+  const linkSkipsRelease = releaseNotice !== null && isSettingSetLink(pathname, search);
+  useEffect(() => {
+    if (linkSkipsRelease) cancelFirstRun();
+  }, [linkSkipsRelease, cancelFirstRun]);
   const backToFirstRun = useFirstRunBack();
-  return needsFirstRun || backToFirstRun ? <FirstRunPage /> : children;
+  return (needsFirstRun && !linkSkipsRelease) || backToFirstRun ? <FirstRunPage /> : children;
 }
 
 /** 問1の答え：更新の知らせのときは「今のデータを使い続ける」（keep）も選べる */
@@ -66,7 +75,7 @@ const KEEP_CHOICE: FirstRunChoice<StartPick> = {
  * （選んでいるあいだは問2を出さない。主ボタン「開く」で今の画面のまま開く）
  */
 function FirstRunPage() {
-  const { startFirstRun, redoingFirstRun, releaseNotice, cancelFirstRun } = useDemoData();
+  const { startFirstRun, redoingFirstRun, releaseNotice, releaseBackup, cancelFirstRun } = useDemoData();
   const navigate = useNavigate();
   // 初めに選んでおく：更新の知らせは今のデータ、ほかはデモで試す・定期の訪問（基本）（今までの初期データと同じ。あとからデータの画面で選び直せる）
   const [start, setStart] = useState<StartPick>(releaseNotice ? 'keep' : 'demo');
@@ -92,7 +101,9 @@ function FirstRunPage() {
   // 逆にすると、本体の画面が今の URL（`#/`）のまま先に出て、知らない URL の予定への移動に上書きされる
   const [answer, setAnswer] = useState<FirstRunAnswer | null>(null);
   const { pathname, search, state } = useLocation();
-  const landing = answer ? firstRunLanding(answer) : null;
+  // 設定のひな形のリンク（`#/settings?apply=…`）で初めて開いた人は、答えたあと同じリンクへ進み、手順の画面を出す（PRD D487）
+  const [linkTo] = useState(() => (isSettingSetLink(pathname, search) ? { pathname, search } : null));
+  const landing = answer ? (linkTo?.pathname ?? firstRunLanding(answer)) : null;
   useEffect(() => {
     if (answer && landing === pathname) startFirstRun(answer);
   }, [answer, landing, pathname, startFirstRun]);
@@ -111,7 +122,7 @@ function FirstRunPage() {
     setAnswer(a);
     // 2問の画面の項目に印を付けてから先へ進む（ブラウザの「戻る」で最初の設定へ戻れる。PRD D381・D438）
     navigate({ pathname, search }, { replace: true, state: FIRST_RUN_ENTRY });
-    navigate(firstRunLanding(a));
+    navigate(linkTo ?? firstRunLanding(a));
   };
   return (
     <main className="first-run" data-testid="first-run">
@@ -127,6 +138,14 @@ function FirstRunPage() {
           {releaseNotice ? RELEASE_TITLE : FIRST_RUN_TITLE}
         </h1>
         {releaseNotice && <ReleaseChanges notes={releaseNotice} />}
+        {/* 開いたときに残した更新前の控え（PRD D483・D488）：時刻と戻す場所、残せなければ理由 */}
+        {releaseNotice && releaseBackup && (
+          <p className="first-run-note" data-testid="first-run-release-backup">
+            {releaseBackup.kept
+              ? `${releaseBackupKeptText(releaseBackup.at)}（データの画面から戻せます）。`
+              : releaseBackupFailedText(releaseBackup.why)}
+          </p>
+        )}
         <ChoiceGroup<StartPick>
           title={releaseNotice ? releaseQ1(!keep) : FIRST_RUN_Q1}
           describedBy={warn ? warnId : undefined}
@@ -182,12 +201,23 @@ function BackupFirst({ result, onDownload }: { result: BackupDownload | null; on
   );
 }
 
-/** 更新の変わったところ（新しい順に、更新の日と箇条書き。PRD D437）。場所を取るので畳んで始め、見出しに更新の件数を出す */
-function ReleaseChanges({ notes }: { notes: readonly ReleaseNote[] }) {
+/**
+ * 更新の変わったところ（新しい順に、更新の日と箇条書き。PRD D437）。場所を取るので畳んで始め、見出しに更新の件数を出す。
+ * 設定のひな形の手順（SettingSetSteps）でも、見出しを［変わったことを見る］にして使う（PRD D486）
+ */
+export function ReleaseChanges({
+  notes,
+  summary = RELEASE_CHANGES,
+  testId = 'first-run-release',
+}: {
+  notes: readonly ReleaseNote[];
+  summary?: string;
+  testId?: string;
+}) {
   return (
-    <details className="first-run-release" data-testid="first-run-release">
-      <summary data-testid="first-run-release-summary">
-        {RELEASE_CHANGES}（{notes.length}件の更新）
+    <details className="first-run-release" data-testid={testId}>
+      <summary data-testid={`${testId}-summary`}>
+        {summary}（{notes.length}件の更新）
       </summary>
       {notes.map((n) => (
         <div key={n.id}>

@@ -3,12 +3,13 @@ import { type DemoData, STORAGE_KEY } from '../contracts/data';
 import type { Features } from '../contracts/features';
 import type { FirstRunAnswer } from '../lib/firstRun';
 import { appHistory } from '../lib/history';
-import type { ReleaseNote } from '../lib/releaseNotes';
+import { LATEST_RELEASE, type ReleaseNote } from '../lib/releaseNotes';
 import { settleUpdate } from '../lib/settled';
 import {
   flushSave,
   importJson,
   isImportError,
+  isReleaseBackup,
   keepAfterRelease,
   keepPrevious as keepPreviousStore,
   loadWithStatus,
@@ -17,6 +18,7 @@ import {
   type PreviousInfo,
   type PreviousKeep,
   previousInfo,
+  type ReleaseBackup,
   rememberCurrent,
   reset as resetStore,
   samePreviousInfo,
@@ -80,6 +82,15 @@ export type DemoStore = {
   redoingFirstRun: boolean;
   /** デモの更新の知らせなら、まだ見ていない更新（新しい順。画面は変わったところと「今のデータを使い続ける」を出す）。ほかは null（PRD D437） */
   releaseNotice: readonly ReleaseNote[] | null;
+  /**
+   * 開いたときにまだ見ていなかった更新（新しい順。知らせを閉じたあとも残る。設定のひな形の手順の［変わったことを見る］。PRD D486）。
+   * 知らせない開き方では空
+   */
+  releaseNotesAtOpen: readonly ReleaseNote[];
+  /** 開いたときに残した更新前の控えの結果（PRD D483。ADR-0122）。知らせる更新が無かったときは null */
+  releaseBackup: ReleaseBackup | null;
+  /** 保存データが無く、このタブで最初の2問に答えて作ったばかりのデータか（控えの書き出しを求めない。PRD D487） */
+  freshStart: boolean;
   /** 今のデータのまま2問から戻る（やり直しをやめる・更新の知らせで今のデータを使い続ける。初めて開いたときは何もしない） */
   cancelFirstRun(): void;
   /**
@@ -324,7 +335,8 @@ function useReplaceActions(st: StoreState) {
     (answer: FirstRunAnswer) => {
       // すでにデータがあるとき（やり直し・更新の知らせ）は、先に1世代の控えに残す
       if (firstRun === 'redo') keepPrevious('最初の設定をやり直す');
-      if (firstRun === 'release') keepPrevious('デモの更新で始め直す');
+      // 更新前の控え（PRD D483）が同じデータを持っているので、上書きしない（更新の id と時刻を残す）
+      if (firstRun === 'release' && !isReleaseBackup(LATEST_RELEASE)) keepPrevious('デモの更新で始め直す');
       setSaveError(null);
       swapIn(startWithAnswer(answer));
       replaced();
@@ -400,6 +412,9 @@ export function DemoDataProvider({ children }: { children: ReactNode }): ReactNo
       needsFirstRun: firstRun !== null,
       redoingFirstRun: firstRun === 'redo',
       releaseNotice: firstRun === 'release' ? initial.releaseNotes : null,
+      releaseNotesAtOpen: initial.releaseNotes,
+      releaseBackup: initial.releaseBackup,
+      freshStart: initial.firstRun,
       cancelFirstRun,
       startFirstRun,
       askFirstRun,
@@ -429,6 +444,8 @@ export function DemoDataProvider({ children }: { children: ReactNode }): ReactNo
       cancelFirstRun,
       initial.outdated,
       initial.releaseNotes,
+      initial.releaseBackup,
+      initial.firstRun,
       externalReloads,
       replacedCount,
       previousDrops,
