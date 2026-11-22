@@ -18,6 +18,7 @@ import {
   PRESET_COLS,
   patternCols,
   presetWeightHeader,
+  RULE_BEFORE_END_COL,
   RULE_COLS,
   reqHeader,
   TYPE_COLS,
@@ -157,8 +158,16 @@ export function writeRules({ wb, data }: SheetCtx): void {
   const ruleLabels = ruleTypeLabels(data.org.terms);
   addTable(wb, {
     name: FIXED_SHEETS.rules,
-    headers: Object.values(RULE_COLS),
-    rows: data.rules.map((r) => [r.id, r.label, ruleLabels[r.type], r.weight, yes(r.hard)]),
+    headers: [...Object.values(RULE_COLS), RULE_BEFORE_END_COL],
+    // 勤務の終わりの何分前からは、帰りの前は自宅に近い人の行で決めてあるときだけ（空＝既定。ADR-0121）
+    rows: data.rules.map((r) => [
+      r.id,
+      r.label,
+      ruleLabels[r.type],
+      r.weight,
+      yes(r.hard),
+      r.type === 'homeNear' ? (r.beforeEndMin ?? '') : '',
+    ]),
     textCols: [1],
     lists: [
       { col: 3, values: RULE_TYPES.map((k) => ruleLabels[k]) },

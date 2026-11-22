@@ -17,6 +17,11 @@ export const ORG_HEADERS = ['項目', '値'] as const;
 export const ITEM_COLS = { id: 'ID', target: '対象', name: '名前', kind: '種類', options: '選択肢' } as const;
 export const RULE_COLS = { id: 'ID', label: '名前', type: '種類', weight: '重み', hard: '必須' } as const;
 /**
+ * 条件の「勤務の終わりの何分前から」（帰りの前は自宅に近い人だけ。ADR-0121）。書き出しは「必須」の次。
+ * 古いブックには無いので必須の列にしない（無い・空なら既定の60分）。ほかの種類の行は読まない
+ */
+export const RULE_BEFORE_END_COL = '勤務の終わりの何分前から';
+/**
  * プリセット（ADR-0008）：ID・名前・一言・重み：〈条件の型の名前〉…・必須（必須にする型の名前を「、」区切り）・
  * 点数の基準（○ を1行だけ。ADR-0010。列が無い・無印なら先頭のプリセット）
  */

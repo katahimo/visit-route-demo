@@ -3,8 +3,8 @@ import type { DemoData } from '../contracts/data';
 import type { Client, LatLng, Pattern, Place, Staff, VisitType } from '../contracts/documents';
 import type { Problem, ProblemStaff, ProblemVisit, Reason } from '../contracts/problem';
 import {
+  beforeEndOf,
   type Condition,
-  HOME_NEAR_FROM,
   HOME_NEAR_MET_MINUTES,
   HOME_NEAR_PER_MINUTE,
   type Item,
@@ -202,11 +202,11 @@ function pushRuleReasons(
     usualStaffId: string | null;
     /** その日に働く担当の ID */
     working: Set<string>;
-    /** 夕方（開始（早）が HOME_NEAR_FROM 以降）の訪問なら、訪問から担当の自宅までの移動（分）。夕方でなければ null */
-    homeMinutes: number | null;
+    /** 帰りの前は自宅に近い人（homeNear）に使うもの。担当のその日の勤務の終わりが分からなければ null */
+    home: HomeLook | null;
   },
 ): void {
-  const { s, client, look, terms, level, usualStaffId, working, homeMinutes } = a;
+  const { s, client, look, terms, level, usualStaffId, working, home } = a;
   const w = r.weight * POINTS_PER_WEIGHT;
   const ng = r.hard ? INF : w;
   switch (r.type) {
@@ -276,13 +276,14 @@ function pushRuleReasons(
       break;
     }
     case 'homeNear':
-      // 夕方は自宅に近い人（ADR-0116）：訪問から自宅までの移動1分＝重み×HOME_NEAR_PER_MINUTE点
-      if (homeMinutes !== null)
+      // 帰りの前は自宅に近い人（ADR-0116・ADR-0121）：訪問の終わりが勤務の終わりの N 分前より後なら、
+      // 訪問から自宅までの移動1分＝重み×HOME_NEAR_PER_MINUTE点
+      if (home !== null && home.visitEnd > home.workEnd - beforeEndOf(r))
         out.push({
           ruleId: r.id,
-          label: `夕方：自宅まで${Math.round(homeMinutes)}分`,
-          points: r.weight * HOME_NEAR_PER_MINUTE * homeMinutes,
-          met: homeMinutes <= HOME_NEAR_MET_MINUTES,
+          label: `帰りの前：自宅まで${Math.round(home.minutes)}分`,
+          points: r.weight * HOME_NEAR_PER_MINUTE * home.minutes,
+          met: home.minutes <= HOME_NEAR_MET_MINUTES,
         });
       break;
     case 'balance':
@@ -297,6 +298,21 @@ function pushRuleReasons(
   }
 }
 
+/** 帰りの前は自宅に近い人（homeNear）の判定に使うもの（分。0時から） */
+type HomeLook = {
+  /** 訪問の終わり（開始（早）＋所要） */
+  visitEnd: number;
+  /** 担当のその日の勤務の終わり（欠勤を引いた稼働の時間帯の最後の終わり） */
+  workEnd: number;
+  /** 訪問から担当の自宅までの移動 */
+  minutes: number;
+};
+
+/** その日の稼働の時間帯の最後の終わり（稼働が無い＝休み・欠勤・勤務なしなら null） */
+function workEndOf(slots: readonly MinuteSlot[]): number | null {
+  return slots.length === 0 ? null : Math.max(...slots.map((x) => x.end));
+}
+
 /** compile の中で、訪問と担当の組の理由を作るときに使う、その日の共通のもの */
 type PairContext = {
   data: CompileInput;
@@ -308,7 +324,7 @@ type PairContext = {
   staff: ProblemStaff[];
   daySlots: ReturnType<typeof slotsOf>[];
   places: (LatLng | null)[];
-  /** 地点どうしの移動（分）。夕方は自宅に近い人（homeNear）に使う */
+  /** 地点どうしの移動（分）。帰りの前は自宅に近い人（homeNear）に使う */
   travel: number[][];
   /** その日の問題にいる担当の ID */
   staffIds: Set<string>;
@@ -396,8 +412,10 @@ function pairReasons(ctx: PairContext, v: VisitSide, i: number): Reason[] {
         : { ruleId: ALLOWED_STAFF_RULE_ID, label: `担当を限る：${limit.names} ✗`, points: INF },
     );
   }
-  const homeMinutes = pv.earliest >= HOME_NEAR_FROM ? ctx.travel[S + j]![i]! : null;
-  for (const r of rules) pushRuleReasons(out, r, { s, client, look, terms, level, usualStaffId, working, homeMinutes });
+  const workEnd = workEndOf(ps.slots);
+  const home: HomeLook | null =
+    workEnd === null ? null : { visitEnd: pv.earliest + pv.duration, workEnd, minutes: ctx.travel[S + j]![i]! };
+  for (const r of rules) pushRuleReasons(out, r, { s, client, look, terms, level, usualStaffId, working, home });
   return out;
 }
 

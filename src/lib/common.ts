@@ -2,14 +2,13 @@ import type { TravelMode } from '../contracts/codes';
 import type { Place, Terms } from '../contracts/documents';
 import {
   HARDABLE,
-  HOME_NEAR_FROM,
+  HOME_NEAR_BEFORE_END_DEFAULT,
   HOME_NEAR_PER_MINUTE,
   type ItemKind,
   type Rule,
   type RuleType,
   SAME_CLIENT_GAP_MAX,
 } from '../contracts/rules';
-import { minutesToHhmm } from '../domain/time';
 
 /** 画面の共通の表示（呼び方は org.terms から引く。「お客様」「シッター」を直書きしない） */
 
@@ -79,9 +78,15 @@ export function ruleTypeLabel(type: RuleType, t: Terms): string {
     case 'sameClient':
       return '続く訪問は同じ人';
     case 'homeNear':
-      return '夕方は自宅に近い人';
+      return '帰りの前は自宅に近い人';
   }
 }
+
+/**
+ * 帰りの前は自宅に近い人（homeNear）の前の名前（ADR-0116。ADR-0121 で改名）。古いデータの条件の名前・Excel の種類・
+ * プリセットの重みの見出しにこの名前があれば、今の名前（ruleTypeLabel）として読む
+ */
+export const HOME_NEAR_OLD_LABEL = '夕方は自宅に近い人';
 
 /** 条件の型の説明（contracts/rules.ts のコメントを平易にしたもの） */
 export function ruleTypeHelp(type: RuleType, t: Terms): string {
@@ -105,7 +110,7 @@ export function ruleTypeHelp(type: RuleType, t: Terms): string {
     case 'sameClient':
       return `同じ${t.client}の同じ日の続く訪問（前の訪問の終わりから次の開始まで${SAME_CLIENT_GAP_MAX}分以内）を、同じ${t.staff}が続けて回らないと 1組につき 重み×10点。サービスの内容で時間を分けた訪問を同じ人に寄せます。いつもある条件で、消せません（使わないときは重み0。必須にはできません）。`;
     case 'homeNear':
-      return `開始が${minutesToHhmm(HOME_NEAR_FROM)}以降の訪問（夕方）で、その訪問から${t.staff}の自宅までの移動1分につき 重み×${HOME_NEAR_PER_MINUTE}点。夕方の訪問を、帰りの近い人に寄せます（必須にはできません）。`;
+      return `訪問の終わりが、その日の${t.staff}の勤務の終わりの N分前（行の「勤務の終わりの◯分前から」。既定${HOME_NEAR_BEFORE_END_DEFAULT}分）より後の訪問で、その訪問から${t.staff}の自宅までの移動1分につき 重み×${HOME_NEAR_PER_MINUTE}点。その日の最後のほうの訪問を、帰りの近い人に寄せます。勤務の無い日の人は対象外です（必須にはできません）。`;
   }
 }
 
@@ -204,7 +209,7 @@ export const paramOf = (params: URLSearchParams, key: string): string | null =>
   params.has(key) ? (params.get(key) ?? '') : null;
 
 /**
- * 重みのスライダーの下の目安（条件の重みの画面）：重み0は「無効」、夕方は自宅に近い人は「自宅まで1分×N点」（ADR-0116）、
+ * 重みのスライダーの下の目安（条件の重みの画面）：重み0は「無効」、帰りの前は自宅に近い人は「自宅まで1分×N点」（ADR-0116）、
  * ほかは「移動N分ぶん」（重み×10）
  */
 export function weightHint(r: Pick<Rule, 'type' | 'weight'>): string {

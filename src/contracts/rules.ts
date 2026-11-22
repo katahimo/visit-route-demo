@@ -77,8 +77,9 @@ export type Condition = z.infer<typeof conditionSchema>;
  * sameClient：同じ〈利用者さん〉の同じ日の続く訪問（前の訪問の終わりから次の開始まで 0〜SAME_CLIENT_GAP_MAX 分。開始（早）で見る）の
  *             組1つを、同じ人が続けて回らない（担当が違う・間に別の訪問を挟む・どちらかが担当なし）と 重み×10点（hard は使わない。ADR-0116）。
  *             組み込みの条件で、データにいつも1つある（store の repair が足す。足す・消すはできず、切るのは重み0）
- * homeNear：開始（早）が HOME_NEAR_FROM 以降の訪問（夕方）で、その訪問から担当の自宅までの移動1分＝重み×HOME_NEAR_PER_MINUTE点
- *           （割当費用。hard は使わない。ADR-0116）
+ * homeNear：訪問の終わり（開始（早）＋所要）が、担当のその日の勤務の終わり（欠勤を引いた稼働の最後の終わり）の
+ *           beforeEndMin 分前より後の訪問（帰りの前）で、その訪問から担当の自宅までの移動1分＝重み×HOME_NEAR_PER_MINUTE点
+ *           （割当費用。hard は使わない。その日に稼働の無い人は対象外。ADR-0116・ADR-0121）
  * 同じ型の条件が複数あってもよい（重みは足し合わせる）。weight=0 かつ hard=false は無効
  */
 export const RULE_TYPES = [
@@ -113,14 +114,16 @@ export const SAME_CLIENT_GAP_MAX = 30;
 export const SAME_CLIENT_WEIGHT_DEFAULT = 2;
 /** 組み込みの条件の型（データにいつも1つ。足す・消すはできない。ADR-0116） */
 export const BUILTIN_RULE_TYPES: ReadonlySet<RuleType> = new Set(['sameClient']);
-/** 夕方の訪問とみる開始（早）の下限（0時からの分。17:00。ADR-0116） */
-export const HOME_NEAR_FROM = 17 * 60;
-/** 夕方は自宅に近い人（homeNear）：訪問から自宅までの移動1分・重み1あたりの点 */
+/** 帰りの前は自宅に近い人（homeNear）：勤務の終わりの何分前から対象にするかの既定（欄の無い古いデータ・プリセット・Excel。ADR-0121） */
+export const HOME_NEAR_BEFORE_END_DEFAULT = 60;
+/** 勤務の終わりの何分前から（beforeEndMin）の上限（分） */
+export const HOME_NEAR_BEFORE_END_MAX = 600;
+/** 帰りの前は自宅に近い人（homeNear）：訪問から自宅までの移動1分・重み1あたりの点 */
 export const HOME_NEAR_PER_MINUTE = 0.2;
-/** 夕方は自宅に近い人（homeNear）を達成とみる、訪問から自宅までの移動の上限（分。条件ごとの達成の件数。ADR-0116） */
+/** 帰りの前は自宅に近い人（homeNear）を達成とみる、訪問から自宅までの移動の上限（分。条件ごとの達成の件数。ADR-0116） */
 export const HOME_NEAR_MET_MINUTES = 15;
 /**
- * 夕方は自宅に近い人（homeNear）の重みが無い古いプリセットの重み（ADR-0116）。条件は初期データに無く、
+ * 帰りの前は自宅に近い人（homeNear）の重みが無い古いプリセットの重み（ADR-0116）。条件は初期データに無く、
  * 利用者が足したときだけ効くので、足してすぐ効くよう0にしない
  */
 export const HOME_NEAR_WEIGHT_DEFAULT = 2;
@@ -132,8 +135,16 @@ export const ruleSchema = z.object({
   /** 0〜5、0.5刻み */
   weight: z.number().min(0).max(5).multipleOf(0.5),
   hard: z.boolean(),
+  /**
+   * 帰りの前は自宅に近い人（homeNear）だけ：勤務の終わりの何分前から対象にするか（分。ADR-0121）。
+   * 無い（古いデータ・ほかの型）なら HOME_NEAR_BEFORE_END_DEFAULT。ほかの型では読まない
+   */
+  beforeEndMin: z.number().int().min(0).max(HOME_NEAR_BEFORE_END_MAX).optional(),
 });
 export type Rule = z.infer<typeof ruleSchema>;
+
+/** 帰りの前は自宅に近い人（homeNear）の「勤務の終わりの何分前から」（無ければ既定。ADR-0121） */
+export const beforeEndOf = (r: Pick<Rule, 'beforeEndMin'>): number => r.beforeEndMin ?? HOME_NEAR_BEFORE_END_DEFAULT;
 
 /** 相性。2=◎ 1=○ 0=未入力 -1=△ -2=×（NG） */
 export const COMPAT_LEVELS = [2, 1, 0, -1, -2] as const;
@@ -161,7 +172,7 @@ const missingWeight = (t: RuleType) => ({
 /**
  * 条件のプリセット（ADR-0005・ADR-0008）。条件の型ごとに重み・必須を決め、その日の条件（rules）の同じ型に上書きする。
  * データ（DemoData.presets）に入り、利用者が編集・追加・削除できる。初期値は seed の INITIAL_PRESETS。
- * weights に無い型は 重み0・必須でない で補う（あとから足した続く訪問・夕方は自宅に近い人は既定の重み。ADR-0116）
+ * weights に無い型は 重み0・必須でない で補う（あとから足した続く訪問・帰りの前は自宅に近い人は既定の重み。ADR-0116）
  */
 export const presetSchema = z.object({
   id: z.string().min(1).max(50),

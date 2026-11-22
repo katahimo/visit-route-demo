@@ -63,12 +63,52 @@ describe('Excel のプリセットのシート', () => {
     expect(added.weights.clientPreference).toEqual({ weight: 0, hard: false });
   });
 
-  it('続く訪問・夕方は自宅に近い人の重みの列が無い古いブックも読め、重みは既定。条件のシートに続く訪問が無くても足す（ADR-0116）', async () => {
+  it('帰りの前は自宅に近い人（ADR-0121）：勤務の終わりの何分前からの列が戻り、前の名前の種類・重みの見出しでも読め、列が無ければ既定', async () => {
+    const d0 = base();
+    const d: DemoData = {
+      ...d0,
+      rules: [
+        ...d0.rules,
+        { id: 'hn', type: 'homeNear', label: '帰り', weight: 2, hard: false, beforeEndMin: 90 },
+        { id: 'hn2', type: 'homeNear', label: '帰り2', weight: 2, hard: false },
+      ],
+    };
+    const r = await importWorkbook(await toBuffer(d), d);
+    if (isImportError(r)) throw new Error(r.message);
+    expect(r.rules.find((x) => x.id === 'hn')?.beforeEndMin).toBe(90);
+    // 決めていない行は空で書き、読んでも無いまま（既定の60）
+    expect(r.rules.find((x) => x.id === 'hn2')?.beforeEndMin).toBeUndefined();
+    const old = await editAndImport(d, (wb) => {
+      const ws = wb.getWorksheet('プリセット')!;
+      ws.getRow(1).getCell(col(ws, '重み：帰りの前は自宅に近い人')).value = '重み：夕方は自宅に近い人';
+      ws.getRow(2).getCell(col(ws, '重み：夕方は自宅に近い人')).value = 3.5;
+      const rules = wb.getWorksheet('条件')!;
+      rules.spliceColumns(col(rules, '勤務の終わりの何分前から'), 1);
+      for (let n = 2; n <= rules.rowCount; n++) {
+        const c = rules.getRow(n).getCell(col(rules, '種類'));
+        if (c.value === '帰りの前は自宅に近い人') c.value = '夕方は自宅に近い人';
+      }
+    });
+    if (isImportError(old)) throw new Error(old.message);
+    expect(old.presets[0]!.weights.homeNear.weight).toBe(3.5);
+    const hn = old.rules.find((x) => x.id === 'hn')!;
+    expect(hn.type).toBe('homeNear');
+    expect(hn.beforeEndMin).toBeUndefined();
+    const bad = await editAndImport(d, (wb) => {
+      const rules = wb.getWorksheet('条件')!;
+      for (let n = 2; n <= rules.rowCount; n++)
+        if (rules.getRow(n).getCell(col(rules, 'ID')).value === 'hn')
+          rules.getRow(n).getCell(col(rules, '勤務の終わりの何分前から')).value = 30.5;
+    });
+    expect(isImportError(bad) && bad.message).toContain('勤務の終わりの何分前から');
+  });
+
+  it('続く訪問・帰りの前は自宅に近い人の重みの列が無い古いブックも読め、重みは既定。条件のシートに続く訪問が無くても足す（ADR-0116）', async () => {
     const d = base();
     let removed = 0;
     const r = await editAndImport(d, (wb) => {
       const ws = wb.getWorksheet('プリセット')!;
-      ws.spliceColumns(col(ws, '重み：夕方は自宅に近い人'), 1);
+      ws.spliceColumns(col(ws, '重み：帰りの前は自宅に近い人'), 1);
       ws.spliceColumns(col(ws, '重み：続く訪問は同じ人'), 1);
       const rules = wb.getWorksheet('条件')!;
       for (let n = rules.rowCount; n >= 2; n--)

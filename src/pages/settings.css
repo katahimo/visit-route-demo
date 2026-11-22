@@ -146,6 +146,26 @@
   padding: 6px 10px;
 }
 
+/* 帰りの前は自宅に近い人の「勤務の終わりの◯分前から」（ADR-0121） */
+.rule-before-end {
+  display: block;
+  margin-top: 6px;
+}
+.rule-before-end-label {
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.9rem;
+}
+.before-end-input {
+  flex: none;
+  width: 4.5em;
+  padding: 4px 6px;
+}
+
 /* ---- 項目 ---- */
 .items-table td {
   vertical-align: top;

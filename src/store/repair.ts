@@ -11,6 +11,8 @@ import {
   type Rule,
 } from '../contracts/rules';
 import { stageFlags } from '../lib/clientStage';
+import { ruleTypeLabel } from '../lib/common';
+import { withCurrentLabel } from '../lib/ruleEdit';
 import { INITIAL_RULES } from '../seed/people';
 import { applyPreset, initialPresets, scorePresetOf } from '../seed/presets';
 
@@ -222,6 +224,7 @@ function repairSnapshots(snapshots: DemoData['snapshots'], staffIds: Set<string>
  * - 点数の基準（scorePresetId。ADR-0010）：無い・どのプリセットでもない id なら先頭のプリセット
  * - 条件の重み・必須（版2。ADR-0053）：いつも点数の基準のプリセットにそろえる（重みは1組）
  * - 組み込みの条件（続く訪問。ADR-0116）：無ければ最後に足す（古いデータ・消したブック。重みはプリセットから）
+ * - 帰りの前は自宅に近い人（ADR-0121）：名前が前の既定の名前「夕方は自宅に近い人」のままなら今の名前にする
  * - 欠勤（ADR-0011）：いない人の欠勤は消す。ID の重複は最初の1件、同じ人・同じ日は最後の1件（上書きと同じ）
  * - 振り直しの情報（reassigns）：いない人の列は消し、その日にない訪問・重複を除く。ピンはいる人だけ
  * - 伝えた内容（snapshots）：日付をキーにそろえ、いない人の担当は null
@@ -282,7 +285,9 @@ export function repair(d: DemoData): DemoData {
   const scorePresetId = presets.some((p) => p.id === d.scorePresetId) ? d.scorePresetId : presets[0]?.id;
   // 条件の重み・必須は点数の基準にそろえる（版2：重みは1組。ADR-0053）
   const basis = scorePresetOf(presets, scorePresetId);
-  const uniqueRules = withBuiltinRules(uniqueById(d.rules));
+  // 前の名前のままの帰りの前は自宅に近い人は今の名前に（ADR-0121）
+  const homeLabel = ruleTypeLabel('homeNear', d.org.terms);
+  const uniqueRules = withBuiltinRules(uniqueById(d.rules)).map((r) => withCurrentLabel(r, homeLabel));
   const rules = basis ? applyPreset(uniqueRules, basis) : uniqueRules;
 
   return {

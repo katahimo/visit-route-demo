@@ -1,6 +1,6 @@
 # データの画面と管理者設定
 
-> この画面のファイル：`src/pages/DataPage.tsx`（組み立てだけ。状態と処理は `useDataBackup`（`useLastExport`・`useDataBackup`・`useDataRestore`）・`useDataExcel`・`useDataTidy`・`useDataTerms`、見た目は `dataParts.tsx`（保存の誤り・直前の状態に戻す・呼び方・控え（JSON）・古い訪問を片づける・初期状態に戻す）・`dataExcel.tsx`（Excel の欄）・`dataBookings.tsx`（予約の CSV の欄）、文と判定は `src/lib/dataScreen.ts`・`bookingScreen.ts`）・`SettingsPage.tsx`（`settings.css`）・`RestartCard.tsx`・`mailScheduleSettings.tsx`、`src/components/FilePick.tsx`（`filePick.css`）・`DataNotices.tsx`（`dataNotices.css`）・`dirtyForms.ts`（`useDirtyMark`）、`src/lib/filePick.ts`・`features.ts`・`backupReminder.ts`・`tidy.ts`・`dirtyForms.ts`。関連 ADR：0006・0028・0032・0068・0069・0073・0075・0090・0095。関連 PRD：D191・D210〜D216・D227・D260・D275・D322・D366・D379・D381・D395・D408・D428。
+> この画面のファイル：`src/pages/DataPage.tsx`（組み立てだけ。状態と処理は `useDataBackup`（`useLastExport`・`useDataBackup`・`useDataRestore`）・`useDataExcel`・`useDataTidy`・`useDataTerms`、見た目は `dataParts.tsx`（保存の誤り・直前の状態に戻す・呼び方・控え（JSON）・古い訪問を片づける・初期状態に戻す）・`dataExcel.tsx`（Excel の欄）・`dataBookings.tsx`（予約の CSV の欄）、文と判定は `src/lib/dataScreen.ts`・`bookingScreen.ts`）・`SettingsPage.tsx`（`settings.css`）・`RestartCard.tsx`・`mailScheduleSettings.tsx`、`src/components/FilePick.tsx`（`filePick.css`）・`DataNotices.tsx`（`dataNotices.css`）・`dirtyForms.ts`（`useDirtyMark`）、`src/lib/filePick.ts`・`features.ts`・`backupReminder.ts`・`tidy.ts`・`dirtyForms.ts`。関連 ADR：0006・0028・0032・0068・0069・0073・0075・0090・0095・0121。関連 PRD：D191・D210〜D216・D227・D260・D275・D322・D366・D379・D381・D395・D408・D428・D480〜D482。
 > Excel の変換は design.md の「excel」、機能の表と判定は design.md の「features」。
 
 ### データ（`#/data`）
@@ -87,6 +87,7 @@
 - 機能の入・切の1枚（`pages/featureRows` の `FeatureSwitchesCard`・`feature-switches`。見出し「機能の入・切」と説明1行）の中に、グループ（`FEATURE_GROUPS`＝予定の入れ方／当日・問い合わせ／担当の決め方／勤務・契約／現場との共有／入力の補助／上級（組み方の調整）。ADR-0092）ごと（`feature-group`。見出しに「N / M 入」`feature-group-count`）の行（`feature-row`）：名前・1行の説明・ⓘ・スイッチ（`feature-switch`。`role="switch"`・`aria-checked`。「入」「切」）。ⓘ は説明の下の行。中は「切ると隠れるもの：…」（`feature-hides`）と、依存先が入のときの注記「「〈名前〉」が入っているときに使えます」（`feature-req-note`）。依存先が切なら注記「「〈名前〉」を入れると使えます」を行に出し、スイッチは aria-disabled。スイッチの aria-describedby は説明・（押せないときの）依存の注記・hidden の写し（`feature-sr`）を指す（閉じた `<details>` の中は読まないため）
 - 押すとすぐ保存（`update`）とトースト「〈機能〉を入れました／切りました」
 - 切るときデータがあれば `turnOffImpact` の件数と効き方の確認。データが無ければ確認なし。取り消すと変わらない
+- 設定のひな形のリンク（`#/settings?apply=<ID>`。`components/useSettingSetLink`・`lib/settingSets`。PRD D480〜D482。ADR-0121）：開くと独自の確認（見出し「設定のひな形「〈名前〉」を適用しますか？」、本文「変わる項目（今 → 適用後）：」と「・機能「〈名前〉」：入 → 切」「・条件「帰りの前は自宅に近い人」：なし → 足す（重みN・勤務の終わりの60分前から）」「・移動時間の見積もり方の車の速さ：25km/h → 30km/h」の行（すでに同じ値の項目は出さない）、切れる機能のデータの「※…」、道路の所要を取ってあれば車の速さの効く区間の「※…」、最後に「〈利用者さん〉・〈スタッフ〉・予定は変えません。切った機能のデータは消えません。」。ボタン［適用］［取り消す］）。［適用］で `update`（手の名前「設定のひな形「〈名前〉」を適用」）と知らせ「設定のひな形「〈名前〉」を適用しました」＋［元に戻す］。全部同じなら確認を出さず知らせ「すでにこの設定です（〈名前〉）」、知らない ID は知らせ「設定のひな形「〈ID〉」が見つかりません。設定は変えていません」。どの場合も答えたあと URL から `apply` を消す（`replace`）。ひな形の一覧の画面は置かない（リンクで送る）
 - 切った機能の URL を開くと予定の画面（`homePath`）へ移り、閉じられる知らせと管理者設定へのリンク（`FeatureOffNotice`）
 - 390px で横にはみ出さない。印刷で知らせ・「適用」を出さない
 - 「メールの予約送信（Google）」のカード（`pages/mailScheduleSettings`・`mail-schedule-settings`。いつも出す。[mail-schedule.md](mail-schedule.md)）：1行の説明（確定するときにまとめて Google に預け、前日の時刻に自動で送る）と ⓘ（aria-label「メールの予約送信の説明」。中は `mail-schedule-notes`：遅れる分数・Google のアカウントを通ること・使わないときは「メールを作る」で送れること）、手順の4行は「詳しく ▾」（`mail-schedule-steps-fold`。見出しの横に「手順 4つ」。ひな型のコピーのリンク `mail-schedule-template`。`GAS_TEMPLATE_URL` が空なら「まだ用意されていません」）、欄 `mail-schedule-url`・`mail-schedule-token`（password）・`mail-schedule-time`（time）、`mail-schedule-test`「接続を試す」・`mail-schedule-save`「保存」・`mail-schedule-clear`「この端末の設定を消す」（確認つき。設定があるときだけ）。誤りは押したあとに欄ごと（`settingsErrors`）。つないでいれば見出しに「つないでいます」
@@ -104,4 +105,5 @@
 
 - [ ] 控えと Excel が同じファイル選択の部品・「ファイルを選ぶ」と未選択の文・input は見えない形・名前・Tab と枠・Space・確認・同じファイルをもう一度・Excel の誤り・名簿は一覧へのリンク（`lib/filePick` のテスト・`scripts/e2e-tour.cjs`）
 - [ ] 初期状態に戻したあと「直前の状態に戻す」で戻る・書き出すと最後に書き出した日が今日になる・片づけで古い訪問と確定した内容が消え新しいものは残る・壊れたデータの知らせと書き出し（`store`・`lib/backupReminder`・`lib/tidy` のテスト・`scripts/e2e-tour.cjs`）
+- [ ] 設定のひな形のリンク：一覧・適用・元に戻す・キャンセル・知らない ID・すでに同じ（`scripts/e2e-settings-apply.cjs`）
 - [ ] 管理者設定：ひな形の5通りごとにメニュー・下のタブ・パレット・画面の中の入口・ルートの移し先、相性を切るときの確認（`scripts/e2e-features.cjs`）

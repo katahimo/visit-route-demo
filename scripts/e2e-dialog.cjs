@@ -130,7 +130,7 @@ async function ruleNames(page) {
 // ---- 条件を消す（#/rules）：Esc・取り消す・背景は何もしない、確定で消える、フォーカスの戻り、Tab が中で回る ----
 async function rules(page) {
   await open(page, '/rules', '[data-testid="narrow-rules"]');
-  // 組み込みの条件（続く訪問は同じ人。ADR-0116）：行はあるが消すボタンは無く、［条件を追加］の種類にも出ない。夕方は自宅に近い人は足せる
+  // 組み込みの条件（続く訪問は同じ人。ADR-0116）：行はあるが消すボタンは無く、［条件を追加］の種類にも出ない。帰りの前は自宅に近い人は足せる
   const builtin = (await stored(page)).rules.find((r) => r.type === 'sameClient');
   check(!!builtin, '組み込みの条件：初期データに続く訪問は同じ人がある');
   check(
@@ -139,8 +139,8 @@ async function rules(page) {
   );
   const addTypes = await page.locator('select option').allInnerTexts();
   check(
-    !addTypes.includes('続く訪問は同じ人') && addTypes.includes('夕方は自宅に近い人'),
-    '組み込みの条件：足す種類に出さない（夕方は自宅に近い人は出す）',
+    !addTypes.includes('続く訪問は同じ人') && addTypes.includes('帰りの前は自宅に近い人'),
+    '組み込みの条件：足す種類に出さない（帰りの前は自宅に近い人は出す）',
     addTypes,
   );
   const before = (await stored(page)).rules;

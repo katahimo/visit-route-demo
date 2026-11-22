@@ -64,7 +64,7 @@ describe('paramOf（URL のクエリの値）', () => {
 });
 
 describe('weightHint（重みのスライダーの下の目安）', () => {
-  it('重み0は無効、夕方は自宅に近い人は1分あたりの点、ほかは移動N分ぶん', () => {
+  it('重み0は無効、帰りの前は自宅に近い人は1分あたりの点、ほかは移動N分ぶん', () => {
     expect(weightHint({ type: 'wait', weight: 0 })).toBe('無効');
     expect(weightHint({ type: 'homeNear', weight: 3 })).toBe('自宅まで1分×0.6点');
     expect(weightHint({ type: 'sameClient', weight: 2 })).toBe('移動20分ぶん');

@@ -1,5 +1,6 @@
-// 夕方は自宅に近い人（条件 homeNear。PRD D455）と、開始時刻をずらさない（機能 shiftStart を切る。PRD D456）。ADR-0116
+// 帰りの前は自宅に近い人（条件 homeNear。PRD D455・D478。ADR-0116・ADR-0121）と、開始時刻をずらさない（機能 shiftStart を切る。PRD D456）
 import { describe, expect, it } from 'vitest';
+import type { Rule } from '../contracts/rules';
 import { HOME_NEAR_MET_MINUTES, HOME_NEAR_PER_MINUTE } from '../contracts/rules';
 import { INQUIRY_VISIT_ID } from '../contracts/vacancy';
 import { achievements, score } from '../evaluate';
@@ -8,59 +9,91 @@ import { solve } from '../solver';
 import { compile } from './compile';
 import { client, DATE, makeData, rule, staff, visit } from './fixtures.testkit';
 
-/** 自宅が近い s1 と遠い s2。c1 の 17:30 の訪問（夕方）と 10:00 の訪問 */
-function evening(weight: number) {
+/**
+ * 自宅が近い s1 と遠い s2（勤務はどちらも 8:00〜19:00）。c1 の 17:30〜18:30 の訪問（勤務の終わりの60分前＝18:00 より後に終わる）と
+ * 10:00 の訪問。over で条件・〈スタッフ〉を変える
+ */
+function homeDay(weight: number, over: { rule?: Partial<Rule>; s2End?: string; absences?: unknown[] } = {}) {
   return makeData({
     staff: [
-      staff('s1', 38.26, 140.87, { shiftStart: '08:00', shiftEnd: '20:00' }),
-      staff('s2', 38.3, 140.95, { shiftStart: '08:00', shiftEnd: '20:00' }),
+      staff('s1', 38.26, 140.87, { shiftStart: '08:00', shiftEnd: '19:00' }),
+      staff('s2', 38.3, 140.95, { shiftStart: '08:00', shiftEnd: over.s2End ?? '19:00' }),
     ],
     clients: [client('c1', 38.265, 140.875)],
     visits: [
       visit('late', 'c1', '17:30', '17:30', { windowKind: 'fixed' }),
       visit('am', 'c1', '10:00', '10:00', { windowKind: 'fixed' }),
     ],
-    rules: [rule('hn', 'homeNear', weight)],
+    rules: [{ ...rule('hn', 'homeNear', weight), ...over.rule }],
+    ...(over.absences && { absences: over.absences as never }),
   });
 }
 
-describe('夕方は自宅に近い人（homeNear）', () => {
-  it('開始（早）が17:00以降の訪問だけ、訪問から自宅までの移動1分＝重み×0.2点を割当費用に足す', () => {
-    const p = compile(evening(3), DATE);
-    const late = p.visits.findIndex((v) => v.id === 'late');
-    const am = p.visits.findIndex((v) => v.id === 'am');
+const idx = (p: ReturnType<typeof compile>, id: string) => p.visits.findIndex((v) => v.id === id);
+const homeMin = (p: ReturnType<typeof compile>, j: number, s: number) =>
+  p.travel[p.visits[j]!.point]![p.staff[s]!.point]!;
+
+describe('帰りの前は自宅に近い人（homeNear）', () => {
+  it('訪問の終わりが勤務の終わりの60分前（既定）より後の訪問だけ、訪問から自宅までの移動1分＝重み×0.2点を割当費用に足す', () => {
+    const p = compile(homeDay(3), DATE);
+    const late = idx(p, 'late');
+    const am = idx(p, 'am');
     for (let s = 0; s < 2; s++) {
-      const home = p.staff[s]!.point;
-      const minutes = p.travel[p.visits[late]!.point]![home]!;
+      const minutes = homeMin(p, late, s);
       expect(p.assignCost[late]![s]).toBeCloseTo(3 * HOME_NEAR_PER_MINUTE * minutes, 9);
-      expect(p.reasons[late]![s]!.find((r) => r.ruleId === 'hn')?.label).toBe(`夕方：自宅まで${Math.round(minutes)}分`);
+      expect(p.reasons[late]![s]!.find((r) => r.ruleId === 'hn')?.label).toBe(
+        `帰りの前：自宅まで${Math.round(minutes)}分`,
+      );
       expect(p.assignCost[am]![s]).toBe(0);
       expect(p.reasons[am]![s]!.some((r) => r.ruleId === 'hn')).toBe(false);
     }
     // 自宅が遠い s2 のほうが重い
     expect(p.assignCost[late]![1]!).toBeGreaterThan(p.assignCost[late]![0]!);
   });
+  it('N は条件の行の beforeEndMin（30分前なら 18:30 に終わる訪問は対象外。境目はちょうどを含まない）', () => {
+    const p = compile(homeDay(3, { rule: { beforeEndMin: 30 } }), DATE);
+    expect(p.assignCost[idx(p, 'late')]!.every((c) => c === 0)).toBe(true);
+    const wide = compile(homeDay(3, { rule: { beforeEndMin: 600 } }), DATE);
+    // 600分前（9:00）からなら朝の訪問も対象
+    expect(wide.reasons[idx(wide, 'am')]![0]!.some((r) => r.ruleId === 'hn')).toBe(true);
+  });
+  it('勤務の終わりは人ごと（22:00 まで働く s2 には 18:30 に終わる訪問は帰りの前でない）', () => {
+    const p = compile(homeDay(3, { s2End: '22:00' }), DATE);
+    const late = idx(p, 'late');
+    expect(p.reasons[late]![0]!.some((r) => r.ruleId === 'hn')).toBe(true);
+    expect(p.reasons[late]![1]!.some((r) => r.ruleId === 'hn')).toBe(false);
+  });
+  it('勤務の終わりは欠勤を引いた稼働の終わり（19:00〜の欠勤なら 22:00 までの勤務でも 18:00 からが対象）', () => {
+    const absences = [{ id: 'a1', staffId: 's2', date: DATE, from: '19:00', to: null, note: '' }];
+    const p = compile(homeDay(3, { s2End: '22:00', absences }), DATE);
+    expect(p.reasons[idx(p, 'late')]![1]!.some((r) => r.ruleId === 'hn')).toBe(true);
+  });
+  it('その日に勤務の無い人（終日の欠勤）は対象外（勤務の終わりが分からない）', () => {
+    const absences = [{ id: 'a1', staffId: 's2', date: DATE, from: null, to: null, note: '' }];
+    const p = compile(homeDay(3, { absences }), DATE);
+    expect(p.reasons[idx(p, 'late')]![1]!.some((r) => r.ruleId === 'hn')).toBe(false);
+  });
   it('達成：自宅までの移動が15分以内なら達成に数える（点は正でも、いつも0件にならない）', () => {
-    const p = compile(evening(3), DATE);
-    const late = p.visits.findIndex((v) => v.id === 'late');
-    const am = p.visits.findIndex((v) => v.id === 'am');
-    const minutes = (s: number) => p.travel[p.visits[late]!.point]![p.staff[s]!.point]!;
-    expect(minutes(0)).toBeGreaterThan(0);
-    expect(minutes(0)).toBeLessThanOrEqual(HOME_NEAR_MET_MINUTES);
-    expect(minutes(1)).toBeGreaterThan(HOME_NEAR_MET_MINUTES);
+    const p = compile(homeDay(3), DATE);
+    const late = idx(p, 'late');
+    const am = idx(p, 'am');
+    expect(homeMin(p, late, 0)).toBeGreaterThan(0);
+    expect(homeMin(p, late, 0)).toBeLessThanOrEqual(HOME_NEAR_MET_MINUTES);
+    expect(homeMin(p, late, 1)).toBeGreaterThan(HOME_NEAR_MET_MINUTES);
     const near = achievements(p, { s1: [p.visits[late]!.id, p.visits[am]!.id], s2: [] }).find((a) => a.ruleId === 'hn');
     expect(near).toMatchObject({ total: 1, met: 1 });
     const far = achievements(p, { s1: [p.visits[am]!.id], s2: [p.visits[late]!.id] }).find((a) => a.ruleId === 'hn');
     expect(far).toMatchObject({ total: 1, met: 0 });
   });
   it('重み0なら効かない（今までと同じ問題）', () => {
-    const p = compile(evening(0), DATE);
+    const p = compile(homeDay(0), DATE);
     expect(p.assignCost.flat().every((c) => c === 0)).toBe(true);
   });
-  it('割当費用なので solver と evaluate の合計点は一致する', () => {
-    const p = compile(evening(5), DATE);
+  it('割当費用なので solver と evaluate の合計点は一致し、同じ種なら同じ結果', () => {
+    const p = compile(homeDay(5), DATE);
     const r = solve(p, { seed: 1, iterations: 2000 });
     expect(score(p, r.routes).total).toBeCloseTo(r.score, 6);
+    expect(solve(p, { seed: 1, iterations: 2000 }).routes).toEqual(r.routes);
   });
 });
 

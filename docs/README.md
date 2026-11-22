@@ -159,6 +159,7 @@
 | [0113](adr/0113-backup-before-rebuild.md) | 今のデータがあるときは、控えを書き出すまで作り直せない（最初の2問・例外の画面） |
 | [0115](adr/0115-preview-url-and-rollback.md) | 本番を変えずに確かめる確認用 URL（PR に「preview」のラベル）と、本番を前の版に戻す手動のジョブを deploy.yml に持つ |
 | [0117](adr/0117-pattern-list-end-time-referrer-person-input-toggles.md) | 今の繰り返しが分かる一覧（前の中身は消さず畳む・いつから／いつまでの札）・所要と終わりの時刻を相互に入れる・紹介元の相談員・〈利用者さん〉の特性と時間の決め方の入り切り |
+| [0121](adr/0121-home-near-before-end-and-setting-set-link.md) | 帰りの前は自宅に近い人（勤務の終わりの N分前から。条件の行で決める）と、設定のひな形を `#/settings?apply=<ID>` のリンクで確認して適用する |
 | [0120](adr/0120-companion-visits-and-copy.md) | 2人体制・研修同行は同じ時刻の訪問をもう1件（省略可の印 `accompany`）で表し、訪問の詳細の欄の［この訪問をコピー］から足す |
 
 ## 文書の保ち方

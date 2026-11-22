@@ -17,7 +17,7 @@ describe('プリセットの読み込み', () => {
     expect(r.presets[0]!.weights.wait).toEqual({ weight: 0, hard: false });
   });
 
-  it('あとから足した型（続く訪問・夕方は自宅に近い人）が無い古いプリセットは既定の重み（ADR-0116）', () => {
+  it('あとから足した型（続く訪問・帰りの前は自宅に近い人）が無い古いプリセットは既定の重み（ADR-0116）', () => {
     const d = base();
     const { sameClient: _a, homeNear: _b, ...weights } = d.presets[0]!.weights;
     const r = migrate({ ...d, presets: [{ ...d.presets[0]!, weights }] });
@@ -45,6 +45,25 @@ describe('プリセットの読み込み', () => {
     expect(taken.rules.filter((x) => x.type === 'sameClient').map((x) => x.id)).toEqual(['sameClient2']);
     // あれば足さない（初期データはそのまま）
     expect(repair(d).rules).toBe(d.rules);
+  });
+
+  it('帰りの前は自宅に近い人（ADR-0121）：前の名前のままの条件は今の名前にし、勤務の終わりの何分前からの無い古いデータも読める', () => {
+    const d = base();
+    const old = {
+      ...d,
+      rules: [
+        ...d.rules,
+        { id: 'hn', type: 'homeNear' as const, label: '夕方は自宅に近い人', weight: 2, hard: false },
+        { id: 'hn2', type: 'homeNear' as const, label: '早く帰す', weight: 2, hard: false, beforeEndMin: 30 },
+      ],
+    };
+    const r = migrate(old);
+    if (isImportError(r)) throw new Error(r.message);
+    expect(r.rules.find((x) => x.id === 'hn')).toMatchObject({ label: '帰りの前は自宅に近い人' });
+    expect(r.rules.find((x) => x.id === 'hn')!.beforeEndMin).toBeUndefined();
+    expect(r.rules.find((x) => x.id === 'hn2')).toMatchObject({ label: '早く帰す', beforeEndMin: 30 });
+    // 範囲外の分は読めない（日本語のエラー）
+    expect(isImportError(migrate({ ...old, rules: [{ ...old.rules.at(-1)!, beforeEndMin: 601 }] }))).toBe(true);
   });
 
   it('名前が空のプリセットは日本語のエラー（元のデータは残す）', () => {

@@ -3,6 +3,7 @@ import { flushSync } from 'react-dom';
 import { useConfirm } from '../components/ConfirmDialog';
 import { useToast } from '../components/Toast';
 import { PageHeader } from '../components/ui';
+import { useSettingSetLink } from '../components/useSettingSetLink';
 import type { FeatureId } from '../contracts/features';
 import { jstDate } from '../domain/time';
 import {
@@ -31,6 +32,7 @@ import { TemplatesCard } from './TemplatesCard';
  * 隠れるものは ⓘ。押すとすぐ保存。主ボタンは置かない）。メールの予約送信の手順も畳む（PRD D395）。
  * データを作り直す操作（最初の設定をやり直す）はデータの画面に置き、ここには置かない（ADR-0092）。
  * 移動時間の見積もり方（直線距離・車道の道のり）と係数もここに置く（PRD D436。pages/roadTravelSettings）。
+ * `#/settings?apply=<ID>` で開くと、設定のひな形（lib/settingSets）を確認のあと適用する（components/useSettingSetLink。ADR-0121）。
  * 書くのは store の update(fn) だけ。切った機能のデータは消さない。呼び方は org.terms
  */
 export default function SettingsPage() {
@@ -42,6 +44,8 @@ export default function SettingsPage() {
   const terms = data.org.terms;
   const toast = useToast();
   const confirmDialog = useConfirm();
+  // 設定のひな形のリンク（`?apply=<ID>`。PRD D480。ADR-0121）
+  useSettingSetLink();
 
   const names = (ids: readonly FeatureId[]) => ids.map((id) => featureLabel(id, terms)).join('、');
 
