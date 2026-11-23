@@ -165,6 +165,38 @@ export function applySettingSet(d: DemoData, set: SettingSetDef, ruleId: string)
 export const isSettingSetLink = (pathname: string, search: string): boolean =>
   pathname === '/settings' && new URLSearchParams(search).has('apply');
 
+/**
+ * リンクの apply をどう扱うか（判定はここ1か所。画面は components/useSettingSetLink と FirstRunGate）：
+ * unknown＝知らない ID（見つかりません）、same＝すでにこの設定（変わる項目なし）、steps＝手順の画面を出す
+ */
+export type SettingSetLinkPlan =
+  | { kind: 'unknown' }
+  | { kind: 'same'; set: SettingSetDef }
+  | { kind: 'steps'; set: SettingSetDef; changes: SettingChange[] };
+
+export function settingSetLinkPlan(
+  d: Pick<DemoData, 'org' | 'rules' | 'presets' | 'scorePresetId'>,
+  applyId: string,
+): SettingSetLinkPlan {
+  const set = settingSetOf(applyId);
+  if (!set) return { kind: 'unknown' };
+  const changes = settingSetChanges(d, set);
+  return changes.length === 0 ? { kind: 'same', set } : { kind: 'steps', set, changes };
+}
+
+/**
+ * リンクで開き、手順の画面を出すか（このときだけ更新の知らせを出さずに見たことにする。PRD D486）。
+ * 知らない ID・すでに同じ設定なら手順の画面を出さないので、いつもの更新の画面を出す（見たことにしない）
+ */
+export function settingSetLinkShowsSteps(
+  d: Pick<DemoData, 'org' | 'rules' | 'presets' | 'scorePresetId'>,
+  pathname: string,
+  search: string,
+): boolean {
+  if (!isSettingSetLink(pathname, search)) return false;
+  return settingSetLinkPlan(d, new URLSearchParams(search).get('apply') ?? '').kind === 'steps';
+}
+
 /** 手順の見出し */
 export const settingSetStepsTitle = (label: string): string => `設定のひな形「${label}」を適用します`;
 export const SETTING_STEP_BACKUP = '① データの控え';

@@ -7,6 +7,7 @@ describe('backupFileName', () => {
     expect(backupFileName('2026-10-21')).toBe('staff-assign-demo-2026-10-21.json');
     expect(backupFileName('2026-10-21', 'broken')).toBe('staff-assign-demo-2026-10-21-broken.json');
     expect(backupFileName('2026-10-21', 'previous')).toBe('staff-assign-demo-2026-10-21-previous.json');
+    expect(backupFileName('2026-10-21', 'release')).toBe('staff-assign-demo-2026-10-21-release.json');
   });
 });
 

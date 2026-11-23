@@ -33,7 +33,7 @@ import {
   type ReleaseNote,
   releaseQ1,
 } from '../lib/releaseNotes';
-import { isSettingSetLink } from '../lib/settingSets';
+import { isSettingSetLink, settingSetLinkShowsSteps } from '../lib/settingSets';
 import { useDemoData } from '../store';
 import './firstRun.css';
 import { WithIcon } from './ui';
@@ -48,11 +48,12 @@ import { useFirstRunBack } from './useFirstRunBack';
  * 自分のデータ＝登録の案内）へ移る。ルーターの中で使う
  */
 export function FirstRunGate({ children }: { children: ReactNode }) {
-  const { needsFirstRun, releaseNotice, cancelFirstRun } = useDemoData();
+  const { needsFirstRun, releaseNotice, cancelFirstRun, data } = useDemoData();
   const { pathname, search } = useLocation();
-  // 設定のひな形のリンクで開いたときは、更新の知らせを出さず見たことにする（手順の画面だけを出す。PRD D486。ADR-0122）。
+  // 設定のひな形のリンクで開き、手順の画面を出すときは、更新の知らせを出さず見たことにする（PRD D486。ADR-0122）。
+  // 知らない ID・すでに同じ設定なら手順の画面を出さないので、見たことにせず、いつもの更新の画面を出す。
   // 更新前の控えは store が開いたときに残している（PRD D483）
-  const linkSkipsRelease = releaseNotice !== null && isSettingSetLink(pathname, search);
+  const linkSkipsRelease = releaseNotice !== null && settingSetLinkShowsSteps(data, pathname, search);
   useEffect(() => {
     if (linkSkipsRelease) cancelFirstRun();
   }, [linkSkipsRelease, cancelFirstRun]);

@@ -11,6 +11,8 @@ import {
   settingSetBackupStep,
   settingSetChanges,
   settingSetConfirmBody,
+  settingSetLinkPlan,
+  settingSetLinkShowsSteps,
   settingSetOf,
 } from './settingSets';
 
@@ -109,6 +111,17 @@ describe('リンクの手順（PRD D484〜D487。ADR-0122）', () => {
     expect(isSettingSetLink('/settings', '?apply=standard-start-no-shift')).toBe(true);
     expect(isSettingSetLink('/settings', '')).toBe(false);
     expect(isSettingSetLink('/data', '?apply=x')).toBe(false);
+  });
+  it('手順の画面を出すのは、知っている ID で変わる項目があるときだけ（ほかは更新の画面を出す）', () => {
+    const d = base();
+    expect(settingSetLinkPlan(d, 'standard-start-no-shift')).toMatchObject({ kind: 'steps', set });
+    expect(settingSetLinkPlan(d, 'nope')).toEqual({ kind: 'unknown' });
+    const once = applySettingSet(d, set, 'r-x');
+    expect(settingSetLinkPlan(once, 'standard-start-no-shift')).toEqual({ kind: 'same', set });
+    expect(settingSetLinkShowsSteps(d, '/settings', '?apply=standard-start-no-shift')).toBe(true);
+    expect(settingSetLinkShowsSteps(d, '/settings', '?apply=nope')).toBe(false);
+    expect(settingSetLinkShowsSteps(once, '/settings', '?apply=standard-start-no-shift')).toBe(false);
+    expect(settingSetLinkShowsSteps(d, '/data', '?apply=standard-start-no-shift')).toBe(false);
   });
   const at = Date.parse('2026-11-22T09:05:00+09:00');
   it('自動の控えがあれば時刻を出し、書き出すまで［適用］を押せない（理由を添える）', () => {

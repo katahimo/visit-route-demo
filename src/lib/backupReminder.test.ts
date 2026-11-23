@@ -8,6 +8,7 @@ import {
   releaseBackupFailedText,
   releaseBackupKeptText,
   releaseBackupTitle,
+  releaseRestoreBody,
   shouldRemindBackup,
 } from './backupReminder';
 import { daysBetween } from './ym';
@@ -102,6 +103,15 @@ describe('更新前の控えの文（PRD D483〜D485）', () => {
   it('残せなかったときは理由（接頭辞を落とす）', () => {
     expect(releaseBackupFailedText('控えを残せません：容量不足')).toBe(
       '更新前の控えを自動で残せませんでした（容量不足）。データはそのままです',
+    );
+  });
+  it('戻す確認の本文：いまのデータは直前の状態の控えに回り、今ある控えは置き換わる（更新前の控えは残る）', () => {
+    const p = { at, release: '2026-11-21' };
+    expect(releaseRestoreBody(p, null)).toBe(
+      '更新前の控え（11月21日の更新の前・9時05分）のデータに戻します。いまのデータは「直前の状態に戻す」の控えに回ります。この更新前の控えは戻したあとも残ります。',
+    );
+    expect(releaseRestoreBody(p, { at, reason: '初期状態に戻す' })).toContain(
+      '（今ある控え（11/22 09:05 の『初期状態に戻す』の前）は置き換わります）',
     );
   });
 });

@@ -1,32 +1,38 @@
-// 更新前の控え（PRD D483〜D485。ADR-0122）：まだ見ていない更新があるとき、開いた時点のデータを1世代の控えに残す
-import { beforeEach, describe, expect, it } from 'vitest';
+// 更新前の控え（PRD D483〜D485・D488。ADR-0122）：まだ見ていない更新があるとき、開いた時点のデータ（読んだ元の文字）を
+// 1世代の控えとは別のキーに残す。1世代の控え（初期状態に戻す・読み込み・最初の設定をやり直すの前）には触らない
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { type DemoData, STORAGE_KEY } from '../contracts/data';
 import { LATEST_RELEASE } from '../lib/releaseNotes';
 import { createDemoData } from '../seed';
 import {
-  exportPrevious,
+  exportReleasePrevious,
   FEATURES_START_ALL,
   FEATURES_START_KEY,
-  isReleaseBackup,
+  flushSave,
   keepBeforeRelease,
   keepPrevious,
   loadWithStatus,
   PREV_INFO_KEY,
   PREV_KEY,
   previousInfo,
-  RELEASE_BACKUP_REASON,
+  RELEASE_PREV_INFO_KEY,
+  RELEASE_PREV_KEY,
+  RELEASE_RESTORE_REASON,
   readPrevious,
-  swapPrevious,
+  releaseBackupHolds,
+  releasePreviousInfo,
+  restoreReleasePrevious,
+  save,
 } from './index';
 import { SEEN_RELEASE_KEY } from './start';
 
-/** 環境は node なので localStorage の簡単なモック。quota の間は PREV_KEY を書けない（容量超過） */
-function mockStorage(quota: { prev: boolean }) {
+/** 環境は node なので localStorage の簡単なモック。full(key, value) が true の書き込みは容量超過にする */
+function mockStorage(full: { at: (k: string, v: string) => boolean }) {
   const m = new Map<string, string>();
   const ls = {
     getItem: (k: string) => m.get(k) ?? null,
     setItem: (k: string, v: string) => {
-      if (quota.prev && k === PREV_KEY) throw new DOMException('full', 'QuotaExceededError');
+      if (full.at(k, v)) throw new DOMException('full', 'QuotaExceededError');
       m.set(k, v);
     },
     removeItem: (k: string) => {
@@ -38,30 +44,48 @@ function mockStorage(quota: { prev: boolean }) {
 }
 
 let mem: Map<string, string>;
-const quota = { prev: false };
+const full = { at: (_k: string, _v: string) => false };
 beforeEach(() => {
-  quota.prev = false;
-  mem = mockStorage(quota);
+  full.at = () => false;
+  mem = mockStorage(full);
 });
 
+const demo = (seed: number): DemoData => ({ ...createDemoData('2026-10-12'), seed });
 const saved = (seed = 1) => {
-  const d = { ...createDemoData('2026-10-12'), seed };
+  const d = demo(seed);
   mem.set(STORAGE_KEY, JSON.stringify(d));
   return d;
 };
+const seedOf = (text: string | undefined) => (JSON.parse(text ?? '{}') as DemoData).seed;
 
 describe('開いたときに更新前の控えを残す（PRD D483）', () => {
-  it('まだ見ていない更新があれば、開いた時点のデータを更新の id と時刻つきで控える', () => {
+  it('まだ見ていない更新があれば、開いた時点のデータを更新の id と時刻つきで別のキーに控える', () => {
     saved(7);
     const r = loadWithStatus();
     expect(r.releaseNotes.length).toBeGreaterThan(0);
     expect(r.releaseBackup).toMatchObject({ kept: true, release: LATEST_RELEASE });
-    const info = previousInfo();
-    expect(info?.release).toBe(LATEST_RELEASE);
-    expect(info?.reason).toBe(RELEASE_BACKUP_REASON);
-    expect((readPrevious() as DemoData).seed).toBe(7);
-    expect(isReleaseBackup(LATEST_RELEASE)).toBe(true);
+    expect(releasePreviousInfo()?.release).toBe(LATEST_RELEASE);
+    expect(seedOf(mem.get(RELEASE_PREV_KEY))).toBe(7);
+    // 1世代の控えは作らない
+    expect(mem.has(PREV_KEY)).toBe(false);
   });
+
+  it('前からある1世代の控え（うっかり初期状態に戻す前の本物のデータ）を、開いただけで上書きしない', () => {
+    keepPrevious(demo(42), '初期状態に戻す', 500);
+    saved(7);
+    loadWithStatus();
+    expect((readPrevious() as DemoData).seed).toBe(42);
+    expect(previousInfo()).toEqual({ at: 500, reason: '初期状態に戻す' });
+    expect(seedOf(mem.get(RELEASE_PREV_KEY))).toBe(7);
+  });
+
+  it('控えは読んだ元の文字のまま（migrate・repair を通す前）', () => {
+    const text = `${JSON.stringify(demo(3))}\n`;
+    mem.set(STORAGE_KEY, text);
+    loadWithStatus();
+    expect(mem.get(RELEASE_PREV_KEY)).toBe(text);
+  });
+
   it('見たことのある版・印「all」・初めて開いたときは控えない', () => {
     saved();
     mem.set(SEEN_RELEASE_KEY, LATEST_RELEASE);
@@ -72,46 +96,121 @@ describe('開いたときに更新前の控えを残す（PRD D483）', () => {
     mem.delete(FEATURES_START_KEY);
     mem.delete(STORAGE_KEY);
     expect(loadWithStatus().releaseBackup).toBeNull();
-    expect(mem.has(PREV_KEY)).toBe(false);
+    expect(mem.has(RELEASE_PREV_KEY)).toBe(false);
   });
+
   it('読み直しても同じ更新の控えは時刻を変えない（最初に残したもの）', () => {
-    saved();
-    const a = keepBeforeRelease(createDemoData('2026-10-12'), LATEST_RELEASE, 1000);
-    const b = keepBeforeRelease(createDemoData('2026-10-12'), LATEST_RELEASE, 2000);
+    const a = keepBeforeRelease(JSON.stringify(demo(1)), LATEST_RELEASE, 1000);
+    const b = keepBeforeRelease(JSON.stringify(demo(2)), LATEST_RELEASE, 2000);
     expect(a).toEqual({ kept: true, at: 1000, release: LATEST_RELEASE });
     expect(b).toEqual({ kept: true, at: 1000, release: LATEST_RELEASE });
+    expect(seedOf(mem.get(RELEASE_PREV_KEY))).toBe(1);
   });
-  it('前の更新の控えや別の操作の控えは上書きする（1世代）', () => {
-    keepPrevious(createDemoData('2026-10-12'), '初期状態に戻す', 500);
-    const r = keepBeforeRelease({ ...createDemoData('2026-10-12'), seed: 9 }, '2099-01-01', 1000);
+
+  it('前の更新の控えは、次の更新の控えで置き換える（1世代の控えには触らない）', () => {
+    keepPrevious(demo(42), '初期状態に戻す', 500);
+    keepBeforeRelease(JSON.stringify(demo(8)), '2000-01-01', 800);
+    const r = keepBeforeRelease(JSON.stringify(demo(9)), '2099-01-01', 1000);
     expect(r).toEqual({ kept: true, at: 1000, release: '2099-01-01' });
-    expect(previousInfo()).toEqual({ at: 1000, reason: RELEASE_BACKUP_REASON, release: '2099-01-01' });
+    expect(releasePreviousInfo()).toEqual({ at: 1000, release: '2099-01-01' });
+    expect(previousInfo()).toEqual({ at: 500, reason: '初期状態に戻す' });
   });
-  it('容量が足りなければ残せなかった理由を返し、今のデータには触らない', () => {
+});
+
+describe('容量が足りないとき（PRD D488）', () => {
+  it('更新前の控えを書けなければ理由を返し、今のデータ・1世代の控え・古い更新前の控えには触らない', () => {
+    keepPrevious(demo(42), '初期状態に戻す', 500);
+    keepBeforeRelease(JSON.stringify(demo(8)), '2000-01-01', 800);
     const d = saved(3);
-    const before = mem.get(STORAGE_KEY);
-    quota.prev = true;
+    const before = new Map(mem);
+    // 新しい控え（seed 3）だけが入らない（古い控えを捨てても足りない）
+    full.at = (k, v) => k === RELEASE_PREV_KEY && seedOf(v) === 3;
     const r = loadWithStatus();
     expect(r.releaseBackup).toEqual({ kept: false, why: '控えを残せません：容量不足' });
-    expect(mem.get(STORAGE_KEY)).toBe(before);
     expect(r.data.seed).toBe(d.seed);
-    expect(mem.has(PREV_INFO_KEY)).toBe(false);
+    expect(mem.get(STORAGE_KEY)).toBe(before.get(STORAGE_KEY));
+    expect(mem.get(PREV_KEY)).toBe(before.get(PREV_KEY));
+    expect(mem.get(PREV_INFO_KEY)).toBe(before.get(PREV_INFO_KEY));
+    expect(mem.get(RELEASE_PREV_KEY)).toBe(before.get(RELEASE_PREV_KEY));
+    expect(mem.get(RELEASE_PREV_INFO_KEY)).toBe(before.get(RELEASE_PREV_INFO_KEY));
+  });
+
+  it('古い更新前の控えが場所を取っているときは、それを捨てて1回だけ試し直す', () => {
+    keepPrevious(demo(42), '初期状態に戻す', 500);
+    keepBeforeRelease(JSON.stringify(demo(8)), '2000-01-01', 800);
+    full.at = (k) => k === RELEASE_PREV_KEY && mem.has(RELEASE_PREV_KEY);
+    expect(keepBeforeRelease(JSON.stringify(demo(9)), LATEST_RELEASE, 1000)).toMatchObject({ kept: true });
+    expect(seedOf(mem.get(RELEASE_PREV_KEY))).toBe(9);
+    expect((readPrevious() as DemoData).seed).toBe(42);
+  });
+
+  it('1世代の控えを書けないときは、前の世代を戻して返す（cancel を呼ばなくても消えない）', () => {
+    keepPrevious(demo(42), '初期状態に戻す', 500);
+    // 新しい控え（seed 3）だけが入らない
+    full.at = (k, v) => k === PREV_KEY && seedOf(v) === 3;
+    const k = keepPrevious(demo(3), '控えの読み込み', 900);
+    expect(k.kept).toBe(false);
+    expect(k.why).toBe('控えを残せません：容量不足');
+    expect((readPrevious() as DemoData).seed).toBe(42);
+    expect(previousInfo()).toEqual({ at: 500, reason: '初期状態に戻す' });
+  });
+
+  it('本体の保存が容量超過なら、1世代の控え → 更新前の控えの順に捨てて書く（いまのデータが先）', () => {
+    keepPrevious(demo(42), '初期状態に戻す', 500);
+    keepBeforeRelease(JSON.stringify(demo(8)), LATEST_RELEASE, 800);
+    full.at = (k) => k === STORAGE_KEY && (mem.has(PREV_KEY) || mem.has(RELEASE_PREV_KEY));
+    const onError = vi.fn();
+    save(demo(5), onError);
+    flushSave();
+    expect(onError).toHaveBeenCalledWith(null, true, true);
+    expect(seedOf(mem.get(STORAGE_KEY))).toBe(5);
   });
 });
 
 describe('更新前の控えに戻す・書き出す（PRD D485）', () => {
-  it('戻すと今のデータが控えに回る（もう一度戻せる。更新の印は外れる）', () => {
-    keepBeforeRelease({ ...createDemoData('2026-10-12'), seed: 1 }, LATEST_RELEASE, 1000);
-    const r = swapPrevious({ ...createDemoData('2026-10-12'), seed: 2 }, 2000);
+  it('戻すと今のデータが1世代の控えに回り、更新前の控えは残る', () => {
+    keepBeforeRelease(JSON.stringify(demo(1)), LATEST_RELEASE, 1000);
+    const r = restoreReleasePrevious(demo(2), 2000);
     expect('data' in r && r.data.seed).toBe(1);
     expect((readPrevious() as DemoData).seed).toBe(2);
-    expect(previousInfo()?.release).toBeUndefined();
+    expect(previousInfo()).toEqual({ at: 2000, reason: RELEASE_RESTORE_REASON });
+    expect(releasePreviousInfo()).toEqual({ at: 1000, release: LATEST_RELEASE });
   });
-  it('控えを JSON のファイルにできる（無ければ null）', async () => {
-    expect(exportPrevious()).toBeNull();
-    keepBeforeRelease({ ...createDemoData('2026-10-12'), seed: 5 }, LATEST_RELEASE, 1000);
-    const b = exportPrevious();
+
+  it('今のデータを1世代の控えに残せなければ戻さない（1世代の控えも元のまま）', () => {
+    keepPrevious(demo(42), '初期状態に戻す', 500);
+    keepBeforeRelease(JSON.stringify(demo(1)), LATEST_RELEASE, 1000);
+    full.at = (k, v) => k === PREV_KEY && seedOf(v) === 2;
+    const r = restoreReleasePrevious(demo(2), 2000);
+    expect('error' in r).toBe(true);
+    expect((readPrevious() as DemoData).seed).toBe(42);
+  });
+
+  it('戻すときは今の読み込みと同じく migrate・repair を通る（読めなければ戻さない）', () => {
+    mem.set(RELEASE_PREV_KEY, '{"version":1}');
+    mem.set(RELEASE_PREV_INFO_KEY, JSON.stringify({ at: 1000, release: LATEST_RELEASE }));
+    const r = restoreReleasePrevious(demo(2), 2000);
+    expect('error' in r).toBe(true);
+    expect(mem.has(PREV_KEY)).toBe(false);
+  });
+
+  it('控えを元の文字のままファイルにできる（無ければ null）', async () => {
+    expect(exportReleasePrevious()).toBeNull();
+    const text = JSON.stringify(demo(5));
+    keepBeforeRelease(text, LATEST_RELEASE, 1000);
+    const b = exportReleasePrevious();
     expect(b).toBeInstanceOf(Blob);
-    expect(JSON.parse(await (b as Blob).text()).seed).toBe(5);
+    expect(await (b as Blob).text()).toBe(text);
+  });
+});
+
+describe('更新の画面で作り直すときの控え（startFirstRun）', () => {
+  it('今のデータが更新前の控えと同じなら真（1世代の控えに残さない）、違えば偽（別のタブで直した分を残す）', () => {
+    saved(7);
+    const r = loadWithStatus();
+    expect(releaseBackupHolds(r.data)).toBe(true);
+    expect(releaseBackupHolds({ ...r.data, seed: 99 })).toBe(false);
+    mem.delete(RELEASE_PREV_KEY);
+    expect(releaseBackupHolds(r.data)).toBe(false);
   });
 });

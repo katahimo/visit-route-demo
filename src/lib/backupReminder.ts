@@ -70,6 +70,18 @@ const releaseDayText = (release: string): string => `${Number(release.slice(5, 7
 export const releaseBackupTitle = (p: { at: number; release: string }): string =>
   `更新前の控え（${releaseDayText(p.release)}の更新の前・${jstClock(p.at)}）`;
 
+/**
+ * 更新前の控えに戻す確認の本文（PRD D485。ADR-0122）。いまのデータは直前の状態の控えに回り、今ある直前の状態の控え（previous）は置き換わる。
+ * 更新前の控えは戻したあとも残る
+ */
+export const releaseRestoreBody = (
+  p: { at: number; release: string },
+  previous: { at: number; reason: string } | null,
+): string =>
+  `${releaseBackupTitle(p)}のデータに戻します。いまのデータは「直前の状態に戻す」の控えに回ります` +
+  (previous ? `（今ある控え（${jstStamp(previous.at)} の『${previous.reason}』の前）は置き換わります）` : '') +
+  '。この更新前の控えは戻したあとも残ります。';
+
 /** 設定のひな形の手順の①：自動で残した更新前の控え */
 export const releaseBackupKeptText = (at: number): string => `更新前の控えを自動で残しました（${jstClock(at)}）`;
 

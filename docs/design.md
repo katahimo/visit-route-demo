@@ -159,15 +159,16 @@ flowchart LR
 
 ### store（データ一式の保存）
 - 責務：`DemoData` の読み込み・保存・検査（zod）・版の確かめ（版1は移さず初期データで始める）・修復（repair）、JSON の書き出し・読み込み、初期状態に戻す、置き換える前の1世代の控え。書き換えは `update`・`replace`・`reset`・`restorePrevious`・`startFirstRun` だけ
-- 画面へ：`useDemoData()`＝`data`・`update(fn, label?, opts?)`・`undo()`・`redo()`・`replace(d)`・`reset(features?)`・`saveError`・`keepPrevious(reason)`・`restorePrevious()`・`previous`・`broken`・`outdated`・`brokenKept`・`dismissBroken()`・`needsFirstRun`・`redoingFirstRun`・`cancelFirstRun()`・`startFirstRun(answer)`・`askFirstRun()`・`externalReloads`・`replacedCount`・`previousDrops`
+- 画面へ：`useDemoData()`＝`data`・`update(fn, label?, opts?)`・`undo()`・`redo()`・`replace(d)`・`reset(features?)`・`saveError`・`keepPrevious(reason)`・`restorePrevious()`・`previous`・`restoreReleasePrevious()`・`releasePrevious`・`broken`・`outdated`・`brokenKept`・`dismissBroken()`・`needsFirstRun`・`redoingFirstRun`・`cancelFirstRun()`・`startFirstRun(answer)`・`askFirstRun()`・`externalReloads`・`replacedCount`・`previousDrops`・`releaseDrops`
 - 持つデータ（持ち主）：localStorage の次のキー
   - `vrdemo:data:v1`：`DemoData`（1つの JSON）。`vrdemo:data:broken`：読めなかった元の文字
   - `vrdemo:data:prev`・`vrdemo:data:prev:info`：1世代の控え（置き換える前の `DemoData`）と `{ at, reason }`（時刻 ms・操作の名前）
+  - `vrdemo:data:release-prev`・`vrdemo:data:release-prev:info`：更新前の控え（まだ見ていない更新があって開いたときに読んだ元の文字のまま）と `{ at, release }`（時刻 ms・更新の id）。1世代の控えとは別で、互いに上書きしない（ADR-0122。`store/releaseBackup.ts`・`releaseRestore.ts`）
   - DemoData の外（ブラウザごとの記録。版・書き出し・読み込み・初期状態に戻すの対象外。`src/contracts/` に足さない）：`vrdemo:features:start`（`all` なら最初の2問を出さない）・`vrdemo:booking:last`（最後の問2の答え `oneOff`／`regular`）・`vrdemo:backup:last`（`{ date: 'YYYY-MM-DD', kind: 'json' | 'excel' }`）・`vrdemo:backup:reminded`（'YYYY-MM-DD'）
 - 提供するAPI（`persist.ts`）：
   - `load()`・`loadWithStatus()`：保存データが無ければ、印 `all` なら `createInitialData(今日, {})`（すべて入）を書いて始め、無ければ最初の2問（`firstRun: true`。答えるまで書かず、読み直してもまた2問。仮のデータは空のデータ）。読めなければ元の文字を `vrdemo:data:broken` に退避して初期データで `broken: true`（退避が容量超過なら控えを捨ててもう1回。退避できたら初期データを書き、読み直すたびに作り直さない。できなければ元の文字を残して `brokenKept: false`）。版1なら初期データで `outdated: true`（画面が「データの形が変わったので初期データで始めます」）
   - `brokenText()`：退避した元の文字（無ければ開いたときに覚えた文字、それも無ければ本体のキーの文字）
-  - `save(data, onResult)`：300ms 間引き・`flushSave()`。結果は `(message, droppedPrevious)`（容量のために控えを捨てたか）
+  - `save(data, onResult)`：300ms 間引き・`flushSave()`。結果は `(message, droppedPrevious, droppedRelease)`（容量超過なら1世代の控え → 更新前の控えの順に捨てて書き直す。捨てたか）
   - `startWithAnswer(answer)`：問2の答えを `vrdemo:booking:last` に残し、`lib/firstRun` の `createFirstRunData(answer, 今日)` を書く（呼び名・ひな形・データが答えで決まる）
   - `reset(features)`：features の既定は今の入り切り（今のデータが無ければ、印があれば答えのひな形、無ければ `{}`）。印 `vrdemo:booking:last` があれば `createFirstRunData({ start: 'demo', booking: 印 }, 今日, features)`、無い・印 `all` なら `createInitialData(今日, features)`
   - `exportJson`・`importJson`（版1は `OUTDATED_MESSAGE` で断る）・`migrate(raw)`（既定値で読み必ず `repair`。§5「版と移行」）・`isOutdated(raw)`・`repair`
@@ -184,12 +185,12 @@ flowchart LR
 - 最初の2問・更新の知らせ（PRD D276・D379〜D381・D437）：
   - 出さない印は `store/start.ts` の `startsWithAll(getStorage)`（保存データが無いときだけ読む。画面からは書かない。e2e の `scripts/lib/startFeatures.cjs` と全機能を見せるデモの前準備）
   - 内部の `firstRun`（`'first'`＝初めて開いた・`'redo'`＝「最初の設定をやり直す」のあと・`'release'`＝まだ見ていないデモの更新がある（`loadWithStatus` の `releaseNotes`。`store/start.ts` の `seenRelease`／`rememberRelease`、キー `vrdemo:release:seen`）・`null`）が null 以外のあいだ `needsFirstRun` が真で、`components/FirstRunPage` の `FirstRunGate` が本体の代わりに2問を出す。`first` のあいだは仮の空データを保存しない（StrictMode の2回実行でも）
-  - `startFirstRun(answer)`：`redo` なら先に `keepPrevious('最初の設定をやり直す')`、`release` なら `keepPrevious('デモの更新で始め直す')`（更新前の控えが今の更新のものなら上書きしない。`isReleaseBackup`）、`startWithAnswer` で書き、`replace` と同じに履歴を捨てて `replacedCount` を増やす（Ctrl+Z の対象外）。`askFirstRun()` は2問を出すだけ。`redoingFirstRun` のときだけ従のボタン「閉じる」（`cancelFirstRun()` で今のデータのまま）。`release` の「今のデータを使い続ける」も `cancelFirstRun()`（`keepAfterRelease` で今の版を見たことにする）。今の版の印は `startWithAnswer`・印 `all`・読めなかったデータでも書く（`rememberRelease` は今の印より新しいときだけ書く。id の新旧は `compareRelease`）。別のタブの保存を受けても `release` の知らせは閉じない
+  - `startFirstRun(answer)`：`redo` なら先に `keepPrevious('最初の設定をやり直す')`、`release` なら今のデータが更新前の控えと違うときだけ `keepPrevious('デモの更新で始め直す')`（同じなら前からある1世代の控えを上書きしない。`releaseBackupHolds`）、`startWithAnswer` で書き、`replace` と同じに履歴を捨てて `replacedCount` を増やす（Ctrl+Z の対象外）。`askFirstRun()` は2問を出すだけ。`redoingFirstRun` のときだけ従のボタン「閉じる」（`cancelFirstRun()` で今のデータのまま）。`release` の「今のデータを使い続ける」も `cancelFirstRun()`（`keepAfterRelease` で今の版を見たことにする）。今の版の印は `startWithAnswer`・印 `all`・読めなかったデータでも書く（`rememberRelease` は今の印より新しいときだけ書く。id の新旧は `compareRelease`）。別のタブの保存を受けても `release` の知らせは閉じない
 - デモを作った直後の1回の組み（PRD D409。ADR-0079）：`startWithAnswer`・`reset` は `store/start.ts` の `arrangesAfterStart({ kind: 'answer', start } | { kind: 'reset' })`（「デモで試す」・初期状態に戻すときだけ真）が真なら sessionStorage の印（`ARRANGE_PENDING_KEY`。`markArrangeAfterStart`）を書き、偽なら消す。store は起動時と作り直した直後に印を読み（`arrangePending`）`startArrange` を置く。`components/autoArrangeHost` が新しいデータで `requestBandArrange`（帯の［要対応を組む］と同じ依頼・知らせ・［元に戻す］）を1回出し、`takeStartArrange`・`clearArrangePending` で印を消す。例外の画面の「データを初期状態に戻す」（`main.tsx` の `reset` → 読み直し）でも組む。StrictMode の付け直しでは依頼し直す。開いただけ・ふつうの読み直しでは組まない
 - 1世代の控え（PRD D227）：
-  - `keepPrevious(data, reason, at)`：置き換える前のデータを書く（上書き）。書けなければ前の世代を消して1回試し直し、だめなら `{ kept: false, why: '控えを残せません：容量不足' }`（操作は止めない）。`cancel()` で前の世代に戻す。画面は確認で OK のあとに残し、確認の本文は `canKeepPrevious()` の見込み（保存が使えない・最後の保存が容量超過なら「容量不足」）
+  - `keepPrevious(data, reason, at)`：置き換える前のデータを書く（上書き）。書けなければ前の世代を消して1回試し直し、だめなら前の世代を書き戻して `{ kept: false, why: '控えを残せません：容量不足' }`（操作は止めない）。`cancel()` で前の世代に戻す。画面は確認で OK のあとに残し、確認の本文は `canKeepPrevious()` の見込み（保存が使えない・最後の保存が容量超過なら「容量不足」）
   - `previousInfo()`（`{ at, reason, release? }`）・`readPrevious()`（`importJson` を通す）・`exportPrevious()`（控えの JSON の Blob）・`samePreviousInfo(a, b)`（同じなら state を替えない）
-  - 更新前の控え（PRD D483。ADR-0122）：`loadWithStatus` は知らせる更新があれば `keepBeforeRelease(data, LATEST_RELEASE)`（`keepPrevious(data, 'デモの更新', at, release)`。同じ更新の控えがあれば時刻を変えずに返す。残せなければ `{ kept: false, why }` で今のデータには触らない）を呼び、結果を `releaseBackup` で返す。react は `releaseBackup`・`releaseNotesAtOpen`（開いたときの未読の更新）・`freshStart`（保存データが無く2問で作った）を画面に渡す
+  - 更新前の控え（PRD D483・D485・D488。ADR-0122）：`loadWithStatus` は知らせる更新があれば `keepBeforeRelease(読んだ元の文字, LATEST_RELEASE)`（`store/releaseBackup.ts`。`vrdemo:data:release-prev` に書く。同じ更新の控えがあれば時刻を変えずに返す。書けなければ古い更新前の控えを捨てて1回だけ試し直し、それでも書けなければ古い控えを書き戻して `{ kept: false, why }`。今のデータ・1世代の控えには触らない）を呼び、結果を `releaseBackup` で返す。戻すのは `restoreReleasePrevious(now)`（`store/releaseRestore.ts`。元の文字を `importJson` で migrate・repair に通し、いまのデータを `keepPrevious` で1世代の控えに残してから返す。残せなければ戻さない。更新前の控えは残す）。`keepPrevious` は書けなければ前の世代を書き戻す（cancel を呼ばなくても消えない）。react は `releaseBackup`（残せた控えは今のキーにまだあるときだけ）・`releasePrevious`・`releaseNotesAtOpen`（開いたときの未読の更新）・`freshStart`（保存データが無く2問で作った）を画面に渡す。更新の画面で作り直すときは、今のデータが更新前の控えと違えば（`releaseBackupHolds`）今のデータを1世代の控えに残してから作り直す
   - `swapPrevious(now)`（react の `restorePrevious()`）：いまのデータを「直前の状態に戻す」として控えてから控えのデータを返す（もう一度戻せる）。控えに残せなければ戻さず「いまのデータを控えに残せないため戻せません：容量不足」
   - 本体の保存（`writeNow`）が容量超過なら控えを捨ててもう1回書き、`previousDrops` を増やす（トースト「容量が足りないため、直前の状態の控えを消しました」）
 - 最後に書き出した日：`store/backup.ts` の `backupMemory`（`lastExport()`・`markExported(kind, date)`・`lastReminded()`・`markReminded(date)`。`createBackupMemory(getStorage)`）。知らせるかは `lib/backupReminder` の `shouldRemindBackup`
@@ -470,7 +471,7 @@ flowchart LR
 
 | コンポーネント | メソッド | エンドポイント | 概要 |
 |---|---|---|---|
-| store | 関数 | `load / save / reset / startWithAnswer / exportJson / importJson / migrate / isOutdated / repair / backup / rememberCurrent / keepPrevious / canKeepPrevious / swapPrevious` | 保存・入出力・版の確かめ・例外の画面の控え |
+| store | 関数 | `load / save / reset / startWithAnswer / exportJson / importJson / migrate / isOutdated / repair / backup / rememberCurrent / keepPrevious / canKeepPrevious / swapPrevious / keepBeforeRelease / restoreReleasePrevious` | 保存・入出力・版の確かめ・例外の画面の控え |
 | domain | 関数 | `withoutAbsences / afterLastDay / leaveOn / isOnLeave` | 欠勤・最終勤務日・休み（デモ独自） |
 | matching | 関数 | `compile(data, date, pins?) → Problem` | 項目・条件 → 可否・費用表 |
 | solver | Worker | `solve` → `progress`…`done`／`error`、`stop` | AI で割当と順番を解く。stop で最良案を返す |

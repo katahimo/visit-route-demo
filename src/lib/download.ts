@@ -2,9 +2,9 @@
 
 /**
  * 控え（バックアップ）の JSON のファイル名。date は日本時間の YYYY-MM-DD。broken は壊れて退避したデータ、
- * previous は1世代の控え（直前の状態・更新前の控え。PRD D485。date は控えを残した日）
+ * previous は1世代の控え（直前の状態）、release は更新前の控え（PRD D485。date はどちらも控えを残した日）
  */
-export function backupFileName(date: string, kind: 'current' | 'broken' | 'previous' = 'current'): string {
+export function backupFileName(date: string, kind: 'current' | 'broken' | 'previous' | 'release' = 'current'): string {
   return kind === 'current' ? `staff-assign-demo-${date}.json` : `staff-assign-demo-${date}-${kind}.json`;
 }
 

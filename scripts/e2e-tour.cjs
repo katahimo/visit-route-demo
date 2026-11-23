@@ -1196,8 +1196,10 @@ async function releaseNotice(b) {
   await answered(page);
   await waitStartArranged(page);
   check((await stored2(page))?.org?.name !== '更新前の事業所', '更新：デモを選ぶとデータを作り直す');
-  await open(page, '/data', '[data-testid="data-prev-card"]');
-  check(await visible(page.getByTestId('data-prev-card')), '更新：作り直す前のデータは控えに残る');
+  // 作り直す前のデータは更新前の控え（開いたときに残した。別のキー）にある。同じデータなので1世代の控えには重ねない（ADR-0122）
+  await open(page, '/data', '[data-testid="data-release-prev-card"]');
+  check(await visible(page.getByTestId('data-release-prev-card')), '更新：作り直す前のデータは更新前の控えに残る');
+  check((await page.getByTestId('data-prev-card').count()) === 0, '更新：同じデータを1世代の控えに重ねない');
   await ctx.close();
 }
 

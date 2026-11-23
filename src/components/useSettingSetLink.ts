@@ -6,13 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { jstDate } from '../domain/time';
 import { newId } from '../lib/common';
-import {
-  applySettingSet,
-  type SettingSetDef,
-  settingSetChanges,
-  settingSetConfirmBody,
-  settingSetOf,
-} from '../lib/settingSets';
+import { applySettingSet, type SettingSetDef, settingSetConfirmBody, settingSetLinkPlan } from '../lib/settingSets';
 import { useDemoData } from '../store';
 import { useToast } from './Toast';
 import { useUndoAction } from './undo';
@@ -59,20 +53,20 @@ export function useSettingSetLink(): SettingSetLink {
     }
     if (handling.current === applyId) return;
     handling.current = applyId;
-    const set = settingSetOf(applyId);
-    if (!set) {
+    const d = dataRef.current;
+    // 手順の画面を出すかの判定は FirstRunGate（更新の知らせを見たことにするか）と同じ settingSetLinkPlan
+    const plan = settingSetLinkPlan(d, applyId);
+    if (plan.kind === 'unknown') {
       toast(`設定のひな形「${applyId}」が見つかりません。設定は変えていません`);
       done();
       return;
     }
-    const d = dataRef.current;
-    const changes = settingSetChanges(d, set);
-    if (changes.length === 0) {
-      toast(`すでにこの設定です（${set.label}）`);
+    if (plan.kind === 'same') {
+      toast(`すでにこの設定です（${plan.set.label}）`);
       done();
       return;
     }
-    setPending({ set, body: settingSetConfirmBody(d, changes, jstDate(Date.now())) });
+    setPending({ set: plan.set, body: settingSetConfirmBody(d, plan.changes, jstDate(Date.now())) });
   }, [applyId]);
 
   const apply = () => {

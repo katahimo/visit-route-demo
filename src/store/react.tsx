@@ -3,13 +3,12 @@ import { type DemoData, STORAGE_KEY } from '../contracts/data';
 import type { Features } from '../contracts/features';
 import type { FirstRunAnswer } from '../lib/firstRun';
 import { appHistory } from '../lib/history';
-import { LATEST_RELEASE, type ReleaseNote } from '../lib/releaseNotes';
+import type { ReleaseNote } from '../lib/releaseNotes';
 import { settleUpdate } from '../lib/settled';
 import {
   flushSave,
   importJson,
   isImportError,
-  isReleaseBackup,
   keepAfterRelease,
   keepPrevious as keepPreviousStore,
   loadWithStatus,
@@ -18,7 +17,6 @@ import {
   type PreviousInfo,
   type PreviousKeep,
   previousInfo,
-  type ReleaseBackup,
   rememberCurrent,
   reset as resetStore,
   samePreviousInfo,
@@ -26,6 +24,15 @@ import {
   startWithAnswer,
   swapPrevious,
 } from './persist';
+import {
+  RELEASE_PREV_INFO_KEY,
+  RELEASE_PREV_KEY,
+  type ReleaseBackup,
+  type ReleasePreviousInfo,
+  releasePreviousInfo,
+  sameReleasePreviousInfo,
+} from './releaseBackup';
+import { releaseBackupHolds, restoreReleasePrevious as restoreReleaseStore } from './releaseRestore';
 import { arrangePending, clearArrangePending } from './start';
 import { isOwnStorageKey, ownKeyOf } from './storageSpace';
 
@@ -66,6 +73,13 @@ export type DemoStore = {
   restorePrevious(): string | null;
   /** 控えの時刻と操作の名前（無ければ null） */
   previous: PreviousInfo | null;
+  /**
+   * 更新前の控えに戻す（PRD D485。ADR-0122）：いまのデータは1世代の控えに回し（残せなければ戻さない）、更新前の控えは残す。
+   * 失敗は利用者向けの文言、成功は null
+   */
+  restoreReleasePrevious(): string | null;
+  /** 更新前の控え（1世代の控えとは別のキー）の時刻と更新の id（無ければ null。PRD D483・D485） */
+  releasePrevious: ReleasePreviousInfo | null;
   /** 起動したとき、保存していたデータが読めず初期データで開いたか（知らせを閉じると false） */
   broken: boolean;
   /** 読めなかった理由が前の版（版1）のデータか（ADR-0053。知らせは「データの形が変わったので初期データで始めます」） */
@@ -87,7 +101,10 @@ export type DemoStore = {
    * 知らせない開き方では空
    */
   releaseNotesAtOpen: readonly ReleaseNote[];
-  /** 開いたときに残した更新前の控えの結果（PRD D483。ADR-0122）。知らせる更新が無かったときは null */
+  /**
+   * 開いたときに残した更新前の控えの結果（PRD D483・D488。ADR-0122）。知らせる更新が無かったときは null。
+   * 残せた控えは今の更新前の控えのキーを見る（別のタブで戻した・容量のために消えたら null）
+   */
   releaseBackup: ReleaseBackup | null;
   /** 保存データが無く、このタブで最初の2問に答えて作ったばかりのデータか（控えの書き出しを求めない。PRD D487） */
   freshStart: boolean;
@@ -109,6 +126,8 @@ export type DemoStore = {
   replacedCount: number;
   /** 保存の容量が足りず1世代の控えを捨てた回数（画面が知らせを出すきっかけ。ADR-0032） */
   previousDrops: number;
+  /** 保存の容量が足りず更新前の控えも捨てた回数（画面が知らせを出すきっかけ。ADR-0122） */
+  releaseDrops: number;
   /**
    * デモを作った直後に要対応を1回自動で組む依頼の印（PRD D409。ADR-0079。「デモで試す」で始めた・初期状態に戻した直後。無ければ null）。
    * 印の元は sessionStorage（store/start の ARRANGE_PENDING_KEY）で、起動時にも読む（例外の画面から戻して読み直しても組む）。
@@ -131,6 +150,12 @@ function useStoreState() {
     (next: PreviousInfo | null) => setPreviousState((cur) => (samePreviousInfo(cur, next) ? cur : next)),
     [],
   );
+  const [releasePrevious, setReleasePreviousState] = useState<ReleasePreviousInfo | null>(() => releasePreviousInfo());
+  const setReleasePrevious = useCallback(
+    (next: ReleasePreviousInfo | null) =>
+      setReleasePreviousState((cur) => (sameReleasePreviousInfo(cur, next) ? cur : next)),
+    [],
+  );
   const [broken, setBroken] = useState(initial.broken);
   /** 最初の2問：first＝初めて開いたとき、redo＝設定からのやり直し、release＝デモの更新の知らせ（PRD D437）、null＝出さない */
   const [firstRun, setFirstRun] = useState<'first' | 'redo' | 'release' | null>(
@@ -140,6 +165,7 @@ function useStoreState() {
   const [replacedCount, setReplacedCount] = useState(0);
   const replaced = useCallback(() => setReplacedCount((n) => n + 1), []);
   const [previousDrops, setPreviousDrops] = useState(0);
+  const [releaseDrops, setReleaseDrops] = useState(0);
   // 組む印（sessionStorage）は起動時にも読む（例外の画面から初期状態に戻して読み直したときも組む。PRD D409）
   const [startArrange, setStartArrange] = useState<object | null>(() => (arrangePending() ? {} : null));
   // 別タブから読み直したデータは、書き戻さない（往復で上書き合戦にしない）
@@ -154,6 +180,8 @@ function useStoreState() {
     setSaveError,
     previous,
     setPrevious,
+    releasePrevious,
+    setReleasePrevious,
     broken,
     setBroken,
     firstRun,
@@ -164,6 +192,8 @@ function useStoreState() {
     replaced,
     previousDrops,
     setPreviousDrops,
+    releaseDrops,
+    setReleaseDrops,
     startArrange,
     setStartArrange,
     skipSave,
@@ -181,6 +211,8 @@ function useStorageSync(st: StoreState): void {
     setSaveError,
     setPrevious,
     setPreviousDrops,
+    setReleasePrevious,
+    setReleaseDrops,
     setExternalReloads,
     setFirstRun,
     replaced,
@@ -196,15 +228,19 @@ function useStorageSync(st: StoreState): void {
       skipSave.current = false;
       return;
     }
-    save(data, (message, dropped) => {
+    save(data, (message, dropped, droppedRelease) => {
       setSaveError(message);
-      // 容量が足りず控えを捨てたときだけ、控えの欄を消して知らせる（ADR-0032）
+      // 容量が足りず控えを捨てたときだけ、控えの欄を消して知らせる（ADR-0032・ADR-0122）
       if (dropped) {
         setPrevious(null);
         setPreviousDrops((n) => n + 1);
       }
+      if (droppedRelease) {
+        setReleasePrevious(null);
+        setReleaseDrops((n) => n + 1);
+      }
     });
-  }, [data, firstRun, setPrevious, skipSave, setSaveError, setPreviousDrops]);
+  }, [data, firstRun, setPrevious, skipSave, setSaveError, setPreviousDrops, setReleasePrevious, setReleaseDrops]);
 
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
@@ -213,6 +249,10 @@ function useStorageSync(st: StoreState): void {
       const key = ownKeyOf(e.key as string);
       if (key === PREV_KEY || key === PREV_INFO_KEY) {
         setPrevious(previousInfo());
+        return;
+      }
+      if (key === RELEASE_PREV_KEY || key === RELEASE_PREV_INFO_KEY) {
+        setReleasePrevious(releasePreviousInfo());
         return;
       }
       if (key !== STORAGE_KEY || e.newValue === null) return;
@@ -235,7 +275,7 @@ function useStorageSync(st: StoreState): void {
       window.removeEventListener('storage', onStorage);
       window.removeEventListener('pagehide', onUnload);
     };
-  }, [setPrevious, replaced, skipSave, setData, setExternalReloads, setFirstRun]);
+  }, [setPrevious, setReleasePrevious, replaced, skipSave, setData, setExternalReloads, setFirstRun]);
 }
 
 /** 書き換え・元に戻す・やり直す（全体の「元に戻す」の履歴。PRD D329。ADR-0054） */
@@ -279,8 +319,8 @@ function useHistoryActions(st: StoreState) {
 
 /** 丸ごと差し替える操作（読み込み・初期状態に戻す）と、1世代の控え（PRD D227。ADR-0032） */
 function useReplaceActions(st: StoreState) {
-  const { setData, setSaveError, setPrevious, setBroken, setFirstRun, setStartArrange, firstRun, replaced, latest } =
-    st;
+  const { setData, setSaveError, setPrevious, setReleasePrevious, setBroken, setFirstRun, setStartArrange } = st;
+  const { firstRun, replaced, latest } = st;
   /** 丸ごと差し替える（履歴は捨てる。差し替えの前のデータへは「直前の状態に戻す」で戻る） */
   const swapIn = useCallback(
     (d: DemoData) => {
@@ -319,31 +359,40 @@ function useReplaceActions(st: StoreState) {
     },
     [setPrevious, latest],
   );
-  const restorePrevious = useCallback((): string | null => {
-    // いまのデータを控えと入れ替える（戻したあとにもう一度戻せる）。いまのデータを控えに残せなければ戻さない
-    const r = swapPrevious(latest.current);
-    setPrevious(previousInfo());
-    if ('error' in r) return r.error;
-    setSaveError(null);
-    swapIn(r.data);
-    replaced();
-    return null;
-  }, [setPrevious, replaced, swapIn, latest, setSaveError]);
+  /** 控えから戻す（いまのデータは1世代の控えに回す。残せなければ戻さない）。失敗は文言、成功は null */
+  const restoreWith = useCallback(
+    (swap: (now: DemoData) => { data: DemoData } | { error: string }): string | null => {
+      const r = swap(latest.current);
+      setPrevious(previousInfo());
+      setReleasePrevious(releasePreviousInfo());
+      if ('error' in r) return r.error;
+      setSaveError(null);
+      swapIn(r.data);
+      replaced();
+      return null;
+    },
+    [setPrevious, setReleasePrevious, replaced, swapIn, latest, setSaveError],
+  );
+  // 直前の状態に戻す：いまのデータを控えと入れ替える（戻したあとにもう一度戻せる）
+  const restorePrevious = useCallback(() => restoreWith((now) => swapPrevious(now)), [restoreWith]);
+  // 更新前の控えに戻す：更新前の控えは残す（ADR-0122）
+  const restoreReleasePrevious = useCallback(() => restoreWith((now) => restoreReleaseStore(now)), [restoreWith]);
   const dismissBroken = useCallback(() => setBroken(false), [setBroken]);
   /** 最初の2問の答えでデータを作り直す。やり直し（初めて開いたときでない）なら先にいまのデータを1世代の控えに残す */
   const startFirstRun = useCallback(
     (answer: FirstRunAnswer) => {
       // すでにデータがあるとき（やり直し・更新の知らせ）は、先に1世代の控えに残す
       if (firstRun === 'redo') keepPrevious('最初の設定をやり直す');
-      // 更新前の控え（PRD D483）が同じデータを持っているので、上書きしない（更新の id と時刻を残す）
-      if (firstRun === 'release' && !isReleaseBackup(LATEST_RELEASE)) keepPrevious('デモの更新で始め直す');
+      // 更新の知らせ：今のデータが更新前の控え（PRD D483）と同じなら、1世代の控え（前からある控え）を上書きしない。
+      // 違えば（別のタブで直した・控えを残せなかった）、今のデータを1世代の控えに残す
+      if (firstRun === 'release' && !releaseBackupHolds(latest.current)) keepPrevious('デモの更新で始め直す');
       setSaveError(null);
       swapIn(startWithAnswer(answer));
       replaced();
       setFirstRun(null);
       setStartArrange(arrangePending() ? {} : null);
     },
-    [firstRun, keepPrevious, replaced, swapIn, setSaveError, setFirstRun, setStartArrange],
+    [firstRun, keepPrevious, replaced, swapIn, setSaveError, setFirstRun, setStartArrange, latest],
   );
   const askFirstRun = useCallback(() => setFirstRun('redo'), [setFirstRun]);
   const cancelFirstRun = useCallback(() => {
@@ -363,6 +412,7 @@ function useReplaceActions(st: StoreState) {
     reset,
     keepPrevious,
     restorePrevious,
+    restoreReleasePrevious,
     dismissBroken,
     startFirstRun,
     askFirstRun,
@@ -370,6 +420,12 @@ function useReplaceActions(st: StoreState) {
     takeStartArrange,
     firstRun,
   };
+}
+
+/** 開いたときの更新前の控えの結果。残せたものは今のキーにまだあるときだけ（別のタブで消えたら null。PRD D484 の①） */
+function releaseBackupNow(at: ReleaseBackup | null, now: ReleasePreviousInfo | null): ReleaseBackup | null {
+  if (at === null || !at.kept) return at;
+  return now !== null && now.release === at.release ? { kept: true, at: now.at, release: now.release } : null;
 }
 
 export function DemoDataProvider({ children }: { children: ReactNode }): ReactNode {
@@ -382,6 +438,7 @@ export function DemoDataProvider({ children }: { children: ReactNode }): ReactNo
     reset,
     keepPrevious,
     restorePrevious,
+    restoreReleasePrevious,
     dismissBroken,
     startFirstRun,
     askFirstRun,
@@ -389,8 +446,12 @@ export function DemoDataProvider({ children }: { children: ReactNode }): ReactNo
     takeStartArrange,
     firstRun,
   } = useReplaceActions(st);
-  const { initial, data, saveError, previous, broken, externalReloads, replacedCount, previousDrops, startArrange } =
-    st;
+  const { initial, data, saveError, previous, releasePrevious, broken, externalReloads, replacedCount } = st;
+  const { previousDrops, releaseDrops, startArrange } = st;
+  const releaseBackup = useMemo(
+    () => releaseBackupNow(initial.releaseBackup, releasePrevious),
+    [initial.releaseBackup, releasePrevious],
+  );
 
   const value = useMemo(
     () => ({
@@ -405,6 +466,8 @@ export function DemoDataProvider({ children }: { children: ReactNode }): ReactNo
       keepPrevious,
       restorePrevious,
       previous,
+      restoreReleasePrevious,
+      releasePrevious,
       broken,
       outdated: initial.outdated,
       brokenKept: initial.brokenKept,
@@ -413,7 +476,7 @@ export function DemoDataProvider({ children }: { children: ReactNode }): ReactNo
       redoingFirstRun: firstRun === 'redo',
       releaseNotice: firstRun === 'release' ? initial.releaseNotes : null,
       releaseNotesAtOpen: initial.releaseNotes,
-      releaseBackup: initial.releaseBackup,
+      releaseBackup,
       freshStart: initial.firstRun,
       cancelFirstRun,
       startFirstRun,
@@ -421,6 +484,7 @@ export function DemoDataProvider({ children }: { children: ReactNode }): ReactNo
       externalReloads,
       replacedCount,
       previousDrops,
+      releaseDrops,
       startArrange,
       takeStartArrange,
     }),
@@ -435,6 +499,8 @@ export function DemoDataProvider({ children }: { children: ReactNode }): ReactNo
       keepPrevious,
       restorePrevious,
       previous,
+      restoreReleasePrevious,
+      releasePrevious,
       broken,
       initial.brokenKept,
       dismissBroken,
@@ -444,11 +510,12 @@ export function DemoDataProvider({ children }: { children: ReactNode }): ReactNo
       cancelFirstRun,
       initial.outdated,
       initial.releaseNotes,
-      initial.releaseBackup,
+      releaseBackup,
       initial.firstRun,
       externalReloads,
       replacedCount,
       previousDrops,
+      releaseDrops,
       startArrange,
       takeStartArrange,
       st.latest,

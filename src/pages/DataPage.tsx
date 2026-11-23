@@ -6,7 +6,7 @@ import '../components/features.css';
 import { SettingsTabs } from '../components/SettingsTabs';
 import { BookingCard } from './dataBookings';
 import { ExcelCard } from './dataExcel';
-import { BackupCard, PrevCard, SaveErrorCard, TermsCard, TidyCard } from './dataParts';
+import { BackupCard, PrevCard, ReleasePrevCard, SaveErrorCard, TermsCard, TidyCard } from './dataParts';
 import { RestartCard } from './RestartCard';
 import { useDataBackup, useDataRestore, useLastExport } from './useDataBackup';
 import { useDataExcel } from './useDataExcel';
@@ -17,7 +17,7 @@ import { useDataTidy } from './useDataTidy';
  * 区画ごとの部品（dataParts・dataExcel）と、状態と処理の画面専用フック（useData*）に分けている
  */
 export default function DataPage() {
-  const { data, saveError, previous } = useDemoData();
+  const { data, saveError, previous, releasePrevious } = useDemoData();
   const lastExport = useLastExport();
   const excel = useDataExcel({ markExported: lastExport.mark });
   const backup = useDataBackup({ markExported: lastExport.mark });
@@ -41,9 +41,17 @@ export default function DataPage() {
       </div>
       {saveError && <SaveErrorCard saveError={saveError} onTidy={tidy.goToCard} />}
 
-      {/* 直前の状態に戻す・更新前の控え（PRD D227・D485。1世代の控えがあるときだけ） */}
+      {/* 直前の状態に戻す（PRD D227。1世代の控えがあるときだけ） */}
       {previous && (
         <PrevCard previous={previous} onRestore={() => void restore.doRestore()} onExport={restore.exportPrev} />
+      )}
+      {/* 更新前の控え（PRD D483・D485。別のキーの控えがあるときだけ。ADR-0122） */}
+      {releasePrevious && (
+        <ReleasePrevCard
+          info={releasePrevious}
+          onRestore={() => void restore.doRestoreRelease()}
+          onExport={restore.exportRelease}
+        />
       )}
 
       <TermsCard />

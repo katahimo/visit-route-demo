@@ -6,9 +6,11 @@
 // ・Ctrl+Z と知らせの［元に戻す］で適用の前に戻る。全部同じなら「すでにこの設定です」で手順の画面を出さない
 // ・［取り消す］では何も変えず、URL から apply が消える（読み直しても出さない）
 // ・知らない ID は「見つかりません」を出して何もしない
-// ・まだ見ていない更新があるとき：普通に開くと「デモを更新しました」の前に更新前の控えを自動で残す。リンクで開くと更新の画面を出さず
-//   （見たことにする）、手順の①に自動の控えの時刻と［変わったことを見る］。データの画面に「更新前の控え（◯月◯日の更新の前・◯時◯分）」、
-//   ［ファイルに書き出す］・［この控えに戻す］で戻せる
+// ・まだ見ていない更新があるとき：普通に開くと「デモを更新しました」の前に更新前の控えを1世代の控えとは別のキーに自動で残す（前からある
+//   1世代の控えは上書きしない）。リンクで開くと更新の画面を出さず（見たことにする）、手順の①に自動の控えの時刻と［変わったことを見る］。
+//   データの画面に2つの控えを別のカードで出し、「更新前の控え（◯月◯日の更新の前・◯時◯分）」の［この控えを書き出す］・［この控えに戻す］
+//   （いまのデータは直前の状態の控えに回り、更新前の控えは残る）。容量不足なら理由を出し、データと1世代の控えはそのまま。
+//   知らない ID のリンクでは見たことにせず、いつもの更新の画面を出す
 // ・保存データが無い人がリンクを開くと、最初の2問のあとに手順の画面（作ったばかりなので書き出しは求めない）
 // ・条件の重みの画面の帰りの前は自宅に近い人の行で「勤務の終わりの◯分前から」を直すとすぐ保存
 //
@@ -25,9 +27,12 @@ const SET_ID = 'standard-start-no-shift';
 const SET_LABEL = 'ちょうどの時刻で組む・連絡を短く';
 const OFF = ['shiftStart', 'clientTraits', 'timeWindow', 'clientContact', 'contactAddress'];
 const HOME = '帰りの前は自宅に近い人';
-/** store/start.ts の SEEN_RELEASE_KEY・store/persist.ts の PREV_INFO_KEY と同じ */
+/** store/start.ts の SEEN_RELEASE_KEY・store/persist.ts の PREV_KEY・store/releaseBackup.ts の RELEASE_PREV_KEY と同じ */
 const SEEN_RELEASE_KEY = 'vrdemo:release:seen';
+const PREV_KEY = 'vrdemo:data:prev';
 const PREV_INFO_KEY = 'vrdemo:data:prev:info';
+const RELEASE_PREV_KEY = 'vrdemo:data:release-prev';
+const RELEASE_PREV_INFO_KEY = 'vrdemo:data:release-prev:info';
 
 /** 設定が適用された形か */
 const applied = (d) =>
@@ -224,7 +229,21 @@ const markOld = (page) =>
     },
     [STORAGE_KEY, SEEN_RELEASE_KEY],
   );
-const prevInfo = (page) => page.evaluate((k) => JSON.parse(localStorage.getItem(k) ?? 'null'), PREV_INFO_KEY);
+const releaseInfo = (page) =>
+  page.evaluate((k) => JSON.parse(localStorage.getItem(k) ?? 'null'), RELEASE_PREV_INFO_KEY);
+/** 1世代の控え（前からある控え）を目印のデータで置く（うっかり初期状態に戻す前の本物のデータの代わり） */
+const putOldPrevious = (page) =>
+  page.evaluate(
+    ([k, pk, ik]) => {
+      const d = JSON.parse(localStorage.getItem(k));
+      d.org.name = '本物の事業所';
+      localStorage.setItem(pk, JSON.stringify(d));
+      localStorage.setItem(ik, JSON.stringify({ at: 1000, reason: '初期状態に戻す' }));
+    },
+    [STORAGE_KEY, PREV_KEY, PREV_INFO_KEY],
+  );
+const prevName = (page) =>
+  page.evaluate((k) => JSON.parse(localStorage.getItem(k) ?? 'null')?.org?.name ?? null, PREV_KEY);
 
 async function releaseBackup() {
   const { b, page } = await askingPage();
@@ -232,13 +251,15 @@ async function releaseBackup() {
     await page.goto(`${BASE}#/`);
     await answerFirstRun(page, { start: 'own' });
     await settle(page, 600);
+    await putOldPrevious(page);
     await markOld(page);
-    // 普通に開く：「デモを更新しました」の前に更新前の控えを残す
+    // 普通に開く：「デモを更新しました」の前に更新前の控えを残す（1世代の控えとは別のキー）
     await page.goto('about:blank');
     await page.goto(`${BASE}#/data`);
     await page.getByTestId('first-run').waitFor({ timeout: 30000 });
-    const info = await prevInfo(page);
+    const info = await releaseInfo(page);
     check(!!info?.release && info.release !== '2000-01-01', '普通に開いても更新前の控えを残す（更新の id つき）', info);
+    check((await prevName(page)) === '本物の事業所', '開いただけでは前からある1世代の控えを上書きしない');
     check(
       /更新前の控えを自動で残しました（\d+時\d{2}分）/.test(
         await page.getByTestId('first-run-release-backup').innerText(),
@@ -247,11 +268,15 @@ async function releaseBackup() {
     );
     await page.getByTestId('first-run-submit').click();
     await page.getByTestId('first-run').waitFor({ state: 'detached', timeout: 30000 });
-    const card = page.getByTestId('data-prev-card');
+    const card = page.getByTestId('data-release-prev-card');
     await card.waitFor({ timeout: 10000 });
     check(
       /更新前の控え（\d+月\d+日の更新の前・\d+時\d{2}分）/.test(await card.innerText()),
       'データの画面に更新前の控え',
+    );
+    check(
+      (await page.getByTestId('data-prev-text').innerText()).includes('『初期状態に戻す』'),
+      'データの画面に直前の状態の控えも別のカードで出す',
     );
     // もう一度古くして、リンクで開く：更新の画面は出さず手順の画面だけ
     await markOld(page);
@@ -285,20 +310,83 @@ async function releaseBackup() {
     check(await waitStored(page, applied), 'リンク：書き出したら適用できる');
     check((await stored(page)).org.name === '更新前の事業所', 'リンク：データはそのまま（設定だけ変わる）');
     // データの画面：書き出し・この控えに戻す
-    await goTo(page, '/data', { ready: '[data-testid="data-prev-card"]' });
-    const [dl] = await Promise.all([page.waitForEvent('download'), page.getByTestId('data-prev-export').click()]);
-    check(
-      /-previous\.json$/.test(dl.suggestedFilename()),
-      '更新前の控えをファイルに書き出せる',
-      dl.suggestedFilename(),
-    );
-    await page.getByTestId('data-prev-restore').click();
+    await goTo(page, '/data', { ready: '[data-testid="data-release-prev-card"]' });
+    const [dl] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByTestId('data-release-prev-export').click(),
+    ]);
+    check(/-release\.json$/.test(dl.suggestedFilename()), '更新前の控えをファイルに書き出せる', dl.suggestedFilename());
+    await page.getByTestId('data-release-prev-restore').click();
     await toastOf(page, '更新前の控えに戻しました').waitFor({ timeout: 10000 });
     check(await waitStored(page, before), '［この控えに戻す］で更新の前（適用の前）のデータに戻る');
     check(
-      (await page.getByTestId('data-prev-card').innerText()).includes('直前の状態に戻す'),
-      '戻す前のデータは控えに回る（もう一度戻せる）',
+      (await page.getByTestId('data-prev-text').innerText()).includes('『更新前の控えに戻す』'),
+      '戻す前のデータは直前の状態の控えに回る（もう一度戻せる）',
     );
+    check((await page.getByTestId('data-release-prev-card').count()) === 1, '更新前の控えは戻したあとも残る');
+  } finally {
+    await b.close();
+  }
+}
+
+/** 更新を知らせるときに、知らない ID のリンクで開くと、いつもの更新の画面を出す（見たことにしない） */
+async function unknownIdRelease() {
+  const { b, page } = await askingPage();
+  try {
+    await page.goto(`${BASE}#/`);
+    await answerFirstRun(page, { start: 'own' });
+    await settle(page, 600);
+    await markOld(page);
+    await page.goto('about:blank');
+    await page.goto(`${BASE}#/settings?apply=no-such-set`);
+    await page.getByTestId('first-run').waitFor({ timeout: 30000 });
+    check(true, '知らない ID：いつもの「デモを更新しました」を出す');
+    check(
+      (await page.evaluate((k) => localStorage.getItem(k), SEEN_RELEASE_KEY)) === '2000-01-01',
+      '知らない ID：更新は見たことにしない（選ぶまで）',
+    );
+    check(
+      (await page.getByTestId('first-run-release-backup').innerText()).includes('自動で残しました'),
+      '知らない ID：更新前の控えの知らせも出す',
+    );
+    await page.getByTestId('first-run-submit').click();
+    await toastOf(page, '設定のひな形「no-such-set」が見つかりません').waitFor({ timeout: 10000 });
+    check((await page.getByTestId('setting-steps').count()) === 0, '知らない ID：手順の画面は出さない');
+  } finally {
+    await b.close();
+  }
+}
+
+/** 更新前の控えを書けない（容量不足）とき：データ・1世代の控えはそのまま、理由を出す */
+async function releaseQuota() {
+  const { b, page } = await askingPage();
+  try {
+    await page.goto(`${BASE}#/`);
+    await answerFirstRun(page, { start: 'own' });
+    await settle(page, 600);
+    await putOldPrevious(page);
+    await markOld(page);
+    const d0 = await page.evaluate((k) => localStorage.getItem(k), STORAGE_KEY);
+    // 更新前の控えのキーにだけ書けない（容量超過）
+    await page.addInitScript((k) => {
+      const set = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (key, value) {
+        if (key === k) throw new DOMException('full', 'QuotaExceededError');
+        return set.call(this, key, value);
+      };
+    }, RELEASE_PREV_KEY);
+    await page.goto('about:blank');
+    await page.goto(`${BASE}#/data`);
+    await page.getByTestId('first-run').waitFor({ timeout: 30000 });
+    check(
+      (await page.getByTestId('first-run-release-backup').innerText()).includes('残せませんでした（容量不足）'),
+      '容量不足：残せなかった理由を出す',
+    );
+    check((await page.evaluate((k) => localStorage.getItem(k), STORAGE_KEY)) === d0, '容量不足：データはそのまま');
+    check((await prevName(page)) === '本物の事業所', '容量不足：前からある1世代の控えは消さない');
+    await page.getByTestId('first-run-submit').click();
+    await page.getByTestId('data-prev-card').waitFor({ timeout: 10000 });
+    check((await page.getByTestId('data-release-prev-card').count()) === 0, '容量不足：更新前の控えのカードは出さない');
   } finally {
     await b.close();
   }
@@ -340,6 +428,8 @@ const steps = sharedPage({
     ['知らない ID は見つかりません', unknownId],
     ['勤務の終わりの何分前から', beforeEndField],
     ['更新前の控えとリンク', () => releaseBackup()],
+    ['更新を知らせるときの知らない ID', () => unknownIdRelease()],
+    ['更新前の控えの容量不足', () => releaseQuota()],
     ['データの無い人のリンク', () => noDataLink()],
   ],
   after: async (s) => {
