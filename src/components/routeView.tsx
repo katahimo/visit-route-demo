@@ -166,7 +166,8 @@ export function VisitCard({
         </div>
         {children}
       </div>
-      {picked && detail}
+      {/* 詳細の中を押しても「空いた所」にしない（日の予定の選択を外す操作。useBlankClickRelease） */}
+      {picked && detail && <div className="route-detail">{detail}</div>}
     </div>
   );
 }

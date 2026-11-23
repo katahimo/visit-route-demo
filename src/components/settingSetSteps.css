@@ -1,0 +1,35 @@
+/* 設定のひな形の手順の画面（components/SettingSetSteps.tsx。PRD D484〜D487）。殻は確認ダイアログ（confirmDialog.css） */
+.confirm-dialog.setting-steps {
+  width: min(560px, 100%);
+}
+.setting-steps-step {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.setting-steps-step h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+.setting-steps-step p {
+  margin: 0;
+  line-height: 1.7;
+}
+.setting-steps-result {
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+.setting-steps-blocked {
+  color: var(--sub);
+  font-size: 0.9rem;
+}
+.setting-steps-release {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.setting-steps-release p {
+  margin: 0;
+}

@@ -1,4 +1,4 @@
-// データの画面の区画の部品：保存の誤り・直前の状態に戻す・呼び方・控え（JSON のファイル）・古い訪問を片づける（最初の設定をやり直すは RestartCard）。
+// データの画面の区画の部品：保存の誤り・直前の状態に戻す・更新前の控え・呼び方・控え（JSON のファイル）・古い訪問を片づける（最初の設定をやり直すは RestartCard）。
 // 状態と処理は画面専用のフック（useData*）が持ち、ここは表示と押したときだけ
 import { ArchiveRestore, Download, Eraser, Save, Tags } from 'lucide-react';
 import { useId } from 'react';
@@ -7,10 +7,10 @@ import { FilePick } from '../components/FilePick';
 import { Term } from '../components/Term';
 import { Hint, SectionTitle, WithIcon } from '../components/ui';
 import { jstDate } from '../domain/time';
-import { exportAgoText, previousText } from '../lib/backupReminder';
+import { exportAgoText, previousText, releaseBackupTitle } from '../lib/backupReminder';
 import { tidyHasAny, tidyPreviewText } from '../lib/dataScreen';
 import { tidyMonthLabel } from '../lib/tidy';
-import { type LastExport, QUOTA_MESSAGE } from '../store';
+import { type LastExport, type PreviousInfo, QUOTA_MESSAGE, type ReleasePreviousInfo } from '../store';
 import { useDataTerms } from './useDataTerms';
 import type { DataTidy } from './useDataTidy';
 
@@ -35,24 +35,68 @@ export function SaveErrorCard({ saveError, onTidy }: { saveError: string; onTidy
   );
 }
 
-/** 直前の状態に戻す（PRD D227。1世代の控えがあるときだけ出す） */
-export function PrevCard({ previous, onRestore }: { previous: { at: number; reason: string }; onRestore: () => void }) {
+/** 直前の状態に戻す（PRD D227。1世代の控えがあるときだけ出す）。［この控えを書き出す］（ファイル）を添える（PRD D485） */
+export function PrevCard({
+  previous,
+  onRestore,
+  onExport,
+}: {
+  previous: PreviousInfo;
+  onRestore: () => void;
+  onExport: () => void;
+}) {
   return (
     <section className="card stack" aria-label="直前の状態に戻す" data-testid="data-prev-card">
       <SectionTitle icon={ArchiveRestore}>直前の状態に戻す</SectionTitle>
       <p className="data-prev-text" data-testid="data-prev-text">
         {previousText(previous)}
       </p>
-      <Hint>置き換える前のデータを1つだけ残しています。戻すと、いまのデータと入れ替わります。</Hint>
-      <button
-        type="button"
-        className="btn"
-        style={{ alignSelf: 'flex-start' }}
-        onClick={onRestore}
-        data-testid="data-prev-restore"
-      >
-        <WithIcon icon={ArchiveRestore}>直前の状態に戻す</WithIcon>
-      </button>
+      <Hint>
+        置き換える前のデータを1つだけ残しています。戻すと、いまのデータと入れ替わります（いまのデータは控えに回ります）。
+      </Hint>
+      <div className="row" style={{ flexWrap: 'wrap' }}>
+        <button type="button" className="btn" onClick={onRestore} data-testid="data-prev-restore">
+          <WithIcon icon={ArchiveRestore}>直前の状態に戻す</WithIcon>
+        </button>
+        <button type="button" className="btn" onClick={onExport} data-testid="data-prev-export">
+          <WithIcon icon={Download}>この控えを書き出す</WithIcon>
+        </button>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * 更新前の控え（PRD D483・D485。ADR-0122。直前の状態の控えとは別の欄で、あるときだけ出す）：見出し「更新前の控え（11月21日の更新の前・14時03分）」、
+ * ［この控えに戻す］（いまのデータは直前の状態の控えに回り、この控えは残る）と［この控えを書き出す］
+ */
+export function ReleasePrevCard({
+  info,
+  onRestore,
+  onExport,
+}: {
+  info: ReleasePreviousInfo;
+  onRestore: () => void;
+  onExport: () => void;
+}) {
+  const title = releaseBackupTitle(info);
+  return (
+    <section className="card stack" aria-label={title} data-testid="data-release-prev-card">
+      <SectionTitle icon={ArchiveRestore}>{title}</SectionTitle>
+      <p className="data-prev-text" data-testid="data-release-prev-text">
+        デモを更新したときに、更新の前のデータを自動で残しました。
+      </p>
+      <Hint>
+        戻すと、いまのデータは「直前の状態に戻す」の控えに回ります。この控えは戻したあとも残ります（次の更新で置き換わります）。
+      </Hint>
+      <div className="row" style={{ flexWrap: 'wrap' }}>
+        <button type="button" className="btn" onClick={onRestore} data-testid="data-release-prev-restore">
+          <WithIcon icon={ArchiveRestore}>この控えに戻す</WithIcon>
+        </button>
+        <button type="button" className="btn" onClick={onExport} data-testid="data-release-prev-export">
+          <WithIcon icon={Download}>この控えを書き出す</WithIcon>
+        </button>
+      </div>
     </section>
   );
 }

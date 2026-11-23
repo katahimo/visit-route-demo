@@ -5,6 +5,7 @@ import { useLocation, useSearchParams } from 'react-router-dom';
 import { focusUndo, undoFocusTarget } from '../components/undo';
 import { useDateEntry } from '../components/useDateEntry';
 import type { useRouteSelection } from '../components/useRouteSelection';
+import { useBlankClickRelease, useEscRelease } from '../components/useSelectRelease';
 import { useOpenVisit } from '../components/VisitPanel';
 import { useVisitKeys } from '../components/visitKeys';
 import { isDate } from '../lib/isDate';
@@ -68,6 +69,11 @@ function useGoTo(d: PlanData, v: PlanView, sel: RouteSel) {
    * 選んだままなら外さず、地図をその人に絞り直す）列の中のカードへ移る
    */
   const goToStaff = (sid: string, visitId?: string) => {
+    // 選んでいる人の行をもう一度押したら外す（列の見出し・地図の凡例と同じ。巻かない）
+    if (!visitId && sel.focusStaff === sid && shownView !== 'list' && shownView !== 'day') {
+      sel.focusOn(null);
+      return;
+    }
     if (shownView === 'list' || shownView === 'day') setView('timeline');
     if (visitId) {
       const x = { id: visitId, set: PLAN_SET };
@@ -197,6 +203,10 @@ export function usePlanNav(x: { date: string; setDate: (d: string) => void; d: P
       },
     });
   useUrlEntry(date, setDate, d, go.goToNone);
+  // 選んだ〈スタッフ〉・訪問・区間を外す：Esc と、時間軸・順番の空いた所を押す（もう一度押す・凡例・「全員のルートを見る」のほか）
+  const selected = sel.focusStaff !== null || sel.focusLeg !== null || sel.picked !== null;
+  useEscRelease(selected, sel.reset);
+  useBlankClickRelease(selected, '.plan-view', sel.reset);
   /** 週間の帯・要対応の帯から開いたときに選ぶ訪問（並びが出たら1回だけ選んで見える所へ） */
   const wantVisit = useRef<string | null>(visitIdOf(location.state));
   const wantOpen = useRef(fromBandOf(location.state));

@@ -93,6 +93,7 @@ export function PatternsSection({
           today={today}
           monthlyOn={flow.monthlyOn}
           monthlyOffId={flow.monthlyOffId}
+          windowOn={flow.windowOn}
           daysLocked={flow.daysLocked}
           errorState={errorState}
           error={error}

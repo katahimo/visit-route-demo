@@ -1,6 +1,14 @@
 import type { TravelMode } from '../contracts/codes';
 import type { Place, Terms } from '../contracts/documents';
-import { HARDABLE, type ItemKind, type Rule, type RuleType } from '../contracts/rules';
+import {
+  HARDABLE,
+  HOME_NEAR_BEFORE_END_DEFAULT,
+  HOME_NEAR_PER_MINUTE,
+  type ItemKind,
+  type Rule,
+  type RuleType,
+  SAME_CLIENT_GAP_MAX,
+} from '../contracts/rules';
 
 /** 画面の共通の表示（呼び方は org.terms から引く。「お客様」「シッター」を直書きしない） */
 
@@ -67,8 +75,18 @@ export function ruleTypeLabel(type: RuleType, t: Terms): string {
     case 'wait':
       // 画面の名前（PRD D174）。Excel の見出しは excel/text の ruleTypeLabels で今の「待ち時間」のまま
       return '空き時間（待ち）';
+    case 'sameClient':
+      return '続く訪問は同じ人';
+    case 'homeNear':
+      return '帰りの前は自宅に近い人';
   }
 }
+
+/**
+ * 帰りの前は自宅に近い人（homeNear）の前の名前（ADR-0116。ADR-0121 で改名）。古いデータの条件の名前・Excel の種類・
+ * プリセットの重みの見出しにこの名前があれば、今の名前（ruleTypeLabel）として読む
+ */
+export const HOME_NEAR_OLD_LABEL = '夕方は自宅に近い人';
 
 /** 条件の型の説明（contracts/rules.ts のコメントを平易にしたもの） */
 export function ruleTypeHelp(type: RuleType, t: Terms): string {
@@ -89,6 +107,10 @@ export function ruleTypeHelp(type: RuleType, t: Terms): string {
       return `勤務時間に合わせた件数の目安（例：2〜3件）から外れるほど重くします（外れた件数の2乗×重み×10点。1件で30点、2件で120点＜重み3のとき＞）。${t.staff}の件数をそろえます。必須にすると、目安の上限＋1件を超える割当はしません（重みも使います）。`;
     case 'wait':
       return '訪問のあいだの空き時間（待ち）1分につき 重み×0.1点（必須にはできません）。';
+    case 'sameClient':
+      return `同じ${t.client}の同じ日の続く訪問（前の訪問の終わりから次の開始まで${SAME_CLIENT_GAP_MAX}分以内）を、同じ${t.staff}が続けて回らないと 1組につき 重み×10点。サービスの内容で時間を分けた訪問を同じ人に寄せます。いつもある条件で、消せません（使わないときは重み0。必須にはできません）。`;
+    case 'homeNear':
+      return `訪問の終わりが、その日の${t.staff}の勤務の終わりの N分前（行の「勤務の終わりの◯分前から」。既定${HOME_NEAR_BEFORE_END_DEFAULT}分）より後の訪問で、その訪問から${t.staff}の自宅までの移動1分につき 重み×${HOME_NEAR_PER_MINUTE}点。その日の最後のほうの訪問を、帰りの近い人に寄せます。勤務の無い日の人は対象外です（必須にはできません）。`;
   }
 }
 
@@ -185,6 +207,16 @@ export const byDisplayName = (a: { displayName: string }, b: { displayName: stri
 /** URL のクエリの値（キーが無ければ null、値が空なら ''） */
 export const paramOf = (params: URLSearchParams, key: string): string | null =>
   params.has(key) ? (params.get(key) ?? '') : null;
+
+/**
+ * 重みのスライダーの下の目安（条件の重みの画面）：重み0は「無効」、帰りの前は自宅に近い人は「自宅まで1分×N点」（ADR-0116）、
+ * ほかは「移動N分ぶん」（重み×10）
+ */
+export function weightHint(r: Pick<Rule, 'type' | 'weight'>): string {
+  if (r.weight === 0) return '無効';
+  if (r.type === 'homeNear') return `自宅まで1分×${Math.round(r.weight * HOME_NEAR_PER_MINUTE * 10) / 10}点`;
+  return `移動${r.weight * 10}分ぶん`;
+}
 
 /** 条件の重みの短い表示（比べる画面。例「重み3」「必須」「無効」。無い条件は「（なし）」） */
 export function ruleWeightText(r: Rule | undefined): string {

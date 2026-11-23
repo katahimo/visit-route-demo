@@ -46,6 +46,10 @@ describe('scoreReason', () => {
     expect(r).toMatchObject({ key: 'travel', text: '移動が長め（190分）', points: 12 });
     expect(scoreReason([part('wait', 2)], sc())?.text).toBe('空き時間（待ち）が長め（45分）');
   });
+  it('続く訪問（ADR-0116）がいちばんなら「続く訪問が別の人（N組）」', () => {
+    const r = scoreReason([part('travel', 2), part('chain', 4)], sc({ perRule: { sameClient: pr(40, 2) } }));
+    expect(r).toMatchObject({ key: 'chain', text: '続く訪問が別の人（2組）', points: 4 });
+  });
   it('必須の違反があれば、点の大きさに関わらず先に出す', () => {
     const r = scoreReason([part('travel', 30)], sc({ hardViolations: [hv, hv], dropped: 1 }));
     expect(r).toMatchObject({ key: 'hard', text: '守れない条件 2件' });

@@ -2,7 +2,7 @@
 // - 壊れたデータの知らせ（起動したとき、保存していたデータが読めず初期データで開いたら、閉じられる帯と「読めなかったデータを書き出す」）
 // - 控えの知らせ（起動したとき1回。確定した日があり、2週間以上書き出していなければトースト。1日1回まで）
 // - 別のタブの変更（読み直したらトースト。編集の欄に変更があれば「保存すると上書きします」）
-// - 容量が足りず、保存のときに直前の状態の控えを捨てた（トースト）
+// - 容量が足りず、保存のときに直前の状態の控え・更新前の控えを捨てた（トースト。ADR-0032・ADR-0122）
 import { Download, FileWarning, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { jstDate } from '../domain/time';
@@ -16,13 +16,14 @@ import './dataNotices.css';
 
 /** 容量のために控えを捨てたときの知らせ */
 export const PREVIOUS_DROPPED_TEXT = '容量が足りないため、直前の状態の控えを消しました';
+export const RELEASE_DROPPED_TEXT = '容量が足りないため、更新前の控えを消しました';
 
 /** 起動したときの控えの知らせを、開いている間に2回出さない */
 let remindedThisSession = false;
 
 /** 控えの知らせと別のタブの変更の知らせ（トースト）。画面全体で1つ置く */
 export function DataWatch() {
-  const { data, externalReloads, previousDrops } = useDemoData();
+  const { data, externalReloads, previousDrops, releaseDrops } = useDemoData();
   const toast = useToast();
   // 起動したときに1回だけ（そのときのデータで決める）
   const first = useRef(data);
@@ -56,6 +57,12 @@ export function DataWatch() {
     drops.current = previousDrops;
     toast(PREVIOUS_DROPPED_TEXT);
   }, [previousDrops, toast]);
+  const releaseDropsSeen = useRef(releaseDrops);
+  useEffect(() => {
+    if (releaseDrops === releaseDropsSeen.current) return;
+    releaseDropsSeen.current = releaseDrops;
+    toast(RELEASE_DROPPED_TEXT);
+  }, [releaseDrops, toast]);
   return null;
 }
 

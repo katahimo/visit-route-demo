@@ -156,6 +156,8 @@
 
 #### `components/ConfirmDialog.tsx`（`confirmDialog.css`）
 
+- 殻（body の直下・inert・フォーカス・Tab・Esc・背景・裏を巻かない）は `components/DialogShell.tsx` に分け、設定のひな形の手順の画面（`SettingSetSteps`。[pages-data.md](pages-data.md)）と共用する。最初のフォーカスは巻かずに置く（長い中身でも見出しから読める）
+
 - `ConfirmDialog`：body の直下。`role="alertdialog"`・`aria-modal`・`aria-labelledby`（見出し）・`aria-describedby`（本文があるとき）。画面の中央
 - 開いたら取り消しへフォーカス、閉じたら開く前の要素へ（消えていれば戻さない）
 - body のほかの子を inert（`lib/inertLock` の要素ごとに数えるロック。`components/useBodyScrollLock` の `inertLock` を引き出し・パレットと共通に使い、閉じる順が逆でも最後の1つが閉じるまで戻さない。テストあり）、`useBodyScrollLock`
@@ -180,6 +182,7 @@
 - URL は機能の表から引く：`menuSections`（下のタブもここから）・`screenSections`（上の帯の名前・パレットの画面）・`settingsTabs`（設定のタブ）、`app/App.tsx` のルート（切った機能の URL（`?do=` も）は予定の画面（`homePath`）へ移し（replace。`state.featureOff`）、知らせ（トースト）と `#/settings` へのリンク。管理者設定と土台の画面は開ける）、`lib/commandPalette.ts` の操作、`lib/attentionBand.ts` の帯の種類、`lib/links.ts`、画面の中の欄・ボタン（`useFeature`）。切った機能の URL を開いたときの知らせは `components/FeatureOffNotice`
 - `rules` が切なら、条件の重みの画面は開けず、担当を組むは点数の基準のプリセットの重み（`scoreRulesOf`）で作る
 - 切っても事実の表示（月の「休みの人に N」・すでに振り直した案の差の欄・帯・連絡の一覧）は残し、隠すのは入力・操作の入口だけ
+- `clientTraits`（〈利用者さん〉の特性）・`timeWindow`（時間の決め方）は見せ方の好み（ADR-0117）：切ると欄を隠すだけで、特性と幅の繰り返し・訪問は今どおり効く。`timeWindow` が切でも幅で入れてあるものを直すときは選ぶ欄を出す（黙ってちょうどにしない）
 - 切ったまま保存しても、データ（段階・担当できる人・メールアドレス・毎月のパターンの `repeat` と `monthWeeks`）は残す（毎月のパターンは読むだけと注記）。`clientStage` が切なら段階は「利用中／終了」の2つで選ばせる
 - 管理者設定の画面は [pages-data.md](pages-data.md)
 
@@ -262,7 +265,7 @@
 - 例外だけ見せる（expert 切）：判定は `lib/exceptionView`（`exceptionsOnly`・`mainTools`・`detailItems`・`introShown`・`proposalWords`・`arrangeWords`）と `lib/visitLook` の `exceptionsOnly`（`lib/bandIssues` の `isBandIssue`＝帯と同じ分け方）。入も同じ部品を使う
   - 訪問の札（日・週・月・人の予定表で共通。`dayLooks` の `exceptionsOnly`）：正常は時刻・名前・担当の1行。目立たせるのは担当なし・間に合わない・重なり・休みの人と「変更あり」だけ（読み上げは検査の言葉「時間の約束に間に合わない」「働ける時間に収まらない」「前の訪問と重なる」など）。資格✗／限✗・ピン・この回だけ変更・仮押さえの印と、条件に合わない（notAllowed）の赤は出さない。日の順番の札は1行（`VisitCard` の `oneLine`）、順番の移動の分数の行は出さない（`showLegs`。時間軸の移動・待ちの区間は入切とも出す。PRD D431）、担当なしの札に入れられない理由の札を出さない（`showUnplacedReasons`。短い内訳 `unplaced-why` は入切とも控えめに出す。PRD D430）
   - 月のマスは入切とも同じ表示（切は確定の鍵・確定の言葉だけ出さない。PRD D433。[pages-month.md](pages-month.md)）
-  - 日の予定の地図：入切とも地図のカード（`plan-map`）を置き、画面の外のときだけ浮かせる（`components/MapDock`。ADR-0103）
+  - 日の予定の地図：入切とも地図のカード（`plan-map`）を置き、画面の外のときだけ右下のボタンから浮かせて開く（`components/MapDock`。開け閉めは端末に覚え、選んでも開かない。ADR-0103・0118）
 - 「詳しく ▾」（`components/DetailsFold`。入切とも）：閉じて始まり、開け閉めは月・週・日と空き状況の画面ごとに端末に覚える（`store/navOpen` の `detailsOpenKey`）。中身：空き状況＝曜日×週のマス・凡例・曜日×開始時刻の表（PRD D412）、月＝進み具合の帯・月全体の件数・凡例、週＝1行の状態・時間軸の凡例と使い方、日＝今の担当の1行（点数・理由・移動）と担当ごとの1日。入は日の要対応の訪問の帯も中に入れ、見出しの1行に数（`lib/detailsHeading`。月＝担当 a/b日・確定 c/d日、週＝未確定 N日・要対応 M件、日＝点数・移動・入らない・守れない条件）
 - 操作の行（入切とも。`components/toolbarRow`・`mainTools(zoom, avail, expert)`）：主ボタン1つ＋ボタン1つまで、ほかは「その他 ▾」。入＝月・週は「定期の予定を追加」＋「担当を組む」、日は「訪問を1件追加」＋「確定（伝えた）」。切＝「定期の予定を追加」＋「欠勤・キャンセルを登録」（スマホの日は主ボタンなし）。「その他 ▾」の最後に「連絡を貼り付けて入れる」（PRD D418。[pages-plan-absence.md](pages-plan-absence.md)）。入切とも、元に戻す・やり直すの前に「休みを取り込む」（`cal-off-open`。毎日使うので「その他 ▾」に入れない。スマホは「その他 ▾」の先頭。機能 `sudden` が入のとき。PRD D440）。要対応を組むのは帯の［要対応を組む］（`components/useBandArrange`。[pages-nav.md](pages-nav.md)「要対応の帯」）
 - 来月の確認（PRD D413。ADR-0081）：[pages-nav.md](pages-nav.md)「要対応の帯」

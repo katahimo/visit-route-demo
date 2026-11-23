@@ -153,7 +153,15 @@
 | [0108](adr/0108-imports-mirror-source.md) | 予約・名簿・休みのファイルの読み込みは総入れ替え（予約システム・カレンダーを写す）と、読み込みのあとの自動の組み |
 | [0112](adr/0112-storage-space-for-slides.md) | 説明用スライドの iframe は `?space=` の接頭辞で保存領域を分け、普段のデータを壊さない |
 | [0114](adr/0114-screen-feedback.md) | 画面への意見をボタンで残し（その画面を撮る）、パスワードで閉じた1つのファイルにまとめて送ってもらう |
+| [0119](adr/0119-vacancy-weekly-strip.md) | 空き状況の答えのカードの下に、曜日ごとの空きの帯（色・数字・印の文）を常に出す |
+| [0118](adr/0118-map-dock-and-contact-switches.md) | 右下の浮かせた地図は勝手に開かず開け閉めを覚える・〈利用者さん〉への訪問連絡と変更の連絡の住所を機能の入り切りに |
+| [0116](adr/0116-chain-visits-evening-home-fixed-start.md) | 続く訪問は同じ人（組み込みの条件）・夕方は自宅に近い人の条件と、開始時刻をずらさない機能のスイッチ |
 | [0113](adr/0113-backup-before-rebuild.md) | 今のデータがあるときは、控えを書き出すまで作り直せない（最初の2問・例外の画面） |
+| [0115](adr/0115-preview-url-and-rollback.md) | 本番を変えずに確かめる確認用 URL（PR に「preview」のラベル）と、本番を前の版に戻す手動のジョブを deploy.yml に持つ |
+| [0117](adr/0117-pattern-list-end-time-referrer-person-input-toggles.md) | 今の繰り返しが分かる一覧（前の中身は消さず畳む・いつから／いつまでの札）・所要と終わりの時刻を相互に入れる・紹介元の相談員・〈利用者さん〉の特性と時間の決め方の入り切り |
+| [0121](adr/0121-home-near-before-end-and-setting-set-link.md) | 帰りの前は自宅に近い人（勤務の終わりの N分前から。条件の行で決める）と、設定のひな形を `#/settings?apply=<ID>` のリンクで確認して適用する |
+| [0120](adr/0120-companion-visits-and-copy.md) | 2人体制・研修同行は同じ時刻の訪問をもう1件（省略可の印 `accompany`）で表し、訪問の詳細の欄の［この訪問をコピー］から足す |
+| [0122](adr/0122-release-backup-and-setting-set-steps.md) | 更新のときに前のデータを1世代の控えへ自動で残し（データの画面から戻せる）、設定のひな形のリンクを ①控え ②変わる設定 ③適用 の手順の画面にする（更新の知らせは出さない） |
 
 ## 文書の保ち方
 

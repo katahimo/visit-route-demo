@@ -5,7 +5,7 @@ import { useFeature } from '../components/useFeature';
 import { RULE_TYPES, type Rule, type RuleType } from '../contracts/rules';
 import { newId, ruleTypeLabel } from '../lib/common';
 import { addRule } from '../lib/presets';
-import { isSavedHard, RULE_DEFAULTS, removeRule, renameRule } from '../lib/ruleEdit';
+import { isSavedHard, RULE_DEFAULTS, removeRule, renameRule, setBeforeEnd } from '../lib/ruleEdit';
 import { useDemoData } from '../store';
 import './settings.css';
 import { PresetSection } from './presetSection';
@@ -73,6 +73,7 @@ export default function RulesPage() {
           changeOf={draft.changeOf}
           actions={{
             onLabel: (id, label) => update((d) => renameRule(d, id, label), '条件の名前'),
+            onBeforeEnd: (id, n) => update((d) => setBeforeEnd(d, id, n), '勤務の終わりの何分前から'),
             onWeight: draft.setWeight,
             onRemove: remove,
           }}

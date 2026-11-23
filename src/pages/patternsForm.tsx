@@ -1,6 +1,7 @@
 // 〈利用者さん〉の繰り返し（定期パターン。ADR-0012・0013・0028・0062）を足す・直す欄：種類と繰り返し方・曜日・第何週・時刻と期間と担当・
 // 曜日ごとの時刻・曜日ごとの標準の開始。欄の中身の確かめは lib/patternForm、保存の処理は usePatternsFlow
 import { CalendarClock, Check, Trash2, X } from 'lucide-react';
+import { DurationEndFields } from '../components/DurationEndFields';
 import { enterToSave, FieldError } from '../components/FieldError';
 import { MonthWeekChips } from '../components/MonthWeekChips';
 import { WithIcon } from '../components/ui';
@@ -9,6 +10,7 @@ import type { Pattern, Staff, VisitType } from '../contracts/documents';
 import { WEEKDAY_LABELS } from '../lib/common';
 import {
   isRepeatChoice,
+  NO_USUAL_STAFF,
   type PatternForm,
   repeatChoiceLabel,
   repeatChoiceOf,
@@ -120,20 +122,32 @@ function PatternRepeatFields({
   );
 }
 
-/** 時間の決め方・開始・所要・いつから（開始日）・終了日・担当・メモ */
-function PatternTimeFields({ form, setForm, staff, today }: FieldsProps & { staff: readonly Staff[]; today: string }) {
+/**
+ * 時間の決め方・開始・所要と終わり・いつから（開始日）・終了日・担当・メモ。
+ * 時間の決め方は windowOn（機能 timeWindow が入か、開いたときの値が幅）のときだけ出す。切ならちょうど（既定）で入れる（ADR-0117）
+ */
+function PatternTimeFields({
+  form,
+  setForm,
+  staff,
+  today,
+  windowOn,
+}: FieldsProps & { staff: readonly Staff[]; today: string; windowOn: boolean }) {
   return (
     <div className="form-grid">
-      <label>
-        時間の決め方
-        <select
-          value={form.windowKind}
-          onChange={(e) => setForm({ ...form, windowKind: e.target.value as Pattern['windowKind'] })}
-        >
-          <option value="fixed">ちょうど</option>
-          <option value="window">幅（この間に開始）</option>
-        </select>
-      </label>
+      {windowOn && (
+        <label>
+          時間の決め方
+          <select
+            value={form.windowKind}
+            onChange={(e) => setForm({ ...form, windowKind: e.target.value as Pattern['windowKind'] })}
+            data-testid="pattern-window"
+          >
+            <option value="fixed">ちょうど</option>
+            <option value="window">幅（この間に開始）</option>
+          </select>
+        </label>
+      )}
       <label>
         {form.windowKind === 'fixed' ? '開始' : '開始（早）'}
         <input
@@ -152,16 +166,14 @@ function PatternTimeFields({ form, setForm, staff, today }: FieldsProps & { staf
           />
         </label>
       )}
-      <label>
-        所要（分）
-        <input
-          type="number"
-          min={5}
-          max={720}
-          value={form.durationMinutes}
-          onChange={(e) => setForm({ ...form, durationMinutes: e.target.value })}
-        />
-      </label>
+      <DurationEndFields
+        start={form.earliestStart}
+        minutes={form.durationMinutes}
+        onMinutes={(durationMinutes) => setForm({ ...form, durationMinutes })}
+        durationLabel="所要（分）"
+        endLabel={form.windowKind === 'fixed' ? '終わり' : '終わり（開始（早）のとき）'}
+        testIdPrefix="pattern"
+      />
       {form.id ? (
         <label>
           <WithIcon icon={CalendarClock} size={14}>
@@ -191,7 +203,8 @@ function PatternTimeFields({ form, setForm, staff, today }: FieldsProps & { staf
           onChange={(e) => setForm({ ...form, usualStaffId: e.target.value })}
           data-testid="pattern-staff"
         >
-          <option value="">担当なし（AI で組む）</option>
+          <option value="">AI で組む（組んだ人をいつもの担当に）</option>
+          <option value={NO_USUAL_STAFF}>担当なし（決めない・組まない）</option>
           {staff.map((s) => (
             <option key={s.id} value={s.id}>
               {s.name}
@@ -319,6 +332,7 @@ export function PatternEditForm({
   monthlyOn,
   monthlyOffId,
   daysLocked,
+  windowOn,
   errorState,
   error,
   onSave,
@@ -331,6 +345,8 @@ export function PatternEditForm({
   monthlyOn: boolean;
   monthlyOffId: string;
   daysLocked: boolean;
+  /** 時間の決め方を出すか（機能 timeWindow が入か、開いたときの値が幅。ADR-0117） */
+  windowOn: boolean;
   /** FieldError の token と文 */
   errorState: { text: string } | null;
   error: string | null;
@@ -350,7 +366,7 @@ export function PatternEditForm({
         monthlyOffId={monthlyOffId}
         daysLocked={daysLocked}
       />
-      <PatternTimeFields form={form} setForm={setForm} staff={staff} today={today} />
+      <PatternTimeFields form={form} setForm={setForm} staff={staff} today={today} windowOn={windowOn} />
       <PatternDayTimes form={form} setForm={setForm} monthlyOn={monthlyOn} />
       <PatternUsualStarts form={form} setForm={setForm} />
       {form.id && (

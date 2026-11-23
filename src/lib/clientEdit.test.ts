@@ -97,6 +97,13 @@ describe('clientSaveDraft', () => {
     const r = draftOf({ ...e, form: { ...e.form, referrer: { ...e.form.referrer, email: 'abc' } } });
     expect(!r.ok && r.error.field).toBe('referrer');
   });
+  it('紹介元の相談員は前後の空白を落とし、空なら欄ごと省く（ADR-0117）', () => {
+    const e = openClientEdit('stage', saved, people);
+    const r = draftOf({ ...e, form: { ...e.form, referrer: { ...e.form.referrer, person: ' 青葉 ' } } });
+    expect(r.ok && r.draft.referrer.person).toBe('青葉');
+    const blank = draftOf({ ...e, form: { ...e.form, referrer: { ...e.form.referrer, person: '  ' } } });
+    expect(blank.ok && 'person' in blank.draft.referrer).toBe(false);
+  });
   it('同じ名前は誤り（名前を直している節だけ）', () => {
     const other = client('c2', 35, 139, { displayName: '佐藤' });
     const e = openClientEdit('basic', saved, people);

@@ -1,6 +1,7 @@
 // 焼きなましの段（初期解・初期温度・受理判定・最後の仕上げ・結果の組み立て）。計算の順は元の createSolver のまま
 import type { Problem, SolveResult } from '../contracts/problem';
 import { DROP_POINTS } from '../contracts/rules';
+import { chainScore } from '../matching/chain';
 import { balancePoints, overCap, totalPoints } from '../matching/cost';
 import { naiveSeqs } from '../matching/naive';
 import { EPS, routeCost, scheduleRoute } from '../matching/timing';
@@ -198,6 +199,7 @@ export function resultOf(
     wait,
     assign,
     balance: balancePoints(problem, bc),
+    chain: chainScore(problem, bestRoutes).points,
     dropped: un.length,
   });
   return { routes: out, unassigned: un, score, seed, iterations, stopped };

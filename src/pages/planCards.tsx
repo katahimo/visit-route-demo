@@ -410,7 +410,7 @@ export function bandOf(p: PlanCtx, id: string, sid: string): TimelineBand {
       <TriangleAlert size={11} aria-hidden="true" />,
       'left-mark',
     );
-  // 要対応・資格✗／限✗・未連絡の変更・ピン・この回だけ変更・仮押さえは、週・月・人の予定表と同じ判定と印（lib/visitLook）
+  // 要対応・資格✗／限✗・未連絡の変更・ピン・この回だけ変更・仮押さえ・同行（ADR-0120）は、週・月・人の予定表と同じ判定と印（lib/visitLook）
   const look = looks.get(id);
   for (const lm of look?.marks ?? [])
     mark(
@@ -430,7 +430,13 @@ export function bandOf(p: PlanCtx, id: string, sid: string): TimelineBand {
       ) : (
         lm.short
       ),
-      lm.kind === 'issue' ? 'issue-mark' : lm.kind === 'told' ? 'told-mark' : undefined,
+      lm.kind === 'issue'
+        ? 'issue-mark'
+        : lm.kind === 'told'
+          ? 'told-mark'
+          : lm.kind === 'companion'
+            ? 'companion-mark'
+            : undefined,
       lm.toldDate,
     );
   if (subFrom) mark('sub', 'is-move', `代行（元の担当：${staffName(subFrom)}さん）`, '代', 'substitute');

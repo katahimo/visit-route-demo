@@ -1,6 +1,6 @@
 # AI の条件と設定（条件の重み・プリセット・種類・特性の項目）と比較の画面
 
-> この画面のファイル：`src/pages/RulesPage.tsx`（区画 `rulesParts.tsx`・プリセットの管理 `presetSection.tsx`・状態 `useRulesDraft.ts`・`usePresetSection.ts`）・`TypesPage.tsx`（`useTypeForm.ts`）・`ItemsPage.tsx`・`ComparePage.tsx`（区画 `compareParts.tsx`・担当ごとの比較と地図 `compareStaff.tsx`・状態 `useCompareChoices.ts`・`useCompareProposal.ts`・`useCompareScores.ts`）、`src/components/conditions.tsx`・`routeView.tsx`・`useLeaveGuard.ts`、`src/lib/presets.ts`・`weightDraft.ts`・`ruleEdit.ts`（条件の名前・削除・乱数の種）・`visitTypes.ts`（種類の確かめ・保存・削除）・`items.ts`（項目の消去・形の変更・選択肢の名前の変更）・`leaveGuard.ts`・`emptyGuide.ts`・`scoreReason.ts`・`compareChoices.ts`（比べる案の一覧・A と B の選び方・条件の差）。関連 ADR：0002・0005・0007・0008・0010・0012・0035・0048・0053・0070・0088・0100。関連 PRD：D20・D23・D25・D36・D173〜D175・D220・D233・D235・D271・D286・D317・D318・D355。
+> この画面のファイル：`src/pages/RulesPage.tsx`（区画 `rulesParts.tsx`・プリセットの管理 `presetSection.tsx`・状態 `useRulesDraft.ts`・`usePresetSection.ts`）・`TypesPage.tsx`（`useTypeForm.ts`）・`ItemsPage.tsx`・`ComparePage.tsx`（区画 `compareParts.tsx`・担当ごとの比較と地図 `compareStaff.tsx`・状態 `useCompareChoices.ts`・`useCompareProposal.ts`・`useCompareScores.ts`）、`src/components/conditions.tsx`・`routeView.tsx`・`useLeaveGuard.ts`、`src/lib/presets.ts`・`weightDraft.ts`・`ruleEdit.ts`（条件の名前・削除・乱数の種）・`visitTypes.ts`（種類の確かめ・保存・削除）・`items.ts`（項目の消去・形の変更・選択肢の名前の変更）・`leaveGuard.ts`・`emptyGuide.ts`・`scoreReason.ts`・`compareChoices.ts`（比べる案の一覧・A と B の選び方・条件の差）。関連 ADR：0002・0005・0007・0008・0010・0012・0035・0048・0053・0070・0088・0100・0116・0121。関連 PRD：D20・D23・D25・D36・D173〜D175・D220・D233・D235・D271・D286・D317・D318・D355・D479。
 > 契約（`Preset`・`scorePresetId`）は design.md §5「項目・条件・プリセット」。重みは1組。
 
 ### 条件の重み（`#/rules`）
@@ -15,6 +15,7 @@ AI で担当を組むとき（予定を入れたときの自動の組み・担�
 #### 条件
 
 - 条件ごとの行：名前（ふだんは文字 `rule-name`、文字のボタン［名前を変える］（`rule-rename`）で入力欄 `rule-name-input`。Enter・欄を離れると決め（変わっていなければ書かない）、Esc で取り消してフォーカスはボタンへ。変換中の Enter・Esc は変換のもの。空なら型の名前）・種類・重みのスライダー（0〜5）・必須の切り替え・消す。重み・必須は `scoreRulesOf(data)` に下書きを当てて出す。同じ型の条件は同じ重み。名前・足す・消すはすぐ保存（`update`）、重み・必須は下書き
+- 組み込みの条件（続く訪問は同じ人。ADR-0116）の行は消すボタンを出さず、［条件を追加］の種類にも出さない（使わないときは重み0）。帰りの前は自宅に近い人は［条件を追加］で足す。その行の重みの下に「勤務の終わりの［N］分前から」（`rule-before-end`・入力 `rule-before-end-input`。0〜600 の整数。欄を離れる・Enter ですぐ保存（`setBeforeEnd`。重みの下書きに入れない）。整数でなければ「0〜600の整数で入れてください」を出して書かない。ADR-0121）
 - 消すときは独自の確認「条件「〈名前〉」を消しますか？」。必須の条件は本文に「必須の条件です。消すと「守らなければ担当にしない」決まりが無くなり、合わない人にも担当が入ることがあります。」
 - 条件を追加するときの重み・必須は `addRule`（基準のプリセットのその型。無ければ型ごとの既定）
 - 狭い画面（600px 以下）：条件の表（`narrow-rules`）は1条件1枚のカード（[pages.md](pages.md) の「狭い画面の表」）。1行目に名前と「必須」、続けて「種類」（札と説明）・「重み」（スライダーは幅いっぱい）、消すは右下

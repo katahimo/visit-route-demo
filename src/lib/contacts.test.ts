@@ -342,3 +342,39 @@ describe('初めての訪問先の連絡文（D415）', () => {
     expect(rows.find((r) => r.key === 'client:c1')?.text).not.toContain('ポスト');
   });
 });
+
+describe('住所を入れない設定・〈利用者さん〉あてを作らない設定（D467・D468）', () => {
+  const clientById = new Map([['c1', { displayName: '天文台', place: { address: '仙台市' } }]]);
+  const base = {
+    date: '2026-10-15',
+    staffWord: 'スタッフ',
+    orgName: 'ほしみ',
+    staffName: (id: string) => id,
+    clientById,
+    visits: [],
+  };
+  const added = { staffId: 's2', added: [list.staffChanged[0]!], removed: [], shifted: [] };
+  it('既定は住所を入れる。staffAddress が false なら「お願いします」の行から住所を外し、所要の分は残す', () => {
+    const on = dayContactWords(base);
+    expect(on.clientAddress('c1')).toBe('仙台市');
+    const off = dayContactWords({ ...base, staffAddress: false });
+    expect(off.clientAddress('c1')).toBe('');
+    const text = staffMessage(added, { ...w, clientAddress: off.clientAddress });
+    expect(text).toContain('・14:00 天文台ほしみ様の訪問をお願いします（60分）。');
+    expect(text).not.toContain('仙台市');
+    expect(staffMessage(added, w)).toContain('（仙台市青葉区1-1・60分）');
+  });
+  it('住所も所要も無ければ括弧ごと出さない', () => {
+    const text = staffMessage(added, { ...w, clientAddress: () => '', visitMinutes: () => null });
+    expect(text).toContain('・14:00 天文台ほしみ様の訪問をお願いします。');
+  });
+  it('clientContact が false なら〈利用者さん〉あては作らず、〈スタッフ〉あては変わらない。既定は作る', () => {
+    expect(dayContactWords(base).clientContact).toBeUndefined();
+    const off: ContactWords = { ...w, clientContact: false };
+    expect(clientMessages(list, off)).toEqual([]);
+    expect(clientMessages(list, w).length).toBeGreaterThan(0);
+    expect(contactRows(list, [], off).map((r) => r.to)).toEqual(['staff', 'staff']);
+    expect(allContactsText(list, off)).toBe(list.staff.map((c) => staffMessage(c, off)).join('\n\n'));
+    expect(allContactsText(list, w)).toContain('様\nいつもお世話になっております');
+  });
+});

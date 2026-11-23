@@ -532,6 +532,75 @@ async function toldContacts(page) {
   );
 }
 
+// ---- 連絡の一覧の入り切り（PRD D467・D468。ADR-0118）：〈利用者さん〉への訪問連絡・変更の連絡の住所 ----
+async function contactFeatures(page) {
+  await page.goto(`${BASE}#/data`);
+  await page.evaluate((k) => localStorage.removeItem(k), STORAGE_KEY);
+  await planDays(page, { cache: true });
+  await openPlan(page);
+  await page.getByTestId('adopt').click();
+  await waitStored(page, (d) => !!d.snapshots?.[TODAY]);
+  // 別のタブで、伝えた訪問の1件を別の人に替える（その〈利用者さん〉の住所が「お願いします」の行に載る）
+  const other = await page.context().newPage();
+  await other.goto(`${BASE}#/data`);
+  const moved = await other.evaluate(
+    ([k, day]) => {
+      const d = JSON.parse(localStorage.getItem(k));
+      const v = d.visits.find((x) => x.date === day && !x.cancelled && x.staffId);
+      const c = d.clients.find((x) => x.id === v.clientId);
+      const to = d.staff.find((s) => s.active && s.id !== v.staffId);
+      v.staffId = to.id;
+      v.pinned = true;
+      localStorage.setItem(k, JSON.stringify(d));
+      return { address: c.place.address, client: c.displayName };
+    },
+    [STORAGE_KEY, TODAY],
+  );
+  await other.close();
+  const sheetOf = async () => {
+    await openPlan(page);
+    await page.getByTestId('told-open').click();
+    await page.getByTestId('contact-sheet').waitFor({ timeout: 10000 });
+    return page.getByTestId('contact-sheet').innerText();
+  };
+  const on = await sheetOf();
+  check(moved.address !== '', '確かめ用の〈利用者さん〉に住所がある', moved);
+  check(
+    on.includes('あて・') && on.includes('担当が変わる') && on.includes(`（${moved.address}`),
+    '既定：〈利用者さん〉あての連絡文・表と、〈スタッフ〉あての連絡文の住所が出る',
+    on.slice(0, 600),
+  );
+  await page.keyboard.press('Escape');
+  const setFeatures = (features) =>
+    page.evaluate(
+      ([k, f]) => {
+        const d = JSON.parse(localStorage.getItem(k));
+        d.org.features = { ...d.org.features, ...f };
+        localStorage.setItem(k, JSON.stringify(d));
+      },
+      [STORAGE_KEY, features],
+    );
+  await setFeatures({ contactAddress: false });
+  const noAddress = await sheetOf();
+  check(
+    !noAddress.includes(moved.address) && noAddress.includes('の訪問をお願いします'),
+    '住所を入れない設定：〈スタッフ〉あての文に住所が無く、ほかの文は残る',
+  );
+  await page.keyboard.press('Escape');
+  await setFeatures({ contactAddress: true, clientContact: false });
+  const noClient = await sheetOf();
+  check(
+    !noClient.includes('いつもお世話になっております') &&
+      !noClient.includes('担当が変わる') &&
+      !noClient.includes('時刻だけ変わる') &&
+      noClient.includes('の訪問をお願いします'),
+    '訪問連絡を切る：〈利用者さん〉あての連絡文と表が消え、〈スタッフ〉あてが残る',
+  );
+  await page.screenshot({ path: path.join(OUT_DIR, 'contact-features.png') });
+  await page.keyboard.press('Escape');
+  await setFeatures({ clientContact: true });
+}
+
 // ---- 当日キャンセル ----
 async function sameDayCancel(page) {
   await openPlan(page);
@@ -923,6 +992,7 @@ const steps = sharedPage({
     ['mobile', mobile],
     ['header-label', headerLabel],
     ['told-contacts', toldContacts],
+    ['contact-features', contactFeatures],
     ['revert-cases', revertCases],
   ],
   call: (fn, s) => fn(s.page, s.st),

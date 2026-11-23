@@ -56,6 +56,8 @@ export function ContactPanel({
   onClose: () => void;
 }) {
   const clients = clientMessages(list, words);
+  /** 〈利用者さん〉あての連絡（機能「訪問連絡」が切なら、表も連絡文も出さない。D467） */
+  const clientOn = words.clientContact !== false;
   const empty = list.staff.length === 0 && list.staffChanged.length === 0;
   const nothing = empty && left.length === 0;
   const copy = (text: string, what: string) => {
@@ -105,11 +107,11 @@ export function ContactPanel({
           <p>連絡が要る変更はありません。</p>
         ) : empty ? null : (
           <>
-            <StaffChangedSection list={list} words={words} terms={terms} />
-            <TimeChangedSection list={list} words={words} terms={terms} />
+            {clientOn && <StaffChangedSection list={list} words={words} terms={terms} />}
+            {clientOn && <TimeChangedSection list={list} words={words} terms={terms} />}
             <StaffListSection list={list} words={words} terms={terms} />
             <StaffMessagesSection list={list} words={words} terms={terms} staffMail={staffMail} copy={copy} />
-            <ClientMessagesSection clients={clients} words={words} terms={terms} copy={copy} />
+            {clientOn && <ClientMessagesSection clients={clients} words={words} terms={terms} copy={copy} />}
           </>
         )}
       </div>

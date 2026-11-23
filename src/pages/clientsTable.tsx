@@ -13,6 +13,7 @@ import { jstDate } from '../domain/time';
 import { STAGE_LABELS } from '../lib/clientStage';
 import { colorOf, initialOf } from '../lib/colors';
 import { hasLocation } from '../lib/common';
+import { isOn } from '../lib/features';
 import { narrowRole } from '../lib/narrowRoles';
 import { addressCellText, type ClientCol, clientColumns, clientNameNote, usualPlanText } from '../lib/peopleView';
 import { shouldOpenRow } from '../lib/rowOpen';
@@ -82,7 +83,7 @@ export function ClientsTable({
 }) {
   const terms = data.org.terms;
   const staffName = (id: string | null) => (id ? (staff.find((s) => s.id === id)?.name ?? '（不明）') : '');
-  const cols = clientColumns(detailed);
+  const cols = clientColumns(detailed, isOn(data.org.features, 'clientTraits'));
   const ctx: RowContext = {
     data,
     cols,

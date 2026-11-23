@@ -1,6 +1,7 @@
 // 本物のマウス操作（mouse.down → move → up）で、画面のドラッグが動くかを確かめる（5種類）。
 // 週の〈利用者さん〉で見るでは、初期値で先頭8人のチップが選ばれていることも確かめる（week-client-default。PRD D136・D137）。
 // 週・スタッフ／週・利用者さん／予定の時間軸／予定の順番／月 → 日（予定の時間軸。月のマスは1回目で右の欄、もう一度押して日の予定）。
+// 予定の担当なしの訪問が多い日に、縦の低い窓（1440×681）で下の端へ寄せて巻き、担当の列へ落とす（plan-unassigned-scroll。PRD D452）。
 // 〈利用者さん〉×曜日の表・〈スタッフ〉×曜日の表・月の一覧の行のドラッグは e2e-chip-containers・e2e-shared-parts（どちらも本物のマウス）。
 // あわせて、週間の〈利用者さん〉×曜日の表の検索欄で日本語の変換（IME。CDP の Input.imeSetComposition）が壊れないかも確かめる
 // （week-clients-ime。変換中は URL の ?cf= を書かず、確定後に書く。URL が外から変わったら入力欄を合わせる。PRD D109）。
@@ -24,6 +25,7 @@ const {
   watchErrors,
   runSteps,
   settle,
+  until,
 } = require('./lib/env.cjs');
 const { pressTool } = require('./lib/ui.cjs');
 const { sharedPage } = require('./lib/steps.cjs');
@@ -204,6 +206,62 @@ async function planMove(page, view, name) {
   report(name, r.ev.includes('drop') && to !== from && r.moved === 0, { vid, from, to, ...r });
 }
 
+/**
+ * 予定の画面：担当なしの訪問が多く、落とす先の列が画面の外にあるとき（縦の低い窓）、ドラッグ中に画面の下の端へ寄せると巻き、
+ * 列へ落とせる（PRD D452。Safari は端で巻かないことがあるので、アプリが巻く）
+ */
+async function planUnassignedScroll(page) {
+  await page.setViewportSize({ width: 1440, height: 681 });
+  await page.goto(`${BASE}#/plan`);
+  await page.reload();
+  await page.locator('[data-testid="route-timeline"]').waitFor({ timeout: 30000 });
+  const cards = page.locator('.route-col-none .route-item[draggable="true"]');
+  // 担当なしの訪問が3件以上ある日を探す（今日から先へ）
+  for (let i = 0; i < 14 && (await cards.count()) < 3; i++) {
+    await page.getByRole('button', { name: '次の日' }).click();
+    await settle(page, 400);
+  }
+  const before = await cards.count();
+  const src = cards.first().locator('.route-btn');
+  await src.scrollIntoViewIfNeeded();
+  const sb = await src.boundingBox();
+  const colTop = () => page.evaluate(() => document.querySelector('.tl-col')?.getBoundingClientRect().top ?? 0);
+  const startTop = await colTop();
+  const y0 = await page.evaluate(() => window.scrollY);
+  await page.mouse.move(sb.x + sb.width / 2, sb.y + 8);
+  await page.mouse.down();
+  await withTimeout(page.mouse.move(sb.x + sb.width / 2 + 6, sb.y + 14, { steps: 3 }), 3000, 'つかみ');
+  await settle(page, 150);
+  // 下の端へ寄せて、列の見出しが画面の真ん中より上に来るまで待つ（巻くのはアプリ。指は止めたまま）
+  await withTimeout(page.mouse.move(700, 672, { steps: 10 }), 3000, '下の端へ');
+  const reached = await until(async () => (await colTop()) < 300, 8000);
+  const y1 = await page.evaluate(() => window.scrollY);
+  // 真ん中へ戻すと巻くのが止まる
+  await withTimeout(page.mouse.move(700, 400, { steps: 5 }), 3000, '真ん中へ');
+  await settle(page, 200);
+  const y2 = await page.evaluate(() => window.scrollY);
+  await settle(page, 300);
+  const stopped = (await page.evaluate(() => window.scrollY)) === y2;
+  const col = page.locator('.tl-col[data-staff]').first();
+  const cb = await col.boundingBox();
+  await withTimeout(
+    page.mouse.move(cb.x + cb.width / 2, Math.min(600, Math.max(cb.y + 60, 160)), { steps: 8 }),
+    3000,
+    '列へ',
+  );
+  await settle(page, 300);
+  await withTimeout(page.mouse.up(), 3000, '離す');
+  await settle(page, 600);
+  const after = await cards.count();
+  report('plan-unassigned-scroll', before >= 3 && startTop > 681 && reached && stopped && after === before - 1, {
+    before,
+    after,
+    startTop,
+    scrolled: [y0, y1, y2],
+    stopped,
+  });
+  await page.setViewportSize({ width: 1400, height: 1000 });
+}
 /** 週間の表の検索欄で日本語を変換して確定する（変換中に入力欄が戻されない・確定後に URL に入る・外からの変更に合わせる） */
 async function weekClientsIme(page) {
   const name = 'week-clients-ime';
@@ -296,6 +354,7 @@ const steps = sharedPage({
         await planMove(page, 'timeline', 'month-day');
       },
     ],
+    ['plan-unassigned-scroll', planUnassignedScroll],
   ],
 });
 

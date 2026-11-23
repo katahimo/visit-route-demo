@@ -1,32 +1,34 @@
 import { ArrowDownToLine, Map as MapIcon, Maximize2, X } from 'lucide-react';
-import { type RefObject, useEffect, useId, useRef, useState } from 'react';
+import { type RefObject, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
 import { scrollBehavior } from '../lib/motion';
 import type { MapLine, MapPoint } from '../lib/routeView';
+import { mapDockOpenKey, navOpenMemory } from '../store';
 import { useFloatingEdge } from './floating';
 import { RouteMap } from './RouteMap';
 import { IconButton } from './ui';
 
 /**
  * 画面の外にある地図を、右下に小さく浮かせて見せる。
- * 元の地図（target）が見えていないときだけ出す。スタッフ・区間・訪問を選ぶと自動で開き、閉じてもボタンで開き直せる
+ * 元の地図（target）が見えていないときだけ出す。勝手には開かず、右下の「地図」のボタンで開く。
+ * 開けた・閉じたは端末に覚える（日・画面を替えても、読み直しても同じ。PRD D466。ADR-0118）。
+ * 開いているあいだは、スタッフ・区間・訪問を選ぶと地図が強調される
  */
 export function MapDock({
   target,
   points,
   lines,
   title,
-  focusKey,
 }: {
   /** ページの中の地図のカード（見えているあいだは浮かせない） */
   target: RefObject<HTMLElement | null>;
   points: MapPoint[];
   lines: MapLine[];
   title: string;
-  /** 選んだもの（スタッフ・区間・訪問）。変わったら閉じていても開く。空文字は何も選んでいない */
-  focusKey: string;
 }) {
   const [inView, setInView] = useState(true);
-  const [open, setOpen] = useState(false);
+  const stored = useSyncExternalStore(navOpenMemory.subscribe, navOpenMemory.read, navOpenMemory.cached);
+  const open = stored[mapDockOpenKey] === true;
+  const setOpen = (v: boolean) => navOpenMemory.write(mapDockOpenKey, v);
   const panelId = useId();
   const fabRef = useRef<HTMLButtonElement | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
@@ -51,11 +53,6 @@ export function MapDock({
       io.disconnect();
     };
   }, [target]);
-
-  // 何かを選んだら開く（選び直すたびに開き直す）
-  useEffect(() => {
-    if (focusKey) setOpen(true);
-  }, [focusKey]);
 
   if (inView || lines.length === 0) return null;
   if (!open)

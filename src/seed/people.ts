@@ -54,6 +54,8 @@ export const INITIAL_RULES: Rule[] = [
   { id: 'continuity', type: 'continuity', label: 'いつもの担当', weight: 2, hard: false },
   { id: 'balance', type: 'balance', label: '負担の均等', weight: 3, hard: false },
   { id: 'wait', type: 'wait', label: '待ち時間', weight: 3, hard: false },
+  // 組み込みの条件（ADR-0116。消せない。store の repair が無いデータに足す）
+  { id: 'sameClient', type: 'sameClient', label: '続く訪問は同じ人', weight: 2, hard: false },
 ];
 
 export type StaffSeed = {

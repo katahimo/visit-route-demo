@@ -6,6 +6,8 @@ import { jstDate } from '../domain/time';
 import { bookingOfUse, createFirstRunData, type FirstRunAnswer, firstRunSetup, firstRunUseOf } from '../lib/firstRun';
 import { LATEST_RELEASE, notesSince, type ReleaseNote } from '../lib/releaseNotes';
 import { createInitialData } from '../seed/plans';
+import { isQuota, KEEP_FAILED, KEEP_FULL, KEEP_NO_STORAGE } from './quota';
+import { dropReleasePrevious, keepBeforeRelease, type ReleaseBackup } from './releaseBackup';
 import { repair } from './repair';
 import {
   lastBooking,
@@ -119,12 +121,6 @@ export function currentData(): DemoData | null {
   return current;
 }
 
-/** 容量超過の例外か */
-function isQuota(e: unknown): boolean {
-  if (e instanceof DOMException && (e.name === 'QuotaExceededError' || e.code === 22)) return true;
-  return (e as { name?: string } | null)?.name === 'QuotaExceededError';
-}
-
 /** 1世代の控えを消す（容量を空ける） */
 function dropPrevious(ls: Storage): void {
   try {
@@ -137,9 +133,10 @@ function dropPrevious(ls: Storage): void {
 
 /**
  * 書いた結果。message：失敗したら利用者向けの文言（成功は null）。
- * droppedPrevious：容量が足りず1世代の控えを捨てた（画面は控えの欄を消して知らせる。ADR-0032）
+ * droppedPrevious：容量が足りず1世代の控えを捨てた（画面は控えの欄を消して知らせる。ADR-0032）。
+ * droppedRelease：それでも足りず更新前の控えも捨てた（ADR-0122）
  */
-export type WriteResult = { message: string | null; droppedPrevious: boolean };
+export type WriteResult = { message: string | null; droppedPrevious: boolean; droppedRelease: boolean };
 
 /** 即時に書く。結果の文言は lastSaveError にも残す */
 function writeNow(data: DemoData): WriteResult {
@@ -149,27 +146,41 @@ function writeNow(data: DemoData): WriteResult {
 }
 
 /**
- * 書いてみる。容量超過なら1世代の控えを捨ててもう1回だけ書く（いまのデータを残すほうが先。ADR-0032）
+ * 書いてみる。容量超過なら1世代の控え → 更新前の控えの順に1つずつ捨てて書き直す（いまのデータを残すほうが先。ADR-0032・ADR-0122）
  */
 function tryWrite(data: DemoData): WriteResult {
-  const fail = (message: string, droppedPrevious = false): WriteResult => ({ message, droppedPrevious });
+  const r: WriteResult = { message: null, droppedPrevious: false, droppedRelease: false };
+  const failed = '保存できませんでした。データを書き出してください';
   const ls = storage();
-  if (!ls) return fail('保存できませんでした（このブラウザでは保存が使えません）。データを書き出してください');
+  if (!ls)
+    return { ...r, message: '保存できませんでした（このブラウザでは保存が使えません）。データを書き出してください' };
   const text = JSON.stringify(data);
   try {
     ls.setItem(STORAGE_KEY, text);
-    return { message: null, droppedPrevious: false };
+    return r;
   } catch (e) {
-    if (!isQuota(e)) return fail('保存できませんでした。データを書き出してください');
-    if (ls.getItem(PREV_KEY) === null) return fail(QUOTA_MESSAGE);
-    dropPrevious(ls);
+    if (!isQuota(e)) return { ...r, message: failed };
+  }
+  const retry = (): WriteResult | null => {
     try {
       ls.setItem(STORAGE_KEY, text);
-      return { message: null, droppedPrevious: true };
+      return r;
     } catch (e2) {
-      return fail(isQuota(e2) ? QUOTA_MESSAGE : '保存できませんでした。データを書き出してください', true);
+      return isQuota(e2) ? null : { ...r, message: failed };
     }
+  };
+  if (ls.getItem(PREV_KEY) !== null) {
+    dropPrevious(ls);
+    r.droppedPrevious = true;
+    const done = retry();
+    if (done) return done;
   }
+  if (dropReleasePrevious(ls)) {
+    r.droppedRelease = true;
+    const done = retry();
+    if (done) return done;
+  }
+  return { ...r, message: QUOTA_MESSAGE };
 }
 
 /** 読めなかった元の文字（退避できなかったときもこれで書き出せるよう、開いている間は覚える） */
@@ -198,7 +209,9 @@ function keepBroken(ls: Storage, text: string): boolean {
  * firstRun：保存データが無く、初めて開いた（印「all」が無いとき。画面は最初の2問を出し、答えが決まるまでデータを書かない。PRD D379）。
  * 印「all」（start.ts）があれば2問を出さず、今の初期データ＋すべて入（{}）で書いて始める（e2e の前準備）。
  * releaseNotes：保存データが読め、まだ見ていないデモの更新（新しい順。空なら知らせない。PRD D437。画面は変わったところと「今のデータを使い続ける」を出す）。
- * 印「all」のとき・読めなかったときは知らせず、見たことにする
+ * 印「all」のとき・読めなかったときは知らせず、見たことにする。
+ * releaseBackup：まだ見ていない更新があるとき、画面を出す前に読んだ元の文字を「更新前の控え」（RELEASE_PREV_KEY）に残した結果（PRD D483。ADR-0122）。
+ * 知らせない開き方では null
  */
 export function loadWithStatus(): {
   data: DemoData;
@@ -207,6 +220,7 @@ export function loadWithStatus(): {
   brokenKept: boolean;
   firstRun: boolean;
   releaseNotes: ReleaseNote[];
+  releaseBackup: ReleaseBackup | null;
 } {
   const ls = storage();
   const todayDate = today();
@@ -217,12 +231,28 @@ export function loadWithStatus(): {
       writeNow(d);
       current = d;
       rememberRelease(LATEST_RELEASE);
-      return { data: d, broken: false, outdated: false, brokenKept: false, firstRun: false, releaseNotes: [] };
+      return {
+        data: d,
+        broken: false,
+        outdated: false,
+        brokenKept: false,
+        firstRun: false,
+        releaseNotes: [],
+        releaseBackup: null,
+      };
     }
     // 最初の2問に答えるまでは書かない（読み直すとまた2問）。それまでの仮のデータは空（画面は2問の画面だけを出す）
     const d = createFirstRunData({ start: 'own', use: 'basic' }, todayDate);
     current = d;
-    return { data: d, broken: false, outdated: false, brokenKept: false, firstRun: true, releaseNotes: [] };
+    return {
+      data: d,
+      broken: false,
+      outdated: false,
+      brokenKept: false,
+      firstRun: true,
+      releaseNotes: [],
+      releaseBackup: null,
+    };
   }
   const r = importJson(text);
   if (isImportError(r)) {
@@ -247,13 +277,15 @@ export function loadWithStatus(): {
     if (brokenKept) writeNow(d);
     current = d;
     rememberRelease(LATEST_RELEASE);
-    return { data: d, broken: true, outdated, brokenKept, firstRun: false, releaseNotes: [] };
+    return { data: d, broken: true, outdated, brokenKept, firstRun: false, releaseNotes: [], releaseBackup: null };
   }
   current = r;
   const all = startsWithAll();
   if (all) rememberRelease(LATEST_RELEASE);
   const releaseNotes = all ? [] : notesSince(seenRelease());
-  return { data: r, broken: false, outdated: false, brokenKept: false, firstRun: false, releaseNotes };
+  // 知らせる更新があれば、画面を出す前に読んだ元の文字を更新前の控え（1世代の控えとは別のキー）に残す（リンクから開いても同じ。PRD D483）
+  const releaseBackup = releaseNotes.length > 0 ? keepBeforeRelease(text, LATEST_RELEASE) : null;
+  return { data: r, broken: false, outdated: false, brokenKept: false, firstRun: false, releaseNotes, releaseBackup };
 }
 
 export function load(): DemoData {
@@ -280,8 +312,8 @@ export function brokenText(): string | null {
 }
 
 let timer: ReturnType<typeof setTimeout> | null = null;
-/** 保存の結果を受け取る（成功は message が null。droppedPrevious は容量のために捨てた控え） */
-export type SaveCallback = (message: string | null, droppedPrevious: boolean) => void;
+/** 保存の結果を受け取る（成功は message が null。droppedPrevious・droppedRelease は容量のために捨てた控え） */
+export type SaveCallback = (message: string | null, droppedPrevious: boolean, droppedRelease: boolean) => void;
 let pending: { data: DemoData; onError?: SaveCallback } | null = null;
 
 /** 待っている保存をすぐ書く（ページを閉じる前・テスト用） */
@@ -293,7 +325,7 @@ export function flushSave(): void {
   if (!p) return;
   // onError が無くても書く（p.onError?.(writeNow(...)) だと onError の無いときに書かない）
   const r = writeNow(p.data);
-  p.onError?.(r.message, r.droppedPrevious);
+  p.onError?.(r.message, r.droppedPrevious, r.droppedRelease);
 }
 
 /**
@@ -360,12 +392,9 @@ export type PreviousInfo = { at: number; reason: string };
  */
 export type PreviousKeep = { kept: boolean; why: string | null; cancel(): void };
 
-const KEEP_FULL = '控えを残せません：容量不足';
-const KEEP_NO_STORAGE = '控えを残せません：このブラウザでは保存が使えません';
-
 /**
  * 置き換える前のデータを1世代だけ控える（PREV_KEY・PREV_INFO_KEY。次に控えると上書き）。
- * 書けなければ（容量超過）前の世代も消して1回だけ試し直し、それでも書けなければ控えなしで kept=false（操作は止めない）
+ * 書けなければ（容量超過）前の世代を消して1回だけ試し直し、それでも書けなければ前の世代を書き戻して kept=false（操作は止めない）
  */
 export function keepPrevious(data: DemoData, reason: string, at: number = Date.now()): PreviousKeep {
   const ls = storage();
@@ -407,8 +436,9 @@ export function keepPrevious(data: DemoData, reason: string, at: number = Date.n
       write();
       kept = true;
     } catch (e2) {
-      dropPrevious(ls);
-      why = isQuota(e) || isQuota(e2) ? KEEP_FULL : '控えを残せません：保存できませんでした';
+      // 書きかけを消し、前の世代を書き戻す（swapPrevious の取り消しと同じ。前の控えを失わない）
+      restoreOld();
+      why = isQuota(e) || isQuota(e2) ? KEEP_FULL : KEEP_FAILED;
     }
   }
   return { kept, why, cancel: restoreOld };
@@ -432,10 +462,22 @@ export const RESTORE_REASON = '直前の状態に戻す';
  * いまのデータを控えに残せなければ（容量不足など）戻さずに文言を返す（控えは元のまま。いまのデータを失わない）
  */
 export function swapPrevious(now: DemoData, at: number = Date.now()): { data: DemoData } | { error: string } {
-  const r = readPrevious();
+  return restoreFrom(readPrevious(), now, RESTORE_REASON, at);
+}
+
+/**
+ * 控えのデータ r に戻す：いまのデータ now を1世代の控えに reason で残してから r を返す。残せなければ戻さない（控えは元のまま）。
+ * 直前の状態に戻す（swapPrevious）と更新前の控えに戻す（releaseRestore.ts）で共用
+ */
+export function restoreFrom(
+  r: DemoData | ImportError | null,
+  now: DemoData,
+  reason: string,
+  at: number,
+): { data: DemoData } | { error: string } {
   if (r === null) return { error: '戻せる控えがありません（別のタブで使ったか、容量のために消えました）' };
   if (isImportError(r)) return { error: `控えを読めませんでした（${r.message}）` };
-  const k = keepPrevious(now, RESTORE_REASON, at);
+  const k = keepPrevious(now, reason, at);
   if (!k.kept) {
     // 書けなかったときに消した控えを元に戻す
     k.cancel();
@@ -473,6 +515,12 @@ function isOutdatedText(text: string): boolean {
   } catch {
     return false;
   }
+}
+
+/** 控えのファイル（書き出す JSON。データの画面の「ファイルに書き出す」と同じ形）。無ければ null、読めなければ ImportError */
+export function exportPrevious(): Blob | ImportError | null {
+  const r = readPrevious();
+  return r === null || isImportError(r) ? r : exportJson(r);
 }
 
 /** 控えのデータ（移行・repair 済み）。無ければ null、読めなければ ImportError */

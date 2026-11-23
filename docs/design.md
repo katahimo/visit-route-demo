@@ -159,15 +159,16 @@ flowchart LR
 
 ### store（データ一式の保存）
 - 責務：`DemoData` の読み込み・保存・検査（zod）・版の確かめ（版1は移さず初期データで始める）・修復（repair）、JSON の書き出し・読み込み、初期状態に戻す、置き換える前の1世代の控え。書き換えは `update`・`replace`・`reset`・`restorePrevious`・`startFirstRun` だけ
-- 画面へ：`useDemoData()`＝`data`・`update(fn, label?, opts?)`・`undo()`・`redo()`・`replace(d)`・`reset(features?)`・`saveError`・`keepPrevious(reason)`・`restorePrevious()`・`previous`・`broken`・`outdated`・`brokenKept`・`dismissBroken()`・`needsFirstRun`・`redoingFirstRun`・`cancelFirstRun()`・`startFirstRun(answer)`・`askFirstRun()`・`externalReloads`・`replacedCount`・`previousDrops`
+- 画面へ：`useDemoData()`＝`data`・`update(fn, label?, opts?)`・`undo()`・`redo()`・`replace(d)`・`reset(features?)`・`saveError`・`keepPrevious(reason)`・`restorePrevious()`・`previous`・`restoreReleasePrevious()`・`releasePrevious`・`broken`・`outdated`・`brokenKept`・`dismissBroken()`・`needsFirstRun`・`redoingFirstRun`・`cancelFirstRun()`・`startFirstRun(answer)`・`askFirstRun()`・`externalReloads`・`replacedCount`・`previousDrops`・`releaseDrops`
 - 持つデータ（持ち主）：localStorage の次のキー
   - `vrdemo:data:v1`：`DemoData`（1つの JSON）。`vrdemo:data:broken`：読めなかった元の文字
   - `vrdemo:data:prev`・`vrdemo:data:prev:info`：1世代の控え（置き換える前の `DemoData`）と `{ at, reason }`（時刻 ms・操作の名前）
+  - `vrdemo:data:release-prev`・`vrdemo:data:release-prev:info`：更新前の控え（まだ見ていない更新があって開いたときに読んだ元の文字のまま）と `{ at, release }`（時刻 ms・更新の id）。1世代の控えとは別で、互いに上書きしない（ADR-0122。`store/releaseBackup.ts`・`releaseRestore.ts`）
   - DemoData の外（ブラウザごとの記録。版・書き出し・読み込み・初期状態に戻すの対象外。`src/contracts/` に足さない）：`vrdemo:features:start`（`all` なら最初の2問を出さない）・`vrdemo:booking:last`（最後の問2の答え `oneOff`／`regular`）・`vrdemo:backup:last`（`{ date: 'YYYY-MM-DD', kind: 'json' | 'excel' }`）・`vrdemo:backup:reminded`（'YYYY-MM-DD'）
 - 提供するAPI（`persist.ts`）：
   - `load()`・`loadWithStatus()`：保存データが無ければ、印 `all` なら `createInitialData(今日, {})`（すべて入）を書いて始め、無ければ最初の2問（`firstRun: true`。答えるまで書かず、読み直してもまた2問。仮のデータは空のデータ）。読めなければ元の文字を `vrdemo:data:broken` に退避して初期データで `broken: true`（退避が容量超過なら控えを捨ててもう1回。退避できたら初期データを書き、読み直すたびに作り直さない。できなければ元の文字を残して `brokenKept: false`）。版1なら初期データで `outdated: true`（画面が「データの形が変わったので初期データで始めます」）
   - `brokenText()`：退避した元の文字（無ければ開いたときに覚えた文字、それも無ければ本体のキーの文字）
-  - `save(data, onResult)`：300ms 間引き・`flushSave()`。結果は `(message, droppedPrevious)`（容量のために控えを捨てたか）
+  - `save(data, onResult)`：300ms 間引き・`flushSave()`。結果は `(message, droppedPrevious, droppedRelease)`（容量超過なら1世代の控え → 更新前の控えの順に捨てて書き直す。捨てたか）
   - `startWithAnswer(answer)`：問2の答えを `vrdemo:booking:last` に残し、`lib/firstRun` の `createFirstRunData(answer, 今日)` を書く（呼び名・ひな形・データが答えで決まる）
   - `reset(features)`：features の既定は今の入り切り（今のデータが無ければ、印があれば答えのひな形、無ければ `{}`）。印 `vrdemo:booking:last` があれば `createFirstRunData({ start: 'demo', booking: 印 }, 今日, features)`、無い・印 `all` なら `createInitialData(今日, features)`
   - `exportJson`・`importJson`（版1は `OUTDATED_MESSAGE` で断る）・`migrate(raw)`（既定値で読み必ず `repair`。§5「版と移行」）・`isOutdated(raw)`・`repair`
@@ -184,11 +185,12 @@ flowchart LR
 - 最初の2問・更新の知らせ（PRD D276・D379〜D381・D437）：
   - 出さない印は `store/start.ts` の `startsWithAll(getStorage)`（保存データが無いときだけ読む。画面からは書かない。e2e の `scripts/lib/startFeatures.cjs` と全機能を見せるデモの前準備）
   - 内部の `firstRun`（`'first'`＝初めて開いた・`'redo'`＝「最初の設定をやり直す」のあと・`'release'`＝まだ見ていないデモの更新がある（`loadWithStatus` の `releaseNotes`。`store/start.ts` の `seenRelease`／`rememberRelease`、キー `vrdemo:release:seen`）・`null`）が null 以外のあいだ `needsFirstRun` が真で、`components/FirstRunPage` の `FirstRunGate` が本体の代わりに2問を出す。`first` のあいだは仮の空データを保存しない（StrictMode の2回実行でも）
-  - `startFirstRun(answer)`：`redo` なら先に `keepPrevious('最初の設定をやり直す')`、`release` なら `keepPrevious('デモの更新で始め直す')`、`startWithAnswer` で書き、`replace` と同じに履歴を捨てて `replacedCount` を増やす（Ctrl+Z の対象外）。`askFirstRun()` は2問を出すだけ。`redoingFirstRun` のときだけ従のボタン「閉じる」（`cancelFirstRun()` で今のデータのまま）。`release` の「今のデータを使い続ける」も `cancelFirstRun()`（`keepAfterRelease` で今の版を見たことにする）。今の版の印は `startWithAnswer`・印 `all`・読めなかったデータでも書く（`rememberRelease` は今の印より新しいときだけ書く。id の新旧は `compareRelease`）。別のタブの保存を受けても `release` の知らせは閉じない
+  - `startFirstRun(answer)`：`redo` なら先に `keepPrevious('最初の設定をやり直す')`、`release` なら今のデータが更新前の控えと違うときだけ `keepPrevious('デモの更新で始め直す')`（同じなら前からある1世代の控えを上書きしない。`releaseBackupHolds`）、`startWithAnswer` で書き、`replace` と同じに履歴を捨てて `replacedCount` を増やす（Ctrl+Z の対象外）。`askFirstRun()` は2問を出すだけ。`redoingFirstRun` のときだけ従のボタン「閉じる」（`cancelFirstRun()` で今のデータのまま）。`release` の「今のデータを使い続ける」も `cancelFirstRun()`（`keepAfterRelease` で今の版を見たことにする）。今の版の印は `startWithAnswer`・印 `all`・読めなかったデータでも書く（`rememberRelease` は今の印より新しいときだけ書く。id の新旧は `compareRelease`）。別のタブの保存を受けても `release` の知らせは閉じない
 - デモを作った直後の1回の組み（PRD D409。ADR-0079）：`startWithAnswer`・`reset` は `store/start.ts` の `arrangesAfterStart({ kind: 'answer', start } | { kind: 'reset' })`（「デモで試す」・初期状態に戻すときだけ真）が真なら sessionStorage の印（`ARRANGE_PENDING_KEY`。`markArrangeAfterStart`）を書き、偽なら消す。store は起動時と作り直した直後に印を読み（`arrangePending`）`startArrange` を置く。`components/autoArrangeHost` が新しいデータで `requestBandArrange`（帯の［要対応を組む］と同じ依頼・知らせ・［元に戻す］）を1回出し、`takeStartArrange`・`clearArrangePending` で印を消す。例外の画面の「データを初期状態に戻す」（`main.tsx` の `reset` → 読み直し）でも組む。StrictMode の付け直しでは依頼し直す。開いただけ・ふつうの読み直しでは組まない
 - 1世代の控え（PRD D227）：
-  - `keepPrevious(data, reason, at)`：置き換える前のデータを書く（上書き）。書けなければ前の世代を消して1回試し直し、だめなら `{ kept: false, why: '控えを残せません：容量不足' }`（操作は止めない）。`cancel()` で前の世代に戻す。画面は確認で OK のあとに残し、確認の本文は `canKeepPrevious()` の見込み（保存が使えない・最後の保存が容量超過なら「容量不足」）
-  - `previousInfo()`・`readPrevious()`（`importJson` を通す）・`samePreviousInfo(a, b)`（同じなら state を替えない）
+  - `keepPrevious(data, reason, at)`：置き換える前のデータを書く（上書き）。書けなければ前の世代を消して1回試し直し、だめなら前の世代を書き戻して `{ kept: false, why: '控えを残せません：容量不足' }`（操作は止めない）。`cancel()` で前の世代に戻す。画面は確認で OK のあとに残し、確認の本文は `canKeepPrevious()` の見込み（保存が使えない・最後の保存が容量超過なら「容量不足」）
+  - `previousInfo()`（`{ at, reason, release? }`）・`readPrevious()`（`importJson` を通す）・`exportPrevious()`（控えの JSON の Blob）・`samePreviousInfo(a, b)`（同じなら state を替えない）
+  - 更新前の控え（PRD D483・D485・D488。ADR-0122）：`loadWithStatus` は知らせる更新があれば `keepBeforeRelease(読んだ元の文字, LATEST_RELEASE)`（`store/releaseBackup.ts`。`vrdemo:data:release-prev` に書く。同じ更新の控えがあれば時刻を変えずに返す。書けなければ古い更新前の控えを捨てて1回だけ試し直し、それでも書けなければ古い控えを書き戻して `{ kept: false, why }`。今のデータ・1世代の控えには触らない）を呼び、結果を `releaseBackup` で返す。戻すのは `restoreReleasePrevious(now)`（`store/releaseRestore.ts`。元の文字を `importJson` で migrate・repair に通し、いまのデータを `keepPrevious` で1世代の控えに残してから返す。残せなければ戻さない。更新前の控えは残す）。`keepPrevious` は書けなければ前の世代を書き戻す（cancel を呼ばなくても消えない）。react は `releaseBackup`（残せた控えは今のキーにまだあるときだけ）・`releasePrevious`・`releaseNotesAtOpen`（開いたときの未読の更新）・`freshStart`（保存データが無く2問で作った）を画面に渡す。更新の画面で作り直すときは、今のデータが更新前の控えと違えば（`releaseBackupHolds`）今のデータを1世代の控えに残してから作り直す
   - `swapPrevious(now)`（react の `restorePrevious()`）：いまのデータを「直前の状態に戻す」として控えてから控えのデータを返す（もう一度戻せる）。控えに残せなければ戻さず「いまのデータを控えに残せないため戻せません：容量不足」
   - 本体の保存（`writeNow`）が容量超過なら控えを捨ててもう1回書き、`previousDrops` を増やす（トースト「容量が足りないため、直前の状態の控えを消しました」）
 - 最後に書き出した日：`store/backup.ts` の `backupMemory`（`lastExport()`・`markExported(kind, date)`・`lastReminded()`・`markReminded(date)`。`createBackupMemory(getStorage)`）。知らせるかは `lib/backupReminder` の `shouldRemindBackup`
@@ -256,6 +258,7 @@ flowchart LR
   - 種類と担当を限るは常に必須で、条件の重み・プリセット・達成の件数に関係しない
 - 期間つきの訪問先（住所2。ADR-0105）：その日の訪問先は `domain/place2` の `placeOn`・`clientOn` だけで決める（`Client.place2` の期間内なら住所2、ほかは `place`）。`compile` は〈利用者さん〉をその日の訪問先に置き換えてから移動の行列・遠方の印を作る。日の画面（`useDayModel`）・日のメール・訪問の詳細と道順も同じ置き換えを使い、置き換えた〈利用者さん〉でデータを書き換えない
 - 移動の行列（`matching/travel` の `travelMatrices`）：〈利用者さん〉に移動時間（片道・分。`place.travelMinutes`）があれば、その地点への・からの移動はその分数（両側にあれば長いほう）・0 m（ADR-0096）。それ以外で位置が未登録の地点への移動は `UNPLACED_TRAVEL_MIN`（30分）・0 m とみる（ADR-0093。移動時間がある〈利用者さん〉には `noPlace` の点を足さない）。地点の鍵（訪問は `'c:'+clientId`、自宅は `'s:'+staffId`）が同じ地点どうしは位置が無くても 0 分（同じ〈利用者さん〉の続けた訪問を同じ担当が持てる）。車の区間で道路の所要の表（`DemoData.roads`。地点ごとに近い順 50 件。`matching/roads` の `roadModelOf` が緯度・経度の小数5桁で引き、索引は表ごとに1回だけ作る）に組があれば、移動＝`org.roadTravel.parkMinutes` ＋ `trafficFactor` × 所要（分）・距離＝道のり（ADR-0101）。無ければ `estimateLeg`（直線距離 × `org.lineTravel.detourFactor` ÷ 車は `driveKmh`・ほかは決まった速さ）
+- 同行の組（2人体制・研修同行。ADR-0120）：組の判定は `domain/companion` の `companionsOf`（同じ日・同じ〈利用者さん〉・同じ開始（早）・取り消していない訪問が2件以上で、うち1件以上に `accompany` があるもの）。組の訪問は `ProblemVisit.companion` を持ち、latest＝earliest（同じ人は組の2件を回れない）。`'trainee'` は人の条件（種類の必要条件・担当を限る・条件の点）を見ない。続く訪問（`chain`）の組にしない。1訪問1人のまま
 - 遠方（出張。ADR-0096）：`place.farTrip` の〈利用者さん〉の訪問は `ProblemVisit.solo`。`scheduleRoute`（strict）・`routeCost` は遠方の訪問とほかの〈利用者さん〉の訪問が同じ列なら不可（`soloBroken`）、列の最初の遠方の訪問は家を出る時刻を勤務の開始に縛らない。可否（`allowed`）には入れない。理由のキー・文（`FAR_TRIP_RULE_ID`「遠方（出張）の日はほかの訪問を入れません」・`TRAVEL_TOO_FAR_RULE_ID`「移動が間に合わない（片道 約N分）」）は `matching/travel` に置き、evaluate の explain（担当なしの理由）と採点（守れない条件）が使う。見分けと案内は `lib/travelReasons`
 - 問題に入れない訪問：取り消し、休み（`leaveOn`）の〈利用者さん〉の訪問。AI で組む（担当を組む・比較）・空き状況・振り直しはどれも compile を通る
 - いつもの担当（`continuity`）：訪問の `pattern` の繰り返しの `usualStaffId`（単発の訪問は無し）
@@ -448,13 +451,15 @@ flowchart LR
   - [ ] `npm test`・`npm run typecheck`・`npm run lint`・`npm run e2e`・`npm run e2e:perf` が通る
 
 ### deploy（公開）
-- 責務：main への push で `npm ci → npm run lint（biome・競合の印）→ npm test → npm run build → Cloudflare Workers へ公開（`wrangler deploy`）`。e2e は別のワークフローで、速い検査は PR の push ごと、`npm run e2e` は PR に「e2e」のラベルを付けたとき（付いた PR への push も）・手動・週1回の夜間、`npm run e2e:perf` は手動・夜間だけ（夜間は `FAKE_NOW` を月末の日にも替えて3通り。ADR-0104）。失敗したときだけ報告と記録を3日残す。公開は e2e を待たない
+- 責務：main への push で `npm ci → npm run lint（biome・競合の印）→ npm test → npm run build → Cloudflare Workers へ公開（`wrangler deploy`）`。確認用 URL：PR に「preview」のラベル（付いた PR への push も）か手動で、同じ検査とビルドのあと `wrangler versions upload --preview-alias` で本番を変えずに workers.dev のプレビュー URL に出し、PR のコメントに URL を書く。戻す：手動で `wrangler rollback`（版の ID を空にすると直前の版）。本番を変える公開と戻すは1つずつ（ADR-0115）。e2e は別のワークフローで、速い検査は PR の push ごと、`npm run e2e` は PR に「e2e」のラベルを付けたとき（付いた PR への push も）・手動・週1回の夜間、`npm run e2e:perf` は手動・夜間だけ（夜間は `FAKE_NOW` を月末の日にも替えて3通り。ADR-0104）。失敗したときだけ報告と記録を3日残す。公開は e2e を待たない
 - 持つデータ（持ち主）：なし
 - 提供するAPI：なし
 - 依存するもの：GitHub Actions（`cloudflare/wrangler-action`。Secrets：`CLOUDFLARE_API_TOKEN`・`CLOUDFLARE_ACCOUNT_ID`）、e2e は `@playwright/test`（devDependency）と Chromium
 - 配置：`.github/workflows/deploy.yml`、`wrangler.jsonc`、`.github/workflows/e2e.yml`、`vite.config.ts`（`base: './'`・vitest の設定）、`playwright.config.ts`・`e2e/`、`scripts/lib/`（e2e の共通の部品・段の型）、`scripts/check-conflict-markers.cjs`
 - 完了の条件：
   - [ ] push から5分以内に Cloudflare Workers の公開URL に反映される
+  - [ ] 「preview」のラベルを付けた PR に確認用 URL のコメントが付き、本番の URL は変わらない
+  - [ ] 手動の rollback で本番が前の版に戻る
   - [ ] サブパスで再読込しても 404 にならない（HashRouter）。分けたチャンクもサブパスから読める（`base: './'`）
   - [ ] PR・夜間に e2e のワークフローが走り、報告（HTML）が残る。落ちたら test-results（trace・動画・スクリーンショット・記録）も残る
   - [ ] e2e の報告で段（test.step）ごと・確かめ（expect.soft）ごとに合否が見える。押したあとの待ちは画面の状態で待つ（`settle`。固定の待ちは速さの計測・外の遅れ・時間そのものを見る所だけ）
@@ -466,7 +471,7 @@ flowchart LR
 
 | コンポーネント | メソッド | エンドポイント | 概要 |
 |---|---|---|---|
-| store | 関数 | `load / save / reset / startWithAnswer / exportJson / importJson / migrate / isOutdated / repair / backup / rememberCurrent / keepPrevious / canKeepPrevious / swapPrevious` | 保存・入出力・版の確かめ・例外の画面の控え |
+| store | 関数 | `load / save / reset / startWithAnswer / exportJson / importJson / migrate / isOutdated / repair / backup / rememberCurrent / keepPrevious / canKeepPrevious / swapPrevious / keepBeforeRelease / restoreReleasePrevious` | 保存・入出力・版の確かめ・例外の画面の控え |
 | domain | 関数 | `withoutAbsences / afterLastDay / leaveOn / isOnLeave` | 欠勤・最終勤務日・休み（デモ独自） |
 | matching | 関数 | `compile(data, date, pins?) → Problem` | 項目・条件 → 可否・費用表 |
 | solver | Worker | `solve` → `progress`…`done`／`error`、`stop` | AI で割当と順番を解く。stop で最良案を返す |

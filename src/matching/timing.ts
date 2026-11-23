@@ -1,5 +1,6 @@
 // 1人のルートの時刻（contracts/problem.ts の規則の唯一の実装）。solver・evaluate はここを使う
 import type { Problem, RouteTiming, StopTiming } from '../contracts/problem';
+import { chainRoutePoints } from './chain';
 
 /** 浮動小数の誤差の許し（matching・solver・evaluate・reassign・vacancy で同じ値を使う） */
 export const EPS = 1e-9;
@@ -98,7 +99,7 @@ export function scheduleRoute(
  * strict の scheduleRoute と同じ規則で、ルートの費用（移動分＋待ち分×waitPerMinute＋割当費用）だけを
  * 配列を作らずに求める（solver の差分評価用）。違反があれば Infinity。
  * problem.stay（案B の変更の減点。ADR-0011）があれば、元の担当と違う訪問・元の開始からのずれの点も足す
- * （evaluate の採点には入れない）
+ * （evaluate の採点には入れない）。problem.chain（続く訪問。ADR-0116）があれば、列の続く訪問の点（chainRoutePoints）も足す
  */
 export function routeCost(problem: Problem, staff: number, visits: ArrayLike<number>, length = visits.length): number {
   if (soloBroken(problem, visits, length)) return Number.POSITIVE_INFINITY;
@@ -136,5 +137,6 @@ export function routeCost(problem: Problem, staff: number, visits: ArrayLike<num
     prevPoint = v.point;
   }
   if (length > 0) travelMinutes += travel[prevPoint]![home]!;
-  return travelMinutes + waitMinutes * problem.waitPerMinute + assign + stayPoints;
+  const chainPoints = problem.chain ? chainRoutePoints(problem.chain, visits, length) : 0;
+  return travelMinutes + waitMinutes * problem.waitPerMinute + assign + stayPoints + chainPoints;
 }

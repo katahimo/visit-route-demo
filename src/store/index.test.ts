@@ -205,7 +205,7 @@ describe('load・save', () => {
     vi.advanceTimersByTime(300);
     vi.useRealTimers();
     expect(flushed).toHaveBeenCalledTimes(1);
-    expect(flushed).toHaveBeenCalledWith(null, false);
+    expect(flushed).toHaveBeenCalledWith(null, false, false);
     expect((JSON.parse(mem.get(STORAGE_KEY) ?? '{}') as DemoData).seed).toBe(42);
   });
 
@@ -216,7 +216,7 @@ describe('load・save', () => {
     const onError = vi.fn();
     save(createDemoData('2026-10-12'), onError);
     flushSave();
-    expect(onError).toHaveBeenCalledWith(expect.stringContaining('保存容量'), false);
+    expect(onError).toHaveBeenCalledWith(expect.stringContaining('保存容量'), false, false);
   });
 
   it('reset は初期データで置き換える', () => {
@@ -390,7 +390,7 @@ describe('1世代の控え（PRD D227。ADR-0032）', () => {
     expect(readPrevious()).toBeNull();
   });
 
-  it('容量超過なら控えを残さず（前の世代も消す）、理由「控えを残せません：容量不足」を返す（操作は止めない）', () => {
+  it('容量超過なら控えを残さず（前の世代を書き戻せなければ消える）、理由「控えを残せません：容量不足」を返す（操作は止めない）', () => {
     const d = createDemoData('2026-10-12');
     keepPrevious(d, '初期状態に戻す', at);
     const ls = globalThis.localStorage as Storage;
@@ -448,7 +448,7 @@ describe('1世代の控え（PRD D227。ADR-0032）', () => {
     save({ ...d, seed: 8 }, onError);
     flushSave();
     // 控えを捨てたことを返す（画面が知らせる）
-    expect(onError).toHaveBeenCalledWith(null, true);
+    expect(onError).toHaveBeenCalledWith(null, true, false);
     expect(previousInfo()).toBeNull();
     expect((JSON.parse(mem.get(STORAGE_KEY) ?? '{}') as DemoData).seed).toBe(8);
   });

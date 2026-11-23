@@ -582,7 +582,7 @@ describe('最終勤務日・段階・紹介元・当日キャンセル・拘束�
               ...c,
               stage: 'ended' as const,
               active: false,
-              referrer: { name: '相談室（架空）', contact: '000', note: '返事待ち', email: '' },
+              referrer: { name: '相談室（架空）', contact: '000', note: '返事待ち', email: '', person: '青葉（架空）' },
             }
           : c,
     ),
@@ -607,7 +607,8 @@ describe('最終勤務日・段階・紹介元・当日キャンセル・拘束�
         const sws = sheet(wb, names.staff);
         sws.spliceColumns(col(sws, '最終勤務日'), 1);
         const cws = sheet(wb, names.client);
-        for (const h of ['段階', '紹介元', '紹介元の連絡先', '紹介元のメモ']) cws.spliceColumns(col(cws, h), 1);
+        for (const h of ['段階', '紹介元', '紹介元の相談員', '紹介元の連絡先', '紹介元のメモ'])
+          cws.spliceColumns(col(cws, h), 1);
         const vws = sheet(wb, '訪問');
         vws.spliceColumns(col(vws, '当日キャンセル'), 1);
         const ows = sheet(wb, '事業所');
@@ -620,6 +621,8 @@ describe('最終勤務日・段階・紹介元・当日キャンセル・拘束�
     expect([r.clients[0]!.stage, r.clients[0]!.tentative, r.clients[0]!.active]).toEqual(['inquiry', true, true]);
     expect(r.clients[1]!.stage).toBe('ended');
     expect(r.clients[1]!.referrer.name).toBe('');
+    // 紹介元の相談員の列が無い古いブックは省く（ADR-0117）
+    expect('person' in r.clients[1]!.referrer).toBe(false);
     expect(r.visits[0]!.cancelKind).toBeNull();
     expect(r.org.spanLimitHours).toBe(10);
   });
@@ -1317,5 +1320,50 @@ describe('版1のブック（ADR-0053）', () => {
       }),
     );
     expect(r.patterns.map((p) => p.usualStaffId)).toEqual(d.patterns.map((p) => p.usualStaffId));
+  });
+});
+
+describe('訪問の「同行」の列（ADR-0120）', () => {
+  /** 単発の訪問をコピーした2人体制の訪問を足したデータ */
+  const withPair = (): DemoData => {
+    const d = base();
+    const v = d.visits.find((x) => x.pattern === null) ?? d.visits[0]!;
+    const pair = {
+      ...v,
+      id: 'vpair',
+      staffId: null,
+      start: null,
+      pinned: false,
+      pattern: null,
+      accompany: 'pair' as const,
+    };
+    return { ...d, visits: [...d.visits, pair] };
+  };
+  it('書き出し → 読み込みで同行が戻る。列の無いブックはふつうの訪問', async () => {
+    const d = withPair();
+    const r = ok(await importWorkbook(await toBuffer(d), d));
+    expect(r.visits.find((v) => v.id === 'vpair')?.accompany).toBe('pair');
+    expect(r).toEqual(d);
+    const old = ok(
+      await editAndImport(d, (wb) => {
+        const ws = sheet(wb, '訪問');
+        ws.spliceColumns(col(ws, '同行'), 1);
+      }),
+    );
+    expect(old.visits.find((v) => v.id === 'vpair')?.accompany).toBeUndefined();
+  });
+  it('読めない値はエラー', async () => {
+    const d = withPair();
+    const msg = fail(
+      await editAndImport(d, (wb) => {
+        const ws = sheet(wb, '訪問');
+        const c = col(ws, '同行');
+        for (let i = 2; i <= ws.rowCount; i++) {
+          const cell = ws.getRow(i).getCell(c);
+          if (cell.value === '2人体制') cell.value = '3人';
+        }
+      }),
+    );
+    expect(msg).toContain('『同行』');
   });
 });

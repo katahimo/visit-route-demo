@@ -74,6 +74,12 @@ export type Condition = z.infer<typeof conditionSchema>;
  * balance：スタッフごとに、稼働時間に比例した件数の目安の帯 [floor, ceil] から外れた件数 e について 重み×10×e² 点。
  *          hard なら件数の上限＝ceil+1（超える割当はしない）
  * wait：待ち1分＝重み×0.1点（hard は使わない）
+ * sameClient：同じ〈利用者さん〉の同じ日の続く訪問（前の訪問の終わりから次の開始まで 0〜SAME_CLIENT_GAP_MAX 分。開始（早）で見る）の
+ *             組1つを、同じ人が続けて回らない（担当が違う・間に別の訪問を挟む・どちらかが担当なし）と 重み×10点（hard は使わない。ADR-0116）。
+ *             組み込みの条件で、データにいつも1つある（store の repair が足す。足す・消すはできず、切るのは重み0）
+ * homeNear：訪問の終わり（開始（早）＋所要）が、担当のその日の勤務の終わり（欠勤を引いた稼働の最後の終わり）の
+ *           beforeEndMin 分前より後の訪問（帰りの前）で、その訪問から担当の自宅までの移動1分＝重み×HOME_NEAR_PER_MINUTE点
+ *           （割当費用。hard は使わない。その日に稼働の無い人は対象外。ADR-0116・ADR-0121）
  * 同じ型の条件が複数あってもよい（重みは足し合わせる）。weight=0 かつ hard=false は無効
  */
 export const RULE_TYPES = [
@@ -85,6 +91,8 @@ export const RULE_TYPES = [
   'continuity',
   'balance',
   'wait',
+  'sameClient',
+  'homeNear',
 ] as const;
 export type RuleType = (typeof RULE_TYPES)[number];
 export const HARDABLE: ReadonlySet<RuleType> = new Set([
@@ -97,6 +105,29 @@ export const HARDABLE: ReadonlySet<RuleType> = new Set([
   'balance',
 ]);
 
+/** 続く訪問とみる間の上限（分。前の訪問の終わり〜次の訪問の開始。ADR-0116） */
+export const SAME_CLIENT_GAP_MAX = 30;
+/**
+ * 続く訪問の条件（sameClient）の重みが無い古いプリセットの重み（ADR-0116）。初期のバランスと同じ。
+ * 同じ〈利用者さん〉の続く訪問を別々の人に分けたい事業所はまれで、分けたいときは重み0にする
+ */
+export const SAME_CLIENT_WEIGHT_DEFAULT = 2;
+/** 組み込みの条件の型（データにいつも1つ。足す・消すはできない。ADR-0116） */
+export const BUILTIN_RULE_TYPES: ReadonlySet<RuleType> = new Set(['sameClient']);
+/** 帰りの前は自宅に近い人（homeNear）：勤務の終わりの何分前から対象にするかの既定（欄の無い古いデータ・プリセット・Excel。ADR-0121） */
+export const HOME_NEAR_BEFORE_END_DEFAULT = 60;
+/** 勤務の終わりの何分前から（beforeEndMin）の上限（分） */
+export const HOME_NEAR_BEFORE_END_MAX = 600;
+/** 帰りの前は自宅に近い人（homeNear）：訪問から自宅までの移動1分・重み1あたりの点 */
+export const HOME_NEAR_PER_MINUTE = 0.2;
+/** 帰りの前は自宅に近い人（homeNear）を達成とみる、訪問から自宅までの移動の上限（分。条件ごとの達成の件数。ADR-0116） */
+export const HOME_NEAR_MET_MINUTES = 15;
+/**
+ * 帰りの前は自宅に近い人（homeNear）の重みが無い古いプリセットの重み（ADR-0116）。条件は初期データに無く、
+ * 利用者が足したときだけ効くので、足してすぐ効くよう0にしない
+ */
+export const HOME_NEAR_WEIGHT_DEFAULT = 2;
+
 export const ruleSchema = z.object({
   id: z.string().min(1).max(50),
   type: z.enum(RULE_TYPES),
@@ -104,8 +135,16 @@ export const ruleSchema = z.object({
   /** 0〜5、0.5刻み */
   weight: z.number().min(0).max(5).multipleOf(0.5),
   hard: z.boolean(),
+  /**
+   * 帰りの前は自宅に近い人（homeNear）だけ：勤務の終わりの何分前から対象にするか（分。ADR-0121）。
+   * 無い（古いデータ・ほかの型）なら HOME_NEAR_BEFORE_END_DEFAULT。ほかの型では読まない
+   */
+  beforeEndMin: z.number().int().min(0).max(HOME_NEAR_BEFORE_END_MAX).optional(),
 });
 export type Rule = z.infer<typeof ruleSchema>;
+
+/** 帰りの前は自宅に近い人（homeNear）の「勤務の終わりの何分前から」（無ければ既定。ADR-0121） */
+export const beforeEndOf = (r: Pick<Rule, 'beforeEndMin'>): number => r.beforeEndMin ?? HOME_NEAR_BEFORE_END_DEFAULT;
 
 /** 相性。2=◎ 1=○ 0=未入力 -1=△ -2=×（NG） */
 export const COMPAT_LEVELS = [2, 1, 0, -1, -2] as const;
@@ -124,10 +163,16 @@ export const MAX_PRESETS = 6;
 /** プリセットの型ごとの重み・必須。重みの範囲（0〜5・0.5刻み）は zod では止めず store の repair で直す */
 const presetWeightSchema = z.object({ weight: z.number(), hard: z.boolean() });
 
+/** プリセットの weights に無い型の重み（あとから足した型は既定の重み、ほかは0。ADR-0116） */
+const missingWeight = (t: RuleType) => ({
+  weight: t === 'sameClient' ? SAME_CLIENT_WEIGHT_DEFAULT : t === 'homeNear' ? HOME_NEAR_WEIGHT_DEFAULT : 0,
+  hard: false,
+});
+
 /**
  * 条件のプリセット（ADR-0005・ADR-0008）。条件の型ごとに重み・必須を決め、その日の条件（rules）の同じ型に上書きする。
  * データ（DemoData.presets）に入り、利用者が編集・追加・削除できる。初期値は seed の INITIAL_PRESETS。
- * weights に無い型は 重み0・必須でない で補う
+ * weights に無い型は 重み0・必須でない で補う（あとから足した続く訪問・帰りの前は自宅に近い人は既定の重み。ADR-0116）
  */
 export const presetSchema = z.object({
   id: z.string().min(1).max(50),
@@ -138,7 +183,7 @@ export const presetSchema = z.object({
     (raw) => {
       if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return raw;
       const o = raw as Record<string, unknown>;
-      return Object.fromEntries(RULE_TYPES.map((t) => [t, Object.hasOwn(o, t) ? o[t] : { weight: 0, hard: false }]));
+      return Object.fromEntries(RULE_TYPES.map((t) => [t, Object.hasOwn(o, t) ? o[t] : missingWeight(t)]));
     },
     z.object(
       Object.fromEntries(RULE_TYPES.map((t) => [t, presetWeightSchema])) as Record<RuleType, typeof presetWeightSchema>,

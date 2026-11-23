@@ -22,6 +22,8 @@ export function savedVisit(visit: Visit | null, f: VisitFields, newVisitId: stri
     visit.windowKind === f.windowKind;
   const base = {
     ...f,
+    // 同行（ADR-0120）は直しても引き継ぐ（欄では変えない）
+    ...(visit?.accompany && { accompany: visit.accompany }),
     id: visit?.id ?? newVisitId,
     staffId: visit?.staffId ?? null,
     start: timeSame ? (visit?.start ?? null) : null,

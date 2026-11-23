@@ -2,6 +2,7 @@
 import type ExcelJS from 'exceljs';
 import { describe, expect, it } from 'vitest';
 import type { DemoData } from '../contracts/data';
+import { HOME_NEAR_WEIGHT_DEFAULT, SAME_CLIENT_WEIGHT_DEFAULT } from '../contracts/rules';
 import { saveTunedWeights, TUNED_PRESET_NAME } from '../lib/presets';
 import { createDemoData, presetOf, scorePresetOf } from '../seed';
 import { isImportError } from '../store/persist';
@@ -60,6 +61,67 @@ describe('Excel のプリセットのシート', () => {
     expect(added.weights.compatibility).toEqual({ weight: 5, hard: true });
     expect(added.weights.continuity).toEqual({ weight: 0, hard: true });
     expect(added.weights.clientPreference).toEqual({ weight: 0, hard: false });
+  });
+
+  it('帰りの前は自宅に近い人（ADR-0121）：勤務の終わりの何分前からの列が戻り、前の名前の種類・重みの見出しでも読め、列が無ければ既定', async () => {
+    const d0 = base();
+    const d: DemoData = {
+      ...d0,
+      rules: [
+        ...d0.rules,
+        { id: 'hn', type: 'homeNear', label: '帰り', weight: 2, hard: false, beforeEndMin: 90 },
+        { id: 'hn2', type: 'homeNear', label: '帰り2', weight: 2, hard: false },
+      ],
+    };
+    const r = await importWorkbook(await toBuffer(d), d);
+    if (isImportError(r)) throw new Error(r.message);
+    expect(r.rules.find((x) => x.id === 'hn')?.beforeEndMin).toBe(90);
+    // 決めていない行は空で書き、読んでも無いまま（既定の60）
+    expect(r.rules.find((x) => x.id === 'hn2')?.beforeEndMin).toBeUndefined();
+    const old = await editAndImport(d, (wb) => {
+      const ws = wb.getWorksheet('プリセット')!;
+      ws.getRow(1).getCell(col(ws, '重み：帰りの前は自宅に近い人')).value = '重み：夕方は自宅に近い人';
+      ws.getRow(2).getCell(col(ws, '重み：夕方は自宅に近い人')).value = 3.5;
+      const rules = wb.getWorksheet('条件')!;
+      rules.spliceColumns(col(rules, '勤務の終わりの何分前から'), 1);
+      for (let n = 2; n <= rules.rowCount; n++) {
+        const c = rules.getRow(n).getCell(col(rules, '種類'));
+        if (c.value === '帰りの前は自宅に近い人') c.value = '夕方は自宅に近い人';
+      }
+    });
+    if (isImportError(old)) throw new Error(old.message);
+    expect(old.presets[0]!.weights.homeNear.weight).toBe(3.5);
+    const hn = old.rules.find((x) => x.id === 'hn')!;
+    expect(hn.type).toBe('homeNear');
+    expect(hn.beforeEndMin).toBeUndefined();
+    const bad = await editAndImport(d, (wb) => {
+      const rules = wb.getWorksheet('条件')!;
+      for (let n = 2; n <= rules.rowCount; n++)
+        if (rules.getRow(n).getCell(col(rules, 'ID')).value === 'hn')
+          rules.getRow(n).getCell(col(rules, '勤務の終わりの何分前から')).value = 30.5;
+    });
+    expect(isImportError(bad) && bad.message).toContain('勤務の終わりの何分前から');
+  });
+
+  it('続く訪問・帰りの前は自宅に近い人の重みの列が無い古いブックも読め、重みは既定。条件のシートに続く訪問が無くても足す（ADR-0116）', async () => {
+    const d = base();
+    let removed = 0;
+    const r = await editAndImport(d, (wb) => {
+      const ws = wb.getWorksheet('プリセット')!;
+      ws.spliceColumns(col(ws, '重み：帰りの前は自宅に近い人'), 1);
+      ws.spliceColumns(col(ws, '重み：続く訪問は同じ人'), 1);
+      const rules = wb.getWorksheet('条件')!;
+      for (let n = rules.rowCount; n >= 2; n--)
+        if (rules.getRow(n).getCell(col(rules, '種類')).value === '続く訪問は同じ人') {
+          rules.spliceRows(n, 1);
+          removed++;
+        }
+    });
+    expect(removed).toBe(1);
+    if (isImportError(r)) throw new Error(r.message);
+    expect(r.presets[0]!.weights.sameClient).toEqual({ weight: SAME_CLIENT_WEIGHT_DEFAULT, hard: false });
+    expect(r.presets[0]!.weights.homeNear).toEqual({ weight: HOME_NEAR_WEIGHT_DEFAULT, hard: false });
+    expect(r.rules.filter((x) => x.type === 'sameClient')).toHaveLength(1);
   });
 
   it('6つを超える行・0.5刻みでない重み・必須にできない型は場所付きで止める', async () => {

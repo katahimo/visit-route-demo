@@ -1,7 +1,7 @@
 // 「使い方」のシートの文面（読み込みでは見ない）
 import type { DemoData } from '../contracts/data';
 import { TRAVEL_MINUTES_MAX } from '../contracts/documents';
-import { ITEM_KINDS } from '../contracts/rules';
+import { HOME_NEAR_BEFORE_END_DEFAULT, HOME_NEAR_BEFORE_END_MAX, ITEM_KINDS } from '../contracts/rules';
 import { STAGE_LABELS } from '../lib/clientStage';
 import {
   CLIENT_PLACE2_COLS,
@@ -9,10 +9,12 @@ import {
   CLIENT_STAGE_COLS,
   CLIENT_TRAVEL_COLS,
   ORG_KEYS,
+  RULE_BEFORE_END_COL,
   STAFF_EMAIL_COL,
   STAFF_ICON_COL,
   STAFF_LAST_DAY_COL,
   START_YEAR_SUFFIX,
+  VISIT_ACCOMPANY_COL,
   VISIT_PIN_COL,
   VISIT_SAME_DAY_COL,
   VISIT_START_COL,
@@ -39,17 +41,17 @@ export function howtoLines(data: DemoData, names: { staff: string; client: strin
     'シート',
     `・${FIXED_SHEETS.org}：事業所名・業種・呼び方など。「項目」と「値」の2列です。「${ORG_KEYS.fare}」は稼働の見込みの交通費の単価（0 なら交通費を出しません）、「${ORG_KEYS.spanLimit}」は拘束（最初の訪問の開始〜最後の訪問の終わり）がこれを超える日に注意を出す時間（0.5刻み。0 なら出しません）です。`,
     `・${FIXED_SHEETS.items}：${t.staff}・${t.client}の特性の項目。種類は「${ITEM_KINDS.map((k) => itemKindLabels[k]).join('」「')}」。選択肢は「、」か改行で区切ります（選択肢の名前に「、」と改行は使えません）。`,
-    `・${FIXED_SHEETS.rules}：AI で担当を組むときの条件の名前と種類。重み・必須は読み込むと${FIXED_SHEETS.presets}のシートの「点数の基準」に ○ を付けた行にそろえます（重みは1組）。`,
+    `・${FIXED_SHEETS.rules}：AI で担当を組むときの条件の名前と種類。重み・必須は読み込むと${FIXED_SHEETS.presets}のシートの「点数の基準」に ○ を付けた行にそろえます（重みは1組）。「${RULE_BEFORE_END_COL}」は種類が「帰りの前は自宅に近い人」の行だけ読みます（0〜${HOME_NEAR_BEFORE_END_MAX}の整数。空は${HOME_NEAR_BEFORE_END_DEFAULT}分）。`,
     `・${FIXED_SHEETS.presets}：条件のプリセット（1〜6行）。「重み：〈条件の種類〉」の列に重み（0〜5、0.5刻み。空は0）、「必須」の列に必須にする条件の種類を「、」区切りで書きます。「点数の基準」の列は、ふだんの考え方（AI で組むとき・要対応の検査に使い、画面の点数（100点満点）も付ける）のプリセットに ○ を1つだけ付けます（無印なら先頭のプリセット）。このシートが無いブックを読み込むと、いまのプリセットのままです。`,
     `・${names.staff}：${t.staff}の一覧。勤務する曜日は「月火水木金」のように書きます。「${STAFF_LAST_DAY_COL}」は退職・担当替えの最後の勤務日（空ならなし。翌日からは勤務なし）です。「${STAFF_EMAIL_COL}」は任意で、予定をメールアプリで開くときの宛先です。「${STAFF_ICON_COL}」は任意の1〜2文字（絵文字も可）で、画面の印の中に出します（空なら苗字の最初の1文字）。`,
-    `・${names.client}：${t.client}の一覧。色は 1〜8 の番号です。「${CLIENT_POSTAL_COL}」は7桁の数字（任意。ハイフンは有っても無くても構いません）で、緯度・経度が空の人は、読み込んだあとに${t.client}の画面の「住所から緯度・経度を入れる」で住所（無ければ郵便番号）から緯度・経度を入れられます（押したときだけ外部の検索サービスへ送ります）。「${CLIENT_TRAVEL_COLS.minutes}」は新幹線・飛行機などで距離から見積もれないときの片道の分（任意。1〜${TRAVEL_MINUTES_MAX}）で、「${CLIENT_TRAVEL_COLS.farTrip}」に ○ がある人の訪問の日は、その${t.staff}にほかの訪問を入れません。「${CLIENT_PLACE2_COLS.address}」は期間つきの訪問先（任意）で、「${CLIENT_PLACE2_COLS.from}」〜「${CLIENT_PLACE2_COLS.to}」（空の端は限りません）の訪問は住所2 へ行きます。担当できる人は、担当を限るときだけ${t.staff}の名前を「、」で区切って書きます（空なら限りません。社内の決まりで、限った人以外は担当になりません）。入り方・鍵・駐車場・注意は訪問先の決まりごと（各200文字まで）で、${t.staff}の画面に出ます。「${CLIENT_STAGE_COLS.stage}」は「${Object.values(STAGE_LABELS).join('」「')}」のどれかで、予定・AI の提案に入るのは「利用中」と、利用中の前で「仮押さえ」に ○ がある人だけです（「${CLIENT_STAGE_COLS.stage}」が空なら「利用中」「仮押さえ」の列から決めます。「${CLIENT_STAGE_COLS.stage}」を書いたときは段階を優先し、「利用中」「仮押さえ」の列が食い違っていても段階に合わせて読みます）。「${CLIENT_STAGE_COLS.referrer}」「${CLIENT_STAGE_COLS.referrerContact}」「${CLIENT_STAGE_COLS.referrerNote}」は紹介してくれた所です。「${CLIENT_STAGE_COLS.referrerEmail}」は任意で、空き枠の案内文をメールアプリで一斉（BCC）に送るときの宛先です。`,
+    `・${names.client}：${t.client}の一覧。色は 1〜8 の番号です。「${CLIENT_POSTAL_COL}」は7桁の数字（任意。ハイフンは有っても無くても構いません）で、緯度・経度が空の人は、読み込んだあとに${t.client}の画面の「住所から緯度・経度を入れる」で住所（無ければ郵便番号）から緯度・経度を入れられます（押したときだけ外部の検索サービスへ送ります）。「${CLIENT_TRAVEL_COLS.minutes}」は新幹線・飛行機などで距離から見積もれないときの片道の分（任意。1〜${TRAVEL_MINUTES_MAX}）で、「${CLIENT_TRAVEL_COLS.farTrip}」に ○ がある人の訪問の日は、その${t.staff}にほかの訪問を入れません。「${CLIENT_PLACE2_COLS.address}」は期間つきの訪問先（任意）で、「${CLIENT_PLACE2_COLS.from}」〜「${CLIENT_PLACE2_COLS.to}」（空の端は限りません）の訪問は住所2 へ行きます。担当できる人は、担当を限るときだけ${t.staff}の名前を「、」で区切って書きます（空なら限りません。社内の決まりで、限った人以外は担当になりません）。入り方・鍵・駐車場・注意は訪問先の決まりごと（各200文字まで）で、${t.staff}の画面に出ます。「${CLIENT_STAGE_COLS.stage}」は「${Object.values(STAGE_LABELS).join('」「')}」のどれかで、予定・AI の提案に入るのは「利用中」と、利用中の前で「仮押さえ」に ○ がある人だけです（「${CLIENT_STAGE_COLS.stage}」が空なら「利用中」「仮押さえ」の列から決めます。「${CLIENT_STAGE_COLS.stage}」を書いたときは段階を優先し、「利用中」「仮押さえ」の列が食い違っていても段階に合わせて読みます）。「${CLIENT_STAGE_COLS.referrer}」「${CLIENT_STAGE_COLS.referrerContact}」「${CLIENT_STAGE_COLS.referrerNote}」は紹介してくれた所で、「${CLIENT_STAGE_COLS.referrerPerson}」はそこの相談員（担当者）の名前です（任意）。「${CLIENT_STAGE_COLS.referrerEmail}」は任意で、空き枠の案内文をメールアプリで一斉（BCC）に送るときの宛先です。`,
     `・${FIXED_SHEETS.compat}：行が${t.client}、列が${t.staff}です。◎・○・△・× か空で書きます（× は担当にしません）。`,
     `・${FIXED_SHEETS.availability}：その日だけの稼働時間。時間帯は「9:00-12:00、13:00-18:00」のように30分単位で書き、休みは「${DAY_OFF}」と書きます。`,
     `・${FIXED_SHEETS.absences}：当日の急な欠勤（1人1日1行）。開始・終了は30分単位で書き、開始が空なら始業から、終了が空なら終業まで、両方空なら終日です。このシートが無いブックを読み込むと、欠勤なしになります。`,
     `・${FIXED_SHEETS.visitTypes}：訪問の種類（20行まで）。名前は重ならないようにします。色は 1〜8 の番号、標準の所要は分です。「必要条件：項目名」の列は担当に必要な${t.staff}の特性で、常に必須です（書き方は${t.client}の必要条件と同じ）。このシートが無いブックを読み込むと、種類なしになります。`,
     `・${FIXED_SHEETS.patterns}：${t.client}ごとの定期パターン。種類は種類の名前（空なら種類を問わない）、曜日は「月木」のように、間隔は「${Object.values(EVERY_WEEKS_LABELS).join('」「')}」「${MONTHLY_LABEL}」で書きます。「${MONTHLY_LABEL}」のときは「第N週」の列に「3、4」のように第何週か（1〜5）を書きます（第3・第4の曜日。第5の無い月は作りません）。「曜日ごとの時刻」の列に「月 9:30、木 15:00〜15:30」のように書くと、その曜日だけ開始の時刻を変えます（空ならどの曜日も「開始（早）」「開始（遅）」）。終了日が空なら続きます。「担当」は繰り返しの担当（いつもの担当）で${t.staff}の名前（空なら担当なし）です。回は見るときに計算します。このシートが無いブックを読み込むと、パターンなしになります。`,
     `・${FIXED_SHEETS.clientLeaves}：${t.client}の休み（入院・ショートステイなど）。開始日〜終了日の訪問は消さずに「休みのため無し」として計算から外します。このシートが無いブックを読み込むと、休みなしになります。`,
-    `・${FIXED_SHEETS.visits}：単発の訪問と、繰り返しの回のうち変えた回（担当・時刻・取り消しなど）。変えていない繰り返しの回はここに無く、定期パターンから計算します。時間の決め方は「ちょうど」（開始（早）に始める）か「幅」（開始（早）〜開始（遅）のあいだに始める）。担当は${t.staff}の名前で、空なら担当なしです。種類は種類の名前（空なら種類なし）。定期パターンはパターンの ID（空なら単発）で、そのときは元の日も書きます（ID は「元の日_パターンID」）。この回だけ変更は、その回だけ時刻などを直したときに ○ を付けます。「${VISIT_SAME_DAY_COL}」は取り消した訪問が当日キャンセルなら ○ です（回数を数えるだけで、請求はしません）。「${VISIT_START_COL}」は担当の回る順の時刻（空なら開始（早）の順）、「${VISIT_PIN_COL}」は AI で組み直しても担当を変えない訪問に ○ です。`,
+    `・${FIXED_SHEETS.visits}：単発の訪問と、繰り返しの回のうち変えた回（担当・時刻・取り消しなど）。変えていない繰り返しの回はここに無く、定期パターンから計算します。時間の決め方は「ちょうど」（開始（早）に始める）か「幅」（開始（早）〜開始（遅）のあいだに始める）。担当は${t.staff}の名前で、空なら担当なしです。種類は種類の名前（空なら種類なし）。定期パターンはパターンの ID（空なら単発）で、そのときは元の日も書きます（ID は「元の日_パターンID」）。この回だけ変更は、その回だけ時刻などを直したときに ○ を付けます。「${VISIT_SAME_DAY_COL}」は取り消した訪問が当日キャンセルなら ○ です（回数を数えるだけで、請求はしません）。「${VISIT_START_COL}」は担当の回る順の時刻（空なら開始（早）の順）、「${VISIT_PIN_COL}」は AI で組み直しても担当を変えない訪問に ○ です。「${VISIT_ACCOMPANY_COL}」は、同じ日・同じ開始（早）のほかの訪問にもう1人つける訪問に「2人体制」か「研修同行」と書きます（空ならふつうの訪問）。`,
     `・${WORKLOAD_SHEET}：担当を組んだ日の予定から見込んだ、${t.staff}×日ごとの拘束・訪問・移動・待ちの分と距離・交通費です（「確定」は伝えた日に ○）。実績ではありません。書き出すだけで、読み込みでは見ません。`,
     '',
     '特性の書き方（「特性：項目名」の列。空は未確認）',

@@ -2,10 +2,12 @@
 import type { DemoData } from '../contracts/data';
 import type { Staff } from '../contracts/documents';
 import { dateText } from '../lib/dateText';
+import { isOn } from '../lib/features';
 import { typeOf } from '../lib/patternText';
 import { SCOPE_LABELS, type ScopeTexts, type VisitDraft, type VisitScope } from '../lib/visitDraft';
 import { keptText, startPatch } from '../lib/visitPanelText';
 import type { StaffChoices } from '../lib/visitStaff';
+import { DurationEndFields } from './DurationEndFields';
 import { type invalidAttrs, RequiredMark } from './FieldError';
 import { StaffMark } from './StaffMark';
 import { KEEP, NONE_PICK } from './useVisitPanel';
@@ -82,21 +84,27 @@ function TypeField({ data, draft, set, isNew }: DraftProps) {
   );
 }
 
-/** 時間の約束・開始時刻（幅を保ってずらす）・最も遅い開始時刻 */
-function StartFields({ draft, set, bad }: DraftProps) {
+/**
+ * 時間の約束・開始時刻（幅を保ってずらす）・最も遅い開始時刻。
+ * 時間の約束は機能 timeWindow が切なら出さず、開始時刻ちょうど（既定）で入れる。幅の訪問を直すときは出す（ADR-0117）。
+ * 出すかは開いたときの値（openedWindow）で決める（「ちょうど」に変えた途端に欄が消えて戻せなくならないように）
+ */
+function StartFields({ data, draft, set, bad, openedWindow }: DraftProps & { openedWindow: boolean }) {
   return (
     <>
-      <label>
-        時間の約束
-        <select
-          value={draft.windowKind}
-          onChange={(e) => set({ windowKind: e.target.value as VisitDraft['windowKind'] })}
-          data-testid="vp-window"
-        >
-          <option value="fixed">開始時刻が決まっている</option>
-          <option value="window">開始に幅がある（受けられる時間帯）</option>
-        </select>
-      </label>
+      {(isOn(data.org.features, 'timeWindow') || openedWindow) && (
+        <label>
+          時間の約束
+          <select
+            value={draft.windowKind}
+            onChange={(e) => set({ windowKind: e.target.value as VisitDraft['windowKind'] })}
+            data-testid="vp-window"
+          >
+            <option value="fixed">開始時刻が決まっている</option>
+            <option value="window">開始に幅がある（受けられる時間帯）</option>
+          </select>
+        </label>
+      )}
       <label>
         <span>
           {draft.windowKind === 'fixed' ? '開始時刻' : '最も早い開始時刻'}
@@ -132,7 +140,7 @@ function StartFields({ draft, set, bad }: DraftProps) {
 }
 
 /** 何を・いつ（新しい訪問）／日時を変える */
-export function VisitTimeFields(p: DraftProps & { today: string }) {
+export function VisitTimeFields(p: DraftProps & { today: string; openedWindow: boolean }) {
   const { draft, set, bad, isNew, today } = p;
   return (
     <fieldset className="vp-section" data-testid="vp-time">
@@ -156,22 +164,21 @@ export function VisitTimeFields(p: DraftProps & { today: string }) {
           />
         </label>
         <StartFields {...p} />
-        <label>
-          <span>
-            所要時間（分）
-            <RequiredMark />
-          </span>
-          <input
-            type="number"
-            min={5}
-            max={720}
-            value={Number.isFinite(draft.durationMinutes) ? draft.durationMinutes : ''}
-            required
-            {...bad('durationMinutes')}
-            onChange={(e) => set({ durationMinutes: e.target.value === '' ? Number.NaN : Number(e.target.value) })}
-            data-testid="vp-duration"
-          />
-        </label>
+        <DurationEndFields
+          start={draft.earliestStart}
+          minutes={Number.isFinite(draft.durationMinutes) ? String(draft.durationMinutes) : ''}
+          onMinutes={(t) => set({ durationMinutes: t === '' ? Number.NaN : Number(t) })}
+          durationLabel={
+            <span>
+              所要時間（分）
+              <RequiredMark />
+            </span>
+          }
+          endLabel={draft.windowKind === 'fixed' ? '終わり' : '終わり（最も早い開始のとき）'}
+          durationAttrs={bad('durationMinutes')}
+          required
+          testIdPrefix="vp"
+        />
         <label>
           メモ
           <input

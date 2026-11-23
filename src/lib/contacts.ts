@@ -18,8 +18,10 @@ export type ContactWords = {
   staffWord: string;
   staffName: (id: string) => string;
   clientName: (id: string) => string;
-  /** 訪問先の住所（無ければ空）。スタッフあての「お願いします」の行だけに載せる（D246） */
+  /** 訪問先の住所（無ければ空。住所を入れない設定のときも空）。スタッフあての「お願いします」の行だけに載せる（D246・D468） */
   clientAddress: (id: string) => string;
+  /** 〈利用者さん〉あての連絡文を作るか（既定は作る。false なら clientMessages が空。D467） */
+  clientContact?: boolean;
   /** 訪問の所要（分。分からなければ null）。スタッフあての「お願いします」の行だけ */
   visitMinutes?: (visitId: string) => number | null;
   /** 事業所名（〈利用者さん〉あての名乗り。空なら名乗りを省く） */
@@ -138,6 +140,7 @@ function clientLine(x: ContactVisit, w: ContactWords): string {
 
 /** 訪問先ごとの連絡文（担当が変わる訪問・開始が変わる訪問。訪問先の初めの訪問の順。敬語。D245） */
 export function clientMessages(list: ContactList, w: ContactWords): { clientId: string; text: string }[] {
+  if (w.clientContact === false) return [];
   const all = [...list.staffChanged, ...list.timeChanged].sort(
     (a, b) => (a.fromStart ?? a.toStart ?? 0) - (b.fromStart ?? b.toStart ?? 0) || a.visitId.localeCompare(b.visitId),
   );
@@ -283,6 +286,10 @@ export function dayContactWords(x: {
   clientById: ReadonlyMap<string, Pick<Client, 'displayName'> & { place: Pick<Client['place'], 'address'> }>;
   /** その日の訪問（取り消し・休みの回も） */
   visits: readonly Visit[];
+  /** 〈利用者さん〉あての連絡文を作るか（既定は作る。機能「訪問連絡」。D467） */
+  clientContact?: boolean;
+  /** 〈スタッフ〉あての連絡に〈利用者さん〉の住所を入れるか（既定は入れる。機能「変更の連絡に住所」。D468） */
+  staffAddress?: boolean;
 }): ContactWords {
   const visitOf = (id: string) => x.visits.find((v) => v.id === id);
   return {
@@ -290,7 +297,8 @@ export function dayContactWords(x: {
     staffWord: x.staffWord,
     staffName: x.staffName,
     clientName: (id) => x.clientById.get(id)?.displayName ?? '（不明）',
-    clientAddress: (id) => x.clientById.get(id)?.place.address ?? '',
+    clientAddress: (id) => (x.staffAddress === false ? '' : (x.clientById.get(id)?.place.address ?? '')),
+    clientContact: x.clientContact,
     visitMinutes: (id) => visitOf(id)?.durationMinutes ?? null,
     promised: (id) => {
       const v = visitOf(id);

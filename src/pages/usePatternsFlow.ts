@@ -11,10 +11,17 @@ import { jstDate } from '../domain/time';
 import { requestAutoArrange } from '../lib/autoArrangeBatch';
 import { byName, newId } from '../lib/common';
 import { mdText } from '../lib/dateText';
-import { patternEndConfirm, patternRemoveConfirm, patternSplitConfirm } from '../lib/patternConfirm';
+import {
+  patternEndConfirm,
+  patternRemoveConfirm,
+  patternRemovedText,
+  patternSplitConfirm,
+  patternSplitText,
+} from '../lib/patternConfirm';
 import {
   type PatternForm,
   parsePatternForm,
+  patternAutoArranges,
   patternConfirmedDays,
   patternEndDefault,
   patternSinceError,
@@ -54,7 +61,7 @@ function usePatternsDraft(onDirty?: (dirty: boolean) => void) {
   const [errorState, setErrorState] = useState<{ text: string } | null>(null);
   const error = errorState?.text ?? null;
   const setError = (text: string | null) => setErrorState(text === null ? null : { text });
-  return { form, setForm, ending, setEnding, open, errorState, error, setError };
+  return { form, opened, setForm, ending, setEnding, open, errorState, error, setError };
 }
 
 export function usePatternsFlow({
@@ -73,13 +80,15 @@ export function usePatternsFlow({
   const confirmDialog = useConfirm();
   const today = jstDate(Date.now());
   const addPattern = usePatternAdd();
-  const { form, setForm, ending, setEnding, open, errorState, error, setError } = usePatternsDraft(onDirty);
+  const { form, opened, setForm, ending, setEnding, open, errorState, error, setError } = usePatternsDraft(onDirty);
   /**
    * 毎月の第N週・曜日ごとの時刻（ADR-0028 の patternMonthly）。切なら選べない。今の値がそれなら欄は読むだけで出す
    * （パターンは事実なので、訪問は今どおり作られる）
    */
   const monthlyOn = useFeature('patternMonthly');
   const monthlyOffId = useId();
+  /** 時間の決め方を出すか（ADR-0117 の timeWindow が入か、開いたときの値が幅。ちょうどに変えても欄を消さない） */
+  const windowOn = useFeature('timeWindow') || opened?.windowKind === 'window';
   /** 曜日ごとの時刻のパターンで patternMonthly が切：曜日・曜日ごとの時刻は読むだけ（データを変えない） */
   const daysLocked = !monthlyOn && !!form?.perDay;
   const patterns = useMemo(() => data.patterns.filter((p) => p.clientId === clientId), [data.patterns, clientId]);
@@ -134,9 +143,9 @@ export function usePatternsFlow({
       return { ...d, patterns: x.patterns, visits: x.visits };
     }, '繰り返しを直す');
     open(null);
-    // 直した回の担当なし（日時が変わった・増えた回）を自動で組む
-    const auto = arrangeAfter(data, after, today);
-    toast(auto ? '繰り返しを直しました（担当を自動で組みます）' : '繰り返しを直しました');
+    // 直した回の担当なし（日時が変わった・増えた回）を自動で組む（担当の欄で「担当なし」を選んだら組まない）
+    const auto = patternAutoArranges(form) && arrangeAfter(data, after, today);
+    toast(patternSplitText(original.from, form.since, today, auto));
   };
 
   const remove = async (p: Pattern) => {
@@ -149,7 +158,7 @@ export function usePatternsFlow({
     }, '繰り返しを消す');
     if (form?.id === p.id) open(null);
     if (selected === p.id) onSelect?.(null);
-    toast('繰り返しを消しました');
+    toast(patternRemovedText(c.patterns.some((x) => x.id === p.id)));
   };
 
   /** 終わらせる：最後の日より後の回を消し、終了日を入れる（確認してから） */
@@ -194,6 +203,7 @@ export function usePatternsFlow({
     error,
     monthlyOn,
     monthlyOffId,
+    windowOn,
     daysLocked,
     save,
     remove,

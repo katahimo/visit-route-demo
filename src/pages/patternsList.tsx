@@ -6,7 +6,14 @@ import { WithIcon } from '../components/ui';
 import { TypeDot } from '../components/visitType';
 import type { Pattern, VisitType } from '../contracts/documents';
 import { mdText } from '../lib/dateText';
-import { patternWhenText, periodText, typeOf, usualStartsLabel } from '../lib/patternText';
+import {
+  patternPhaseText,
+  patternWhenText,
+  periodText,
+  splitEndedPatterns,
+  typeOf,
+  usualStartsLabel,
+} from '../lib/patternText';
 import type { PatternEnding } from './usePatternsFlow';
 
 /** 終わらせる欄の値と押したとき（errorState・error は FieldError の token と文） */
@@ -72,12 +79,15 @@ function PatternPick({
   pattern: p,
   type: t,
   usual,
+  phase,
   selected,
   onSelect,
 }: {
   pattern: Pattern;
   type: VisitType | null;
   usual: string | null;
+  /** 今の一覧の札（「11/23から」「11/22まで」。patternPhaseText） */
+  phase: string | null;
   selected: boolean;
   onSelect?: (id: string | null) => void;
 }) {
@@ -99,6 +109,11 @@ function PatternPick({
         <span className="chip">種類なし</span>
       )}
       <strong>{patternWhenText(p)}</strong>
+      {phase && (
+        <span className="chip pattern-phase" data-testid="pattern-phase">
+          {phase}
+        </span>
+      )}
       <span className="sub">
         {p.durationMinutes}分・{periodText(p)}
         {usual ? `・いつもの担当 ${usual}` : ''}
@@ -112,7 +127,7 @@ function PatternPick({
   );
 }
 
-/** 繰り返しの一覧（無ければその旨） */
+/** 繰り返しの一覧（無ければその旨）。終わった繰り返しは「終わった繰り返し」に畳み、読むだけにする */
 export function PatternsList({
   patterns,
   visitTypes,
@@ -138,51 +153,80 @@ export function PatternsList({
   end: PatternEndProps;
 }) {
   if (patterns.length === 0) return <span className="sub">繰り返しはありません</span>;
+  // 終わった繰り返し（消した・終わらせた繰り返しは今日より前の回のために残る）は下に畳み、直す・終わらせるを出さない
+  const { current, ended } = splitEndedPatterns(patterns, today);
+  const pick = (p: Pattern) => (
+    <PatternPick
+      pattern={p}
+      type={typeOf(visitTypes, p.typeId)}
+      usual={staffName(p.usualStaffId)}
+      phase={patternPhaseText(p, patterns, today)}
+      selected={selected === p.id}
+      onSelect={onSelect}
+    />
+  );
   return (
-    <ul className="pattern-list">
-      {patterns.map((p) => (
-        <li
-          key={p.id}
-          className={`pattern-row${selected === p.id ? ' is-selected' : ''}`}
-          data-testid="pattern-row"
-          data-pattern={p.id}
-        >
-          <PatternPick
-            pattern={p}
-            type={typeOf(visitTypes, p.typeId)}
-            usual={staffName(p.usualStaffId)}
-            selected={selected === p.id}
-            onSelect={onSelect}
-          />
-          {!readOnly && (
-            <span className="actions">
-              <button
-                type="button"
-                className="btn btn-small btn-text"
-                aria-label={`${patternWhenText(p)}の繰り返しを直す`}
-                onClick={() => onEdit(p)}
-                data-testid="pattern-edit"
+    <>
+      {current.length === 0 && <span className="sub">今日から続く繰り返しはありません</span>}
+      <ul className="pattern-list">
+        {current.map((p) => (
+          <li
+            key={p.id}
+            className={`pattern-row${selected === p.id ? ' is-selected' : ''}`}
+            data-testid="pattern-row"
+            data-pattern={p.id}
+          >
+            {pick(p)}
+            {!readOnly && (
+              <span className="actions">
+                <button
+                  type="button"
+                  className="btn btn-small btn-text"
+                  aria-label={`${patternWhenText(p)}の繰り返しを直す`}
+                  onClick={() => onEdit(p)}
+                  data-testid="pattern-edit"
+                >
+                  <WithIcon icon={Pencil} size={14}>
+                    直す
+                  </WithIcon>
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-small btn-text"
+                  aria-label={`${patternWhenText(p)}の繰り返しを終わらせる`}
+                  onClick={() => onStartEnd(p)}
+                  data-testid="pattern-end"
+                >
+                  <WithIcon icon={CalendarX2} size={14}>
+                    終わらせる
+                  </WithIcon>
+                </button>
+              </span>
+            )}
+            {end.ending?.id === p.id && <PatternEndForm pattern={p} today={today} {...end} ending={end.ending} />}
+          </li>
+        ))}
+      </ul>
+      {ended.length > 0 && (
+        <details className="pattern-ended" data-testid="pattern-ended">
+          <summary>終わった繰り返し（{ended.length}件）</summary>
+          <p className="sub">
+            直す前の中身・終わらせた繰り返しです。今日より前の回の記録（予定・伝えた内容）として残し、今日からの予定には出ません。
+          </p>
+          <ul className="pattern-list">
+            {ended.map((p) => (
+              <li
+                key={p.id}
+                className={`pattern-row${selected === p.id ? ' is-selected' : ''}`}
+                data-testid="pattern-ended-row"
+                data-pattern={p.id}
               >
-                <WithIcon icon={Pencil} size={14}>
-                  直す
-                </WithIcon>
-              </button>
-              <button
-                type="button"
-                className="btn btn-small btn-text"
-                aria-label={`${patternWhenText(p)}の繰り返しを終わらせる`}
-                onClick={() => onStartEnd(p)}
-                data-testid="pattern-end"
-              >
-                <WithIcon icon={CalendarX2} size={14}>
-                  終わらせる
-                </WithIcon>
-              </button>
-            </span>
-          )}
-          {end.ending?.id === p.id && <PatternEndForm pattern={p} today={today} {...end} ending={end.ending} />}
-        </li>
-      ))}
-    </ul>
+                {pick(p)}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </>
   );
 }

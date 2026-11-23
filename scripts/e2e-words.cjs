@@ -421,6 +421,24 @@ async function legend(page) {
   await page.locator('h1').click();
   await settle(page, 150);
   check(!(await tip.isVisible()), 'フォーカスが外れると消える');
+  // 縦の低い窓（1440x681）でも、読み方は画面に収まり、巻かずに最後まで読める。吹き出しはマウスを受けない（下を隠さない）
+  const vp = page.viewportSize();
+  await page.setViewportSize({ width: 1440, height: 681 });
+  await settle(page, 300);
+  const lowCell = page.locator('[data-testid="month-day"]').nth(15);
+  await lowCell.scrollIntoViewIfNeeded();
+  await page.mouse.move(5, 5);
+  await lowCell.hover();
+  await tip.waitFor({ state: 'visible', timeout: 3000 });
+  const lb = await tip.boundingBox();
+  check(lb && lb.y >= 0 && lb.y + lb.height <= 681, '低い窓：読み方が画面に収まる', lb);
+  const rest = await tip.evaluate((e) => e.scrollHeight - e.clientHeight);
+  check(rest <= 1, '低い窓：巻かずに最後まで読める（はみ出し 0）', rest);
+  const pe = await tip.evaluate((e) => getComputedStyle(e).pointerEvents);
+  check(pe === 'none', '吹き出しはマウスを受けない（下のマス・ボタンを押せる）', pe);
+  await page.mouse.move(5, 5);
+  await settle(page, 300);
+  await page.setViewportSize(vp);
   // 休みを切り替えたら、出ている読み方も新しい文になる（文は日付で引く）
   // 月末に実行すると今月に休みを入れられる日が無いことがあるので、無ければ来月で見る
   const nextYm = (() => {

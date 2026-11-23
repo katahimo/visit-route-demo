@@ -1,7 +1,17 @@
 // 条件の重みの画面（pages/RulesPage）の条件・乱数の種の編集の純粋関数。データを書き換えるのは store の update(fn) を通した画面だけ。
 // ここは新しい DemoData を返す（重みの下書きは lib/weightDraft、プリセットは lib/presets）
 import type { DemoData } from '../contracts/data';
-import { HARDABLE, type Rule, type RuleType } from '../contracts/rules';
+import {
+  BUILTIN_RULE_TYPES,
+  beforeEndOf,
+  HARDABLE,
+  HOME_NEAR_BEFORE_END_MAX,
+  HOME_NEAR_WEIGHT_DEFAULT,
+  type Rule,
+  type RuleType,
+  SAME_CLIENT_WEIGHT_DEFAULT,
+} from '../contracts/rules';
+import { HOME_NEAR_OLD_LABEL } from './common';
 
 /** 型ごとの既定（design.md §5 の表）。足したときの初期値 */
 export const RULE_DEFAULTS: Record<RuleType, { weight: number; hard: boolean }> = {
@@ -13,6 +23,8 @@ export const RULE_DEFAULTS: Record<RuleType, { weight: number; hard: boolean }> 
   continuity: { weight: 2, hard: false },
   balance: { weight: 3, hard: false },
   wait: { weight: 3, hard: false },
+  sameClient: { weight: SAME_CLIENT_WEIGHT_DEFAULT, hard: false },
+  homeNear: { weight: HOME_NEAR_WEIGHT_DEFAULT, hard: false },
 };
 
 /** 条件の名前の上限 */
@@ -22,9 +34,36 @@ export const RULE_NAME_MAX = 40;
 export function renameRule(d: DemoData, id: string, label: string): DemoData {
   return { ...d, rules: d.rules.map((r) => (r.id === id ? { ...r, label } : r)) };
 }
-/** 条件を消す */
+/**
+ * 前の名前のままの条件を今の名前にする（帰りの前は自宅に近い人。ADR-0121）：名前が前の既定の名前（HOME_NEAR_OLD_LABEL）の
+ * homeNear だけ newLabel にする（利用者が付けた名前は変えない）。変えなければ同じものを返す
+ */
+export function withCurrentLabel(r: Rule, newLabel: string): Rule {
+  return r.type === 'homeNear' && r.label === HOME_NEAR_OLD_LABEL ? { ...r, label: newLabel } : r;
+}
+
+/** 打った「勤務の終わりの何分前から」を数にする（0〜上限の整数でなければ null。ADR-0121） */
+export function parseBeforeEnd(text: string): number | null {
+  const t = text.trim().replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0));
+  if (!/^\d+$/.test(t)) return null;
+  const n = Number(t);
+  return n <= HOME_NEAR_BEFORE_END_MAX ? n : null;
+}
+
+/** 条件の「勤務の終わりの何分前から」を書く（帰りの前は自宅に近い人だけ。同じなら元のまま。ADR-0121） */
+export function setBeforeEnd(d: DemoData, id: string, minutes: number): DemoData {
+  const r = d.rules.find((x) => x.id === id);
+  if (!r || r.type !== 'homeNear' || beforeEndOf(r) === minutes) return d;
+  return { ...d, rules: d.rules.map((x) => (x.id === id ? { ...x, beforeEndMin: minutes } : x)) };
+}
+
+/** 消せる条件か（組み込みの条件（続く訪問）は消さない。切るのは重み0。ADR-0116） */
+export const isRemovableRule = (r: Pick<Rule, 'type'>): boolean => !BUILTIN_RULE_TYPES.has(r.type);
+/** 足せる条件の型（組み込みの条件はいつも1つあるので足さない。ADR-0116） */
+export const addableTypes = (types: readonly RuleType[]): RuleType[] => types.filter((t) => !BUILTIN_RULE_TYPES.has(t));
+/** 条件を消す（組み込みの条件は消さない） */
 export function removeRule(d: DemoData, id: string): DemoData {
-  return { ...d, rules: d.rules.filter((x) => x.id !== id) };
+  return { ...d, rules: d.rules.filter((x) => x.id !== id || !isRemovableRule(x)) };
 }
 /** 保存済みの条件で必須か（消すときの断りに使う。PRD D271） */
 export function isSavedHard(savedRules: readonly Rule[], r: Rule): boolean {

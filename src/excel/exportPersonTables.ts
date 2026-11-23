@@ -128,6 +128,7 @@ export function clientTable(data: DemoData, name: string): TableSpec {
       // 段階と紹介元（ADR-0015）
       STAGE_LABELS[c.stage],
       c.referrer.name,
+      c.referrer.person ?? '',
       c.referrer.contact,
       c.referrer.note,
       c.referrer.email,

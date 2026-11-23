@@ -4,9 +4,23 @@
 export { BACKUP_LAST_KEY, BACKUP_REMINDED_KEY, backupMemory, type ExportKind, type LastExport } from './backup';
 export { feedbackStore } from './feedback';
 export { MAIL_SCHEDULE_KEY, type MailScheduleState, mailScheduleMemory } from './mailSchedule';
-export { columnsOpenKey, type DetailsScreen, detailsOpenKey, navOpenMemory } from './navOpen';
+export { columnsOpenKey, type DetailsScreen, detailsOpenKey, mapDockOpenKey, navOpenMemory } from './navOpen';
 export * from './persist';
 export { DemoDataProvider, type UpdateOptions, useDemoData } from './react';
+export {
+  keepBeforeRelease,
+  RELEASE_PREV_INFO_KEY,
+  RELEASE_PREV_KEY,
+  type ReleaseBackup,
+  type ReleasePreviousInfo,
+  releasePreviousInfo,
+} from './releaseBackup';
+export {
+  exportReleasePrevious,
+  RELEASE_RESTORE_REASON,
+  releaseBackupHolds,
+  restoreReleasePrevious,
+} from './releaseRestore';
 export { type ReloadFile, stashReloadFile, takeReloadFile } from './reloadResume';
 export { repair } from './repair';
 export { FEATURES_START_ALL, FEATURES_START_KEY, startsWithAll } from './start';

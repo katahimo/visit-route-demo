@@ -1,8 +1,17 @@
 // 全体のブックの、項目・条件・プリセットのシートを読む（importWorkbook から。ADR-0006・ADR-0008）
-import { HARDABLE, type Item, MAX_PRESETS, type Preset, RULE_TYPES, type Rule } from '../contracts/rules';
-import { MAX_OPTIONS, optionNameError } from '../lib/common';
+import {
+  HARDABLE,
+  HOME_NEAR_BEFORE_END_MAX,
+  type Item,
+  MAX_PRESETS,
+  type Preset,
+  RULE_TYPES,
+  type Rule,
+  type RuleType,
+} from '../contracts/rules';
+import { HOME_NEAR_OLD_LABEL, MAX_OPTIONS, optionNameError } from '../lib/common';
 import type { BookCtx } from './bookContext';
-import { ITEM_COLS, PRESET_COLS, presetWeightHeader, RULE_COLS } from './layout';
+import { ITEM_COLS, PRESET_COLS, presetWeightHeader, RULE_BEFORE_END_COL, RULE_COLS } from './layout';
 import { idOf, Sheet, sheetMsg, uniqueName } from './reader';
 import { FIXED_SHEETS, itemKindLabels, lookup, ruleTypeLabels, splitList, YES } from './text';
 
@@ -37,6 +46,11 @@ export function readItems(ctx: BookCtx, itemSheet: Sheet): Item[] {
   return items;
 }
 
+/** 条件の種類の名前を読む（帰りの前は自宅に近い人は前の名前「夕方は自宅に近い人」でも読む。ADR-0121） */
+function ruleTypeOf(labels: Record<RuleType, string>, text: string): RuleType | null {
+  return lookup(labels, text) ?? lookup({ homeNear: HOME_NEAR_OLD_LABEL }, text, false);
+}
+
 /** 条件のシート */
 export function readRules(ctx: BookCtx, ruleSheet: Sheet): Rule[] {
   const rules: Rule[] = [];
@@ -47,16 +61,23 @@ export function readRules(ctx: BookCtx, ruleSheet: Sheet): Rule[] {
     const id = idOf(r, RULE_COLS.id, ids, 'r', ctx.used, 50);
     const label = r.required(RULE_COLS.label, 40);
     const tText = r.required(RULE_COLS.type);
-    const type = tText === null ? null : lookup(labels, tText);
+    const type = tText === null ? null : ruleTypeOf(labels, tText);
     if (tText !== null && type === null) r.err(RULE_COLS.type, '一覧にない種類です（プルダウンから選んでください）');
     const weight = r.num(RULE_COLS.weight, { min: 0, max: 5, required: true });
     if (typeof weight === 'number' && !Number.isInteger(weight * 2))
       r.err(RULE_COLS.weight, '重みは0.5刻みで書いてください');
     const hard = r.yes(RULE_COLS.hard);
-    if (label !== null && type && typeof weight === 'number') rules.push({ id, type, label, weight, hard });
+    // 勤務の終わりの何分前から（帰りの前は自宅に近い人だけ。列が無い・空なら既定。ADR-0121）
+    const beforeEnd =
+      type === 'homeNear' ? r.num(RULE_BEFORE_END_COL, { int: true, min: 0, max: HOME_NEAR_BEFORE_END_MAX }) : null;
+    if (label !== null && type && typeof weight === 'number')
+      rules.push({ id, type, label, weight, hard, ...(typeof beforeEnd === 'number' && { beforeEndMin: beforeEnd }) });
   }
   return rules;
 }
+
+/** プリセットのシートで、無くてもよい重みの列の型（あとから足した条件。無い古いブックはプリセットの契約の既定。ADR-0116） */
+const OPTIONAL_WEIGHT_TYPES: ReadonlySet<string> = new Set(['sameClient', 'homeNear']);
 
 /**
  * プリセットのシート（ADR-0008）。シートが無い古いブックは、いまのプリセット・点数の基準のまま。
@@ -68,13 +89,21 @@ export function readPresets(ctx: BookCtx): { presets: Preset[]; scorePresetId: s
   if (!presetWs) return { presets: base.presets, scorePresetId: base.scorePresetId };
   const sheet = new Sheet(FIXED_SHEETS.presets, presetWs, errors);
   const labels = ruleTypeLabels(ctx.terms);
-  const weightCols = RULE_TYPES.map((t) => ({ t, h: presetWeightHeader(labels[t]) }));
+  // 帰りの前は自宅に近い人の重みの列は、前の名前の見出し「重み：夕方は自宅に近い人」でも読む（ADR-0121）
+  const oldHome = presetWeightHeader(HOME_NEAR_OLD_LABEL);
+  const headerOf = (t: RuleType) => {
+    const h = presetWeightHeader(labels[t]);
+    return t === 'homeNear' && !sheet.has(h) && sheet.has(oldHome) ? oldHome : h;
+  };
+  const weightCols = RULE_TYPES.map((t) => ({ t, h: headerOf(t) })).filter(
+    (c) => !OPTIONAL_WEIGHT_TYPES.has(c.t) || sheet.has(c.h),
+  );
   if (
     !sheet.require([
       PRESET_COLS.id,
       PRESET_COLS.name,
       PRESET_COLS.note,
-      ...weightCols.map((c) => c.h),
+      ...weightCols.filter((c) => !OPTIONAL_WEIGHT_TYPES.has(c.t)).map((c) => c.h),
       PRESET_COLS.hard,
     ])
   )

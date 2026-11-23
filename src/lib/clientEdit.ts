@@ -139,6 +139,9 @@ export function clientSaveDraft(input: {
         field: 'referrer',
       },
     };
+  // 紹介元の相談員（任意。ADR-0117）：前後の空白を落とし、空なら欄ごと省く（古いデータと同じ形）
+  const { person: referrerPerson, ...referrer } = base.referrer;
+  const person = referrerPerson?.trim() ?? '';
   // 同じ名前は保存しない（Excel では名前で人を引くため。ADR-0006）
   if (touches('displayName') && nameTaken(clients, (x) => x.displayName, base.displayName, base.id))
     return {
@@ -153,7 +156,7 @@ export function clientSaveDraft(input: {
     draft: {
       ...base,
       allowedStaffIds: allowed,
-      referrer: { ...base.referrer, email: referrerEmail },
+      referrer: { ...referrer, email: referrerEmail, ...(person ? { person } : {}) },
       // 節を開いた後に「まとめて地図に置く」が書いた位置・住所は、節で触っていなければ残す（ADR-0016）
       place: {
         ...(key === 'place' || key === 'new'
